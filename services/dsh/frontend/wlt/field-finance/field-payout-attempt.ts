@@ -1,27 +1,19 @@
-import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
+import { resolveMutationIdentityScope } from "@bthwani/data-runtime/mutation-identity-scope";
+import type { DurableMutationAttemptEnvelope } from "../../shared/_kernel/durable-mutation-attempt-registry.ts";
 import {
-  MutationIdentityScopeError,
-  resolveMutationIdentityScope,
-} from "@bthwani/data-runtime/mutation-identity-scope";
+  getOrCreateDurableMutationAttempt,
+  purgeExactDurableMutationAttempt,
+} from "../../shared/_kernel/durable-mutation-attempt-registry.ts";
 
-const STORAGE_PREFIX = "@bthwani/field-payout-attempt:v3/";
+const OPERATION = "field-payout-create";
 const STORAGE_KEY_LEGACY = "@bthwani/field-payout-attempt:v1";
-
-function storageKey(scope: { readonly actorId: string; readonly installationId: string; readonly entityId: string }, signature: string): string {
-  return `${STORAGE_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}/${encodeURIComponent(scope.entityId)}/${encodeURIComponent(signature)}`;
-}
 const MAX_ATTEMPT_AGE_MS = 24 * 60 * 60 * 1000;
 let fallbackSequence = 0;
 
-type StoredPayoutAttempt = {
+type StoredPayoutAttempt = DurableMutationAttemptEnvelope<{ readonly idempotencyKey: string }> & {
   readonly signature: string;
   readonly idempotencyKey: string;
   readonly createdAtMs: number;
-  readonly scope: {
-    readonly actorId: string;
-    readonly installationId: string;
-    readonly entityId: string;
-  };
 };
 
 function stableHash(value: string): string {
@@ -42,21 +34,16 @@ function buildAttemptKey(signature: string): string {
   return `field-payout:${timestamp.toString(36)}:${fallbackSequence.toString(36)}:${stableHash(`${signature}|${timestamp}|${fallbackSequence}`)}`;
 }
 
-function parseStoredAttempt(raw: string | null): StoredPayoutAttempt | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Partial<StoredPayoutAttempt>;
-    if (
-      typeof parsed.signature !== "string"
-      || typeof parsed.idempotencyKey !== "string"
-      || typeof parsed.createdAtMs !== "number"
-    ) {
-      return null;
-    }
-    return parsed as StoredPayoutAttempt;
-  } catch {
-    return null;
-  }
+function parseStoredAttempt(value: unknown): value is StoredPayoutAttempt {
+  if (!value || typeof value !== "object") return false;
+  const parsed = value as Partial<StoredPayoutAttempt>;
+  return typeof parsed.signature === "string"
+    && typeof parsed.fingerprint === "string"
+    && typeof parsed.context?.idempotencyKey === "string"
+    && typeof parsed.createdAtMs === "number"
+    && typeof parsed.scope?.actorId === "string"
+    && typeof parsed.scope?.installationId === "string"
+    && typeof parsed.scope?.entityId === "string";
 }
 
 function payoutEntityId(actorId: string, amountMinorUnits: number, currency: string): string {
@@ -80,51 +67,25 @@ export async function getOrCreateFieldPayoutAttempt(
   const entityId = payoutEntityId(normalizedActorId, amountMinorUnits, normalizedCurrency);
   const scope = await resolveMutationIdentityScope(normalizedActorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
-  const attemptKey = storageKey(scoped, signature);
-
-  const existingRaw = await bthwaniDurableStorage.getItem(attemptKey);
-  if (existingRaw) {
-    const existing = parseStoredAttempt(existingRaw);
-    if (existing) {
-      if (existing.scope.actorId !== scoped.actorId) {
-        throw new MutationIdentityScopeError(
-          "actor_mismatch",
-          `field-payout attempt belongs to a different actor (${existing.scope.actorId}); refusing to reuse it for ${scoped.actorId}`,
-        );
-      }
-      if (existing.scope.installationId !== scoped.installationId) {
-        throw new MutationIdentityScopeError(
-          "installation_mismatch",
-          `field-payout attempt belongs to a different installation (${existing.scope.installationId}); refusing to reuse it for ${scoped.installationId}`,
-        );
-      }
-      if (existing.scope.entityId !== entityId) {
-        await bthwaniDurableStorage.removeItem(attemptKey);
-      } else if (
-        existing.signature === signature
-        && Date.now() - existing.createdAtMs <= MAX_ATTEMPT_AGE_MS
-      ) {
-        return existing;
-      } else {
-        await bthwaniDurableStorage.removeItem(attemptKey);
-      }
-    }
-  }
-
-  const legacy = await bthwaniDurableStorage.getItem(STORAGE_KEY_LEGACY);
-  if (legacy) {
-    await bthwaniDurableStorage.setItem(`${STORAGE_KEY_LEGACY}:quarantine:${Date.now()}`, legacy);
-    await bthwaniDurableStorage.removeItem(STORAGE_KEY_LEGACY);
-  }
-
-  const attempt: StoredPayoutAttempt = {
-    signature,
-    idempotencyKey: buildAttemptKey(signature),
-    createdAtMs: Date.now(),
+  return getOrCreateDurableMutationAttempt({
+    operation: OPERATION,
     scope: scoped,
-  };
-  await bthwaniDurableStorage.setItem(attemptKey, JSON.stringify(attempt));
-  return attempt;
+    fingerprint: signature,
+    create: () => {
+      const idempotencyKey = buildAttemptKey(signature);
+      return {
+        signature,
+        fingerprint: signature,
+        idempotencyKey,
+        createdAtMs: Date.now(),
+        scope: scoped,
+        context: { idempotencyKey },
+      };
+    },
+    parse: parseStoredAttempt,
+    legacyKeys: [STORAGE_KEY_LEGACY],
+    legacyPrefixes: ["@bthwani/field-payout-attempt:v2", "@bthwani/field-payout-attempt:v3/"],
+  });
 }
 
 export async function clearFieldPayoutAttempt(
@@ -139,9 +100,10 @@ export async function clearFieldPayoutAttempt(
   if (!normalizedActorId || !normalizedCurrency || !normalizedSignature) return;
   const entityId = payoutEntityId(normalizedActorId, amountMinorUnits, normalizedCurrency);
   const scope = await resolveMutationIdentityScope(normalizedActorId, { entityId });
-  const key = storageKey({ actorId: scope.actorId, installationId: scope.installationId, entityId }, normalizedSignature);
-  const parsed = parseStoredAttempt(await bthwaniDurableStorage.getItem(key));
-  if (parsed?.signature === normalizedSignature && parsed.scope.actorId === scope.actorId && parsed.scope.installationId === scope.installationId && parsed.scope.entityId === entityId) {
-    await bthwaniDurableStorage.removeItem(key);
-  }
+  await purgeExactDurableMutationAttempt(
+    OPERATION,
+    { actorId: scope.actorId, installationId: scope.installationId, entityId },
+    normalizedSignature,
+    parseStoredAttempt,
+  );
 }

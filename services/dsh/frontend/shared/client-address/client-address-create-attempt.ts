@@ -1,17 +1,14 @@
 import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
-import {
-  MutationIdentityScopeError,
-  resolveMutationIdentityScope,
-} from "@bthwani/data-runtime/mutation-identity-scope";
+import { resolveMutationIdentityScope } from "@bthwani/data-runtime/mutation-identity-scope";
 import type { DshAddressMutationContext, DshClientAddressDraft } from "./client-address.types";
 import { secureRandomId } from "../_kernel/secure-random.ts";
+import {
+  getOrCreateDurableMutationAttempt,
+  purgeExactDurableMutationAttempt,
+} from "../_kernel/durable-mutation-attempt-registry.ts";
 
-const STORAGE_PREFIX = "@bthwani/client-address-create-attempt:v3/";
+const OPERATION = "client-address-create";
 const STORAGE_KEY_LEGACY = "@bthwani/client-address-create-attempt:v1";
-
-function storageKey(scope: { readonly actorId: string; readonly installationId: string; readonly entityId: string }, fingerprint: string): string {
-  return `${STORAGE_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}/${encodeURIComponent(scope.entityId)}/${encodeURIComponent(fingerprint)}`;
-}
 
 type StoredAttempt = {
   readonly fingerprint: string;
@@ -74,14 +71,6 @@ function isStoredAttempt(value: unknown): value is StoredAttempt {
     && typeof candidate.scope?.entityId === "string";
 }
 
-async function quarantineLegacy(): Promise<void> {
-  const raw = await bthwaniDurableStorage.getItem(STORAGE_KEY_LEGACY);
-  if (!raw) return;
-  const quarantineKey = `${STORAGE_KEY_LEGACY}:corrupt:${Date.now()}`;
-  await bthwaniDurableStorage.setItem(quarantineKey, raw);
-  await bthwaniDurableStorage.removeItem(STORAGE_KEY_LEGACY);
-}
-
 export async function getOrCreateClientAddressAttempt(
   input: DshClientAddressDraft,
 ): Promise<StoredAttempt> {
@@ -89,40 +78,15 @@ export async function getOrCreateClientAddressAttempt(
   const entityId = fingerprint.slice(0, 32);
   const scope = await resolveMutationIdentityScope("", { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
-  const attemptKey = storageKey(scoped, fingerprint);
-
-  const raw = await bthwaniDurableStorage.getItem(attemptKey);
-  if (raw) {
-    try {
-      const parsed: unknown = JSON.parse(raw);
-      if (isStoredAttempt(parsed) && parsed.fingerprint === fingerprint) {
-        if (parsed.scope.actorId !== scoped.actorId) {
-          throw new MutationIdentityScopeError(
-            "actor_mismatch",
-            `client-address attempt belongs to a different actor (${parsed.scope.actorId}); refusing to reuse it for ${scoped.actorId}`,
-          );
-        }
-        if (parsed.scope.installationId !== scoped.installationId) {
-          throw new MutationIdentityScopeError(
-            "installation_mismatch",
-            `client-address attempt belongs to a different installation (${parsed.scope.installationId}); refusing to reuse it for ${scoped.installationId}`,
-          );
-        }
-        if (parsed.scope.entityId !== scoped.entityId) {
-          await bthwaniDurableStorage.removeItem(attemptKey);
-        } else {
-          return parsed;
-        }
-      }
-    } catch (cause) {
-      if (cause instanceof MutationIdentityScopeError) throw cause;
-      await quarantineLegacy();
-    }
-  }
-
-  const attempt = newAttempt(fingerprint, scoped);
-  await bthwaniDurableStorage.setItem(attemptKey, JSON.stringify(attempt));
-  return attempt;
+  return getOrCreateDurableMutationAttempt({
+    operation: OPERATION,
+    scope: scoped,
+    fingerprint,
+    create: () => newAttempt(fingerprint, scoped),
+    parse: isStoredAttempt,
+    legacyKeys: [STORAGE_KEY_LEGACY],
+    legacyPrefixes: ["@bthwani/client-address-create-attempt:v2", "@bthwani/client-address-create-attempt:v3/"],
+  });
 }
 
 export async function clearClientAddressAttempt(fingerprint: string): Promise<void> {
@@ -130,15 +94,10 @@ export async function clearClientAddressAttempt(fingerprint: string): Promise<vo
   if (!normalizedFingerprint) return;
   const entityId = normalizedFingerprint.slice(0, 32);
   const scope = await resolveMutationIdentityScope("", { entityId });
-  const key = storageKey({ actorId: scope.actorId, installationId: scope.installationId, entityId }, normalizedFingerprint);
-  const raw = await bthwaniDurableStorage.getItem(key);
-  if (!raw) return;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (isStoredAttempt(parsed) && parsed.fingerprint === normalizedFingerprint) {
-      await bthwaniDurableStorage.removeItem(key);
-    }
-  } catch {
-    // Preserve unresolved attempts when the entry is corrupt.
-  }
+  await purgeExactDurableMutationAttempt(
+    OPERATION,
+    { actorId: scope.actorId, installationId: scope.installationId, entityId },
+    normalizedFingerprint,
+    isStoredAttempt,
+  );
 }
