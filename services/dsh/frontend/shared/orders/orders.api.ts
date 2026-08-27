@@ -97,19 +97,6 @@ export async function acceptOrder(orderId: string, options: PartnerOrderMutation
   return data.order;
 }
 
-export async function rejectOrder(
-  orderId: string,
-  input: DshRejectOrderInput,
-  options: PartnerOrderMutationOptions,
-  token?: string,
-): Promise<DshOrder> {
-  const data = await request<{ order: DshOrder }>(
-    `/dsh/partner/orders/${encodeURIComponent(orderId)}/reject`,
-    withOptionalToken({ ...partnerMutationOptions(options), body: input }, token),
-  );
-  return data.order;
-}
-
 export async function markOrderPreparing(orderId: string, options: PartnerOrderMutationOptions, token?: string): Promise<DshOrder> {
   const data = await request<{ order: DshOrder }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/preparing`,
