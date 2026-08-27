@@ -326,7 +326,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'summary-only',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'governance/19_CONTROL_PANEL_AND_OPERATING_MODEL.md',
+    currentEvidencePath: 'dsh/frontend/shared/operations/operations-registry.ts',
     notes: 'Every control-panel action must declare operation_id, permission, input, validation, side effect, audit, rollback, and evidence.',
   },
 ];
