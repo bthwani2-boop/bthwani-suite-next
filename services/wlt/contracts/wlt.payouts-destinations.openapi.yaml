@@ -600,11 +600,18 @@ components:
     ImportAuthoritativeStatementInput:
       type: object
       additionalProperties: false
+      description: >-
+        The artifactSha256 value must equal the SHA-256 fingerprint computed by
+        WLT from the normalized account, statement, balance, currency, and line
+        payload. A caller assertion that does not match is rejected.
       required: [ externalProviderAccountId, statementReference, artifactSha256, businessDate, closingBalanceMinorUnits, currency, lines ]
       properties:
         externalProviderAccountId: { type: string, minLength: 1 }
         statementReference: { type: string, minLength: 1 }
-        artifactSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        artifactSha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+          description: Server-verified SHA-256 fingerprint of the normalized statement payload.
         businessDate: { type: string, format: date }
         closingBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
         currency: { type: string, minLength: 3, maxLength: 3 }
@@ -622,7 +629,8 @@ components:
           properties:
             id: { type: string }
             statementReference: { type: string }
-            artifactSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+            artifactSha256: { type: string, pattern: '^[a-f0-9]{64}$', description: Server-computed normalized artifact digest. }
+            statementFingerprint: { type: string, pattern: '^[a-f0-9]{64}$', description: Server-computed statement identity fingerprint; absent only on historical pre-WLT-949 rows. }
     PayoutActorType:
       type: string
       enum: [ partner, captain, field ]

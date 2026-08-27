@@ -2,7 +2,9 @@ package payout
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -45,9 +47,91 @@ type ImportAuthoritativeStatementInput struct {
 }
 
 type AuthoritativeStatement struct {
-	ID                 string `json:"id"`
-	StatementReference string `json:"statementReference"`
-	ArtifactSHA256     string `json:"artifactSha256"`
+	ID                   string `json:"id"`
+	StatementReference   string `json:"statementReference"`
+	ArtifactSHA256       string `json:"artifactSha256"`
+	StatementFingerprint string `json:"statementFingerprint"`
+}
+
+type canonicalStatementLine struct {
+	ExternalTransferReference string         `json:"externalTransferReference"`
+	Direction                 string         `json:"direction"`
+	AmountMinorUnits          int64          `json:"amountMinorUnits"`
+	Currency                  string         `json:"currency"`
+	DestinationReferenceHash  string         `json:"destinationReferenceHash"`
+	OccurredAt                *time.Time     `json:"occurredAt,omitempty"`
+	SourceRecord              map[string]any `json:"sourceRecord"`
+}
+
+type canonicalStatementArtifact struct {
+	ExternalProviderAccountID string                   `json:"externalProviderAccountId"`
+	StatementReference        string                   `json:"statementReference"`
+	BusinessDate              string                   `json:"businessDate"`
+	ClosingBalanceMinorUnits  int64                    `json:"closingBalanceMinorUnits"`
+	Currency                  string                   `json:"currency"`
+	Lines                     []canonicalStatementLine `json:"lines"`
+}
+
+func canonicalStatementArtifactSHA256(input ImportAuthoritativeStatementInput, businessDate time.Time) (string, error) {
+	lines := make([]canonicalStatementLine, 0, len(input.Lines))
+	for _, line := range input.Lines {
+		lines = append(lines, canonicalStatementLine{
+			ExternalTransferReference: line.ExternalTransferReference,
+			Direction:                 line.Direction,
+			AmountMinorUnits:          line.AmountMinorUnits,
+			Currency:                  line.Currency,
+			DestinationReferenceHash:  line.DestinationReferenceHash,
+			OccurredAt:                line.OccurredAt,
+			SourceRecord:              line.SourceRecord,
+		})
+	}
+	payload, err := json.Marshal(canonicalStatementArtifact{
+		ExternalProviderAccountID: input.ExternalProviderAccountID,
+		StatementReference:        input.StatementReference,
+		BusinessDate:              businessDate.Format(time.DateOnly),
+		ClosingBalanceMinorUnits:  input.ClosingBalanceMinorUnits,
+		Currency:                  input.Currency,
+		Lines:                     lines,
+	})
+	if err != nil {
+		return "", fmt.Errorf("encode canonical statement artifact: %w", err)
+	}
+	digest := sha256.Sum256(payload)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func canonicalStatementFingerprint(input ImportAuthoritativeStatementInput, businessDate time.Time, artifactSHA256 string) (string, error) {
+	identity, err := json.Marshal(struct {
+		ExternalProviderAccountID string `json:"externalProviderAccountId"`
+		StatementReference        string `json:"statementReference"`
+		BusinessDate              string `json:"businessDate"`
+		ArtifactSHA256            string `json:"artifactSha256"`
+	}{
+		ExternalProviderAccountID: input.ExternalProviderAccountID,
+		StatementReference:        input.StatementReference,
+		BusinessDate:              businessDate.Format(time.DateOnly),
+		ArtifactSHA256:            artifactSHA256,
+	})
+	if err != nil {
+		return "", fmt.Errorf("encode canonical statement fingerprint: %w", err)
+	}
+	digest := sha256.Sum256(identity)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func validateCanonicalStatementArtifact(input ImportAuthoritativeStatementInput, businessDate time.Time) (string, string, error) {
+	computedArtifactSHA256, err := canonicalStatementArtifactSHA256(input, businessDate)
+	if err != nil {
+		return "", "", err
+	}
+	if input.ArtifactSHA256 != "" && input.ArtifactSHA256 != computedArtifactSHA256 {
+		return "", "", fmt.Errorf("artifactSha256 does not match the server-computed canonical statement fingerprint")
+	}
+	statementFingerprint, err := canonicalStatementFingerprint(input, businessDate, computedArtifactSHA256)
+	if err != nil {
+		return "", "", err
+	}
+	return computedArtifactSHA256, statementFingerprint, nil
 }
 
 func isSHA256(value string) bool {
@@ -109,9 +193,21 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 	input.ArtifactSHA256 = strings.ToLower(strings.TrimSpace(input.ArtifactSHA256))
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
 	businessDate, err := time.Parse(time.DateOnly, strings.TrimSpace(input.BusinessDate))
-	if err != nil || input.ExternalProviderAccountID == "" || input.StatementReference == "" || !isSHA256(input.ArtifactSHA256) || input.Currency == "" || len(input.Lines) == 0 {
+	if err != nil || input.ExternalProviderAccountID == "" || input.StatementReference == "" || (input.ArtifactSHA256 != "" && !isSHA256(input.ArtifactSHA256)) || input.Currency == "" || len(input.Lines) == 0 {
 		return nil, fmt.Errorf("account, statementReference, SHA-256 artifact, businessDate, currency and statement lines are required")
 	}
+	for i := range input.Lines {
+		line := &input.Lines[i]
+		line.ExternalTransferReference = strings.TrimSpace(line.ExternalTransferReference)
+		line.Direction = strings.ToLower(strings.TrimSpace(line.Direction))
+		line.Currency = strings.ToUpper(strings.TrimSpace(line.Currency))
+		line.DestinationReferenceHash = strings.ToLower(strings.TrimSpace(line.DestinationReferenceHash))
+	}
+	computedArtifactSHA256, statementFingerprint, err := validateCanonicalStatementArtifact(input, businessDate)
+	if err != nil {
+		return nil, err
+	}
+	input.ArtifactSHA256 = computedArtifactSHA256
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -132,21 +228,22 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 
 	var statement AuthoritativeStatement
 	err = tx.QueryRowContext(ctx, `
-		INSERT INTO wlt_external_provider_statements
-			(operator_context_id, external_provider_account_id, statement_reference,
-			 artifact_sha256, business_date, closing_balance_minor_units, currency, imported_by_operator_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-		ON CONFLICT (operator_context_id, artifact_sha256) DO NOTHING
-		RETURNING id, statement_reference, artifact_sha256`,
+					INSERT INTO wlt_external_provider_statements
+				(operator_context_id, external_provider_account_id, statement_reference,
+				 artifact_sha256, statement_fingerprint, business_date, closing_balance_minor_units, currency, imported_by_operator_id)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			ON CONFLICT (operator_context_id, artifact_sha256) DO NOTHING
+			RETURNING id, statement_reference, artifact_sha256, statement_fingerprint`,
+
 		operatorContextID, input.ExternalProviderAccountID, input.StatementReference,
-		input.ArtifactSHA256, businessDate, input.ClosingBalanceMinorUnits, input.Currency, operatorID,
-	).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256)
+		input.ArtifactSHA256, statementFingerprint, businessDate, input.ClosingBalanceMinorUnits, input.Currency, operatorID,
+	).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256, &statement.StatementFingerprint)
 	if err == sql.ErrNoRows {
 		err = tx.QueryRowContext(ctx, `
-			SELECT id, statement_reference, artifact_sha256
+			SELECT id, statement_reference, artifact_sha256, COALESCE(statement_fingerprint, '')
 			FROM wlt_external_provider_statements
 			WHERE operator_context_id=$1 AND artifact_sha256=$2`, operatorContextID, input.ArtifactSHA256,
-		).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256)
+		).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256, &statement.StatementFingerprint)
 		if err != nil {
 			return nil, err
 		}
@@ -163,10 +260,6 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 	}
 
 	for _, line := range input.Lines {
-		line.ExternalTransferReference = strings.TrimSpace(line.ExternalTransferReference)
-		line.Direction = strings.ToLower(strings.TrimSpace(line.Direction))
-		line.Currency = strings.ToUpper(strings.TrimSpace(line.Currency))
-		line.DestinationReferenceHash = strings.ToLower(strings.TrimSpace(line.DestinationReferenceHash))
 		if line.ExternalTransferReference == "" || (line.Direction != "incoming" && line.Direction != "outgoing") ||
 			line.AmountMinorUnits <= 0 || line.Currency != input.Currency || !isSHA256(line.DestinationReferenceHash) {
 			return nil, fmt.Errorf("every statement line needs a unique reference, direction, positive amount, account currency and SHA-256 destination fingerprint")

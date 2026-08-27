@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-947_provider_penalty_command_idempotency.sql",
+  "cutover": "wlt-949_external_statement_fingerprint.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -829,6 +829,13 @@
       "file": "wlt-948_financial_rail_registry_seed.sql",
       "sha256": "928bc2abeec8e4086d526c2965f7f0b9ae70fdb1a071f1f2b1dfdd351076106e",
       "historicalPrefix": "948",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 119,
+      "file": "wlt-949_external_statement_fingerprint.sql",
+      "sha256": "38487674d2b5d3c6e3bb549188abddd6c026cfbfe68d63cae1290b4fe1affb0d",
+      "historicalPrefix": "949",
       "state": "ACTIVE"
     }
   ]
