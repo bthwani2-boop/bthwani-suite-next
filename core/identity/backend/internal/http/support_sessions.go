@@ -72,6 +72,8 @@ func writeSupportSessionError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, identity.ErrSupportSessionAlreadyIssued):
 		sendError(w, http.StatusConflict, "SUPPORT_SESSION_ALREADY_ISSUED", err.Error())
+	case errors.Is(err, identity.ErrSupportSessionRequestConflict):
+		sendError(w, http.StatusConflict, "SUPPORT_SESSION_REQUEST_CONFLICT", err.Error())
 	case errors.Is(err, identity.ErrSupportSessionSelfTarget):
 		sendError(w, http.StatusBadRequest, "SUPPORT_SESSION_SELF_TARGET", err.Error())
 	case errors.Is(err, identity.ErrSupportSessionTargetUnavailable):

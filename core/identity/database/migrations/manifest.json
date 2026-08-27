@@ -1,1 +1,303 @@
-{"schemaVersion":1,"service":"identity","ordering":"explicit","orderingSource":"Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS","cutover":"identity-040_retire_local_platform_persona_roles.sql","migrations":[{"ordinal":1,"file":"identity-001_sessions.sql","sha256":"993aec367346e43914a0b1d692c8d89b93840d06eea1bc9d952da2cf390147e9","historicalPrefix":"001","state":"HISTORICAL_IMMUTABLE"},{"ordinal":2,"file":"identity-002_activation_challenges.sql","sha256":"0b5bdd503a3327b547f00af71560c8eda7a1ecc7488542e4ceff0c88430145ac","historicalPrefix":"002","state":"HISTORICAL_IMMUTABLE"},{"ordinal":3,"file":"identity-003_login_attempts.sql","sha256":"2fd33b928ca74c8a79aa9d8685892e92c96ff0832c1340a8bd3116b9c5f5219b","historicalPrefix":"003","state":"HISTORICAL_IMMUTABLE"},{"ordinal":4,"file":"identity-004_otp_and_deletion_outbox.sql","sha256":"41b02b53526de0901454068c6987f5a1330c4cb53ecedb8de82037672f930427","historicalPrefix":"004","state":"HISTORICAL_IMMUTABLE"},{"ordinal":5,"file":"identity-005_governance.sql","sha256":"5a155dcaba7caaf31f0572d3a674e52f302f8d53b3bd3424c90e21554bd22e15","historicalPrefix":"005","state":"HISTORICAL_IMMUTABLE"},{"ordinal":6,"file":"identity-006_deletion_outbox_delivery.sql","sha256":"f6f563559a198a0a01c73c34bfe55b02153f731890474f48115900643688edec","historicalPrefix":"006","state":"HISTORICAL_IMMUTABLE"},{"ordinal":7,"file":"identity-007_local_actor_operator_context_repair.sql","sha256":"174cd31b102c53013c1767cf3d9cf9192028658856dc55f4c8e175598759a63a","historicalPrefix":"007","state":"HISTORICAL_IMMUTABLE"},{"ordinal":8,"file":"identity-008_employee_activation_surface.sql","sha256":"794a34f8fc5b2e073b1ec33e28d0b40beaca5426276cdc279ed83d2a0f1fee4f","historicalPrefix":"008","state":"HISTORICAL_IMMUTABLE"},{"ordinal":9,"file":"identity-009_support_sessions.sql","sha256":"eab006689806177c2438a28ec8a540f5dc62586bbe7d8327caffefb132e3b835","historicalPrefix":"009","state":"HISTORICAL_IMMUTABLE"},{"ordinal":10,"file":"identity-010_employee_operator_role_repair.sql","sha256":"598cd9df89af686cc2eaf42bb02bb4034d846ba0b0f9040e7b40908a0446fe5d","historicalPrefix":"010","state":"HISTORICAL_IMMUTABLE"},{"ordinal":11,"file":"identity-011_employee_dsh_permission_backfill.sql","sha256":"58efbed6a60e4624c5b6c7e5e81663c577f490a7d184cf1b6a3bd0ee76cfd397","historicalPrefix":"011","state":"HISTORICAL_IMMUTABLE"},{"ordinal":12,"file":"identity-012_activation_session_causality.sql","sha256":"bded0a9665b4a82218482bd43170a7a12c6097d6bcfc8b83295651b9aa1b5164","historicalPrefix":"012","state":"HISTORICAL_IMMUTABLE"},{"ordinal":13,"file":"identity-013_actor_provisioning_integrity.sql","sha256":"80f50cbb08692c26abe57ba9186378dfbd713a28c888a86204238467925fb631","historicalPrefix":"013","state":"HISTORICAL_IMMUTABLE"},{"ordinal":14,"file":"identity-014_actor_lifecycle_audit.sql","sha256":"2b926ca48f3d669f2505bb170857e97ed66f6414cd22e7e0540db35ae1826450","historicalPrefix":"014","state":"HISTORICAL_IMMUTABLE"},{"ordinal":15,"file":"identity-015_actor_lifecycle_integrity.sql","sha256":"65fef9621d9d6dd25abeee2393bfed6e09c9e15da6ba4e5bd328a98f4d4c52e3","historicalPrefix":"015","state":"HISTORICAL_IMMUTABLE"},{"ordinal":16,"file":"identity-016_dsh_operational_policy_permissions.sql","sha256":"c7a7ba1e6a5d62aafa5279c13f90b4e22b835606d16e89b5db1cfb97b83ac8a8","historicalPrefix":"016","state":"HISTORICAL_IMMUTABLE"},{"ordinal":17,"file":"identity-017_employee_dsh_permission_integrity.sql","sha256":"28d5384c6a38f960efb55b8bc64337b40b95404857c9fada92f466543fdb6c06","historicalPrefix":"017","state":"HISTORICAL_IMMUTABLE"},{"ordinal":18,"file":"identity-018_session_surface.sql","sha256":"bb0d70855597f5ec20f98e2a5e396555cbc6b6cba5f11fe54128e7c48e583479","historicalPrefix":"018","state":"HISTORICAL_IMMUTABLE"},{"ordinal":19,"file":"identity-019_session_family.sql","sha256":"a3c6fd01630356aefdff8d5923fb956a7c5fa36a477ecdcdb80b93d29de8a56c","historicalPrefix":"019","state":"HISTORICAL_IMMUTABLE"},{"ordinal":20,"file":"identity-020_rbac_foundation.sql","sha256":"2c610a5bed11b4c9302ff732948bf252d98568bb880f11e59c930af2031b5e8f","historicalPrefix":"020","state":"HISTORICAL_IMMUTABLE"},{"ordinal":21,"file":"identity-021_actor_lifecycle_status.sql","sha256":"c9b2c315845623d1874e5d07c319361ee13403b826769a94f2f03d4db70cea10","historicalPrefix":"021","state":"HISTORICAL_IMMUTABLE"},{"ordinal":22,"file":"identity-022_refresh_rotation_concurrency.sql","sha256":"f7a08c031697a90d0c4f7dc717652ca59c85f05aaf8e988dfb8054709c00ea03","historicalPrefix":"022","state":"HISTORICAL_IMMUTABLE"},{"ordinal":23,"file":"identity-023_actor_lifecycle_suspension_audit.sql","sha256":"b8bb72bc084101e35c837240360107bd9252a39cba97e924160bf5f6d9a4c963","historicalPrefix":"023","state":"HISTORICAL_IMMUTABLE"},{"ordinal":24,"file":"identity-024_dsh_operational_policy_evaluation_permission.sql","sha256":"36d3463d71367e34b31385913003bac41a4ce5f00f3825a447f0561c900c6fa4","historicalPrefix":"024","state":"HISTORICAL_IMMUTABLE"},{"ordinal":25,"file":"identity-025_canonical_access_projection.sql","sha256":"0f01513ea612b8f78aecdecb3e7f6b8f581040431c1d386d0c28194e94b65ca3","historicalPrefix":"025","state":"HISTORICAL_IMMUTABLE"},{"ordinal":26,"file":"identity-026_canonical_access_projection_permission_capture_repair.sql","sha256":"61f6cd3c272a89f132d375af6f4b3983f0c78de4f6a3a8ba6992c12f3e27db59","historicalPrefix":"026","state":"HISTORICAL_IMMUTABLE"},{"ordinal":27,"file":"identity-027_operator_support_permissions.sql","sha256":"d6eda46302f6ec420ccc50e3a33c40f0a82ccfaa70074da17c37c9a2ee765e45","historicalPrefix":"027","state":"HISTORICAL_IMMUTABLE"},{"ordinal":28,"file":"identity-028_administration_rbac_canonicalization.sql","sha256":"2e603e5b097f3ea8f6ebec8ce50edcdd2d86908cca7d1ce0bb06926fe72b251c","historicalPrefix":"028","state":"HISTORICAL_IMMUTABLE"},{"ordinal":29,"file":"identity-029_canonical_rbac_writer_guard_and_idempotency.sql","sha256":"95001db2f0b88c0971e2386e1df70df99706e1de91e828cdcc3798de0b12ce2a","historicalPrefix":"029","state":"HISTORICAL_IMMUTABLE"},{"ordinal":30,"file":"identity-030_canonical_projection_empty_insert.sql","sha256":"e8ae7c8dfec29bd9898904e0635c16eb8cdfffa8d592731c071bdb25dc00ae87","historicalPrefix":"030","state":"HISTORICAL_IMMUTABLE"},{"ordinal":31,"file":"identity-031_projection_update_write_fence.sql","sha256":"1eb002d131e1da8d02d8bb303c79013cf88542c088f5906d5248fb1b38cf07d5","historicalPrefix":"031","state":"HISTORICAL_IMMUTABLE"},{"ordinal":32,"file":"identity-032_platform_permission_vocabulary_canonicalization.sql","sha256":"27e45c57525e90396834360f9bd2b18705adc134e92c99dc462d63d7d29f488d","historicalPrefix":"032","state":"HISTORICAL_IMMUTABLE"},{"ordinal":33,"file":"identity-033_workforce_provider_permission_vocabulary.sql","sha256":"f678f53c60cd51b7262389009158b872601fe00cdeb568af4d892d649918127c","historicalPrefix":"033","state":"HISTORICAL_IMMUTABLE"},{"ordinal":34,"file":"identity-034_canonical_provider_partner_vocabulary.sql","sha256":"b3010eff307dd2b4be5f71f6672fdf388f6b76bda42abaa5d80c9e3eca4cd0df","historicalPrefix":"034","state":"HISTORICAL_IMMUTABLE"},{"ordinal":35,"file":"identity-035_local_platform_role_vocabulary.sql","sha256":"e470b74a9199acc5d0f01e52f63730621ee4e9937ed0a3104a79f83adb9d5c2e","historicalPrefix":"035","state":"HISTORICAL_IMMUTABLE"},{"ordinal":36,"file":"identity-036_canonical_platform_control_permission_vocabulary.sql","sha256":"d19b1a8038e2ceb8f053cfa8c5e1eea7f20d00ed6ec0a97c8c526f79381aa736","historicalPrefix":"036","state":"HISTORICAL_IMMUTABLE"},{"ordinal":37,"file":"identity-037_canonical_local_bootstrap_access_vocabulary.sql","sha256":"19d83ecc3aa6c78f981a9448964bca8496bd763ef4b56713ca5a986f099dcda4","historicalPrefix":"037","state":"HISTORICAL_IMMUTABLE"},{"ordinal":38,"file":"identity-038_mobile_surface_permission_separation.sql","sha256":"098b5dd03c985283e22e7d6fb933e277357fb7fdf7c835462ab03c25eda653c2","historicalPrefix":"038","state":"HISTORICAL_IMMUTABLE"},{"ordinal":39,"file":"identity-039_retire_embedded_local_bootstrap_authority.sql","sha256":"0486fcee8598689f1ab592274288862139d7a54a2572b79edff67edee5aeaf89","historicalPrefix":"039","state":"HISTORICAL_IMMUTABLE"},{"ordinal":40,"file":"identity-040_remove_local_platform_roles.sql","sha256":"1e0d815de07e856d42a77dc3f48813e427acae997199d5e6c987902a46440bed","historicalPrefix":"040","state":"HISTORICAL_IMMUTABLE"},{"ordinal":41,"file":"identity-040_retire_local_platform_persona_roles.sql","sha256":"03411e4ce9d7c84c472e28b140f5fd76c106db0a62a9ff268c7532854dd8e9db","historicalPrefix":null,"state":"ACTIVE"}]}
+{
+  "schemaVersion": 1,
+  "service": "identity",
+  "ordering": "explicit",
+  "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
+  "cutover": "identity-041_support_session_request_fingerprint.sql",
+  "migrations": [
+    {
+      "ordinal": 1,
+      "file": "identity-001_sessions.sql",
+      "sha256": "993aec367346e43914a0b1d692c8d89b93840d06eea1bc9d952da2cf390147e9",
+      "historicalPrefix": "001",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 2,
+      "file": "identity-002_activation_challenges.sql",
+      "sha256": "0b5bdd503a3327b547f00af71560c8eda7a1ecc7488542e4ceff0c88430145ac",
+      "historicalPrefix": "002",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 3,
+      "file": "identity-003_login_attempts.sql",
+      "sha256": "2fd33b928ca74c8a79aa9d8685892e92c96ff0832c1340a8bd3116b9c5f5219b",
+      "historicalPrefix": "003",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 4,
+      "file": "identity-004_otp_and_deletion_outbox.sql",
+      "sha256": "41b02b53526de0901454068c6987f5a1330c4cb53ecedb8de82037672f930427",
+      "historicalPrefix": "004",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 5,
+      "file": "identity-005_governance.sql",
+      "sha256": "5a155dcaba7caaf31f0572d3a674e52f302f8d53b3bd3424c90e21554bd22e15",
+      "historicalPrefix": "005",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 6,
+      "file": "identity-006_deletion_outbox_delivery.sql",
+      "sha256": "f6f563559a198a0a01c73c34bfe55b02153f731890474f48115900643688edec",
+      "historicalPrefix": "006",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 7,
+      "file": "identity-007_local_actor_operator_context_repair.sql",
+      "sha256": "174cd31b102c53013c1767cf3d9cf9192028658856dc55f4c8e175598759a63a",
+      "historicalPrefix": "007",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 8,
+      "file": "identity-008_employee_activation_surface.sql",
+      "sha256": "794a34f8fc5b2e073b1ec33e28d0b40beaca5426276cdc279ed83d2a0f1fee4f",
+      "historicalPrefix": "008",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 9,
+      "file": "identity-009_support_sessions.sql",
+      "sha256": "eab006689806177c2438a28ec8a540f5dc62586bbe7d8327caffefb132e3b835",
+      "historicalPrefix": "009",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 10,
+      "file": "identity-010_employee_operator_role_repair.sql",
+      "sha256": "598cd9df89af686cc2eaf42bb02bb4034d846ba0b0f9040e7b40908a0446fe5d",
+      "historicalPrefix": "010",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 11,
+      "file": "identity-011_employee_dsh_permission_backfill.sql",
+      "sha256": "58efbed6a60e4624c5b6c7e5e81663c577f490a7d184cf1b6a3bd0ee76cfd397",
+      "historicalPrefix": "011",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 12,
+      "file": "identity-012_activation_session_causality.sql",
+      "sha256": "bded0a9665b4a82218482bd43170a7a12c6097d6bcfc8b83295651b9aa1b5164",
+      "historicalPrefix": "012",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 13,
+      "file": "identity-013_actor_provisioning_integrity.sql",
+      "sha256": "80f50cbb08692c26abe57ba9186378dfbd713a28c888a86204238467925fb631",
+      "historicalPrefix": "013",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 14,
+      "file": "identity-014_actor_lifecycle_audit.sql",
+      "sha256": "2b926ca48f3d669f2505bb170857e97ed66f6414cd22e7e0540db35ae1826450",
+      "historicalPrefix": "014",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 15,
+      "file": "identity-015_actor_lifecycle_integrity.sql",
+      "sha256": "65fef9621d9d6dd25abeee2393bfed6e09c9e15da6ba4e5bd328a98f4d4c52e3",
+      "historicalPrefix": "015",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 16,
+      "file": "identity-016_dsh_operational_policy_permissions.sql",
+      "sha256": "c7a7ba1e6a5d62aafa5279c13f90b4e22b835606d16e89b5db1cfb97b83ac8a8",
+      "historicalPrefix": "016",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 17,
+      "file": "identity-017_employee_dsh_permission_integrity.sql",
+      "sha256": "28d5384c6a38f960efb55b8bc64337b40b95404857c9fada92f466543fdb6c06",
+      "historicalPrefix": "017",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 18,
+      "file": "identity-018_session_surface.sql",
+      "sha256": "bb0d70855597f5ec20f98e2a5e396555cbc6b6cba5f11fe54128e7c48e583479",
+      "historicalPrefix": "018",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 19,
+      "file": "identity-019_session_family.sql",
+      "sha256": "a3c6fd01630356aefdff8d5923fb956a7c5fa36a477ecdcdb80b93d29de8a56c",
+      "historicalPrefix": "019",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 20,
+      "file": "identity-020_rbac_foundation.sql",
+      "sha256": "2c610a5bed11b4c9302ff732948bf252d98568bb880f11e59c930af2031b5e8f",
+      "historicalPrefix": "020",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 21,
+      "file": "identity-021_actor_lifecycle_status.sql",
+      "sha256": "c9b2c315845623d1874e5d07c319361ee13403b826769a94f2f03d4db70cea10",
+      "historicalPrefix": "021",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 22,
+      "file": "identity-022_refresh_rotation_concurrency.sql",
+      "sha256": "f7a08c031697a90d0c4f7dc717652ca59c85f05aaf8e988dfb8054709c00ea03",
+      "historicalPrefix": "022",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 23,
+      "file": "identity-023_actor_lifecycle_suspension_audit.sql",
+      "sha256": "b8bb72bc084101e35c837240360107bd9252a39cba97e924160bf5f6d9a4c963",
+      "historicalPrefix": "023",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 24,
+      "file": "identity-024_dsh_operational_policy_evaluation_permission.sql",
+      "sha256": "36d3463d71367e34b31385913003bac41a4ce5f00f3825a447f0561c900c6fa4",
+      "historicalPrefix": "024",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 25,
+      "file": "identity-025_canonical_access_projection.sql",
+      "sha256": "0f01513ea612b8f78aecdecb3e7f6b8f581040431c1d386d0c28194e94b65ca3",
+      "historicalPrefix": "025",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 26,
+      "file": "identity-026_canonical_access_projection_permission_capture_repair.sql",
+      "sha256": "61f6cd3c272a89f132d375af6f4b3983f0c78de4f6a3a8ba6992c12f3e27db59",
+      "historicalPrefix": "026",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 27,
+      "file": "identity-027_operator_support_permissions.sql",
+      "sha256": "d6eda46302f6ec420ccc50e3a33c40f0a82ccfaa70074da17c37c9a2ee765e45",
+      "historicalPrefix": "027",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 28,
+      "file": "identity-028_administration_rbac_canonicalization.sql",
+      "sha256": "2e603e5b097f3ea8f6ebec8ce50edcdd2d86908cca7d1ce0bb06926fe72b251c",
+      "historicalPrefix": "028",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 29,
+      "file": "identity-029_canonical_rbac_writer_guard_and_idempotency.sql",
+      "sha256": "95001db2f0b88c0971e2386e1df70df99706e1de91e828cdcc3798de0b12ce2a",
+      "historicalPrefix": "029",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 30,
+      "file": "identity-030_canonical_projection_empty_insert.sql",
+      "sha256": "e8ae7c8dfec29bd9898904e0635c16eb8cdfffa8d592731c071bdb25dc00ae87",
+      "historicalPrefix": "030",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 31,
+      "file": "identity-031_projection_update_write_fence.sql",
+      "sha256": "1eb002d131e1da8d02d8bb303c79013cf88542c088f5906d5248fb1b38cf07d5",
+      "historicalPrefix": "031",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 32,
+      "file": "identity-032_platform_permission_vocabulary_canonicalization.sql",
+      "sha256": "27e45c57525e90396834360f9bd2b18705adc134e92c99dc462d63d7d29f488d",
+      "historicalPrefix": "032",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 33,
+      "file": "identity-033_workforce_provider_permission_vocabulary.sql",
+      "sha256": "f678f53c60cd51b7262389009158b872601fe00cdeb568af4d892d649918127c",
+      "historicalPrefix": "033",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 34,
+      "file": "identity-034_canonical_provider_partner_vocabulary.sql",
+      "sha256": "b3010eff307dd2b4be5f71f6672fdf388f6b76bda42abaa5d80c9e3eca4cd0df",
+      "historicalPrefix": "034",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 35,
+      "file": "identity-035_local_platform_role_vocabulary.sql",
+      "sha256": "e470b74a9199acc5d0f01e52f63730621ee4e9937ed0a3104a79f83adb9d5c2e",
+      "historicalPrefix": "035",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 36,
+      "file": "identity-036_canonical_platform_control_permission_vocabulary.sql",
+      "sha256": "d19b1a8038e2ceb8f053cfa8c5e1eea7f20d00ed6ec0a97c8c526f79381aa736",
+      "historicalPrefix": "036",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 37,
+      "file": "identity-037_canonical_local_bootstrap_access_vocabulary.sql",
+      "sha256": "19d83ecc3aa6c78f981a9448964bca8496bd763ef4b56713ca5a986f099dcda4",
+      "historicalPrefix": "037",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 38,
+      "file": "identity-038_mobile_surface_permission_separation.sql",
+      "sha256": "098b5dd03c985283e22e7d6fb933e277357fb7fdf7c835462ab03c25eda653c2",
+      "historicalPrefix": "038",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 39,
+      "file": "identity-039_retire_embedded_local_bootstrap_authority.sql",
+      "sha256": "0486fcee8598689f1ab592274288862139d7a54a2572b79edff67edee5aeaf89",
+      "historicalPrefix": "039",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 40,
+      "file": "identity-040_remove_local_platform_roles.sql",
+      "sha256": "1e0d815de07e856d42a77dc3f48813e427acae997199d5e6c987902a46440bed",
+      "historicalPrefix": "040",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 41,
+      "file": "identity-040_retire_local_platform_persona_roles.sql",
+      "sha256": "03411e4ce9d7c84c472e28b140f5fd76c106db0a62a9ff268c7532854dd8e9db",
+      "historicalPrefix": null,
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 42,
+      "file": "identity-041_support_session_request_fingerprint.sql",
+      "sha256": "366266292bb59c18ff9e8b1c6a9e9bc31161b5d732164ced4de07d358aea85f0",
+      "historicalPrefix": null,
+      "state": "ACTIVE"
+    }
+  ]
+}

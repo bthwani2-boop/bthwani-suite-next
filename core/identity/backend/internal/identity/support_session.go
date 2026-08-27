@@ -2,7 +2,9 @@ package identity
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,7 +21,8 @@ var (
 	ErrSupportSessionSelfTarget = errors.New("support session cannot target the initiating actor")
 	// ErrSupportSessionAlreadyIssued is returned when a support session was
 	// already issued for this request id (uq_identity_support_request).
-	ErrSupportSessionAlreadyIssued = errors.New("support session already issued for this request")
+	ErrSupportSessionAlreadyIssued   = errors.New("support session already issued for this request")
+	ErrSupportSessionRequestConflict = errors.New("support request payload conflicts with the issued session")
 	// ErrSupportSessionTargetUnavailable is returned when the target actor
 	// does not exist or is not ACTIVE.
 	ErrSupportSessionTargetUnavailable = errors.New("support session target actor is unavailable")
@@ -78,6 +81,12 @@ func supportSessionPermissions(targetActorID string) []Permission {
 // responsible for that approval; this call performs no authorization
 // decision of its own beyond the self-target and target-availability
 // invariants enforced here and by the database).
+func supportSessionFingerprint(requestID, targetActorID, initiatorActorID, reason string, durationMinutes int) string {
+	payload := fmt.Sprintf("%s|%s|%s|%s|%d", requestID, targetActorID, initiatorActorID, reason, durationMinutes)
+	hash := sha256.Sum256([]byte(payload))
+	return hex.EncodeToString(hash[:])
+}
+
 func (r *Repository) IssueSupportSession(ctx context.Context, requestID, targetActorID, initiatorActorID, reason string, durationMinutes int) (SupportSessionToken, error) {
 	requestID = strings.TrimSpace(requestID)
 	targetActorID = strings.TrimSpace(targetActorID)
@@ -92,12 +101,35 @@ func (r *Repository) IssueSupportSession(ctx context.Context, requestID, targetA
 	if durationMinutes < supportSessionMinMinutes || durationMinutes > supportSessionMaxMinutes {
 		durationMinutes = supportSessionMaxMinutes
 	}
+	fingerprint := supportSessionFingerprint(requestID, targetActorID, initiatorActorID, reason, durationMinutes)
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return SupportSessionToken{}, err
 	}
 	defer tx.Rollback()
+
+	var existingFingerprint, existingTarget, existingInitiator string
+	var existingSessionID string
+	var existingExpires time.Time
+	var existingPermissionsJSON []byte
+	existingErr := tx.QueryRowContext(ctx, `
+		SELECT id, actor_id, initiator_actor_id, access_expires_at, effective_permissions, support_payload_fingerprint
+		FROM identity_sessions WHERE support_request_id=$1 AND session_kind='support'`, requestID).
+		Scan(&existingSessionID, &existingTarget, &existingInitiator, &existingExpires, &existingPermissionsJSON, &existingFingerprint)
+	if existingErr == nil {
+		if existingFingerprint != fingerprint || existingTarget != targetActorID || existingInitiator != initiatorActorID {
+			return SupportSessionToken{}, ErrSupportSessionRequestConflict
+		}
+		var permissions []Permission
+		if err := json.Unmarshal(existingPermissionsJSON, &permissions); err != nil {
+			return SupportSessionToken{}, err
+		}
+		return SupportSessionToken{TokenType: "Bearer", ExpiresIn: max(0, int(time.Until(existingExpires).Seconds())), Identity: SupportSessionIdentity{Subject: existingTarget, InitiatorActorID: existingInitiator, SupportRequestID: requestID, SessionID: existingSessionID, SessionKind: "support", Roles: []string{"support"}, Permissions: permissions, AuthState: "authenticated", ExpiresAt: existingExpires}}, nil
+	}
+	if existingErr != sql.ErrNoRows {
+		return SupportSessionToken{}, existingErr
+	}
 
 	target, err := actorByIDTx(ctx, tx, targetActorID)
 	if err != nil {
@@ -140,13 +172,13 @@ func (r *Repository) IssueSupportSession(ctx context.Context, requestID, targetA
 	}
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO identity_sessions
-			(id, actor_id, access_token_hash, surface, access_expires_at,
-			 session_kind, initiator_actor_id, support_request_id, support_reason,
-			 effective_roles, effective_permissions)
-		VALUES ($1, $2, $3, 'control-panel', $4, 'support', $5, $6, $7, $8, $9)`,
+			INSERT INTO identity_sessions
+				(id, actor_id, access_token_hash, surface, access_expires_at,
+				 session_kind, initiator_actor_id, support_request_id, support_reason,
+				 effective_roles, effective_permissions, support_payload_fingerprint)
+			VALUES ($1, $2, $3, 'control-panel', $4, 'support', $5, $6, $7, $8, $9, $10)`,
 		sessionID, targetActorID, tokenHash(accessToken), expiresAt,
-		initiatorActorID, requestID, reason, pq.Array([]string{"support"}), permissionsJSON,
+		initiatorActorID, requestID, reason, pq.Array([]string{"support"}), permissionsJSON, fingerprint,
 	)
 	if err != nil {
 		if isUniqueViolation(err) {
