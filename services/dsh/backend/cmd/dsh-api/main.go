@@ -24,6 +24,7 @@ import (
 	"dsh-api/internal/partnerwltoutbox"
 	"dsh-api/internal/platformclient"
 	"dsh-api/internal/promotionfundingoutbox"
+	"dsh-api/internal/specialrequests"
 	"dsh-api/internal/supportsession"
 	"dsh-api/internal/wlt"
 	"dsh-api/internal/wltoutbox"
@@ -133,6 +134,7 @@ func main() {
 		}
 	}
 
+	go specialrequests.RunSpecialRequestSagaWorker(outboxCtx, db, wltClient, 15*time.Second)
 	if wltClient.Configured() {
 		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go fieldcommissionoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)

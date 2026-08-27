@@ -331,6 +331,13 @@
       "sha256": "7455657bbc6893f68bdd6e98487eeb23fef5cdb9c08342b08ce3efec6a4bffd9",
       "historicalPrefix": "1046",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 287,
+      "file": "dsh-1047_special_request_durable_sagas.sql",
+      "sha256": "4052630a1569514b178c8db4fb2f976c223ae998d232e845e95f92c63ad445b1",
+      "historicalPrefix": "1047",
+      "state": "ACTIVE"
     }
   ]
 }
