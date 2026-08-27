@@ -138,11 +138,7 @@ export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomai
     return PLATFORM_VAR_QUICK_PICKS[selectedVar.key] ?? [];
   }, [selectedVar]);
 
-  const hasProposed = Boolean(selectedVar?.proposedValue);
   const isDesign = selectedVar ? isPlatformDesignVar(selectedVar.key) : false;
-  const isValidDesignVal = isDesign
-    ? (PLATFORM_VAR_QUICK_PICKS[selectedVar?.key ?? ''] ?? []).includes(editVal)
-    : true;
 
   return {
     activeScope,
@@ -157,8 +153,6 @@ export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomai
     linkedScenarios,
     linkedAudits,
     quickPicks,
-    hasProposed,
     isDesignVar: isDesign,
-    isValidDesignVal,
   };
 }
