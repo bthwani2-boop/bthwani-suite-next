@@ -226,10 +226,10 @@ export async function fetchOperatorDeliveryExceptions(status: "open" | "acknowle
   return data.exceptions ?? [];
 }
 
-export async function acknowledgeDeliveryException(id: string, expectedVersion: number): Promise<DshDeliveryException> {
+export async function acknowledgeDeliveryException(id: string, expectedVersion: number, idempotencyKey?: string): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
     `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/acknowledge`,
-    { method: "POST", body: { expectedVersion } },
+    { method: "POST", body: { expectedVersion }, idempotencyKey: idempotencyKey ?? corrId("operator-delivery-exception-ack") },
   );
   return data.exception;
 }
@@ -250,12 +250,14 @@ async function resolveAcknowledgedDeliveryException(
   id: string,
   expectedVersion: number,
   input: DeliveryExceptionResolutionInput,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryException> {
   const path = `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`;
   const execute = async (version: number) => {
     const data = await request<{ exception: DshDeliveryException }>(path, {
       method: "POST",
       body: { expectedVersion: version, ...input },
+      idempotencyKey: idempotencyKey ?? corrId("operator-delivery-exception-resolve"),
     });
     return data.exception;
   };
@@ -264,7 +266,7 @@ async function resolveAcknowledgedDeliveryException(
     return await execute(expectedVersion);
   } catch (error) {
     if (!requiresDeliveryExceptionAcknowledgement(error)) throw error;
-    const acknowledged = await acknowledgeDeliveryException(id, expectedVersion);
+    const acknowledged = await acknowledgeDeliveryException(id, expectedVersion, idempotencyKey ? `${idempotencyKey}:ack` : undefined);
     return execute(acknowledged.version);
   }
 }
@@ -273,11 +275,12 @@ export function resolveDeliveryExceptionRetrySameCaptain(
   id: string,
   expectedVersion: number,
   note: string,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "retry_same_captain",
     note,
-  });
+  }, idempotencyKey);
 }
 
 export function resolveDeliveryExceptionReassignCaptain(
@@ -285,34 +288,37 @@ export function resolveDeliveryExceptionReassignCaptain(
   expectedVersion: number,
   newCaptainId: string,
   note: string,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "reassign_captain",
     newCaptainId,
     note,
-  });
+  }, idempotencyKey);
 }
 
 export function resolveDeliveryExceptionReturnToStore(
   id: string,
   expectedVersion: number,
   note: string,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "return_to_store",
     note,
-  });
+  }, idempotencyKey);
 }
 
 export function resolveDeliveryExceptionCancelOrder(
   id: string,
   expectedVersion: number,
   note: string,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "cancel_order",
     note,
-  });
+  }, idempotencyKey);
 }
 
 export async function arriveCaptainReturnToStore(assignmentId: string): Promise<DshDeliveryException> {
