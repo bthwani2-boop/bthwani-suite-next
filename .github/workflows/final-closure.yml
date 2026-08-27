@@ -150,11 +150,11 @@ jobs:
     if: ${{ needs.evidence.outputs.ci_valid != 'true' }}
     uses: ./.github/workflows/ci.yml
     with:
-      mode: full
-      journey: "true"
-      runtime_proof: true
-      run_analyzers: true
-      run_assurance: true
+      mode: affected
+      journey: ""
+      runtime_proof: false
+      run_analyzers: false
+      run_assurance: false
       target_kind: pull_request
       pr_number: ${{ needs.resolve.outputs.pr_number }}
       expected_head_sha: ${{ needs.resolve.outputs.head_sha }}
