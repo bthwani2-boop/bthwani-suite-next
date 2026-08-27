@@ -85,10 +85,10 @@ export async function upsertCaptainDispatchProfile(
   return data.candidate;
 }
 
-export async function acceptDispatchAssignment(assignmentId: string): Promise<DshDispatchAssignment> {
+export async function acceptDispatchAssignment(assignmentId: string, idempotencyKey?: string): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/accept`,
-    { method: "POST" },
+    { method: "POST", idempotencyKey: idempotencyKey ?? corrId("captain-dispatch-accept") },
   );
   return data.assignment;
 }
@@ -97,10 +97,11 @@ export async function declineDispatchAssignment(
   assignmentId: string,
   reason: string,
   reasonCode = "captain_declined",
+  idempotencyKey?: string,
 ): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/decline`,
-    { method: "POST", body: { reasonCode, reason } },
+    { method: "POST", body: { reasonCode, reason }, idempotencyKey: idempotencyKey ?? corrId("captain-dispatch-decline") },
   );
   return data.assignment;
 }
@@ -181,10 +182,10 @@ export async function updateDeliveryStatus(
   return data.assignment;
 }
 
-export async function submitPoD(assignmentId: string, input: DshSubmitPoDInput): Promise<DshDispatchAssignment> {
+export async function submitPoD(assignmentId: string, input: DshSubmitPoDInput, idempotencyKey?: string): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/pod`,
-    { method: "POST", body: input },
+    { method: "POST", body: input, idempotencyKey: idempotencyKey ?? corrId("captain-dispatch-pod") },
   );
   return data.assignment;
 }
@@ -195,7 +196,7 @@ export async function reportDeliveryException(
 ): Promise<DshDeliveryException> {
   await request<{ exception: DshDeliveryException }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/exceptions`,
-    { method: "POST", body: input },
+    { method: "POST", body: input, idempotencyKey: input.correlationId },
   );
   return fetchCaptainDeliveryException(assignmentId);
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   acceptDispatchAssignment,
   classifyDispatchError,
@@ -11,6 +11,7 @@ import {
   updateDeliveryStatus,
 } from "./dispatch.api";
 import { corrId } from "../_kernel/dsh-http-request";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   beginDispatchLoad,
   beginTrackingLoad,
@@ -39,8 +40,20 @@ import type {
 } from "./dispatch.types";
 
 export function useCaptainDeliveryController() {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = useRef<Record<string, string>>({});
   const [state, setState] = useState<DshDispatchListState>(dispatchIdleState());
   const [actionState, setActionState] = useState<DshDispatchActionState>(dispatchActionIdleState());
+
+  const commandFor = useCallback((key: string) => {
+    const scopedKey = `${actorId ?? "anonymous"}:${key}`;
+    const existing = commandIds.current[scopedKey];
+    if (existing) return { key: scopedKey, id: existing };
+    const id = corrId(`captain-dispatch-${key}`);
+    commandIds.current[scopedKey] = id;
+    return { key: scopedKey, id };
+  }, [actorId]);
 
   const load = useCallback(async () => {
     setState(beginDispatchLoad());
@@ -64,26 +77,38 @@ export function useCaptainDeliveryController() {
   }, [load]);
 
   const accept = useCallback(async (assignmentId: string) => {
+    if (!actorId) {
+      setActionState(dispatchActionErrorState("جلسة الكابتن غير جاهزة لتنفيذ الإسناد."));
+      return;
+    }
+    const command = commandFor(`accept:${assignmentId}`);
     setActionState(dispatchActionSubmittingState());
     try {
-      const assignment = await acceptDispatchAssignment(assignmentId);
+      const assignment = await acceptDispatchAssignment(assignmentId, command.id);
+      delete commandIds.current[command.key];
       setActionState(dispatchActionSuccessState(assignment));
       await load();
     } catch (error) {
       await handleActionError(error, "accept");
     }
-  }, [handleActionError, load]);
+  }, [actorId, commandFor, handleActionError, load]);
 
   const decline = useCallback(async (assignmentId: string, reason: string) => {
+    if (!actorId) {
+      setActionState(dispatchActionErrorState("جلسة الكابتن غير جاهزة لرفض الإسناد."));
+      return;
+    }
+    const command = commandFor(`decline:${assignmentId}:${reason}`);
     setActionState(dispatchActionSubmittingState());
     try {
-      const assignment = await declineDispatchAssignment(assignmentId, reason);
+      const assignment = await declineDispatchAssignment(assignmentId, reason, "captain_declined", command.id);
+      delete commandIds.current[command.key];
       setActionState(dispatchActionSuccessState(assignment));
       await load();
     } catch (error) {
       await handleActionError(error, "decline");
     }
-  }, [handleActionError, load]);
+  }, [actorId, commandFor, handleActionError, load]);
 
   const advance = useCallback(async (assignmentId: string, currentStatus: Parameters<typeof nextDeliveryStatus>[0]) => {
     const next = nextDeliveryStatus(currentStatus);
@@ -91,6 +116,11 @@ export function useCaptainDeliveryController() {
       setActionState(dispatchActionErrorState("لا توجد حالة تالية متاحة لهذه المهمة."));
       return;
     }
+    if (!actorId) {
+      setActionState(dispatchActionErrorState("جلسة الكابتن غير جاهزة لتحديث حالة التوصيل."));
+      return;
+    }
+    const command = commandFor(`status:${assignmentId}:${next}`);
     setActionState(dispatchActionSubmittingState());
     try {
       const current = state.kind === "success"
@@ -101,14 +131,15 @@ export function useCaptainDeliveryController() {
       }
       const assignment = await updateDeliveryStatus(assignmentId, next, {
         expectedVersion: current.version,
-        idempotencyKey: corrId("captain-delivery-status"),
+        idempotencyKey: command.id,
       });
+      delete commandIds.current[command.key];
       setActionState(dispatchActionSuccessState(assignment));
       await load();
     } catch (error) {
       await handleActionError(error, "status");
     }
-  }, [handleActionError, load, state]);
+  }, [actorId, commandFor, handleActionError, load, state]);
 
   const submitProof = useCallback(async (assignmentId: string, input: DshSubmitPoDInput) => {
     const validation = resolvePoDValidation(input);
@@ -116,15 +147,21 @@ export function useCaptainDeliveryController() {
       setActionState(validation);
       return;
     }
+    if (!actorId) {
+      setActionState(dispatchActionErrorState("جلسة الكابتن غير جاهزة لإرسال إثبات التسليم."));
+      return;
+    }
+    const command = commandFor(`pod:${assignmentId}:${JSON.stringify(input)}`);
     setActionState(dispatchActionSubmittingState());
     try {
-      const assignment = await submitPoD(assignmentId, input);
+      const assignment = await submitPoD(assignmentId, input, command.id);
+      delete commandIds.current[command.key];
       setActionState(dispatchActionSuccessState(assignment));
       await load();
     } catch (error) {
       await handleActionError(error, "pod");
     }
-  }, [handleActionError, load]);
+  }, [actorId, commandFor, handleActionError, load]);
 
   useEffect(() => { void load(); }, [load]);
 

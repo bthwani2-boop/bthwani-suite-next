@@ -9,6 +9,7 @@ import {
   updateDeliveryStatus,
 } from '../dispatch/dispatch.api';
 import { corrId } from '../_kernel/dsh-http-request';
+import { useIdentitySession } from '@bthwani/core-identity';
 import {
   flushPendingForegroundDispatchLocations,
   syncForegroundDispatchLocation,
@@ -75,15 +76,39 @@ export async function readCaptainForegroundLocation(): Promise<DshCaptainCoordin
 }
 
 export function useCaptainOrderRuntime() {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
+  const commandIds = React.useRef<Record<string, string>>({});
+  const commandFor = React.useCallback((key: string) => {
+    if (!actorId) throw new Error('جلسة الكابتن غير جاهزة لتنفيذ العملية.');
+    const scopedKey = `${actorId}:${key}`;
+    const existing = commandIds.current[scopedKey];
+    if (existing) return { key: scopedKey, id: existing };
+    const id = corrId(`captain-dispatch-${key}`);
+    commandIds.current[scopedKey] = id;
+    return { key: scopedKey, id };
+  }, [actorId]);
+
   const acceptTask = React.useCallback(
-    (assignmentId: string, _captainId: string) => acceptDispatchAssignment(assignmentId),
-    [],
+    (assignmentId: string, _captainId: string) => {
+      const command = commandFor(`accept:${assignmentId}`);
+      return acceptDispatchAssignment(assignmentId, command.id).then((result) => {
+        delete commandIds.current[command.key];
+        return result;
+      });
+    },
+    [commandFor],
   );
 
   const declineTask = React.useCallback(
-    (assignmentId: string, _captainId: string, reason: string) =>
-      declineDispatchAssignment(assignmentId, reason),
-    [],
+    (assignmentId: string, _captainId: string, reason: string) => {
+      const command = commandFor(`decline:${assignmentId}:${reason}`);
+      return declineDispatchAssignment(assignmentId, reason, 'captain_declined', command.id).then((result) => {
+        delete commandIds.current[command.key];
+        return result;
+      });
+    },
+    [commandFor],
   );
 
   const confirmPickup = React.useCallback(
@@ -93,12 +118,15 @@ export function useCaptainOrderRuntime() {
       if (!assignment || !Number.isInteger(assignment.version) || assignment.version < 1) {
         throw new Error('تعذر قراءة إصدار مهمة التوصيل. حدّث المهمة قبل الاستلام.');
       }
-      return updateDeliveryStatus(assignmentId, 'picked_up', {
+      const command = commandFor(`pickup:${assignmentId}:${assignment.version}`);
+      const result = await updateDeliveryStatus(assignmentId, 'picked_up', {
         expectedVersion: assignment.version,
-        idempotencyKey: corrId('captain-pickup'),
+        idempotencyKey: command.id,
       });
+      delete commandIds.current[command.key];
+      return result;
     },
-    [],
+    [commandFor],
   );
 
   const pushLocation = React.useCallback(
@@ -120,14 +148,17 @@ export function useCaptainOrderRuntime() {
       } catch {
         // Location is valuable evidence but must not block safety or incident reporting.
       }
-      return reportDeliveryException(assignmentId, {
+      const command = commandFor(`exception:${assignmentId}:${draft.reasonCode}:${draft.note.trim()}`);
+      const result = await reportDeliveryException(assignmentId, {
         reasonCode: draft.reasonCode,
         note: draft.note.trim(),
-        correlationId: corrId('captain-delivery-exception'),
+        correlationId: command.id,
         ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
       });
+      delete commandIds.current[command.key];
+      return result;
     },
-    [],
+    [commandFor],
   );
 
   return React.useMemo(
