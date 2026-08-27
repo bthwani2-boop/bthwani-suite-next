@@ -18,9 +18,7 @@ import type {
   UpdateCaptainInput,
   UpdateEmployeeInput,
   UpdateFieldAgentInput,
-  UpdateSelfInput,
   WorkforceCity,
-  WorkforceMe,
   WorkforceShift,
 } from "./workforce.types";
 
@@ -252,12 +250,4 @@ export async function createWorkforceShift(shift: WorkforceShift, idempotencyKey
 export async function updateWorkforceShift(shift: WorkforceShift, idempotencyKey?: string): Promise<WorkforceShift> {
   const { code, ...body } = shift;
   return request<WorkforceShift>(`/workforce/reference/shifts/${encodeURIComponent(code)}`, { method: "PATCH", body, idempotencyKey });
-}
-
-export async function getWorkforceMe(): Promise<WorkforceMe> {
-  return request<WorkforceMe>("/workforce/me");
-}
-
-export async function updateWorkforceMe(input: UpdateSelfInput): Promise<WorkforceMe> {
-  return request<WorkforceMe>("/workforce/me", { method: "PATCH", body: input });
 }
