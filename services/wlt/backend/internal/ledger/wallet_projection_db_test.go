@@ -145,8 +145,19 @@ func TestWalletProjection_DerivesAvailableFromRestrictedBuckets(t *testing.T) {
 		SET held_balance_minor_units=4000
 		WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2`,
 		"OperatorContext-ledger-tests", actorID,
-	); err == nil {
-		t.Fatal("expected restricted balance above canonical value to fail closed")
+	); err != nil {
+		t.Fatalf("negative canonical balance must allow positive restricted buckets: %v", err)
+	}
+	if err := db.QueryRowContext(ctx, `
+		SELECT available_balance_minor_units, held_balance_minor_units
+		FROM wlt_wallets
+		WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2`,
+		"OperatorContext-ledger-tests", actorID,
+	).Scan(&available, &held); err != nil {
+		t.Fatalf("read negative canonical projection: %v", err)
+	}
+	if available != -1000 || held != 4000 {
+		t.Fatalf("expected canonical -1000 minus held 4000, got available=%d held=%d", available, held)
 	}
 }
 

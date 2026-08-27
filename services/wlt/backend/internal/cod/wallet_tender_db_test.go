@@ -254,11 +254,12 @@ func TestMixedFinalizationCollectsWalletTender(t *testing.T) {
 	var captainDebit, clientWalletDebit, platformCredit int64
 	err = db.QueryRow(`
 		SELECT
-			COALESCE(SUM(CASE WHEN l.account_type='wallet' AND l.actor_type='captain' AND l.debit_credit='debit' THEN l.amount_minor_units ELSE 0 END),0),
-			COALESCE(SUM(CASE WHEN l.account_type='wallet' AND l.actor_type='client' AND l.actor_id=$2 AND l.debit_credit='debit' THEN l.amount_minor_units ELSE 0 END),0),
-			COALESCE(SUM(CASE WHEN l.account_type='platform_payable' AND l.debit_credit='credit' THEN l.amount_minor_units ELSE 0 END),0)
+			COALESCE(SUM(CASE WHEN a.account_type='wallet' AND a.actor_type='captain' AND l.debit_credit='debit' THEN l.amount_minor_units ELSE 0 END),0),
+			COALESCE(SUM(CASE WHEN a.account_type='wallet' AND a.actor_type='client' AND a.actor_id=$2 AND l.debit_credit='debit' THEN l.amount_minor_units ELSE 0 END),0),
+			COALESCE(SUM(CASE WHEN a.account_type='platform_payable' AND l.debit_credit='credit' THEN l.amount_minor_units ELSE 0 END),0)
 		FROM wlt_ledger_transactions t
-		JOIN wlt_ledger_lines l ON l.ledger_transaction_id=t.id
+		JOIN wlt_ledger_lines l ON l.ledger_transaction_id=t.id AND l.operator_context_id=t.operator_context_id
+		JOIN wlt_ledger_accounts a ON a.id=l.account_id AND a.operator_context_id=l.operator_context_id
 		WHERE t.operator_context_id=$1
 		  AND t.transaction_type IN ('cod_finalized','wallet_tender_collected')`,
 		operatorContextID, clientID).Scan(&captainDebit, &clientWalletDebit, &platformCredit)
