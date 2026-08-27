@@ -25,7 +25,11 @@ func NewRouter(db *sql.DB, service *providers.Service, repo *providers.Repositor
 	s := &server{db: db, service: service, repo: repo, auth: authClient}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /providers/health", s.operatorOnly("provider:read", s.providerHealth))
-	mux.HandleFunc("GET /providers/readiness", s.operatorOnly("provider:read", s.providerReadiness))
+	// Readiness is an unauthenticated infrastructure probe; business provider
+	// routes below remain protected by the operator permission boundary.
+	mux.HandleFunc("GET /providers/readiness", func(w http.ResponseWriter, r *http.Request) {
+		s.providerReadiness(w, r, auth.Identity{})
+	})
 	mux.HandleFunc("GET /providers", s.operatorOnly("provider:read", s.listProviders))
 	mux.HandleFunc("GET /providers/{providerId}", s.operatorOnly("provider:read", s.getProvider))
 	mux.HandleFunc("PATCH /providers/{providerId}", s.operatorOnly("provider:update", s.updateProvider))
