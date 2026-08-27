@@ -8,7 +8,6 @@ import type { DshCreateIntentInput } from "./checkout.types";
 import { secureRandomId } from "../_kernel/secure-random.ts";
 
 const STORAGE_PREFIX = "@bthwani/checkout-create-attempt:v3/";
-const STORAGE_KEY_LEGACY = "@bthwani/checkout-create-attempt:v1";
 
 function storageKey(scope: { readonly actorId: string; readonly installationId: string; readonly entityId: string }, fingerprint: string): string {
   return `${STORAGE_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}/${encodeURIComponent(scope.entityId)}/${encodeURIComponent(fingerprint)}`;
@@ -72,20 +71,13 @@ function isStoredAttempt(value: unknown): value is StoredCheckoutAttempt {
     && typeof candidate.scope?.entityId === "string";
 }
 
-async function quarantineLegacy(): Promise<void> {
-  const raw = await bthwaniDurableStorage.getItem(STORAGE_KEY_LEGACY);
-  if (!raw) return;
-  const quarantineKey = `${STORAGE_KEY_LEGACY}:corrupt:${Date.now()}`;
-  await bthwaniDurableStorage.setItem(quarantineKey, raw);
-  await bthwaniDurableStorage.removeItem(STORAGE_KEY_LEGACY);
-}
-
 export async function getOrCreateCheckoutAttempt(
+  actorId: string,
   input: DshCreateIntentInput,
 ): Promise<StoredCheckoutAttempt> {
   const fingerprint = fingerprintCheckoutInput(input);
   const entityId = fingerprint.slice(0, 32);
-  const scope = await resolveMutationIdentityScope("", { entityId });
+  const scope = await resolveMutationIdentityScope(actorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
   const attemptKey = storageKey(scoped, fingerprint);
 
@@ -117,10 +109,9 @@ export async function getOrCreateCheckoutAttempt(
     } catch (cause) {
       if (cause instanceof MutationIdentityPersistenceError) throw cause;
       if (cause instanceof MutationIdentityScopeError) throw cause;
-      await quarantineLegacy();
+      await bthwaniDurableStorage.setItem(`${attemptKey}:quarantine:${Date.now()}`, raw);
+      await bthwaniDurableStorage.removeItem(attemptKey);
     }
-  } else {
-    await quarantineLegacy();
   }
 
   const attempt = newAttempt(fingerprint, scoped);
@@ -128,11 +119,11 @@ export async function getOrCreateCheckoutAttempt(
   return attempt;
 }
 
-export async function clearCheckoutAttempt(fingerprint: string): Promise<void> {
+export async function clearCheckoutAttempt(actorId: string, fingerprint: string): Promise<void> {
   const normalizedFingerprint = fingerprint.trim();
   if (!normalizedFingerprint) return;
   const entityId = normalizedFingerprint.slice(0, 32);
-  const scope = await resolveMutationIdentityScope("", { entityId });
+  const scope = await resolveMutationIdentityScope(actorId, { entityId });
   const key = storageKey({ actorId: scope.actorId, installationId: scope.installationId, entityId }, normalizedFingerprint);
   const raw = await bthwaniDurableStorage.getItem(key);
   if (!raw) return;

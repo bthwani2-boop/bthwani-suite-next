@@ -7,6 +7,7 @@ import {
   fetchOperatorCheckoutIntents,
   reconcileOperatorCheckoutIntent,
 } from "./checkout.api";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   clearCheckoutAttempt,
   getOrCreateCheckoutAttempt,
@@ -28,17 +29,23 @@ import {
 import { checkoutIdleState } from "./checkout.states";
 
 export function useCheckoutController() {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : "";
   const [state, setState] = useState<DshCheckoutState>(checkoutIdleState());
   const operationGeneration = useRef(0);
 
   const submit = useCallback(async (input: DshCreateIntentInput) => {
     const generation = ++operationGeneration.current;
+    if (!actorId) {
+      setState({ kind: "error", message: "جلسة العميل غير جاهزة لتثبيت هوية الدفع." });
+      return;
+    }
     setState(beginCheckoutSubmit());
     try {
-      const attempt = await getOrCreateCheckoutAttempt(input);
+      const attempt = await getOrCreateCheckoutAttempt(actorId, input);
       const intent = await createCheckoutIntent(input, attempt.context);
       try {
-        await clearCheckoutAttempt(attempt.fingerprint);
+        await clearCheckoutAttempt(actorId, attempt.fingerprint);
       } catch {
         // The accepted server mutation is idempotent; retaining the key is safe.
       }
@@ -48,7 +55,7 @@ export function useCheckoutController() {
       if (generation !== operationGeneration.current) return;
       setState(resolveCheckoutSubmitError(classifyCheckoutError(error)));
     }
-  }, []);
+  }, [actorId]);
 
   const cancel = useCallback(async (intentId: string) => {
     const generation = ++operationGeneration.current;
