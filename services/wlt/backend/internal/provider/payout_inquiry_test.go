@@ -37,8 +37,8 @@ func TestPayoutInquiryUsesProviderReadAndPreservesReference(t *testing.T) {
 	client := newClient(Config{Mode: ModeSandbox, BaseURL: server.URL, TimeoutBudget: 15 * time.Second}, nil)
 	inquiry, err := client.InquirePayout(context.Background(), url.Values{
 		"providerReference": {"provider-1"},
-		"payoutRequestId":  {"payout-1"},
-		"operatorContextId":         {"OperatorContext-1"},
+		"payoutRequestId":   {"payout-1"},
+		"operatorContextId": {"OperatorContext-1"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected inquiry error: %v", err)
@@ -51,8 +51,8 @@ func TestPayoutInquiryUsesProviderReadAndPreservesReference(t *testing.T) {
 func TestProductionPayoutInquiryFailsClosed(t *testing.T) {
 	_, err := NewProductionPaymentAdapter().InquirePayout(context.Background(), url.Values{
 		"providerReference": {"provider-1"},
-		"payoutRequestId":  {"payout-1"},
-		"operatorContextId":         {"OperatorContext-1"},
+		"payoutRequestId":   {"payout-1"},
+		"operatorContextId": {"OperatorContext-1"},
 	})
 	if err == nil || !strings.Contains(err.Error(), ErrProductionProviderUnavailable.Error()) {
 		t.Fatalf("expected production provider block, got %v", err)

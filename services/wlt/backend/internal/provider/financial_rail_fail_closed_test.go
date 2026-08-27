@@ -38,7 +38,7 @@ func TestFinancialRailFailsClosedWithoutRegistry(t *testing.T) {
 		{"authorize", func() error { _, err := router.Authorize(context.Background(), map[string]any{}, meta); return err }},
 		{"capture", func() error { _, err := router.Capture(context.Background(), map[string]any{}, meta); return err }},
 		{"refund", func() error { _, err := router.Refund(context.Background(), map[string]any{}, meta); return err }},
-		{"status", func() error { _, err := router.Status(context.Background(), meta); return err }},
+		{"status", func() error { _, err := router.Status(context.Background(), StatusInquiry{}, meta); return err }},
 	}
 	for _, capability := range capabilities {
 		if err := capability.call(); !errors.Is(err, ErrRailRegistryRequired) {

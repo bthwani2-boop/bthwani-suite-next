@@ -42,7 +42,7 @@ func (p *recordingProvider) Refund(ctx context.Context, body any, meta provider.
 	return p.res, p.err
 }
 
-func (p *recordingProvider) Status(ctx context.Context, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func (p *recordingProvider) Status(ctx context.Context, inquiry provider.StatusInquiry, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	p.meta = meta
 	return p.res, p.err
 }

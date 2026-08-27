@@ -35,12 +35,23 @@ const (
 // CashInRail is the capability-checked domain interface for Cash-In money
 // movement. Unlike the underlying PaymentProvider.Post/Get (which accept an
 // arbitrary path), each method here is bound to exactly one allowlisted
-// capability/path pair, and no Cash-Out capability is exposed.
+// capability/path pair, and no Cash-Out capability is exposed. Status is a
+// BOUND readback: it must carry the payment session identity and the known
+// provider reference so an unbound (or cross-session) provider answer can
+// never be projected onto a session.
 type CashInRail interface {
 	Authorize(ctx context.Context, body any, meta RequestMeta) (ProviderResult, error)
 	Capture(ctx context.Context, body any, meta RequestMeta) (ProviderResult, error)
 	Refund(ctx context.Context, body any, meta RequestMeta) (ProviderResult, error)
-	Status(ctx context.Context, meta RequestMeta) (ProviderResult, error)
+	Status(ctx context.Context, body StatusInquiry, meta RequestMeta) (ProviderResult, error)
+}
+
+// StatusInquiry binds a provider status readback to exactly one payment
+// session and its previously observed provider reference. An inquiry without
+// both bindings is refused by the rail before any HTTP traffic is sent.
+type StatusInquiry struct {
+	PaymentSessionID  string `json:"paymentSessionId"`
+	ProviderReference string `json:"providerReference"`
 }
 
 // FinancialRailRouter is the single canonical authority for all outbound
@@ -168,11 +179,16 @@ func (r *FinancialRailRouter) Refund(ctx context.Context, body any, meta Request
 	return r.client.Post(ctx, cashInRefundPath, body, meta)
 }
 
-func (r *FinancialRailRouter) Status(ctx context.Context, meta RequestMeta) (ProviderResult, error) {
+func (r *FinancialRailRouter) Status(ctx context.Context, inquiry StatusInquiry, meta RequestMeta) (ProviderResult, error) {
 	if err := r.checkActive(ctx, CapabilityCashInStatus); err != nil {
 		return ProviderResult{}, err
 	}
-	return r.client.Get(ctx, cashInStatusPath, meta)
+	if strings.TrimSpace(inquiry.PaymentSessionID) == "" || strings.TrimSpace(inquiry.ProviderReference) == "" {
+		return ProviderResult{}, fmt.Errorf("financial rail capability %s refused: %w", CapabilityCashInStatus, ErrUnboundStatusInquiry)
+	}
+	// The provider contract (wiremock card-gateway status mapping) is a POST
+	// /financial/card/status carrying the bound inquiry body — not a GET.
+	return r.client.Post(ctx, cashInStatusPath, inquiry, meta)
 }
 
 var _ CashInRail = (*FinancialRailRouter)(nil)

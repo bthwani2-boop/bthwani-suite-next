@@ -30,7 +30,7 @@ func (f *fakeProvider) Refund(ctx context.Context, body any, meta provider.Reque
 	return f.res, f.err
 }
 
-func (f *fakeProvider) Status(ctx context.Context, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func (f *fakeProvider) Status(ctx context.Context, inquiry provider.StatusInquiry, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	return f.res, f.err
 }
 

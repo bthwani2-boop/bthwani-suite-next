@@ -28,7 +28,7 @@ func (f *fakeCashInRail) Capture(ctx context.Context, body any, meta provider.Re
 func (f *fakeCashInRail) Refund(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	return provider.ProviderResult{}, fmt.Errorf("not used in this test")
 }
-func (f *fakeCashInRail) Status(ctx context.Context, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func (f *fakeCashInRail) Status(ctx context.Context, inquiry provider.StatusInquiry, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	return provider.ProviderResult{}, fmt.Errorf("not used in this test")
 }
 

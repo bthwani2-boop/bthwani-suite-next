@@ -38,7 +38,7 @@ func (p *slowCountingProvider) Refund(ctx context.Context, body any, meta provid
 	return p.res, nil
 }
 
-func (p *slowCountingProvider) Status(ctx context.Context, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func (p *slowCountingProvider) Status(ctx context.Context, inquiry provider.StatusInquiry, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	atomic.AddInt32(&p.calls, 1)
 	time.Sleep(p.delay)
 	return p.res, nil

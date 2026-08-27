@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	_ "github.com/lib/pq"
@@ -112,7 +115,7 @@ func TestFinancialRailRouter_RegistryMissingProviderFailsClosed(t *testing.T) {
 	ctx := context.Background()
 	meta := NewRequestMeta("test")
 
-	_, err = router.Status(ctx, meta)
+	_, err = router.Status(ctx, StatusInquiry{PaymentSessionID: "sess", ProviderReference: "ref"}, meta)
 	if !errors.Is(err, ErrProviderNotFound) {
 		t.Fatalf("expected ErrProviderNotFound, got %v", err)
 	}
@@ -131,4 +134,62 @@ func seedFinancialProvider(t *testing.T, db *sql.DB, providerType, environment s
 		t.Fatalf("failed to seed wlt_financial_providers: %v", err)
 	}
 	return id
+}
+
+// TestStatusReadbackPostsBoundInquiry proves the readback contract (root #2):
+// a bound inquiry is transmitted as POST /financial/card/status carrying the
+// payment session identity and provider reference in the JSON body, and the
+// provider answer is returned only for the bound reference.
+func TestStatusReadbackPostsBoundInquiry(t *testing.T) {
+	db := getTestDB(t)
+	defer db.Close()
+
+	envSuffix, err := randomToken()
+	if err != nil {
+		t.Fatalf("random token: %v", err)
+	}
+	environment := "status-readback-" + envSuffix
+	seedFinancialProvider(t, db, "payment-gateway", environment, true, false)
+
+	var receivedMethod, receivedBody, receivedPath string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedMethod, receivedPath = r.Method, r.URL.Path
+		buf := make([]byte, 4096)
+		n, _ := r.Body.Read(buf)
+		receivedBody = string(buf[:n])
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"providerReference":"ref-status-1","status":"authorized"}`))
+	}))
+	defer upstream.Close()
+	t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "mock")
+	t.Setenv("WLT_ALLOW_MOCK_PROVIDER", "true")
+	t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", upstream.URL)
+
+	router, err := NewFinancialRailRouter(NewRegistry(db), environment)
+	if err != nil {
+		t.Fatalf("router construction: %v", err)
+	}
+	meta := NewRequestMeta("status-readback-test")
+
+	// Unbound inquiries are refused before any traffic is sent.
+	if _, err := router.Status(context.Background(), StatusInquiry{PaymentSessionID: "sess-1"}, meta); !errors.Is(err, ErrUnboundStatusInquiry) {
+		t.Fatalf("inquiry without provider reference must be refused, got %v", err)
+	}
+	if receivedMethod != "" {
+		t.Fatal("no outbound traffic may be sent for an unbound inquiry")
+	}
+
+	result, err := router.Status(context.Background(), StatusInquiry{PaymentSessionID: "sess-1", ProviderReference: "ref-status-1"}, meta)
+	if err != nil {
+		t.Fatalf("bound status readback: %v", err)
+	}
+	if receivedMethod != http.MethodPost || receivedPath != "/financial/card/status" {
+		t.Fatalf("status readback must be POST /financial/card/status, got %s %s", receivedMethod, receivedPath)
+	}
+	if !strings.Contains(receivedBody, `"paymentSessionId":"sess-1"`) || !strings.Contains(receivedBody, `"providerReference":"ref-status-1"`) {
+		t.Fatalf("status readback body must carry the bound identity, got %s", receivedBody)
+	}
+	if result.ProviderReference != "ref-status-1" || result.Status != "authorized" {
+		t.Fatalf("unexpected provider result: %+v", result)
+	}
 }

@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	ErrProviderNotFound   = errors.New("provider not found or inactive")
+	ErrProviderNotFound      = errors.New("provider not found or inactive")
 	ErrProviderInMaintenance = errors.New("provider is currently in maintenance mode")
 )
 

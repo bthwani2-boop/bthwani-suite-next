@@ -43,9 +43,27 @@ func HandleRefreshProviderStatus(db *sql.DB, rail provider.CashInRail) http.Hand
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
-		result, err := rail.Status(r.Context(), provider.RequestMetaFromHTTP(r, "wlt-provider-status-refresh"))
+		if strings.TrimSpace(session.ProviderReference) == "" {
+			// Without a previously observed provider reference the readback
+			// cannot be bound to this session; an unbound provider answer must
+			// never be projected onto one.
+			shared.SendJSON(w, http.StatusOK, map[string]any{
+				"paymentSession":         session,
+				"providerRefreshSkipped": true,
+				"reason":                 "session has no provider reference to bind a readback",
+			})
+			return
+		}
+		inquiry := provider.StatusInquiry{PaymentSessionID: session.ID, ProviderReference: session.ProviderReference}
+		result, err := rail.Status(r.Context(), inquiry, provider.RequestMetaFromHTTP(r, "wlt-provider-status-refresh"))
 		if err != nil {
 			shared.SendProviderError(w, err)
+			return
+		}
+		if strings.TrimSpace(result.ProviderReference) == "" || strings.TrimSpace(result.ProviderReference) != strings.TrimSpace(session.ProviderReference) {
+			// The provider answered for a different reference than the one this
+			// session holds: refuse to treat the answer as this session's truth.
+			shared.SendError(w, http.StatusBadGateway, "UNBOUND_PROVIDER_REFERENCE", "provider status response does not match this session's provider reference")
 			return
 		}
 		eventType := providerEventTypeForStatus(result.Status)
