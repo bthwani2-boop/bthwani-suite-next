@@ -8,8 +8,6 @@ export type {
   PlatformProviderRecord,
 } from "./platform-provider.types";
 
-export type { PlatformProviderAuditAction } from "./platform-provider-audit.types";
-
 export type { ProviderVisibleFields } from "./platform-provider-visibility.policy";
 export { toProviderVisibleFields } from "./platform-provider-visibility.policy";
 
