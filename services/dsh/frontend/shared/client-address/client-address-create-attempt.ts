@@ -8,7 +8,6 @@ import {
 } from "../_kernel/durable-mutation-attempt-registry.ts";
 
 const OPERATION = "client-address-create";
-const STORAGE_KEY_LEGACY = "@bthwani/client-address-create-attempt:v1";
 
 type StoredAttempt = {
   readonly fingerprint: string;
@@ -72,11 +71,12 @@ function isStoredAttempt(value: unknown): value is StoredAttempt {
 }
 
 export async function getOrCreateClientAddressAttempt(
+  actorId: string,
   input: DshClientAddressDraft,
 ): Promise<StoredAttempt> {
   const fingerprint = fingerprintClientAddressDraft(input);
   const entityId = fingerprint.slice(0, 32);
-  const scope = await resolveMutationIdentityScope("", { entityId });
+  const scope = await resolveMutationIdentityScope(actorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
   return getOrCreateDurableMutationAttempt({
     operation: OPERATION,
@@ -84,16 +84,14 @@ export async function getOrCreateClientAddressAttempt(
     fingerprint,
     create: () => newAttempt(fingerprint, scoped),
     parse: isStoredAttempt,
-    legacyKeys: [STORAGE_KEY_LEGACY],
-    legacyPrefixes: ["@bthwani/client-address-create-attempt:v2", "@bthwani/client-address-create-attempt:v3/"],
   });
 }
 
-export async function clearClientAddressAttempt(fingerprint: string): Promise<void> {
+export async function clearClientAddressAttempt(actorId: string, fingerprint: string): Promise<void> {
   const normalizedFingerprint = fingerprint.trim();
   if (!normalizedFingerprint) return;
   const entityId = normalizedFingerprint.slice(0, 32);
-  const scope = await resolveMutationIdentityScope("", { entityId });
+  const scope = await resolveMutationIdentityScope(actorId, { entityId });
   await purgeExactDurableMutationAttempt(
     OPERATION,
     { actorId: scope.actorId, installationId: scope.installationId, entityId },
