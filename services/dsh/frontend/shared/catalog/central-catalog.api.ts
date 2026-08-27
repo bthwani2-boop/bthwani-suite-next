@@ -6,11 +6,9 @@ import type {
   MasterProduct,
   ProductProposal,
   StoreAssortment,
-  CatalogPlatformPolicy,
   ClientVisibleCatalogResponse,
   CatalogAsset,
   CatalogAssetLink,
-  StoreAssortmentInput,
   StoreAssortmentInventoryInput,
   StoreAssortmentInventory,
   StoreAssortmentPriceInput,
@@ -268,30 +266,6 @@ export async function transitionProductProposal(
   return resp.proposal;
 }
 
-export async function updateCatalogPlatformPolicy(
-  policyId: string,
-  input: {
-    readonly platformCommissionRate: number;
-    readonly fieldPartnerOnboardingCommissionAmount: number;
-    readonly fieldPartnerOnboardingCommissionCurrency: string;
-    readonly storeOnboardingFeeAmount: number;
-    readonly storeOnboardingFeeCurrency: string;
-    readonly allowsStoreProductCustomImage: boolean;
-    readonly allowsProductProposal: boolean;
-    readonly requiresBarcode: boolean;
-    readonly requiresCatalogReview: boolean;
-    readonly isActive: boolean;
-    readonly effectiveFrom: string;
-    readonly notes: string;
-  },
-): Promise<CatalogPlatformPolicy> {
-  const resp = await request<{ policy: CatalogPlatformPolicy }>(`/dsh/operator/catalog/platform-policies/${encodeURIComponent(policyId)}`, {
-    method: "PUT",
-    body: input,
-  });
-  return resp.policy;
-}
-
 export async function fetchOperatorStoreAssortment(storeId: string): Promise<readonly StoreAssortment[]> {
   const resp = await request<{ assortment: readonly StoreAssortment[] }>(`/dsh/operator/stores/${encodeURIComponent(storeId)}/assortment`);
   return resp.assortment;
@@ -346,18 +320,6 @@ export async function fetchPartnerMasterProducts(query?: {
   const path = qs ? `/dsh/partner/catalog/master-products?${qs}` : "/dsh/partner/catalog/master-products";
   const resp = await request<{ masterProducts: readonly MasterProduct[] }>(path);
   return resp.masterProducts;
-}
-
-export async function upsertPartnerStoreAssortment(
-  storeId: string,
-  masterProductId: string,
-  input: StoreAssortmentInput,
-): Promise<StoreAssortment> {
-  const resp = await request<{ assortment: StoreAssortment }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`, {
-    method: "PUT",
-    body: input,
-  });
-  return resp.assortment;
 }
 
 export async function upsertPartnerStoreAssortmentInventory(
@@ -457,27 +419,6 @@ export async function fetchFieldMasterProducts(query?: {
   const path = qs ? `/dsh/field/catalog/master-products?${qs}` : "/dsh/field/catalog/master-products";
   const resp = await request<{ masterProducts: readonly MasterProduct[] }>(path);
   return resp.masterProducts;
-}
-
-export async function upsertFieldStoreAssortment(
-  partnerId: string,
-  storeId: string,
-  masterProductId: string,
-  input: {
-    readonly unitPrice: number;
-    readonly currency: string;
-    readonly available: boolean;
-    readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
-    readonly localNote: string;
-    readonly customImageObjectKey: string | null;
-    readonly publicationStatus: string;
-  },
-): Promise<StoreAssortment> {
-  const resp = await request<{ assortment: StoreAssortment }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`, {
-    method: "PUT",
-    body: input,
-  });
-  return resp.assortment;
 }
 
 export async function fetchFieldStoreAssortment(partnerId: string): Promise<{

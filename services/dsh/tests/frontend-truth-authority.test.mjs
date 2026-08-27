@@ -127,8 +127,6 @@ describe("DSH/WLT frontend truth authority", () => {
 
     for (const marker of [
       "CatalogPlatformPolicy",
-      "fetchCatalogPlatformPolicies",
-      "updateCatalogPlatformPolicy",
       "reloadPolicies",
       "updatePolicy",
       "policies:",
