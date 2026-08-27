@@ -43,6 +43,7 @@ func TestSupportSessionReplayRotatesUsableCredentialInDB(t *testing.T) {
 	requestID := fmt.Sprintf("objective3-support-request-%d", stamp)
 	targetID := fmt.Sprintf("objective3-target-%d", stamp)
 	initiatorID := fmt.Sprintf("objective3-initiator-%d", stamp)
+	repo := NewRepository(db)
 	for _, actor := range []struct {
 		id    string
 		phone string
@@ -50,15 +51,18 @@ func TestSupportSessionReplayRotatesUsableCredentialInDB(t *testing.T) {
 		{targetID, fmt.Sprintf("+9677%09d", stamp%1000000000)},
 		{initiatorID, fmt.Sprintf("+9677%09d", (stamp+1)%1000000000)},
 	} {
-		if _, err := db.Exec(`INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
-			VALUES ($1,$2,'test-hash','objective3-context',$3,ARRAY['client']::TEXT[],'[]'::JSONB,'ACTIVE',1)`,
-			actor.id, actor.id, actor.phone); err != nil {
-			t.Fatalf("insert actor %s: %v", actor.id, err)
+		if err := repo.UpsertActorWithAccess(context.Background(), ActorAccessProvisionInput{
+			ID:                actor.id,
+			Username:          actor.id,
+			PasswordHash:      "test-hash",
+			OperatorContextID: "objective3-context",
+			PhoneE164:         actor.phone,
+			Roles:             []string{"client"},
+			GrantedBy:         "test-fixture",
+		}); err != nil {
+			t.Fatalf("provision actor %s: %v", actor.id, err)
 		}
 	}
-
-	repo := NewRepository(db)
 	ctx := context.Background()
 	first, err := repo.IssueSupportSession(ctx, requestID, targetID, initiatorID, "objective 3 replay proof", 5)
 	if err != nil {
