@@ -116,10 +116,6 @@ async function getPartnerQueueRecords(
   });
 }
 
-export function isPartnerOwnedException(stage: ApprovalStage | string): boolean {
-  return stage === 'partner-review' || stage === 'rejected';
-}
-
 export function canRenderInClientSurface(stage: ApprovalStage | string): boolean {
   return stage === 'client-visible';
 }
