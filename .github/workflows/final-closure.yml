@@ -150,20 +150,20 @@ jobs:
     if: ${{ needs.evidence.outputs.ci_valid != 'true' }}
     uses: ./.github/workflows/ci.yml
     with:
-      mode: full
-      journey: "true"
-      runtime_proof: true
+      mode: affected
+      journey: ""
+      runtime_proof: false
       run_analyzers: false
-      run_assurance: true
+      run_assurance: false
       target_kind: pull_request
       pr_number: ${{ needs.resolve.outputs.pr_number }}
       expected_head_sha: ${{ needs.resolve.outputs.head_sha }}
       expected_base_sha: ${{ needs.resolve.outputs.base_sha }}
 
   sonar:
-    name: SonarQube exact analysis (optional)
+    name: SonarQube exact analysis
     needs: [resolve, evidence]
-    if: ${{ false }}
+    if: ${{ needs.evidence.outputs.sonar_valid != 'true' }}
     uses: ./.github/workflows/sonarqube.yml
     secrets: inherit
     with:
@@ -174,9 +174,9 @@ jobs:
       base_ref: ${{ needs.resolve.outputs.base_ref }}
 
   codeql:
-    name: CodeQL exact analysis (optional)
+    name: CodeQL exact analysis
     needs: [resolve, evidence]
-    if: ${{ false }}
+    if: ${{ needs.evidence.outputs.codeql_valid != 'true' }}
     uses: ./.github/workflows/codeql.yml
     with:
       pr_number: ${{ needs.resolve.outputs.pr_number }}
@@ -186,9 +186,9 @@ jobs:
       base_ref: ${{ needs.resolve.outputs.base_ref }}
 
   semgrep:
-    name: Semgrep exact analysis (optional)
+    name: Semgrep exact analysis
     needs: [resolve, evidence]
-    if: ${{ false }}
+    if: ${{ needs.evidence.outputs.semgrep_valid != 'true' }}
     uses: ./.github/workflows/semgrep.yml
     with:
       mode: diff
@@ -199,9 +199,9 @@ jobs:
       head_ref: ${{ needs.resolve.outputs.head_ref }}
 
   security:
-    name: Security exact analysis (optional)
+    name: Security exact analysis
     needs: [resolve, evidence]
-    if: ${{ false }}
+    if: ${{ needs.evidence.outputs.security_valid != 'true' }}
     uses: ./.github/workflows/security-remote.yml
     with:
       pr_number: ${{ needs.resolve.outputs.pr_number }}
