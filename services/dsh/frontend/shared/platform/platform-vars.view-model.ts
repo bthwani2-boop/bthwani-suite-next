@@ -53,7 +53,7 @@ export function sortPlatformVarsByScope(records: readonly DshPlatformVarRecord[]
   });
 }
 
-export type PlatformVarKpi = { id: string; label: string; value: string; cls: string };
+type PlatformVarKpi = { id: string; label: string; value: string; cls: string };
 
 function resolvePlatformVarsDomainKpis(
   domain: VarsDomainId,
