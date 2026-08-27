@@ -258,10 +258,16 @@ func (s *protectedStoreServer) handleReviewOperatorDeliveryProof(w http.Response
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	idempotencyKey := deliveryProofIdempotencyKey(r, "")
+	if len(idempotencyKey) < 8 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain at least 8 characters")
+		return
+	}
 	proof, err := dispatch.ReviewDeliveryProof(s.db, r.PathValue("proofId"), actor.ID, dispatch.ReviewDeliveryProofInput{
 		ExpectedVersion: body.ExpectedVersion,
 		Reason:          strings.TrimSpace(body.Reason),
 		Accept:          accept,
+		IdempotencyKey:  idempotencyKey,
 	})
 	if err != nil {
 		writeDeliveryProofError(w, err)

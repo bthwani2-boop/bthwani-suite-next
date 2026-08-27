@@ -345,6 +345,13 @@
       "sha256": "8d66da3479808d7e1c719c320a94e27f43a40a80c60886d3faf4a6608fff601a",
       "historicalPrefix": "1048",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 290,
+      "file": "dsh-1049_delivery_proof_review_idempotency.sql",
+      "sha256": "0f8fc3b6cc21fe8a4c4b0ab7cf17c3375729eb0c3e5854dd08727beec3cb646d",
+      "historicalPrefix": "1049",
+      "state": "ACTIVE"
     }
   ]
 }

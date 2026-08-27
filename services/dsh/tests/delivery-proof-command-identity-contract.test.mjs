@@ -11,6 +11,18 @@ const api = readFileSync(
   resolve(process.cwd(), "services/dsh/frontend/shared/delivery-proof/delivery-proof.api.ts"),
   "utf8",
 );
+const handler = readFileSync(
+  resolve(process.cwd(), "services/dsh/backend/internal/http/delivery_proof_completion.go"),
+  "utf8",
+);
+const dispatch = readFileSync(
+  resolve(process.cwd(), "services/dsh/backend/internal/dispatch/delivery_proof.go"),
+  "utf8",
+);
+const migration = readFileSync(
+  resolve(process.cwd(), "services/dsh/database/migrations/dsh-1049_delivery_proof_review_idempotency.sql"),
+  "utf8",
+);
 
 test("operator delivery-proof review requires an authenticated actor and reuses commands on retry", () => {
   assert.match(controller, /const identity = useIdentitySession\(\)/);
@@ -23,10 +35,21 @@ test("operator delivery-proof review requires an authenticated actor and reuses 
 });
 
 test("operator delivery-proof review transport forwards explicit idempotency keys", () => {
-  assert.match(api, /acceptOperatorDeliveryProof\(\n  proofId: string,\n  input: DshReviewDeliveryProofInput,\n  idempotencyKey\?: string,/);
-  assert.match(api, /idempotencyKey: idempotencyKey \?\? corrId\("operator-delivery-proof-accept"\)/);
-  assert.match(api, /rejectOperatorDeliveryProof\(\n  proofId: string,\n  input: DshReviewDeliveryProofInput,\n  idempotencyKey\?: string,/);
-  assert.match(api, /idempotencyKey: idempotencyKey \?\? corrId\("operator-delivery-proof-reject"\)/);
+  assert.match(api, /acceptOperatorDeliveryProof\(\n  proofId: string,\n  input: DshReviewDeliveryProofInput,\n  idempotencyKey: string,/);
+  assert.match(api, /idempotencyKey,/);
+  assert.match(api, /rejectOperatorDeliveryProof\(\n  proofId: string,\n  input: DshReviewDeliveryProofInput,\n  idempotencyKey: string,/);
+  assert.match(api, /idempotencyKey,/);
+});
+
+test("backend delivery-proof reviews require and persist an actor-scoped command receipt", () => {
+  assert.match(handler, /idempotencyKey := deliveryProofIdempotencyKey\(r, ""\)/);
+  assert.match(handler, /IDEMPOTENCY_KEY_REQUIRED/);
+  assert.match(handler, /IdempotencyKey:\s+idempotencyKey/);
+  assert.match(dispatch, /IdempotencyKey\s+string/);
+  assert.match(dispatch, /FROM dsh_delivery_proof_review_receipts/);
+  assert.match(dispatch, /storedProofID != proofID \|\| storedFingerprint != fingerprint/);
+  assert.match(dispatch, /INSERT INTO dsh_delivery_proof_review_receipts/);
+  assert.match(migration, /UNIQUE \(operator_id, idempotency_key\)/);
 });
 
 console.log("delivery-proof-command-identity-contract: PASS");

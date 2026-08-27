@@ -99,6 +99,33 @@ func TestDeliveryProofFingerprintChangesWithOperationalEvidence(t *testing.T) {
 	}
 }
 
+func TestDeliveryProofReviewFingerprintIsActorAndDecisionBound(t *testing.T) {
+	base := ReviewDeliveryProofInput{
+		ExpectedVersion: 3,
+		Reason:          "verified by operator",
+		Accept:          true,
+	}
+	first := deliveryProofReviewFingerprint("proof-a", "operator-a", base)
+	if first == deliveryProofReviewFingerprint("proof-a", "operator-b", base) {
+		t.Fatal("review fingerprint must be actor-bound")
+	}
+	changedDecision := base
+	changedDecision.Accept = false
+	if first == deliveryProofReviewFingerprint("proof-a", "operator-a", changedDecision) {
+		t.Fatal("review fingerprint must distinguish accept and reject")
+	}
+	changedVersion := base
+	changedVersion.ExpectedVersion++
+	if first == deliveryProofReviewFingerprint("proof-a", "operator-a", changedVersion) {
+		t.Fatal("review fingerprint must distinguish expected versions")
+	}
+	changedReason := base
+	changedReason.Reason = "different reason"
+	if first == deliveryProofReviewFingerprint("proof-a", "operator-a", changedReason) {
+		t.Fatal("review fingerprint must distinguish reasons")
+	}
+}
+
 func TestDeliveryProofFingerprintIsStableWhenCapturedAtOmitted(t *testing.T) {
 	input := SubmitDeliveryProofInput{
 		Method:         DeliveryProofPhoto,
