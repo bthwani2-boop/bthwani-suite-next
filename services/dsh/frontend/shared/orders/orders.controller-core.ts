@@ -1,9 +1,8 @@
 import type { DshOrder, DshOrdersListState } from "./orders.types";
-import { orderActionErrorState, orderActionSubmittingState, orderActionSuccessState, ordersErrorState, ordersLoadingState } from "./orders.states";
+import { orderActionErrorState, orderActionSubmittingState, orderActionSuccessState, ordersErrorState } from "./orders.states";
 import { hasRejectReason, resolveOrdersListState } from "./orders.view-model";
 
 export type OrderErrorKind = "permission_denied" | "offline" | "conflict" | "not_found" | "error";
-export function beginOrdersLoad(): DshOrdersListState { return ordersLoadingState(); }
 export function resolveOrdersLoadSuccess(orders: readonly DshOrder[]): DshOrdersListState { return resolveOrdersListState(orders); }
 export function resolveOrdersLoadError(classified: { readonly kind: OrderErrorKind }, scope: "client" | "partner" | "operator"): DshOrdersListState {
   if (classified.kind === "offline") return ordersErrorState("لا يوجد اتصال بالإنترنت.");
