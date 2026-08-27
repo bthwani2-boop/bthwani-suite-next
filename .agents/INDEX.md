@@ -31,6 +31,7 @@ Policies live directly under `.agents/tools/`:
 - `antigravity-implementer`
 - `graphify`
 - `leanctx`
+- `open-code-review`
 
 ## Constraints
 

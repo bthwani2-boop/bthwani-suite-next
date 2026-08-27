@@ -178,7 +178,14 @@
     "graphify:verify": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-graphify-toolchain.ps1 -Mode Verify",
     "leanctx:version": "lean-ctx --version",
     "leanctx:verify": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-leanctx-toolchain.ps1 -Mode Verify",
-    "leanctx:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-leanctx-toolchain.ps1 -Mode Full"
+    "leanctx:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-leanctx-toolchain.ps1 -Mode Full",
+    "ocr:version": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode Version",
+    "ocr:preview": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode DelegatePreview",
+    "ocr:rules": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode DelegateRules",
+    "ocr:verify": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode Verify",
+    "ocr:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode Full",
+    "ocr:setup": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode Setup",
+    "ocr:audit": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode DelegateAudit"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
