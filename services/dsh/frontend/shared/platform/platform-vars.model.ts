@@ -25,7 +25,6 @@ import {
 import {
   isPlatformDesignVar,
   PLATFORM_VAR_QUICK_PICKS,
-  PlatformVarMutationAction,
 } from './platform-vars.policy';
 
 type PlatformVarsSessionEntry = {
@@ -64,7 +63,6 @@ export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomai
   const [activeScope, setActiveScope] = React.useState<string>('all');
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [editVal, setEditVal] = React.useState('');
-  const [showConfirm, setShowConfirm] = React.useState<PlatformVarMutationAction | null>(null);
 
   const getLive = React.useCallback(
     (variable: DshPlatformVarRecord): DshPlatformVarRecord => {
@@ -81,7 +79,6 @@ export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomai
 
   React.useEffect(() => {
     setActiveScope('all');
-    setShowConfirm(null);
     const records = resolvePlatformVarsDomainRecords(activeDomain);
     const first = records[0] ?? null;
     setSelectedId(first?.id ?? null);
@@ -89,7 +86,6 @@ export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomai
   }, [activeDomain, getLive]);
 
   React.useEffect(() => {
-    setShowConfirm(null);
     if (!selectedId) return;
     const all = [
       ...DSH_PLATFORM_OPERATIONAL_VARS,
@@ -148,12 +144,6 @@ export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomai
     ? (PLATFORM_VAR_QUICK_PICKS[selectedVar?.key ?? ''] ?? []).includes(editVal)
     : true;
 
-  const confirmSaveProposed = React.useCallback(async () => {
-    // Fail closed: no local state or audit event is written.
-    setShowConfirm(null);
-    return { ok: false as const, reason: 'PLATFORM_CONTROL_MUTATION_CONTRACT_REQUIRED' };
-  }, []);
-
   return {
     activeScope,
     setActiveScope,
@@ -161,8 +151,6 @@ export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomai
     setSelectedId,
     editVal,
     setEditVal,
-    showConfirm,
-    setShowConfirm,
     filteredRecords,
     selectedVar,
     orderedScopes,
@@ -172,7 +160,6 @@ export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomai
     hasProposed,
     isDesignVar: isDesign,
     isValidDesignVal,
-    confirmSaveProposed,
     getLive,
   };
 }
