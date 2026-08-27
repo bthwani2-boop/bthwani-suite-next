@@ -140,7 +140,7 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/commissions/{commissionId}/reverse", cod.HandleReverseGovernedCommissionIdempotent(db))
 
 	workforceMutation("POST /wlt/provider-penalties", penalty.HandlePost(db))
-	workforceMutation("POST /wlt/provider-penalties/{penaltyId}/reverse", penalty.HandleReverse(db))
+	workforceMutation("POST /wlt/provider-penalties/reverse/{penaltyId}", penalty.HandleReverse(db))
 	workforceRead("GET /wlt/provider-penalties/by-incident/{incidentId}", penalty.HandleGetByIncident(db))
 	workforceRead("GET /wlt/provider-penalties/{penaltyId}", penalty.HandleGetByID(db))
 

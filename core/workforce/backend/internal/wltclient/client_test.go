@@ -27,7 +27,7 @@ func TestPostAndReverseCarryEndToEndIdempotency(t *testing.T) {
 		wantKey := "post-key"
 		status := "posted"
 		reversalKey := ""
-		if r.URL.Path == "/wlt/provider-penalties/wpen-1/reverse" {
+		if r.URL.Path == "/wlt/provider-penalties/reverse/wpen-1" {
 			wantKey = "reverse-key"
 			status = "reversed"
 			reversalKey = wantKey

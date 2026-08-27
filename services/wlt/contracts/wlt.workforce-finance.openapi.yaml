@@ -105,7 +105,7 @@ paths:
         '401': { $ref: '#/components/responses/WorkforceFinanceUnauthorized' }
         '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }
         '409': { $ref: '#/components/responses/WorkforceFinanceConflict' }
-  /wlt/provider-penalties/{penaltyId}/reverse:
+  /wlt/provider-penalties/reverse/{penaltyId}:
     post:
       operationId: reverseProviderPenalty
       tags: [ WltWorkforceFinance ]

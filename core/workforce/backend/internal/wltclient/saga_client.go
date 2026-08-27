@@ -147,7 +147,7 @@ func (c *Client) PostPenaltySaga(ctx context.Context, idempotencyKey, correlatio
 }
 
 func (c *Client) ReversePenaltySaga(ctx context.Context, penaltyID, idempotencyKey, correlationID string, input ReversePenaltyInput) (SagaProviderPenalty, error) {
-	return c.sagaRequest(ctx, http.MethodPost, "/wlt/provider-penalties/"+penaltyID+"/reverse", idempotencyKey, correlationID, input)
+	return c.sagaRequest(ctx, http.MethodPost, "/wlt/provider-penalties/reverse/"+penaltyID, idempotencyKey, correlationID, input)
 }
 
 func (c *Client) GetPenaltyByIncident(ctx context.Context, incidentID, correlationID string) (SagaProviderPenalty, error) {
