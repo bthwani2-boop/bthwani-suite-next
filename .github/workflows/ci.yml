@@ -34,6 +34,11 @@ on:
         required: true
         default: false
         type: boolean
+      run_assurance:
+        description: Run heavy assurance workers
+        required: false
+        default: false
+        type: boolean
       target_kind:
         description: Explicit target identity for remote closure
         required: false
@@ -54,8 +59,6 @@ on:
         type: string
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: ["**"]
-  push:
     branches: ["**"]
 
 permissions:
@@ -267,6 +270,7 @@ jobs:
           DISPATCH_MODE: ${{ inputs.mode }}
           CI_JOURNEY: ${{ inputs.journey }}
           CI_RUNTIME_PROOF: ${{ inputs.runtime_proof }}
+          CI_RUN_ASSURANCE: ${{ inputs.run_assurance }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
