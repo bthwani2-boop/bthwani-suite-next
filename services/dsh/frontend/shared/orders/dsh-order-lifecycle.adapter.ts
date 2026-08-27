@@ -125,7 +125,7 @@ function deriveTotalPrice(raw: BackendOrder): number {
   }, 0);
 }
 
-export function normalizeOrder(raw: BackendOrder): DshOrderRecord {
+function normalizeOrder(raw: BackendOrder): DshOrderRecord {
   const orderId = String(raw.id ?? '');
   const checkoutIntentId = raw.checkout_intent_id ?? raw.checkoutIntentId;
   const wltPaymentRefId = raw.wlt_payment_ref_id ?? raw.wltPaymentRefId;
