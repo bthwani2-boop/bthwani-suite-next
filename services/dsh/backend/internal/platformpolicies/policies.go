@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	ErrInvalid             = errors.New("invalid platform policy")
-	ErrNotFound            = errors.New("platform policy not found")
-	ErrVersionConflict     = errors.New("platform policy version conflict")
-	ErrIdempotencyConflict = errors.New("platform policy idempotency conflict")
+	ErrInvalid                = errors.New("invalid platform policy")
+	ErrNotFound               = errors.New("platform policy not found")
+	ErrVersionConflict        = errors.New("platform policy version conflict")
+	ErrIdempotencyConflict    = errors.New("platform policy idempotency conflict")
+	ErrPolicyTruthUnavailable = errors.New("operational policy truth unavailable")
 )
 
 type MutationContext struct {

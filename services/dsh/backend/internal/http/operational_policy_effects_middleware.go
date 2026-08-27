@@ -71,7 +71,7 @@ func OperationalPolicyEffectsMiddleware(db *sql.DB, next http.Handler) http.Hand
 		}
 		target, resolved, err := resolveOperationalPolicyEffectTarget(r, db, body)
 		if err != nil {
-			store.SendError(w, http.StatusInternalServerError, "OPERATIONAL_POLICY_CONTEXT_FAILED", "operational policy context could not be resolved")
+			store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy context is temporarily unavailable")
 			return
 		}
 		if !resolved {
@@ -90,6 +90,10 @@ func OperationalPolicyEffectsMiddleware(db *sql.DB, next http.Handler) http.Hand
 		}
 		if errors.Is(err, platformpolicies.ErrNotFound) {
 			store.SendError(w, http.StatusUnprocessableEntity, "OPERATIONAL_POLICY_NOT_CONFIGURED", "store is not mapped to a governed operational zone")
+			return
+		}
+		if errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable) {
+			store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
 			return
 		}
 		if err != nil {

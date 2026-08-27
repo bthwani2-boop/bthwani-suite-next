@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"dsh-api/internal/checkout"
+	"dsh-api/internal/platformpolicies"
 	"dsh-api/internal/wlt"
 	"github.com/lib/pq"
 )
@@ -605,7 +606,7 @@ func normalizeCityCode(code string) string {
 // and reports which canonical checkout fulfillment modes are actually usable for this
 // store+location combination. DSH only checks store-level and zone-level availability —
 // delivery fee and zone pricing are WLT concerns.
-func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string, clientLat, clientLng *float64) ServiceabilityResult {
+func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string, clientLat, clientLng *float64) (ServiceabilityResult, error) {
 	var storeStatus, serviceabilityStatus, storeServiceArea, storeCity string
 	var distanceKM, storeLat, storeLng *float64
 	var deliveryModes []string
@@ -614,22 +615,22 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 		storeID,
 	).Scan(&storeStatus, &serviceabilityStatus, &storeServiceArea, &storeCity, &distanceKM, &storeLat, &storeLng, pq.Array(&deliveryModes))
 	if errors.Is(err, sql.ErrNoRows) {
-		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store not found"}
+		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store not found"}, nil
 	}
 	if err != nil {
-		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store lookup failed"}
+		return ServiceabilityResult{}, fmt.Errorf("%w: store serviceability read: %v", platformpolicies.ErrPolicyTruthUnavailable, err)
 	}
 	if storeStatus != "published" {
 		return ServiceabilityResult{
 			Serviceable: false, Code: "store_unavailable", Reason: "store is not published",
 			AvailableModes: allModesUnavailable("store_unavailable"),
-		}
+		}, nil
 	}
 	if serviceabilityStatus == "out_of_area" || serviceabilityStatus == "unavailable" {
 		return ServiceabilityResult{
 			Serviceable: false, Code: "store_unavailable", Reason: "store is not serviceable",
 			AvailableModes: allModesUnavailable("store_unavailable"),
-		}
+		}, nil
 	}
 
 	// Calculate physical distance between client and store coordinates if both are provided
@@ -660,16 +661,19 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 		return ServiceabilityResult{
 			Serviceable: false, Code: "out_of_area", Reason: "store outside requested service area",
 			AvailableModes: availableModes,
-		}
+		}, nil
 	}
-	return ServiceabilityResult{Serviceable: true, Code: "serviceable", AvailableModes: availableModes}
+	return ServiceabilityResult{Serviceable: true, Code: "serviceable", AvailableModes: availableModes}, nil
 }
 
 // GetFulfillmentModes is the J051 lightweight mode capability fetcher.
 // It uses the same zone check as CheckServiceability but only returns modes.
-func GetFulfillmentModes(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string, clientLat, clientLng *float64) FulfillmentModesResponse {
+func GetFulfillmentModes(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string, clientLat, clientLng *float64) (FulfillmentModesResponse, error) {
 	// Call CheckServiceability to run the identical store and zone constraints
-	res := CheckServiceability(ctx, db, storeID, serviceAreaCode, clientLat, clientLng)
+	res, err := CheckServiceability(ctx, db, storeID, serviceAreaCode, clientLat, clientLng)
+	if err != nil {
+		return FulfillmentModesResponse{}, err
+	}
 
 	// If check failed early without computing modes, fallback to all unavailable
 	modes := res.AvailableModes
@@ -681,7 +685,7 @@ func GetFulfillmentModes(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 		StoreID:     storeID,
 		Modes:       modes,
 		EvaluatedAt: time.Now().UTC(),
-	}
+	}, nil
 }
 
 // computeFulfillmentModeAvailability derives per-mode availability from the

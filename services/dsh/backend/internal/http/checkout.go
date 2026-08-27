@@ -14,6 +14,7 @@ import (
 	"dsh-api/internal/checkoutfinanceoutbox"
 	"dsh-api/internal/clientaddress"
 	"dsh-api/internal/coupons"
+	"dsh-api/internal/platformpolicies"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
@@ -67,10 +68,13 @@ func (s *protectedStoreServer) evaluateCheckoutDependencies(
 		cartValidation.Ready = false
 		cartValidation.Code = "CART_EMPTY"
 	}
-	serviceability := cart.CheckGovernedServiceability(
+	serviceability, err := cart.CheckGovernedServiceability(
 		r.Context(), s.db, s.maps, intent.StoreID, serviceAreaCode, clientLat, clientLng,
 		cart.FulfillmentMode(mode),
 	)
+	if err != nil {
+		return checkout.IntentDependencyValidation{}, resolvedAddressID, addressSnapshot, err
+	}
 	return checkout.IntentDependencyValidation{
 		CartReady:          cartValidation.Ready,
 		CartCode:           cartValidation.Code,
@@ -169,10 +173,22 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	// OCC-locked cart snapshot. A cached or earlier successful serviceability
 	// result cannot authorize checkout after a pause, capacity change, mode
 	// disablement, or provider denial.
-	serviceability := cart.CheckGovernedServiceability(
+	serviceability, err := cart.CheckGovernedServiceability(
 		r.Context(), s.db, s.maps, storeID, serviceAreaCode, clientLat, clientLng,
 		cart.FulfillmentMode(fulfillmentMode),
 	)
+	if errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable) {
+		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
+		return
+	}
+	if errors.Is(err, platformpolicies.ErrNotFound) {
+		store.SendError(w, http.StatusUnprocessableEntity, "OPERATIONAL_POLICY_NOT_CONFIGURED", "store is not mapped to a governed operational zone")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "operational policy could not be evaluated")
+		return
+	}
 	if !serviceability.Serviceable {
 		reasonCode := serviceability.Code
 		if reasonCode == "" {
@@ -846,6 +862,14 @@ func (s *protectedStoreServer) handleValidateCheckoutIntent(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkout fulfillment mode is invalid")
 		return
 	}
+	if errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable) {
+		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
+		return
+	}
+	if errors.Is(err, platformpolicies.ErrNotFound) {
+		store.SendError(w, http.StatusUnprocessableEntity, "OPERATIONAL_POLICY_NOT_CONFIGURED", "store is not mapped to a governed operational zone")
+		return
+	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to evaluate checkout dependencies")
 		return
@@ -916,6 +940,14 @@ func (s *protectedStoreServer) handleRefreshCheckoutIntent(w http.ResponseWriter
 	}
 	if errors.Is(err, checkout.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkout fulfillment mode is invalid")
+		return
+	}
+	if errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable) {
+		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
+		return
+	}
+	if errors.Is(err, platformpolicies.ErrNotFound) {
+		store.SendError(w, http.StatusUnprocessableEntity, "OPERATIONAL_POLICY_NOT_CONFIGURED", "store is not mapped to a governed operational zone")
 		return
 	}
 	if err != nil {

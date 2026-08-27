@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -295,10 +296,10 @@ func EvaluateOperationalPolicy(
 		return OperationalDecision{}, ErrNotFound
 	}
 	if err != nil {
-		return OperationalDecision{}, err
+		return OperationalDecision{}, fmt.Errorf("%w: operational-zone read: %v", ErrPolicyTruthUnavailable, err)
 	}
 
-	_ = db.QueryRowContext(ctx, `
+	slaErr := db.QueryRowContext(ctx, `
 		SELECT id, category, max_prep_mins, max_assignment_mins,
 		       max_delivery_mins, version
 		FROM dsh_platform_sla_rules
@@ -309,9 +310,12 @@ func EvaluateOperationalPolicy(
 		&snapshot.SLA.MaxAssignmentMins, &snapshot.SLA.MaxDeliveryMins,
 		&snapshot.SLA.Version,
 	)
+	if slaErr != nil && !errors.Is(slaErr, sql.ErrNoRows) {
+		return OperationalDecision{}, fmt.Errorf("%w: SLA policy read: %v", ErrPolicyTruthUnavailable, slaErr)
+	}
 	snapshot.SLA.Configured = snapshot.SLA.RuleID != ""
 
-	_ = db.QueryRowContext(ctx, `
+	capacityErr := db.QueryRowContext(ctx, `
 		SELECT id, max_concurrent_orders, max_captains_online,
 		       throttle_threshold, is_paused, pause_reason, version
 		FROM dsh_platform_capacity_configs
@@ -321,13 +325,16 @@ func EvaluateOperationalPolicy(
 		&snapshot.Capacity.IsPaused, &snapshot.Capacity.PauseReason,
 		&snapshot.Capacity.Version,
 	)
+	if capacityErr != nil && !errors.Is(capacityErr, sql.ErrNoRows) {
+		return OperationalDecision{}, fmt.Errorf("%w: capacity policy read: %v", ErrPolicyTruthUnavailable, capacityErr)
+	}
 	snapshot.Capacity.Configured = snapshot.Capacity.ConfigID != ""
 
 	var mode DeliveryModePolicy
-	_ = db.QueryRowContext(ctx, `
+	modeErr := db.QueryRowContext(ctx, `
 		SELECT id, zone_id, fulfillment_mode, is_enabled, sla_category,
 		       version, updated_by, created_at, updated_at
-		FROM dsh_platform_delivery_mode_policies
+	FROM dsh_platform_delivery_mode_policies
 		WHERE zone_id = $1 AND fulfillment_mode = $2`,
 		input.ZoneID, input.FulfillmentMode,
 	).Scan(
@@ -335,15 +342,23 @@ func EvaluateOperationalPolicy(
 		&mode.SlaCategory, &mode.Version, &mode.UpdatedBy,
 		&mode.CreatedAt, &mode.UpdatedAt,
 	)
+	if modeErr != nil && !errors.Is(modeErr, sql.ErrNoRows) {
+		return OperationalDecision{}, fmt.Errorf("%w: fulfillment mode policy read: %v", ErrPolicyTruthUnavailable, modeErr)
+	}
 	if mode.ID != "" {
 		snapshot.ModePolicy = &mode
 	}
 
 	serviceability, serviceabilityErr := GetZoneServiceability(ctx, db, input.ZoneID)
-	if serviceabilityErr == nil {
-		snapshot.ActiveStores = serviceability.ActiveStores
+	if errors.Is(serviceabilityErr, ErrNotFound) {
+		return OperationalDecision{}, ErrNotFound
 	}
+	if serviceabilityErr != nil {
+		return OperationalDecision{}, fmt.Errorf("%w: serviceability read: %v", ErrPolicyTruthUnavailable, serviceabilityErr)
+	}
+	snapshot.ActiveStores = serviceability.ActiveStores
 	return BuildOperationalDecision(snapshot), nil
+
 }
 
 func BuildOperationalDecision(snapshot operationalSnapshot) OperationalDecision {

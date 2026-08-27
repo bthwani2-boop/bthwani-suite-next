@@ -9,6 +9,7 @@ import (
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/clientaddress"
+	"dsh-api/internal/platformpolicies"
 	"dsh-api/internal/store"
 )
 
@@ -32,8 +33,17 @@ func (s *protectedStoreServer) handleGetFulfillmentModes(w http.ResponseWriter, 
 	// GetFulfillmentModes doesn't rely on full physical coordinates in the simple case,
 	// but if we have an active address, we should technically use it.
 	// For J051 lightweight capability fetch, we just rely on the zone/serviceAreaCode.
-	resp := cart.GetFulfillmentModes(r.Context(), s.db, storeID, serviceAreaCode, nil, nil)
+	resp, err := cart.GetFulfillmentModes(r.Context(), s.db, storeID, serviceAreaCode, nil, nil)
+	if errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable) {
+		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "fulfillment modes could not be evaluated")
+		return
+	}
 	store.SendJSON(w, http.StatusOK, resp)
+
 }
 
 // POST /dsh/client/cart/serviceability
@@ -89,7 +99,7 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		return
 	}
 
-	result := cart.CheckGovernedServiceability(
+	result, err := cart.CheckGovernedServiceability(
 		r.Context(),
 		s.db,
 		s.maps,
@@ -99,6 +109,18 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		address.Longitude,
 		mode,
 	)
+	if errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable) {
+		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
+		return
+	}
+	if errors.Is(err, platformpolicies.ErrNotFound) {
+		store.SendError(w, http.StatusUnprocessableEntity, "OPERATIONAL_POLICY_NOT_CONFIGURED", "store is not mapped to a governed operational zone")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "operational policy could not be evaluated")
+		return
+	}
 	result.AddressID = address.ID
 	result.AddressVersion = address.Version
 	if err := cart.RecordServiceabilityCheck(

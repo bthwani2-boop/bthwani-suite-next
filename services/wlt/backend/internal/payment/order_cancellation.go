@@ -130,28 +130,3 @@ func HandleGovernedOrderCancellation(db *sql.DB) http.HandlerFunc {
 		writeGovernedCancellationResult(w, result, err)
 	}
 }
-
-// HandleGovernedSessionCancellation preserves the established
-// /payment-sessions/{id}/cancel-for-order route while applying the same
-// ownership checks and atomic refund logic as /wlt/order-cancellations.
-func HandleGovernedSessionCancellation(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var body struct {
-			OrderID  string `json:"orderId"`
-			ClientID string `json:"clientId"`
-			Reason   string `json:"reason"`
-		}
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		if err := decoder.Decode(&body); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		result, err := CancelOrderFinanciallyWithContext(r.Context(), db, GovernedOrderCancellationInput{
-			PaymentSessionID: r.PathValue("paymentSessionId"),
-			OrderID:          body.OrderID,
-			ClientID:         body.ClientID,
-			Reason:           body.Reason,
-		})
-		writeGovernedCancellationResult(w, result, err)
-	}
-}

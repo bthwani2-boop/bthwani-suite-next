@@ -57,6 +57,18 @@ func TestRetiredLedgerMutationRouteIsNotRegistered(t *testing.T) {
 // their handlers with no db.DB available in this unit test, so asserting
 // "not gated" for them would require a real database connection -- that is
 // covered by the wlt-go-db CI job instead, not here.
+func TestRetiredOrderCancellationRouteIsNotRegistered(t *testing.T) {
+	for _, mutationsEnabled := range []bool{false, true} {
+		router := NewRouter(nil, mutationsEnabled, nil, nil)
+		req := httptest.NewRequest(http.MethodPost, "/wlt/payment-sessions/ps-1/cancel-for-order", strings.NewReader(`{"orderId":"order-1","clientId":"client-1","reason":"customer request"}`))
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("mutationsEnabled=%t: retired POST /wlt/payment-sessions/{id}/cancel-for-order must return 404, got %d", mutationsEnabled, rec.Code)
+		}
+	}
+}
+
 func TestReadRoutesStillWorkWhenMutationsDisabled(t *testing.T) {
 	router := NewRouter(nil, false, nil, nil)
 

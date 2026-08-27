@@ -533,14 +533,3 @@ func HandleExpireSession(db *sql.DB) http.HandlerFunc {
 		shared.SendJSON(w, http.StatusOK, map[string]any{"paymentSession": session})
 	}
 }
-
-// HandleCancelSessionForOrder handles the new orchestration endpoint DSH
-// calls to signal an order was cancelled, without DSH itself needing to know
-// whether the underlying session should be expired or refunded -- see
-// CancelSessionForOrder. Response envelope:
-//   - {"action": "expired", "paymentSession": {...}}
-//   - {"action": "refund_requested", "refund": {...}}
-//   - {"action": "none", "sessionStatus": "<status>"}
-func HandleCancelSessionForOrder(db *sql.DB) http.HandlerFunc {
-	return HandleGovernedSessionCancellation(db)
-}

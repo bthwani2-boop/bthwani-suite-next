@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -46,7 +47,7 @@ func resolveOperationalZoneForStore(
 		return "", "", ErrNotFound
 	}
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("%w: store service-area read: %v", ErrPolicyTruthUnavailable, err)
 	}
 	serviceAreaCode = strings.ToLower(strings.TrimSpace(serviceAreaCode))
 	if serviceAreaCode == "" {
@@ -62,7 +63,7 @@ func resolveOperationalZoneForStore(
 		return "", "", ErrNotFound
 	}
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("%w: operational-zone read: %v", ErrPolicyTruthUnavailable, err)
 	}
 	return zoneID, serviceAreaCode, nil
 }
@@ -101,7 +102,7 @@ func EvaluateOperationalPolicyForStoreSnapshot(
 		WHERE LOWER(s.service_area_code) = LOWER($1)
 		  AND o.status NOT IN ('delivered', 'cancelled', 'returned_to_store')`, serviceAreaCode).Scan(&activeOrders)
 	if err != nil {
-		return OperationalDecision{}, 0, err
+		return OperationalDecision{}, 0, fmt.Errorf("%w: active-orders read: %v", ErrPolicyTruthUnavailable, err)
 	}
 
 	decision, err := EvaluateOperationalPolicy(ctx, db, OperationalEvaluationInput{
