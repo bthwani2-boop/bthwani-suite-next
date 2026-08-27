@@ -616,7 +616,12 @@ func GetByIncident(ctx context.Context, db *sql.DB, incidentID string) (Provider
 
 func handleGet(loader func(context.Context, *sql.DB, string) (ProviderPenalty, error), pathValue string, db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		item, err := loader(r.Context(), db, r.PathValue(pathValue))
+		value := strings.TrimSpace(r.PathValue(pathValue))
+		if value == "by-incident" {
+			HandleReservedPathSegment(value)(w, r)
+			return
+		}
+		item, err := loader(r.Context(), db, value)
 		if err != nil {
 			writeError(w, err)
 			return

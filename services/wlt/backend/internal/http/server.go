@@ -143,10 +143,6 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	workforceMutation("POST /wlt/provider-penalties/{penaltyId}/reverse", penalty.HandleReverse(db))
 	workforceRead("GET /wlt/provider-penalties/by-incident/{incidentId}", penalty.HandleGetByIncident(db))
 	workforceRead("GET /wlt/provider-penalties/{penaltyId}", penalty.HandleGetByID(db))
-	// Literal reserved segments shadow the {penaltyId} wildcard so the lookup
-	// cone can never be captured as an identifier (root #9).
-	workforceRead("GET /wlt/provider-penalties/by-incident", penalty.HandleReservedPathSegment("by-incident"))
-	workforceMutation("POST /wlt/provider-penalties/by-incident/reverse", penalty.HandleReservedPathSegment("by-incident"))
 
 	read("GET /wlt/ledger/entries/{entryId}", ledger.HandleGetLedgerEntry(db))
 	read("GET /wlt/ledger/entries", ledger.HandleListLedgerEntries(db))
