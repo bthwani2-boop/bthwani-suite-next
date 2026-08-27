@@ -48,7 +48,7 @@ export function useCreateOrderTruthController(token?: string) {
       ) {
         throw { kind: "http", status: 409, code: "READBACK_MISMATCH" };
       }
-      await clearOrderTruthAttempt();
+      await clearOrderTruthAttempt(attempt.fingerprint);
       setState({ kind: "success", order: readback });
       return readback;
     } catch (error) {
