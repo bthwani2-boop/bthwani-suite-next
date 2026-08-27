@@ -1,8 +1,5 @@
 import React from 'react';
-import {
-  toSharedStoreCardViewModel,
-  type HomeStoreCardViewModel,
-} from '../../shared/home-discovery';
+import type { HomeStoreCardViewModel } from '../../shared/home-discovery';
 import { StoreCardPremium } from '../store/StoreCardPremium';
 
 type Props = Readonly<{
@@ -11,11 +8,9 @@ type Props = Readonly<{
 }>;
 
 export function HomeStoreCard({ store, onPress }: Props) {
-  const item = toSharedStoreCardViewModel(store);
-
   return (
     <StoreCardPremium
-      store={item}
+      store={store}
       onPress={(storeId: string) => onPress?.(storeId, store.slug)}
     />
   );
