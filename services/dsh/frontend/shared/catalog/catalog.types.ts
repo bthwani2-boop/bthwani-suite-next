@@ -11,7 +11,6 @@ export type MediaUploadIntent = {
 export type CatalogMedia = {
   readonly id: string;
   readonly productId: string | null;
-  readonly objectKey: string;
   readonly contentType: string;
   readonly state: "pending" | "complete" | "deleted";
   readonly publicUrl: string | null;
