@@ -9,7 +9,6 @@ export type PlatformSovereignRuntimeState =
   | 'CONTRACT_REQUIRED';
 
 // ── Appearance Types ──────────────────────────────────────────────────────────
-export type AppearanceRisk = 'low' | 'medium' | 'high' | 'visual-identity';
 export type AppearanceOwner = 'Platform' | 'DesignSystem' | 'AppShell' | 'ServiceOwner';
 
 
