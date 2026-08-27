@@ -1,5 +1,5 @@
 import type { DshOrder, DshOrdersListState } from "./orders.types";
-import { orderActionErrorState, orderActionSuccessState, ordersErrorState } from "./orders.states";
+import { orderActionErrorState, ordersErrorState } from "./orders.states";
 import { hasRejectReason, resolveOrdersListState } from "./orders.view-model";
 
 export type OrderErrorKind = "permission_denied" | "offline" | "conflict" | "not_found" | "error";
