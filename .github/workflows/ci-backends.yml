@@ -231,7 +231,12 @@ jobs:
           go-version-file: ${{ matrix.go_mod }}
           cache-dependency-path: ${{ matrix.workdir }}/go.sum
       - name: Install PostgreSQL client
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ubuntu.sources \
+            -o Dir::Etc::sourceparts=- update -qq
+          sudo apt-get install -y -qq --no-install-recommends postgresql-client >/dev/null
       - name: Apply migrations and verify safety contracts
         shell: pwsh
         env:
@@ -330,7 +335,12 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
       - name: Install PostgreSQL client
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/ubuntu.sources \
+            -o Dir::Etc::sourceparts=- update -qq
+          sudo apt-get install -y -qq --no-install-recommends postgresql-client >/dev/null
       - name: Validate governed DSH database contracts
         run: |
           node tools/scripts/check-dsh-database-contract.mjs
