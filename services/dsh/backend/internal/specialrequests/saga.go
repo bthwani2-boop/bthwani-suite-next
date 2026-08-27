@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -604,7 +605,13 @@ func RunSpecialRequestSagaWorker(ctx context.Context, db *sql.DB, client *wlt.Cl
 		rows.Close()
 		for _, id := range ids {
 			if _, err := DispatchSpecialRequestSaga(ctx, db, client, id); err != nil && !errors.Is(err, ErrSagaBusy) {
-				_ = markSagaFailure(ctx, db, id, err)
+				// markSagaFailure is the recovery write: losing it leaves an
+				// exhausted saga retrying forever with no operator visibility.
+				// Log the failure -- the dispatcher re-scans pending/in_flight
+				// rows on the next tick, so the saga itself self-heals.
+				if markErr := markSagaFailure(ctx, db, id, err); markErr != nil {
+					log.Printf("special request saga dispatcher: marking saga %s as failed after dispatch error %v failed: %v", id, err, markErr)
+				}
 			}
 		}
 	}
