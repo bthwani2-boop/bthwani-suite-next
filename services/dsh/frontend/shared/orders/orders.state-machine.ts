@@ -7,7 +7,7 @@
  *
  * P0-02: Extended with full lifecycle state coverage including pre-order,
  * partner/captain exceptions, WLT refund bridge states, and audit states.
- * All 22 original statuses kept for backward compatibility.
+ * Canonical lifecycle statuses are kept here; WLT event values remain owned by WLT contracts.
  */
 
 import type { DshFulfillmentDeliveryMode } from '../delivery/delivery.contract';
@@ -65,14 +65,13 @@ type DshOrderJourneyEvent = {
 
 // ─── Lifecycle status ─────────────────────────────────────────────────────────
 //
-// Ordered by lifecycle phase. Original 22 values preserved for backward compat.
-// P0-02 additions come after 'refunded' and are grouped by phase.
+// Ordered by lifecycle phase. P0-02 additions are grouped by phase.
 //
 // WLT boundary rule: any state with wltImplication !== 'none' in the metadata
 // registry is DSH read-only — no financial mutation allowed inside DSH.
 
 export type DshOrderLifecycleStatus =
-  // ── Original states (backward compat, do not remove) ──────────────────────
+  // ── Canonical lifecycle states ────────────────────────────────────────────
   | 'quote'
   | 'created'
   | 'confirmed'
@@ -94,7 +93,6 @@ export type DshOrderLifecycleStatus =
   | 'cancelled'
   | 'failed'
   | 'returned'
-  | 'refunded'
   // ── P0-02: Pre-order and payment states ───────────────────────────────────
   | 'checkout_intent'        // Client entering checkout flow
   | 'serviceability_quote'   // Checking serviceability + pricing quote
@@ -333,7 +331,6 @@ function mapLifecycleToJourneyStage(status: DshOrderLifecycleStatus): DshOrderJo
     case 'cancelled':              return 'cancelled';
     case 'failed':
     case 'returned':               return 'exception';
-    case 'refunded':               return 'post_delivery';
     // ── P0-02: Pre-order and payment ──────────────────────────────────────
     case 'checkout_intent':
     case 'serviceability_quote':
@@ -1152,22 +1149,7 @@ export const DSH_ORDER_LIFECYCLE_STATES: ReadonlyArray<DshOrderLifecycleStateMet
     auditRequired: true,
     deliveryModeImpact: 'all',
   },
-  // ── Legacy aliases (backward compat — keep in union and registry) ─────────
-  {
-    stateId: 'refunded',
-    actorOwner: 'wlt',
-    visibleToSurfaces: ['app-client', 'control-panel'],
-    clientLabel: 'تم الاسترداد',
-    partnerLabel: '—',
-    captainLabel: '—',
-    fieldLabel: '—',
-    controlPanelLabel: 'مُسترَد (قديم)',
-    allowedNextStates: [],
-    forbiddenActions: ['mutate-refund'],
-    wltImplication: 'refund-read-only',
-    auditRequired: false,
-    deliveryModeImpact: 'all',
-  },
+  // ── Legacy aliases retained only while backed by active DSH consumers ──────
   {
     stateId: 'failed',
     actorOwner: 'system',
