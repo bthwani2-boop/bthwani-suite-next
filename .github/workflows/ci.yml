@@ -353,8 +353,7 @@ jobs:
             echo "- Phase: ${PHASE}"
             echo "- Verification tier: ${TIER}"
             echo "- Duplicate push suppressed: ${SKIP_DUPLICATE}"
-          } >> "${          GITHUB_STEP_SUMMARY
-}"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
   diagnostics:
     name: Contract diagnostics
