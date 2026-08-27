@@ -321,10 +321,10 @@ export function resolveDeliveryExceptionCancelOrder(
   }, idempotencyKey);
 }
 
-export async function arriveCaptainReturnToStore(assignmentId: string): Promise<DshDeliveryException> {
+export async function arriveCaptainReturnToStore(assignmentId: string, idempotencyKey?: string): Promise<DshDeliveryException> {
   await request<{ exception: DshDeliveryException }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/return-to-store/arrive`,
-    { method: "POST" },
+    { method: "POST", idempotencyKey: idempotencyKey ?? corrId("captain-return-arrive") },
   );
   return fetchCaptainDeliveryException(assignmentId);
 }
@@ -336,10 +336,10 @@ export async function fetchPartnerReturnToStore(orderId: string): Promise<DshDel
   return data.exception;
 }
 
-export async function acceptPartnerReturnToStore(orderId: string): Promise<DshDeliveryException> {
+export async function acceptPartnerReturnToStore(orderId: string, idempotencyKey?: string): Promise<DshDeliveryException> {
   await request<{ exception: DshDeliveryException }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/return-to-store/accept`,
-    { method: "POST" },
+    { method: "POST", idempotencyKey: idempotencyKey ?? corrId("partner-return-accept") },
   );
   return fetchPartnerReturnToStore(orderId);
 }
