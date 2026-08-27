@@ -869,7 +869,7 @@
     {
       "ordinal": 124,
       "file": "wlt-954_external_statement_provenance.sql",
-      "sha256": "fbd75d6c0d9577fbbc3e6eb6c2fe1eea753cf0b7c6524e339e6e84082d490e28",
+      "sha256": "d1705eb614295d330e4f4f33afb2e7246d1911d3b18d68d0ae7fc6748895515d",
       "historicalPrefix": "954",
       "state": "ACTIVE"
     },
@@ -885,6 +885,20 @@
       "file": "wlt-956_external_statement_provenance_evidence.sql",
       "sha256": "bfff721dcd0e6499c342c49b413c4b4fef343d294eff33149e031026b4e48b7d",
       "historicalPrefix": "956",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 127,
+      "file": "wlt-957_external_statement_verification_receipts.sql",
+      "sha256": "9204d788d5a9ecdf4d37f499701ad43020545fdd0c390c2f1ab0bed705da2520",
+      "historicalPrefix": "957",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 128,
+      "file": "wlt-958_external_statement_verification_link.sql",
+      "sha256": "f4dbe00a39c9a132caf5f73922e8ae018b250a8946f5c16bd22fbc7894b85c7b",
+      "historicalPrefix": "958",
       "state": "ACTIVE"
     }
   ]

@@ -365,7 +365,7 @@ jobs:
       full_verification: ${{ needs.context.outputs.full_verification }}
       runtime: ${{ needs.context.outputs.runtime_required }}
       runtime_profile: ${{ needs.context.outputs.runtime_profile }}
-      runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
+      runtime_proof: ${{ inputs.runtime_proof == true }}
 
   codeql:
     name: CodeQL applicable analysis

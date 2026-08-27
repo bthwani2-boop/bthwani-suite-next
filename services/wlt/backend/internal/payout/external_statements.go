@@ -3,16 +3,19 @@ package payout
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"wlt-api/internal/shared"
 )
 
@@ -46,6 +49,8 @@ type ImportAuthoritativeStatementInput struct {
 	ProvenanceType                string                            `json:"provenanceType,omitempty"`
 	ProvenanceEvidenceSHA256      string                            `json:"provenanceEvidenceSha256,omitempty"`
 	ProvenanceEvidenceBytesBase64 string                            `json:"provenanceEvidenceBytesBase64,omitempty"`
+	ProvenanceKeyID               string                            `json:"provenanceKeyId,omitempty"`
+	ProviderSignatureBase64       string                            `json:"providerSignatureBase64,omitempty"`
 	BusinessDate                  string                            `json:"businessDate"`
 	ClosingBalanceMinorUnits      int64                             `json:"closingBalanceMinorUnits"`
 	Currency                      string                            `json:"currency"`
@@ -59,6 +64,9 @@ type AuthoritativeStatement struct {
 	StatementFingerprint     string `json:"statementFingerprint"`
 	ProvenanceType           string `json:"provenanceType"`
 	ProvenanceEvidenceSHA256 string `json:"provenanceEvidenceSha256"`
+	ProvenanceKeyID          string `json:"provenanceKeyId,omitempty"`
+	VerifierVersion          string `json:"verifierVersion,omitempty"`
+	VerificationReceiptID    string `json:"verificationReceiptId,omitempty"`
 }
 
 type canonicalStatementLine struct {
@@ -225,6 +233,8 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 	input.ProvenanceType = strings.ToLower(strings.TrimSpace(input.ProvenanceType))
 	input.ProvenanceEvidenceSHA256 = strings.ToLower(strings.TrimSpace(input.ProvenanceEvidenceSHA256))
 	input.ProvenanceEvidenceBytesBase64 = strings.TrimSpace(input.ProvenanceEvidenceBytesBase64)
+	input.ProvenanceKeyID = strings.TrimSpace(input.ProvenanceKeyID)
+	input.ProviderSignatureBase64 = strings.TrimSpace(input.ProviderSignatureBase64)
 	if input.ProvenanceType == "" {
 		input.ProvenanceType = "operator_attested"
 	}
@@ -236,21 +246,26 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 	if input.ProvenanceType != "operator_attested" && input.ProvenanceType != "provider_signed" && input.ProvenanceType != "provider_api_verified" {
 		return nil, fmt.Errorf("provenanceType must be operator_attested, provider_signed or provider_api_verified")
 	}
+	artifactBytes, err := base64.StdEncoding.DecodeString(input.ArtifactBytesBase64)
+	if err != nil || len(artifactBytes) == 0 {
+		return nil, fmt.Errorf("artifact bytes are invalid or empty")
+	}
+	var provenanceEvidenceBytes []byte
 	if input.ProvenanceType == "operator_attested" {
 		input.ProvenanceEvidenceSHA256 = input.ArtifactSHA256
-	} else if !isSHA256(input.ProvenanceEvidenceSHA256) || input.ProvenanceEvidenceBytesBase64 == "" {
-		return nil, fmt.Errorf("independent provenance evidence SHA-256 and bytes are required for %s statements", input.ProvenanceType)
-	}
-	provenanceEvidenceBytes, err := base64.StdEncoding.DecodeString(input.ProvenanceEvidenceBytesBase64)
-	if input.ProvenanceType == "operator_attested" && input.ProvenanceEvidenceBytesBase64 == "" {
-		provenanceEvidenceBytes, err = base64.StdEncoding.DecodeString(input.ArtifactBytesBase64)
-	}
-	if err != nil || len(provenanceEvidenceBytes) == 0 {
-		return nil, fmt.Errorf("provenance evidence bytes are invalid or empty")
-	}
-	evidenceDigest := sha256.Sum256(provenanceEvidenceBytes)
-	if hex.EncodeToString(evidenceDigest[:]) != input.ProvenanceEvidenceSHA256 {
-		return nil, fmt.Errorf("provenance evidence bytes do not match provenanceEvidenceSha256")
+		provenanceEvidenceBytes = artifactBytes
+	} else if input.ProvenanceType == "provider_signed" {
+		if input.ProvenanceKeyID == "" || input.ProviderSignatureBase64 == "" {
+			return nil, fmt.Errorf("provider_signed requires a provider key id and signature; self-asserted evidence is not accepted")
+		}
+		provenanceEvidenceBytes, err = base64.StdEncoding.DecodeString(input.ProviderSignatureBase64)
+		if err != nil || len(provenanceEvidenceBytes) != ed25519.SignatureSize {
+			return nil, fmt.Errorf("provider_signed evidence must be a valid Ed25519 signature")
+		}
+		input.ProvenanceEvidenceBytesBase64 = input.ProviderSignatureBase64
+		input.ProvenanceEvidenceSHA256 = ""
+	} else {
+		return nil, fmt.Errorf("provider_api_verified requires the trusted provider API verifier; caller-asserted API provenance is rejected")
 	}
 	for i := range input.Lines {
 		line := &input.Lines[i]
@@ -264,38 +279,70 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 		return nil, err
 	}
 	input.ArtifactSHA256 = computedArtifactSHA256
+	if input.ProvenanceType == "provider_signed" {
+		var signatureBytes []byte
+		signatureBytes, err = base64.StdEncoding.DecodeString(input.ProviderSignatureBase64)
+		if err != nil || len(signatureBytes) != ed25519.SignatureSize {
+			return nil, fmt.Errorf("provider signature evidence is invalid")
+		}
+		provenanceEvidenceBytes = signatureBytes
+		evidenceDigest := sha256.Sum256(signatureBytes)
+		input.ProvenanceEvidenceSHA256 = hex.EncodeToString(evidenceDigest[:])
+	}
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	var accountCurrency string
+	var providerKey, accountCurrency string
 	if err := tx.QueryRowContext(ctx, `
-		SELECT currency FROM wlt_external_provider_accounts
+		SELECT provider_key, currency FROM wlt_external_provider_accounts
 		WHERE id=$1 AND operator_context_id=$2 AND active=true
 		FOR UPDATE`, input.ExternalProviderAccountID, operatorContextID,
-	).Scan(&accountCurrency); err != nil {
+	).Scan(&providerKey, &accountCurrency); err != nil {
 		return nil, fmt.Errorf("active external provider account not found: %w", err)
 	}
 	if accountCurrency != input.Currency {
 		return nil, fmt.Errorf("statement currency must match external provider account currency")
 	}
 
-	var existingArtifactSHA256, existingProvenanceType, existingEvidenceSHA256 string
+	var verifierVersion string
+	if input.ProvenanceType == "provider_signed" {
+		var publicKey []byte
+		err := tx.QueryRowContext(ctx, `
+			SELECT public_key, verifier_version
+			FROM wlt_external_provider_verification_keys
+			WHERE operator_context_id=$1 AND provider_key=$2 AND key_id=$3 AND algorithm='ed25519'
+			  AND active=true AND valid_from <= NOW() AND (valid_until IS NULL OR valid_until > NOW())
+			FOR SHARE`, operatorContextID, providerKey, input.ProvenanceKeyID).Scan(&publicKey, &verifierVersion)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("provider signing key is not trusted or active")
+		}
+		if err != nil {
+			return nil, fmt.Errorf("read trusted provider signing key: %w", err)
+		}
+		if len(publicKey) != ed25519.PublicKeySize || !ed25519.Verify(ed25519.PublicKey(publicKey), artifactBytes, provenanceEvidenceBytes) {
+			return nil, fmt.Errorf("provider signature does not verify against the canonical statement artifact")
+		}
+	}
+
+	var existingArtifactSHA256, existingProvenanceType, existingEvidenceSHA256, existingKeyID, existingVerifierVersion, existingReceiptID string
 	existingErr := tx.QueryRowContext(ctx, `
-		SELECT artifact_sha256, COALESCE(provenance_type, 'operator_attested'), COALESCE(provenance_evidence_sha256, '')
+		SELECT artifact_sha256, COALESCE(provenance_type, 'operator_attested'), COALESCE(provenance_evidence_sha256, ''),
+		       COALESCE(provenance_key_id, ''), COALESCE(provenance_verifier_version, ''), COALESCE(provenance_verification_receipt_id, '')
 		FROM wlt_external_provider_statements
 		WHERE operator_context_id=$1 AND external_provider_account_id=$2
 		  AND statement_reference=$3 AND business_date=$4
 		FOR UPDATE`,
 		operatorContextID, input.ExternalProviderAccountID, input.StatementReference, businessDate,
-	).Scan(&existingArtifactSHA256, &existingProvenanceType, &existingEvidenceSHA256)
+	).Scan(&existingArtifactSHA256, &existingProvenanceType, &existingEvidenceSHA256, &existingKeyID, &existingVerifierVersion, &existingReceiptID)
 	if existingErr == nil {
 		if existingArtifactSHA256 != input.ArtifactSHA256 {
 			return nil, fmt.Errorf("statement reference is already bound to a different artifact payload")
 		}
-		if existingProvenanceType != input.ProvenanceType || existingEvidenceSHA256 != input.ProvenanceEvidenceSHA256 {
+		if existingProvenanceType != input.ProvenanceType || existingEvidenceSHA256 != input.ProvenanceEvidenceSHA256 ||
+			(input.ProvenanceType == "provider_signed" && (existingKeyID != input.ProvenanceKeyID || existingVerifierVersion == "" || existingReceiptID == "")) {
 			return nil, fmt.Errorf("statement replay provenance does not match the immutable existing evidence")
 		}
 	}
@@ -303,29 +350,40 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 		return nil, existingErr
 	}
 
+	statementID := "weps_" + uuid.NewString()
+	var provenanceKeyID, provenanceVerifierVersion, provenanceReceiptID any
+	if input.ProvenanceType == "provider_signed" {
+		provenanceKeyID = input.ProvenanceKeyID
+		provenanceVerifierVersion = verifierVersion
+		provenanceReceiptID = "wepsvr_" + uuid.NewString()
+	}
+
 	var statement AuthoritativeStatement
 	err = tx.QueryRowContext(ctx, `
 			INSERT INTO wlt_external_provider_statements
-				(operator_context_id, external_provider_account_id, statement_reference,
+				(id, operator_context_id, external_provider_account_id, statement_reference,
 				 artifact_sha256, statement_fingerprint, business_date, closing_balance_minor_units, currency,
-				 imported_by_operator_id, provenance_type, provenance_evidence_sha256, provenance_evidence_bytes)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+				 imported_by_operator_id, provenance_type, provenance_evidence_sha256, provenance_evidence_bytes,
+				 provenance_key_id, provenance_verifier_version, provenance_verification_receipt_id)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 			ON CONFLICT (operator_context_id, artifact_sha256) DO NOTHING
-			RETURNING id, statement_reference, artifact_sha256, statement_fingerprint, provenance_type, provenance_evidence_sha256`,
-
-		operatorContextID, input.ExternalProviderAccountID, input.StatementReference,
+			RETURNING id, statement_reference, artifact_sha256, statement_fingerprint, provenance_type, provenance_evidence_sha256,
+			       COALESCE(provenance_key_id, ''), COALESCE(provenance_verifier_version, ''), COALESCE(provenance_verification_receipt_id, '')`,
+		statementID, operatorContextID, input.ExternalProviderAccountID, input.StatementReference,
 		input.ArtifactSHA256, statementFingerprint, businessDate, input.ClosingBalanceMinorUnits, input.Currency,
 		operatorID, input.ProvenanceType, input.ProvenanceEvidenceSHA256, provenanceEvidenceBytes,
+		provenanceKeyID, provenanceVerifierVersion, provenanceReceiptID,
 	).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256, &statement.StatementFingerprint,
-		&statement.ProvenanceType, &statement.ProvenanceEvidenceSHA256)
+		&statement.ProvenanceType, &statement.ProvenanceEvidenceSHA256, &statement.ProvenanceKeyID, &statement.VerifierVersion, &statement.VerificationReceiptID)
 	if err == sql.ErrNoRows {
 		err = tx.QueryRowContext(ctx, `
-			SELECT id, statement_reference, artifact_sha256, COALESCE(statement_fingerprint, ''),
-			       COALESCE(provenance_type, 'operator_attested'), COALESCE(provenance_evidence_sha256, '')
-				FROM wlt_external_provider_statements
+				SELECT id, statement_reference, artifact_sha256, COALESCE(statement_fingerprint, ''),
+			       COALESCE(provenance_type, 'operator_attested'), COALESCE(provenance_evidence_sha256, ''),
+			       COALESCE(provenance_key_id, ''), COALESCE(provenance_verifier_version, ''), COALESCE(provenance_verification_receipt_id, '')
+			FROM wlt_external_provider_statements
 			WHERE operator_context_id=$1 AND artifact_sha256=$2`, operatorContextID, input.ArtifactSHA256,
 		).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256, &statement.StatementFingerprint,
-			&statement.ProvenanceType, &statement.ProvenanceEvidenceSHA256)
+			&statement.ProvenanceType, &statement.ProvenanceEvidenceSHA256, &statement.ProvenanceKeyID, &statement.VerifierVersion, &statement.VerificationReceiptID)
 		if err != nil {
 			return nil, err
 		}
@@ -339,6 +397,18 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	if input.ProvenanceType == "provider_signed" {
+		if _, err := tx.ExecContext(ctx, `
+				INSERT INTO wlt_external_statement_verification_receipts
+					(id, operator_context_id, statement_id, provider_key, verification_method, key_id,
+					 verifier_version, artifact_sha256, evidence_sha256, raw_evidence)
+				VALUES ($1,$2,$3,$4,'provider_signed',$5,$6,$7,$8,$9)`, provenanceReceiptID,
+			operatorContextID, statement.ID, providerKey, input.ProvenanceKeyID, verifierVersion,
+			input.ArtifactSHA256, input.ProvenanceEvidenceSHA256, provenanceEvidenceBytes); err != nil {
+			return nil, fmt.Errorf("persist provider verification receipt: %w", err)
+		}
 	}
 
 	for _, line := range input.Lines {
