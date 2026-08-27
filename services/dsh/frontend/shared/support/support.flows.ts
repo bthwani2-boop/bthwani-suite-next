@@ -434,23 +434,3 @@ export const DSH_OPERATIONS_SUPPORT_FLOWS_BY_ID = Object.fromEntries(
 export function getOperationsSupportFlowSpec(flowId: DshOperationsSupportFlowId): DshOperationsSupportFlowSpec {
   return DSH_OPERATIONS_SUPPORT_FLOWS_BY_ID[flowId];
 }
-
-function getOperationsSupportSurfaceEntry(
-  flowId: DshOperationsSupportFlowId,
-  surfaceId: DshOperationsSupportSurfaceId,
-): DshOperationsSupportFlowVisibility | undefined {
-  return getOperationsSupportFlowSpec(flowId).surfaceVisibility.find((e) => e.surfaceId === surfaceId);
-}
-
-export function getOperationsSupportFlowsForSurface(
-  surfaceId: DshOperationsSupportSurfaceId,
-  options: { includeHiddenCompat?: boolean; includeReferenceOnly?: boolean } = {},
-): readonly DshOperationsSupportFlowSpec[] {
-  return DSH_OPERATIONS_SUPPORT_FLOWS.filter((item) => {
-    const entry = item.surfaceVisibility.find((e) => e.surfaceId === surfaceId);
-    if (!entry) return false;
-    if (entry.mode === 'reference-only' && !options.includeReferenceOnly) return false;
-    if (entry.mode === 'hidden-compat' && !options.includeHiddenCompat) return false;
-    return true;
-  });
-}
