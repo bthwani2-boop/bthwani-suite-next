@@ -2,7 +2,6 @@ import type { CatalogSubmission } from "./catalog.types";
 import type { CatalogState } from "./client-catalog.types";
 import {
   catalogAuditErrorState,
-  catalogAuditSuccessState,
   catalogErrorState,
   catalogLoadingState,
   catalogPermissionDeniedState,
@@ -23,10 +22,6 @@ export function resolveCatalogError(error: unknown): CatalogState {
     return catalogErrorState("خدمة الكتالوج غير متاحة حاليًا.");
   }
   return catalogErrorState("تعذر تنفيذ عملية الكتالوج.");
-}
-
-export function resolveCatalogAuditSuccess(entries: readonly CatalogSubmission[]) {
-  return catalogAuditSuccessState(entries);
 }
 
 export function resolveCatalogAuditError(previousEntries: readonly CatalogSubmission[]) {
