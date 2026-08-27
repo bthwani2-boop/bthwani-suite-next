@@ -150,6 +150,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/client/special-requests", protected.handleCreateSpecialRequest)
 	mux.HandleFunc("GET /dsh/client/special-requests", protected.handleListClientSpecialRequests)
 	mux.HandleFunc("GET /dsh/client/special-requests/{requestId}", protected.handleGetClientSpecialRequest)
+	mux.HandleFunc("GET /dsh/client/special-requests/{requestId}/sagas/{sagaId}", protected.handleGetClientSpecialRequestSaga)
 	mux.HandleFunc("GET /dsh/client/special-requests/{requestId}/information-exchange", protected.handleGetClientSpecialRequestInformation)
 	mux.HandleFunc("POST /dsh/client/special-requests/{requestId}/information-response", protected.handleRespondSpecialRequestInformation)
 	mux.HandleFunc("GET /dsh/client/special-requests/{requestId}/execution", protected.handleGetClientSpecialRequestExecution)
@@ -158,6 +159,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 
 	mux.HandleFunc("GET /dsh/operator/special-requests", protected.withPermission("control-panel", OperationsSpecialRequestsPermissionRead, protected.handleListOperatorSpecialRequests))
 	mux.HandleFunc("GET /dsh/operator/special-requests/{requestId}", protected.withPermission("control-panel", OperationsSpecialRequestsPermissionRead, protected.handleGetOperatorSpecialRequest))
+	mux.HandleFunc("GET /dsh/operator/special-requests/{requestId}/sagas/{sagaId}", protected.withPermission("control-panel", OperationsSpecialRequestsPermissionRead, protected.handleGetOperatorSpecialRequestSaga))
 	mux.HandleFunc("GET /dsh/operator/special-requests/{requestId}/information-exchange", protected.withPermission("control-panel", OperationsSpecialRequestsPermissionRead, protected.handleGetOperatorSpecialRequestInformation))
 	mux.HandleFunc("POST /dsh/operator/special-requests/{requestId}/information-request", protected.withPermission("control-panel", OperationsSpecialRequestsPermissionTransition, protected.handleRequestSpecialRequestInformation))
 	mux.HandleFunc("GET /dsh/operator/special-requests/{requestId}/execution", protected.withPermission("control-panel", OperationsSpecialRequestsPermissionRead, protected.handleGetOperatorSpecialRequestExecution))

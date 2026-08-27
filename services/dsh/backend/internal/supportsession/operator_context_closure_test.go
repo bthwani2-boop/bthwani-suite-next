@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/lib/pq"
 	"dsh-api/internal/auth"
+	_ "github.com/lib/pq"
 )
 
 func TestSupportSessionPersistenceFailsClosedWithoutOperatorContext(t *testing.T) {
@@ -68,7 +68,11 @@ func TestSupportRequestsAreTenantLocalInDB(t *testing.T) {
 	token := fmt.Sprintf("objective3-%d", time.Now().UnixNano())
 	targetID := "objective3-shared-target-" + token
 	requesterID := "objective3-shared-requester-" + token
-	for _, operatorContextID := range []string{"objective3-dsh-tenant-a", "objective3-dsh-tenant-b"} {
+	operatorContextIDs := []string{
+		"objective3-dsh-tenant-a-" + token,
+		"objective3-dsh-tenant-b-" + token,
+	}
+	for _, operatorContextID := range operatorContextIDs {
 		ctx := auth.WithOperatorContext(context.Background(), operatorContextID)
 		request, err := CreateRequest(ctx, db, targetID, requesterID, "objective 3 isolation proof", 5)
 		if err != nil {
@@ -86,7 +90,7 @@ func TestSupportRequestsAreTenantLocalInDB(t *testing.T) {
 		}
 	}
 	var count int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_admin_support_session_requests WHERE target_actor_id=$1 AND operator_context_id IN ('objective3-dsh-tenant-a','objective3-dsh-tenant-b')`, targetID).Scan(&count); err != nil {
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_admin_support_session_requests WHERE target_actor_id=$1 AND operator_context_id IN ($2, $3)`, targetID, operatorContextIDs[0], operatorContextIDs[1]).Scan(&count); err != nil {
 		t.Fatalf("count tenant-local requests: %v", err)
 	}
 	if count != 2 {
