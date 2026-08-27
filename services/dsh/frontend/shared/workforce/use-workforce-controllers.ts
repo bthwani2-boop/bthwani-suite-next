@@ -445,6 +445,7 @@ export function useServiceZoneReference() {
 }
 
 export function useProviderActivationController(providerKind: "field" | "captain", actorId: string) {
+  const mutationCommands = useWorkforceMutationCommands(actorId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<FieldAgentDetail | null>(null);
@@ -506,25 +507,28 @@ export function useProviderActivationController(providerKind: "field" | "captain
     });
   };
 
-  const suspend = async (reason: string): Promise<boolean> => {
+    const suspend = async (reason: string): Promise<boolean> => {
     if (!detail) return false;
     return runAction(async () => {
+      const command = mutationCommands.commandFor("suspend", detail.version, reason);
       if (providerKind === "captain") {
-        await suspendCaptain(actorId, detail.version, reason);
+        await suspendCaptain(actorId, detail.version, reason, command.id);
       } else {
-        await suspendFieldAgent(actorId, detail.version, reason);
+        await suspendFieldAgent(actorId, detail.version, reason, command.id);
       }
+      mutationCommands.commandIds.delete(command.key);
     });
   };
-
   const reactivate = async (reason: string): Promise<boolean> => {
     if (!detail) return false;
     return runAction(async () => {
+      const command = mutationCommands.commandFor("reactivate", detail.version, reason);
       if (providerKind === "captain") {
-        await reactivateCaptain(actorId, detail.version, reason);
+        await reactivateCaptain(actorId, detail.version, reason, command.id);
       } else {
-        await reactivateFieldAgent(actorId, detail.version, reason);
+        await reactivateFieldAgent(actorId, detail.version, reason, command.id);
       }
+      mutationCommands.commandIds.delete(command.key);
     });
   };
 
