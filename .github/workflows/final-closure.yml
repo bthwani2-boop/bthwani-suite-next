@@ -211,6 +211,7 @@ jobs:
         shell: bash
         env:
           HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+          BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
           PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
           RESOLVE_RESULT: ${{ needs.resolve.result }}
           CI_RESULT: ${{ needs.ci.result }}
@@ -243,6 +244,13 @@ jobs:
           fi
           if [[ "${DOCKER_CHANGED}" == "true" ]]; then
             [[ "${DOCKER_RESULT}" == "success" ]] || failures+=("docker:${DOCKER_RESULT}")
+          fi
+          if (( ${#failures[@]} == 0 )); then
+            live_pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+            [[ "$(jq -r '.state' <<<"${live_pr}")" == "open" ]] || failures+=("target:closed")
+            [[ "$(jq -r '.draft' <<<"${live_pr}")" == "false" ]] || failures+=("target:draft")
+            [[ "$(jq -r '.head.sha' <<<"${live_pr}")" == "${HEAD_SHA}" ]] || failures+=("target:head-moved")
+            [[ "$(jq -r '.base.sha' <<<"${live_pr}")" == "${BASE_SHA}" ]] || failures+=("target:base-moved")
           fi
           if (( ${#failures[@]} )); then
             gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \

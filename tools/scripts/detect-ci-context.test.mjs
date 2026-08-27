@@ -42,7 +42,7 @@ test("database changes route to the owning backend and database checks", () => {
 });
 
 test("CI control-plane changes run node verification without semantic filename routing", () => {
-  const result = classifyFiles([".github/workflows/ci.yml"]);
+  const result = classifyFiles([".github/workflows/ci-check.yml"]);
   assert.equal(result.ci_control_plane, true);
   assert.equal(result.node, true);
   assert.deepEqual(result.required_jobs, ["node"]);

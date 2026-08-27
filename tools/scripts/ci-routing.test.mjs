@@ -56,6 +56,8 @@ test("final closure is explicit only and runs Full CI before analyzers", () => {
   }
   assert.doesNotMatch(workflow, /open-code-review\.yml|SEMANTIC_RESULT/u);
   assert.match(workflow, /BThwani \/ Final Closure/u);
+  assert.match(workflow, /target:head-moved/u);
+  assert.match(workflow, /target:base-moved/u);
   assert.doesNotMatch(workflow, /workflow_run:|repository_dispatch|actions\/workflows\/|sleep|poll/u);
 });
 
