@@ -268,11 +268,6 @@ export async function transitionProductProposal(
   return resp.proposal;
 }
 
-export async function fetchCatalogPlatformPolicies(): Promise<readonly CatalogPlatformPolicy[]> {
-  const resp = await request<{ policies: readonly CatalogPlatformPolicy[] }>("/dsh/operator/catalog/platform-policies");
-  return resp.policies;
-}
-
 export async function updateCatalogPlatformPolicy(
   policyId: string,
   input: {
