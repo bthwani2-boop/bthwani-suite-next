@@ -69,6 +69,11 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 	}
 	defer tx.Rollback() //nolint:errcheck
 
+	var cutoffAt time.Time
+	if err := tx.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&cutoffAt); err != nil {
+		return nil, err
+	}
+
 	// Check if already closed
 	var existing string
 	if err := tx.QueryRowContext(ctx, `SELECT business_date FROM wlt_daily_finance_close WHERE business_date = $1 AND operator_context_id = $2`, date.Format("2006-01-02"), operatorContextID).Scan(&existing); err == nil {
@@ -83,7 +88,8 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		FROM wlt_payment_sessions
 		WHERE operator_context_id = $1
 		  AND status IN ('pending_provider', 'provider_result_unknown')
-	`, operatorContextID).Scan(&unresolvedPaymentOutcomes); err != nil {
+		  AND updated_at <= $2
+	`, operatorContextID, cutoffAt).Scan(&unresolvedPaymentOutcomes); err != nil {
 		return nil, err
 	}
 	if unresolvedPaymentOutcomes > 0 {
@@ -95,7 +101,8 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		SELECT COUNT(*)
 		FROM wlt_reconciliation_cases
 		WHERE operator_context_id = $1 AND status = 'open'
-	`, operatorContextID).Scan(&openReconciliationCases); err != nil {
+		  AND updated_at <= $2
+	`, operatorContextID, cutoffAt).Scan(&openReconciliationCases); err != nil {
 		return nil, err
 	}
 	if openReconciliationCases > 0 {
@@ -108,7 +115,8 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		FROM wlt_payout_requests
 		WHERE operator_context_id = $1
 		  AND status IN ('provider_pending', 'provider_result_unknown')
-	`, operatorContextID).Scan(&unresolvedPayoutOutcomes); err != nil {
+		  AND updated_at <= $2
+	`, operatorContextID, cutoffAt).Scan(&unresolvedPayoutOutcomes); err != nil {
 		return nil, err
 	}
 	if unresolvedPayoutOutcomes > 0 {
@@ -133,7 +141,8 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		JOIN wlt_ledger_lines l ON l.ledger_transaction_id = t.id
 		JOIN wlt_ledger_accounts a ON a.id = l.account_id
 		WHERE t.operator_context_id = $1 AND DATE(t.created_at AT TIME ZONE 'UTC') = $2
-	`, operatorContextID, date.Format("2006-01-02")).Scan(&totalPayouts, &totalCashin); err != nil {
+		  AND t.created_at <= $3
+	`, operatorContextID, date.Format("2006-01-02"), cutoffAt).Scan(&totalPayouts, &totalCashin); err != nil {
 		return nil, err
 	}
 
@@ -296,12 +305,13 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		INSERT INTO wlt_daily_finance_close
 		(business_date, operator_context_id, total_payouts_minor_units, total_cashin_minor_units, closing_balance_minor_units,
 		 treasury_expected_balance_minor_units, treasury_statement_balance_minor_units, treasury_ledger_balance_minor_units,
-		 settlement_audit_pack_count, closed_by_operator_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		 settlement_audit_pack_count, closed_by_operator_id, cutoff_at, input_high_watermark)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING business_date, operator_context_id, total_payouts_minor_units, total_cashin_minor_units, closing_balance_minor_units,
 		 treasury_expected_balance_minor_units, treasury_statement_balance_minor_units, treasury_ledger_balance_minor_units,
 		 settlement_audit_pack_count, closed_by_operator_id, closed_at
-	`, date.Format("2006-01-02"), operatorContextID, totalPayouts, totalCashin, closingBalance, treasuryExpected, treasuryStatement, treasuryLedger, auditPackCount, operatorID)
+	`, date.Format("2006-01-02"), operatorContextID, totalPayouts, totalCashin, closingBalance, treasuryExpected, treasuryStatement, treasuryLedger, auditPackCount, operatorID, cutoffAt,
+		json.RawMessage(fmt.Sprintf(`{"cutoffAt":%q,"businessDate":%q}`, cutoffAt.UTC().Format(time.RFC3339Nano), date.Format(time.DateOnly))))
 
 	var closeRecord DailyFinanceClose
 	var bDate time.Time

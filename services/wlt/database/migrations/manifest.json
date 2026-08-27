@@ -837,6 +837,13 @@
       "sha256": "38487674d2b5d3c6e3bb549188abddd6c026cfbfe68d63cae1290b4fe1affb0d",
       "historicalPrefix": "949",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 120,
+      "file": "wlt-950_daily_close_cutoff_high_watermark.sql",
+      "sha256": "cb2da6d2dc8b9887456c65b6891de5d209a0c61866bbfb334fa8d90c2bd0b124",
+      "historicalPrefix": "950",
+      "state": "ACTIVE"
     }
   ]
 }
