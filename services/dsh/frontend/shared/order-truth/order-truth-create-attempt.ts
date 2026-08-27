@@ -12,7 +12,6 @@ import {
 } from "../_kernel/durable-mutation-attempt-registry.ts";
 
 const OPERATION = "order-truth-create";
-const STORAGE_KEY_LEGACY = "@bthwani/order-truth-create-attempt:v1";
 
 type StoredOrderTruthAttempt = {
   readonly fingerprint: string;
@@ -65,11 +64,12 @@ function isStoredAttempt(value: unknown): value is StoredOrderTruthAttempt {
 }
 
 export async function getOrCreateOrderTruthAttempt(
+  actorId: string,
   input: CreateOrderTruthInput,
 ): Promise<StoredOrderTruthAttempt> {
   const fingerprint = fingerprintOrderTruthInput(input);
   const entityId = input.checkoutIntentId.trim();
-  const scope = await resolveMutationIdentityScope("", { entityId });
+  const scope = await resolveMutationIdentityScope(actorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
   return getOrCreateDurableMutationAttempt({
     operation: OPERATION,
@@ -77,19 +77,17 @@ export async function getOrCreateOrderTruthAttempt(
     fingerprint,
     create: () => newAttempt(fingerprint, scoped),
     parse: isStoredAttempt,
-    legacyKeys: [STORAGE_KEY_LEGACY],
-    legacyPrefixes: ["@bthwani/order-truth-create-attempt:v2", "@bthwani/order-truth-create-attempt:v3/"],
   });
 }
 
-export async function clearOrderTruthAttempt(fingerprint: string): Promise<void> {
+export async function clearOrderTruthAttempt(actorId: string, fingerprint: string): Promise<void> {
   const normalizedFingerprint = fingerprint.trim();
   if (!normalizedFingerprint) return;
   const entityId = normalizedFingerprint.startsWith('{')
     ? (() => { try { return (JSON.parse(normalizedFingerprint) as { checkoutIntentId?: string }).checkoutIntentId?.trim() ?? ''; } catch { return ''; } })()
     : normalizedFingerprint;
   if (!entityId) return;
-  const scope = await resolveMutationIdentityScope("", { entityId });
+  const scope = await resolveMutationIdentityScope(actorId, { entityId });
   await purgeExactDurableMutationAttempt(
     OPERATION,
     { actorId: scope.actorId, installationId: scope.installationId, entityId },
