@@ -45,12 +45,6 @@ export function catalogSubmissionSuccessState(
   return { kind: "success", submissions };
 }
 
-export function catalogAuditSuccessState(
-  entries: readonly CatalogSubmission[],
-): CatalogAuditState {
-  return { kind: "success", entries };
-}
-
 export function catalogAuditErrorState(
   entries: readonly CatalogSubmission[],
   message: string,
