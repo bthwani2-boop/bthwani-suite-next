@@ -387,7 +387,7 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
 		}
 
-		if _, err := AcceptAssignment(db, assignment.ID, captainID); err != nil {
+		if _, err := AcceptAssignment(db, testSpecialRequestOperatorContextID, assignment.ID, captainID); err != nil {
 			t.Fatalf("AcceptAssignment failed: %v", err)
 		}
 
@@ -407,7 +407,7 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
 		}
 
-		if _, err := DeclineAssignment(db, assignment.ID, captainID, "captain unavailable"); err != nil {
+		if _, err := DeclineAssignment(db, testSpecialRequestOperatorContextID, assignment.ID, captainID, "captain unavailable"); err != nil {
 			t.Fatalf("DeclineAssignment failed: %v", err)
 		}
 
@@ -440,13 +440,13 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 // request's status (it stays in_progress throughout, per dispatch.go's
 // updateDeliveryProgress comment). It also registers the two governed media
 // references used by the completion subtests for this captain.
-func driveDeliveryToArrivedCustomer(t *testing.T, db *sql.DB, assignmentID, captainID string) {
+func driveDeliveryToArrivedCustomer(t *testing.T, db *sql.DB, operatorContextID, assignmentID, captainID string) {
 	t.Helper()
-	if _, err := AcceptAssignment(db, assignmentID, captainID); err != nil {
+	if _, err := AcceptAssignment(db, operatorContextID, assignmentID, captainID); err != nil {
 		t.Fatalf("AcceptAssignment failed: %v", err)
 	}
 	for _, status := range []DeliveryStatus{DeliveryArrivedStore, DeliveryPickedUp, DeliveryArrivedCustomer} {
-		if _, err := UpdateDeliveryStatus(db, assignmentID, captainID, status); err != nil {
+		if _, err := UpdateDeliveryStatus(db, operatorContextID, assignmentID, captainID, status); err != nil {
 			t.Fatalf("UpdateDeliveryStatus(%s) failed: %v", status, err)
 		}
 	}
@@ -466,9 +466,9 @@ func TestSpecialRequestSubmitPoDDBIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
 		}
-		driveDeliveryToArrivedCustomer(t, db, assignment.ID, captainID)
+		driveDeliveryToArrivedCustomer(t, db, testSpecialRequestOperatorContextID, assignment.ID, captainID)
 
-		if _, err := SubmitPoD(db, assignment.ID, captainID, PoDInput{Method: "photo", Reference: "sr-pod-ref"}); err != nil {
+		if _, err := SubmitPoD(db, testSpecialRequestOperatorContextID, assignment.ID, captainID, PoDInput{Method: "photo", Reference: "sr-pod-ref"}); err != nil {
 			t.Fatalf("SubmitPoD failed: %v", err)
 		}
 
@@ -497,14 +497,14 @@ func TestSpecialRequestSubmitPoDDBIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
 		}
-		driveDeliveryToArrivedCustomer(t, db, assignment.ID, captainID)
+		driveDeliveryToArrivedCustomer(t, db, testSpecialRequestOperatorContextID, assignment.ID, captainID)
 
 		var before int
 		if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_wlt_outbox_events WHERE captain_id = $1`, captainID).Scan(&before); err != nil {
 			t.Fatalf("failed to count outbox rows before PoD: %v", err)
 		}
 
-		if _, err := SubmitPoD(db, assignment.ID, captainID, PoDInput{Method: "photo", Reference: "sr-pod-outbox-guard"}); err != nil {
+		if _, err := SubmitPoD(db, testSpecialRequestOperatorContextID, assignment.ID, captainID, PoDInput{Method: "photo", Reference: "sr-pod-outbox-guard"}); err != nil {
 			t.Fatalf("SubmitPoD failed: %v", err)
 		}
 

@@ -100,7 +100,7 @@ func TestOutboundStoreCaptainHandoffDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
 
-	arrived, err := UpdateDeliveryStatusGoverned(db, fixture.AssignmentID, fixture.CaptainID, DeliveryArrivedStore)
+	arrived, err := UpdateDeliveryStatusGovernedForOperatorContext(db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID, DeliveryArrivedStore)
 	if err != nil {
 		t.Fatalf("captain arrival failed: %v", err)
 	}
@@ -121,15 +121,15 @@ func TestOutboundStoreCaptainHandoffDBIntegration(t *testing.T) {
 		t.Fatalf("after arrival handoff=%q order=%q", handoffStatus, orderStatus)
 	}
 
-	if _, err = UpdateDeliveryStatusGoverned(db, fixture.AssignmentID, fixture.CaptainID, DeliveryPickedUp); !errors.Is(err, ErrStoreHandoffRequired) {
+	if _, err = UpdateDeliveryStatusGovernedForOperatorContext(db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID, DeliveryPickedUp); !errors.Is(err, ErrStoreHandoffRequired) {
 		t.Fatalf("pickup before store confirmation error=%v want ErrStoreHandoffRequired", err)
 	}
 
-	if _, err = ConfirmStoreCaptainHandoff(db, fixture.OrderID, "wrong-store", "partner-actor"); !errors.Is(err, ErrNotFound) {
+	if _, err = ConfirmStoreCaptainHandoffForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, "wrong-store", "partner-actor"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("wrong-store confirmation error=%v want ErrNotFound", err)
 	}
 
-	confirmed, err := ConfirmStoreCaptainHandoff(db, fixture.OrderID, fixture.StoreID, "partner-actor")
+	confirmed, err := ConfirmStoreCaptainHandoffForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, fixture.StoreID, "partner-actor")
 	if err != nil {
 		t.Fatalf("partner confirmation failed: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestOutboundStoreCaptainHandoffDBIntegration(t *testing.T) {
 		t.Fatalf("confirmed handoff=%+v", confirmed)
 	}
 
-	replayed, err := ConfirmStoreCaptainHandoff(db, fixture.OrderID, fixture.StoreID, "partner-actor")
+	replayed, err := ConfirmStoreCaptainHandoffForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, fixture.StoreID, "partner-actor")
 	if err != nil {
 		t.Fatalf("idempotent partner confirmation failed: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestOutboundStoreCaptainHandoffDBIntegration(t *testing.T) {
 		t.Fatalf("order status after partner confirmation=%q", orderStatus)
 	}
 
-	pickedUp, err := UpdateDeliveryStatusGoverned(db, fixture.AssignmentID, fixture.CaptainID, DeliveryPickedUp)
+	pickedUp, err := UpdateDeliveryStatusGovernedForOperatorContext(db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID, DeliveryPickedUp)
 	if err != nil {
 		t.Fatalf("captain pickup failed: %v", err)
 	}
@@ -176,7 +176,7 @@ func TestOutboundStoreCaptainHandoffDBIntegration(t *testing.T) {
 func TestOutboundHandoffReassignmentSupersedesPriorAttemptDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
-	if _, err := UpdateDeliveryStatusGoverned(db, fixture.AssignmentID, fixture.CaptainID, DeliveryArrivedStore); err != nil {
+	if _, err := UpdateDeliveryStatusGovernedForOperatorContext(db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID, DeliveryArrivedStore); err != nil {
 		t.Fatalf("first captain arrival failed: %v", err)
 	}
 
@@ -211,7 +211,7 @@ func TestOutboundHandoffReassignmentSupersedesPriorAttemptDBIntegration(t *testi
 		t.Fatal(err)
 	}
 
-	if _, err = UpdateDeliveryStatusGoverned(db, newAssignmentID, newCaptainID, DeliveryArrivedStore); err != nil {
+	if _, err = UpdateDeliveryStatusGovernedForOperatorContext(db, fixture.OperatorContextID, newAssignmentID, newCaptainID, DeliveryArrivedStore); err != nil {
 		t.Fatalf("replacement captain arrival failed: %v", err)
 	}
 	rows, err := db.Query(`

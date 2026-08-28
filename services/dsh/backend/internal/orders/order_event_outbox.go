@@ -9,15 +9,15 @@ import (
 )
 
 type OrderOutboxRecord struct {
-	ID            string
-	OperatorContextID      string
-	OrderID       string
-	EventID       string
-	EventType     string
-	CorrelationID string
-	CausationID   string
-	Payload       json.RawMessage
-	AttemptCount  int
+	ID                string
+	OperatorContextID string
+	OrderID           string
+	EventID           string
+	EventType         string
+	CorrelationID     string
+	CausationID       string
+	Payload           json.RawMessage
+	AttemptCount      int
 }
 
 // ClaimOrderEvents atomically leases retryable events. The caller must publish

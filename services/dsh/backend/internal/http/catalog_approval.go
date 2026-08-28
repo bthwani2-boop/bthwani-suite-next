@@ -78,14 +78,14 @@ func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter
 		metadata = encoded
 	}
 	rec, err := catalogapproval.Create(s.db, catalogapproval.CreateInput{
-		OperatorContextID:     operatorContextID,
-		EntityType:   body.EntityType,
-		EntityID:     body.EntityID,
-		OwnerActorID: actor.ID,
-		Source:       source,
-		Stage:        stage,
-		Title:        body.Title,
-		Metadata:     metadata,
+		OperatorContextID: operatorContextID,
+		EntityType:        body.EntityType,
+		EntityID:          body.EntityID,
+		OwnerActorID:      actor.ID,
+		Source:            source,
+		Stage:             stage,
+		Title:             body.Title,
+		Metadata:          metadata,
 	})
 	if errors.Is(err, catalogapproval.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "OperatorContext, entityType, actor, and title are required")

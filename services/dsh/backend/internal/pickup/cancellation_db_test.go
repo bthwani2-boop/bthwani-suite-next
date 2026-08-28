@@ -52,7 +52,7 @@ func TestOrderCancellationCancelsPickupSessionDBIntegration(t *testing.T) {
 		t.Fatalf("cancelled pickup session retained consumption data: usedAt=%v verificationMethod=%v", usedAt, verificationMethod)
 	}
 
-	if _, err := service.VerifyOtp(context.Background(), fixture.orderID, otp, "partner-1", "partner", "cancel-command-19"); !errors.Is(err, ErrCancelled) {
+	if _, err := service.VerifyOtp(context.Background(), fixture.operatorContextID, fixture.orderID, otp, "partner-1", "partner", "cancel-command-19"); !errors.Is(err, ErrCancelled) {
 		t.Fatalf("expected ErrCancelled after order cancellation, got %v", err)
 	}
 }

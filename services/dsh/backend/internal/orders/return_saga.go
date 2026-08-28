@@ -90,6 +90,10 @@ func CreateReturnCase(db *sql.DB, input CreateReturnCaseInput) (*OrderReturn, er
 	if input.OrderID == "" || input.ActorID == "" || input.ReasonCode == "" || input.ActorRole == "" {
 		return nil, fmt.Errorf("%w: missing required fields", ErrInvalid)
 	}
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	if input.OperatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	if len(input.Items) == 0 {
 		return nil, fmt.Errorf("%w: at least one item must be returned", ErrInvalid)
 	}
@@ -100,21 +104,23 @@ func CreateReturnCase(db *sql.DB, input CreateReturnCaseInput) (*OrderReturn, er
 	}
 	defer tx.Rollback()
 
-	// 1. Lock the order
+	// 1. Lock the order within the trusted operator context. The lock itself is
+	// context-bound so cross-context callers cannot observe or mutate another
+	// context's order, and legacy context-less rows never match (fail closed).
 	var order Order
 	var operatorContextID string
 	err = tx.QueryRow(`
 		SELECT id, store_id, client_id, status, operator_context_id
 		FROM dsh_orders
-		WHERE id = $1 FOR UPDATE
-	`, input.OrderID).Scan(&order.ID, &order.StoreID, &order.ClientID, &order.Status, &operatorContextID)
+		WHERE id = $1 AND operator_context_id = $2 FOR UPDATE
+	`, input.OrderID, input.OperatorContextID).Scan(&order.ID, &order.StoreID, &order.ClientID, &order.Status, &operatorContextID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
 		}
 		return nil, err
 	}
-	if operatorContextID != input.OperatorContextID && input.OperatorContextID != "" {
+	if operatorContextID != input.OperatorContextID {
 		return nil, fmt.Errorf("%w: mismatch operator context", ErrConflict)
 	}
 
@@ -162,71 +168,21 @@ func CreateReturnCase(db *sql.DB, input CreateReturnCaseInput) (*OrderReturn, er
 	return &ret, nil
 }
 
-type ExecuteReturnActionInput struct {
-	ActorID       string
-	ActionID      string
-	CorrelationID string
-}
-
-func ExecuteReturnActionTx(db *sql.DB, input ExecuteReturnActionInput) (*OrderReturnAction, error) {
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
+// GetReturnForOperatorContext reads the return case for an order inside the
+// trusted operator context. The join through dsh_orders makes the read
+// context-bound; the caller must already have proven order ownership.
+func GetReturnForOperatorContext(db *sql.DB, operatorContextID, orderID string) (*OrderReturn, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
-	defer tx.Rollback()
-
-	var action OrderReturnAction
-	var payloadString []byte
-	err = tx.QueryRow(`
-		SELECT id, return_id, actor_id, action_type, payload, idempotency_key, correlation_id, status, created_at, executed_at, error_message
-		FROM dsh_order_return_actions
-		WHERE id = $1 FOR UPDATE
-	`, input.ActionID).Scan(
-		&action.ID, &action.ReturnID, &action.ActorID, (*string)(&action.ActionType),
-		&payloadString, &action.IdempotencyKey, &action.CorrelationID,
-		&action.Status, &action.CreatedAt, &action.ExecutedAt, &action.ErrorMessage,
-	)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	action.Payload = json.RawMessage(payloadString)
-
-	if action.Status != "pending" {
-		return &action, nil
-	}
-
-	// In a real implementation we would apply state transitions here.
-	// For J072 we focus on mapping the intent and keeping outbox reconciliation.
-
-	_, err = tx.Exec(`
-		UPDATE dsh_order_return_actions
-		SET status = 'executed', executed_at = NOW()
-		WHERE id = $1
-	`, action.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	action.Status = "executed"
-	now := time.Now()
-	action.ExecutedAt = &now
-
-	return &action, nil
-}
-
-func GetReturn(db *sql.DB, orderID string) (*OrderReturn, error) {
 	var ret OrderReturn
 	err := db.QueryRow(`
-		SELECT id, order_id, status, actor_id, actor_role, reason_code, reason_note, ticket_reference, correlation_id, version, created_at, updated_at
-		FROM dsh_order_returns
-		WHERE order_id = $1
-	`, orderID).Scan(&ret.ID, &ret.OrderID, (*string)(&ret.Status), &ret.ActorID, &ret.ActorRole, &ret.ReasonCode, &ret.ReasonNote, &ret.TicketReference, &ret.CorrelationID, &ret.Version, &ret.CreatedAt, &ret.UpdatedAt)
+		SELECT r.id, r.order_id, r.status, r.actor_id, r.actor_role, r.reason_code, r.reason_note, r.ticket_reference, r.correlation_id, r.version, r.created_at, r.updated_at
+		FROM dsh_order_returns r
+		JOIN dsh_orders o ON o.id = r.order_id
+		WHERE r.order_id = $1 AND o.operator_context_id = $2
+	`, orderID, operatorContextID).Scan(&ret.ID, &ret.OrderID, (*string)(&ret.Status), &ret.ActorID, &ret.ActorRole, &ret.ReasonCode, &ret.ReasonNote, &ret.TicketReference, &ret.CorrelationID, &ret.Version, &ret.CreatedAt, &ret.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound

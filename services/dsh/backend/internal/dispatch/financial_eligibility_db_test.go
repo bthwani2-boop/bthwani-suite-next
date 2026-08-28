@@ -9,16 +9,8 @@ import (
 
 func TestGovernedDispatchRequiresFreshWltEligibilityDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
-	assignmentID, captainID, _, _, _ := seedArrivedCustomerFixture(t, db, "wallet")
+	assignmentID, captainID, _, _, _, operatorContextID := seedArrivedCustomerFixture(t, db, "wallet")
 	ctx := context.Background()
-
-	var operatorContextID string
-	if err := db.QueryRowContext(ctx, `
-		SELECT operator_context_id
-		FROM dsh_assignments
-		WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID); err != nil {
-		t.Fatalf("read assignment OperatorContext: %v", err)
-	}
 
 	idempotencyKey := fmt.Sprintf("financial-eligibility-test:%s", assignmentID)
 	if _, err := db.ExecContext(ctx, `

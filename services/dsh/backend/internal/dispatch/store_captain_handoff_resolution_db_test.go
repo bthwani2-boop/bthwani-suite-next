@@ -6,8 +6,9 @@ func TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration(t *te
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
 
-	if _, err := UpdateDeliveryStatusGovernedIdempotent(
+	if _, err := UpdateDeliveryStatusGovernedIdempotentForOperatorContext(
 		db,
+		fixture.OperatorContextID,
 		fixture.AssignmentID,
 		fixture.CaptainID,
 		DeliveryArrivedStore,
@@ -48,16 +49,18 @@ func TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration(t *te
 		t.Fatalf("resolution action=%v want=retry_same_captain", resolved.ResolutionAction)
 	}
 
-	if _, err = ConfirmStoreCaptainHandoffIdempotent(
+	if _, err = ConfirmStoreCaptainHandoffIdempotentForOperatorContext(
 		db,
+		fixture.OperatorContextID,
 		fixture.OrderID,
 		fixture.StoreID,
 		"partner-resolution-actor",
 	); err != nil {
 		t.Fatalf("partner confirmation after resolution failed: %v", err)
 	}
-	assignment, err := UpdateDeliveryStatusGovernedIdempotent(
+	assignment, err := UpdateDeliveryStatusGovernedIdempotentForOperatorContext(
 		db,
+		fixture.OperatorContextID,
 		fixture.AssignmentID,
 		fixture.CaptainID,
 		DeliveryPickedUp,
@@ -74,8 +77,9 @@ func TestHandoffExceptionReassignmentSupersedesCustodyDBIntegration(t *testing.T
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
 
-	if _, err := UpdateDeliveryStatusGovernedIdempotent(
+	if _, err := UpdateDeliveryStatusGovernedIdempotentForOperatorContext(
 		db,
+		fixture.OperatorContextID,
 		fixture.AssignmentID,
 		fixture.CaptainID,
 		DeliveryArrivedStore,

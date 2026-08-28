@@ -298,6 +298,7 @@ func (s *Service) submitProofForContext(ctx context.Context, operatorContextID, 
 
 	if _, err := orders.TransitionDispatchOrder(
 		tx,
+		operatorContextID,
 		current.OrderID,
 		actorID,
 		actorRole,
@@ -415,6 +416,7 @@ func (s *Service) transitionForContext(ctx context.Context, operatorContextID, t
 	if orderStep != nil {
 		if _, err := orders.TransitionDispatchOrder(
 			tx,
+			operatorContextID,
 			current.OrderID,
 			actorID,
 			actorRole,

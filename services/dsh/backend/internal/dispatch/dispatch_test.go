@@ -71,7 +71,7 @@ func TestSubmitPoDRequiresMethodAndReference(t *testing.T) {
 		{Method: "photo"},
 	}
 	for _, input := range cases {
-		_, err := SubmitPoD(nil, "assignment-1", "captain-1", input)
+		_, err := SubmitPoD(nil, "OperatorContext-validation", "assignment-1", "captain-1", input)
 		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("expected ErrInvalid for input %+v, got %v", input, err)
 		}
@@ -79,7 +79,7 @@ func TestSubmitPoDRequiresMethodAndReference(t *testing.T) {
 }
 
 func TestUpdateDeliveryStatusRejectsUnsupportedStatus(t *testing.T) {
-	_, err := UpdateDeliveryStatus(nil, "assignment-1", "captain-1", DeliveryStatus("bogus_status"))
+	_, err := UpdateDeliveryStatus(nil, "OperatorContext-validation", "assignment-1", "captain-1", DeliveryStatus("bogus_status"))
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid for unsupported delivery status, got %v", err)
 	}
@@ -88,7 +88,7 @@ func TestUpdateDeliveryStatusRejectsUnsupportedStatus(t *testing.T) {
 func TestPushLocationRejectsOutOfRangeLatitude(t *testing.T) {
 	cases := []float64{-90.1, 90.1, 1000}
 	for _, lat := range cases {
-		_, err := PushLocation(nil, "assignment-1", "captain-1", PushLocationInput{Latitude: lat, Longitude: 0})
+		_, err := PushLocation(nil, "OperatorContext-validation", "assignment-1", "captain-1", PushLocationInput{Latitude: lat, Longitude: 0})
 		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("expected ErrInvalid for latitude %v, got %v", lat, err)
 		}
@@ -98,7 +98,7 @@ func TestPushLocationRejectsOutOfRangeLatitude(t *testing.T) {
 func TestPushLocationRejectsOutOfRangeLongitude(t *testing.T) {
 	cases := []float64{-180.1, 180.1, 1000}
 	for _, lng := range cases {
-		_, err := PushLocation(nil, "assignment-1", "captain-1", PushLocationInput{Latitude: 0, Longitude: lng})
+		_, err := PushLocation(nil, "OperatorContext-validation", "assignment-1", "captain-1", PushLocationInput{Latitude: 0, Longitude: lng})
 		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("expected ErrInvalid for longitude %v, got %v", lng, err)
 		}

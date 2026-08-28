@@ -126,14 +126,15 @@ func (s *protectedStoreServer) executePartnerOrderDecision(
 	}
 
 	order, err := orders.DecidePartnerOrder(s.db, orders.DecidePartnerOrderInput{
-		OrderID:         ownedOrder.ID,
-		StoreID:         ownedOrder.StoreID,
-		ActorID:         actor.ID,
-		Decision:        decision,
-		ReasonCode:      reasonCode,
-		ReasonNote:      reasonNote,
-		ExpectedVersion: version,
-		IdempotencyKey:  idempotencyKey,
+		OperatorContextID: actor.OperatorContextID,
+		OrderID:           ownedOrder.ID,
+		StoreID:           ownedOrder.StoreID,
+		ActorID:           actor.ID,
+		Decision:          decision,
+		ReasonCode:        reasonCode,
+		ReasonNote:        reasonNote,
+		ExpectedVersion:   version,
+		IdempotencyKey:    idempotencyKey,
 	})
 
 	if errors.Is(err, orders.ErrInvalid) {
@@ -217,7 +218,8 @@ func (s *protectedStoreServer) handleMarkPreparing(w http.ResponseWriter, r *htt
 		return
 	}
 	order, err := orders.TransitionPartnerPreparation(s.db, orders.PartnerPreparationTransitionInput{
-		OrderID: ownedOrder.ID, StoreID: ownedOrder.StoreID, ActorID: actor.ID,
+		OperatorContextID: actor.OperatorContextID,
+		OrderID:           ownedOrder.ID, StoreID: ownedOrder.StoreID, ActorID: actor.ID,
 		Operation: "prepare", ExpectedVersion: expectedVersion, IdempotencyKey: idempotencyKey,
 	})
 	if errors.Is(err, orders.ErrNotFound) {
@@ -246,7 +248,8 @@ func (s *protectedStoreServer) handleMarkReadyForPickup(w http.ResponseWriter, r
 		return
 	}
 	order, err := orders.TransitionPartnerPreparation(s.db, orders.PartnerPreparationTransitionInput{
-		OrderID: ownedOrder.ID, StoreID: ownedOrder.StoreID, ActorID: actor.ID,
+		OperatorContextID: actor.OperatorContextID,
+		OrderID:           ownedOrder.ID, StoreID: ownedOrder.StoreID, ActorID: actor.ID,
 		Operation: "ready", ExpectedVersion: expectedVersion, IdempotencyKey: idempotencyKey,
 	})
 	if errors.Is(err, orders.ErrNotFound) {

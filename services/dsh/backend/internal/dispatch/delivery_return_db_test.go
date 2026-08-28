@@ -58,7 +58,7 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if orderStatus != "returning_to_store" || deliveryStatus != "returning_to_store" || assignmentStatus != "accepted" {
 		t.Fatalf("return start mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
 	}
-	if _, err := PushLocation(db, assignmentID, captainID, PushLocationInput{Latitude: 15.37, Longitude: 44.19}); err != nil {
+	if _, err := PushLocation(db, operatorContextID, assignmentID, captainID, PushLocationInput{Latitude: 15.37, Longitude: 44.19}); err != nil {
 		t.Fatalf("GPS must remain active during return: %v", err)
 	}
 	visible, err := GetCaptainOpenDeliveryException(db, assignmentID, captainID)

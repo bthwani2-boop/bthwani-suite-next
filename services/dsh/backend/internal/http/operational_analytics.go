@@ -39,8 +39,7 @@ func analyticsLimit(r *http.Request, fallback int) int {
 		return fallback
 	}
 	return value
-	}
-
+}
 
 func (s *protectedStoreServer) handlePreparationSLAAnalytics(w http.ResponseWriter, r *http.Request) {
 	window, ok := parseAnalyticsWindow(w, r)
@@ -106,7 +105,7 @@ func (s *protectedStoreServer) handleAnalyticsFinancialSnapshot(w http.ResponseW
 		store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 			"financialSnapshot": snapshot,
 			"error": map[string]string{
-				"code": "WLT_ANALYTICS_UNAVAILABLE",
+				"code":    "WLT_ANALYTICS_UNAVAILABLE",
 				"message": "financial analytics remain owned by WLT and are currently unavailable",
 			},
 		})

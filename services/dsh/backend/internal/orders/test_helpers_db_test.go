@@ -83,6 +83,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 		t.Fatalf("failed to insert test order: %v", err)
 	}
 	o.FulfillmentMode = "bthwani_delivery"
+	o.OperatorContextID = operatorContextID
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_orders WHERE id = $1::uuid`, o.ID) })
 	return &o, paymentSessionID
 }

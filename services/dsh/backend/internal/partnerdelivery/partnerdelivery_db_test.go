@@ -260,13 +260,13 @@ func TestPartnerDeliveryCompletesTaskAndOrderAtomicallyDBIntegration(t *testing.
 	svc := NewService(db, mockWFServer(t))
 	ctx := context.Background()
 
-	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "corr-complete")
+	task, err := svc.AssignCourierCommand(ctx, f.operatorContextID, f.orderID, f.courierID, "operator-1", "operator", "corr-complete", "cmd-assign-complete")
 	if err != nil {
-		t.Fatalf("AssignCourier failed: %v", err)
+		t.Fatalf("AssignCourierCommand failed: %v", err)
 	}
-	pickedUp, err := svc.MarkPickedUp(ctx, task.ID, task.Version, f.courierID, "partner", "corr-complete")
+	pickedUp, err := svc.MarkPickedUpCommand(ctx, f.operatorContextID, task.ID, task.Version, f.courierID, "partner", "corr-complete", "cmd-pickup-complete")
 	if err != nil {
-		t.Fatalf("MarkPickedUp failed: %v", err)
+		t.Fatalf("MarkPickedUpCommand failed: %v", err)
 	}
 	if pickedUp.PickedUpAt == nil {
 		t.Fatal("expected picked_up_at to be recorded")
@@ -275,21 +275,21 @@ func TestPartnerDeliveryCompletesTaskAndOrderAtomicallyDBIntegration(t *testing.
 		t.Fatalf("expected order status picked_up, got %s", got)
 	}
 
-	departed, err := svc.MarkDeparted(ctx, pickedUp.ID, pickedUp.Version, f.courierID, "partner", "corr-complete")
+	departed, err := svc.MarkDepartedCommand(ctx, f.operatorContextID, pickedUp.ID, pickedUp.Version, f.courierID, "partner", "corr-complete", "cmd-depart-complete")
 	if err != nil {
-		t.Fatalf("MarkDeparted failed: %v", err)
+		t.Fatalf("MarkDepartedCommand failed: %v", err)
 	}
-	arrived, err := svc.MarkArrived(ctx, departed.ID, departed.Version, f.courierID, "partner", "corr-complete")
+	arrived, err := svc.MarkArrivedCommand(ctx, f.operatorContextID, departed.ID, departed.Version, f.courierID, "partner", "corr-complete", "cmd-arrive-complete")
 	if err != nil {
-		t.Fatalf("MarkArrived failed: %v", err)
+		t.Fatalf("MarkArrivedCommand failed: %v", err)
 	}
 	if got := readOrderStatus(t, db, f.orderID); got != "arrived_customer" {
 		t.Fatalf("expected order status arrived_customer, got %s", got)
 	}
 
-	completed, err := svc.SubmitProof(ctx, arrived.ID, arrived.Version, "photo", f.proofRef, f.courierID, "partner", "corr-complete")
+	completed, err := svc.SubmitProofCommand(ctx, f.operatorContextID, arrived.ID, arrived.Version, "photo", f.proofRef, f.courierID, "partner", "corr-complete", "cmd-proof-complete")
 	if err != nil {
-		t.Fatalf("SubmitProof failed: %v", err)
+		t.Fatalf("SubmitProofCommand failed: %v", err)
 	}
 	if completed.Status != StatusCompleted || completed.CompletedAt == nil {
 		t.Fatalf("expected completed task with timestamp, got status=%s completedAt=%v", completed.Status, completed.CompletedAt)

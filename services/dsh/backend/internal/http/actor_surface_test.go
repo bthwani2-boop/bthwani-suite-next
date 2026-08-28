@@ -45,12 +45,12 @@ func TestRequireActorRejectsSystemSurfaceForMobileRole(t *testing.T) {
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
-			Subject:        "client-1",
+			Subject:           "client-1",
 			OperatorContextID: "operator-context-1",
-			Roles:          []string{"client"},
-			AuthState:      "authenticated",
-			SessionID:      "system-session-1",
-			SessionSurface: "system",
+			Roles:             []string{"client"},
+			AuthState:         "authenticated",
+			SessionID:         "system-session-1",
+			SessionSurface:    "system",
 		})
 	})
 

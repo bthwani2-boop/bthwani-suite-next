@@ -11,18 +11,20 @@ import (
 )
 
 type DecidePartnerOrderInput struct {
-	OrderID         string
-	StoreID         string
-	ActorID         string
-	Decision        string // "accept" or "reject"
-	ReasonCode      string
-	ReasonNote      string
-	ExpectedVersion int
-	IdempotencyKey  string
+	OperatorContextID string
+	OrderID           string
+	StoreID           string
+	ActorID           string
+	Decision          string // "accept" or "reject"
+	ReasonCode        string
+	ReasonNote        string
+	ExpectedVersion   int
+	IdempotencyKey    string
 }
 
 func partnerDecisionFingerprint(input DecidePartnerOrderInput) string {
 	hash := sha256.Sum256([]byte(strings.Join([]string{
+		input.OperatorContextID,
 		input.OrderID,
 		input.StoreID,
 		input.Decision,
@@ -35,6 +37,7 @@ func partnerDecisionFingerprint(input DecidePartnerOrderInput) string {
 // DecidePartnerOrder replaces the legacy AcceptOrder and RejectOrder endpoints.
 // It enforces idempotency, OCC (versioning), and unified decision tracking.
 func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, error) {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.StoreID = strings.TrimSpace(input.StoreID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
@@ -43,7 +46,7 @@ func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, erro
 	input.ReasonCode = strings.TrimSpace(input.ReasonCode)
 	input.ReasonNote = strings.TrimSpace(input.ReasonNote)
 
-	if db == nil || input.OrderID == "" || input.StoreID == "" || input.ActorID == "" || input.IdempotencyKey == "" {
+	if db == nil || input.OperatorContextID == "" || input.OrderID == "" || input.StoreID == "" || input.ActorID == "" || input.IdempotencyKey == "" {
 		return nil, ErrInvalid
 	}
 	if input.Decision != "accept" && input.Decision != "reject" {
@@ -77,7 +80,7 @@ func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, erro
 		if err := tx.Commit(); err != nil {
 			return nil, err
 		}
-		return GetOrder(db, input.OrderID)
+		return GetOrderForContext(db, input.OperatorContextID, input.OrderID)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -90,9 +93,9 @@ func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, erro
 	err = tx.QueryRow(`
 		SELECT status, version, store_id, partner_deadline_at
 		FROM dsh_orders
-		WHERE id = $1::uuid
+		WHERE id = $1::uuid AND operator_context_id = $2
 		FOR UPDATE
-	`, input.OrderID).Scan(&currentStatus, &currentVersion, &actualStoreID, &deadlineAt)
+	`, input.OrderID, input.OperatorContextID).Scan(&currentStatus, &currentVersion, &actualStoreID, &deadlineAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -147,8 +150,8 @@ func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, erro
 				preparation_warning_minutes = $4,
 				preparation_delay_reason = NULL,
 				updated_at = NOW()
-			WHERE id = $1::uuid
-		`, input.OrderID, string(StatusStoreAccepted), preparationMinutes, warningMinutes)
+			WHERE id = $1::uuid AND operator_context_id = $5
+		`, input.OrderID, string(StatusStoreAccepted), preparationMinutes, warningMinutes, input.OperatorContextID)
 		if err != nil {
 			return nil, err
 		}
@@ -170,8 +173,8 @@ func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, erro
 			    version = version + 1,
 				rejection_reason = $3,
 				updated_at = NOW()
-			WHERE id = $1::uuid
-		`, input.OrderID, string(StatusCancelled), input.ReasonCode)
+			WHERE id = $1::uuid AND operator_context_id = $4
+		`, input.OrderID, string(StatusCancelled), input.ReasonCode, input.OperatorContextID)
 		if err != nil {
 			return nil, err
 		}
@@ -196,49 +199,5 @@ func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, erro
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetOrder(db, input.OrderID)
-}
-
-// SweepExpiredPendingOrders is the idempotent Timeout Worker job
-func SweepExpiredPendingOrders(db *sql.DB) (int, error) {
-	// Find up to 100 expired pending orders
-	rows, err := db.Query(`
-		SELECT id::text
-		FROM dsh_orders
-		WHERE status = 'pending' AND partner_deadline_at < NOW()
-		LIMIT 100
-		FOR UPDATE SKIP LOCKED
-	`)
-	if err != nil {
-		return 0, err
-	}
-	defer rows.Close()
-
-	var expiredIDs []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return 0, err
-		}
-		expiredIDs = append(expiredIDs, id)
-	}
-	rows.Close()
-
-	count := 0
-	for _, id := range expiredIDs {
-		// Perform a governed cancellation for each
-		_, err := CancelOrderSync(db, CreateCancellationCaseInput{
-			OrderID:       id,
-			ActorID:       "system",
-			ActorRole:     "system",
-			ReasonCode:    "partner_timeout",
-			ReasonNote:    "Partner did not accept the order within the deadline",
-			CorrelationID: "timeout:" + id,
-		})
-		if err == nil {
-			count++
-		}
-	}
-
-	return count, nil
+	return GetOrderForContext(db, input.OperatorContextID, input.OrderID)
 }

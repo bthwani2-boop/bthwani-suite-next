@@ -100,7 +100,7 @@ func (s *protectedStoreServer) handleClientGetReturnOrder(w http.ResponseWriter,
 		return
 	}
 
-	ret, err := orders.GetReturn(s.db, orderID)
+	ret, err := orders.GetReturnForOperatorContext(s.db, actor.OperatorContextID, orderID)
 	if err != nil {
 		writeOrderReturnError(w, err)
 		return

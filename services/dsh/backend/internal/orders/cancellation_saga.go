@@ -76,10 +76,10 @@ type OrderCancellationAction struct {
 }
 
 const orderCancellationSelect = `
-	SELECT id, order_id, operator_context_id, actor_id, actor_role, reason_code, reason_note,
-		from_status, to_status, financial_closure_status, financial_reference, correlation_id,
-		status, version, created_at, updated_at
-	FROM dsh_order_cancellations
+        SELECT id, order_id, operator_context_id, actor_id, actor_role, reason_code, reason_note,
+                from_status, to_status, financial_closure_status, financial_reference, correlation_id,
+                status, version, created_at, updated_at
+        FROM dsh_order_cancellations
 `
 
 func scanOrderCancellationCase(row *sql.Row) (OrderCancellationCase, error) {
@@ -93,9 +93,9 @@ func scanOrderCancellationCase(row *sql.Row) (OrderCancellationCase, error) {
 }
 
 const orderCancellationActionSelect = `
-	SELECT id, cancellation_id, action_type, status, COALESCE(payload, '{}'::jsonb)::text,
-		idempotency_key, correlation_id, created_by, executed_by, created_at, updated_at
-	FROM dsh_order_cancellation_actions
+        SELECT id, cancellation_id, action_type, status, COALESCE(payload, '{}'::jsonb)::text,
+                idempotency_key, correlation_id, created_by, executed_by, created_at, updated_at
+        FROM dsh_order_cancellation_actions
 `
 
 func scanOrderCancellationAction(row *sql.Row) (OrderCancellationAction, error) {
@@ -130,7 +130,7 @@ func CreateCancellationCase(db *sql.DB, input CreateCancellationCaseInput) (*Ord
 	input.ReasonNote = strings.TrimSpace(input.ReasonNote)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 
-	if input.OrderID == "" || input.ActorID == "" || input.ActorRole == "" || input.ReasonCode == "" || input.CorrelationID == "" {
+	if input.OrderID == "" || input.OperatorContextID == "" || input.ActorID == "" || input.ActorRole == "" || input.ReasonCode == "" || input.CorrelationID == "" {
 		return nil, ErrInvalid
 	}
 
@@ -140,6 +140,9 @@ func CreateCancellationCase(db *sql.DB, input CreateCancellationCaseInput) (*Ord
 	}
 	defer tx.Rollback()
 
+	// The trusted operator context is mandatory. The order lock is context-bound
+	// so a cross-context caller cannot even observe another context's order, and
+	// legacy rows without an operator context never match (fail closed).
 	var (
 		checkoutIntentID string
 		clientID         string
@@ -148,10 +151,10 @@ func CreateCancellationCase(db *sql.DB, input CreateCancellationCaseInput) (*Ord
 		current          OrderStatus
 	)
 	err = tx.QueryRow(`
-		SELECT checkout_intent_id::text, client_id, operator_context_id, wlt_payment_ref_id, status
-		FROM dsh_orders
-		WHERE id=$1::uuid
-		FOR UPDATE`, input.OrderID).Scan(
+                SELECT checkout_intent_id::text, client_id, operator_context_id, wlt_payment_ref_id, status
+                FROM dsh_orders
+                WHERE id=$1::uuid AND operator_context_id=$2
+                FOR UPDATE`, input.OrderID, input.OperatorContextID).Scan(
 		&checkoutIntentID, &clientID, &opCtxID, &paymentSessionID, &current,
 	)
 	if err != nil {
@@ -160,7 +163,7 @@ func CreateCancellationCase(db *sql.DB, input CreateCancellationCaseInput) (*Ord
 		}
 		return nil, err
 	}
-	if input.OperatorContextID != "" && input.OperatorContextID != opCtxID {
+	if input.OperatorContextID != opCtxID {
 		return nil, ErrNotFound
 	}
 
@@ -223,11 +226,11 @@ func CreateCancellationCase(db *sql.DB, input CreateCancellationCaseInput) (*Ord
 
 	var caseID string
 	err = tx.QueryRow(`
-		INSERT INTO dsh_order_cancellations(
-			order_id, operator_context_id, actor_id, actor_role, reason_code, reason_note,
-			from_status, to_status, financial_closure_status, correlation_id, status)
-		VALUES($1::uuid, $2, $3, $4, $5, NULLIF($6,''), $7, $8, $9, $10, $11)
-		RETURNING id`,
+                INSERT INTO dsh_order_cancellations(
+                        order_id, operator_context_id, actor_id, actor_role, reason_code, reason_note,
+                        from_status, to_status, financial_closure_status, correlation_id, status)
+                VALUES($1::uuid, $2, $3, $4, $5, NULLIF($6,''), $7, $8, $9, $10, $11)
+                RETURNING id`,
 		input.OrderID, opCtxID, input.ActorID, input.ActorRole, input.ReasonCode, input.ReasonNote,
 		string(current), string(target), financialStatus, input.CorrelationID, string(status),
 	).Scan(&caseID)
@@ -279,33 +282,33 @@ func CreateCancellationAction(db *sql.DB, input CreateCancellationActionInput) (
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 
-	if db == nil || input.CaseID == "" || input.IdempotencyKey == "" || input.ActorID == "" {
+	if db == nil || input.CaseID == "" || input.IdempotencyKey == "" || input.ActorID == "" || input.OperatorContextID == "" {
 		return OrderCancellationAction{}, ErrInvalid
 	}
 
-	if input.OperatorContextID != "" {
-		var orderContext string
-		err := db.QueryRow(`
-			SELECT o.operator_context_id
-			FROM dsh_order_cancellations c
-			JOIN dsh_orders o ON o.id = c.order_id
-			WHERE c.id = $1::uuid`, input.CaseID).Scan(&orderContext)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return OrderCancellationAction{}, ErrNotFound
-			}
-			return OrderCancellationAction{}, err
-		}
-		if orderContext != input.OperatorContextID {
+	// The trusted operator context is mandatory: the case must belong to the
+	// caller's context through its order, and the check runs on every command.
+	var orderContext string
+	err := db.QueryRow(`
+                SELECT o.operator_context_id
+                FROM dsh_order_cancellations c
+                JOIN dsh_orders o ON o.id = c.order_id
+                WHERE c.id = $1::uuid`, input.CaseID).Scan(&orderContext)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
 			return OrderCancellationAction{}, ErrNotFound
 		}
+		return OrderCancellationAction{}, err
+	}
+	if orderContext != input.OperatorContextID {
+		return OrderCancellationAction{}, ErrNotFound
 	}
 
 	var actionID string
-	err := db.QueryRow(`
-		INSERT INTO dsh_order_cancellation_actions (cancellation_id, action_type, payload, idempotency_key, correlation_id, created_by)
-		VALUES ($1::uuid, $2, NULLIF($3,'')::jsonb, $4, $5, $6)
-		RETURNING id`,
+	err = db.QueryRow(`
+                INSERT INTO dsh_order_cancellation_actions (cancellation_id, action_type, payload, idempotency_key, correlation_id, created_by)
+                VALUES ($1::uuid, $2, NULLIF($3,'')::jsonb, $4, $5, $6)
+                RETURNING id`,
 		input.CaseID, string(input.ActionType), input.Payload, input.IdempotencyKey, input.CorrelationID, input.ActorID,
 	).Scan(&actionID)
 
@@ -335,7 +338,7 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 
-	if db == nil || input.ActionID == "" || input.ActorID == "" {
+	if db == nil || input.ActionID == "" || input.ActorID == "" || input.OperatorContextID == "" || input.OrderID == "" {
 		return OrderCancellationAction{}, ErrInvalid
 	}
 
@@ -366,21 +369,19 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 	}
 
 	// Validate vertical authority: OrderID and OperatorContextID must match caseItem and Order!
-	if input.OrderID != "" && caseItem.OrderID != input.OrderID {
+	if caseItem.OrderID != input.OrderID {
 		return OrderCancellationAction{}, ErrNotFound
 	}
-	if input.OperatorContextID != "" {
-		var orderContext string
-		err := tx.QueryRow(`SELECT operator_context_id FROM dsh_orders WHERE id = $1::uuid`, caseItem.OrderID).Scan(&orderContext)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return OrderCancellationAction{}, ErrNotFound
-			}
-			return OrderCancellationAction{}, err
-		}
-		if orderContext != input.OperatorContextID || (caseItem.OperatorContextID != "" && caseItem.OperatorContextID != input.OperatorContextID) {
+	var orderContext string
+	err = tx.QueryRow(`SELECT operator_context_id FROM dsh_orders WHERE id = $1::uuid`, caseItem.OrderID).Scan(&orderContext)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
 			return OrderCancellationAction{}, ErrNotFound
 		}
+		return OrderCancellationAction{}, err
+	}
+	if orderContext != input.OperatorContextID || (caseItem.OperatorContextID != "" && caseItem.OperatorContextID != input.OperatorContextID) {
+		return OrderCancellationAction{}, ErrNotFound
 	}
 
 	// State machine enforcement
@@ -393,8 +394,8 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 		}
 		// Queue the execute cancel action
 		if _, err = tx.Exec(`
-			INSERT INTO dsh_order_cancellation_actions (cancellation_id, action_type, idempotency_key, correlation_id, created_by, status)
-			VALUES ($1::uuid, $2, $3, $4, $5, 'pending_approval')`,
+                        INSERT INTO dsh_order_cancellation_actions (cancellation_id, action_type, idempotency_key, correlation_id, created_by, status)
+                        VALUES ($1::uuid, $2, $3, $4, $5, 'pending_approval')`,
 			caseItem.ID, string(CancellationActionExecuteCancel), "exec-"+action.ID, input.CorrelationID, input.ActorID,
 		); err != nil {
 			return OrderCancellationAction{}, err
@@ -419,26 +420,26 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 		// Perform Custody Transfer Check
 		var deliveryStatus string
 		err = tx.QueryRow(`
-			SELECT d.status FROM dsh_assignments a
-			JOIN dsh_deliveries d ON d.assignment_id = a.id
-			WHERE a.order_id = $1::uuid AND a.status IN ('offered', 'accepted')
-			LIMIT 1`, caseItem.OrderID).Scan(&deliveryStatus)
+                        SELECT d.status FROM dsh_assignments a
+                        JOIN dsh_deliveries d ON d.assignment_id = a.id
+                        WHERE a.order_id = $1::uuid AND a.status IN ('offered', 'accepted')
+                        LIMIT 1`, caseItem.OrderID).Scan(&deliveryStatus)
 		if err == nil && deliveryStatus == "picked_up" {
 			// Custody violation: items are with the captain, cannot cancel blindly.
 			// Must go through return / handoff first.
 			return OrderCancellationAction{}, fmt.Errorf("%w: cannot cancel order while items are in transit (custody block)", ErrConflict)
 		}
 
-		// Mutate Order Status
+		// Mutate Order Status (context-bound terminal write)
 		var paymentSessionID string
 		var checkoutIntentID string
 		var clientID string
 		err = tx.QueryRow(`
-			UPDATE dsh_orders
-			SET status = $2, cancelled_by_actor_id = $3, cancelled_by_role = $4, cancellation_reason_code = $5, cancellation_note = NULLIF($6,''), cancelled_at = NOW(), updated_at = NOW()
-			WHERE id = $1::uuid AND status = $7
-			RETURNING wlt_payment_ref_id, checkout_intent_id::text, client_id
-		`, caseItem.OrderID, caseItem.ToStatus, caseItem.ActorID, caseItem.ActorRole, caseItem.ReasonCode, caseItem.ReasonNote, caseItem.FromStatus).Scan(&paymentSessionID, &checkoutIntentID, &clientID)
+                        UPDATE dsh_orders
+                        SET status = $2, cancelled_by_actor_id = $3, cancelled_by_role = $4, cancellation_reason_code = $5, cancellation_note = NULLIF($6,''), cancelled_at = NOW(), updated_at = NOW()
+                        WHERE id = $1::uuid AND status = $7 AND operator_context_id = $8
+                        RETURNING wlt_payment_ref_id, checkout_intent_id::text, client_id
+                `, caseItem.OrderID, caseItem.ToStatus, caseItem.ActorID, caseItem.ActorRole, caseItem.ReasonCode, caseItem.ReasonNote, caseItem.FromStatus, input.OperatorContextID).Scan(&paymentSessionID, &checkoutIntentID, &clientID)
 
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -464,8 +465,8 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 
 		// Emit Status Event
 		if _, err := tx.Exec(`
-			INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note)
-			VALUES($1::uuid,$2,$3,$4,$5)`,
+                        INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note)
+                        VALUES($1::uuid,$2,$3,$4,$5)`,
 			caseItem.OrderID, caseItem.ActorRole, caseItem.FromStatus, caseItem.ToStatus, caseItem.ReasonCode,
 		); err != nil {
 			return OrderCancellationAction{}, err
@@ -497,15 +498,22 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 	return action, nil
 }
 
-// CancelOrderSync is a convenience wrapper for immediate cancellations.
+// CancelOrderSync is a convenience wrapper for immediate cancellations. The
+// trusted operator context is mandatory; the order-derived context recorded on
+// the cancellation case is persisted truth and may complete a caller that
+// resolved the case first, but an empty context always fails closed.
 func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, error) {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	c, err := CreateCancellationCase(db, input)
 	if err != nil {
 		return nil, err
 	}
-	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	operatorContextID := input.OperatorContextID
 	if operatorContextID == "" {
-		operatorContextID = c.OperatorContextID
+		operatorContextID = strings.TrimSpace(c.OperatorContextID)
+	}
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
 	if c.Status == CancellationApproved {
 		act, err := CreateCancellationAction(db, CreateCancellationActionInput{

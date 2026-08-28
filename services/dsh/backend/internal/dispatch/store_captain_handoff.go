@@ -289,6 +289,7 @@ func updateDeliveryProgressWithStoreHandoffVersioned(
 		}
 		if _, err = orders.TransitionDispatchOrder(
 			tx,
+			operatorContextID,
 			current.OrderID,
 			captainID,
 			"captain",
@@ -422,6 +423,7 @@ func confirmStoreCaptainHandoff(db *sql.DB, operatorContextID, orderID, storeID,
 	if orderStatus == string(orders.StatusArrivedStore) {
 		if _, err = orders.TransitionDispatchOrder(
 			tx,
+			operatorContextID,
 			orderID,
 			actorID,
 			"partner",

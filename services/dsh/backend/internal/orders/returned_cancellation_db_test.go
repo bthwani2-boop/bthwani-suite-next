@@ -16,12 +16,13 @@ func TestReturnedOrderCancellationCreatesOneGovernedFinancialHandoffDBIntegratio
 	})
 
 	input := CreateCancellationCaseInput{
-		OrderID:       order.ID,
-		ActorID:       "operator-return-closure-test",
-		ActorRole:     "operator",
-		ReasonCode:    "operational_failure",
-		ReasonNote:    "returned order inspected and cannot be redelivered",
-		CorrelationID: correlationID,
+		OrderID:           order.ID,
+		OperatorContextID: order.OperatorContextID,
+		ActorID:           "operator-return-closure-test",
+		ActorRole:         "operator",
+		ReasonCode:        "operational_failure",
+		ReasonNote:        "returned order inspected and cannot be redelivered",
+		CorrelationID:     correlationID,
 	}
 	first, err := CancelOrderSync(db, input)
 	if err != nil {
@@ -71,12 +72,13 @@ func TestReturnedOrderCancellationRemainsForbiddenForClientAndPartnerDBIntegrati
 		t.Run(tc.role, func(t *testing.T) {
 			order, _ := seedOrderFixture(t, db, string(StatusReturnedStore))
 			_, err := CancelOrderSync(db, CreateCancellationCaseInput{
-				OrderID:       order.ID,
-				ActorID:       tc.role + "-returned-order-test",
-				ActorRole:     tc.role,
-				ReasonCode:    tc.reasonCode,
-				ReasonNote:    "returned orders require an operator financial decision",
-				CorrelationID: fmt.Sprintf("returned-order-forbidden-%s-%d", tc.role, time.Now().UnixNano()),
+				OrderID:           order.ID,
+				OperatorContextID: order.OperatorContextID,
+				ActorID:           tc.role + "-returned-order-test",
+				ActorRole:         tc.role,
+				ReasonCode:        tc.reasonCode,
+				ReasonNote:        "returned orders require an operator financial decision",
+				CorrelationID:     fmt.Sprintf("returned-order-forbidden-%s-%d", tc.role, time.Now().UnixNano()),
 			})
 			if !errors.Is(err, ErrConflict) {
 				t.Fatalf("expected returned order cancellation to remain forbidden for %s, got %v", tc.role, err)

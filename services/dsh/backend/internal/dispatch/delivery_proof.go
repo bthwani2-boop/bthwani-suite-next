@@ -315,7 +315,7 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 		return nil, err
 	}
 	if status == DeliveryProofAccepted {
-		if err = finalizeAcceptedDeliveryProof(tx, current, proof, captainID); err != nil {
+		if err = finalizeAcceptedDeliveryProof(tx, input.OperatorContextID, current, proof, captainID); err != nil {
 			return nil, err
 		}
 	} else {
@@ -496,7 +496,7 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		if err = ensureNoOpenDeliveryException(tx, proof.AssignmentID); err != nil {
 			return nil, err
 		}
-		if err = finalizeAcceptedDeliveryProof(tx, current, proof, proof.CaptainID); err != nil {
+		if err = finalizeAcceptedDeliveryProof(tx, input.OperatorContextID, current, proof, proof.CaptainID); err != nil {
 			return nil, err
 		}
 	}
@@ -807,11 +807,11 @@ func insertDeliveryProof(
 	return proof, err
 }
 
-func finalizeAcceptedDeliveryProof(tx *sql.Tx, current *Assignment, proof *DeliveryProof, captainID string) error {
+func finalizeAcceptedDeliveryProof(tx *sql.Tx, operatorContextID string, current *Assignment, proof *DeliveryProof, captainID string) error {
 	if current.OrderID == "" {
 		return fmt.Errorf("%w: proof completion requires an order", ErrInvalid)
 	}
-	if _, err := orders.TransitionDispatchOrder(tx, current.OrderID, captainID, "captain",
+	if _, err := orders.TransitionDispatchOrder(tx, operatorContextID, current.OrderID, captainID, "captain",
 		[]orders.OrderStatus{orders.StatusArrivedCustomer}, orders.StatusDelivered, "governed proof of delivery accepted"); err != nil {
 		return mapOrderError(err)
 	}
@@ -858,11 +858,11 @@ func finalizeAcceptedDeliveryProof(tx *sql.Tx, current *Assignment, proof *Deliv
 			return fmt.Errorf("%w: delivery PIN was already consumed", ErrConflict)
 		}
 	}
-	return enqueueWltDeliveryCompletion(tx, current.OrderID, captainID)
+	return enqueueWltDeliveryCompletion(tx, operatorContextID, current.OrderID, captainID)
 }
 
-func enqueueWltDeliveryCompletion(tx *sql.Tx, orderID, captainID string) error {
-	ctx, err := orders.GetOrderDeliveryContext(tx, orderID)
+func enqueueWltDeliveryCompletion(tx *sql.Tx, operatorContextID, orderID, captainID string) error {
+	ctx, err := orders.GetOrderDeliveryContextForOperatorContext(tx, operatorContextID, orderID)
 	if err != nil {
 		return fmt.Errorf("resolve delivery context for WLT completion: %w", err)
 	}

@@ -188,7 +188,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 
 	tx, err := s.db.BeginTx(r.Context(), nil)
 	if err == nil {
-		deliveryCtx, err := orders.GetOrderDeliveryContext(tx, assignment.OrderID)
+		deliveryCtx, err := orders.GetOrderDeliveryContextForOperatorContext(tx, actor.OperatorContextID, assignment.OrderID)
 		if err == nil && (deliveryCtx.PaymentMethod == "cod" || deliveryCtx.PaymentMethod == "mixed") && deliveryCtx.WltPaymentSessionID != "" {
 			isCod = true
 			sessionID = deliveryCtx.WltPaymentSessionID

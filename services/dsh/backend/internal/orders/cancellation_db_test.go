@@ -16,11 +16,12 @@ func TestClientEarlyCancellationCreatesOneGovernedRecordDBIntegration(t *testing
 	})
 
 	input := CreateCancellationCaseInput{
-		OrderID:       order.ID,
-		ActorID:       order.ClientID,
-		ActorRole:     "client",
-		ReasonCode:    "changed_mind",
-		CorrelationID: correlationID,
+		OrderID:           order.ID,
+		OperatorContextID: order.OperatorContextID,
+		ActorID:           order.ClientID,
+		ActorRole:         "client",
+		ReasonCode:        "changed_mind",
+		CorrelationID:     correlationID,
 	}
 	first, err := CancelOrderSync(db, input)
 	if err != nil {
@@ -65,11 +66,12 @@ func TestClientLateCancellationRequiresOperatorReviewDBIntegration(t *testing.T)
 	})
 
 	_, err := CancelOrderSync(db, CreateCancellationCaseInput{
-		OrderID:       order.ID,
-		ActorID:       order.ClientID,
-		ActorRole:     "client",
-		ReasonCode:    "excessive_delay",
-		CorrelationID: fmt.Sprintf("late-client-cancel-%d", time.Now().UnixNano()),
+		OrderID:           order.ID,
+		OperatorContextID: order.OperatorContextID,
+		ActorID:           order.ClientID,
+		ActorRole:         "client",
+		ReasonCode:        "excessive_delay",
+		CorrelationID:     fmt.Sprintf("late-client-cancel-%d", time.Now().UnixNano()),
 	})
 	if !errors.Is(err, ErrCancellationRequiresReview) {
 		t.Fatalf("expected ErrCancellationRequiresReview, got %v", err)
@@ -116,12 +118,13 @@ func TestOperatorCancellationStopsDependentDispatchWorkDBIntegration(t *testing.
 	}
 
 	cancelled, err := CancelOrderSync(db, CreateCancellationCaseInput{
-		OrderID:       order.ID,
-		ActorID:       "operator-cancellation-test",
-		ActorRole:     "operator",
-		ReasonCode:    "operational_failure",
-		ReasonNote:    "dispatch dependency test",
-		CorrelationID: fmt.Sprintf("operator-cancel-%d", time.Now().UnixNano()),
+		OrderID:           order.ID,
+		OperatorContextID: order.OperatorContextID,
+		ActorID:           "operator-cancellation-test",
+		ActorRole:         "operator",
+		ReasonCode:        "operational_failure",
+		ReasonNote:        "dispatch dependency test",
+		CorrelationID:     fmt.Sprintf("operator-cancel-%d", time.Now().UnixNano()),
 	})
 	if err != nil {
 		t.Fatalf("CancelOrderSync failed: %v", err)
@@ -150,11 +153,12 @@ func TestPartnerCannotCancelAfterReadyForPickupDBIntegration(t *testing.T) {
 	})
 
 	_, err := CancelOrderSync(db, CreateCancellationCaseInput{
-		OrderID:       order.ID,
-		ActorID:       "partner-cancellation-test",
-		ActorRole:     "partner",
-		ReasonCode:    "cannot_fulfill",
-		CorrelationID: fmt.Sprintf("partner-late-cancel-%d", time.Now().UnixNano()),
+		OrderID:           order.ID,
+		OperatorContextID: order.OperatorContextID,
+		ActorID:           "partner-cancellation-test",
+		ActorRole:         "partner",
+		ReasonCode:        "cannot_fulfill",
+		CorrelationID:     fmt.Sprintf("partner-late-cancel-%d", time.Now().UnixNano()),
 	})
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict for late partner cancellation, got %v", err)

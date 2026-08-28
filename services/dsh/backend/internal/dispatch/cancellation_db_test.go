@@ -92,7 +92,7 @@ func TestCancelledOrderRemovesCaptainTaskAndRejectsStaleAcceptDBIntegration(t *t
 		t.Fatalf("cancel order: %v", err)
 	}
 
-	if _, err := AcceptAssignment(db, assignmentID, captainID); !errors.Is(err, ErrConflict) {
+	if _, err := AcceptAssignment(db, operatorContextID, assignmentID, captainID); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected stale captain accept to return ErrConflict, got %v", err)
 	}
 

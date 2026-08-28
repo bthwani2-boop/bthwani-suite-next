@@ -15,11 +15,12 @@ func TestCancellationOutboxPersistsCommandCorrelationDBIntegration(t *testing.T)
 	})
 
 	if _, err := CancelOrderSync(db, CreateCancellationCaseInput{
-		OrderID:       order.ID,
-		ActorID:       order.ClientID,
-		ActorRole:     "client",
-		ReasonCode:    "changed_mind",
-		CorrelationID: correlationID,
+		OrderID:           order.ID,
+		OperatorContextID: order.OperatorContextID,
+		ActorID:           order.ClientID,
+		ActorRole:         "client",
+		ReasonCode:        "changed_mind",
+		CorrelationID:     correlationID,
 	}); err != nil {
 		t.Fatalf("CancelOrderSync failed: %v", err)
 	}

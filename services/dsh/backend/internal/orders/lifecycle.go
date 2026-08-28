@@ -7,27 +7,14 @@ import (
 	"strings"
 )
 
-// Legacy entry points removed; use DecidePartnerOrder instead.
-
-// CancelOrderByOperator is retained for existing callers and routes every
-// mutation through the same cancellation record, task shutdown and WLT outbox.
-func CancelOrderByOperator(db *sql.DB, orderID, actorID, reason string) (*Order, error) {
-	reason = strings.TrimSpace(reason)
-	if reason == "" {
-		return nil, fmt.Errorf("%w: cancellation reason is required", ErrInvalid)
-	}
-	return CancelOrderSync(db, CreateCancellationCaseInput{
-		OrderID:       orderID,
-		ActorID:       actorID,
-		ActorRole:     "operator",
-		ReasonCode:    "other",
-		ReasonNote:    reason,
-		CorrelationID: "operator-cancel:" + orderID,
-	})
-}
-
+// TransitionDispatchOrder moves an order through its dispatch lifecycle states.
+// The trusted operator context is mandatory: the row lock and the status write
+// are both bound to (order_id, operator_context_id) so a cross-context caller
+// can never lock, observe or mutate another context's order. Legacy rows
+// without an operator context never match and therefore fail closed.
 func TransitionDispatchOrder(
 	db *sql.Tx,
+	operatorContextID,
 	orderID,
 	actorID,
 	actorRole string,
@@ -35,39 +22,12 @@ func TransitionDispatchOrder(
 	toStatus OrderStatus,
 	note string,
 ) (*Order, error) {
-	return transitionOrderTx(db, orderID, actorID, actorRole, allowedFrom, toStatus, note)
-}
-
-func transitionOrder(
-	db *sql.DB,
-	orderID,
-	actorID,
-	actorRole string,
-	allowedFrom []OrderStatus,
-	toStatus OrderStatus,
-	note string,
-) (*Order, error) {
-	if orderID == "" || actorID == "" || actorRole == "" || len(allowedFrom) == 0 {
-		return nil, ErrInvalid
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	order, err := transitionOrderTx(tx, orderID, actorID, actorRole, allowedFrom, toStatus, note)
-	if err != nil {
-		return nil, err
-	}
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
-	return order, nil
+	return transitionOrderTx(db, operatorContextID, orderID, actorID, actorRole, allowedFrom, toStatus, note)
 }
 
 func transitionOrderTx(
 	tx *sql.Tx,
+	operatorContextID,
 	orderID,
 	actorID,
 	actorRole string,
@@ -77,15 +37,16 @@ func transitionOrderTx(
 ) (*Order, error) {
 	actorID = strings.TrimSpace(actorID)
 	actorRole = strings.TrimSpace(actorRole)
-	if strings.TrimSpace(orderID) == "" || actorID == "" || actorRole == "" || len(allowedFrom) == 0 {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" || strings.TrimSpace(orderID) == "" || actorID == "" || actorRole == "" || len(allowedFrom) == 0 {
 		return nil, ErrInvalid
 	}
 	var fromStatus string
 	err := tx.QueryRow(`
-		SELECT status
-		FROM dsh_orders
-		WHERE id = $1::uuid
-		FOR UPDATE`, orderID).Scan(&fromStatus)
+                SELECT status
+                FROM dsh_orders
+                WHERE id = $1::uuid AND operator_context_id = $2
+                FOR UPDATE`, orderID, operatorContextID).Scan(&fromStatus)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -105,14 +66,15 @@ func transitionOrderTx(
 	}
 
 	order, err := scanOrderRow(tx.QueryRow(`
-		UPDATE dsh_orders
-		SET status = $1, updated_at = NOW()
-		WHERE id = $2::uuid AND status = $3
-		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status, version,
-		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at`,
+                UPDATE dsh_orders
+                SET status = $1, updated_at = NOW()
+                WHERE id = $2::uuid AND status = $3 AND operator_context_id = $4
+                RETURNING id::text, COALESCE(operator_context_id, ''), checkout_intent_id::text, store_id, fulfillment_mode, client_id, status, version,
+                          COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at`,
 		string(toStatus),
 		orderID,
 		fromStatus,
+		operatorContextID,
 	))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrConflict
@@ -122,8 +84,8 @@ func transitionOrderTx(
 	}
 
 	if _, err = tx.Exec(`
-		INSERT INTO dsh_order_status_events (order_id, actor_id, actor_role, from_status, to_status, note)
-		VALUES ($1::uuid, $2, $3, $4, $5, NULLIF($6, ''))`,
+                INSERT INTO dsh_order_status_events (order_id, actor_id, actor_role, from_status, to_status, note)
+                VALUES ($1::uuid, $2, $3, $4, $5, NULLIF($6, ''))`,
 		order.ID,
 		actorID,
 		actorRole,
@@ -138,10 +100,10 @@ func transitionOrderTx(
 
 func listOrderItems(db *sql.DB, orderID string) ([]OrderItem, error) {
 	rows, err := db.Query(`
-		SELECT id::text, order_id::text, product_id, product_name, quantity, unit_price, currency
-		FROM dsh_order_items
-		WHERE order_id = $1::uuid
-		ORDER BY created_at, id`, orderID)
+                SELECT id::text, order_id::text, product_id, product_name, quantity, unit_price, currency
+                FROM dsh_order_items
+                WHERE order_id = $1::uuid
+                ORDER BY created_at, id`, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -169,6 +131,7 @@ func scanOrderRow(row *sql.Row) (*Order, error) {
 	var order Order
 	err := row.Scan(
 		&order.ID,
+		&order.OperatorContextID,
 		&order.CheckoutIntentID,
 		&order.StoreID,
 		&order.FulfillmentMode,
@@ -193,6 +156,7 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 		var order Order
 		if err := rows.Scan(
 			&order.ID,
+			&order.OperatorContextID,
 			&order.CheckoutIntentID,
 			&order.StoreID,
 			&order.FulfillmentMode,
@@ -220,16 +184,20 @@ type DeliveryCompletionContext struct {
 	WltPaymentSessionID string
 }
 
-func GetOrderDeliveryContext(tx *sql.Tx, orderID string) (*DeliveryCompletionContext, error) {
+func GetOrderDeliveryContextForOperatorContext(tx *sql.Tx, operatorContextID, orderID string) (*DeliveryCompletionContext, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, ErrInvalid
+	}
 	var context DeliveryCompletionContext
 	var partnerID sql.NullString
 	err := tx.QueryRow(`
-		SELECT o.checkout_intent_id::text, ci.fulfillment_mode, ci.payment_method, s.partner_id, ci.wlt_payment_session_id
-		FROM dsh_orders o
-		JOIN dsh_checkout_intents ci ON ci.id = o.checkout_intent_id
-		JOIN dsh_stores s ON s.id = o.store_id
-		WHERE o.id = $1::uuid`,
-		orderID,
+                SELECT o.checkout_intent_id::text, ci.fulfillment_mode, ci.payment_method, s.partner_id, ci.wlt_payment_session_id
+                FROM dsh_orders o
+                JOIN dsh_checkout_intents ci ON ci.id = o.checkout_intent_id
+                JOIN dsh_stores s ON s.id = o.store_id
+                WHERE o.id = $1::uuid AND o.operator_context_id = $2`,
+		orderID, operatorContextID,
 	).Scan(&context.CheckoutIntentID, &context.FulfillmentMode, &context.PaymentMethod, &partnerID, &context.WltPaymentSessionID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound

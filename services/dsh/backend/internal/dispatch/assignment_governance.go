@@ -501,7 +501,7 @@ func CreateGovernedAssignment(db *sql.DB, input GovernedCreateAssignmentInput) (
 		return nil, false, err
 	}
 
-	if _, err = orders.TransitionDispatchOrder(tx, input.OrderID, input.ActorID, "operator",
+	if _, err = orders.TransitionDispatchOrder(tx, input.OperatorContextID, input.OrderID, input.ActorID, "operator",
 		[]orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDriverAssigned, "captain offer created"); err != nil {
 		return nil, false, mapOrderError(err)
 	}
@@ -680,7 +680,7 @@ func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmen
 		}
 		return nil, ErrOfferExpired
 	}
-	if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, captainID, "captain",
+	if _, err = orders.TransitionDispatchOrder(tx, operatorContextID, current.OrderID, captainID, "captain",
 		[]orders.OrderStatus{orders.StatusDriverAssigned}, orders.StatusReadyForPickup, reason); err != nil {
 		return nil, mapOrderError(err)
 	}
@@ -753,7 +753,7 @@ func expireAssignmentTx(tx *sql.Tx, operatorContextID string, current *Assignmen
 		return fmt.Errorf("%w: only offered assignments can expire", ErrConflict)
 	}
 	if current.OrderID != "" {
-		if _, err := orders.TransitionDispatchOrder(tx, current.OrderID, actorID, actorRole,
+		if _, err := orders.TransitionDispatchOrder(tx, operatorContextID, current.OrderID, actorID, actorRole,
 			[]orders.OrderStatus{orders.StatusDriverAssigned}, orders.StatusReadyForPickup, reason); err != nil {
 			return mapOrderError(err)
 		}
@@ -819,7 +819,7 @@ func cancelGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignment
 		return err
 	}
 	if current.OrderID != "" {
-		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, actorID, "operator",
+		if _, err = orders.TransitionDispatchOrder(tx, operatorContextID, current.OrderID, actorID, "operator",
 			[]orders.OrderStatus{orders.StatusDriverAssigned}, orders.StatusReadyForPickup, reason); err != nil {
 			return mapOrderError(err)
 		}
@@ -928,7 +928,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 		return nil, err
 	}
 	if current.OrderID != "" {
-		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, input.ActorID, "operator",
+		if _, err = orders.TransitionDispatchOrder(tx, operatorContextID, current.OrderID, input.ActorID, "operator",
 			[]orders.OrderStatus{orders.StatusDriverAssigned}, orders.StatusReadyForPickup, input.Reason); err != nil {
 			return nil, mapOrderError(err)
 		}
@@ -949,7 +949,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 	if err = checkoutfinanceoutbox.EnqueueCodReservationReleaseForOrderTx(tx, current.OrderID, "reassigned: "+input.Reason, input.AssignmentID); err != nil {
 		return nil, err
 	}
-	if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, input.ActorID, "operator",
+	if _, err = orders.TransitionDispatchOrder(tx, operatorContextID, current.OrderID, input.ActorID, "operator",
 		[]orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDriverAssigned, "replacement captain offer created"); err != nil {
 		return nil, mapOrderError(err)
 	}
