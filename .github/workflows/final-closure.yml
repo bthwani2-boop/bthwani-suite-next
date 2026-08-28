@@ -97,8 +97,12 @@ jobs:
           dependency=false
           docker=false
           for file in "${files[@]}"; do
-            [[ "${file}" =~ (^|/)(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|go\.mod|go\.sum|requirements[^/]*\.txt|poetry\.lock|Cargo\.lock)$ ]] && dependency=true
-            [[ "${file}" == ".dockerignore" || "${file}" =~ (^|/)(Dockerfile(\..*)?|[^/]*\.dockerfile)$ || "${file}" == infra/* ]] && docker=true
+            if [[ "${file}" =~ (^|/)(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|go\.mod|go\.sum|requirements[^/]*\.txt|poetry\.lock|Cargo\.lock)$ ]]; then
+              dependency=true
+            fi
+            if [[ "${file}" == ".dockerignore" || "${file}" =~ (^|/)(Dockerfile(\..*)?|[^/]*\.dockerfile)$ || "${file}" == infra/* ]]; then
+              docker=true
+            fi
           done
           echo "dependency_changed=${dependency}" >> "${GITHUB_OUTPUT}"
           echo "docker_changed=${docker}" >> "${GITHUB_OUTPUT}"

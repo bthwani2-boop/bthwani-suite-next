@@ -48,7 +48,7 @@ function commissionActionPath(
 function newAdjustmentIdempotencyKey(commissionId: string): string {
   const uuid = globalThis.crypto?.randomUUID?.();
   if (uuid) return `commission-adjustment:${commissionId}:${uuid}`;
-  return `commission-adjustment:${commissionId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  throw new Error("Secure randomness is unavailable; refusing to create a commission idempotency key");
 }
 
 export async function fetchOwnCommissions(

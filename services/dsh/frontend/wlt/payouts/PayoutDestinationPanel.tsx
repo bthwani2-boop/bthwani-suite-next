@@ -45,7 +45,7 @@ function errorMessage(error: unknown): string {
 function newAttemptKey(actorType: PayoutActorType): string {
   const uuid = globalThis.crypto?.randomUUID?.();
   if (uuid) return `payout:${actorType}:${uuid}`;
-  return `payout:${actorType}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  throw new Error("Secure randomness is unavailable; refusing to create a payout idempotency key");
 }
 
 function statusMeta(status: string): { readonly label: string; readonly tone: "neutral" | "success" | "warning" | "danger" } {
