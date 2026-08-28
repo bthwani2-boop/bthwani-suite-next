@@ -1,14 +1,14 @@
 # APP-PARTNER — Deep Root Audit & Final Remediation Ledger
 
-> **Repository:** `bthwani2-boop/bthwani-suite-next`  
-> **Branch:** `f`  
-> **Target anchor:** `app-partner` / تطبيق الشريك  
-> **Audit baseline commit:** `36e63b046f4165bb7e8b968f7c270a550bb10c81`  
-> **Baseline tree:** `358f760470438ac9d6d633b82585131a33c53463`  
-> **Audit date:** `2026-08-29`  
-> **ACTIVE_WORKSET:** `NOT_DECLARED`  
-> **Open PRs targeting `f` at audit time:** none discovered  
-> **CLOSED:** **NO**
+- **Repository:** `bthwani2-boop/bthwani-suite-next`
+- **Branch:** `f`
+- **Target anchor:** `app-partner` / تطبيق الشريك
+- **Audit baseline commit:** `36e63b046f4165bb7e8b968f7c270a550bb10c81`
+- **Baseline tree:** `358f760470438ac9d6d633b82585131a33c53463`
+- **Audit date:** `2026-08-29`
+- **ACTIVE_WORKSET:** `NOT_DECLARED`
+- **Open PRs targeting `f` at audit time:** none discovered
+- **CLOSED:** **NO**
 
 ---
 
