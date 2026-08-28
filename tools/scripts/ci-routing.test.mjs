@@ -62,6 +62,15 @@ test("ci-check exposes the one manual affected-verification entrypoint", () => {
   assert.doesNotMatch(workflow, /workflow_run:|repository_dispatch|actions\/workflows\//u);
 });
 
+test("Sonar trusted analysis has one explicit master opt-in", () => {
+  const sonar = read(".github/workflows/sonarqube.yml");
+  const master = read(".github/workflows/master-sonar.yml");
+  assert.match(sonar, /trusted_scan: \{type: boolean, required: false, default: false\}/u);
+  assert.match(sonar, /if: \$\{\{ inputs\.trusted_scan && needs\.scope\.result == 'success' && needs\.assemble\.result == 'success' \}\}/u);
+  assert.match(master, /trusted_scan: true/u);
+  assert.doesNotMatch(sonar, /skip_duplicate_push|needs\.ownership|^  ownership:/mu);
+});
+
 test("the affected router is based on the exact current Base-to-Head diff", () => {
   const router = read("tools/scripts/detect-ci-context.mjs");
   assert.match(router, /\["diff", "--name-only"/u);
