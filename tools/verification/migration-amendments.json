@@ -606,16 +606,52 @@
     },
     {
       "service": "wlt",
+      "migrationId": "wlt-954_external_statement_provenance.sql",
+      "replacementSha256": "17de13d85253574dd95e82cd518c70ebfd2e752f597b2463506abc910ae1fafa",
+      "acceptedHistoricalSha256": [
+        "fbd75d6c0d9577fbbc3e6eb6c2fe1eea753cf0b7c6524e339e6e84082d490e28",
+        "d1705eb614295d330e4f4f33afb2e7246d1911d3b18d68d0ae7fc6748895515d"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release operator-context closure wrapped WLT-954's operator-attested provenance backfill in trigger suspension so the daily-close mutation fence created by WLT-952 cannot fire on the backfill while it populates provenance_evidence_sha256 from artifact_sha256. The DDL is unchanged and schema-equivalent; only the backfill's trigger context changed. Both earlier byte forms were published on the canonical trunk (fbd75d6c at a61159be1665e4f8e9975318c3aad4d5578406b1, d1705eb614295d330e4f4f33afb2e7246d1911d3b18d68d0ae7fc6748895515d is the recorded master manifest digest), so any environment that recorded either checksum must reconcile through the governed ledger rather than a silent bypass. No CI database job ever executed the historical forms (backend verification was skipped on every run whose head carried them), and no production approval evidence exists.",
+      "evidence": {
+        "cleanInstallCommitSha": "99238779b9e4afaef04b42813a9a68b6c364414e",
+        "cleanInstallResult": "CURRENT_WLT_DATABASE_VERIFICATION_PASSED",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep the corrected WLT-954 source and register both published historical checksums as accepted historical evidence so the governed ledger reconciles every recorded form without rewriting applied migration history."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-956_external_statement_provenance_evidence.sql",
+      "replacementSha256": "4ee0018e6e2fdd8fd6aa182de2c8815f54bcc887d0ff667542bb95e1039408a5",
+      "acceptedHistoricalSha256": [
+        "0452b48b733475dad647422f128164f7a230f85a14cd5d17beba82a34c9292d1",
+        "bfff721dcd0e6499c342c49b413c4b4fef343d294eff33149e031026b4e48b7d"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release operator-context closure wrapped WLT-956's downgrade of unevidenced provider-provenance rows in trigger suspension so the daily-close mutation fence created by WLT-952 cannot fire on the downgrade backfill. The DDL is unchanged and schema-equivalent; only the backfill's trigger context changed. Both earlier byte forms were published on the canonical trunk (0452b48b at 0b618b8070655acc7d05cbbde482faf6f46a9924, bfff721dcd0e6499c342c49b413c4b4fef343d294eff33149e031026b4e48b7d is the recorded master manifest digest), so any environment that recorded either checksum must reconcile through the governed ledger rather than a silent bypass. No CI database job ever executed the historical forms (backend verification was skipped on every run whose head carried them), and no production approval evidence exists.",
+      "evidence": {
+        "cleanInstallCommitSha": "99238779b9e4afaef04b42813a9a68b6c364414e",
+        "cleanInstallResult": "CURRENT_WLT_DATABASE_VERIFICATION_PASSED",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep the corrected WLT-956 source and register both published historical checksums as accepted historical evidence so the governed ledger reconciles every recorded form without rewriting applied migration history."
+    },
+    {
+      "service": "wlt",
       "migrationId": "wlt-958_external_statement_verification_link.sql",
       "replacementSha256": "69ac9749f5ce78a3f0b9a5b888b46f226d408b824186ac88d26c96d091ea6be5",
       "acceptedHistoricalSha256": [
         "f4dbe00a39c9a132caf5f73922e8ae018b250a8946f5c16bd22fbc7894b85c7b"
       ],
       "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
-      "reason": "The pre-release operator-context closure added trigger suspension around WLT-958's bounded downgrade of legacy provider labels that lacked an immutable verification receipt. The migration remains schema-equivalent, but the historical file is marked HISTORICAL_IMMUTABLE and the drift gate must retain the original checksum for databases that recorded it before this correction. No production WLT runtime evidence exists for the corrected candidate.",
+      "reason": "The pre-release operator-context closure added trigger suspension around WLT-958's bounded downgrade of legacy provider labels that lacked an immutable verification receipt. The migration remains schema-equivalent, but the historical file is marked HISTORICAL_IMMUTABLE and the drift gate must retain the original checksum for databases that recorded it before this correction. The corrected candidate was later verified by exact-candidate CI (BThwani CI workflow_dispatch run 33200902587: wlt database safety and full runtime verification succeeded on 99238779b9e4afaef04b42813a9a68b6c364414e). No production WLT runtime evidence exists for the corrected candidate.",
       "evidence": {
-        "cleanInstallCommitSha": "406d67d1a0e864d008aba59d0426376bd3dd9d58",
-        "cleanInstallResult": "NOT_RUN",
+        "cleanInstallCommitSha": "99238779b9e4afaef04b42813a9a68b6c364414e",
+        "cleanInstallResult": "CURRENT_WLT_DATABASE_VERIFICATION_PASSED",
         "sameCommitRuntimeEvidence": false,
         "productionApprovalEvidence": false
       },

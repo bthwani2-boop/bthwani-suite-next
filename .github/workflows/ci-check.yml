@@ -107,6 +107,8 @@ jobs:
           CI_HEAD_SHA: ${{ steps.identity.outputs.head_sha }}
           CI_FULL_SCOPE: ${{ inputs.full_scope }}
         run: node tools/scripts/detect-ci-context.mjs
+      - name: Enforce governed migration manifest history
+        run: node tools/guards/migration-manifest-drift-gate.mjs --immutable-baseline "${{ steps.identity.outputs.base_sha }}"
       - name: Verify Sonar coverage ownership and configuration
         run: node --test tools/guards/sonar-coverage-ownership-gate.test.mjs && node tools/guards/sonar-coverage-ownership-gate.mjs
 
