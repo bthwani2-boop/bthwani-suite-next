@@ -30,16 +30,16 @@ export function resolveDshOrderApiBaseUrl(): string | null {
   return PlatformVarsRegistry.get('dshApiBaseUrl') ?? null;
 }
 
-export function orderAuthHeaders(auth: DshOrderAuthContext): Record<string, string> {
+function orderAuthHeaders(auth: DshOrderAuthContext): Record<string, string> {
   const bearerToken = auth.bearerToken?.trim();
   return bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {};
 }
 
-export function unsupportedTransition(message: string): never {
+function unsupportedTransition(message: string): never {
   throw { kind: 'http', status: 400, body: message } as DshOrderApiHttpError;
 }
 
-export async function doFetch<T>(
+async function doFetch<T>(
   baseUrl: string,
   fetchFn: DshOrderFetchFn,
   method: string,
@@ -81,7 +81,7 @@ export async function doFetch<T>(
   return response.json() as Promise<T>;
 }
 
-export function ordersPathForScope(scope: DshListOrdersQuery['scope'] | DshOrderAuthContext['scope']): string {
+function ordersPathForScope(scope: DshListOrdersQuery['scope'] | DshOrderAuthContext['scope']): string {
   if (scope === 'partner') return '/dsh/partner/orders';
   if (scope === 'operator') return '/dsh/operator/orders';
   return '/dsh/client/orders';
@@ -152,30 +152,7 @@ export function createDshOrderLifecycleHttpClient(
         );
         return normalizeOrderResponse(resp).order;
       }
-      if (req.actor === 'operator' && req.status === 'cancelled') {
-        const resp = await doFetch<{ order?: BackendOrder }>(
-          baseUrl,
-          fetchFn,
-          'POST',
-          `/dsh/operator/orders/${encodeURIComponent(orderId)}/cancel`,
-          { reason: req.note ?? 'operator_cancelled' },
-          orderAuthHeaders(auth),
-        );
-        return normalizeOrderResponse(resp).order;
-      }
       unsupportedTransition(`unsupported order transition for ${req.actor}: ${req.status}`);
-    },
-    cancelOrder: async (orderId, req = {}) => {
-      if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;
-      const resp = await doFetch<{ order?: BackendOrder }>(
-        baseUrl,
-        fetchFn,
-        'POST',
-        `/dsh/operator/orders/${encodeURIComponent(orderId)}/cancel`,
-        { reason: req.note ?? 'operator_cancelled' },
-        orderAuthHeaders(auth),
-      );
-      return normalizeOrderResponse(resp).order;
     },
     createSupportEscalation: async () => {
       unsupportedTransition('support escalation must use the governed DSH support ticket API');

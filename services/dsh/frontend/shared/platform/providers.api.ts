@@ -1,4 +1,4 @@
-import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolveProvidersApiBaseUrl } from "../_kernel/providers-api-base-url";
 import type { components } from "@bthwani/core-providers";
 
@@ -20,13 +20,13 @@ export function getProvider(providerId: string): Promise<ExternalProvider> {
 export function updateProvider(
   providerId: string,
   input: UpdateExternalProviderInput,
+  idempotencyKey: string,
 ): Promise<ExternalProvider> {
-  const mutationId = corrId(`provider-update-${providerId}`);
   return request<ExternalProvider>(`/providers/${encodeURIComponent(providerId)}`, {
     method: "PATCH",
     body: input,
-    idempotencyKey: mutationId,
-    correlationId: mutationId,
+    idempotencyKey,
+    correlationId: idempotencyKey,
   });
 }
 

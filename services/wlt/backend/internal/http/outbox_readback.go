@@ -21,7 +21,7 @@ func HandleLoyaltyOutboxReadback(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "idempotencyKey is required")
 			return
 		}
-		entry, err := commercial.GetLoyaltyEntryByIdempotency(db, key)
+		entry, err := commercial.GetLoyaltyEntryByIdempotency(r.Context(), db, key)
 		if errors.Is(err, commercial.ErrNotFound) {
 			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "loyalty entry not found")
 			return

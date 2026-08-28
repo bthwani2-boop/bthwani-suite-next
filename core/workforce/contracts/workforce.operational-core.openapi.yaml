@@ -140,6 +140,35 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
+  /workforce/me/availability-notices/{noticeId}:
+    patch:
+      operationId: updateOwnAvailabilityNotice
+      parameters:
+        - name: noticeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAvailabilityNoticeInput' }
+      responses:
+        '200':
+          description: Availability notice updated and re-enqueued with a new source version.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ availabilityNotice ]
+                properties:
+                  availabilityNotice: { $ref: '#/components/schemas/AvailabilityNotice' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/me/incidents:
     get:
       operationId: listOwnProviderIncidents
@@ -213,6 +242,8 @@ paths:
       - $ref: '#/components/parameters/IncidentId'
     patch:
       operationId: transitionProviderIncident
+      parameters:
+        - $ref: '#/components/parameters/FinancialIdempotencyKey'
       requestBody:
         required: true
         content:
@@ -220,6 +251,16 @@ paths:
             schema: { $ref: '#/components/schemas/TransitionProviderIncidentInput' }
       responses:
         '200': { $ref: '#/components/responses/IncidentResponse' }
+        '202':
+          description: Durable provider-penalty command recorded for asynchronous WLT reconciliation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ financialCommand, replayed ]
+                properties:
+                  financialCommand: { $ref: '#/components/schemas/ProviderPenaltyCommand' }
+                  replayed: { type: boolean }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
@@ -248,6 +289,29 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
+  /workforce/provider-penalty-commands/{commandId}:
+    get:
+      operationId: getProviderPenaltyCommand
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Durable financial command and reconciliation state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ financialCommand ]
+                properties:
+                  financialCommand: { $ref: '#/components/schemas/ProviderPenaltyCommand' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -264,6 +328,12 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    FinancialIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Required for financial_action_posted and reversed; ignored for non-financial transitions.
+      schema: { type: string, minLength: 1 }
   responses:
     ErrorResponse:
       description: Governed error response.
@@ -532,15 +602,40 @@ components:
         serviceZoneId: { type: string }
         reasonCode: { type: string, minLength: 1 }
         note: { type: string, maxLength: 1000 }
+    UpdateAvailabilityNoticeInput:
+      type: object
+      additionalProperties: false
+      required: [ noticeType, startsAt, endsAt, reasonCode, status, expectedSourceVersion ]
+      properties:
+        noticeType:
+          {
+            type: string,
+            enum:
+              [
+                planned_unavailability,
+                immediate_unavailability,
+                short_break,
+                emergency,
+                temporary_restriction
+              ]
+          }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        serviceZoneId: { type: string }
+        reasonCode: { type: string, minLength: 1 }
+        note: { type: string, maxLength: 1000 }
+        status: { type: string, enum: [ scheduled, active, completed, cancelled ] }
+        expectedSourceVersion: { type: integer, minimum: 1 }
     AvailabilityNotice:
       allOf:
         - $ref: '#/components/schemas/CreateAvailabilityNoticeInput'
         - type: object
-          required: [ id, actorId, status, createdByActorId, createdAt, updatedAt ]
+          required: [ id, actorId, status, sourceVersion, createdByActorId, createdAt, updatedAt ]
           properties:
             id: { type: string, format: uuid }
             actorId: { type: string }
             status: { type: string, enum: [ scheduled, active, completed, cancelled ] }
+            sourceVersion: { type: integer, minimum: 1 }
             createdByActorId: { type: string }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
@@ -595,11 +690,36 @@ components:
     TransitionProviderIncidentInput:
       type: object
       additionalProperties: false
-      required: [ toStatus ]
+      required: [ toStatus, resolutionNote, expectedVersion ]
       properties:
         toStatus: { $ref: '#/components/schemas/IncidentStatus' }
         resolutionNote: { type: string, minLength: 3, maxLength: 1000 }
-        wltLedgerReference: { type: string, minLength: 1 }
+        expectedVersion: { type: integer, minimum: 1 }
+    ProviderPenaltyCommand:
+      type: object
+      required: [ id, incidentId, incidentSourceVersion, operation, commandIdempotencyKey, lifecycleState, attemptCount, readbackAttemptCount, nextRetryAt, reconciliationState, createdAt, updatedAt ]
+      properties:
+        id: { type: string, format: uuid }
+        incidentId: { type: string, format: uuid }
+        incidentSourceVersion: { type: integer, minimum: 1 }
+        operation: { type: string, enum: [ post, reverse ] }
+        commandIdempotencyKey: { type: string }
+        lifecycleState:
+          type: string
+          enum: [ READY, IN_FLIGHT, REMOTE_OUTCOME_UNKNOWN, REMOTE_CONFIRMED, LOCAL_PROJECTION_PENDING, RECONCILING, RETRY_SCHEDULED, COMPLETED, PERMANENTLY_REJECTED, HISTORIC_UNPROVEN ]
+        attemptCount: { type: integer, minimum: 0 }
+        readbackAttemptCount: { type: integer, minimum: 0 }
+        nextRetryAt: { type: string, format: date-time }
+        lastErrorCode: { type: string }
+        lastError: { type: string }
+        remotePenaltyId: { type: string }
+        remoteLedgerTransactionId: { type: string }
+        remoteStatus: { type: string }
+        reconciliationState: { type: string, enum: [ NOT_REQUIRED, REQUIRED, FOUND, ABSENT, UNPROVEN ] }
+        terminalDisposition: { type: string }
+        completedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     ProviderIncidentTransition:
       type: object
       required: [ id, incidentId, fromStatus, toStatus, changedByActorId, createdAt ]

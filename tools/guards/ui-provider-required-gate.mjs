@@ -12,6 +12,17 @@ const MOBILE_APPS = [
   "app-field",
 ];
 
+const mobileProviderWrapperRelative = "shared/ui-kit/src/mobile.tsx";
+const mobileProviderWrapperPath = path.join(repoRoot, mobileProviderWrapperRelative);
+const mobileProviderWrapperContent = fs.existsSync(mobileProviderWrapperPath)
+  ? fs.readFileSync(mobileProviderWrapperPath, "utf8")
+  : "";
+const mobileProviderWrapperRoots =
+  count(mobileProviderWrapperContent, /React\.createElement\(\s*BthwaniUiProvider\b/g) +
+  count(mobileProviderWrapperContent, /<BthwaniUiProvider\b/g);
+const mobileProviderWrapperIsCanonical =
+  mobileProviderWrapperContent.includes('from "./provider"') && mobileProviderWrapperRoots === 1;
+
 function count(content, pattern) {
   return [...content.matchAll(pattern)].length;
 }
@@ -37,15 +48,24 @@ for (const name of MOBILE_APPS) {
   const uiProviderRoots =
     count(indexContent, /React\.createElement\(\s*BthwaniUiProvider\b/g) +
     count(indexContent, /<BthwaniUiProvider\b/g);
+  const mobileUiProviderRoots =
+    count(indexContent, /React\.createElement\(\s*MobileUiProvider\b/g) +
+    count(indexContent, /<MobileUiProvider\b/g);
+  const hasDirectUiProvider =
+    indexContent.includes('from "@bthwani/ui-kit"') && uiProviderRoots === 1;
+  const hasCanonicalMobileUiProvider =
+    indexContent.includes('from "@bthwani/ui-kit/mobile"') &&
+    mobileUiProviderRoots === 1 &&
+    mobileProviderWrapperIsCanonical;
 
   const safeAreaRoots =
     count(indexContent, /React\.createElement\(\s*SafeAreaProvider\b/g) +
     count(indexContent, /<SafeAreaProvider\b/g);
 
-  if (!indexContent.includes('from "@bthwani/ui-kit"') || uiProviderRoots !== 1) {
+  if (!hasDirectUiProvider && !hasCanonicalMobileUiProvider) {
     violations.push({
       file: indexRelative,
-      message: `Expected exactly one BthwaniUiProvider at the runtime root; found ${uiProviderRoots}.`,
+      message: `Expected one direct BthwaniUiProvider or one canonical MobileUiProvider at the runtime root; direct=${uiProviderRoots}, mobile=${mobileUiProviderRoots}.`,
     });
   }
 
@@ -53,6 +73,13 @@ for (const name of MOBILE_APPS) {
     violations.push({
       file: indexRelative,
       message: `Expected exactly one SafeAreaProvider at the runtime root; found ${safeAreaRoots}.`,
+    });
+  }
+
+  if (!mobileProviderWrapperIsCanonical) {
+    violations.push({
+      file: mobileProviderWrapperRelative,
+      message: "MobileUiProvider must import ./provider and render exactly one BthwaniUiProvider.",
     });
   }
 

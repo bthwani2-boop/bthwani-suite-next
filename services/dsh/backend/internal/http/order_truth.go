@@ -2,6 +2,7 @@ package http
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -57,41 +58,49 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 		return
 	}
 	truth, replay, err := orders.CreateOrderTruth(s.db, orders.CreateOrderTruthInput{
-		CheckoutIntentID: body.CheckoutIntentID,
-		ClientID:         actor.ID,
-		OperatorContextID:         actor.OperatorContextID,
-		IdempotencyKey:   idempotencyKey,
-		CorrelationID:    correlationID,
+		CheckoutIntentID:  body.CheckoutIntentID,
+		ClientID:          actor.ID,
+		OperatorContextID: actor.OperatorContextID,
+		IdempotencyKey:    idempotencyKey,
+		CorrelationID:     correlationID,
 	})
 	if errors.Is(err, orders.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 	if errors.Is(err, orders.ErrIdempotencyConflict) {
-		_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
-			OperatorContextID:         actor.OperatorContextID,
-			ActorID:          actor.ID,
-			ActorRole:        "client",
-			CheckoutIntentID: body.CheckoutIntentID,
-			EventType:        "order.idempotency_conflict",
-			ResultCode:       "IDEMPOTENCY_KEY_REUSED",
-			CorrelationID:    correlationID,
-			Metadata:         map[string]any{"surface": "app-client", "route": "/dsh/client/order-truth", "status": 409},
-		})
+		if err := orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
+			OperatorContextID: actor.OperatorContextID,
+			ActorID:           actor.ID,
+			ActorRole:         "client",
+			CheckoutIntentID:  body.CheckoutIntentID,
+			EventType:         "order.idempotency_conflict",
+			ResultCode:        "IDEMPOTENCY_KEY_REUSED",
+			CorrelationID:     correlationID,
+			Metadata:          map[string]any{"surface": "app-client", "route": "/dsh/client/order-truth", "status": 409},
+		}); err != nil {
+			// Best-effort means logged, never silently discarded: this row is the
+			// only record of WHY a financial request was rejected.
+			log.Printf("[order-truth] audit write failed for order.idempotency_conflict (checkout_intent_id=%s, error_type %T)", body.CheckoutIntentID, err)
+		}
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", "Idempotency-Key was already used for another order request")
 		return
 	}
 	if errors.Is(err, orders.ErrConflict) {
-		_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
-			OperatorContextID:         actor.OperatorContextID,
-			ActorID:          actor.ID,
-			ActorRole:        "client",
-			CheckoutIntentID: body.CheckoutIntentID,
-			EventType:        "order.create_conflict",
-			ResultCode:       "ORDER_CREATE_CONFLICT",
-			CorrelationID:    correlationID,
-			Metadata:         map[string]any{"surface": "app-client", "route": "/dsh/client/order-truth", "status": 409},
-		})
+		if err := orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
+			OperatorContextID: actor.OperatorContextID,
+			ActorID:           actor.ID,
+			ActorRole:         "client",
+			CheckoutIntentID:  body.CheckoutIntentID,
+			EventType:         "order.create_conflict",
+			ResultCode:        "ORDER_CREATE_CONFLICT",
+			CorrelationID:     correlationID,
+			Metadata:          map[string]any{"surface": "app-client", "route": "/dsh/client/order-truth", "status": 409},
+		}); err != nil {
+			// Best-effort means logged, never silently discarded: this row is the
+			// only record of WHY a financial request was rejected.
+			log.Printf("[order-truth] audit write failed for order.create_conflict (checkout_intent_id=%s, error_type %T)", body.CheckoutIntentID, err)
+		}
 		store.SendError(w, http.StatusConflict, "ORDER_CREATE_CONFLICT", err.Error())
 		return
 	}
@@ -107,15 +116,15 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 		eventType = "order.create_replayed"
 		w.Header().Set("Idempotent-Replay", "true")
 	}
-	_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
-		OperatorContextID:         actor.OperatorContextID,
-		ActorID:          actor.ID,
-		ActorRole:        "client",
-		OrderID:          truth.ID,
-		CheckoutIntentID: body.CheckoutIntentID,
-		EventType:        eventType,
-		ResultCode:       http.StatusText(status),
-		CorrelationID:    truth.CorrelationID,
+	if err := orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
+		OperatorContextID: actor.OperatorContextID,
+		ActorID:           actor.ID,
+		ActorRole:         "client",
+		OrderID:           truth.ID,
+		CheckoutIntentID:  body.CheckoutIntentID,
+		EventType:         eventType,
+		ResultCode:        http.StatusText(status),
+		CorrelationID:     truth.CorrelationID,
 		Metadata: map[string]any{
 			"surface": "app-client",
 			"route":   "/dsh/client/order-truth",
@@ -123,7 +132,12 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 			"replay":  replay,
 			"version": truth.Version,
 		},
-	})
+	}); err != nil {
+		// The order is already committed; failing the response now would tell
+		// the client "error" for an order that exists. Best-effort means logged,
+		// never silently discarded.
+		log.Printf("[order-truth] audit write failed for %s (order_id=%s, error_type %T)", eventType, truth.ID, err)
+	}
 	w.Header().Set("X-Correlation-ID", truth.CorrelationID)
 	store.SendJSON(w, status, map[string]any{"order": truth})
 }

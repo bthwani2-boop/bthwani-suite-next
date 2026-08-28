@@ -22,6 +22,7 @@ type Props = {
 
 export function TicketDetailScreen({ ticketId, onBack }: Props) {
   const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const {
     detailState,
     messageListState,
@@ -30,7 +31,7 @@ export function TicketDetailScreen({ ticketId, onBack }: Props) {
     resetMessageAction,
     reloadDetail,
     reloadMessages,
-  } = useTicketDetailController(ticketId, identity.state.kind);
+  } = useTicketDetailController(ticketId, actorId, identity.state.kind);
   const [reply, setReply] = React.useState("");
 
   const handleSend = React.useCallback(async () => {

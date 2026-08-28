@@ -93,7 +93,7 @@ func RuntimeReadinessBoundary(next http.Handler, databases ...*sql.DB) http.Hand
 }
 
 func isProvidersOperationalRequest(r *http.Request) bool {
-	if r.Method == http.MethodOptions || r.URL.Path == "/providers/readiness" || r.URL.Path == "/providers/health" {
+	if r.Method == http.MethodOptions || r.URL.Path == "/providers/health" {
 		return false
 	}
 	return r.URL.Path == "/providers" || strings.HasPrefix(r.URL.Path, "/providers/")
@@ -101,8 +101,14 @@ func isProvidersOperationalRequest(r *http.Request) bool {
 
 func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		isReadinessRequest := r.Method == http.MethodGet && r.URL.Path == "/providers/readiness"
-		if !isReadinessRequest && !isProvidersOperationalRequest(r) {
+		// Readiness is now handled by the canonical router.
+		// Pass it through to the next handler (the router).
+		if r.Method == http.MethodGet && r.URL.Path == "/providers/readiness" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		if !isProvidersOperationalRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -180,12 +186,6 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 			"failure_total", readinessFailures.Load(),
 		)
 
-		if isReadinessRequest {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"HEALTHY","service":"core-providers"}`))
-			return
-		}
 		w.Header().Set("X-Providers-Runtime-Status", "HEALTHY")
 		next.ServeHTTP(w, r)
 	})

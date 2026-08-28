@@ -120,16 +120,35 @@ func TestPenaltyPostAndReverseUseCanonicalLedgerAsSoleBalanceWriter(t *testing.T
 	if _, err := Post(ctx, db, "different-key-"+suffix, input); !errors.Is(err, ErrConflict) {
 		t.Fatalf("same incident with a different idempotency identity must conflict, got %v", err)
 	}
+	differentPayload := input
+	differentPayload.Reason = "a materially different governed reason"
+	if _, err := Post(ctx, db, "penalty-key-"+suffix, differentPayload); !errors.Is(err, ErrConflict) {
+		t.Fatalf("same POST key with a different payload must conflict, got %v", err)
+	}
 
-	reversed, err := Reverse(ctx, db, posted.ID, ReverseInput{
+	reverseKey := "provider-incident-reverse:" + input.IncidentID
+	reverseInput := ReverseInput{
 		Reason:            "penalty overturned by review",
 		ReversedByActorID: "workforce-operator-b",
-	})
+	}
+	reversed, err := Reverse(ctx, db, posted.ID, reverseKey, reverseInput)
 	if err != nil {
 		t.Fatalf("reverse penalty: %v", err)
 	}
 	if reversed.ReversalLedgerTransactionID == "" || reversed.Status != "reversed" {
 		t.Fatalf("reversal did not persist canonical lineage: %+v", reversed)
+	}
+	replayedReverse, err := Reverse(ctx, db, posted.ID, reverseKey, reverseInput)
+	if err != nil || replayedReverse.ReversalLedgerTransactionID != reversed.ReversalLedgerTransactionID {
+		t.Fatalf("exact reverse replay changed canonical result: replay=%+v err=%v", replayedReverse, err)
+	}
+	differentReverse := reverseInput
+	differentReverse.Reason = "different reversal governance reason"
+	if _, err := Reverse(ctx, db, posted.ID, reverseKey, differentReverse); !errors.Is(err, ErrConflict) {
+		t.Fatalf("same REVERSE key with a different payload must conflict, got %v", err)
+	}
+	if _, err := Reverse(ctx, db, posted.ID, reverseKey+":different", reverseInput); !errors.Is(err, ErrConflict) {
+		t.Fatalf("duplicate reversal under a different identity must conflict, got %v", err)
 	}
 	projection, err = ledger.GetWalletLedgerProjection(ctx, db, "captain", actorID, "YER")
 	if err != nil || projection == nil || projection.BalanceMinorUnits != 5000 {
@@ -204,7 +223,7 @@ func TestPenaltyPostCreatesCanonicalDebtWhenWalletIsInsufficient(t *testing.T) {
 	if err != nil || projection == nil || projection.BalanceMinorUnits != 0 {
 		t.Fatalf("expected wallet leg to consume only available 500, projection=%+v err=%v", projection, err)
 	}
-	if _, err := Reverse(ctx, db, posted.ID, ReverseInput{Reason: "penalty overturned by review", ReversedByActorID: "workforce-operator-b"}); err != nil {
+	if _, err := Reverse(ctx, db, posted.ID, "provider-incident-reverse:"+posted.IncidentID, ReverseInput{Reason: "penalty overturned by review", ReversedByActorID: "workforce-operator-b"}); err != nil {
 		t.Fatalf("reverse debt-backed penalty: %v", err)
 	}
 	if err := db.QueryRowContext(ctx, `SELECT outstanding_amount_minor_units,status FROM wlt_provider_debts WHERE id=$1`, posted.DebtID).Scan(&outstanding, &status); err != nil {
@@ -212,5 +231,37 @@ func TestPenaltyPostCreatesCanonicalDebtWhenWalletIsInsufficient(t *testing.T) {
 	}
 	if outstanding != 0 || status != "reversed" {
 		t.Fatalf("reversal did not close canonical debt: outstanding=%d status=%s", outstanding, status)
+	}
+}
+
+func TestReservedPathSegmentIsNeverCapturedAsIdentifier(t *testing.T) {
+	handler := HandleReservedPathSegment("by-incident")
+	recorder := httptest.NewRecorder()
+	handler(recorder, httptest.NewRequest(http.MethodGet, "/wlt/provider-penalties/by-incident", nil))
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("reserved segment must 400, got %d", recorder.Code)
+	}
+	if !strings.Contains(recorder.Body.String(), "RESERVED_PATH_SEGMENT") {
+		t.Fatalf("explicit code required, got %s", recorder.Body.String())
+	}
+}
+
+func TestDebtLegReversalRefusesSettledAndDriftedStates(t *testing.T) {
+	// Root #4 regression fence: the reversal error surface is explicit and
+	// fail-closed. The decision logic is enforced in SQL under FOR UPDATE; the
+	// sentinel surface is proven here so handler mapping cannot regress.
+	if !strings.Contains(ErrDebtPartiallySettled.Error(), "partially settled") ||
+		!strings.Contains(ErrDebtStateConflict.Error(), "conflicts") {
+		t.Fatal("sentinels must carry explicit semantics")
+	}
+	recorder := httptest.NewRecorder()
+	writeError(recorder, ErrDebtPartiallySettled)
+	if recorder.Code != http.StatusConflict || !strings.Contains(recorder.Body.String(), "PROVIDER_DEBT_PARTIALLY_SETTLED") {
+		t.Fatalf("partial settlement must map to 409 PROVIDER_DEBT_PARTIALLY_SETTLED, got %d %s", recorder.Code, recorder.Body.String())
+	}
+	recorder = httptest.NewRecorder()
+	writeError(recorder, ErrDebtStateConflict)
+	if recorder.Code != http.StatusConflict || !strings.Contains(recorder.Body.String(), "PROVIDER_DEBT_STATE_CONFLICT") {
+		t.Fatalf("debt state drift must map to 409 PROVIDER_DEBT_STATE_CONFLICT, got %d %s", recorder.Code, recorder.Body.String())
 	}
 }

@@ -95,7 +95,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'evidence-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/docs/RUNTIME_EVIDENCE_MATRIX.md',
+    currentEvidencePath: 'dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx',
     notes: 'Field owns visit/readiness evidence; partner sees approval state; control-panel approves or requests completion.',
   },
   {
@@ -116,7 +116,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/shared/products/products.contract.ts',
+    currentEvidencePath: 'dsh/frontend/shared/catalog/central-catalog.types.ts',
     notes: 'Catalog data remains central; surfaces must not clone product/media payloads locally.',
   },
   {
@@ -137,7 +137,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/shared/dsh-order-journey.model.ts',
+    currentEvidencePath: 'dsh/frontend/shared/orders/orders.state-machine.ts',
     notes: 'Order lifecycle belongs to DSH; payment/refund truth stays WLT read-only.',
   },
   {
@@ -158,7 +158,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/docs/RUNTIME_EVIDENCE_MATRIX.md',
+    currentEvidencePath: 'dsh/frontend/shared/delivery/delivery.contract.ts',
     notes: 'Trip is operational proof for WLT later; DSH does not account for the trip.',
   },
   {
@@ -221,7 +221,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'evidence-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/docs/RUNTIME_EVIDENCE_MATRIX.md',
+    currentEvidencePath: 'dsh/frontend/shared/pickup/pickup.api.ts',
     notes: 'Pickup proof prevents store/captain handoff disputes from becoming untraceable.',
   },
   {
@@ -242,7 +242,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'evidence-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/app-captain/screens/DshCaptainPoDSubmissionScreen.tsx',
+    currentEvidencePath: 'dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx',
     notes: 'PoD acceptance can become WLT evidence; PoD rejection can become audit candidate.',
   },
   {
@@ -326,7 +326,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'summary-only',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'governance/19_CONTROL_PANEL_AND_OPERATING_MODEL.md',
+    currentEvidencePath: 'dsh/frontend/shared/operations/operations-registry.ts',
     notes: 'Every control-panel action must declare operation_id, permission, input, validation, side effect, audit, rollback, and evidence.',
   },
 ];
@@ -458,9 +458,6 @@ export type DshFlowRegistryEntry = {
 
 // ---------------------------------------------------------------------------
 // Registry — Partner Operational Flows
-// Note: registry also covers 2 legacy support-route aliases (auction-status-update,
-// order-rejection) that exist in DSH_PARTNER_SUPPORT_ROUTE_IDS but NOT in
-// DSH_PARTNER_OPERATIONAL_FLOW_IDS — they appear in PARTNER_HIDDEN_COMPAT_FLOWS.
 // ---------------------------------------------------------------------------
 
 const PARTNER_ORDER_LIFECYCLE: readonly DshFlowRegistryEntry[] = [
@@ -617,45 +614,6 @@ const PARTNER_HIDDEN_COMPAT_FLOWS: readonly DshFlowRegistryEntry[] = [
     allowedActions: ['تمييز الحالة كخطر SLA', 'الاحتفاظ بالتوافق'],
     forbiddenActions: ['عرضه كمدخل أساسي منفصل'],
     notes: 'مضمّن داخل حالات command center؛ التصعيد يذهب لـ control-panel.',
-  },
-  {
-    id: 'order-issue-required',
-    label: 'تقرير مشكلة إلزامي',
-    domain: 'support-escalation',
-    ownerSurface: 'app-partner',
-    visibleSurfaces: ['app-partner'],
-    visibility: 'hidden-compat',
-    hiddenCompat: true,
-    onDemandPolicy: 'detail-on-open',
-    allowedActions: ['الاحتفاظ بالتوافق'],
-    forbiddenActions: ['إظهاره كخيار ابتدائي'],
-    notes: 'استخدم order-issue-queue بدلًا منه للتدفقات الجديدة.',
-  },
-  {
-    id: 'auction-status-update',
-    label: 'Auction Status Update (Legacy)',
-    domain: 'order-lifecycle',
-    ownerSurface: 'app-partner',
-    visibleSurfaces: ['app-partner'],
-    visibility: 'hidden-compat',
-    hiddenCompat: true,
-    onDemandPolicy: 'summary-only',
-    allowedActions: ['الاحتفاظ بالتوافق للمستهلكين القدامى'],
-    forbiddenActions: ['إظهاره كخيار أساسي', 'إنشاء route مستقل جديد'],
-    notes: 'Legacy registry consumer only. See operations-support.snapshot.ts for detail.',
-  },
-  {
-    id: 'order-rejection',
-    label: 'Order Rejection (Legacy Route)',
-    domain: 'cancellation-rejection',
-    ownerSurface: 'app-partner',
-    visibleSurfaces: ['app-partner'],
-    visibility: 'hidden-compat',
-    hiddenCompat: true,
-    onDemandPolicy: 'summary-only',
-    allowedActions: ['الاحتفاظ بالتوافق'],
-    forbiddenActions: ['عرضه كصفحة أساسية منفصلة'],
-    notes: 'Legacy alias. استخدم order-reject (flow) أو partner-reject-request (support) بدلًا منه.',
   },
 ];
 
@@ -1092,72 +1050,6 @@ export const DSH_FLOW_REGISTRY: readonly DshFlowRegistryEntry[] = [
 /** Lookup a registry entry by its stable flow ID. */
 export function getDshFlowById(id: string): DshFlowRegistryEntry | undefined {
   return DSH_FLOW_REGISTRY.find((entry) => entry.id === id);
-}
-
-/**
- * All registry entries that are visible on a given surface
- * (owns, or listed in visibleSurfaces — including hidden-compat).
- */
-export function getDshFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
-  return DSH_FLOW_REGISTRY.filter(
-    (entry) =>
-      entry.ownerSurface === surfaceId || entry.visibleSurfaces.includes(surfaceId)
-  );
-}
-
-/**
- * Entries that can render in a visible workspace for a surface.
- * Excludes hidden-compat and disabled everywhere, and excludes internal
- * outside control-panel. Pure read-only filter — no side effects, no throws.
- */
-export function getDshRenderableFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
-  return getDshFlowsForSurface(surfaceId).filter((entry) => {
-    if (entry.visibility === 'hidden-compat' || entry.visibility === 'disabled') {
-      return false;
-    }
-
-    if (entry.visibility === 'internal' && surfaceId !== 'control-panel') {
-      return false;
-    }
-
-    return true;
-  });
-}
-
-/** True when a flow ID is a legacy/hidden-compat entry that must NOT render primary. */
-export function isDshHiddenCompatFlow(id: string): boolean {
-  const entry = getDshFlowById(id);
-  return entry?.hiddenCompat === true;
-}
-
-/**
- * All flows that require escalation handling (have an escalationOwner defined).
- * Useful for control-panel escalation queue wiring.
- */
-export function getDshEscalationFlows(): readonly DshFlowRegistryEntry[] {
-  return DSH_FLOW_REGISTRY.filter((entry) => entry.escalationOwner !== undefined);
-}
-
-/**
- * Escalation-aware flows relevant to a given surface.
- * Includes flows owned by the surface, visible on the surface, or escalated to it.
- * Pure read-only filter — no side effects, no throws.
- */
-export function getDshEscalationFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
-  return getDshEscalationFlows().filter(
-    (entry) =>
-      entry.ownerSurface === surfaceId ||
-      entry.visibleSurfaces.includes(surfaceId) ||
-      entry.escalationOwner === surfaceId,
-  );
-}
-
-/**
- * All flows with financialImpact=true.
- * These must remain finance-snapshot-only — no mutation from DSH.
- */
-export function getDshFinanceImpactFlows(): readonly DshFlowRegistryEntry[] {
-  return DSH_FLOW_REGISTRY.filter((entry) => entry.financialImpact === true);
 }
 
 export type DshFlowPolicySummary = {

@@ -1,6 +1,9 @@
 import React from "react";
 import { useColorScheme } from "react-native";
+import { configureNativeIconRenderer } from "./components/Icon/icon-renderer.native";
 import { BthwaniUiProvider } from "./provider";
+
+configureNativeIconRenderer();
 
 export type MobileUiProviderProps = {
   children?: React.ReactNode;

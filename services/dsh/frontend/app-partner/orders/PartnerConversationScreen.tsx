@@ -59,7 +59,7 @@ export function ConversationScreen({ activeFlowId = 'chat-send', onBack, onOpenS
       />
 
       <DshPartnerOrderConversationPanel
-        onOpenFlow={(flowId) => {
+        onOpenOperationalFlow={(flowId) => {
           const routeId = mapDshPartnerOperationalFlowToSupportRoute(flowId);
           if (routeId) {
             onOpenScreen?.(routeId as PartnerConversationRouteId);

@@ -312,7 +312,7 @@ func TestAppendLoyaltyEntryHasDeterministicRequiredHeaders(t *testing.T) {
 }
 
 // TestFinanceWriteHasDeterministicRequiredHeaders covers the
-// finance_proxy.go mutation surface: FinanceWriteWithOperatorContext must
+// finance facade mutation surface: ExecuteFinanceWrite must
 // always send non-empty required mutation headers, and two identical calls
 // must derive the identical idempotency key so a replay is safe.
 func TestFinanceWriteHasDeterministicRequiredHeaders(t *testing.T) {
@@ -320,18 +320,20 @@ func TestFinanceWriteHasDeterministicRequiredHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requireMutationHeaders(t, r)
 		idempotencyKeys = append(idempotencyKeys, r.Header.Get("Idempotency-Key"))
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{"payoutRequest":{"id":"payout-1"}}`))
 	}))
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
 	body := []byte(`{"actorId":"payout-1"}`)
+	idempotencyKey := deterministicMutationKey("finance-proxy", http.MethodPost, "/wlt/payout-requests", string(body), "OperatorContext-a")
 
-	if _, _, err := c.FinanceWriteWithOperatorContext(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1", "", "OperatorContext-a"); err != nil {
+	if _, _, err := c.ExecuteFinanceWrite(trustedMutationTestContext(), "finance.payout_requests.create", nil, body, "corr-payout-1", idempotencyKey, "", "payout-1"); err != nil {
 		t.Fatalf("unexpected error on first call: %v", err)
 	}
-	if _, _, err := c.FinanceWriteWithOperatorContext(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1", "", "OperatorContext-a"); err != nil {
+	if _, _, err := c.ExecuteFinanceWrite(trustedMutationTestContext(), "finance.payout_requests.create", nil, body, "corr-payout-1", idempotencyKey, "", "payout-1"); err != nil {
 		t.Fatalf("unexpected error on second call: %v", err)
 	}
 

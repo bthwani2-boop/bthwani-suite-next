@@ -42,8 +42,8 @@ func TestRequireServiceCallerBindsAuthenticatedDelegatedOperatorContext(t *testi
 	if got := request.Header.Get("X-Delegated-Operator-Context"); got != "OperatorContext-a" {
 		t.Fatalf("delegated context changed after authentication: got %q", got)
 	}
-	if scopeID, ok := OperatorContextIDFromContext(request.Context()); !ok || scopeID != "OperatorContext-a" {
-		t.Fatalf("delegated context was not propagated, scope=%q ok=%v", scopeID, ok)
+	if operatorContextID, ok := OperatorContextIDFromContext(request.Context()); !ok || operatorContextID != "OperatorContext-a" {
+		t.Fatalf("delegated context was not propagated, operatorContext=%q ok=%v", operatorContextID, ok)
 	}
 }
 
@@ -94,6 +94,13 @@ func TestRequireServiceCallerAuthenticatesBeforeBindingScope(t *testing.T) {
 	}
 	if got := request.Header.Get("X-Delegated-Operator-Context"); got != "OperatorContext-a" {
 		t.Fatalf("unauthenticated request was mutated before authentication: got %q", got)
+	}
+}
+
+func TestRequireOperatorContextRejectsLegacyUnscopedSentinel(t *testing.T) {
+	ctx := WithOperatorContext(context.Background(), "legacy-unscoped")
+	if scopeID, err := RequireOperatorContext(ctx); err == nil || scopeID != "" {
+		t.Fatalf("legacy-unscoped context was accepted: scope=%q err=%v", scopeID, err)
 	}
 }
 

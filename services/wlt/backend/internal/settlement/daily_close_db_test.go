@@ -10,6 +10,17 @@ import (
 	"wlt-api/internal/testsupport"
 )
 
+func TestValidateDailyCloseBusinessDateRejectsFuture(t *testing.T) {
+	now := time.Date(2026, time.August, 27, 12, 0, 0, 0, time.UTC)
+	future := now.AddDate(0, 0, 1)
+	if err := validateDailyCloseBusinessDate(future, now); err == nil {
+		t.Fatal("future business date must be rejected")
+	}
+	if err := validateDailyCloseBusinessDate(now, now); err != nil {
+		t.Fatalf("current business date should remain representable for the canonical cutoff gate: %v", err)
+	}
+}
+
 // TestDailyCloseTotalsComeFromTheCanonicalLedger proves the close reads the
 // double-entry kernel.
 //
@@ -56,7 +67,6 @@ func TestDailyCloseTotalsComeFromTheCanonicalLedger(t *testing.T) {
 
 	close, err := ExecuteDailyFinanceClose(ctx, db, ExecuteDailyCloseInput{
 		BusinessDate: businessDate,
-		OperatorID:   "finance-day-closer",
 	}, "close-corr")
 	if err != nil {
 		t.Fatalf("execute daily close: %v", err)
@@ -72,7 +82,6 @@ func TestDailyCloseTotalsComeFromTheCanonicalLedger(t *testing.T) {
 	// A business date closes exactly once.
 	if _, err := ExecuteDailyFinanceClose(ctx, db, ExecuteDailyCloseInput{
 		BusinessDate: businessDate,
-		OperatorID:   "finance-day-closer",
 	}, "close-corr-2"); err == nil {
 		t.Fatal("expected a second close of the same business date to be refused")
 	}
@@ -135,7 +144,6 @@ func TestDailyCloseBlocksOnUnverifiedExecution(t *testing.T) {
 
 	_, err = ExecuteDailyFinanceClose(ctx, db, ExecuteDailyCloseInput{
 		BusinessDate: time.Now().UTC().Format("2006-01-02"),
-		OperatorID:   "finance-day-closer",
 	}, "close-block-corr")
 	if err == nil {
 		t.Fatal("expected the close to be blocked by unverified external execution")

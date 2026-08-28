@@ -50,6 +50,8 @@ paths:
       operationId: createProviderPenalty
       tags: [ WltWorkforceFinance ]
       security: [ { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -103,18 +105,25 @@ paths:
         '401': { $ref: '#/components/responses/WorkforceFinanceUnauthorized' }
         '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }
         '409': { $ref: '#/components/responses/WorkforceFinanceConflict' }
-  /wlt/provider-penalties/{penaltyId}/reverse:
+  /wlt/provider-penalties/reverse/{penaltyId}:
     post:
       operationId: reverseProviderPenalty
       tags: [ WltWorkforceFinance ]
       security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/PenaltyId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { type: object, additionalProperties: true }
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ reason, reversedByActorId ]
+              properties:
+                reason: { type: string, minLength: 3 }
+                reversedByActorId: { type: string, minLength: 1 }
       responses:
         '200': { description: Provider penalty reversed through a compensating ledger entry. }
         '400': { $ref: '#/components/responses/WorkforceFinanceBadRequest' }
@@ -122,6 +131,33 @@ paths:
         '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }
         '404': { $ref: '#/components/responses/WorkforceFinanceNotFound' }
         '409': { $ref: '#/components/responses/WorkforceFinanceConflict' }
+  /wlt/provider-penalties/by-incident/{incidentId}:
+    get:
+      operationId: getProviderPenaltyByIncident
+      tags: [ WltWorkforceFinance ]
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: incidentId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200': { description: Authoritative provider penalty readback. }
+        '401': { $ref: '#/components/responses/WorkforceFinanceUnauthorized' }
+        '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }
+        '404': { $ref: '#/components/responses/WorkforceFinanceNotFound' }
+  /wlt/provider-penalties/{penaltyId}:
+    get:
+      operationId: getProviderPenalty
+      tags: [ WltWorkforceFinance ]
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/PenaltyId'
+      responses:
+        '200': { description: Authoritative provider penalty readback. }
+        '401': { $ref: '#/components/responses/WorkforceFinanceUnauthorized' }
+        '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }
+        '404': { $ref: '#/components/responses/WorkforceFinanceNotFound' }
 components:
   securitySchemes:
     bearerAuth:
@@ -136,6 +172,11 @@ components:
     PenaltyId:
       name: penaltyId
       in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
       required: true
       schema: { type: string, minLength: 1 }
   responses:

@@ -1,7 +1,20 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import test, { afterEach } from "node:test";
 import { dehydrate } from "@tanstack/react-query";
 import { createBthwaniQueryClient } from "../src/create-query-client.ts";
+
+const testQueryClients = new Set();
+
+function createTestQueryClient() {
+  const client = createBthwaniQueryClient();
+  testQueryClients.add(client);
+  return client;
+}
+
+afterEach(() => {
+  for (const client of testQueryClients) client.clear();
+  testQueryClients.clear();
+});
 
 function makeStorage() {
   const stored = new Map();
@@ -16,7 +29,7 @@ function makeStorage() {
 }
 
 test("createBthwaniQueryClient sets conservative defaults", () => {
-  const client = createBthwaniQueryClient();
+  const client = createTestQueryClient();
   const defaults = client.getDefaultOptions().queries;
   assert.equal(defaults.staleTime, 30_000);
   assert.equal(defaults.refetchOnReconnect, true);
@@ -25,7 +38,7 @@ test("createBthwaniQueryClient sets conservative defaults", () => {
 });
 
 test("createBthwaniQueryClient retry never retries 4xx", () => {
-  const client = createBthwaniQueryClient();
+  const client = createTestQueryClient();
   const retry = client.getDefaultOptions().queries.retry;
   assert.equal(retry(0, { kind: "http", status: 400 }), false);
   assert.equal(retry(0, { kind: "http", status: 503 }), true);
@@ -55,7 +68,7 @@ test("persistBthwaniQueryClient persists only allowlisted namespaces", async () 
 
   const { stored, storage } = makeStorage();
 
-  const client = createBthwaniQueryClient();
+  const client = createTestQueryClient();
   const stop = persistBthwaniQueryClient(client, "test-cache-key", storage);
   await client.prefetchQuery({
     queryKey: ["dsh", "home-discovery", "x"],
@@ -81,7 +94,7 @@ test("persistBthwaniQueryClient persists only allowlisted namespaces", async () 
 test("restore hydrates v3 envelope but rejects legacy v2 envelope", async () => {
   const { restoreBthwaniQueryClient } = await import("../src/persistence.ts");
 
-  const seed = createBthwaniQueryClient();
+  const seed = createTestQueryClient();
   await seed.prefetchQuery({
     queryKey: ["dsh", "home-discovery", "x"],
     queryFn: async () => ({ stores: ["store-1"] }),
@@ -94,7 +107,7 @@ test("restore hydrates v3 envelope but rejects legacy v2 envelope", async () => 
     clientState: dehydrate(seed),
   };
   await storageV3.setItem("cache-key-v3", JSON.stringify(v3Envelope));
-  const hydratedClient = createBthwaniQueryClient();
+  const hydratedClient = createTestQueryClient();
   await restoreBthwaniQueryClient(hydratedClient, "cache-key-v3", storageV3);
   assert.deepEqual(hydratedClient.getQueryData(["dsh", "home-discovery", "x"]), { stores: ["store-1"] });
   assert.equal(storedV3.get("cache-key-v3") !== undefined, true);
@@ -106,7 +119,7 @@ test("restore hydrates v3 envelope but rejects legacy v2 envelope", async () => 
   };
   const { stored: storedLegacy, storage: storageLegacy } = makeStorage();
   await storageLegacy.setItem("cache-key-v2", JSON.stringify(legacyEnvelope));
-  const legacyClient = createBthwaniQueryClient();
+  const legacyClient = createTestQueryClient();
   await restoreBthwaniQueryClient(legacyClient, "cache-key-v2", storageLegacy);
   assert.equal(legacyClient.getQueryData(["dsh", "home-discovery", "x"]), undefined);
   assert.equal(legacyClient.getQueryCache().getAll().length, 0);
@@ -116,7 +129,7 @@ test("restore hydrates v3 envelope but rejects legacy v2 envelope", async () => 
 test("restore drops non-allowlisted entries inside a valid v3 envelope", async () => {
   const { restoreBthwaniQueryClient } = await import("../src/persistence.ts");
 
-  const seed = createBthwaniQueryClient();
+  const seed = createTestQueryClient();
   await seed.prefetchQuery({
     queryKey: ["dsh", "home-discovery", "x"],
     queryFn: async () => ({ stores: ["store-1"] }),
@@ -138,7 +151,7 @@ test("restore drops non-allowlisted entries inside a valid v3 envelope", async (
 
   const { storage } = makeStorage();
   await storage.setItem("tampered-cache-key", JSON.stringify(tamperedEnvelope));
-  const client = createBthwaniQueryClient();
+  const client = createTestQueryClient();
   await restoreBthwaniQueryClient(client, "tampered-cache-key", storage);
 
   assert.deepEqual(client.getQueryData(["dsh", "home-discovery", "x"]), { stores: ["store-1"] });

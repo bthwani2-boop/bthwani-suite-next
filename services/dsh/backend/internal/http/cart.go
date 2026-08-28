@@ -1,14 +1,18 @@
 package http
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/clientaddress"
+	"dsh-api/internal/platformpolicies"
 	"dsh-api/internal/store"
 )
 
@@ -32,8 +36,17 @@ func (s *protectedStoreServer) handleGetFulfillmentModes(w http.ResponseWriter, 
 	// GetFulfillmentModes doesn't rely on full physical coordinates in the simple case,
 	// but if we have an active address, we should technically use it.
 	// For J051 lightweight capability fetch, we just rely on the zone/serviceAreaCode.
-	resp := cart.GetFulfillmentModes(r.Context(), s.db, storeID, serviceAreaCode, nil, nil)
+	resp, err := cart.GetFulfillmentModes(r.Context(), s.db, storeID, serviceAreaCode, nil, nil)
+	if errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable) {
+		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "fulfillment modes could not be evaluated")
+		return
+	}
 	store.SendJSON(w, http.StatusOK, resp)
+
 }
 
 // POST /dsh/client/cart/serviceability
@@ -89,7 +102,7 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		return
 	}
 
-	result := cart.CheckGovernedServiceability(
+	result, err := cart.CheckGovernedServiceability(
 		r.Context(),
 		s.db,
 		s.maps,
@@ -99,6 +112,18 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		address.Longitude,
 		mode,
 	)
+	if errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable) {
+		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
+		return
+	}
+	if errors.Is(err, platformpolicies.ErrNotFound) {
+		store.SendError(w, http.StatusUnprocessableEntity, "OPERATIONAL_POLICY_NOT_CONFIGURED", "store is not mapped to a governed operational zone")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "operational policy could not be evaluated")
+		return
+	}
 	result.AddressID = address.ID
 	result.AddressVersion = address.Version
 	if err := cart.RecordServiceabilityCheck(
@@ -289,18 +314,21 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		return
 	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not update cart item")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart item update failed")
 		return
 	}
 
-	// Add idempotency tracking if provided
+	// Record the idempotency key after the mutation succeeded. Best-effort
+	// means logged, never silently discarded: a dropped tracking row would
+	// silently degrade replay protection for this key.
 	if idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key")); idempotencyKey != "" {
 		deviceId := strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id"))
 		sessionId := strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id"))
-		_, _ = s.db.ExecContext(r.Context(),
-			`INSERT INTO dsh_cart_idempotency (cart_id, idempotency_key, version, device_id, session_id) VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, '')) ON CONFLICT DO NOTHING`,
+		if err := recordCartIdempotency(r.Context(), s.db,
 			current.ID, idempotencyKey, current.Version+1, deviceId, sessionId,
-		)
+		); err != nil {
+			log.Printf("[cart] idempotency tracking failed (cart_id=%s, error_type %T)", current.ID, err)
+		}
 	}
 
 	// Read cart again to get updated version
@@ -354,10 +382,11 @@ func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *ht
 		if expectedVersion != nil {
 			v = *expectedVersion + 1
 		}
-		_, _ = s.db.ExecContext(r.Context(),
-			`INSERT INTO dsh_cart_idempotency (cart_id, idempotency_key, version, device_id, session_id) VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, '')) ON CONFLICT DO NOTHING`,
+		if err := recordCartIdempotency(r.Context(), s.db,
 			cartID, idempotencyKey, v, deviceId, sessionId,
-		)
+		); err != nil {
+			log.Printf("[cart] idempotency tracking failed (cart_id=%s, error_type %T)", cartID, err)
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
@@ -417,13 +446,39 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 		if expectedVersion != nil {
 			v = *expectedVersion + 1
 		}
-		_, _ = s.db.ExecContext(r.Context(),
-			`INSERT INTO dsh_cart_idempotency (cart_id, idempotency_key, version, device_id, session_id) VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, '')) ON CONFLICT DO NOTHING`,
+		if err := recordCartIdempotency(r.Context(), s.db,
 			cartID, idempotencyKey, v, deviceId, sessionId,
-		)
+		); err != nil {
+			log.Printf("[cart] idempotency tracking failed (cart_id=%s, error_type %T)", cartID, err)
+		}
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// recordCartIdempotency claims the (cart_id, idempotency_key) pair after a
+// successful cart mutation. The conflict target is the table's primary key,
+// and the insert outcome is always inspected: 0 rows means the key was
+// already claimed by a concurrent request — surfaced as ErrIdempotencyClaimed
+// so callers can log the anomaly instead of mistaking it for success.
+var errCartIdempotencyClaimed = errors.New("cart idempotency key already claimed")
+
+func recordCartIdempotency(ctx context.Context, db *sql.DB, cartID, idempotencyKey string, version int, deviceID, sessionID string) error {
+	result, err := db.ExecContext(ctx,
+		`INSERT INTO dsh_cart_idempotency (cart_id, idempotency_key, version, device_id, session_id) VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, '')) ON CONFLICT (cart_id, idempotency_key) DO NOTHING`,
+		cartID, idempotencyKey, version, deviceID, sessionID,
+	)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errCartIdempotencyClaimed
+	}
+	return nil
 }
 
 // GET /dsh/operator/carts?state=active

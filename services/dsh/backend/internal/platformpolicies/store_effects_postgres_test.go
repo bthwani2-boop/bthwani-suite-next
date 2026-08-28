@@ -3,7 +3,6 @@ package platformpolicies
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -13,7 +12,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func TestEvaluateOperationalPolicyForStoreFailsClosedOnAmbiguousZoneBinding(t *testing.T) {
+// The operational-zone binding invariants live at the persistence owner: every
+// zone references a governed service area and at most one zone may bind a
+// service area. These proofs fail if either constraint regresses.
+func TestZoneServiceAreaBindingInvariants(t *testing.T) {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		t.Skip("DATABASE_URL is required for the PostgreSQL operational-zone proof")
@@ -29,60 +31,69 @@ func TestEvaluateOperationalPolicyForStoreFailsClosedOnAmbiguousZoneBinding(t *t
 	}
 
 	ctx := context.Background()
-	operatorContextID := "local-dsh"
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
-	storeID := "store-zone-ambiguity-" + suffix
-	serviceAreaCode := "area-zone-ambiguity-" + suffix
-	zoneNameA := "Ambiguous A " + suffix
-	zoneNameB := "Ambiguous B " + suffix
+	serviceAreaCode := "area-zone-binding-" + suffix
 
-	_, err = db.ExecContext(ctx, `
-		INSERT INTO dsh_stores (
-			id, operator_context_id, slug, display_name, status, city_code, service_area_code,
-			serviceability_status, is_visible, partner_readiness,
-			catalog_approval_status, marketing_visibility
-		)
-		VALUES (
-			$1, $4, $1, $2, 'published', 'test-city', $3, 'serviceable', TRUE,
-			'ready', 'approved', 'visible'
-		)`, storeID, "Ambiguous Zone Store", serviceAreaCode, operatorContextID)
-	if err != nil {
-		t.Fatalf("insert store: %v", err)
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_service_area_geofences (service_area_code, display_name, polygon, active)
+		VALUES ($1, 'Binding Proof Area', ST_GeomFromText('POLYGON((44.18 15.33,44.20 15.33,44.20 15.35,44.18 15.35,44.18 15.33))', 4326), TRUE)
+		ON CONFLICT (service_area_code) DO NOTHING`, serviceAreaCode); err != nil {
+		t.Fatalf("seed service-area geofence: %v", err)
 	}
 
-	var zoneIDA, zoneIDB string
+	var zoneID string
 	err = db.QueryRowContext(ctx, `
-		INSERT INTO dsh_platform_zones (name, city_code, description)
-		VALUES ($1, $2, 'ambiguity proof A')
-		RETURNING id::text`, zoneNameA, serviceAreaCode).Scan(&zoneIDA)
+		INSERT INTO dsh_platform_zones (name, service_area_code, description)
+		VALUES ($1, $2, 'binding invariant proof')
+		RETURNING id::text`, "Binding Proof "+suffix, serviceAreaCode).Scan(&zoneID)
 	if err != nil {
-		t.Fatalf("insert first zone: %v", err)
-	}
-	err = db.QueryRowContext(ctx, `
-		INSERT INTO dsh_platform_zones (name, city_code, description)
-		VALUES ($1, $2, 'ambiguity proof B')
-		RETURNING id::text`, zoneNameB, serviceAreaCode).Scan(&zoneIDB)
-	if err != nil {
-		t.Fatalf("insert second zone: %v", err)
+		t.Fatalf("insert governed zone: %v", err)
 	}
 
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM dsh_platform_delivery_mode_policies WHERE zone_id::text IN ($1, $2)`, zoneIDA, zoneIDB)
-		_, _ = db.Exec(`DELETE FROM dsh_platform_capacity_configs WHERE zone_id::text IN ($1, $2)`, zoneIDA, zoneIDB)
-		_, _ = db.Exec(`DELETE FROM dsh_platform_sla_rules WHERE zone_id::text IN ($1, $2)`, zoneIDA, zoneIDB)
-		_, _ = db.Exec(`DELETE FROM dsh_platform_policy_events WHERE aggregate_id IN ($1, $2)`, zoneIDA, zoneIDB)
-		_, _ = db.Exec(`DELETE FROM dsh_platform_zones WHERE id::text IN ($1, $2)`, zoneIDA, zoneIDB)
-		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id = $1`, storeID)
+		_, _ = db.Exec(`DELETE FROM dsh_platform_delivery_mode_policies WHERE zone_id::text = $1`, zoneID)
+		_, _ = db.Exec(`DELETE FROM dsh_platform_capacity_configs WHERE zone_id::text = $1`, zoneID)
+		_, _ = db.Exec(`DELETE FROM dsh_platform_sla_rules WHERE zone_id::text = $1`, zoneID)
+		_, _ = db.Exec(`DELETE FROM dsh_platform_policy_events WHERE aggregate_id = $1`, zoneID)
+		_, _ = db.Exec(`DELETE FROM dsh_platform_zones WHERE id::text = $1`, zoneID)
+		_, _ = db.Exec(`DELETE FROM dsh_service_area_geofences WHERE service_area_code = $1`, serviceAreaCode)
 	})
 
-	_, err = EvaluateOperationalPolicyForStore(ctx, db, storeID, FulfillmentModeBthwaniDelivery)
-	if err == nil {
-		t.Fatal("ambiguous service-area binding must fail closed")
+	var duplicateRejected bool
+	var duplicateErr error
+	err = db.QueryRowContext(ctx, `
+		INSERT INTO dsh_platform_zones (name, service_area_code, description)
+		VALUES ($1, $2, 'duplicate binding must be rejected')
+		RETURNING id::text`, "Duplicate Binding "+suffix, serviceAreaCode).Scan(new(string))
+	if err != nil {
+		duplicateRejected = true
+		duplicateErr = err
+	} else {
+		var duplicateID string
+		_ = db.QueryRowContext(ctx,
+			`SELECT id::text FROM dsh_platform_zones WHERE lower(service_area_code) = lower($1) AND id::text <> $2 LIMIT 1`,
+			serviceAreaCode, zoneID).Scan(&duplicateID)
+		if duplicateID != "" {
+			_, _ = db.Exec(`DELETE FROM dsh_platform_policy_events WHERE aggregate_id = $1`, duplicateID)
+			_, _ = db.Exec(`DELETE FROM dsh_platform_zones WHERE id::text = $1`, duplicateID)
+		}
 	}
-	if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalid) {
-		t.Fatalf("ambiguous mapping must remain distinguishable from missing/invalid policy: %v", err)
+	if !duplicateRejected {
+		t.Fatal("a second operational zone for one service area must be rejected by persistence")
 	}
-	if !strings.Contains(err.Error(), "ambiguous operational zone mapping") {
-		t.Fatalf("unexpected ambiguity error: %v", err)
+	if duplicateErr != nil && !strings.Contains(duplicateErr.Error(), "uq_dsh_platform_zones_service_area") {
+		t.Fatalf("duplicate binding must fail through the canonical unique constraint: %v", duplicateErr)
+	}
+
+	var orphanRejected bool
+	err = db.QueryRowContext(ctx, `
+		INSERT INTO dsh_platform_zones (name, service_area_code, description)
+		VALUES ($1, $2, 'ungoverned service area must be rejected')
+		RETURNING id::text`, "Orphan Binding "+suffix, "no-such-area-"+suffix).Scan(new(string))
+	if err != nil {
+		orphanRejected = true
+	}
+	if !orphanRejected {
+		t.Fatal("a zone bound to an ungoverned service area must be rejected by the foreign key")
 	}
 }

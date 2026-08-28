@@ -100,7 +100,7 @@ function deriveOrderStatusFromDispatch(raw: BackendDispatchAssignment): DshOrder
   }
 }
 
-export function normalizeOrderItem(raw: BackendOrderItem, orderId = ''): DshOrderItemRecord {
+function normalizeOrderItem(raw: BackendOrderItem, orderId = ''): DshOrderItemRecord {
   const quantity = Number(raw.quantity ?? 0);
   const price = Number(raw.price ?? raw.unitPrice ?? 0);
   const productName = raw.product_name ?? raw.productName;
@@ -115,7 +115,7 @@ export function normalizeOrderItem(raw: BackendOrderItem, orderId = ''): DshOrde
   };
 }
 
-export function deriveTotalPrice(raw: BackendOrder): number {
+function deriveTotalPrice(raw: BackendOrder): number {
   const explicit = raw.total_price ?? raw.totalPrice;
   if (explicit != null) return Number(explicit);
   return (raw.items ?? []).reduce((sum, item) => {
@@ -125,7 +125,7 @@ export function deriveTotalPrice(raw: BackendOrder): number {
   }, 0);
 }
 
-export function normalizeOrder(raw: BackendOrder): DshOrderRecord {
+function normalizeOrder(raw: BackendOrder): DshOrderRecord {
   const orderId = String(raw.id ?? '');
   const checkoutIntentId = raw.checkout_intent_id ?? raw.checkoutIntentId;
   const wltPaymentRefId = raw.wlt_payment_ref_id ?? raw.wltPaymentRefId;
@@ -194,7 +194,7 @@ export function normalizeOrderList(resp: { readonly orders?: readonly BackendOrd
   };
 }
 
-export function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignment): DshOrderRecord {
+function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignment): DshOrderRecord {
   const captainId = raw.captainId;
   const lifecycleStatus = raw.delivery?.status;
   const podReference = raw.delivery?.podReference;

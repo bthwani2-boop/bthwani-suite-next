@@ -11,21 +11,37 @@ import (
 )
 
 type ProviderAvailabilityProjectionInput struct {
-	OperatorContextID         string    `json:"operatorContextId"`
-	NoticeID         string    `json:"noticeId"`
-	ActorType        string    `json:"actorType"`
-	ActorID          string    `json:"actorId"`
-	NoticeType       string    `json:"noticeType"`
-	StartsAt         time.Time `json:"startsAt"`
-	EndsAt           time.Time `json:"endsAt"`
-	Status           string    `json:"status"`
-	Reason           string    `json:"reason"`
-	SourceUpdatedAt  time.Time `json:"sourceUpdatedAt"`
+	OperatorContextID string    `json:"operatorContextId"`
+	NoticeID          string    `json:"noticeId"`
+	ActorType         string    `json:"actorType"`
+	ActorID           string    `json:"actorId"`
+	NoticeType        string    `json:"noticeType"`
+	StartsAt          time.Time `json:"startsAt"`
+	EndsAt            time.Time `json:"endsAt"`
+	Status            string    `json:"status"`
+	Reason            string    `json:"reason"`
+	SourceVersion     int64     `json:"sourceVersion"`
+	SourceUpdatedAt   time.Time `json:"sourceUpdatedAt"`
+	IdempotencyKey    string    `json:"idempotencyKey"`
 }
 
 type ProviderAvailabilityProjection struct {
 	ProviderAvailabilityProjectionInput
-	SyncedAt time.Time `json:"syncedAt"`
+	SyncedAt   time.Time `json:"syncedAt"`
+	Idempotent bool      `json:"idempotent"`
+}
+
+var (
+	ErrAvailabilityProjectionStale               = errors.New("availability projection source version is stale")
+	ErrAvailabilityProjectionIdempotencyConflict = errors.New("availability projection idempotency conflict")
+)
+
+// AvailabilityProjectionIdempotencyKey is shared by the DSH boundary and the
+// Workforce client. It deliberately contains only canonical identity and the
+// source version, so a replay of the same event always addresses the same
+// remote operation.
+func AvailabilityProjectionIdempotencyKey(operatorContextID, noticeID string, sourceVersion int64) string {
+	return fmt.Sprintf("workforce-availability-v1:%s:%s:%d", strings.TrimSpace(operatorContextID), strings.TrimSpace(noticeID), sourceVersion)
 }
 
 func normalizeAvailabilityProjection(input *ProviderAvailabilityProjectionInput) error {
@@ -40,17 +56,19 @@ func normalizeAvailabilityProjection(input *ProviderAvailabilityProjectionInput)
 	input.NoticeType = strings.TrimSpace(input.NoticeType)
 	input.Status = strings.ToLower(strings.TrimSpace(input.Status))
 	input.Reason = strings.TrimSpace(input.Reason)
-	if input.Status == "" {
-		input.Status = "active"
-	}
-	if input.SourceUpdatedAt.IsZero() {
-		input.SourceUpdatedAt = time.Now().UTC()
-	}
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	if input.NoticeID == "" || input.ActorID == "" || input.NoticeType == "" ||
 		(input.ActorType != "captain" && input.ActorType != "field") ||
 		(input.Status != "active" && input.Status != "cancelled") ||
-		input.StartsAt.IsZero() || input.EndsAt.IsZero() || !input.EndsAt.After(input.StartsAt) {
+		input.StartsAt.IsZero() || input.EndsAt.IsZero() || !input.EndsAt.After(input.StartsAt) ||
+		input.SourceVersion < 1 || input.SourceUpdatedAt.IsZero() {
 		return fmt.Errorf("%w: invalid provider availability projection", ErrInvalid)
+	}
+	expectedKey := AvailabilityProjectionIdempotencyKey(input.OperatorContextID, input.NoticeID, input.SourceVersion)
+	if input.IdempotencyKey == "" {
+		input.IdempotencyKey = expectedKey
+	} else if input.IdempotencyKey != expectedKey {
+		return fmt.Errorf("%w: idempotency key does not match the source identity", ErrConflict)
 	}
 	return nil
 }
@@ -60,29 +78,113 @@ func UpsertProviderAvailabilityProjection(ctx context.Context, db *sql.DB, input
 		return ProviderAvailabilityProjection{}, err
 	}
 	var result ProviderAvailabilityProjection
-	err := db.QueryRowContext(ctx, `INSERT INTO dsh_provider_availability_projections(
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return ProviderAvailabilityProjection{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	var rowSourceVersion int64
+	err = tx.QueryRowContext(ctx, `INSERT INTO dsh_provider_availability_projections(
 		operator_context_id,notice_id,actor_type,actor_id,notice_type,starts_at,ends_at,status,
-		reason,source_updated_at)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		reason,source_version,source_updated_at,idempotency_key)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 		ON CONFLICT(operator_context_id,notice_id) DO UPDATE SET
 			actor_type=EXCLUDED.actor_type,actor_id=EXCLUDED.actor_id,
 			notice_type=EXCLUDED.notice_type,starts_at=EXCLUDED.starts_at,
 			ends_at=EXCLUDED.ends_at,status=EXCLUDED.status,reason=EXCLUDED.reason,
-			source_updated_at=EXCLUDED.source_updated_at,synced_at=now()
-		WHERE dsh_provider_availability_projections.source_updated_at <= EXCLUDED.source_updated_at
+			source_version=EXCLUDED.source_version,source_updated_at=EXCLUDED.source_updated_at,
+			idempotency_key=EXCLUDED.idempotency_key,synced_at=now()
+		WHERE dsh_provider_availability_projections.source_version < EXCLUDED.source_version
 		RETURNING operator_context_id,notice_id,actor_type,actor_id,notice_type,starts_at,ends_at,
-		status,reason,source_updated_at,synced_at`,
+		status,reason,source_version,source_updated_at,idempotency_key,synced_at`,
 		input.OperatorContextID, input.NoticeID, input.ActorType, input.ActorID, input.NoticeType,
-		input.StartsAt, input.EndsAt, input.Status, input.Reason, input.SourceUpdatedAt,
+		input.StartsAt, input.EndsAt, input.Status, input.Reason, input.SourceVersion,
+		input.SourceUpdatedAt, input.IdempotencyKey,
 	).Scan(
 		&result.OperatorContextID, &result.NoticeID, &result.ActorType, &result.ActorID,
 		&result.NoticeType, &result.StartsAt, &result.EndsAt, &result.Status,
-		&result.Reason, &result.SourceUpdatedAt, &result.SyncedAt,
+		&result.Reason, &result.SourceVersion, &result.SourceUpdatedAt,
+		&result.IdempotencyKey, &result.SyncedAt,
+	)
+	if err == nil {
+		if err := tx.Commit(); err != nil {
+			return ProviderAvailabilityProjection{}, err
+		}
+		return result, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return ProviderAvailabilityProjection{}, err
+	}
+
+	var existing ProviderAvailabilityProjection
+	err = tx.QueryRowContext(ctx, `SELECT operator_context_id,notice_id,actor_type,actor_id,notice_type,
+		starts_at,ends_at,status,reason,source_version,source_updated_at,idempotency_key,synced_at
+		FROM dsh_provider_availability_projections
+		WHERE operator_context_id=$1 AND notice_id=$2`, input.OperatorContextID, input.NoticeID).Scan(
+		&existing.OperatorContextID, &existing.NoticeID, &existing.ActorType, &existing.ActorID,
+		&existing.NoticeType, &existing.StartsAt, &existing.EndsAt, &existing.Status,
+		&existing.Reason, &rowSourceVersion, &existing.SourceUpdatedAt,
+		&existing.IdempotencyKey, &existing.SyncedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ProviderAvailabilityProjection{}, fmt.Errorf("%w: stale availability projection", ErrConflict)
+		return ProviderAvailabilityProjection{}, fmt.Errorf("%w: availability projection disappeared during upsert", ErrConflict)
 	}
-	return result, err
+	if err != nil {
+		return ProviderAvailabilityProjection{}, err
+	}
+	existing.SourceVersion = rowSourceVersion
+	if rowSourceVersion > input.SourceVersion {
+		return ProviderAvailabilityProjection{}, fmt.Errorf("%w: %w", ErrConflict, ErrAvailabilityProjectionStale)
+	}
+	if rowSourceVersion == input.SourceVersion && existing.IdempotencyKey == input.IdempotencyKey &&
+		sameAvailabilityProjection(existing.ProviderAvailabilityProjectionInput, input) {
+		existing.Idempotent = true
+		if err := tx.Commit(); err != nil {
+			return ProviderAvailabilityProjection{}, err
+		}
+		return existing, nil
+	}
+	return ProviderAvailabilityProjection{}, fmt.Errorf("%w: %w: idempotency key or payload conflicts with an existing source version", ErrConflict, ErrAvailabilityProjectionIdempotencyConflict)
+}
+
+func sameAvailabilityProjection(left, right ProviderAvailabilityProjectionInput) bool {
+	return left.OperatorContextID == right.OperatorContextID &&
+		left.NoticeID == right.NoticeID && left.ActorType == right.ActorType &&
+		left.ActorID == right.ActorID && left.NoticeType == right.NoticeType &&
+		left.StartsAt.Equal(right.StartsAt) && left.EndsAt.Equal(right.EndsAt) &&
+		left.Status == right.Status && left.Reason == right.Reason &&
+		left.SourceVersion == right.SourceVersion &&
+		left.SourceUpdatedAt.Equal(right.SourceUpdatedAt) &&
+		left.IdempotencyKey == right.IdempotencyKey
+}
+
+func GetProviderAvailabilityProjectionByIdempotencyKey(ctx context.Context, db *sql.DB, operatorContextID, idempotencyKey string) (ProviderAvailabilityProjection, bool, error) {
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
+	if err != nil {
+		return ProviderAvailabilityProjection{}, false, err
+	}
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	if idempotencyKey == "" {
+		return ProviderAvailabilityProjection{}, false, ErrInvalid
+	}
+	var result ProviderAvailabilityProjection
+	err = db.QueryRowContext(ctx, `SELECT operator_context_id,notice_id,actor_type,actor_id,notice_type,
+		starts_at,ends_at,status,reason,source_version,source_updated_at,idempotency_key,synced_at
+		FROM dsh_provider_availability_projections
+		WHERE operator_context_id=$1 AND idempotency_key=$2`, operatorContextID, idempotencyKey).Scan(
+		&result.OperatorContextID, &result.NoticeID, &result.ActorType, &result.ActorID,
+		&result.NoticeType, &result.StartsAt, &result.EndsAt, &result.Status,
+		&result.Reason, &result.SourceVersion, &result.SourceUpdatedAt,
+		&result.IdempotencyKey, &result.SyncedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ProviderAvailabilityProjection{}, false, nil
+	}
+	if err != nil {
+		return ProviderAvailabilityProjection{}, false, err
+	}
+	result.Idempotent = true
+	return result, true, nil
 }
 
 func CaptainUnavailableAt(ctx context.Context, db *sql.DB, operatorContextID, captainID string, at time.Time) (bool, error) {
@@ -146,7 +248,7 @@ func ApplyWorkforceAvailability(ctx context.Context, db *sql.DB, operatorContext
 }
 
 type ServiceAreaCapacityPolicy struct {
-	OperatorContextID                        string    `json:"operatorContextId"`
+	OperatorContextID               string    `json:"operatorContextId"`
 	ServiceAreaCode                 string    `json:"serviceAreaCode"`
 	MinimumAvailableCaptains        int       `json:"minimumAvailableCaptains"`
 	TargetAvailableCaptains         int       `json:"targetAvailableCaptains"`
@@ -159,7 +261,7 @@ type ServiceAreaCapacityPolicy struct {
 }
 
 type UpsertServiceAreaCapacityPolicyInput struct {
-	OperatorContextID                        string `json:"operatorContextId"`
+	OperatorContextID               string `json:"operatorContextId"`
 	ServiceAreaCode                 string `json:"serviceAreaCode"`
 	MinimumAvailableCaptains        int    `json:"minimumAvailableCaptains"`
 	TargetAvailableCaptains         int    `json:"targetAvailableCaptains"`
@@ -249,7 +351,7 @@ func loadCapacityPolicy(ctx context.Context, db *sql.DB, operatorContextID, serv
 }
 
 type ServiceAreaCapacityForecast struct {
-	OperatorContextID                   string                    `json:"operatorContextId"`
+	OperatorContextID          string                    `json:"operatorContextId"`
 	ServiceAreaCode            string                    `json:"serviceAreaCode"`
 	AsOf                       time.Time                 `json:"asOf"`
 	HorizonEndsAt              time.Time                 `json:"horizonEndsAt"`

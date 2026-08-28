@@ -130,13 +130,3 @@ export function toHomeStoreCardViewModel(dto: DshHomeStoreDto): HomeStoreCardVie
     openStatusRole: resolveOpenStatusRole(dto.status, dto.serviceability.status),
   };
 }
-
-/**
- * Home discovery and store discovery share one canonical store-card contract.
- * This adapter remains only as a compatibility boundary for app-client callers.
- */
-export function toSharedStoreCardViewModel(
-  vm: HomeStoreCardViewModel,
-): DshStoreCardViewModel {
-  return vm;
-}

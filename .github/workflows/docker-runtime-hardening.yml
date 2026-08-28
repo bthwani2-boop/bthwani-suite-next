@@ -7,43 +7,11 @@ run-name: >-
   github.sha) }}
 
 on:
-  pull_request:
-    paths:
-      - ".dockerignore"
-      - "infra/docker/**"
-      - "tools/scripts/**/*.ps1"
-      - "services/**/database/scripts/**/*.ps1"
-      - "apps/**/runtime/**/*.ps1"
-      - "core/**/Dockerfile"
-      - "services/**/Dockerfile"
-      - "tools/guards/docker-runtime-hardening-gate.mjs"
-      - ".github/workflows/docker-runtime-hardening.yml"
-  push:
-    branches: ["**"]
-    paths:
-      - ".dockerignore"
-      - "infra/docker/**"
-      - "tools/scripts/**/*.ps1"
-      - "services/**/database/scripts/**/*.ps1"
-      - "apps/**/runtime/**/*.ps1"
-      - "core/**/Dockerfile"
-      - "services/**/Dockerfile"
-      - "tools/guards/docker-runtime-hardening-gate.mjs"
-      - ".github/workflows/docker-runtime-hardening.yml"
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      pr_number:
-        description: PR number for exact closure verification
-        required: false
-        type: string
-      head_sha:
-        description: Immutable candidate SHA
-        required: false
-        type: string
-      base_sha:
-        description: Immutable PR base SHA
-        required: false
-        type: string
+      pr_number: {type: string, required: false, default: ""}
+      head_sha: {type: string, required: true}
+      base_sha: {type: string, required: true}
 
 permissions:
   contents: read

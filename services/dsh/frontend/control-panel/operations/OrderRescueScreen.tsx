@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useControlPanelSession } from '../session';
 import {
   Badge,
   Box,
@@ -37,7 +38,9 @@ function statusTone(status: DshGovernedOrderRescueStatus): 'neutral' | 'warning'
 }
 
 export function OrderRescueScreen({ hubHref, subGroup }: OrderRescueScreenProps) {
-  const controller = useOrderRescueController('authenticated');
+  const session = useControlPanelSession();
+  const actorId = session.state.kind === 'authenticated' ? session.state.identity.subject : null;
+  const controller = useOrderRescueController(actorId, session.state.kind);
   const [orderId, setOrderId] = React.useState('');
   const [summary, setSummary] = React.useState('');
   const [operatorNote, setOperatorNote] = React.useState('');

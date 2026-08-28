@@ -632,7 +632,7 @@ function Wait-ForSelectedApis {
     Wait-ForHttpStatus -Name "Identity API" -Url "http://localhost:$identityApiHostPort/identity/readiness" -HealthyValues @("HEALTHY") | Out-Null
   }
   if ($ProfileList -contains "workforce") { Wait-ForHttpStatus -Name "Workforce API" -Url "http://localhost:18086/workforce/readiness" -HealthyValues @("HEALTHY") | Out-Null }
-  if ($ProfileList -contains "providers") { Wait-ForHttpStatus -Name "Providers API" -Url "http://localhost:18087/providers/readiness" -HealthyValues @("HEALTHY") | Out-Null }
+  if ($ProfileList -contains "providers") { Wait-ForHttpStatus -Name "Providers API" -Url "http://localhost:18087/providers/readiness" -HealthyValues @("HEALTHY", "ready") | Out-Null }
   if ($ProfileList -contains "platform") { Wait-ForHttpStatus -Name "Platform Control API" -Url "http://localhost:18088/platform/readiness" -HealthyValues @("HEALTHY") | Out-Null }
   if ($ProfileList -contains "wlt") { Wait-ForHttpStatus -Name "WLT API" -Url "http://localhost:18083/wlt/readiness" -HealthyValues @("HEALTHY") | Out-Null }
   if ($ProfileList -contains "dsh") { Wait-ForHttpStatus -Name "DSH API" -Url "http://localhost:18080/dsh/readiness" -HealthyValues @("HEALTHY") | Out-Null }

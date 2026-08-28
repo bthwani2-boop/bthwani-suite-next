@@ -29,8 +29,9 @@ export type SupportTicketScreenProps = {
 
 export function SupportTicketScreen({ onOpenTicket, onBack, orderId }: SupportTicketScreenProps = {}) {
   const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const { listState, actionState, reload, submitTicket, resetAction } =
-    useSupportTicketController(identity.state.kind);
+    useSupportTicketController(actorId, identity.state.kind);
   const [showForm, setShowForm] = React.useState(Boolean(orderId));
   const [subject, setSubject] = React.useState(orderId ? "مساعدة بخصوص الطلب" : "");
   const [description, setDescription] = React.useState("");

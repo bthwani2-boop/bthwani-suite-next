@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -284,10 +285,10 @@ func EvaluateOperationalPolicy(
 	var snapshot operationalSnapshot
 	snapshot.Input = input
 	err := db.QueryRowContext(ctx, `
-		SELECT id, name, city_code, is_active, description, version, created_at, updated_at
+		SELECT id, name, service_area_code, is_active, description, version, created_at, updated_at
 		FROM dsh_platform_zones
 		WHERE id = $1`, input.ZoneID).Scan(
-		&snapshot.Zone.ID, &snapshot.Zone.Name, &snapshot.Zone.CityCode,
+		&snapshot.Zone.ID, &snapshot.Zone.Name, &snapshot.Zone.ServiceAreaCode,
 		&snapshot.Zone.IsActive, &snapshot.Zone.Description, &snapshot.Zone.Version,
 		&snapshot.Zone.CreatedAt, &snapshot.Zone.UpdatedAt,
 	)
@@ -295,10 +296,10 @@ func EvaluateOperationalPolicy(
 		return OperationalDecision{}, ErrNotFound
 	}
 	if err != nil {
-		return OperationalDecision{}, err
+		return OperationalDecision{}, fmt.Errorf("%w: operational-zone read: %v", ErrPolicyTruthUnavailable, err)
 	}
 
-	_ = db.QueryRowContext(ctx, `
+	slaErr := db.QueryRowContext(ctx, `
 		SELECT id, category, max_prep_mins, max_assignment_mins,
 		       max_delivery_mins, version
 		FROM dsh_platform_sla_rules
@@ -309,9 +310,12 @@ func EvaluateOperationalPolicy(
 		&snapshot.SLA.MaxAssignmentMins, &snapshot.SLA.MaxDeliveryMins,
 		&snapshot.SLA.Version,
 	)
+	if slaErr != nil && !errors.Is(slaErr, sql.ErrNoRows) {
+		return OperationalDecision{}, fmt.Errorf("%w: SLA policy read: %v", ErrPolicyTruthUnavailable, slaErr)
+	}
 	snapshot.SLA.Configured = snapshot.SLA.RuleID != ""
 
-	_ = db.QueryRowContext(ctx, `
+	capacityErr := db.QueryRowContext(ctx, `
 		SELECT id, max_concurrent_orders, max_captains_online,
 		       throttle_threshold, is_paused, pause_reason, version
 		FROM dsh_platform_capacity_configs
@@ -321,13 +325,16 @@ func EvaluateOperationalPolicy(
 		&snapshot.Capacity.IsPaused, &snapshot.Capacity.PauseReason,
 		&snapshot.Capacity.Version,
 	)
+	if capacityErr != nil && !errors.Is(capacityErr, sql.ErrNoRows) {
+		return OperationalDecision{}, fmt.Errorf("%w: capacity policy read: %v", ErrPolicyTruthUnavailable, capacityErr)
+	}
 	snapshot.Capacity.Configured = snapshot.Capacity.ConfigID != ""
 
 	var mode DeliveryModePolicy
-	_ = db.QueryRowContext(ctx, `
+	modeErr := db.QueryRowContext(ctx, `
 		SELECT id, zone_id, fulfillment_mode, is_enabled, sla_category,
 		       version, updated_by, created_at, updated_at
-		FROM dsh_platform_delivery_mode_policies
+	FROM dsh_platform_delivery_mode_policies
 		WHERE zone_id = $1 AND fulfillment_mode = $2`,
 		input.ZoneID, input.FulfillmentMode,
 	).Scan(
@@ -335,22 +342,30 @@ func EvaluateOperationalPolicy(
 		&mode.SlaCategory, &mode.Version, &mode.UpdatedBy,
 		&mode.CreatedAt, &mode.UpdatedAt,
 	)
+	if modeErr != nil && !errors.Is(modeErr, sql.ErrNoRows) {
+		return OperationalDecision{}, fmt.Errorf("%w: fulfillment mode policy read: %v", ErrPolicyTruthUnavailable, modeErr)
+	}
 	if mode.ID != "" {
 		snapshot.ModePolicy = &mode
 	}
 
 	serviceability, serviceabilityErr := GetZoneServiceability(ctx, db, input.ZoneID)
-	if serviceabilityErr == nil {
-		snapshot.ActiveStores = serviceability.ActiveStores
+	if errors.Is(serviceabilityErr, ErrNotFound) {
+		return OperationalDecision{}, ErrNotFound
 	}
+	if serviceabilityErr != nil {
+		return OperationalDecision{}, fmt.Errorf("%w: serviceability read: %v", ErrPolicyTruthUnavailable, serviceabilityErr)
+	}
+	snapshot.ActiveStores = serviceability.ActiveStores
 	return BuildOperationalDecision(snapshot), nil
+
 }
 
 func BuildOperationalDecision(snapshot operationalSnapshot) OperationalDecision {
 	input := snapshot.Input
 	decision := OperationalDecision{
 		ZoneID:          snapshot.Zone.ID,
-		ServiceAreaCode: snapshot.Zone.CityCode,
+		ServiceAreaCode: snapshot.Zone.ServiceAreaCode,
 		FulfillmentMode: input.FulfillmentMode,
 		Decision:        "serviceable",
 		Serviceable:     true,
@@ -384,7 +399,7 @@ func BuildOperationalDecision(snapshot operationalSnapshot) OperationalDecision 
 	switch {
 	case !snapshot.Zone.IsActive:
 		deny("ZONE_INACTIVE", "unserviceable")
-	case input.ServiceAreaCode != "" && input.ServiceAreaCode != strings.ToLower(snapshot.Zone.CityCode):
+	case input.ServiceAreaCode != "" && input.ServiceAreaCode != strings.ToLower(snapshot.Zone.ServiceAreaCode):
 		deny("SERVICE_AREA_MISMATCH", "unserviceable")
 	case snapshot.ActiveStores < 1:
 		deny("NO_ACTIVE_STORES", "unserviceable")
@@ -516,10 +531,10 @@ func RollbackPolicyEvent(
 			}
 			err = tx.QueryRowContext(ctx, `
 				UPDATE dsh_platform_zones
-				SET name = $2, city_code = $3, is_active = $4, description = $5,
+				SET name = $2, service_area_code = $3, is_active = $4, description = $5,
 				    version = version + 1, updated_at = NOW()
 				WHERE id = $1 AND version = $6
-				RETURNING version`, event.AggregateID, snapshot.Name, snapshot.CityCode,
+				RETURNING version`, event.AggregateID, snapshot.Name, snapshot.ServiceAreaCode,
 				snapshot.IsActive, snapshot.Description, input.ExpectedCurrentVersion,
 			).Scan(&result.ToVersion)
 			restored = snapshot

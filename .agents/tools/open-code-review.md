@@ -22,6 +22,15 @@ The canonical delegation path must not depend on:
 
 A GitHub Actions workflow may prepare and publish deterministic delegation context, but it must not claim that an AI semantic review occurred unless a separately authenticated host reviewer actually performed one.
 
+The only accepted semantic attestation is one comment whose body is exactly one marker line followed by one canonical JSON line:
+
+```text
+BTHWANI_SEMANTIC_REVIEW:v1
+{"schema":"BTHWANI_SEMANTIC_REVIEW","version":1,"candidateSha":"<exact 40-character head SHA>","verdict":"PASS","reviewIdentity":{"kind":"external-authorized-host-agent","provider":"<host provider>"},"reviewProvenance":{"artifactIdentity":"<exact OCR artifact name>","contextSha256":"<64 lowercase hex characters>","packageIntegrity":"<exact pinned package integrity>","toolVersion":"<pinned semantic-review tool version>"}}
+```
+
+The closure consumer validates the exact structured contract, the exact candidate SHA, the OCR artifact hashes and package provenance, and the live GitHub permission of the comment author. Malformed, partial, stale, duplicated, conflicting, candidate-authored, or free-form substring imitations fail closed. The comment author is the authority identity; no username embedded in the comment body is trusted.
+
 Automatic GitHub PR AI review belongs to the platform-native host reviewer (for example Codex Code Review) and is separate from the deterministic OpenCodeReview context workflow.
 
 ## Use when

@@ -15,6 +15,7 @@ import (
 	"wlt-api/internal/dshnotify"
 	"wlt-api/internal/dshoutbox"
 	wltHttp "wlt-api/internal/http"
+	"wlt-api/internal/provider"
 	"wlt-api/internal/wallet"
 )
 
@@ -54,7 +55,16 @@ func main() {
 		log.Fatalf("[wlt-api] financial kill-switch authority is invalid: %v", err)
 	}
 	mutationsEnabled := os.Getenv("WLT_MUTATIONS_ENABLED") == "true"
-	router := wltHttp.NewRouter(db, mutationsEnabled, decisionService)
+	registry := provider.NewRegistry(db)
+	railEnvironment := os.Getenv("WLT_FINANCIAL_PROVIDER_ENVIRONMENT")
+	if railEnvironment == "" {
+		railEnvironment = "sandbox"
+	}
+	rail, err := provider.NewFinancialRailRouter(registry, railEnvironment)
+	if err != nil {
+		log.Fatalf("[wlt-api] financial rail authority is invalid: %v", err)
+	}
+	router := wltHttp.NewRouter(db, mutationsEnabled, decisionService, rail)
 	wltHttp.RegisterDispatchFinancialEligibilityRoutes(router, db)
 	referenceScopedRouter := wltHttp.ReferenceReadBoundary(router)
 	handler := wltHttp.CorsMiddleware(authMode, referenceScopedRouter)

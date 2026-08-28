@@ -21,7 +21,6 @@ const EXECUTABLE_SUITES = [
   "dsh",
   "identity",
   "ui-kit",
-  "wlt",
 ];
 
 test("coverage ownership is manifest-derived and exposes executable source authorities", () => {
@@ -37,7 +36,7 @@ test("coverage ownership is manifest-derived and exposes executable source autho
   assert.equal(model.projects.dsh.strategy, "node-lcov");
   assert.equal(model.projects.identity.strategy, "node-lcov");
   assert.equal(model.projects["ui-kit"].strategy, "node-lcov");
-  assert.equal(model.projects.wlt.strategy, "node-lcov");
+  assert.equal(model.projects.wlt.strategy, "required");
 });
 
 test("coverage preparation is an ordered shell-free command contract", () => {
@@ -94,7 +93,10 @@ test("coverage planning is source-authority based and keeps DSH LCOV separate fr
   assert.deepEqual(planCoverageSuites(["shared/data-runtime/src/a.ts"]), ["data-runtime"]);
   assert.deepEqual(planCoverageSuites(["core/identity/clients/identity-session-store.ts"]), ["identity"]);
   assert.deepEqual(planCoverageSuites(["apps/control-panel/runtime/next.config.mjs"]), ["control-panel-config"]);
-  assert.deepEqual(planCoverageSuites(["services/wlt/frontend/shared/dsh/finance/a.ts"]), ["wlt"]);
+  assert.throws(
+    () => planCoverageSuites(["services/wlt/frontend/shared/dsh/finance/a.ts"]),
+    /wlt has no executable LCOV suite/,
+  );
   assert.deepEqual(planCoverageSuites(["apps/app-field/runtime/src/navigation/field-deep-link.ts"]), ["app-field"]);
   assert.deepEqual(planCoverageSuites(["apps/app-captain/runtime/src/App.tsx"]), ["app-captain"]);
   assert.deepEqual(planCoverageSuites(["apps/app-client/runtime/app.config.ts"]), ["app-client"]);

@@ -41,14 +41,8 @@ type trustedStoreOnboardingFeePolicyWriteInput struct {
 
 func writeStoreOnboardingFeeProxyResponse(w http.ResponseWriter, status int, body []byte, err error) {
 	w.Header().Set("Cache-Control", "private, no-store")
-	w.Header().Set("Pragma", "no-cache")
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT store onboarding fee policy is unavailable")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	w.Header().Set("Pragma", "no-store")
+	writeFinanceResponse(w, status, body, err)
 }
 
 func decodeStoreOnboardingFeePolicyWrite(w http.ResponseWriter, r *http.Request) (storeOnboardingFeePolicyWriteInput, bool) {
@@ -74,9 +68,10 @@ func (s *protectedStoreServer) proxyStoreOnboardingFeePolicyRead(w http.Response
 		return
 	}
 	trustedContext := wlt.WithOperatorContext(r.Context(), operatorContextID)
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(
+	status, body, err := s.wlt.ExecuteFinanceRead(
 		trustedContext,
-		wltStoreOnboardingFeePolicyPath,
+		"finance.store_onboarding_fee.read",
+		nil,
 		nil,
 		r.Header.Get("X-Correlation-ID"),
 		operatorContextID,
@@ -138,14 +133,15 @@ func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.Respo
 		return
 	}
 	trustedContext := wlt.WithOperatorContext(r.Context(), operatorContextID)
-	status, body, err := s.wlt.FinanceWriteWithOperatorContext(
+	status, body, err := s.wlt.ExecuteFinanceWrite(
 		trustedContext,
-		http.MethodPut,
-		wltStoreOnboardingFeePolicyPath,
+		"finance.store_onboarding_fee.upsert",
+		nil,
 		payload,
 		correlationID,
 		idempotencyKey,
 		operatorContextID,
+		actorID,
 	)
 	writeStoreOnboardingFeeProxyResponse(w, status, body, err)
 }

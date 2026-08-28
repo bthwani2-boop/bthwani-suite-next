@@ -44,15 +44,10 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
         : undefined;
       const media: CatalogMedia[] = product.effectiveImage
         ? [{
-            id: effectiveMediaLink?.id ?? `${product.id}-effective`,
-            productId: product.id,
-            objectKey: effectiveMediaLink?.objectKey ?? "",
-            contentType: effectiveMediaLink?.mimeType ?? "image/webp",
             state: "complete",
             publicUrl: product.effectiveImage.url.startsWith("http")
               ? product.effectiveImage.url
               : `${baseUrl}${product.effectiveImage.url}`,
-            version: effectiveMediaLink?.version ?? product.version,
           }]
         : [];
       return {

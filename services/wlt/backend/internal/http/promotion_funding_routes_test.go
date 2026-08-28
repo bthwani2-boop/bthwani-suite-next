@@ -9,7 +9,7 @@ import (
 func TestPromotionFundingRoutesRegistered(t *testing.T) {
 	t.Parallel()
 
-	router := NewRouter(nil, true, nil)
+	router := NewRouter(nil, true, nil, nil)
 	tests := []struct {
 		method  string
 		path    string

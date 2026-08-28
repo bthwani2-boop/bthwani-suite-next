@@ -56,10 +56,10 @@ if ([string]$health.status -ne "healthy") {
 Write-Host "  /wlt/health: healthy"
 
 $readiness = Invoke-RestMethod -Method Get -Uri "$BaseUrl/wlt/readiness" -TimeoutSec 15 -ErrorAction Stop
-if ([string]$readiness.status -ne "ready") {
-  throw "/wlt/readiness not ready: $($readiness.status)"
+if ([string]$readiness.status -ne "HEALTHY") {
+  throw "/wlt/readiness not healthy: $($readiness.status)"
 }
-Write-Host "  /wlt/readiness: ready"
+Write-Host "  /wlt/readiness: HEALTHY"
 
 $paymentReference = Invoke-WltRead -Path "/wlt/references/payment-status?orderId=order-dev-0001"
 if ([string]$paymentReference.reference.status -ne "captured") {

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { Cairo, Inter } from "next/font/google";
 import { Providers } from "./providers";
 import { WebThemeStyle } from "@bthwani/ui-kit/web";
-import { buildCpCssVariables, renderCssVariableBlock } from "../styles/cp-css-vars";
+import { renderCpCriticalCss } from "../styles/cp-critical-css";
 
-// Self-hosted via next/font/google: the font files are fetched at build time and
-// served from this origin, so the CSP never needs to allowlist
+// Self-hosted via next/font/google: the font files are fetched at build time
+// and served from this origin, so the CSP never needs to allowlist
 // fonts.googleapis.com / fonts.gstatic.com, and there is no render-blocking
 // stylesheet round-trip (no FOUT, no preconnect needed).
 const cairo = Cairo({
@@ -27,7 +28,19 @@ export const metadata: Metadata = {
   description: "منصة DSH — لوحة التحكم الإدارية",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+const NONCE_REQUEST_HEADER = "x-bthwani-csp-nonce";
+
+async function readCspNonce(): Promise<string | undefined> {
+  const store = await headers();
+  return store.get(NONCE_REQUEST_HEADER) ?? undefined;
+}
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const nonce = await readCspNonce();
+  const criticalCss = renderCpCriticalCss();
+  const themeStyleNonce = nonce;
+  const criticalStyleNonce = nonce;
+
   return (
     <html
       lang="ar"
@@ -40,51 +53,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       suppressHydrationWarning
     >
       <head suppressHydrationWarning>
-        <WebThemeStyle />
+        <WebThemeStyle nonce={themeStyleNonce} />
+        <style
+          id="control-panel-critical-css"
+          suppressHydrationWarning
+          nonce={criticalStyleNonce}
+          dangerouslySetInnerHTML={{ __html: criticalCss }}
+        />
       </head>
       <body>
-        <style dangerouslySetInnerHTML={{ __html: `
-          *, *::before, *::after { box-sizing: border-box; }
-
-          :root {
-${renderCssVariableBlock(buildCpCssVariables())}
-
-            /* Typography */
-            --font-arabic:     var(--font-cairo), 'system-ui', sans-serif;
-            --font-latin:      var(--font-inter), 'system-ui', sans-serif;
-
-          }
-
-          html, body { height: 100%; margin: 0; padding: 0; }
-
-          body {
-            font-family: var(--font-arabic);
-            background: var(--cp-main-bg);
-            color: var(--cp-text-primary);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-          }
-
-          /* --font-latin renders Latin-script / numeral-only runs (codes, IDs,
-             amounts, English labels) explicitly marked as such, rather than
-             falling back to Cairo's Latin glyphs. */
-          [lang="en"], [dir="ltr"], .cp-latin {
-            font-family: var(--font-latin);
-          }
-
-          @keyframes dsh-fade-up {
-            from { opacity: 0; transform: translateY(16px); }
-            to   { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes dsh-fade-in {
-            from { opacity: 0; }
-            to   { opacity: 1; }
-          }
-          @keyframes dsh-pulse-dot {
-            0%, 100% { opacity: 1; }
-            50%       { opacity: 0.4; }
-          }
-        `}} />
         <Providers>{children}</Providers>
       </body>
     </html>

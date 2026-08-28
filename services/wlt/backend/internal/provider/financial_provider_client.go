@@ -13,10 +13,12 @@ import (
 )
 
 type Client struct {
-	baseURL    string
-	httpClient *http.Client
-	breaker    *CircuitBreaker
-	reg        *Registry
+	baseURL      string
+	httpClient   *http.Client
+	breaker      *CircuitBreaker
+	reg          *Registry
+	providerType string
+	environment  string
 }
 
 type ProviderResult struct {
@@ -26,11 +28,13 @@ type ProviderResult struct {
 	Message           string `json:"message,omitempty"`
 }
 
-func NewClient(config Config, reg *Registry) *Client {
+func newClient(config Config, reg *Registry, providerType, environment string) *Client {
 	return &Client{
-		baseURL: strings.TrimRight(config.BaseURL, "/"),
+		baseURL:      strings.TrimRight(config.BaseURL, "/"),
+		providerType: strings.TrimSpace(providerType),
+		environment:  strings.TrimSpace(environment),
 		// The timeout will be dynamically overridden per-request
-		httpClient: &http.Client{},
+		httpClient: &http.Client{Timeout: config.TimeoutBudget},
 		breaker: NewCircuitBreaker(CircuitBreakerConfig{
 			FailureThreshold: 5,
 			SuccessThreshold: 2,
@@ -60,8 +64,7 @@ func (c *Client) do(ctx context.Context, method string, path string, body any, m
 
 	var reqCtx = ctx
 	if c.reg != nil {
-		// Example provider type lookup. This should ideally be passed in or configured on the client.
-		cfg, _, err := c.reg.GetActiveProvider(ctx, "payment-gateway", "production")
+		cfg, _, err := c.reg.GetActiveProvider(ctx, c.providerType, c.environment)
 		if err == nil && cfg.TimeoutBudget > 0 {
 			var cancel context.CancelFunc
 			reqCtx, cancel = context.WithTimeout(ctx, cfg.TimeoutBudget)

@@ -1,10 +1,12 @@
 import React from "react";
 import { Pressable, TextInput, View } from "react-native";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { DateTimeField, Icon, StateView, Text, colorRoles, formatDateTime, spacing } from "@bthwani/ui-kit";
 import {
   createOwnAvailabilityNotice,
   listOwnAvailabilityNotices,
 } from "./workforce-me-operational.api";
+import { corrId } from "../_kernel/dsh-http-request";
 import type { ProviderAvailabilityNotice } from "./workforce.types";
 
 const STATUS_LABEL: Record<ProviderAvailabilityNotice["status"], string> = {
@@ -24,6 +26,9 @@ export function ProviderAvailabilityNoticesPanel(props: {
   readonly providerLabel: "الميداني" | "الكابتن";
   readonly hasActiveAssignment?: boolean;
 }) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandRef = React.useRef<{ readonly actorId: string; readonly key: string; readonly id: string } | null>(null);
   const [notices, setNotices] = React.useState<readonly ProviderAvailabilityNotice[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [busy, setBusy] = React.useState(false);
@@ -61,6 +66,16 @@ export function ProviderAvailabilityNoticesPanel(props: {
       setError("لديك مهمة نشطة. أكملها أولًا قبل تسجيل عدم التوفر.");
       return;
     }
+    if (!actorId) {
+      setError("جلسة مقدم الخدمة غير جاهزة لتسجيل عدم التوفر.");
+      return;
+    }
+    const noticeKey = `${start.toISOString()}:${until.toISOString()}:${note.trim()}`;
+    const existing = commandRef.current?.actorId === actorId && commandRef.current.key === noticeKey
+      ? commandRef.current
+      : null;
+    const command = existing ?? { actorId, key: noticeKey, id: corrId("workforce-availability-notice") };
+    commandRef.current = command;
     setBusy(true);
     setError(null);
     setSuccess(null);
@@ -71,7 +86,8 @@ export function ProviderAvailabilityNoticesPanel(props: {
         endsAt: until.toISOString(),
         reasonCode: "personal",
         note: note.trim(),
-      });
+      }, command.id);
+      commandRef.current = null;
       setNotices((current) => [created, ...current]);
       setSuccess("تم تسجيل عدم توفرك. لن تصلك مهام جديدة حتى الوقت المحدد.");
       setNote(""); setUntil(null); setReporting(false);

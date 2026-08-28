@@ -11,18 +11,10 @@ type GeneratedDshHomeDiscoveryResponseDto =
   paths['/dsh/home-discovery']['get']['responses']['200']['content']['application/json'];
 type GeneratedDshHomeCategoryDto = GeneratedDshHomeDiscoveryResponseDto['categories'][number];
 
-export type DshHomeCategoryDestinationType = 'catalog_domain' | 'special_request';
+export type DshHomeCategoryDestinationType = GeneratedDshHomeCategoryDto['destinationType'];
 export type DshHomeSpecialRequestTarget = 'SHEIN_ASSISTED_PURCHASE' | 'AWNAK_ERRAND';
 
-/**
- * Temporary generated-client compatibility boundary. The OpenAPI source of
- * truth already requires these fields; this intersection can be removed after
- * the next generated-client refresh.
- */
-export type DshHomeCategoryDto = GeneratedDshHomeCategoryDto & {
-  readonly destinationType: DshHomeCategoryDestinationType;
-  readonly destinationTarget: string;
-};
+export type DshHomeCategoryDto = GeneratedDshHomeCategoryDto;
 
 export type DshHomeDiscoveryResponseDto = Omit<GeneratedDshHomeDiscoveryResponseDto, 'categories'> & {
   readonly categories: readonly DshHomeCategoryDto[];

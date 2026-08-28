@@ -14,7 +14,6 @@ import (
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/specialrequests"
 	"dsh-api/internal/store"
-	"dsh-api/internal/wlt"
 
 	"github.com/google/uuid"
 )
@@ -91,6 +90,19 @@ func writeSpecialRequestError(w http.ResponseWriter, err error, notFoundMsg stri
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "special request access forbidden")
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "special request action failed")
+	}
+}
+
+func marshalSpecialRequestSaga(saga *specialrequests.SpecialRequestSaga) map[string]any {
+	if saga == nil {
+		return map[string]any{"state": "unknown"}
+	}
+	return map[string]any{
+		"id": saga.ID, "commandId": saga.CommandID, "operation": saga.Operation,
+		"specialRequestId": saga.SpecialRequestID, "state": saga.State,
+		"attemptCount": saga.AttemptCount, "remoteReference": saga.RemoteReference,
+		"lastError": saga.LastError, "nextAttemptAt": saga.NextAttemptAt,
+		"completedAt": saga.CompletedAt,
 	}
 }
 
@@ -279,13 +291,53 @@ func (s *protectedStoreServer) handleCancelClientSpecialRequest(w http.ResponseW
 		return
 	}
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	svc.SetWltClient(s.wlt)
-	updated, err := svc.CancelForClientInOperatorContext(r.Context(), actor.OperatorContextID, reqID, actor.ID, body.ExpectedVersion)
+	current, err := svc.GetForClientInOperatorContext(r.Context(), actor.OperatorContextID, reqID, actor.ID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, marshalSpecialRequest(updated))
+	if current.Status != specialrequests.StatusSubmitted && current.Status != specialrequests.StatusUnderReview && current.Status != specialrequests.StatusNeedsCustomerInput && current.Status != specialrequests.StatusApproved {
+		writeSpecialRequestError(w, fmt.Errorf("%w: cannot cancel from status %s", specialrequests.ErrConflict, current.Status), "special request not found")
+		return
+	}
+	paymentSessionID := ""
+	if current.WltPaymentSessionID != nil {
+		paymentSessionID = *current.WltPaymentSessionID
+	}
+	commandID := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if commandID == "" {
+		commandID = "special-request-cancel-" + reqID
+	}
+	saga, _, err := specialrequests.StartCancelSaga(r.Context(), s.db, specialrequests.CancelSagaInput{
+		OperatorContextID: actor.OperatorContextID, SpecialRequestID: reqID, ClientID: actor.ID,
+		ExpectedVersion: body.ExpectedVersion, CommandID: commandID, CorrelationID: r.Header.Get("X-Correlation-ID"),
+		PaymentSessionID: paymentSessionID, Reason: "client cancelled special request",
+	})
+	if err != nil {
+		writeSpecialRequestError(w, err, "special request cancellation could not be started")
+		return
+	}
+	if saga.State == specialrequests.SagaRequested {
+		if err := specialrequests.ActivateSaga(r.Context(), s.db, saga.ID); err != nil {
+			writeSpecialRequestError(w, err, "special request cancellation could not be started")
+			return
+		}
+	}
+	saga, err = specialrequests.DispatchSpecialRequestSaga(r.Context(), s.db, s.wlt, saga.ID)
+	if err != nil && !errors.Is(err, specialrequests.ErrSagaBusy) {
+		writeSpecialRequestError(w, err, "special request cancellation could not be completed")
+		return
+	}
+	if saga != nil && saga.State == specialrequests.SagaCompleted {
+		updated, readErr := svc.GetForClientInOperatorContext(r.Context(), actor.OperatorContextID, reqID, actor.ID)
+		if readErr != nil {
+			writeSpecialRequestError(w, readErr, "special request not found")
+			return
+		}
+		store.SendJSON(w, http.StatusOK, marshalSpecialRequest(updated))
+		return
+	}
+	store.SendJSON(w, http.StatusAccepted, map[string]any{"saga": marshalSpecialRequestSaga(saga)})
 }
 
 type approveSpecialRequestQuoteBody struct {
@@ -328,29 +380,45 @@ func (s *protectedStoreServer) handleApproveSpecialRequestQuote(w http.ResponseW
 		return
 	}
 
-	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		SpecialRequestID:  reqID,
-		OperatorContextID: actor.OperatorContextID,
-		ClientID:          actor.ID,
-		StoreID:           "dsh-special-requests",
-		PaymentMethod:     "official_wallet",
-		PricingQuoteID:    *req.WltQuoteID,
-		AmountMinorUnits:  *req.WltQuoteAmountMinorUnits,
-		Currency:          *req.WltQuoteCurrency,
-		CorrelationID:     r.Header.Get("X-Correlation-ID"),
-		IdempotencyKey:    r.Header.Get("Idempotency-Key"),
-	})
-	if err != nil {
+	if s.wlt == nil || !s.wlt.Configured() {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT payment-session handoff is unavailable")
 		return
 	}
-
-	updated, err := svc.AttachWltPaymentSessionInOperatorContext(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, paymentSession.ID)
+	commandID := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if commandID == "" {
+		commandID = "special-request-payment-" + reqID
+	}
+	saga, _, err := specialrequests.StartPaymentSessionSaga(r.Context(), s.db, specialrequests.PaymentSessionSagaInput{
+		OperatorContextID: actor.OperatorContextID, SpecialRequestID: reqID, ClientID: actor.ID,
+		ExpectedVersion: *body.ExpectedVersion, CommandID: commandID, CorrelationID: r.Header.Get("X-Correlation-ID"),
+		StoreID: "dsh-special-requests", PaymentMethod: "official_wallet", PricingQuoteID: *req.WltQuoteID,
+		AmountMinorUnits: *req.WltQuoteAmountMinorUnits, Currency: *req.WltQuoteCurrency,
+	})
 	if err != nil {
-		writeSpecialRequestError(w, err, "special request not found")
+		writeSpecialRequestError(w, err, "special request payment could not be started")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, marshalSpecialRequest(updated))
+	if saga.State == specialrequests.SagaRequested {
+		if err := specialrequests.ActivateSaga(r.Context(), s.db, saga.ID); err != nil {
+			writeSpecialRequestError(w, err, "special request payment could not be started")
+			return
+		}
+	}
+	saga, err = specialrequests.DispatchSpecialRequestSaga(r.Context(), s.db, s.wlt, saga.ID)
+	if err != nil && !errors.Is(err, specialrequests.ErrSagaBusy) {
+		writeSpecialRequestError(w, err, "special request payment could not be completed")
+		return
+	}
+	if saga != nil && saga.State == specialrequests.SagaCompleted {
+		updated, readErr := svc.GetForClientInOperatorContext(r.Context(), actor.OperatorContextID, reqID, actor.ID)
+		if readErr != nil {
+			writeSpecialRequestError(w, readErr, "special request not found")
+			return
+		}
+		store.SendJSON(w, http.StatusOK, marshalSpecialRequest(updated))
+		return
+	}
+	store.SendJSON(w, http.StatusAccepted, map[string]any{"saga": marshalSpecialRequestSaga(saga)})
 }
 
 // GET /dsh/operator/special-requests
@@ -484,13 +552,13 @@ func (s *protectedStoreServer) handleUpdateOperatorSpecialRequest(w http.Respons
 		ModerationNote:         body.ModerationNote,
 		IsUnsafeContent:        body.IsUnsafeContent,
 	}
-	var quote *wlt.SpecialRequestQuote
+	idempotencyKey := ""
 	if proposalRequested {
 		if s.wlt == nil || !s.wlt.Configured() {
 			store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT quote handoff is unavailable")
 			return
 		}
-		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 		if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
 			writeSpecialRequestError(w, fmt.Errorf("%w: Idempotency-Key must contain between 8 and 200 characters", specialrequests.ErrInvalid), "special request not found")
 			return
@@ -500,36 +568,58 @@ func (s *protectedStoreServer) handleUpdateOperatorSpecialRequest(w http.Respons
 		input.Status = &status
 		input.WorkflowStage = &stage
 	}
-	updated, err := svc.ApplyOperatorTransitionInOperatorContext(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, input)
-	if err != nil {
-		writeSpecialRequestError(w, err, "special request not found")
-		return
-	}
-	if proposalRequested {
-		correlation := specialRequestCorrelationID(r)
-		quote, err = s.wlt.IssueSpecialRequestQuote(r.Context(), wlt.SpecialRequestQuoteInput{
-			SpecialRequestID:         reqID,
-			ClientID:                 current.ClientID,
-			PolicyID:                 *body.QuotePolicyID,
-			ProposedAmountMinorUnits: *body.ProposedAmountMinorUnits,
-			ProposedCurrency:         *body.ProposedCurrency,
-			ProposalReason:           *body.ProposalReason,
-			CorrelationID:            *correlation,
-			IdempotencyKey:           r.Header.Get("Idempotency-Key"),
-		})
-		if err != nil {
-			store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT quote handoff failed")
-			return
-		}
-	}
-	if quote != nil {
-		updated, err = svc.AttachWltQuoteInOperatorContext(r.Context(), actor.OperatorContextID, reqID, updated.Version, quote)
+	if !proposalRequested {
+		updated, err := svc.ApplyOperatorTransitionInOperatorContext(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, input)
 		if err != nil {
 			writeSpecialRequestError(w, err, "special request not found")
 			return
 		}
+		store.SendJSON(w, http.StatusOK, marshalSpecialRequest(updated))
+		return
 	}
-	store.SendJSON(w, http.StatusOK, marshalSpecialRequest(updated))
+	correlation := specialRequestCorrelationID(r)
+	saga, _, err := specialrequests.StartQuoteSaga(r.Context(), s.db, specialrequests.QuoteSagaInput{
+		OperatorContextID: actor.OperatorContextID, SpecialRequestID: reqID, ClientID: current.ClientID,
+		ExpectedVersion: *body.ExpectedVersion, CommandID: idempotencyKey, CorrelationID: *correlation,
+		PolicyID: *body.QuotePolicyID, ProposedAmountMinorUnits: *body.ProposedAmountMinorUnits,
+		ProposedCurrency: *body.ProposedCurrency, ProposalReason: *body.ProposalReason,
+	})
+	if err != nil {
+		writeSpecialRequestError(w, err, "special request quote could not be started")
+		return
+	}
+	if saga.State == specialrequests.SagaRequested {
+		fresh, readErr := svc.GetForOperatorInOperatorContext(r.Context(), actor.OperatorContextID, reqID)
+		if readErr != nil {
+			writeSpecialRequestError(w, readErr, "special request not found")
+			return
+		}
+		if fresh.Status != specialrequests.StatusNeedsCustomerInput || fresh.WorkflowStage == nil || *fresh.WorkflowStage != "customer_approval" {
+			if _, err := svc.ApplyOperatorTransitionInOperatorContext(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, input); err != nil {
+				writeSpecialRequestError(w, err, "special request not found")
+				return
+			}
+		}
+		if err := specialrequests.ActivateSaga(r.Context(), s.db, saga.ID); err != nil {
+			writeSpecialRequestError(w, err, "special request quote could not be activated")
+			return
+		}
+	}
+	saga, err = specialrequests.DispatchSpecialRequestSaga(r.Context(), s.db, s.wlt, saga.ID)
+	if err != nil && !errors.Is(err, specialrequests.ErrSagaBusy) {
+		writeSpecialRequestError(w, err, "special request quote could not be completed")
+		return
+	}
+	if saga != nil && saga.State == specialrequests.SagaCompleted {
+		updated, readErr := svc.GetForOperatorInOperatorContext(r.Context(), actor.OperatorContextID, reqID)
+		if readErr != nil {
+			writeSpecialRequestError(w, readErr, "special request not found")
+			return
+		}
+		store.SendJSON(w, http.StatusOK, marshalSpecialRequest(updated))
+		return
+	}
+	store.SendJSON(w, http.StatusAccepted, map[string]any{"saga": marshalSpecialRequestSaga(saga)})
 }
 
 type assignSpecialRequestDispatchBody struct {

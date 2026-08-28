@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   clearCheckoutAttempt,
+  fingerprintCheckoutInput,
   getOrCreateCheckoutAttempt,
 } from "./checkout-create-attempt";
 import {
@@ -35,16 +37,22 @@ export type CheckoutToOrderFlowState =
     };
 
 export function useCheckoutToOrderFlow() {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : "";
   const [state, setState] = useState<CheckoutToOrderFlowState>({ kind: "idle" });
   const { submit: submitOrder } = useCreateOrderTruthController();
 
   const start = useCallback(async (input: DshCreateIntentInput) => {
+    if (!actorId) {
+      setState({ kind: "order_error", message: "جلسة العميل غير جاهزة لتثبيت هوية الدفع." });
+      return;
+    }
     setState({ kind: "loading" });
     try {
-      const attempt = await getOrCreateCheckoutAttempt(input);
+      const attempt = await getOrCreateCheckoutAttempt(actorId, input);
       const intent = await createCheckoutIntent(input, attempt.context);
       try {
-        await clearCheckoutAttempt(attempt.fingerprint);
+        await clearCheckoutAttempt(actorId, fingerprintCheckoutInput(input));
       } catch {
         // The canonical checkout mutation succeeded; stale local cleanup must
         // not rewrite the server result.
@@ -79,7 +87,7 @@ export function useCheckoutToOrderFlow() {
       }
       setState({ kind: "order_error", message });
     }
-  }, [submitOrder]);
+  }, [actorId, submitOrder]);
 
   const reset = useCallback(() => {
     setState({ kind: "idle" });

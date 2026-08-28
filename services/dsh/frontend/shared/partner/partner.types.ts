@@ -259,7 +259,6 @@ export const DSH_PARTNER_OPERATIONAL_FLOW_IDS = [
   'order-alerts',
   'order-sla-risk',
   'order-issue-queue',
-  'order-issue-required',
   'order-out-for-delivery',
   'order-prepare',
   'order-ready',
@@ -282,7 +281,6 @@ export type DshPartnerOperationalFlowId = (typeof DSH_PARTNER_OPERATIONAL_FLOW_I
 
 
 export const DSH_PARTNER_SUPPORT_ROUTE_IDS = [
-  'auction-status-update',
   'chat-read-ack',
   'chat-send',
   'inventory-adjust',
@@ -336,7 +334,6 @@ export type DshPartnerSupportCommandContext = {
 };
 
 export const DSH_PARTNER_SUPPORT_ROUTE_TO_OPERATIONAL_FLOW: Record<DshPartnerSupportRouteId, DshPartnerOperationalFlowId | null> = {
-  'auction-status-update': null,
   'chat-read-ack': 'order-chat-read-ack',
   'chat-send': 'order-chat-send',
   'inventory-adjust': 'inventory-adjust',
@@ -363,7 +360,6 @@ export const DSH_PARTNER_OPERATIONAL_FLOW_TO_SUPPORT_ROUTE: Record<DshPartnerOpe
   'order-alerts': null,
   'order-sla-risk': null,
   'order-issue-queue': 'order-issue-queue',
-  'order-issue-required': null,
   'order-out-for-delivery': 'order-out-for-delivery',
   'order-prepare': 'order-prepare',
   'order-ready': 'order-ready',
@@ -461,7 +457,6 @@ export type DshPartnerRoute =
   | 'support-directory'
   | 'support-screen'
   | 'inventory-management'
-  | 'order-rejection'
   | 'store-courier'
   | 'product-edit'
   | 'category-management'

@@ -1,13 +1,12 @@
 package http
 
 import (
-	"bytes"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 
 type financeSettlementOrderSource struct {
 	OrderID                string    `json:"orderId"`
+	PaymentSessionID       string    `json:"paymentSessionId"`
 	GrossAmountMinorUnits  int64     `json:"grossAmountMinorUnits"`
 	Currency               string    `json:"currency"`
 	DeliveredAt            time.Time `json:"deliveredAt"`
@@ -95,21 +95,39 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	}
 
 	rows, err := s.db.QueryContext(r.Context(), `
-		SELECT o.id::text, o.subtotal_minor_units, o.currency,
-		       delivered.delivered_at, o.pricing_snapshot_hash
-		FROM dsh_orders o
-		JOIN dsh_stores st ON st.id = o.store_id
-		JOIN LATERAL (
-			SELECT MAX(event.created_at) AS delivered_at
-			FROM dsh_order_status_events event
-			WHERE event.order_id = o.id AND event.to_status = 'delivered'
-		) delivered ON delivered.delivered_at IS NOT NULL
-		WHERE st.partner_id::text = $1 AND o.status = 'delivered'
-		  AND delivered.delivered_at >= $2::date
-		  AND delivered.delivered_at < ($3::date + INTERVAL '1 day')
-		  AND o.subtotal_minor_units > 0 AND btrim(o.currency) <> ''
-		  AND btrim(o.pricing_snapshot_hash) <> ''
-		ORDER BY delivered.delivered_at, o.id`, input.PartnerID, input.PeriodStart, input.PeriodEnd)
+			SELECT o.id::text, btrim(intent.wlt_payment_session_id), o.subtotal_minor_units, o.currency,
+			       delivered.delivered_at, delivered.completion_event_id, o.pricing_snapshot_hash,
+				       cancellation.status AS cancellation_status
+
+			FROM dsh_orders o
+			JOIN dsh_checkout_intents intent ON intent.id = o.checkout_intent_id
+			JOIN dsh_stores st ON st.id = o.store_id
+			JOIN LATERAL (
+				SELECT event.id::text AS completion_event_id, event.created_at AS delivered_at
+				FROM dsh_order_status_events event
+				WHERE event.order_id = o.id AND event.to_status = 'delivered'
+				ORDER BY event.created_at DESC, event.id DESC
+				LIMIT 1
+			) delivered ON TRUE
+			LEFT JOIN LATERAL (
+				SELECT cancellation.status
+				FROM dsh_order_cancellations cancellation
+				WHERE cancellation.order_id = o.id
+				  AND cancellation.status IN ('requested', 'review', 'approved', 'cancelling', 'cancelled', 'conflict', 'unknown')
+				ORDER BY cancellation.updated_at DESC, cancellation.id DESC
+				LIMIT 1
+			) cancellation ON TRUE
+			WHERE st.partner_id::text = $1 AND o.status = 'delivered'
+			  AND delivered.delivered_at >= $2::date
+			  AND delivered.delivered_at < ($3::date + INTERVAL '1 day')
+			  AND o.subtotal_minor_units > 0 AND btrim(o.currency) <> ''
+			  AND btrim(o.pricing_snapshot_hash) <> ''
+			  AND NOT EXISTS (
+				SELECT 1 FROM dsh_order_cancellations cancellation
+				WHERE cancellation.order_id = o.id
+				  AND cancellation.status IN ('requested', 'review', 'approved', 'cancelling', 'cancelled', 'conflict', 'unknown')
+			  )
+			ORDER BY delivered.delivered_at, o.id`, input.PartnerID, input.PeriodStart, input.PeriodEnd)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to derive delivered order sources")
 		return
@@ -118,13 +136,24 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	orderSources := make([]financeSettlementOrderSource, 0)
 	for rows.Next() {
 		var source financeSettlementOrderSource
-		if err := rows.Scan(&source.OrderID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.PricingSnapshotHash); err != nil {
+		var observedCancellation sql.NullString
+		if err := rows.Scan(&source.OrderID, &source.PaymentSessionID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.CompletionEventID, &source.PricingSnapshotHash, &observedCancellation); err != nil {
+
 			store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode delivered order source")
 			return
 		}
+		if observedCancellation.Valid {
+			// This should be unreachable because the canonical NOT EXISTS predicate
+			// above excludes every active cancellation state. Never turn a returned
+			// cancellation into a non-cancelled settlement fact.
+			store.SendError(w, http.StatusConflict, "CANCELLATION_STATE_CHANGED", "canonical cancellation state changed during settlement source read")
+			return
+		}
 		source.CancellationStatus = "not_cancelled"
-		source.CompletionEventID = "delivered:" + source.OrderID + ":" + source.DeliveredAt.UTC().Format(time.RFC3339Nano)
-		source.CompletionEvidenceHash = settlementEvidenceHash(source.OrderID, "delivered", source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.PricingSnapshotHash, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.CancellationStatus)
+		// CancellationStatus is now derived only after the canonical owner query
+		// proves absence; completion identity comes from the immutable event row.
+		source.CompletionEvidenceHash = settlementEvidenceHash(source.OrderID, source.PaymentSessionID, "delivered", source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.CompletionEventID, source.PricingSnapshotHash, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.CancellationStatus)
+
 		orderSources = append(orderSources, source)
 	}
 	if err := rows.Err(); err != nil {
@@ -141,15 +170,12 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 		return
 	}
 	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, responseBody, err := s.wlt.FinanceWriteSettlement(trustedContext, http.MethodPost, "/wlt/settlements", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
+	status, responseBody, err := s.wlt.ExecuteFinanceWrite(trustedContext, "finance.settlements.create", nil, payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, "")
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT governed settlement call failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(status)
-	_, _ = w.Write(responseBody)
+	writeFinanceResponse(w, status, responseBody, nil)
 }
 
 // PUT /dsh/control-panel/finance/settlement-policies/{partnerId}
@@ -196,15 +222,11 @@ func (s *protectedStoreServer) handleUpsertFinanceSettlementPolicy(w http.Respon
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode settlement policy")
 		return
 	}
-	path := "/wlt/settlement-policies/" + url.PathEscape(partnerID)
 	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, responseBody, err := s.wlt.FinanceWriteSettlement(trustedContext, http.MethodPut, path, bytes.Clone(payload), r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
+	status, responseBody, err := s.wlt.ExecuteFinanceWrite(trustedContext, "finance.settlement_policy.upsert", map[string]string{"partnerId": partnerID}, payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, "")
 	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", fmt.Sprintf("WLT settlement policy call failed: %v", err))
+		store.SendError(w, http.StatusBadGateway, "FINANCE_RESPONSE_UNAVAILABLE", "finance settlement policy response was invalid or unavailable")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(status)
-	_, _ = w.Write(responseBody)
+	writeFinanceResponse(w, status, responseBody, nil)
 }

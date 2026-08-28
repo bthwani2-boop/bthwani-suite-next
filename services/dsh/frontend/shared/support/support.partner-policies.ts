@@ -32,7 +32,7 @@ export function resolveSupportFilterFromOperationalFlow(
   ) {
     return 'escalation';
   }
-  if (flowId === 'order-issue-queue' || flowId === 'order-issue-required' || flowId === 'order-reject') {
+  if (flowId === 'order-issue-queue' || flowId === 'order-reject') {
     return 'order-issues';
   }
   return 'active-orders';

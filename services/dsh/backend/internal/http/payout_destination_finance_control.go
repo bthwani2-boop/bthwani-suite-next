@@ -3,7 +3,6 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"dsh-api/internal/store"
@@ -25,22 +24,8 @@ func resolveManagedPayoutDestinationActor(w http.ResponseWriter, r *http.Request
 	return actorType, actorID, true
 }
 
-func managedPayoutDestinationPath(actorType, actorID string) string {
-	return "/wlt/payout-destinations/" + url.PathEscape(actorType) + "/" + url.PathEscape(actorID)
-}
-
 func writeManagedPayoutDestinationResponse(w http.ResponseWriter, status int, body []byte, err error) {
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT payout destination governance operation failed")
-		return
-	}
-	if len(body) > 0 {
-		w.Header().Set("Content-Type", "application/json")
-	}
-	w.WriteHeader(status)
-	if len(body) > 0 {
-		_, _ = w.Write(body)
-	}
+	writeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleFinancePayoutDestinationRead(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +40,7 @@ func (s *protectedStoreServer) handleFinancePayoutDestinationRead(w http.Respons
 	status, body, err := s.wlt.ExecuteFinanceRead(
 		r.Context(),
 		"finance.payout_destinations.read",
-		managedPayoutDestinationPath(actorType, actorID),
+		map[string]string{"actorType": actorType, "actorId": actorID},
 		nil,
 		r.Header.Get("X-Correlation-ID"),
 		operator.OperatorContextID,
@@ -98,8 +83,7 @@ func (s *protectedStoreServer) handleFinancePayoutDestinationUpsert(w http.Respo
 	status, responseBody, err := s.wlt.ExecuteFinanceWrite(
 		r.Context(),
 		"finance.payout_destinations.upsert",
-		http.MethodPut,
-		managedPayoutDestinationPath(actorType, actorID),
+		map[string]string{"actorType": actorType, "actorId": actorID},
 		body,
 		r.Header.Get("X-Correlation-ID"),
 		r.Header.Get("Idempotency-Key"),
@@ -144,8 +128,7 @@ func (s *protectedStoreServer) handleFinancePayoutDestinationVerify(w http.Respo
 	status, responseBody, err := s.wlt.ExecuteFinanceWrite(
 		r.Context(),
 		"finance.payout_destinations.verify",
-		http.MethodPost,
-		managedPayoutDestinationPath(actorType, actorID)+"/verify",
+		map[string]string{"actorType": actorType, "actorId": actorID},
 		body,
 		r.Header.Get("X-Correlation-ID"),
 		r.Header.Get("Idempotency-Key"),
@@ -187,8 +170,7 @@ func (s *protectedStoreServer) handleFinancePayoutDestinationDeactivate(w http.R
 	status, responseBody, err := s.wlt.ExecuteFinanceWrite(
 		r.Context(),
 		"finance.payout_destinations.deactivate",
-		http.MethodPost,
-		managedPayoutDestinationPath(actorType, actorID)+"/deactivate",
+		map[string]string{"actorType": actorType, "actorId": actorID},
 		body,
 		r.Header.Get("X-Correlation-ID"),
 		r.Header.Get("Idempotency-Key"),

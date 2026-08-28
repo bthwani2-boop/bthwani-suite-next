@@ -13,6 +13,60 @@ x-bthwani-runtime-dependency: true
 servers:
   - url: http://localhost:18080
 paths:
+  /dsh/control-panel/finance/checkout-closures/{outboxId}/retry:
+    post:
+      tags: [ "dsh-finance" ]
+      operationId: retryDshCheckoutFinancialClosure
+      summary: Schedule an eligible definitive checkout closure failure for retry.
+      parameters:
+        - name: outboxId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1 }
+      responses:
+        '200': { $ref: '#/components/responses/RecoveryResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
+  /dsh/control-panel/finance/checkout-closures/{outboxId}/reconcile:
+    post:
+      tags: [ "dsh-finance" ]
+      operationId: reconcileDshCheckoutFinancialClosure
+      summary: Schedule canonical WLT readback for an unknown checkout closure.
+      parameters:
+        - name: outboxId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1 }
+      responses:
+        '200': { $ref: '#/components/responses/RecoveryResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/order-workboard:
     get:
       tags: [ "dsh-operator" ]
@@ -39,6 +93,16 @@ components:
       required: false
       schema: { type: string, minLength: 1 }
   responses:
+    RecoveryResponse:
+      description: Recovery request accepted by the DSH outbox state machine.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [outboxId, status]
+            properties:
+              outboxId: { type: string, format: uuid }
+              status: { type: string, enum: [retry_scheduled, reconciliation_scheduled] }
     WorkboardResponse:
       description: Actor-scoped order workboard.
       content:

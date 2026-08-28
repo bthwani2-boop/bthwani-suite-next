@@ -10,25 +10,15 @@ import (
 	"strings"
 )
 
-func (c *Client) ExecuteFinanceRead(ctx context.Context, opID string, path string, query url.Values, correlationID, operatorContextID string) (int, []byte, error) {
-	if !c.Configured() {
-		return 0, nil, fmt.Errorf("WLT integration is not configured")
-	}
-	op, err := Registry.GetOperation(opID)
-	if err != nil {
-		return 0, nil, err
-	}
-	if op.Type != OperationTypeRead {
-		return 0, nil, fmt.Errorf("operation %s is not a read operation", opID)
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, op.Timeout)
-	defer cancel()
-
-	return c.financeReadRequest(ctx, path, query, correlationID, operatorContextID)
+func (c *Client) ExecuteFinanceRead(ctx context.Context, opID string, params map[string]string, query url.Values, correlationID, operatorContextID string) (int, []byte, error) {
+	return c.executeFinance(ctx, opID, params, query, nil, correlationID, "", operatorContextID, "")
 }
 
-func (c *Client) ExecuteFinanceWrite(ctx context.Context, opID string, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID string) (int, []byte, error) {
+func (c *Client) ExecuteFinanceWrite(ctx context.Context, opID string, params map[string]string, body []byte, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID string) (int, []byte, error) {
+	return c.executeFinance(ctx, opID, params, nil, body, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID)
+}
+
+func (c *Client) executeFinance(ctx context.Context, opID string, params map[string]string, query url.Values, body []byte, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID string) (int, []byte, error) {
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
 	}
@@ -36,52 +26,79 @@ func (c *Client) ExecuteFinanceWrite(ctx context.Context, opID string, method, p
 	if err != nil {
 		return 0, nil, err
 	}
-	if op.Type != OperationTypeWrite {
-		return 0, nil, fmt.Errorf("operation %s is not a write operation", opID)
+	path, err := op.Path(params)
+	if err != nil {
+		return 0, nil, err
 	}
-	if method != http.MethodPost && method != http.MethodPut && method != http.MethodPatch {
-		return 0, nil, fmt.Errorf("WLT finance write method %q is not allowlisted", method)
+	if authorized, ok := ctx.Value("authorized_action").(string); ok && strings.TrimSpace(authorized) != "" && strings.TrimSpace(authorized) != op.RequiredPermission {
+		return 0, nil, fmt.Errorf("operation %s requires permission %q", opID, op.RequiredPermission)
+	}
+	if op.Type == OperationTypeRead && body != nil {
+		return 0, nil, fmt.Errorf("operation %s is a read operation", opID)
+	}
+	if op.Type == OperationTypeWrite && body == nil {
+		return 0, nil, fmt.Errorf("operation %s is a write operation", opID)
+	}
+	if op.RequiresDelegatedActor && strings.TrimSpace(delegatedPrincipalID) == "" {
+		return 0, nil, fmt.Errorf("Identity-authenticated delegated finance principal is required")
+	}
+	correlationID = strings.TrimSpace(correlationID)
+	if op.Type == OperationTypeWrite && correlationID == "" {
+		return 0, nil, fmt.Errorf("WLT finance write correlation id is required")
+	}
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	if op.RequiresIdempotencyKey && idempotencyKey == "" {
+		return 0, nil, fmt.Errorf("WLT finance operation %s requires an idempotency key", opID)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, op.Timeout)
 	defer cancel()
-
-	correlationID = strings.TrimSpace(correlationID)
-	if correlationID == "" {
-		return 0, nil, fmt.Errorf("WLT finance write correlation id is required")
+	target := c.baseURL + path
+	if op.Type == OperationTypeRead && len(query) > 0 {
+		target += "?" + query.Encode()
 	}
-
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(body))
+	method := op.HTTPMethod
+	var reader io.Reader
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, target, reader)
 	if err != nil {
-		return 0, nil, fmt.Errorf("build WLT finance write request: %w", err)
+		return 0, nil, fmt.Errorf("build WLT finance request: %w", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
-	req.Header.Set("Content-Type", "application/json")
+	if correlationID != "" {
+		req.Header.Set("X-Correlation-ID", correlationID)
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
-		return 0, nil, fmt.Errorf("prepare WLT finance write OperatorContext: %w", err)
+		return 0, nil, fmt.Errorf("prepare WLT finance OperatorContext: %w", err)
 	}
-	delegatedPrincipalID = strings.TrimSpace(delegatedPrincipalID)
-	if delegatedPrincipalID == "" {
-		return 0, nil, fmt.Errorf("Identity-authenticated delegated finance principal is required")
+	if delegatedPrincipalID = strings.TrimSpace(delegatedPrincipalID); delegatedPrincipalID != "" {
+		req.Header.Set("X-Delegated-Principal-ID", delegatedPrincipalID)
 	}
-	req.Header.Set("X-Delegated-Principal-ID", delegatedPrincipalID)
-
-	idempotencyKey = strings.TrimSpace(idempotencyKey)
-	if idempotencyKey == "" && op.Idempotent {
-		idempotencyKey = deterministicMutationKey("finance-facade", method, path, string(body), operatorContextID)
-	}
-
-	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
-		return 0, nil, fmt.Errorf("prepare WLT finance write request: %w", err)
+	if op.Type == OperationTypeWrite {
+		if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
+			return 0, nil, fmt.Errorf("prepare WLT finance request: %w", err)
+		}
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
-		return 0, nil, fmt.Errorf("call WLT finance write: %w", err)
+		return 0, nil, fmt.Errorf("call WLT finance operation: %w", err)
 	}
 	defer response.Body.Close()
-	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes))
+	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes+1))
 	if err != nil {
-		return 0, nil, fmt.Errorf("read WLT finance write response: %w", err)
+		return 0, nil, fmt.Errorf("read WLT finance response: %w", err)
 	}
-	return response.StatusCode, responseBody, nil
+	if len(responseBody) > maxFinanceProxyResponseBytes {
+		return 0, nil, fmt.Errorf("WLT finance response exceeds the %d-byte limit", maxFinanceProxyResponseBytes)
+	}
+	normalizedStatus, normalizedBody, err := normalizeFinanceResponse(op, response.StatusCode, response.Header.Get("Content-Type"), responseBody)
+	if err != nil {
+		return 0, nil, fmt.Errorf("validate WLT finance response for %s: %w", opID, err)
+	}
+	return normalizedStatus, normalizedBody, nil
 }

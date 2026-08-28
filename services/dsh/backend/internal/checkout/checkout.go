@@ -126,48 +126,6 @@ func CreateIntent(db *sql.DB, input CreateIntentInput) (*Intent, error) {
 	return scanIntent(row)
 }
 
-func AttachWltPaymentSession(db *sql.DB, intentID, operatorContextID, clientID, paymentSessionID string) (*Intent, error) {
-	operatorContextID = normalizeOperatorContext(operatorContextID)
-	if intentID == "" || operatorContextID == "" || clientID == "" || paymentSessionID == "" {
-		return nil, ErrInvalid
-	}
-	const q = `
-		UPDATE dsh_checkout_intents
-		SET state = $1, wlt_payment_session_id = $2, version = version + 1, updated_at = NOW()
-		WHERE id = $3::uuid AND operator_context_id = $4 AND client_id = $5
-		  AND state IN ('ready', 'confirming', 'blocked')
-		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
-		          state, payment_method, wlt_payment_session_id,
-		          delivery_address, note, version, created_at, updated_at, expires_at, preview_hash, validation_issues`
-	row := db.QueryRow(q, string(StateConfirming), paymentSessionID, intentID, operatorContextID, clientID)
-	intent, err := scanIntent(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: intent not found, OperatorContext mismatch, or not handoff-ready", ErrConflict)
-	}
-	return intent, err
-}
-
-func MarkWltOutcomeUnknown(db *sql.DB, intentID, operatorContextID, clientID string) (*Intent, error) {
-	operatorContextID = normalizeOperatorContext(operatorContextID)
-	if intentID == "" || operatorContextID == "" || clientID == "" {
-		return nil, ErrInvalid
-	}
-	const q = `
-		UPDATE dsh_checkout_intents
-		SET state = $1, version = version + 1, updated_at = NOW()
-		WHERE id = $2::uuid AND operator_context_id = $3 AND client_id = $4
-		  AND state IN ('ready', 'confirming', 'blocked')
-		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
-		          state, payment_method, wlt_payment_session_id,
-		          delivery_address, note, version, created_at, updated_at, expires_at, preview_hash, validation_issues`
-	row := db.QueryRow(q, string(StateConfirming), intentID, operatorContextID, clientID)
-	intent, err := scanIntent(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: intent not found, OperatorContext mismatch, or not handoff-reconcilable", ErrConflict)
-	}
-	return intent, err
-}
-
 func MarkWltHandoffFailed(db *sql.DB, intentID, operatorContextID, clientID string) (*Intent, error) {
 	operatorContextID = normalizeOperatorContext(operatorContextID)
 	if intentID == "" || operatorContextID == "" || clientID == "" {

@@ -7,7 +7,6 @@ import {
   canClientCancelSpecialRequest,
   canClientRespondToInformation,
   clientCancellationActionLabel,
-  isClientQuoteDecisionPending,
   specialRequestStatusLabel,
   specialRequestTypeLabel,
 } from "./special-requests.actions";
@@ -60,7 +59,7 @@ function RequestCard({ request, detail, isBusy, onApprove, onCancel, onRespond }
   const canApprove = canClientApproveSpecialRequestQuote(request);
   const canCancel = canClientCancelSpecialRequest(request);
   const canRespond = canClientRespondToInformation(request);
-  const quoteDecisionPending = isClientQuoteDecisionPending(request);
+  const quoteDecisionPending = canApprove;
   const cancellationLabel = clientCancellationActionLabel(request);
   const exchange = detail?.informationExchange;
   const execution = detail?.execution;

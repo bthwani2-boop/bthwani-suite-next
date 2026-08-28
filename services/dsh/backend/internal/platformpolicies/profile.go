@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -39,7 +40,7 @@ func GetOperationalProfile(ctx context.Context, db *sql.DB, zoneID string, categ
 	}
 	var profile OperationalProfile
 	profile.ZoneID = zoneID
-	_ = db.QueryRowContext(ctx, `
+	slaErr := db.QueryRowContext(ctx, `
 		SELECT id, category, max_prep_mins, max_assignment_mins,
 		       max_delivery_mins, version
 		FROM dsh_platform_sla_rules
@@ -53,8 +54,12 @@ func GetOperationalProfile(ctx context.Context, db *sql.DB, zoneID string, categ
 		&profile.SLA.MaxDeliveryMins,
 		&profile.SLA.Version,
 	)
+	if slaErr != nil && !errors.Is(slaErr, sql.ErrNoRows) {
+		return OperationalProfile{}, fmt.Errorf("%w: SLA policy read: %v", ErrPolicyTruthUnavailable, slaErr)
+	}
 	profile.SLA.Configured = profile.SLA.RuleID != ""
-	_ = db.QueryRowContext(ctx, `
+
+	capacityErr := db.QueryRowContext(ctx, `
 		SELECT id, max_concurrent_orders, max_captains_online,
 		       throttle_threshold, is_paused, pause_reason, version
 		FROM dsh_platform_capacity_configs
@@ -67,6 +72,9 @@ func GetOperationalProfile(ctx context.Context, db *sql.DB, zoneID string, categ
 		&profile.Capacity.PauseReason,
 		&profile.Capacity.Version,
 	)
+	if capacityErr != nil && !errors.Is(capacityErr, sql.ErrNoRows) {
+		return OperationalProfile{}, fmt.Errorf("%w: capacity policy read: %v", ErrPolicyTruthUnavailable, capacityErr)
+	}
 	profile.Capacity.Configured = profile.Capacity.ConfigID != ""
 	return profile, nil
 }

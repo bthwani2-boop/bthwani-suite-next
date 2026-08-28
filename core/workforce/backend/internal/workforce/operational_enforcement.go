@@ -39,6 +39,7 @@ type TransitionProviderIncidentInput struct {
 	ToStatus           string `json:"toStatus"`
 	ResolutionNote     string `json:"resolutionNote"`
 	WltLedgerReference string `json:"wltLedgerReference"`
+	ExpectedVersion    int    `json:"expectedVersion"`
 }
 
 type ProviderIncidentTransition struct {
@@ -91,7 +92,7 @@ func validateCaptainPromotionInput(input PromoteCaptainInput) error {
 // PromoteCaptainToBasic is idempotent after a successful promotion. The
 // history row is inserted before the classification update so the database
 // trigger can prove the update is evidence-backed within the same transaction.
-func (r *Repository) PromoteCaptainToBasic(ctx context.Context, actorID, operatorID string, input PromoteCaptainInput) (ProviderOperationalCore, error) {
+func (r *Repository) PromoteCaptainToBasic(ctx context.Context, actorID, operatorID, operatorRole, correlationID, idempotencyKey string, input PromoteCaptainInput) (ProviderOperationalCore, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
 		return ProviderOperationalCore{}, err
@@ -196,7 +197,7 @@ func incidentResolutionRequired(status string) bool {
 // TransitionProviderIncident applies the operational decision only. A monetary
 // debit is never created here; financial_action_posted is accepted only after
 // WLT has returned a ledger reference.
-func (r *Repository) TransitionProviderIncident(ctx context.Context, incidentID, operatorID string, input TransitionProviderIncidentInput) (ProviderIncident, error) {
+func (r *Repository) TransitionProviderIncident(ctx context.Context, incidentID, operatorID, operatorRole, correlationID, idempotencyKey string, input TransitionProviderIncidentInput) (ProviderIncident, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
 		return ProviderIncident{}, err
@@ -208,6 +209,9 @@ func (r *Repository) TransitionProviderIncident(ctx context.Context, incidentID,
 	input.WltLedgerReference = strings.TrimSpace(input.WltLedgerReference)
 	if incidentID == "" || operatorID == "" || input.ToStatus == "" {
 		return ProviderIncident{}, ErrInvalidInput
+	}
+	if input.ExpectedVersion <= 0 {
+		return ProviderIncident{}, fmt.Errorf("%w: expectedVersion is required", ErrInvalidInput)
 	}
 	if incidentResolutionRequired(input.ToStatus) && len(input.ResolutionNote) < 3 {
 		return ProviderIncident{}, fmt.Errorf("%w: resolution note is required", ErrInvalidInput)
@@ -223,15 +227,19 @@ func (r *Repository) TransitionProviderIncident(ctx context.Context, incidentID,
 	defer tx.Rollback() //nolint:errcheck
 
 	var actorID, currentStatus string
+	var currentVersion int
 	if err := tx.QueryRowContext(ctx, `
-		SELECT actor_id,status
+		SELECT actor_id,status,version
 		FROM workforce_provider_incidents
 		WHERE id=$1::uuid AND operator_context_id=$2
-		FOR UPDATE`, incidentID, operatorContextID).Scan(&actorID, &currentStatus); err != nil {
+		FOR UPDATE`, incidentID, operatorContextID).Scan(&actorID, &currentStatus, &currentVersion); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ProviderIncident{}, ErrNotFound
 		}
 		return ProviderIncident{}, err
+	}
+	if currentVersion != input.ExpectedVersion {
+		return ProviderIncident{}, ErrVersionConflict
 	}
 	if currentStatus == input.ToStatus {
 		if err := tx.Commit(); err != nil {

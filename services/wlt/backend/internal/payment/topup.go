@@ -38,7 +38,7 @@ func topUpActorType(financialPurpose string) (string, error) {
 // AuthorizeTopUpSession authorizes a Cash-In wallet top-up session through the
 // capability-checked CashInRail (U002-T001) instead of an arbitrary Post/Get
 // call to a caller-chosen path. It otherwise mirrors
-// AuthorizeSessionWithProviderSovereign's claim-before-mutation and
+// AuthorizeSessionWithProvider's claim-before-mutation and
 // ambiguous-result handling exactly, so a topup session gets the same
 // guarantees an order-payment session already has.
 func AuthorizeTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
@@ -53,16 +53,19 @@ func AuthorizeTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashIn
 		return claimed, err
 	}
 	if _, err := topUpActorType(claimed.FinancialPurpose); err != nil {
-		_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
-		return nil, err
+		return nil, withDurableRecoveryError(err, func() error {
+			return markSessionFailedAndNotify(db, claimed, "authorization_pending")
+		})
 	}
 	currency := claimed.Currency
 	if currency == "" {
 		currency = "YER"
 	}
 	if claimed.AmountMinorUnits <= 0 {
-		_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
-		return nil, fmt.Errorf("payment session has no amount to authorize")
+		cause := fmt.Errorf("payment session has no amount to authorize")
+		return nil, withDurableRecoveryError(cause, func() error {
+			return markSessionFailedAndNotify(db, claimed, "authorization_pending")
+		})
 	}
 
 	result, err := rail.Authorize(ctx, map[string]any{
@@ -78,18 +81,22 @@ func AuthorizeTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashIn
 	}
 	if err != nil {
 		if isAmbiguousProviderError(err) {
-			_ = markSessionResultUnknownAndOpenCase(db, claimed, "authorize", err, "authorization_pending")
-		} else {
-			_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
+			return nil, withDurableRecoveryError(err, func() error {
+				return markSessionResultUnknownAndOpenCase(db, claimed, "authorize", err, "authorization_pending")
+			})
 		}
-		return nil, err
+		return nil, withDurableRecoveryError(err, func() error {
+			return markSessionFailedAndNotify(db, claimed, "authorization_pending")
+		})
 	}
 
+	var tx *sql.Tx
 	finalizationFailure := func(cause error) (*PaymentSession, error) {
-		_ = markSessionResultUnknownAndOpenCase(db, claimed, "authorize", cause, "authorization_pending")
-		return nil, cause
+		return nil, recoverAfterFinalizationFailure(tx, cause, func() error {
+			return markSessionResultUnknownAndOpenCase(db, claimed, "authorize", cause, "authorization_pending")
+		})
 	}
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err = db.BeginTx(ctx, nil)
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("begin topup authorize finalization: %w", err))
 	}
@@ -122,7 +129,7 @@ func AuthorizeTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashIn
 // UPDATE or the ledger posting fails after the provider confirmed capture,
 // the whole transaction rolls back and the session is marked
 // provider_result_unknown for reconciliation, exactly like
-// CaptureSessionWithProviderSovereign already does for order payments.
+// CaptureSessionWithProvider already does for order payments.
 func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
@@ -134,10 +141,10 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 	if err != nil || claimed == nil {
 		return claimed, err
 	}
-	actorType, err := topUpActorType(claimed.FinancialPurpose)
-	if err != nil {
-		_ = markSessionFailedAndNotify(db, claimed, "capture_pending")
-		return nil, err
+	if _, err := topUpActorType(claimed.FinancialPurpose); err != nil {
+		return nil, withDurableRecoveryError(err, func() error {
+			return markSessionFailedAndNotify(db, claimed, "capture_pending")
+		})
 	}
 
 	result, err := rail.Capture(ctx, map[string]any{
@@ -151,33 +158,37 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 	}
 	if err != nil {
 		if isAmbiguousProviderError(err) {
-			_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
-		} else {
-			_ = markSessionFailedAndNotify(db, claimed, "capture_pending")
+			return nil, withDurableRecoveryError(err, func() error {
+				return markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
+			})
 		}
-		return nil, err
+		return nil, withDurableRecoveryError(err, func() error {
+			return markSessionFailedAndNotify(db, claimed, "capture_pending")
+		})
 	}
 
+	var tx *sql.Tx
 	finalizationFailure := func(cause error) (*PaymentSession, error) {
-		_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", cause, "capture_pending")
-		return nil, cause
+		return nil, recoverAfterFinalizationFailure(tx, cause, func() error {
+			return markSessionResultUnknownAndOpenCase(db, claimed, "capture", cause, "capture_pending")
+		})
 	}
 	if claimed.AmountMinorUnits <= 0 || claimed.Currency == "" {
 		return finalizationFailure(fmt.Errorf("captured topup session %s has invalid accounting amount/currency", claimed.ID))
 	}
 
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err = db.BeginTx(ctx, nil)
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("begin topup capture finalization: %w", err))
 	}
 	defer tx.Rollback()
 
-	lines := []ledger.LedgerLine{
-		{AccountType: "provider_clearing", DebitCredit: "debit", AmountMinorUnits: claimed.AmountMinorUnits, Currency: claimed.Currency},
-		{AccountType: "wallet", ActorType: actorType, ActorID: claimed.ClientID, DebitCredit: "credit", AmountMinorUnits: claimed.AmountMinorUnits, Currency: claimed.Currency},
+	effect, err := captureEconomicEffect(claimed)
+	if err != nil {
+		return finalizationFailure(err)
 	}
 	postCtx := shared.WithOperatorContext(ctx, claimed.OperatorContextID)
-	ledgerTransactionID, err := ledger.PostLedgerTransaction(postCtx, tx, "cash_in_topup", "payment_session", claimed.ID, lines, ledger.Actor{ID: claimed.ClientID, Type: actorType})
+	ledgerTransactionID, err := ledger.PostLedgerTransaction(postCtx, tx, effect.TransactionType, effect.ReferenceType, effect.ReferenceID, effect.Lines, effect.Actor)
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("post topup capture ledger transaction: %w", err))
 	}
@@ -202,11 +213,10 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 	return s, nil
 }
 
-func HandleAuthorizeTopUpSession(db *sql.DB) http.HandlerFunc {
+func HandleAuthorizeTopUpSession(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rail, err := provider.NewDefaultFinancialRailRouter()
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+		if rail == nil {
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
 		session, err := AuthorizeTopUpSession(r.Context(), db, rail, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-topup-authorize"))
@@ -230,11 +240,10 @@ func HandleAuthorizeTopUpSession(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleCaptureTopUpSession(db *sql.DB) http.HandlerFunc {
+func HandleCaptureTopUpSession(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rail, err := provider.NewDefaultFinancialRailRouter()
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+		if rail == nil {
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
 		session, err := CaptureTopUpSession(r.Context(), db, rail, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-topup-capture"))

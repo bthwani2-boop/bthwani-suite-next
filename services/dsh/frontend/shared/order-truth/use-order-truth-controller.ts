@@ -9,6 +9,7 @@ import {
   fetchPartnerOrderTruth,
   fetchPartnerOrderTruthDetail,
 } from "./order-truth.api";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   clearOrderTruthAttempt,
   getOrCreateOrderTruthAttempt,
@@ -28,15 +29,21 @@ import type {
 } from "./order-truth.types";
 
 export function useCreateOrderTruthController(token?: string) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : "";
   const [state, setState] = useState<OrderTruthCreateState>({ kind: "idle" });
   const mutationLock = useRef(false);
 
   const submit = useCallback(async (input: CreateOrderTruthInput): Promise<OrderTruth | null> => {
     if (mutationLock.current) return null;
+    if (!actorId) {
+      setState({ kind: "error", message: "جلسة العميل غير جاهزة لتثبيت هوية الطلب." });
+      return null;
+    }
     mutationLock.current = true;
     setState({ kind: "submitting" });
     try {
-      const attempt = await getOrCreateOrderTruthAttempt(input);
+      const attempt = await getOrCreateOrderTruthAttempt(actorId, input);
       const created = await createOrderTruth(input, attempt.context, token);
       // The mutation response is not accepted as final UI truth. Read it back
       // through the actor-scoped canonical endpoint before clearing the attempt.
@@ -48,7 +55,7 @@ export function useCreateOrderTruthController(token?: string) {
       ) {
         throw { kind: "http", status: 409, code: "READBACK_MISMATCH" };
       }
-      await clearOrderTruthAttempt(attempt.fingerprint);
+      await clearOrderTruthAttempt(actorId, attempt.fingerprint);
       setState({ kind: "success", order: readback });
       return readback;
     } catch (error) {
@@ -58,7 +65,7 @@ export function useCreateOrderTruthController(token?: string) {
     } finally {
       mutationLock.current = false;
     }
-  }, [token]);
+  }, [actorId, token]);
 
   const reset = useCallback(() => setState({ kind: "idle" }), []);
   return { state, submit, reset };

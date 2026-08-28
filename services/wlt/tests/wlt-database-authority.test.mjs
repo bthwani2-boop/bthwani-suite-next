@@ -58,6 +58,16 @@ describe("WLT database authority", () => {
     assert.match(invariant, /NOT tgisinternal/);
   });
 
+  it("retains only OperatorContext-scoped wallet runtime authority", () => {
+    const walletRepository = read("services/wlt/backend/internal/wallet/repository.go");
+    assert.doesNotMatch(walletRepository, /func GetWallet\s*\(/);
+    assert.doesNotMatch(walletRepository, /func EnsureWalletTx\s*\(/);
+    assert.doesNotMatch(walletRepository, /legacy-unscoped/);
+    assert.match(walletRepository, /func GetWalletForOperatorContext\s*\(/);
+    assert.match(walletRepository, /func EnsureWalletForOperatorContextTx\s*\(/);
+    assert.match(walletRepository, /shared\.RequireOperatorContext\(ctx\)/);
+  });
+
   it("declares an empty WLT local seed set explicitly", () => {
     const runtimeSeedAdapter = read("infra/docker/scripts/invoke-runtime-database-seeds.ps1");
     const canonicalSeedRunner = read("tools/scripts/invoke-service-seeds.ps1");

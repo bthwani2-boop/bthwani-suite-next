@@ -7,7 +7,6 @@ import type {
   DshPartnerOrder,
   DshRejectOrderInput,
   DshStoreCaptainHandoff,
-  DshStorePreparationPolicy,
   DshPreparationIssue,
   DshPreparationIssueList,
   DshCreatePreparationIssueInput,
@@ -93,19 +92,6 @@ export async function acceptOrder(orderId: string, options: PartnerOrderMutation
   const data = await request<{ order: DshOrder }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/accept`,
     withOptionalToken(partnerMutationOptions(options), token),
-  );
-  return data.order;
-}
-
-export async function rejectOrder(
-  orderId: string,
-  input: DshRejectOrderInput,
-  options: PartnerOrderMutationOptions,
-  token?: string,
-): Promise<DshOrder> {
-  const data = await request<{ order: DshOrder }>(
-    `/dsh/partner/orders/${encodeURIComponent(orderId)}/reject`,
-    withOptionalToken({ ...partnerMutationOptions(options), body: input }, token),
   );
   return data.order;
 }
@@ -198,34 +184,6 @@ export async function resolveOrderPreparationIssue(
     withOptionalToken({ method: "POST", body: input }, token),
   );
   return data.issue;
-}
-
-export async function fetchStorePreparationPolicy(
-  storeId: string,
-  token?: string,
-): Promise<DshStorePreparationPolicy> {
-  const data = await request<{ policy: DshStorePreparationPolicy }>(
-    `/dsh/partner/stores/${encodeURIComponent(storeId)}/order-preparation-policy`,
-    withOptionalToken({}, token),
-  );
-  return data.policy;
-}
-
-export async function updateStorePreparationPolicy(
-  storeId: string,
-  input: {
-    readonly expectedVersion: number;
-    readonly defaultPreparationMinutes: number;
-    readonly warningBeforeMinutes: number;
-    readonly reason: string;
-  },
-  token?: string,
-): Promise<DshStorePreparationPolicy> {
-  const data = await request<{ policy: DshStorePreparationPolicy }>(
-    `/dsh/partner/stores/${encodeURIComponent(storeId)}/order-preparation-policy`,
-    withOptionalToken({ method: "PUT", body: input }, token),
-  );
-  return data.policy;
 }
 
 export function classifyOrderError(error: unknown): {

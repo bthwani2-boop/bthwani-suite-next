@@ -1,81 +1,14 @@
 // Canonical location: dsh/frontend/shared/view-models/control-panel/platform/platform.types.ts
 // Authority: dsh/frontend/shared — moved from control-panel/platform/*/types files
 
-export type PlatformSovereignRuntimeState =
-  | 'FIX_REQUIRED'
-  | 'PARTIALLY_BOUND'
-  | 'UNKNOWN_HEALTH'
-  | 'ROLLBACK_UNAVAILABLE'
-  | 'CONTRACT_REQUIRED';
-
 // ── Appearance Types ──────────────────────────────────────────────────────────
-export type AppearanceStatus = 'snapshot-only' | 'contract-needed' | 'ready-for-binding';
-export type AppearanceScope = 'Global' | 'Platform' | 'App' | 'Surface' | 'Service';
-export type AppearanceRisk = 'low' | 'medium' | 'high' | 'visual-identity';
-export type AppearanceOwner = 'Platform' | 'DesignSystem' | 'AppShell' | 'ServiceOwner';
 
-interface AppearanceRecord {
-  id: string;
-  label: string;
-  owner: AppearanceOwner;
-  status: AppearanceStatus;
-  scope: AppearanceScope;
-  risk: AppearanceRisk;
-  currentSnapshotValue: string;
-  proposedSnapshotValue: string;
-  effectSummary: string;
-  auditRollbackHint: string;
-  centralColorSystemNote: string;
-  reason?: string;
-  evidence?: string;
-  rollbackTarget?: string;
-}
 
 // ── Providers Types ───────────────────────────────────────────────────────────
-export type ProviderEnvironment = 'test' | 'sandbox' | 'production';
-export type ProviderStatus = 'active' | 'inactive' | 'test-only' | 'pending-approval';
-export type ProviderOwner = 'Platform' | 'DesignSystem' | 'ServiceOwner';
 
-interface ProviderRecord {
-  id: string;
-  label: string;
-  category: string;
-  selectedProvider: string;
-  /** Always masked — never show real keys */
-  maskedCredential: string;
-  environment: ProviderEnvironment;
-  status: ProviderStatus;
-  owner: ProviderOwner;
-  priority: number;
-  fallbackProvider?: string;
-  lastTestResult?: 'pass' | 'fail' | 'not-run';
-  rollbackTarget?: string;
-  evidence?: string;
-  activationNote: string;
-}
 
 // ── Services Types ────────────────────────────────────────────────────────────
-export type ServiceStatus = 'live' | 'paused' | 'internal-only' | 'pilot' | 'maintenance';
-export type ServiceClientVisibility = 'visible' | 'hidden';
-export type ServiceScope = 'Global' | 'Region' | 'City' | 'Zone' | 'Service';
-export type ServiceOwner = 'Platform' | 'Operations' | 'DesignSystem';
-export type ServiceRisk = 'low' | 'medium' | 'high' | 'critical';
 
-interface ServiceRecord {
-  id: string;
-  label: string;
-  description: string;
-  owner: ServiceOwner;
-  status: ServiceStatus;
-  clientVisibility: ServiceClientVisibility;
-  scope: ServiceScope;
-  risk: ServiceRisk;
-  effectSummary: string;
-  auditRollbackHint: string;
-  reason?: string;
-  evidence?: string;
-  rollbackTarget?: ServiceStatus;
-}
 
 // ── Vars Types ────────────────────────────────────────────────────────────────
 export type DshPlatformVarOwner = 'DSH' | 'WLT' | 'Provider';

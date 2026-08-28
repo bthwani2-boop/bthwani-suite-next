@@ -7,7 +7,7 @@ import { useDshCaptainSurfaceModel } from "./useDshCaptainSurfaceModel";
 import type { DshCaptainRoute } from "./dsh-captain.types";
 import type { DshCaptainSurfaceProps } from "./dsh-captain.types";
 import {
-  dshCaptainLegacyRoute,
+  dshCaptainRouteFromNavigation,
   dshCaptainRouteAssignmentId,
   dshCaptainRouteSupportScreen,
   type DshCaptainAccountSection,
@@ -104,7 +104,7 @@ function AuthenticatedCaptainSurface({
   readonly route: DshCaptainSurfaceProps["route"];
   readonly navigation: DshCaptainNavigation;
 }) {
-  const legacyRoute = dshCaptainLegacyRoute(route);
+  const captainRoute = dshCaptainRouteFromNavigation(route);
   const routeAssignmentId = dshCaptainRouteAssignmentId(route) ?? "";
   const selectedSupportScreen = dshCaptainRouteSupportScreen(route);
   const {
@@ -115,7 +115,7 @@ function AuthenticatedCaptainSurface({
     assignmentClosureNotice,
     operationalAssignmentId,
     operationalAssignmentAmbiguous,
-  } = useDshCaptainSurfaceModel(captainId, legacyRoute, routeAssignmentId, selectedSupportScreen);
+  } = useDshCaptainSurfaceModel(captainId, captainRoute, routeAssignmentId, selectedSupportScreen);
   const camera = useCameraPhotoCapture();
   const [cameraError, setCameraError] = React.useState<string | null>(null);
   const [appearanceMode, setAppearanceMode] = React.useState<AppearanceMode>("lightPremium");

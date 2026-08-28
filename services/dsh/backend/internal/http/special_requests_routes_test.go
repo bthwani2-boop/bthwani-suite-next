@@ -45,6 +45,12 @@ func TestSpecialRequestRoutes(t *testing.T) {
 			pattern: "POST /dsh/client/special-requests/{requestId}/approve-quote",
 		},
 		{
+			name:    "client reads saga status",
+			method:  http.MethodGet,
+			path:    "/dsh/client/special-requests/request-1/sagas/saga-1",
+			pattern: "GET /dsh/client/special-requests/{requestId}/sagas/{sagaId}",
+		},
+		{
 			name:    "client reads requested information",
 			method:  http.MethodGet,
 			path:    "/dsh/client/special-requests/request-1/information-exchange",
@@ -73,6 +79,12 @@ func TestSpecialRequestRoutes(t *testing.T) {
 			method:  http.MethodGet,
 			path:    "/dsh/operator/special-requests/request-1",
 			pattern: "GET /dsh/operator/special-requests/{requestId}",
+		},
+		{
+			name:    "operator reads saga status",
+			method:  http.MethodGet,
+			path:    "/dsh/operator/special-requests/request-1/sagas/saga-1",
+			pattern: "GET /dsh/operator/special-requests/{requestId}/sagas/{sagaId}",
 		},
 		{
 			name:    "operator reads information exchange",

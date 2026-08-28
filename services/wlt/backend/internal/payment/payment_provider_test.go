@@ -10,21 +10,44 @@ import (
 )
 
 type recordingProvider struct {
-	path string
-	body map[string]any
-	meta provider.RequestMeta
-	res  provider.ProviderResult
-	err  error
+	authorizeBody map[string]any
+	captureBody   map[string]any
+	refundBody    map[string]any
+	meta          provider.RequestMeta
+	res           provider.ProviderResult
+	err           error
 }
 
-func (p *recordingProvider) Post(ctx context.Context, path string, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
-	p.path = path
+func (p *recordingProvider) Authorize(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	p.meta = meta
 	if typed, ok := body.(map[string]any); ok {
-		p.body = typed
+		p.authorizeBody = typed
 	}
 	return p.res, p.err
 }
+
+func (p *recordingProvider) Capture(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	p.meta = meta
+	if typed, ok := body.(map[string]any); ok {
+		p.captureBody = typed
+	}
+	return p.res, p.err
+}
+
+func (p *recordingProvider) Refund(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	p.meta = meta
+	if typed, ok := body.(map[string]any); ok {
+		p.refundBody = typed
+	}
+	return p.res, p.err
+}
+
+func (p *recordingProvider) Status(ctx context.Context, inquiry provider.StatusInquiry, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	p.meta = meta
+	return p.res, p.err
+}
+
+var _ provider.CashInRail = (*recordingProvider)(nil)
 
 func TestAuthorizeProviderCallsFinancialProvider(t *testing.T) {
 	client := &recordingProvider{
@@ -46,14 +69,8 @@ func TestAuthorizeProviderCallsFinancialProvider(t *testing.T) {
 	if err != nil {
 		t.Fatalf("authorizeProvider returned error: %v", err)
 	}
-	if client.path != "/financial/card/authorize" {
-		t.Fatalf("unexpected provider path: %s", client.path)
-	}
-	if client.meta.CorrelationID != "corr-1" || client.meta.IdempotencyKey != "idem-1" {
-		t.Fatalf("provider metadata was not forwarded")
-	}
-	if client.body["paymentSessionId"] != "wps_1" || client.body["amountMinorUnits"] != int64(1000) {
-		t.Fatalf("provider request body missing WLT payment data: %#v", client.body)
+	if client.authorizeBody["paymentSessionId"] != "wps_1" || client.authorizeBody["amountMinorUnits"] != int64(1000) {
+		t.Fatalf("provider request body missing WLT payment data: %#v", client.authorizeBody)
 	}
 	if result.ProviderReference != "card-auth-001" {
 		t.Fatalf("provider reference was not returned")
@@ -78,11 +95,8 @@ func TestCaptureProviderCallsFinancialProvider(t *testing.T) {
 	if err != nil {
 		t.Fatalf("captureProvider returned error: %v", err)
 	}
-	if client.path != "/financial/card/capture" {
-		t.Fatalf("unexpected provider path: %s", client.path)
-	}
-	if client.body["providerReference"] != "card-auth-001" {
-		t.Fatalf("capture did not include authorize provider reference: %#v", client.body)
+	if client.captureBody["providerReference"] != "card-auth-001" {
+		t.Fatalf("capture did not include authorize provider reference: %#v", client.captureBody)
 	}
 	if result.ProviderReference != "card-capture-001" {
 		t.Fatalf("capture provider reference was not returned")

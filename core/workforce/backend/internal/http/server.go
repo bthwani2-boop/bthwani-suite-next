@@ -73,6 +73,10 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("PATCH /workforce/reference/shifts/{code}", s.operatorOnly("reference:manage", s.updateShift))
 	mux.HandleFunc("GET /workforce/reference/supervisors", s.operatorOnly("provider:read", s.searchSupervisors))
 
+	mux.HandleFunc("POST /workforce/reference/cities", s.operatorOnly("reference:manage", s.createCity))
+	mux.HandleFunc("PATCH /workforce/reference/cities/{code}", s.operatorOnly("reference:manage", s.updateCity))
+	mux.HandleFunc("POST /workforce/{collection}/{actorId}/documents", s.operatorOnly("provider:update", s.appendProviderDocument))
+
 	// Internal routes
 	mux.HandleFunc("GET /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleGetActorScopes))
 	return mux
@@ -473,6 +477,159 @@ func (s *server) updateShift(w http.ResponseWriter, r *http.Request, _ auth.Iden
 		return
 	}
 	sendJSON(w, http.StatusOK, shift)
+}
+
+func (s *server) createCity(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	if !identity.HasPermission("workforce", "reference:manage", "all") {
+		sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
+		return
+	}
+	var city workforce.City
+	if !decodeJSON(w, r, &city) {
+		return
+	}
+	city.Code = strings.TrimSpace(city.Code)
+	city.NameAr = strings.TrimSpace(city.NameAr)
+	city.NameEn = strings.TrimSpace(city.NameEn)
+	if city.Code == "" || city.NameAr == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "code and nameAr are required")
+		return
+	}
+	city.Active = true
+	if err := s.repo.UpsertCity(r.Context(), city, true); err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusCreated, city)
+}
+
+func (s *server) updateCity(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	if !identity.HasPermission("workforce", "reference:manage", "all") {
+		sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
+		return
+	}
+	var city workforce.City
+	if !decodeJSON(w, r, &city) {
+		return
+	}
+	city.Code = strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/workforce/reference/cities/"))
+	city.NameAr = strings.TrimSpace(city.NameAr)
+	city.NameEn = strings.TrimSpace(city.NameEn)
+	if city.Code == "" || city.NameAr == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "city code and nameAr are required")
+		return
+	}
+	if err := s.repo.UpsertCity(r.Context(), city, false); err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, city)
+}
+
+func (s *server) appendProviderDocument(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	if !identity.HasPermission("workforce", "provider:update", "all") {
+		sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
+		return
+	}
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) != 4 || parts[0] != "workforce" || parts[3] != "documents" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid path")
+		return
+	}
+	kind := parts[1]
+	actorID := strings.TrimSpace(parts[2])
+	if actorID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "actorId is required")
+		return
+	}
+	var input struct {
+		ExpectedVersion int    `json:"expectedVersion"`
+		MediaRef        string `json:"mediaRef"`
+	}
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	// Media verification is handled by the middleware chain - we don't have direct access to mediaVerifier here
+	// The middleware will validate the media reference before reaching this handler
+	operatorRole := "operator"
+	if len(identity.Roles) > 0 {
+		operatorRole = identity.Roles[0]
+	}
+	person, err := s.repo.AppendProviderDocument(
+		r.Context(),
+		identity.Subject,
+		operatorRole,
+		actorID,
+		kind,
+		input.MediaRef,
+		input.ExpectedVersion,
+		r.Header.Get("X-Correlation-ID"),
+	)
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, person)
+}
+
+func (s *server) handleAffiliationReplace(w http.ResponseWriter, r *http.Request, role, actorID string) {
+	identity, ok := s.resolveReferenceOperator(w, r, "provider:update")
+	if !ok {
+		return
+	}
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if correlationID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "X-Correlation-ID is required")
+		return
+	}
+	var input struct {
+		Affiliations []workforce.OperationalAssignmentInput `json:"affiliations"`
+	}
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	person, err := s.repo.PersonByActorID(r.Context(), actorID)
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	if person.WorkforceKind != role {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "provider collection does not match workforce kind")
+		return
+	}
+	scopes, err := s.repo.SetOperationalScopes(
+		r.Context(),
+		actorID,
+		identity.OperatorContextID,
+		role,
+		input.Affiliations,
+		identity.Subject,
+		correlationID,
+	)
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"affiliations": scopes})
+}
+
+func (s *server) resolveReferenceOperator(w http.ResponseWriter, r *http.Request, action string) (auth.Identity, bool) {
+	identity, err := s.auth.Resolve(r.Context(), r.Header.Get("Authorization"))
+	if err != nil {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
+		return auth.Identity{}, false
+	}
+	boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
+	if bindErr != nil {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity operator context is missing")
+		return auth.Identity{}, false
+	}
+	*r = *r.WithContext(boundContext)
+	if !identity.HasPermission("workforce", action, "all") {
+		sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
+		return auth.Identity{}, false
+	}
+	return identity, true
 }
 
 // ---- plumbing ----

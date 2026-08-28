@@ -18,9 +18,7 @@ import type {
   UpdateCaptainInput,
   UpdateEmployeeInput,
   UpdateFieldAgentInput,
-  UpdateSelfInput,
   WorkforceCity,
-  WorkforceMe,
   WorkforceShift,
 } from "./workforce.types";
 
@@ -120,28 +118,28 @@ export async function createFieldAgent(input: CreateFieldAgentInput): Promise<Fi
   });
 }
 
-export async function updateFieldAgent(actorId: string, input: UpdateFieldAgentInput): Promise<FieldAgent> {
-  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
+export async function updateFieldAgent(actorId: string, input: UpdateFieldAgentInput, idempotencyKey?: string): Promise<FieldAgent> {
+  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input, idempotencyKey });
 }
 
-export async function suspendFieldAgent(actorId: string, expectedVersion: number, reason: string): Promise<FieldAgent> {
-  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason } });
+export async function suspendFieldAgent(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<FieldAgent> {
+  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
-export async function reactivateFieldAgent(actorId: string, expectedVersion: number, reason: string): Promise<FieldAgent> {
-  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason } });
+export async function reactivateFieldAgent(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<FieldAgent> {
+  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
-export async function issueFieldAgentActivationCode(actorId: string, expectedVersion: number): Promise<ActivationCodeResult> {
+export async function issueFieldAgentActivationCode(actorId: string, expectedVersion: number, idempotencyKey?: string): Promise<ActivationCodeResult> {
   return request<ActivationCodeResult>(`/workforce/field-agents/${encodeURIComponent(actorId)}/activation-codes`, {
     method: "POST",
-    idempotencyKey: corrId("wf-activation-field"),
+    idempotencyKey: idempotencyKey ?? corrId("wf-activation-field"),
     body: { expectedVersion },
   });
 }
 
-export async function revokeFieldAgentActivationCodes(actorId: string): Promise<void> {
-  await request<void>(`/workforce/field-agents/${encodeURIComponent(actorId)}/activation-codes`, { method: "DELETE" });
+export async function revokeFieldAgentActivationCodes(actorId: string, idempotencyKey?: string): Promise<void> {
+  await request<void>(`/workforce/field-agents/${encodeURIComponent(actorId)}/activation-codes`, { method: "DELETE", idempotencyKey });
 }
 
 export async function listCaptains(filter: CaptainListFilter = {}): Promise<readonly Captain[]> {
@@ -161,28 +159,28 @@ export async function createCaptain(input: CreateCaptainInput): Promise<Captain>
   });
 }
 
-export async function updateCaptain(actorId: string, input: UpdateCaptainInput): Promise<Captain> {
-  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
+export async function updateCaptain(actorId: string, input: UpdateCaptainInput, idempotencyKey?: string): Promise<Captain> {
+  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input, idempotencyKey });
 }
 
-export async function suspendCaptain(actorId: string, expectedVersion: number, reason: string): Promise<Captain> {
-  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason } });
+export async function suspendCaptain(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<Captain> {
+  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
-export async function reactivateCaptain(actorId: string, expectedVersion: number, reason: string): Promise<Captain> {
-  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason } });
+export async function reactivateCaptain(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<Captain> {
+  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
-export async function issueCaptainActivationCode(actorId: string, expectedVersion: number): Promise<ActivationCodeResult> {
+export async function issueCaptainActivationCode(actorId: string, expectedVersion: number, idempotencyKey?: string): Promise<ActivationCodeResult> {
   return request<ActivationCodeResult>(`/workforce/captains/${encodeURIComponent(actorId)}/activation-codes`, {
     method: "POST",
-    idempotencyKey: corrId("wf-activation-captain"),
+    idempotencyKey: idempotencyKey ?? corrId("wf-activation-captain"),
     body: { expectedVersion },
   });
 }
 
-export async function revokeCaptainActivationCodes(actorId: string): Promise<void> {
-  await request<void>(`/workforce/captains/${encodeURIComponent(actorId)}/activation-codes`, { method: "DELETE" });
+export async function revokeCaptainActivationCodes(actorId: string, idempotencyKey?: string): Promise<void> {
+  await request<void>(`/workforce/captains/${encodeURIComponent(actorId)}/activation-codes`, { method: "DELETE", idempotencyKey });
 }
 
 const DEPARTMENT_EMPLOYEE_PATH = "/workforce/department-employees";
@@ -205,16 +203,16 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
   return result.employee;
 }
 
-export async function updateEmployee(actorId: string, input: UpdateEmployeeInput): Promise<Employee> {
-  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
+export async function updateEmployee(actorId: string, input: UpdateEmployeeInput, idempotencyKey?: string): Promise<Employee> {
+  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input, idempotencyKey });
 }
 
-export async function suspendEmployee(actorId: string, expectedVersion: number, reason: string): Promise<Employee> {
-  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason } });
+export async function suspendEmployee(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<Employee> {
+  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
-export async function reactivateEmployee(actorId: string, expectedVersion: number, reason: string): Promise<Employee> {
-  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason } });
+export async function reactivateEmployee(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<Employee> {
+  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
 export async function searchSupervisors(kind: ProviderKind, q: string): Promise<readonly SupervisorCandidate[]> {
@@ -231,13 +229,13 @@ export async function listWorkforceCities(includeInactive = false): Promise<read
   return result.cities;
 }
 
-export async function createWorkforceCity(city: WorkforceCity): Promise<WorkforceCity> {
-  return request<WorkforceCity>("/workforce/reference/cities", { method: "POST", body: city });
+export async function createWorkforceCity(city: WorkforceCity, idempotencyKey?: string): Promise<WorkforceCity> {
+  return request<WorkforceCity>("/workforce/reference/cities", { method: "POST", body: city, idempotencyKey });
 }
 
-export async function updateWorkforceCity(city: WorkforceCity): Promise<WorkforceCity> {
+export async function updateWorkforceCity(city: WorkforceCity, idempotencyKey?: string): Promise<WorkforceCity> {
   const { code, ...body } = city;
-  return request<WorkforceCity>(`/workforce/reference/cities/${encodeURIComponent(code)}`, { method: "PATCH", body });
+  return request<WorkforceCity>(`/workforce/reference/cities/${encodeURIComponent(code)}`, { method: "PATCH", body, idempotencyKey });
 }
 
 export async function listWorkforceShifts(includeInactive = false): Promise<readonly WorkforceShift[]> {
@@ -245,19 +243,11 @@ export async function listWorkforceShifts(includeInactive = false): Promise<read
   return result.shifts;
 }
 
-export async function createWorkforceShift(shift: WorkforceShift): Promise<WorkforceShift> {
-  return request<WorkforceShift>("/workforce/reference/shifts", { method: "POST", body: shift });
+export async function createWorkforceShift(shift: WorkforceShift, idempotencyKey?: string): Promise<WorkforceShift> {
+  return request<WorkforceShift>("/workforce/reference/shifts", { method: "POST", body: shift, idempotencyKey });
 }
 
-export async function updateWorkforceShift(shift: WorkforceShift): Promise<WorkforceShift> {
+export async function updateWorkforceShift(shift: WorkforceShift, idempotencyKey?: string): Promise<WorkforceShift> {
   const { code, ...body } = shift;
-  return request<WorkforceShift>(`/workforce/reference/shifts/${encodeURIComponent(code)}`, { method: "PATCH", body });
-}
-
-export async function getWorkforceMe(): Promise<WorkforceMe> {
-  return request<WorkforceMe>("/workforce/me");
-}
-
-export async function updateWorkforceMe(input: UpdateSelfInput): Promise<WorkforceMe> {
-  return request<WorkforceMe>("/workforce/me", { method: "PATCH", body: input });
+  return request<WorkforceShift>(`/workforce/reference/shifts/${encodeURIComponent(code)}`, { method: "PATCH", body, idempotencyKey });
 }

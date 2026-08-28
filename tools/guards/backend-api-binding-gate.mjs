@@ -34,69 +34,6 @@ const routeClassificationFile =
   "services/dsh/contracts/backend-route-classification.json";
 const dshPrimary = "services/dsh/contracts/dsh.openapi.yaml";
 
-// Routes intercepted entirely by a middleware boundary before the router is
-// ever reached — the mux extractor can only see mux.HandleFunc registrations,
-// not a boundary's own path/method comparison, so these can never appear as
-// Go routes even though they are genuinely implemented.
-const boundaryInterceptedRoutes = new Map([
-  [
-    "Identity",
-    new Map([
-      [
-        "POST /auth/otp/request",
-        "intercepted by OtpBoundary (core/identity/backend/internal/http/otp_boundary.go) before the router",
-      ],
-      [
-        "GET /identity/health",
-        "intercepted by RuntimeReadinessBoundary (core/identity/backend/internal/http/runtime_readiness_boundary.go) before the router",
-      ],
-      [
-        "GET /identity/readiness",
-        "intercepted by RuntimeReadinessBoundary (core/identity/backend/internal/http/runtime_readiness_boundary.go) before the router",
-      ],
-    ]),
-  ],
-  [
-    "Workforce",
-    new Map([
-      [
-        "POST /workforce/reference/cities",
-        "intercepted by ReferenceMutationMiddleware (core/workforce/backend/internal/http/reference_mutation_middleware.go) before the router",
-      ],
-      [
-        "PATCH /workforce/reference/cities/{code}",
-        "intercepted by ReferenceMutationMiddleware (core/workforce/backend/internal/http/reference_mutation_middleware.go) before the router",
-      ],
-      [
-        "POST /workforce/{collection}/{actorId}/documents",
-        "intercepted by ReferenceMutationMiddleware (core/workforce/backend/internal/http/reference_mutation_middleware.go) before the router",
-      ],
-    ]),
-  ],
-  [
-    "Providers",
-    new Map([
-      [
-        "GET /providers/readiness",
-        "intercepted by RuntimeReadinessBoundary (core/providers/backend/internal/http/runtime_readiness_boundary.go) before the router",
-      ],
-    ]),
-  ],
-  [
-    "PlatformControl",
-    new Map([
-      [
-        "GET /platform/health",
-        "intercepted by RuntimeReadinessBoundary (core/platform-control/backend/internal/http/runtime_readiness_boundary.go) before the router",
-      ],
-      [
-        "GET /platform/readiness",
-        "intercepted by RuntimeReadinessBoundary (core/platform-control/backend/internal/http/runtime_readiness_boundary.go) before the router",
-      ],
-    ]),
-  ],
-]);
-
 function registeredDshContracts() {
   const source = read(dshRegistryFile);
   const entries = [];
@@ -158,13 +95,19 @@ function loadRouteClassifications() {
       item.classification !== "LEGACY_COMPATIBILITY" ||
       item.retirementState !== "DEPRECATED_SUPPORTED" ||
       typeof item.owner !== "string" ||
-      item.owner.trim() === ""
+      item.owner.trim() === "" ||
+      typeof item.migrationLifecycle !== "string" ||
+      item.migrationLifecycle.trim() === "" ||
+      typeof item.retirementCriteria !== "string" ||
+      item.retirementCriteria.trim() === "" ||
+      typeof item.expiryOrClosure !== "string" ||
+      item.expiryOrClosure.trim() === ""
     ) {
       violations.push({
         file: routeClassificationFile,
         line,
         message:
-          "MALFORMED_ROUTE_CLASSIFICATION: every route must define a legacy route, canonical route, owner and governed retirement state",
+          "MALFORMED_ROUTE_CLASSIFICATION: every route must define a legacy route, canonical route, owner, migrationLifecycle, retirementCriteria, expiryOrClosure and governed retirement state",
       });
       continue;
     }
@@ -503,7 +446,6 @@ try {
       validateWltOperation(service, operation);
       if (
         !goRouteSet.has(key) &&
-        !boundaryInterceptedRoutes.get(service.name)?.has(key) &&
         !isNonActiveContract(operationFile(service, operation))
       ) {
         violations.push({

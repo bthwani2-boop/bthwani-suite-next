@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"wlt-api/internal/payment"
 	"wlt-api/internal/shared"
 )
 
@@ -16,6 +17,7 @@ import (
 // is not currently 'open' -- either it was never open, or a concurrent
 // request already resolved it first.
 var ErrCaseNotOpen = errors.New("reconciliation case is not open")
+var ErrReconciliationPrincipalMismatch = errors.New("reconciliation principal does not match the authenticated delegated principal")
 
 type Case struct {
 	ID                   string  `json:"id"`
@@ -149,7 +151,25 @@ func GetCase(db *sql.DB, caseID string) (*Case, error) {
 	return GetCaseForOperatorContext(context.Background(), db, caseID)
 }
 
+func resolveReconciliationPrincipal(ctx context.Context, asserted string) (string, error) {
+	asserted = strings.TrimSpace(asserted)
+	if authenticated, ok := shared.DelegatedFinancePrincipalFromContext(ctx); ok {
+		if asserted != "" && asserted != authenticated {
+			return "", ErrReconciliationPrincipalMismatch
+		}
+		return authenticated, nil
+	}
+	if asserted == "" {
+		return "", fmt.Errorf("Identity-authenticated delegated finance principal is required")
+	}
+	return asserted, nil
+}
+
 func AssignCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID, operatorID string) (*Case, error) {
+	operatorID, err := resolveReconciliationPrincipal(ctx, operatorID)
+	if err != nil {
+		return nil, err
+	}
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
@@ -181,11 +201,11 @@ func AssignCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID, opera
 	return c, err
 }
 
-func AssignCase(db *sql.DB, caseID, operatorID string) (*Case, error) {
-	return AssignCaseForOperatorContext(context.Background(), db, caseID, operatorID)
-}
-
 func ResolveCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID, operatorID, resolutionAction, resolutionNote string) (*Case, error) {
+	operatorID, err := resolveReconciliationPrincipal(ctx, operatorID)
+	if err != nil {
+		return nil, err
+	}
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
@@ -200,34 +220,19 @@ func ResolveCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID, oper
 	if operatorID == "" {
 		return nil, fmt.Errorf("operatorId is required")
 	}
-	switch resolutionAction {
-	case "confirmed_success", "confirmed_failed", "manual_adjustment", "ignored":
-	default:
-		return nil, fmt.Errorf("resolutionAction must be one of confirmed_success, confirmed_failed, manual_adjustment, ignored")
+	if resolutionAction != "confirmed_success" && resolutionAction != "confirmed_failed" {
+		return nil, fmt.Errorf("resolutionAction must be one of confirmed_success or confirmed_failed; manual adjustment and ignore cannot establish financial truth")
 	}
-
-	row := db.QueryRowContext(ctx, `
-		UPDATE wlt_reconciliation_cases
-		SET status='resolved',resolved_by_operator_id=$3,resolution_action=$4,
-		    resolution_note=$5,resolution=$4,resolved_at=NOW(),updated_at=NOW()
-		WHERE operator_context_id=$1 AND id=$2 AND status='open'
-		RETURNING `+caseCols, operatorContextID, caseID, operatorID, resolutionAction, resolutionNote)
-	c, err := scanCase(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		existing, getErr := GetCaseForOperatorContext(ctx, db, caseID)
-		if getErr != nil {
-			return nil, getErr
-		}
-		if existing == nil {
+	if err := payment.ResolveReconciliationCase(ctx, db, caseID, operatorContextID, operatorID, resolutionAction, resolutionNote); err != nil {
+		if errors.Is(err, payment.ErrReconciliationCaseNotFound) {
 			return nil, nil
 		}
-		return nil, ErrCaseNotOpen
+		if errors.Is(err, payment.ErrReconciliationCaseNotOpen) {
+			return nil, ErrCaseNotOpen
+		}
+		return nil, err
 	}
-	return c, err
-}
-
-func ResolveCase(db *sql.DB, caseID, operatorID, resolutionAction, resolutionNote string) (*Case, error) {
-	return ResolveCaseForOperatorContext(context.Background(), db, caseID, operatorID, resolutionAction, resolutionNote)
+	return GetCaseForOperatorContext(ctx, db, caseID)
 }
 
 func HandleListCases(db *sql.DB) http.HandlerFunc {
@@ -258,16 +263,19 @@ func HandleGetCase(db *sql.DB) http.HandlerFunc {
 
 func HandleAssignCase(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var input struct {
-			OperatorID string `json:"operatorId"`
-		}
+		var input struct{}
 		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8*1024))
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&input); err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		c, err := AssignCaseForOperatorContext(r.Context(), db, r.PathValue("caseId"), input.OperatorID)
+		principal, principalErr := shared.RequireDelegatedFinancePrincipal(r.Context())
+		if principalErr != nil {
+			shared.SendError(w, http.StatusForbidden, "AUTHENTICATED_PRINCIPAL_REQUIRED", principalErr.Error())
+			return
+		}
+		c, err := AssignCaseForOperatorContext(r.Context(), db, r.PathValue("caseId"), principal)
 		if errors.Is(err, ErrCaseNotOpen) {
 			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "reconciliation case is not open")
 			return
@@ -287,7 +295,6 @@ func HandleAssignCase(db *sql.DB) http.HandlerFunc {
 func HandleResolveCase(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
-			OperatorID       string `json:"operatorId"`
 			ResolutionAction string `json:"resolutionAction"`
 			ResolutionNote   string `json:"resolutionNote"`
 		}
@@ -297,7 +304,12 @@ func HandleResolveCase(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		c, err := ResolveCaseForOperatorContext(r.Context(), db, r.PathValue("caseId"), input.OperatorID, input.ResolutionAction, input.ResolutionNote)
+		principal, principalErr := shared.RequireDelegatedFinancePrincipal(r.Context())
+		if principalErr != nil {
+			shared.SendError(w, http.StatusForbidden, "AUTHENTICATED_PRINCIPAL_REQUIRED", principalErr.Error())
+			return
+		}
+		c, err := ResolveCaseForOperatorContext(r.Context(), db, r.PathValue("caseId"), principal, input.ResolutionAction, input.ResolutionNote)
 		if errors.Is(err, ErrCaseNotOpen) {
 			shared.SendError(w, http.StatusConflict, "INVALID_STATE", "reconciliation case is not open")
 			return

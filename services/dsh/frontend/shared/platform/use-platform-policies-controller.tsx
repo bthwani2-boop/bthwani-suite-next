@@ -326,7 +326,7 @@ export function useOperationalPolicyEditor(onSaved: () => Promise<void>) {
     input: {
       readonly id?: string;
       readonly name: string;
-      readonly cityCode: string;
+      readonly serviceAreaCode: string;
       readonly description: string;
       readonly isActive: boolean;
       readonly reason: string;

@@ -1,18 +1,12 @@
 import type {
-  AnyOperationsWorkspaceId,
   CanonicalOperationsGroupId,
-  LegacyOperationsWorkspaceId,
-  LegacySectionRedirectId,
   NonOperationsSectionRootId,
   OperationsFocusParams,
   OperationsGroupMeta,
-  OperationsNormalizationResult,
   OperationsPanelId,
   OperationsViewState,
   StateViewCopy,
 } from './operations.types';
-
-export type { AnyOperationsWorkspaceId } from './operations.types';
 
 export const OPERATIONS_CANONICAL_GROUPS: readonly OperationsGroupMeta[] = [
   {
@@ -99,79 +93,6 @@ export const NON_OPERATIONS_SECTION_SHORTCUTS: ReadonlyArray<{
   { id: 'administration', label: 'الإدارة', description: 'الأدوار وسلسلة الاعتماد تبقى في قسم الإدارة.', href: '/dsh/administration' },
 ] as const;
 
-type CanonicalMapping = {
-  readonly group: CanonicalOperationsGroupId;
-  readonly subGroup?: string;
-};
-type LegacyOperationalWorkspaceId = Exclude<LegacyOperationsWorkspaceId, LegacySectionRedirectId>;
-
-const LEGACY_OPERATIONAL_TO_CANONICAL_GROUP: Record<
-  LegacyOperationalWorkspaceId | 'orders' | 'overview',
-  CanonicalMapping
-> = {
-  overview: { group: 'command-center' },
-  dashboard: { group: 'command-center' },
-  orders: { group: 'live-orders', subGroup: 'queue' },
-  'tracking-handoff': { group: 'live-orders', subGroup: 'queue' },
-  'order-detail': { group: 'live-orders', subGroup: 'queue' },
-  orderchat: { group: 'live-orders', subGroup: 'queue' },
-  'live-tracking': { group: 'live-orders', subGroup: 'queue' },
-  handoff: { group: 'live-orders', subGroup: 'queue' },
-  'proof-review': { group: 'live-orders', subGroup: 'proofs' },
-  bell: { group: 'live-orders', subGroup: 'queue' },
-  'arrival-bell': { group: 'live-orders', subGroup: 'queue' },
-  'assisted-order-desk': { group: 'live-orders', subGroup: 'assisted' },
-  'order-rescue': { group: 'live-orders', subGroup: 'rescue' },
-  'dispatch-assignment': { group: 'dispatch-capacity', subGroup: 'pending' },
-  dispatch: { group: 'dispatch-capacity', subGroup: 'pending' },
-  'dispatch-fleet': { group: 'dispatch-capacity', subGroup: 'captains' },
-  reassign: { group: 'dispatch-capacity', subGroup: 'pending' },
-  'peak-mode': { group: 'dispatch-capacity', subGroup: 'pending' },
-  'captain-operations': { group: 'dispatch-capacity', subGroup: 'captains' },
-  'captain-ops': { group: 'dispatch-capacity', subGroup: 'captains' },
-  'geo-heatmap': { group: 'dispatch-capacity', subGroup: 'heatmap' },
-  'live-map-capacity': { group: 'dispatch-capacity', subGroup: 'heatmap' },
-  'area-capacity': { group: 'dispatch-capacity', subGroup: 'zones' },
-  capacity: { group: 'dispatch-capacity', subGroup: 'zones' },
-  'zone-set': { group: 'dispatch-capacity', subGroup: 'zones' },
-  serviceability: { group: 'dispatch-capacity', subGroup: 'zones' },
-  'exceptions-escalations': { group: 'exceptions', subGroup: 'active' },
-  'exceptions-sla': { group: 'exceptions', subGroup: 'active' },
-  exceptions: { group: 'exceptions', subGroup: 'active' },
-  issues: { group: 'exceptions', subGroup: 'active' },
-  'audit-support-sla': { group: 'exceptions', subGroup: 'audit' },
-  'audit-evidence': { group: 'exceptions', subGroup: 'audit' },
-  audit: { group: 'exceptions', subGroup: 'audit' },
-  'guard-status': { group: 'exceptions', subGroup: 'audit' },
-  evidence: { group: 'exceptions', subGroup: 'audit' },
-  sla: { group: 'exceptions', subGroup: 'audit' },
-  'partner-stores': { group: 'exceptions', subGroup: 'stores' },
-  'partner-readiness': { group: 'exceptions', subGroup: 'stores' },
-  'field-ops': { group: 'exceptions', subGroup: 'stores' },
-  'partner-prep': { group: 'exceptions', subGroup: 'stores' },
-  sheinproxy: { group: 'special-ops', subGroup: 'shein' },
-  'awnak-operations': { group: 'special-ops', subGroup: 'awnak' },
-  'proxy-shein-awnak': { group: 'special-ops', subGroup: 'awnak' },
-};
-
-const LEGACY_SECTION_REDIRECTS: Record<LegacySectionRedirectId, NonOperationsSectionRootId> = {
-  support: 'support',
-  finance: 'finance',
-  settlements: 'finance',
-  cod: 'finance',
-  refunds: 'finance',
-  catalogs: 'catalogs',
-  'catalog-categories': 'catalogs',
-  marketing: 'marketing',
-  banners: 'marketing',
-  growth: 'marketing',
-  loyalty: 'marketing',
-  'smart-signal': 'marketing',
-  partners: 'partners',
-  platform: 'platform',
-  administration: 'administration',
-};
-
 export function coerceOperationsPanel(panel?: string): OperationsPanelId | undefined {
   if (
     panel === 'detail'
@@ -188,80 +109,15 @@ export function coerceOperationsPanel(panel?: string): OperationsPanelId | undef
   return undefined;
 }
 
-export function normalizeOperationsLocation(
-  workspace?: string,
-  panel?: string,
-): OperationsNormalizationResult {
-  const resolvedPanel = coerceOperationsPanel(panel);
-  if (!workspace || workspace === 'overview') {
-    return {
-      kind: 'group',
-      group: 'command-center',
-      sourceWorkspace: workspace as AnyOperationsWorkspaceId | undefined,
-      panel: resolvedPanel,
-    };
-  }
-
-  const directCanonical = OPERATIONS_CANONICAL_GROUP_IDS.find((groupId) => groupId === workspace);
-  if (directCanonical) {
-    return {
-      kind: 'group',
-      group: directCanonical,
-      sourceWorkspace: directCanonical,
-      panel: resolvedPanel,
-    };
-  }
-
-  if (Object.prototype.hasOwnProperty.call(LEGACY_SECTION_REDIRECTS, workspace)) {
-    const section = LEGACY_SECTION_REDIRECTS[workspace as LegacySectionRedirectId];
-    return {
-      kind: 'redirect',
-      sourceWorkspace: workspace as AnyOperationsWorkspaceId,
-      section,
-      href: `/dsh/${section}`,
-    };
-  }
-
-  const mapped = LEGACY_OPERATIONAL_TO_CANONICAL_GROUP[
-    workspace as LegacyOperationalWorkspaceId | 'orders' | 'overview'
-  ];
-  if (!mapped) {
-    return {
-      kind: 'group',
-      group: 'command-center',
-      sourceWorkspace: workspace as AnyOperationsWorkspaceId,
-      panel: resolvedPanel,
-    };
-  }
-
-  const derivedPanel = workspace === 'order-detail'
-    ? 'detail'
-    : workspace === 'orderchat'
-      ? 'chat'
-      : resolvedPanel;
-
-  return {
-    kind: 'group',
-    group: mapped.group,
-    subGroup: mapped.subGroup,
-    sourceWorkspace: workspace as AnyOperationsWorkspaceId,
-    panel: derivedPanel,
-  };
-}
-
 export function buildOperationsHref(
-  group: AnyOperationsWorkspaceId = 'command-center',
+  group: CanonicalOperationsGroupId = 'command-center',
   options?: OperationsFocusParams,
 ) {
-  const normalizedLocation = normalizeOperationsLocation(group, options?.panel);
-  if (normalizedLocation.kind === 'redirect') {
-    return `/dsh/${normalizedLocation.section}`;
+  const searchParams = new globalThis.URLSearchParams();
+  if (group !== 'command-center') {
+    searchParams.set('workspace', group);
   }
 
-  const searchParams = new globalThis.URLSearchParams();
-  if (normalizedLocation.group !== 'command-center') {
-    searchParams.set('workspace', normalizedLocation.group);
-  }
   if (options?.orderId) searchParams.set('orderId', options.orderId);
   if (options?.customerId) searchParams.set('customerId', options.customerId);
   if (options?.ticketId) searchParams.set('ticketId', options.ticketId);
@@ -269,7 +125,7 @@ export function buildOperationsHref(
   if (options?.requestId) searchParams.set('requestId', options.requestId);
   if (options?.panel) searchParams.set('panel', options.panel);
 
-  const resolvedSubGroup = options?.subGroup ?? normalizedLocation.subGroup;
+  const resolvedSubGroup = options?.subGroup;
   if (resolvedSubGroup) searchParams.set('subGroup', resolvedSubGroup);
   const query = searchParams.toString();
   return query ? `/dsh/operations?${query}` : '/dsh/operations';

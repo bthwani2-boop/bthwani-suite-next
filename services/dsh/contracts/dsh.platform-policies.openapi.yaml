@@ -161,7 +161,7 @@ components:
       required:
       - id
       - name
-      - cityCode
+      - serviceAreaCode
       - isActive
       - description
       - version
@@ -172,7 +172,7 @@ components:
           type: string
         name:
           type: string
-        cityCode:
+        serviceAreaCode:
           type: string
         isActive:
           type: boolean
@@ -192,7 +192,7 @@ components:
       additionalProperties: false
       required:
       - name
-      - cityCode
+      - serviceAreaCode
       - reason
       properties:
         id:
@@ -202,10 +202,11 @@ components:
           type: string
           minLength: 2
           maxLength: 160
-        cityCode:
+        serviceAreaCode:
           type: string
           minLength: 1
           maxLength: 80
+          description: Governed service-area code from dsh_service_area_geofences bound to this operational zone.
         description:
           type: string
           maxLength: 1000

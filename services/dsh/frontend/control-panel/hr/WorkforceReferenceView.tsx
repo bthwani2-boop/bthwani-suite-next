@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
 import { SettingsPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
@@ -12,9 +13,22 @@ import {
   useWorkforceReferenceData,
   workforceErrorMessage } from "../../shared/workforce";
 import type { WorkforceCity, WorkforceShift } from "../../shared/workforce";
+import { corrId } from "../../shared/_kernel/dsh-http-request";
 
 export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
   const reference = useWorkforceReferenceData(true);
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = React.useRef<Record<string, string>>({});
+  const commandFor = (key: string) => {
+    if (!actorId) throw new Error("جلسة لوحة التحكم غير جاهزة لتعديل المرجعيات.");
+    const scopedKey = `${actorId}:${key}`;
+    const existing = commandIds.current[scopedKey];
+    if (existing) return { key: scopedKey, id: existing };
+    const id = corrId("workforce-reference");
+    commandIds.current[scopedKey] = id;
+    return { key: scopedKey, id };
+  };
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [cityCode, setCityCode] = useState("");
@@ -24,11 +38,17 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
   const [shiftStartsAt, setShiftStartsAt] = useState("");
   const [shiftEndsAt, setShiftEndsAt] = useState("");
 
-  const run = async (action: () => Promise<unknown>) => {
+  const run = async (key: string, action: (commandId: string) => Promise<unknown>) => {
+    if (!actorId) {
+      setError("جلسة لوحة التحكم غير جاهزة لتعديل المرجعيات.");
+      return false;
+    }
+    const command = commandFor(key);
     setError(null);
     setBusy(true);
     try {
-      await action();
+      await action(command.id);
+      delete commandIds.current[command.key];
       await reference.reload();
       return true;
     } catch (err) {
@@ -39,8 +59,10 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
     }
   };
 
-  const toggleCity = (city: WorkforceCity) => run(() => updateWorkforceCity({ ...city, active: !(city.active ?? true) }));
-  const toggleShift = (shift: WorkforceShift) => run(() => updateWorkforceShift({ ...shift, active: !(shift.active ?? true) }));
+  const toggleCity = (city: WorkforceCity) => run(`city:update:${city.code}:${city.active ?? true}`, (commandId) =>
+    updateWorkforceCity({ ...city, active: !(city.active ?? true) }, commandId));
+  const toggleShift = (shift: WorkforceShift) => run(`shift:update:${shift.code}:${shift.active ?? true}`, (commandId) =>
+    updateWorkforceShift({ ...shift, active: !(shift.active ?? true) }, commandId));
 
   return (
     <SettingsPageFrame
@@ -82,7 +104,7 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
             variant="primary"
             disabled={busy || !cityCode.trim() || !cityName.trim()}
             onClick={() =>
-              void run(() => createWorkforceCity({ code: cityCode.trim().toUpperCase(), nameAr: cityName.trim(), active: true })).then((ok) => {
+              void run(`city:create:${cityCode.trim().toUpperCase()}:${cityName.trim()}`, (commandId) => createWorkforceCity({ code: cityCode.trim().toUpperCase(), nameAr: cityName.trim(), active: true }, commandId)).then((ok) => {
                 if (ok) {
                   setCityCode("");
                   setCityName("");
@@ -127,12 +149,12 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
             variant="primary"
             disabled={busy || !shiftCode.trim() || !shiftName.trim()}
             onClick={() =>
-              void run(() => createWorkforceShift({
+              void run(`shift:create:${shiftCode.trim()}:${shiftName.trim()}:${shiftStartsAt.trim()}:${shiftEndsAt.trim()}`, (commandId) => createWorkforceShift({
                 code: shiftCode.trim(),
                 nameAr: shiftName.trim(),
                 ...(shiftStartsAt.trim() ? { startsAt: shiftStartsAt.trim() } : {}),
                 ...(shiftEndsAt.trim() ? { endsAt: shiftEndsAt.trim() } : {}),
-                active: true })).then((ok) => {
+                active: true }, commandId)).then((ok) => {
                 if (ok) {
                   setShiftCode("");
                   setShiftName("");

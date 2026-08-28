@@ -8,10 +8,7 @@ export type {
   PlatformProviderRecord,
 } from "./platform-provider.types";
 
-export type { PlatformProviderAuditAction } from "./platform-provider-audit.types";
-
 export type { ProviderVisibleFields } from "./platform-provider-visibility.policy";
-export { toProviderVisibleFields } from "./platform-provider-visibility.policy";
 
 export { PROVIDER_SECRET_POLICIES, PROVIDER_CREDENTIAL_VISIBILITY, isForbiddenInFrontend } from "./platform-provider-secrets.policy";
 
@@ -22,8 +19,6 @@ export {
   PROVIDER_MUTATION_POLICY,
   WLT_BOUNDARY_PROVIDER_KINDS,
 } from "./platform-provider.policy";
-
-export type { MapsProviderPublicConfig } from "./platform-provider-public-config";
 
 export { PLATFORM_PROVIDER_REGISTRY } from "./platform-provider.registry";
 
@@ -39,7 +34,6 @@ export * from "./use-provider-registry-controller";
 
 export * from "./PlatformVarsProvider";
 export * from "./resolve-dsh-color-token";
-export * from "./appearance.contract";
 export * from "./platform.types";
 export * from "./platform-registry";
 export * from "./providers.api";

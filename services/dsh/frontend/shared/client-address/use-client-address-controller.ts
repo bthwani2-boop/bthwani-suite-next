@@ -6,6 +6,7 @@ import {
   setDshClientDefaultAddress,
   updateDshClientAddress,
 } from "./client-address.api";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   clearClientAddressAttempt,
   getOrCreateClientAddressAttempt,
@@ -73,6 +74,8 @@ function messageOf(error: unknown): string {
 }
 
 export function useClientAddressController() {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : "";
   const [state, setState] = useState<ClientAddressState>({ kind: "loading" });
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -127,11 +130,15 @@ export function useClientAddressController() {
 
   const createAddress = useCallback(async (input: DshClientAddressDraft): Promise<boolean> => {
     if (!validateMutationInput(input)) return false;
+    if (!actorId) {
+      setMutationError("جلسة العميل غير جاهزة لتثبيت هوية العنوان.");
+      return false;
+    }
     const address = await runMutation(async () => {
-      const attempt = await getOrCreateClientAddressAttempt(input);
+      const attempt = await getOrCreateClientAddressAttempt(actorId, input);
       const created = await createDshClientAddress(input, attempt.context);
       try {
-        await clearClientAddressAttempt(attempt.fingerprint);
+        await clearClientAddressAttempt(actorId, attempt.fingerprint);
       } catch {
         // The server accepted the idempotent mutation; replaying the stored key remains safe.
       }
@@ -141,7 +148,7 @@ export function useClientAddressController() {
     setSelectedAddressId(address.id);
     await load();
     return true;
-  }, [load, runMutation, validateMutationInput]);
+  }, [actorId, load, runMutation, validateMutationInput]);
 
   const updateAddress = useCallback(async (
     address: DshClientAddress,

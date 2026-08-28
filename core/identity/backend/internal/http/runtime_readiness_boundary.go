@@ -18,7 +18,7 @@ const (
 	minimumActivationHMACSecretLength = 32
 	minimumInternalServiceTokenLength = 32
 	identityMigrationServiceName      = "identity"
-	identityLatestMigration           = "identity-040_retire_local_platform_persona_roles.sql"
+	identityLatestMigration           = "identity-042_support_session_rotation.sql"
 	defaultReadinessProbeTimeout      = 2 * time.Second
 	defaultReadinessCheckTimeout      = 750 * time.Millisecond
 	defaultClockSkewLimit             = 5 * time.Second
@@ -490,14 +490,33 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Correlation-ID", correlationID)
 
+		// Canonical health/readiness handling - the boundary IS the authority.
+		if r.Method == http.MethodGet && r.URL.Path == "/identity/readiness" {
+			startedAt := time.Now()
+			settings, configurationFailure := runtimeProbeConfiguration()
+			if configurationFailure.failedCheck != "" {
+				writeReadinessFailure(w, configurationFailure, startedAt, correlationID)
+				return
+			}
+			result, completed := waitForRuntimeProbe(r, coordinator, store, settings)
+			if !completed {
+				return
+			}
+			if result.failedCheck != "" {
+				writeReadinessFailure(w, result, startedAt, correlationID)
+				return
+			}
+			writeReadinessSuccess(w, result, startedAt, correlationID)
+			return
+		}
+
 		if r.Method == http.MethodGet && r.URL.Path == "/identity/health" {
 			snapshot, statusCode := currentHealthSnapshot(correlationID)
 			sendJSON(w, statusCode, snapshot)
 			return
 		}
 
-		isReadinessRequest := r.Method == http.MethodGet && r.URL.Path == "/identity/readiness"
-		if !isReadinessRequest && !isIdentityOperationalRequest(r) {
+		if !isIdentityOperationalRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -517,17 +536,23 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 			return
 		}
 
-		writeReadinessSuccess(result, startedAt, correlationID)
-		if isReadinessRequest {
-			sendJSON(w, http.StatusOK, readinessStatus("HEALTHY", result, startedAt, correlationID))
-			return
-		}
+		recordReadinessSuccess(result, startedAt, correlationID)
 		w.Header().Set("X-Identity-Runtime-Status", "HEALTHY")
 		next.ServeHTTP(w, r)
 	})
 }
 
-func writeReadinessSuccess(result runtimeReadinessResult, startedAt time.Time, correlationID string) {
+func writeReadinessSuccess(
+	w http.ResponseWriter,
+	result runtimeReadinessResult,
+	startedAt time.Time,
+	correlationID string,
+) {
+	recordReadinessSuccess(result, startedAt, correlationID)
+	sendJSON(w, http.StatusOK, readinessStatus("HEALTHY", result, startedAt, correlationID))
+}
+
+func recordReadinessSuccess(result runtimeReadinessResult, startedAt time.Time, correlationID string) {
 	lastReadinessFailed.Store(false)
 	successTotal := readinessSuccesses.Add(1)
 	snapshot := readinessStatus("HEALTHY", result, startedAt, correlationID)

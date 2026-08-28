@@ -6,9 +6,9 @@
     "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs wlt",
     "openapi:generate": "node -e \"require('node:fs').mkdirSync('clients/generated',{recursive:true})\" && pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/wlt.bundle.openapi.yaml -o clients/generated/wlt-api.ts",
     "openapi:verify": "node ../../tools/guards/wlt-openapi-bundle-gate.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "pnpm --dir ../.. exec nx run contracts:materialize && tsc --noEmit -p tsconfig.json",
     "build": "node ../../tools/scripts/verify-go-build.mjs backend",
-    "test": "node --experimental-loader ./tests/ts-loader.mjs --test tests/*.test.mjs ../../tools/scripts/wlt-openapi-bundle-lib.test.mjs && cd backend && go test ./...",
+    "test": "pnpm --dir ../.. exec nx run contracts:materialize && node --experimental-loader ./tests/ts-loader.mjs --test tests/*.test.mjs ../../tools/scripts/wlt-openapi-bundle-lib.test.mjs && cd backend && go test ./...",
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary && pnpm --dir ../.. run guard:wlt-financial-boundary && pnpm --dir ../.. run guard:wlt-openapi-bundle"
   },
   "dependencies": {},

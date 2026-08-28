@@ -25,6 +25,12 @@ export type OperatorOrderWorkboardRow = {
   readonly financialClosureStatus: DshFinancialClosureStatus;
   readonly financialClosureReference: string | null;
   readonly financialClosureFailure: string | null;
+  readonly financialOutboxId: string | null;
+  readonly financialOutboxStatus: string;
+  readonly financialRecoveryDisposition: string;
+  readonly financialDiagnosticCode: string | null;
+  readonly financialAttemptCount: number;
+  readonly financialReadbackAttemptCount: number;
   readonly totalPrice: number;
   readonly createdAt: string;
   readonly updatedAt: string;

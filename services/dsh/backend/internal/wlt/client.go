@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-var ErrPaymentSessionOutcomeUnknown = errors.New("WLT payment-session outcome is unknown")
+var (
+	ErrPaymentSessionOutcomeUnknown = errors.New("WLT payment-session outcome is unknown")
+	ErrMutationOutcomeUnknown       = errors.New("WLT mutation outcome is unknown")
+)
 
 type PaymentSessionHTTPError struct {
 	StatusCode int
@@ -26,6 +29,10 @@ func IsPaymentSessionOutcomeUnknown(err error) bool {
 	return errors.Is(err, ErrPaymentSessionOutcomeUnknown)
 }
 
+func IsMutationOutcomeUnknown(err error) bool {
+	return errors.Is(err, ErrMutationOutcomeUnknown)
+}
+
 type Client struct {
 	baseURL      string
 	serviceToken string
@@ -35,18 +42,15 @@ type Client struct {
 type CreatePaymentSessionInput struct {
 	CheckoutIntentID string `json:"checkoutIntentId,omitempty"`
 	SpecialRequestID string `json:"specialRequestId,omitempty"`
-	// OperatorContextID is compile-only while legacy DSH call sites are cleaned.
-	// It is excluded from JSON and cannot select WLT financial ownership.
-	OperatorContextID string `json:"-"`
-	ClientID          string `json:"clientId"`
-	StoreID           string `json:"storeId"`
-	PaymentMethod     string `json:"paymentMethod"`
-	AmountMinorUnits  int64  `json:"amountMinorUnits"`
-	Currency          string `json:"currency"`
-	CartSnapshotHash  string `json:"cartSnapshotHash"`
-	PricingQuoteID    string `json:"pricingQuoteId"`
-	CorrelationID     string `json:"-"`
-	IdempotencyKey    string `json:"-"`
+	ClientID         string `json:"clientId"`
+	StoreID          string `json:"storeId"`
+	PaymentMethod    string `json:"paymentMethod"`
+	AmountMinorUnits int64  `json:"amountMinorUnits"`
+	Currency         string `json:"currency"`
+	CartSnapshotHash string `json:"cartSnapshotHash"`
+	PricingQuoteID   string `json:"pricingQuoteId"`
+	CorrelationID    string `json:"-"`
+	IdempotencyKey   string `json:"-"`
 }
 
 type PaymentSession struct {
@@ -318,11 +322,14 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("call WLT expire-session: %w", err)
+		return fmt.Errorf("%w: call WLT expire-session: %v", ErrMutationOutcomeUnknown, err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode == http.StatusConflict {
 		return nil
+	}
+	if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
+		return fmt.Errorf("%w: WLT expire-session returned HTTP %d", ErrMutationOutcomeUnknown, response.StatusCode)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return fmt.Errorf("WLT expire-session returned HTTP %d", response.StatusCode)

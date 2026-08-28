@@ -8,7 +8,12 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./native-data-adapters": "./src/native-data-adapters.ts"
+    "./native-data-adapters": "./src/native-data-adapters.ts",
+    "./connectivity-adapter": "./src/connectivity-adapter.ts",
+    "./storage-adapter": "./src/storage-adapter.ts",
+    "./mutation-identity-scope": "./src/mutation-identity-scope.ts",
+    "./installation-id": "./src/installation-id.ts",
+    "./power-policy": "./src/power-policy.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

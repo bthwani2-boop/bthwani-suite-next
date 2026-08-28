@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	ErrInvalid             = errors.New("invalid platform policy")
-	ErrNotFound            = errors.New("platform policy not found")
-	ErrVersionConflict     = errors.New("platform policy version conflict")
-	ErrIdempotencyConflict = errors.New("platform policy idempotency conflict")
+	ErrInvalid                = errors.New("invalid platform policy")
+	ErrNotFound               = errors.New("platform policy not found")
+	ErrVersionConflict        = errors.New("platform policy version conflict")
+	ErrIdempotencyConflict    = errors.New("platform policy idempotency conflict")
+	ErrPolicyTruthUnavailable = errors.New("operational policy truth unavailable")
 )
 
 type MutationContext struct {
@@ -27,14 +28,14 @@ type MutationContext struct {
 }
 
 type Zone struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	CityCode    string    `json:"cityCode"`
-	IsActive    bool      `json:"isActive"`
-	Description string    `json:"description"`
-	Version     int       `json:"version"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	ServiceAreaCode string    `json:"serviceAreaCode"`
+	IsActive        bool      `json:"isActive"`
+	Description     string    `json:"description"`
+	Version         int       `json:"version"`
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
 type SlaRule struct {
@@ -72,12 +73,12 @@ func ListZones(
 	includeInactive bool,
 ) ([]Zone, error) {
 	query := `
-		SELECT id, name, city_code, is_active, description, version, created_at, updated_at
+		SELECT id, name, service_area_code, is_active, description, version, created_at, updated_at
 		FROM dsh_platform_zones`
 	if !includeInactive {
 		query += ` WHERE is_active = TRUE`
 	}
-	query += ` ORDER BY city_code, name, id`
+	query += ` ORDER BY service_area_code, name, id`
 
 	rows, err := db.QueryContext(ctx, query)
 	if err != nil {
@@ -91,7 +92,7 @@ func ListZones(
 		if err := rows.Scan(
 			&item.ID,
 			&item.Name,
-			&item.CityCode,
+			&item.ServiceAreaCode,
 			&item.IsActive,
 			&item.Description,
 			&item.Version,
@@ -188,7 +189,7 @@ func GetZoneServiceability(
 			(
 				SELECT COUNT(*)::int
 				FROM dsh_stores s
-				WHERE s.service_area_code = z.city_code
+				WHERE s.service_area_code = z.service_area_code
 				  AND s.status = 'published'
 				  AND s.is_visible = TRUE
 				  AND s.serviceability_status = 'serviceable'

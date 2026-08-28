@@ -1,6 +1,7 @@
 package commercial
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"strings"
@@ -18,14 +19,23 @@ type CreateSubscriptionPaymentSessionInput struct {
 }
 
 func CreateSubscriptionPaymentSession(
+	ctx context.Context,
 	db *sql.DB,
 	input CreateSubscriptionPaymentSessionInput,
 	idempotencyKey string,
 	correlationID string,
 ) (*reference.PaymentSession, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, ErrInvalid
+	}
 	input.SubscriptionPurchaseID = strings.TrimSpace(input.SubscriptionPurchaseID)
 	input.ProductReference = strings.TrimSpace(input.ProductReference)
 	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	if input.OperatorContextID != "" && input.OperatorContextID != operatorContextID {
+		return nil, ErrInvalid
+	}
+	input.OperatorContextID = operatorContextID
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.PaymentMethod = strings.TrimSpace(input.PaymentMethod)
 	if db == nil || input.SubscriptionPurchaseID == "" || input.ProductReference == "" ||
@@ -77,7 +87,7 @@ func HandleCreateSubscriptionPaymentSession(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "MISSING_CORRELATION_ID", "X-Correlation-ID is required")
 			return
 		}
-		session, err := CreateSubscriptionPaymentSession(db, input, idempotencyKey, correlationID)
+		session, err := CreateSubscriptionPaymentSession(r.Context(), db, input, idempotencyKey, correlationID)
 		if err != nil {
 			writeError(w, err)
 			return

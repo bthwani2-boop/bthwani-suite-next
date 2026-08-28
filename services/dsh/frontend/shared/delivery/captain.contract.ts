@@ -170,34 +170,32 @@ export type DshCaptainRouteId =
   | 'dsh-captain-pod-submission'
   | 'dsh-captain-map';
 
-export type DshCaptainLegacyRoute = DshCaptainRoute;
-
 export type DshCaptainRouteRecord = {
   readonly routeId: DshCaptainRouteId;
-  readonly legacyRoute: DshCaptainLegacyRoute;
+  readonly route: DshCaptainRoute;
   readonly screenId: string;
   readonly ownerPath: string;
 };
 
 export const DSH_CAPTAIN_ROUTE_RECORDS = [
-  { routeId: 'dsh-captain-home',             legacyRoute: 'home',             screenId: 'captain.dsh.home.dashboard',       ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
-  { routeId: 'dsh-captain-account',          legacyRoute: 'account',          screenId: 'captain.dsh.account.root',         ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
-  { routeId: 'dsh-captain-account-profile',  legacyRoute: 'account-profile',  screenId: 'captain.dsh.account.profile',      ownerPath: 'dsh/frontend/app-captain/account/DshCaptainProfileScreen.tsx' },
-  { routeId: 'dsh-captain-account-finance',  legacyRoute: 'account-finance',  screenId: 'captain.dsh.account.finance',      ownerPath: 'wlt/frontend/app-captain/finance/WltCaptainFinanceScreen.tsx' },
-  { routeId: 'dsh-captain-account-orders',   legacyRoute: 'account-orders',   screenId: 'captain.dsh.account.orders',       ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
-  { routeId: 'dsh-captain-account-docs',     legacyRoute: 'account-docs',     screenId: 'captain.dsh.account.docs',         ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
-  { routeId: 'dsh-captain-account-shifts',   legacyRoute: 'account-shifts',   screenId: 'captain.dsh.account.shifts',       ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
-  { routeId: 'dsh-captain-account-support',  legacyRoute: 'account-support',  screenId: 'captain.dsh.account.support',      ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
-  { routeId: 'dsh-captain-entry',            legacyRoute: 'entry',            screenId: 'captain.dsh.entry',                ownerPath: 'dsh/frontend/app-captain/account/DshCaptainEntryScreen.tsx' },
-  { routeId: 'dsh-captain-inbox',            legacyRoute: 'inbox',            screenId: 'captain.dsh.orders.inbox',         ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx' },
-  { routeId: 'dsh-captain-detail',           legacyRoute: 'detail',           screenId: 'captain.dsh.orders.detail',        ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx' },
-  { routeId: 'dsh-captain-order-chat',       legacyRoute: 'orderchat',        screenId: 'captain.dsh.orders.chat',          ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx' },
-  { routeId: 'dsh-captain-bell',             legacyRoute: 'bell',             screenId: 'captain.dsh.orders.bell',          ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx' },
-  { routeId: 'dsh-captain-support-directory',legacyRoute: 'support-directory',screenId: 'captain.dsh.support.directory',    ownerPath: 'dsh/frontend/app-captain/account/DshCaptainOperationsScreen.tsx' },
-  { routeId: 'dsh-captain-support-screen',   legacyRoute: 'support-screen',   screenId: 'captain.dsh.support.workspace',    ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
-  { routeId: 'dsh-captain-pickup-dropoff',   legacyRoute: 'pickup-dropoff',   screenId: 'captain.dsh.orders.pickup-dropoff',ownerPath: 'dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx' },
-  { routeId: 'dsh-captain-pod-submission',   legacyRoute: 'pod-submission',   screenId: 'captain.dsh.orders.pod-submission',ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx' },
-  { routeId: 'dsh-captain-map',              legacyRoute: 'map',              screenId: 'captain.dsh.orders.map',           ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx' },
+  { routeId: 'dsh-captain-home',             route: 'home',             screenId: 'captain.dsh.home.dashboard',       ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
+  { routeId: 'dsh-captain-account',          route: 'account',          screenId: 'captain.dsh.account.root',         ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
+  { routeId: 'dsh-captain-account-profile',  route: 'account-profile',  screenId: 'captain.dsh.account.profile',      ownerPath: 'dsh/frontend/app-captain/account/DshCaptainProfileScreen.tsx' },
+  { routeId: 'dsh-captain-account-finance',  route: 'account-finance',  screenId: 'captain.dsh.account.finance',      ownerPath: 'wlt/frontend/app-captain/finance/WltCaptainFinanceScreen.tsx' },
+  { routeId: 'dsh-captain-account-orders',   route: 'account-orders',   screenId: 'captain.dsh.account.orders',       ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
+  { routeId: 'dsh-captain-account-docs',     route: 'account-docs',     screenId: 'captain.dsh.account.docs',         ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
+  { routeId: 'dsh-captain-account-shifts',   route: 'account-shifts',   screenId: 'captain.dsh.account.shifts',       ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
+  { routeId: 'dsh-captain-account-support',  route: 'account-support',  screenId: 'captain.dsh.account.support',      ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
+  { routeId: 'dsh-captain-entry',            route: 'entry',            screenId: 'captain.dsh.entry',                ownerPath: 'dsh/frontend/app-captain/account/DshCaptainEntryScreen.tsx' },
+  { routeId: 'dsh-captain-inbox',            route: 'inbox',            screenId: 'captain.dsh.orders.inbox',         ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx' },
+  { routeId: 'dsh-captain-detail',           route: 'detail',           screenId: 'captain.dsh.orders.detail',        ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx' },
+  { routeId: 'dsh-captain-order-chat',       route: 'orderchat',        screenId: 'captain.dsh.orders.chat',          ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx' },
+  { routeId: 'dsh-captain-bell',             route: 'bell',             screenId: 'captain.dsh.orders.bell',          ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx' },
+  { routeId: 'dsh-captain-support-directory',route: 'support-directory',screenId: 'captain.dsh.support.directory',    ownerPath: 'dsh/frontend/app-captain/account/DshCaptainOperationsScreen.tsx' },
+  { routeId: 'dsh-captain-support-screen',   route: 'support-screen',   screenId: 'captain.dsh.support.workspace',    ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
+  { routeId: 'dsh-captain-pickup-dropoff',   route: 'pickup-dropoff',   screenId: 'captain.dsh.orders.pickup-dropoff',ownerPath: 'dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx' },
+  { routeId: 'dsh-captain-pod-submission',   route: 'pod-submission',   screenId: 'captain.dsh.orders.pod-submission',ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx' },
+  { routeId: 'dsh-captain-map',              route: 'map',              screenId: 'captain.dsh.orders.map',           ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx' },
 ] as const satisfies readonly DshCaptainRouteRecord[];
 
 // ─── Surface Bindings (Moved from contracts/captain/dsh-captain-binding.contracts.ts) ───
@@ -306,7 +304,7 @@ export const DSH_CAPTAIN_SCREEN_REGISTRY = [
 ] as const satisfies readonly DshCaptainScreenRegistryItem[];
 
 export function getDshCaptainRouteRecord(route: DshCaptainRoute): DshCaptainRouteRecord | undefined {
-  return DSH_CAPTAIN_ROUTE_RECORDS.find((record) => record.legacyRoute === route);
+  return DSH_CAPTAIN_ROUTE_RECORDS.find((record) => record.route === route);
 }
 
 export function getDshCaptainScreenRegistryItem(

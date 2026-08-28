@@ -8,6 +8,7 @@ import (
 
 func TestJourneys015Through020ExposeGovernedRoutes(t *testing.T) {
 	router := NewRouter(nil, nil, nil, nil, nil, nil)
+	RegisterOrderCancellationRoutes(router, nil, nil, nil, nil)
 	cases := []struct {
 		journey string
 		method  string
@@ -21,7 +22,7 @@ func TestJourneys015Through020ExposeGovernedRoutes(t *testing.T) {
 		{journey: " captain location", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/location", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/location"},
 		{journey: " client tracking", method: http.MethodGet, path: "/dsh/client/orders/order-1/tracking", pattern: "GET /dsh/client/orders/{orderId}/tracking"},
 		{journey: " captain proof", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/pod", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/pod"},
-		{journey: " operator cancellation", method: http.MethodPost, path: "/dsh/operator/orders/order-1/cancel", pattern: "POST /dsh/operator/orders/{orderId}/cancel"},
+		{journey: " operator cancellation", method: http.MethodPost, path: "/dsh/operator/orders/order-1/cancellation", pattern: "POST /dsh/operator/orders/{orderId}/cancellation"},
 		{journey: " exception report", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/exceptions", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/exceptions"},
 		{journey: " return arrival", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/return-to-store/arrive", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive"},
 		{journey: " partner receipt", method: http.MethodPost, path: "/dsh/partner/orders/order-1/return-to-store/accept", pattern: "POST /dsh/partner/orders/{orderId}/return-to-store/accept"},

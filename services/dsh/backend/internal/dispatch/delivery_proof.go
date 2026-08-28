@@ -104,6 +104,7 @@ type ReviewDeliveryProofInput struct {
 	ExpectedVersion int
 	Reason          string
 	Accept          bool
+	IdempotencyKey  string
 }
 
 func IssueDeliveryPIN(db *sql.DB, orderID, clientID string) (*IssuedDeliveryPIN, error) {
@@ -320,15 +321,36 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 	proofID = strings.TrimSpace(proofID)
 	operatorID = strings.TrimSpace(operatorID)
 	input.Reason = strings.TrimSpace(input.Reason)
-	if proofID == "" || operatorID == "" || input.ExpectedVersion <= 0 || len(input.Reason) < 5 {
-		return nil, fmt.Errorf("%w: proof, operator, expectedVersion and review reason are required", ErrInvalid)
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
+	if proofID == "" || operatorID == "" || len(input.IdempotencyKey) < 8 || input.ExpectedVersion <= 0 || len(input.Reason) < 5 {
+		return nil, fmt.Errorf("%w: proof, operator, idempotency key, expectedVersion and review reason are required", ErrInvalid)
 	}
 
+	fingerprint := deliveryProofReviewFingerprint(proofID, operatorID, input)
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
+
+	var storedProofID, storedFingerprint string
+	receiptErr := tx.QueryRow(`
+		SELECT proof_id::text, request_fingerprint
+		FROM dsh_delivery_proof_review_receipts
+		WHERE operator_id=$1 AND idempotency_key=$2
+		FOR UPDATE`, operatorID, input.IdempotencyKey).Scan(&storedProofID, &storedFingerprint)
+	if receiptErr == nil {
+		if storedProofID != proofID || storedFingerprint != fingerprint {
+			return nil, ErrIdempotencyConflict
+		}
+		if err = tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetOperatorDeliveryProof(db, proofID)
+	}
+	if !errors.Is(receiptErr, sql.ErrNoRows) {
+		return nil, receiptErr
+	}
 
 	proof, _, err := scanDeliveryProofRow(tx.QueryRow(deliveryProofSelectSQL()+` WHERE p.id=$1::uuid FOR UPDATE`, proofID))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -337,11 +359,50 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 	if err != nil {
 		return nil, err
 	}
+	if receiptErr = tx.QueryRow(`
+		SELECT proof_id::text, request_fingerprint
+		FROM dsh_delivery_proof_review_receipts
+		WHERE operator_id=$1 AND idempotency_key=$2
+		FOR UPDATE`, operatorID, input.IdempotencyKey).Scan(&storedProofID, &storedFingerprint); receiptErr == nil {
+		if storedProofID != proofID || storedFingerprint != fingerprint {
+			return nil, ErrIdempotencyConflict
+		}
+		if err = tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetOperatorDeliveryProof(db, proofID)
+	} else if !errors.Is(receiptErr, sql.ErrNoRows) {
+		return nil, receiptErr
+	}
 	if proof.Version != input.ExpectedVersion {
 		return nil, fmt.Errorf("%w: delivery proof version changed", ErrConflict)
 	}
 	if proof.Status != DeliveryProofPendingReview && proof.Status != DeliveryProofSubmitted {
 		return nil, fmt.Errorf("%w: only pending proof can be reviewed", ErrConflict)
+	}
+	receiptResult, err := tx.Exec(`
+		INSERT INTO dsh_delivery_proof_review_receipts
+			(proof_id, operator_id, idempotency_key, request_fingerprint)
+		VALUES ($1::uuid, $2, $3, $4)
+		ON CONFLICT (operator_id, idempotency_key) DO NOTHING`, proofID, operatorID, input.IdempotencyKey, fingerprint)
+	if err != nil {
+		return nil, err
+	}
+	if affected, _ := receiptResult.RowsAffected(); affected != 1 {
+		if err = tx.QueryRow(`
+			SELECT proof_id::text, request_fingerprint
+			FROM dsh_delivery_proof_review_receipts
+			WHERE operator_id=$1 AND idempotency_key=$2
+			FOR UPDATE`, operatorID, input.IdempotencyKey).Scan(&storedProofID, &storedFingerprint); err != nil {
+			return nil, err
+		}
+		if storedProofID != proofID || storedFingerprint != fingerprint {
+			return nil, ErrIdempotencyConflict
+		}
+		if err = tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetOperatorDeliveryProof(db, proofID)
 	}
 
 	if !input.Accept {
@@ -788,6 +849,18 @@ func hashDeliveryPIN(assignmentID, pin string) (string, error) {
 		return "", fmt.Errorf("hash delivery PIN: %w", err)
 	}
 	return string(hash), nil
+}
+
+func deliveryProofReviewFingerprint(proofID, operatorID string, input ReviewDeliveryProofInput) string {
+	raw := strings.Join([]string{
+		proofID,
+		operatorID,
+		fmt.Sprintf("%t", input.Accept),
+		fmt.Sprintf("%d", input.ExpectedVersion),
+		input.Reason,
+	}, "|")
+	sum := sha256.Sum256([]byte(raw))
+	return fmt.Sprintf("%x", sum[:])
 }
 
 func deliveryProofFingerprint(assignmentID, captainID string, input SubmitDeliveryProofInput, capturedAt time.Time) string {

@@ -31,7 +31,7 @@ func (p *governedRuntimeProvider) Refund(_ context.Context, _ any, meta provider
 	p.lastMeta = meta
 	return p.result, p.err
 }
-func (p *governedRuntimeProvider) Status(_ context.Context, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func (p *governedRuntimeProvider) Status(_ context.Context, _ provider.StatusInquiry, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	return provider.ProviderResult{}, fmt.Errorf("not used in this test")
 }
 

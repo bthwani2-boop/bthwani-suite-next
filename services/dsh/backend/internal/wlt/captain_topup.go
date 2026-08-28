@@ -17,18 +17,18 @@ var ErrCaptainTopUpNotOwned = errors.New("captain top-up session is not owned by
 // CaptainTopUpSession is the bounded WLT readback used by the Captain Cash-In
 // consumer. Monetary state, purpose and ledger references remain WLT-owned.
 type CaptainTopUpSession struct {
-	ID                   string  `json:"id"`
-	OperatorContextID    string  `json:"operatorContextId"`
-	ClientID             string  `json:"clientId"`
-	TopUpReference       *string `json:"topupReference"`
-	TopUpActorType       *string `json:"topupActorType"`
-	FinancialPurpose     string  `json:"financialPurpose"`
-	PaymentMethod        string  `json:"paymentMethod"`
-	Status               string  `json:"status"`
-	ProviderReference    string  `json:"providerReference"`
-	AmountMinorUnits     int64   `json:"amountMinorUnits"`
-	Currency             string  `json:"currency"`
-	CapturedAt           *string `json:"capturedAt"`
+	ID                string  `json:"id"`
+	OperatorContextID string  `json:"operatorContextId"`
+	ClientID          string  `json:"clientId"`
+	TopUpReference    *string `json:"topupReference"`
+	TopUpActorType    *string `json:"topupActorType"`
+	FinancialPurpose  string  `json:"financialPurpose"`
+	PaymentMethod     string  `json:"paymentMethod"`
+	Status            string  `json:"status"`
+	ProviderReference string  `json:"providerReference"`
+	AmountMinorUnits  int64   `json:"amountMinorUnits"`
+	Currency          string  `json:"currency"`
+	CapturedAt        *string `json:"capturedAt"`
 }
 
 type captainTopUpEnvelope struct {
@@ -70,11 +70,31 @@ func (c *Client) captainTopUpRequest(ctx context.Context, method, path string, b
 		return 0, nil, fmt.Errorf("call WLT Captain top-up route: %w", err)
 	}
 	defer response.Body.Close()
-	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes))
+	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes+1))
 	if err != nil {
 		return 0, nil, fmt.Errorf("read WLT Captain top-up response: %w", err)
 	}
-	return response.StatusCode, responseBody, nil
+	if len(responseBody) > maxFinanceProxyResponseBytes {
+		return 0, nil, fmt.Errorf("WLT Captain top-up response exceeds the %d-byte limit", maxFinanceProxyResponseBytes)
+	}
+	opID := "finance.payment_sessions.read"
+	switch {
+	case req.Method == http.MethodPost && req.URL.Path == "/wlt/topup-sessions":
+		opID = "finance.topup_sessions.create"
+	case strings.HasSuffix(req.URL.Path, "/authorize"):
+		opID = "finance.topup_sessions.authorize"
+	case strings.HasSuffix(req.URL.Path, "/capture"):
+		opID = "finance.topup_sessions.capture"
+	}
+	op, err := Registry.GetOperation(opID)
+	if err != nil {
+		return 0, nil, err
+	}
+	normalizedStatus, normalizedBody, err := normalizeFinanceResponse(op, response.StatusCode, response.Header.Get("Content-Type"), responseBody)
+	if err != nil {
+		return 0, nil, fmt.Errorf("validate WLT Captain top-up response: %w", err)
+	}
+	return normalizedStatus, normalizedBody, nil
 }
 
 func (c *Client) CreateCaptainTopUpSession(ctx context.Context, actorID, topUpReference string, amountMinorUnits int64, currency, correlationID, idempotencyKey, operatorContextID string) (int, []byte, error) {

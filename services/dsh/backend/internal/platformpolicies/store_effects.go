@@ -28,10 +28,11 @@ func NormalizeFulfillmentMode(value string) (string, error) {
 }
 
 // resolveOperationalZoneForStore binds a store to exactly one governed
-// operational zone through the store's canonical service_area_code. The
-// platform-zones city_code column is the legacy persisted name for that
-// service-area binding. Ambiguous bindings are configuration corruption and
-// must fail closed instead of selecting an arbitrary zone by timestamp.
+// operational zone through the store's service_area_code. The zone-to-service-area
+// relationship is enforced by the persistence layer: dsh_platform_zones carries an
+// explicit foreign key to the canonical dsh_service_area_geofences owner and a
+// unique index guarantees at most one operational zone per service area. A missing
+// binding fails closed.
 func resolveOperationalZoneForStore(
 	ctx context.Context,
 	db *sql.DB,
@@ -46,41 +47,25 @@ func resolveOperationalZoneForStore(
 		return "", "", ErrNotFound
 	}
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("%w: store service-area read: %v", ErrPolicyTruthUnavailable, err)
 	}
 	serviceAreaCode = strings.ToLower(strings.TrimSpace(serviceAreaCode))
 	if serviceAreaCode == "" {
 		return "", "", ErrNotFound
 	}
 
-	rows, err := db.QueryContext(ctx, `
+	var zoneID string
+	err = db.QueryRowContext(ctx, `
 		SELECT id::text
 		FROM dsh_platform_zones
-		WHERE LOWER(city_code) = LOWER($1)
-		ORDER BY id`, serviceAreaCode)
-	if err != nil {
-		return "", "", err
-	}
-	defer rows.Close()
-
-	zoneIDs := make([]string, 0, 2)
-	for rows.Next() {
-		var zoneID string
-		if err := rows.Scan(&zoneID); err != nil {
-			return "", "", err
-		}
-		zoneIDs = append(zoneIDs, zoneID)
-		if len(zoneIDs) > 1 {
-			return "", "", fmt.Errorf("ambiguous operational zone mapping for service area %q", serviceAreaCode)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return "", "", err
-	}
-	if len(zoneIDs) == 0 {
+		WHERE LOWER(service_area_code) = LOWER($1)`, serviceAreaCode).Scan(&zoneID)
+	if errors.Is(err, sql.ErrNoRows) {
 		return "", "", ErrNotFound
 	}
-	return zoneIDs[0], serviceAreaCode, nil
+	if err != nil {
+		return "", "", fmt.Errorf("%w: operational-zone read: %v", ErrPolicyTruthUnavailable, err)
+	}
+	return zoneID, serviceAreaCode, nil
 }
 
 // EvaluateOperationalPolicyForStoreSnapshot is the single store-level policy
@@ -117,7 +102,7 @@ func EvaluateOperationalPolicyForStoreSnapshot(
 		WHERE LOWER(s.service_area_code) = LOWER($1)
 		  AND o.status NOT IN ('delivered', 'cancelled', 'returned_to_store')`, serviceAreaCode).Scan(&activeOrders)
 	if err != nil {
-		return OperationalDecision{}, 0, err
+		return OperationalDecision{}, 0, fmt.Errorf("%w: active-orders read: %v", ErrPolicyTruthUnavailable, err)
 	}
 
 	decision, err := EvaluateOperationalPolicy(ctx, db, OperationalEvaluationInput{

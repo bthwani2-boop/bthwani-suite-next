@@ -7,19 +7,17 @@ import (
 	"strings"
 )
 
-// CreateZoneInput and UpdateZoneInput/CreateZone/UpdateZone were dropped from
-// this package by the DSH infrastructure reconstruction without a migrated
-// consumer; they are restored here byte-for-byte from their last known-good
-// implementation because TestPostgresLifecycle (postgres_test.go) exercises
-// the full zone → SLA → capacity → rollback → idempotency chain through them,
-// and no replacement exists. HTTP mutation routes are intentionally not
-// re-registered for these primitives here; the owning contract must provide
-// the sole governed write path for any mutation that uses them.
+// Zone mutation is a product capability owned by DSH's governed control-panel
+// routes. CreateZone and UpdateZone are the single persistence writers used by
+// those authenticated routes and by the same lifecycle tests; tests must not
+// construct an alternate production writer or treat these primitives as a
+// test-only compatibility seam. The route layer supplies permission, actor,
+// correlation, reason, and idempotency context before entering this package.
 type CreateZoneInput struct {
-	ID          string `json:"id,omitempty"`
-	Name        string `json:"name"`
-	CityCode    string `json:"cityCode"`
-	Description string `json:"description,omitempty"`
+	ID              string `json:"id,omitempty"`
+	Name            string `json:"name"`
+	ServiceAreaCode string `json:"serviceAreaCode"`
+	Description     string `json:"description,omitempty"`
 }
 
 type UpdateZoneInput struct {
@@ -37,12 +35,12 @@ func CreateZone(
 ) (Zone, error) {
 	input.ID = strings.ToLower(strings.TrimSpace(input.ID))
 	input.Name = strings.TrimSpace(input.Name)
-	input.CityCode = strings.ToLower(strings.TrimSpace(input.CityCode))
+	input.ServiceAreaCode = strings.ToLower(strings.TrimSpace(input.ServiceAreaCode))
 	input.Description = strings.TrimSpace(input.Description)
 	if input.Name == "" ||
 		len(input.Name) > 160 ||
-		input.CityCode == "" ||
-		len(input.CityCode) > 80 ||
+		input.ServiceAreaCode == "" ||
+		len(input.ServiceAreaCode) > 80 ||
 		len(input.Description) > 1000 ||
 		!validMutation(mutation) {
 		return Zone{}, ErrInvalid
@@ -59,17 +57,17 @@ func CreateZone(
 			var err error
 			if input.ID == "" {
 				err = tx.QueryRowContext(ctx, `
-					INSERT INTO dsh_platform_zones (name, city_code, description)
+					INSERT INTO dsh_platform_zones (name, service_area_code, description)
 					VALUES ($1, $2, $3)
-					RETURNING id, name, city_code, is_active, description,
+					RETURNING id, name, service_area_code, is_active, description,
 					          version, created_at, updated_at`,
 					input.Name,
-					input.CityCode,
+					input.ServiceAreaCode,
 					input.Description,
 				).Scan(
 					&item.ID,
 					&item.Name,
-					&item.CityCode,
+					&item.ServiceAreaCode,
 					&item.IsActive,
 					&item.Description,
 					&item.Version,
@@ -78,18 +76,18 @@ func CreateZone(
 				)
 			} else {
 				err = tx.QueryRowContext(ctx, `
-					INSERT INTO dsh_platform_zones (id, name, city_code, description)
+					INSERT INTO dsh_platform_zones (id, name, service_area_code, description)
 					VALUES ($1, $2, $3, $4)
-					RETURNING id, name, city_code, is_active, description,
+					RETURNING id, name, service_area_code, is_active, description,
 					          version, created_at, updated_at`,
 					input.ID,
 					input.Name,
-					input.CityCode,
+					input.ServiceAreaCode,
 					input.Description,
 				).Scan(
 					&item.ID,
 					&item.Name,
-					&item.CityCode,
+					&item.ServiceAreaCode,
 					&item.IsActive,
 					&item.Description,
 					&item.Version,
@@ -156,14 +154,14 @@ func UpdateZone(
 		func(tx *sql.Tx) (Zone, error) {
 			var before Zone
 			err := tx.QueryRowContext(ctx, `
-				SELECT id, name, city_code, is_active, description,
+				SELECT id, name, service_area_code, is_active, description,
 				       version, created_at, updated_at
 				FROM dsh_platform_zones
 				WHERE id = $1
 				FOR UPDATE`, zoneID).Scan(
 				&before.ID,
 				&before.Name,
-				&before.CityCode,
+				&before.ServiceAreaCode,
 				&before.IsActive,
 				&before.Description,
 				&before.Version,
@@ -202,7 +200,7 @@ func UpdateZone(
 				    version = version + 1,
 				    updated_at = NOW()
 				WHERE id = $1
-				RETURNING id, name, city_code, is_active, description,
+				RETURNING id, name, service_area_code, is_active, description,
 				          version, created_at, updated_at`,
 				zoneID,
 				name,
@@ -211,7 +209,7 @@ func UpdateZone(
 			).Scan(
 				&item.ID,
 				&item.Name,
-				&item.CityCode,
+				&item.ServiceAreaCode,
 				&item.IsActive,
 				&item.Description,
 				&item.Version,

@@ -44,7 +44,7 @@ test("partner field rating keeps failures visible and confirms canonical complet
 test("partner order mutations carry server version and durable idempotency headers", async () => {
   const api = await read("services/dsh/frontend/shared/orders/orders.api.ts");
   const controller = await read("services/dsh/frontend/shared/orders/use-partner-order-commands.ts");
-  const decisionScreen = await read("services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx");
+  const journey = await read("services/dsh/frontend/app-partner/DshPartnerOrderJourneyRenderer.tsx");
   const schema = await read("services/dsh/contracts/components/schemas/orders.schemas.yaml");
 
   assert.match(schema, /required: \[id, version,/);
@@ -52,7 +52,7 @@ test("partner order mutations carry server version and durable idempotency heade
   assert.match(api, /idempotencyKey: options\.idempotencyKey \?\? corrId\("partner-order-command"\)/);
   assert.match(controller, /expectedVersion\?: number/);
   assert.match(controller, /idempotencyKey: corrId\('partner-order-command'\)/);
-  assert.match(decisionScreen, /commands\.execute\('accept', orderId, order\?\.version\)/);
+  assert.match(journey, /buildDshPartnerSupportDirectoryRouteFromFlow\('order-reject', 'orders', orderId\)/);
 });
 
 test("partner surface keeps store scope explicit while navigation is router-owned", async () => {

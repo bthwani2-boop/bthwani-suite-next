@@ -4,7 +4,6 @@ export * from './use-operator-order-workboard';
 export * from './use-dispatch-captain-options';
 export * from './use-dispatch-operations';
 export * from './dsh-operational-registry';
-export * from './dsh-operational-summary-adapter';
 export * from './dsh-operational.contract';
 export * from './operations.types';
 export * from './operations-registry';

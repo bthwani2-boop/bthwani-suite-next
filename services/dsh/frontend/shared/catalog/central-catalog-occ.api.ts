@@ -18,14 +18,6 @@ type NodeMutationInput = NonNullable<operations["updateCatalogNode"]["requestBod
 type ProductMutationInput = NonNullable<operations["updateMasterProduct"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type ProposalTransitionInput = Parameters<typeof catalogApi.transitionProductProposal>[1] & { readonly expectedVersion: number };
 type AssortmentMutationInput = Parameters<typeof catalogApi.upsertOperatorStoreAssortment>[2] & { readonly expectedVersion?: number };
-type ProposalMutationInput = {
-  readonly expectedVersion: number;
-  readonly proposedNameAr?: string;
-  readonly proposedNameEn?: string;
-  readonly brand?: string;
-  readonly barcode?: string | null;
-  readonly imageObjectKey?: string | null;
-};
 type AssetMutationInput = NonNullable<operations["updateCatalogAsset"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type AssetReviewInput = NonNullable<operations["reviewCatalogAsset"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 
@@ -187,29 +179,4 @@ export async function reviewCatalogAssetOCC(assetId: string, input: CatalogAsset
     { method: "POST", body: { ...input, expectedVersion } satisfies AssetReviewInput },
   );
   return response.asset;
-}
-
-export type ProductProposalPatchOCCInput = ProposalMutationInput;
-
-export async function updatePartnerProductProposalOCC(
-  proposalId: string,
-  input: ProductProposalPatchOCCInput,
-): Promise<ProductProposal> {
-  const response = await request<{ proposal: ProductProposal }>(
-    `/dsh/partner/catalog/product-proposals/${encodeURIComponent(proposalId)}`,
-    { method: "PUT", body: input },
-  );
-  return response.proposal;
-}
-
-export async function updateFieldProductProposalOCC(
-  partnerId: string,
-  proposalId: string,
-  input: ProductProposalPatchOCCInput,
-): Promise<ProductProposal> {
-  const response = await request<{ proposal: ProductProposal }>(
-    `/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals/${encodeURIComponent(proposalId)}`,
-    { method: "PUT", body: input },
-  );
-  return response.proposal;
 }

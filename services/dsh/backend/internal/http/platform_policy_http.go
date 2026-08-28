@@ -23,6 +23,8 @@ func writePlatformPolicyError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "operational policy changed; reload before retrying")
 	case errors.Is(err, platformpolicies.ErrIdempotencyConflict):
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was reused with a different operational policy request")
+	case errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable):
+		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "operational policy operation failed")
 	}

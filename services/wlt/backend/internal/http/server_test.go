@@ -9,7 +9,7 @@ import (
 )
 
 func TestMutationRoutesDisabledByDefault(t *testing.T) {
-	router := NewRouter(nil, false, nil)
+	router := NewRouter(nil, false, nil, nil)
 
 	gatedRoutes := []struct {
 		method string
@@ -41,7 +41,7 @@ func TestMutationRoutesDisabledByDefault(t *testing.T) {
 
 func TestRetiredLedgerMutationRouteIsNotRegistered(t *testing.T) {
 	for _, mutationsEnabled := range []bool{false, true} {
-		router := NewRouter(nil, mutationsEnabled, nil)
+		router := NewRouter(nil, mutationsEnabled, nil, nil)
 		req := httptest.NewRequest(http.MethodPost, "/wlt/ledger/entries", nil)
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)
@@ -57,8 +57,20 @@ func TestRetiredLedgerMutationRouteIsNotRegistered(t *testing.T) {
 // their handlers with no db.DB available in this unit test, so asserting
 // "not gated" for them would require a real database connection -- that is
 // covered by the wlt-go-db CI job instead, not here.
+func TestRetiredOrderCancellationRouteIsNotRegistered(t *testing.T) {
+	for _, mutationsEnabled := range []bool{false, true} {
+		router := NewRouter(nil, mutationsEnabled, nil, nil)
+		req := httptest.NewRequest(http.MethodPost, "/wlt/payment-sessions/ps-1/cancel-for-order", strings.NewReader(`{"orderId":"order-1","clientId":"client-1","reason":"customer request"}`))
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("mutationsEnabled=%t: retired POST /wlt/payment-sessions/{id}/cancel-for-order must return 404, got %d", mutationsEnabled, rec.Code)
+		}
+	}
+}
+
 func TestReadRoutesStillWorkWhenMutationsDisabled(t *testing.T) {
-	router := NewRouter(nil, false, nil)
+	router := NewRouter(nil, false, nil, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/wlt/health", nil)
 	rec := httptest.NewRecorder()
@@ -97,7 +109,7 @@ func concreteRoute(pattern string) (string, string) {
 func TestMutationRoutesRequireServiceAuth(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
 	t.Setenv("WLT_WORKFORCE_SERVICE_TOKEN", "test-workforce-service-token")
-	router, routes := newRouterWithRoutes(nil, true, nil)
+	router, routes := newRouterWithRoutes(nil, true, nil, nil)
 
 	checked := 0
 	for _, route := range routes {
@@ -126,7 +138,7 @@ func TestMutationRoutesRequireServiceAuth(t *testing.T) {
 func TestEveryFinancialMutationIsKillSwitchGated(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
 	t.Setenv("WLT_WORKFORCE_SERVICE_TOKEN", "test-workforce-service-token")
-	router, routes := newRouterWithRoutes(nil, true, killedDecisionService{})
+	router, routes := newRouterWithRoutes(nil, true, killedDecisionService{}, nil)
 
 	checked := 0
 	for _, route := range routes {
@@ -162,7 +174,7 @@ func TestEveryFinancialMutationIsKillSwitchGated(t *testing.T) {
 // TestNoWriteRouteEscapesTheMutationClassification catches a route registered
 // with read() or public() that actually mutates financial state.
 func TestNoWriteRouteEscapesTheMutationClassification(t *testing.T) {
-	_, routes := newRouterWithRoutes(nil, true, nil)
+	_, routes := newRouterWithRoutes(nil, true, nil, nil)
 	for _, route := range routes {
 		method, _ := concreteRoute(route.Pattern)
 		switch method {
@@ -183,7 +195,7 @@ func (killedDecisionService) IsCapabilityKilled(context.Context, string, string)
 
 func TestFinancialReadRoutesRequireInternalServiceAuth(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
-	router := NewRouter(nil, true, nil)
+	router := NewRouter(nil, true, nil, nil)
 
 	readRoutes := []string{
 		"/wlt/refunds",
@@ -199,6 +211,21 @@ func TestFinancialReadRoutesRequireInternalServiceAuth(t *testing.T) {
 		router.ServeHTTP(rec, req)
 		if rec.Code != http.StatusUnauthorized {
 			t.Fatalf("GET %s: expected 401 service auth gate, got %d", path, rec.Code)
+		}
+	}
+}
+
+// TestPenaltyLookupConeReservedSegments (root #9): the literal reserved
+// segment patterns must shadow the {penaltyId} wildcard so the by-incident
+// lookup cone can never be captured as an identifier.
+func TestPenaltyLookupConeReservedSegments(t *testing.T) {
+	router := NewRouter(nil, false, nil, nil)
+	for _, path := range []string{"/wlt/provider-penalties/by-incident"} {
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, path, nil))
+		body := recorder.Body.String()
+		if strings.Contains(body, "PROVIDER_PENALTY_NOT_FOUND") || strings.Contains(body, "INVALID_REQUEST") {
+			t.Fatalf("%s fell through to the wildcard lookup: %d %s", path, recorder.Code, body)
 		}
 	}
 }

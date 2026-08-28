@@ -30,6 +30,7 @@ func RegisterOperationalCoreRoutes(handler http.Handler, repo *workforce.Reposit
 	mux.HandleFunc("GET /workforce/me/operational-core", s.providerSelf("provider:read", s.getOwnCore))
 	mux.HandleFunc("GET /workforce/me/availability-notices", s.providerSelf("provider:read", s.listOwnAvailabilityNotices))
 	mux.HandleFunc("POST /workforce/me/availability-notices", s.providerSelf("provider:update", s.createOwnAvailabilityNotice))
+	mux.HandleFunc("PATCH /workforce/me/availability-notices/{noticeId}", s.providerSelf("provider:update", s.updateOwnAvailabilityNotice))
 	mux.HandleFunc("GET /workforce/me/incidents", s.providerSelf("provider:read", s.listOwnIncidents))
 	mux.HandleFunc("POST /workforce/me/incidents/{incidentId}/appeal", s.providerSelf("provider:update", s.appealOwnIncident))
 	mux.HandleFunc("POST /workforce/provider-incidents", s.operatorOnly("provider:update", s.createProviderIncident))
@@ -98,14 +99,13 @@ func (s *operationalCoreServer) patchOperatorCore(w http.ResponseWriter, r *http
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	before, _ := s.repo.OperationalCoreByActorID(r.Context(), actorID)
-	core, err := s.repo.PatchOperationalCore(r.Context(), actorID, identity.Subject, input)
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	core, err := s.repo.PatchOperationalCore(r.Context(), actorID, identity.Subject, firstRole(identity), correlationID, idempotencyKey, input)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
 	}
-	_ = s.repo.RecordAudit(r.Context(), identity.Subject, firstRole(identity), actorID,
-		"provider.operational_core.updated", before, core, "", r.Header.Get("X-Correlation-ID"))
 	readiness, err := s.repo.GovernedActivationReadiness(r.Context(), actorID)
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -134,13 +134,13 @@ func (s *operationalCoreServer) createOwnAvailabilityNotice(w http.ResponseWrite
 		return
 	}
 	input.OperatorContextID, _ = auth.OperatorContextIDFromContext(r.Context())
-	notice, err := s.repo.CreateAvailabilityNotice(r.Context(), identity.Subject, input)
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	notice, err := s.repo.CreateAvailabilityNotice(r.Context(), identity.Subject, identity.Subject, firstRole(identity), correlationID, idempotencyKey, input)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
 	}
-	_ = s.repo.RecordAudit(r.Context(), identity.Subject, firstRole(identity), identity.Subject,
-		"provider.availability_notice.created", nil, notice, input.Note, r.Header.Get("X-Correlation-ID"))
 	sendJSON(w, http.StatusCreated, map[string]any{"availabilityNotice": notice})
 }
 
@@ -154,6 +154,22 @@ func (s *operationalCoreServer) listOwnAvailabilityNotices(w http.ResponseWriter
 	sendJSON(w, http.StatusOK, map[string]any{"availabilityNotices": notices})
 }
 
+func (s *operationalCoreServer) updateOwnAvailabilityNotice(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.UpdateAvailabilityNoticeInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	input.OperatorContextID, _ = auth.OperatorContextIDFromContext(r.Context())
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	notice, err := s.repo.UpdateAvailabilityNotice(r.Context(), identity.Subject, r.PathValue("noticeId"), identity.Subject, firstRole(identity), correlationID, idempotencyKey, input)
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"availabilityNotice": notice})
+}
+
 func (s *operationalCoreServer) createProviderIncident(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	var input workforce.CreateProviderIncidentInput
 	if !decodeJSON(w, r, &input) {
@@ -162,13 +178,13 @@ func (s *operationalCoreServer) createProviderIncident(w http.ResponseWriter, r 
 	if !s.isCaptain(w, r, strings.TrimSpace(input.ActorID)) {
 		return
 	}
-	incident, err := s.repo.CreateProviderIncident(r.Context(), identity.Subject, input)
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	incident, err := s.repo.CreateProviderIncident(r.Context(), identity.Subject, identity.Subject, firstRole(identity), correlationID, idempotencyKey, input)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
 	}
-	_ = s.repo.RecordAudit(r.Context(), identity.Subject, firstRole(identity), input.ActorID,
-		"provider.incident.reported", nil, incident, input.Description, r.Header.Get("X-Correlation-ID"))
 	sendJSON(w, http.StatusCreated, map[string]any{"incident": incident})
 }
 
@@ -213,13 +229,13 @@ func (s *operationalCoreServer) appealOwnIncident(w http.ResponseWriter, r *http
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	incident, err := s.repo.SubmitProviderIncidentAppeal(r.Context(), identity.Subject, r.PathValue("incidentId"), input.Note)
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	incident, err := s.repo.SubmitProviderIncidentAppeal(r.Context(), identity.Subject, r.PathValue("incidentId"), identity.Subject, firstRole(identity), correlationID, idempotencyKey, input.Note)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
 	}
-	_ = s.repo.RecordAudit(r.Context(), identity.Subject, firstRole(identity), identity.Subject,
-		"provider.incident.appealed", nil, incident, input.Note, r.Header.Get("X-Correlation-ID"))
 	sendJSON(w, http.StatusOK, map[string]any{"incident": incident})
 }
 

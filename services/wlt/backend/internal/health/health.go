@@ -13,9 +13,10 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	// wlt-946 is the canonical manifest cutover and must gate readiness after COD initialization.
-	wltLatestMigration      = "wlt-946_cod_pending_initial_state.sql"
-	wltReadinessTimeout     = 2 * time.Second
+	// The latest active manifest migration is the readiness gate: no instance
+	// is ready while the canonical schema has not reached this cutover.
+	wltLatestMigration  = "wlt-962_wallet_projection_negative_balance.sql"
+	wltReadinessTimeout = 2 * time.Second
 )
 
 type runtimeReadinessStore interface {
@@ -51,10 +52,16 @@ func (s sqlRuntimeReadinessStore) Ready(ctx context.Context) (bool, error) {
 			AND to_regclass('public.wlt_checkout_pricing_quotes') IS NOT NULL
 			AND to_regclass('public.wlt_store_onboarding_fee_policy_versions') IS NOT NULL
 			AND to_regclass('public.wlt_provider_penalty_policies') IS NOT NULL
+			AND to_regclass('public.wlt_provider_penalties') IS NOT NULL
 			AND to_regclass('public.wlt_provider_debts') IS NOT NULL
 			AND to_regclass('public.wlt_captain_collateral_policies') IS NOT NULL
 			AND to_regclass('public.wlt_captain_collateral_positions') IS NOT NULL
-			AND to_regclass('public.wlt_captain_collateral_events') IS NOT NULL`,
+			AND to_regclass('public.wlt_captain_collateral_events') IS NOT NULL
+			AND (
+				SELECT COUNT(*) FROM information_schema.columns
+				 WHERE table_schema='public' AND table_name='wlt_provider_penalties'
+				   AND column_name IN ('post_request_hash','reversal_idempotency_key','reversal_request_hash')
+			) = 3`,
 		wltMigrationServiceName,
 		wltLatestMigration,
 	).Scan(&ready)

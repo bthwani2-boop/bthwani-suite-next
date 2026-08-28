@@ -69,10 +69,16 @@ export async function fetchOperatorDeliveryProof(proofId: string): Promise<DshDe
 export async function acceptOperatorDeliveryProof(
   proofId: string,
   input: DshReviewDeliveryProofInput,
+  idempotencyKey: string,
 ): Promise<DshDeliveryProof> {
   const data = await request<{ readonly proof: DshDeliveryProof }>(
     `/dsh/operator/delivery-proofs/${encodeURIComponent(proofId)}/accept`,
-    { method: "POST", body: input, expectedVersion: input.expectedVersion },
+    {
+      method: "POST",
+      body: input,
+      expectedVersion: input.expectedVersion,
+      idempotencyKey,
+    },
   );
   return data.proof;
 }
@@ -80,10 +86,16 @@ export async function acceptOperatorDeliveryProof(
 export async function rejectOperatorDeliveryProof(
   proofId: string,
   input: DshReviewDeliveryProofInput,
+  idempotencyKey: string,
 ): Promise<DshDeliveryProof> {
   const data = await request<{ readonly proof: DshDeliveryProof }>(
     `/dsh/operator/delivery-proofs/${encodeURIComponent(proofId)}/reject`,
-    { method: "POST", body: input, expectedVersion: input.expectedVersion },
+    {
+      method: "POST",
+      body: input,
+      expectedVersion: input.expectedVersion,
+      idempotencyKey,
+    },
   );
   return data.proof;
 }

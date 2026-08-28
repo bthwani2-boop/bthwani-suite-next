@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient, corrId } from "../_kernel/dsh-http-request";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   ClassifiedPickupError,
   DshPickupCustomerArrivedResponse,
@@ -39,50 +39,55 @@ export async function fetchPartnerPickupState(orderId: string): Promise<DshPartn
 export async function markPickupReady(
   orderId: string,
   expectedVersion: number,
+  commandId: string,
 ): Promise<DshPickupMarkReadyResponse> {
   return request<DshPickupMarkReadyResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup/mark-ready`,
-    { method: "POST", body: { expectedVersion, commandId: corrId("pk-ready") } },
+    { method: "POST", body: { expectedVersion, commandId } },
   );
 }
 
 export async function notifyPickupCustomer(
   orderId: string,
-  input: { readonly expectedVersion: number; readonly clientId?: string } = { expectedVersion: 0 },
+  input: { readonly expectedVersion: number; readonly clientId?: string },
+  commandId: string,
 ): Promise<DshPickupNotifyResponse> {
   return request<DshPickupNotifyResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup/notify`,
-    { method: "POST", body: { ...input, commandId: corrId("pk-notify") } },
+    { method: "POST", body: { ...input, commandId } },
   );
 }
 
 export async function markPickupCustomerArrived(
   orderId: string,
   expectedVersion: number,
+  commandId: string,
 ): Promise<DshPickupCustomerArrivedResponse> {
   return request<DshPickupCustomerArrivedResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup/customer-arrived`,
-    { method: "POST", body: { expectedVersion, commandId: corrId("pk-arrived") } },
+    { method: "POST", body: { expectedVersion, commandId } },
   );
 }
 
 export async function verifyPickupSession(
   orderId: string,
   input: { readonly expectedVersion: number; readonly code: string },
+  commandId: string,
 ): Promise<DshPickupSessionResponse> {
   return request<DshPickupSessionResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup/verify`,
-    { method: "POST", body: { ...input, commandId: corrId("pk-verify") } },
+    { method: "POST", body: { ...input, commandId } },
   );
 }
 
 export async function markPickupNoShow(
   orderId: string,
   input: { readonly expectedVersion: number; readonly reason: string },
+  commandId: string,
 ): Promise<DshPickupSessionResponse> {
   return request<DshPickupSessionResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup/no-show`,
-    { method: "POST", body: { ...input, commandId: corrId("pk-no-show") } },
+    { method: "POST", body: { ...input, commandId } },
   );
 }
 
@@ -90,10 +95,11 @@ export async function markPickupNoShow(
 export async function extendPickupWindowAsPartner(
   orderId: string,
   input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+  commandId: string,
 ): Promise<DshPickupSessionResponse> {
   return request<DshPickupSessionResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup/extend-window`,
-    { method: "POST", body: { ...input, commandId: corrId("pk-extend") } },
+    { method: "POST", body: { ...input, commandId } },
   );
 }
 
@@ -101,10 +107,11 @@ export async function extendPickupWindowAsPartner(
 export async function reschedulePickupWindowAsPartner(
   orderId: string,
   input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+  commandId: string,
 ): Promise<DshPickupSessionResponse> {
   return request<DshPickupSessionResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup/reschedule`,
-    { method: "POST", body: { ...input, commandId: corrId("pk-reschedule") } },
+    { method: "POST", body: { ...input, commandId } },
   );
 }
 
@@ -130,10 +137,11 @@ export async function fetchOperatorPickup(orderId: string): Promise<DshPickupSes
 export async function extendPickupWindow(
   orderId: string,
   input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+  commandId: string,
 ): Promise<DshPickupSessionResponse> {
   return request<DshPickupSessionResponse>(
     `/dsh/operator/pickups/${encodeURIComponent(orderId)}/extend-window`,
-    { method: "POST", body: { ...input, commandId: corrId("pk-extend") } },
+    { method: "POST", body: { ...input, commandId } },
   );
 }
 
@@ -145,6 +153,7 @@ export async function extendPickupWindow(
 export async function reschedulePickupWindow(
   _orderId: string,
   _input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+  _commandId?: string,
 ): Promise<DshPickupSessionResponse> {
   throw new Error("Operator pickup rescheduling is not supported; use the partner-owned recovery flow.");
 }

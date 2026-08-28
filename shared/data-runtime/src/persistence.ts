@@ -4,7 +4,10 @@ import {
   type DehydratedState,
   type QueryClient,
 } from "@tanstack/react-query";
-import { bthwaniKeyValueStorage, type BthwaniKeyValueStorage } from "./native-data-adapters.ts";
+import {
+  bthwaniCacheStorage,
+  type BthwaniCacheStore,
+} from "./storage-adapter.ts";
 
 const CACHE_SCHEMA_VERSION = 3;
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
@@ -43,7 +46,7 @@ function isEnvelope(value: unknown): value is PersistedQueryEnvelope {
 export async function restoreBthwaniQueryClient(
   client: QueryClient,
   storageKey: string,
-  storage: BthwaniKeyValueStorage = bthwaniKeyValueStorage,
+  storage: BthwaniCacheStore = bthwaniCacheStorage,
 ): Promise<void> {
   try {
     const raw = await storage.getItem(storageKey);
@@ -69,7 +72,7 @@ export async function restoreBthwaniQueryClient(
 export function persistBthwaniQueryClient(
   client: QueryClient,
   storageKey: string,
-  storage: BthwaniKeyValueStorage = bthwaniKeyValueStorage,
+  storage: BthwaniCacheStore = bthwaniCacheStorage,
 ): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const unsubscribe = client.getQueryCache().subscribe(() => {
@@ -97,7 +100,7 @@ export function persistBthwaniQueryClient(
 export async function clearBthwaniQueryClient(
   client: QueryClient,
   storageKey: string,
-  storage: BthwaniKeyValueStorage = bthwaniKeyValueStorage,
+  storage: BthwaniCacheStore = bthwaniCacheStorage,
 ): Promise<void> {
   client.clear();
   await storage.removeItem(storageKey);

@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	_ "github.com/lib/pq"
 	"wlt-api/internal/provider"
+	"wlt-api/internal/shared"
 )
 
 type fakeProvider struct {
@@ -18,9 +20,23 @@ type fakeProvider struct {
 	err error
 }
 
-func (f *fakeProvider) Post(ctx context.Context, path string, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func (f *fakeProvider) Authorize(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	return f.res, f.err
 }
+
+func (f *fakeProvider) Capture(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	return f.res, f.err
+}
+
+func (f *fakeProvider) Refund(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	return f.res, f.err
+}
+
+func (f *fakeProvider) Status(ctx context.Context, inquiry provider.StatusInquiry, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	return f.res, f.err
+}
+
+var _ provider.CashInRail = (*fakeProvider)(nil)
 
 func getTestDB(t *testing.T) *sql.DB {
 	dbURL := os.Getenv("DATABASE_URL")
@@ -112,7 +128,7 @@ func TestCaptureSessionWithProvider_DBFlow(t *testing.T) {
 	}
 	defer db.Close()
 
-	ctx := context.Background()
+	ctx := shared.WithOperatorContext(context.Background(), "OperatorContext-test")
 	checkoutIntentID := fmt.Sprintf("test-checkout-cap-%d", time.Now().UnixNano())
 
 	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "authorized", "card-auth-001", 1000, false)
@@ -180,8 +196,8 @@ func TestAuthorizeSessionWithProvider_IgnoresCallerAmount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AuthorizeSessionWithProvider returned error: %v", err)
 	}
-	if amt, _ := client.body["amountMinorUnits"].(int64); amt != 500 {
-		t.Errorf("expected provider to be called with the session's own amount (500), got %v", client.body["amountMinorUnits"])
+	if amt, _ := client.authorizeBody["amountMinorUnits"].(int64); amt != 500 {
+		t.Errorf("expected provider to be called with the session's own amount (500), got %v", client.authorizeBody["amountMinorUnits"])
 	}
 	if session.AmountMinorUnits != 500 {
 		t.Errorf("expected persisted amount to remain 500, got %d", session.AmountMinorUnits)
@@ -388,5 +404,49 @@ func TestProviderAmbiguousError_Capture_DBFlow(t *testing.T) {
 	_, err = AuthorizeSessionWithProvider(ctx, db, client2, sessionID, provider.RequestMeta{})
 	if !errors.Is(err, ErrNotAuthorizable) {
 		t.Fatalf("expected ErrNotAuthorizable for provider_result_unknown session, got %v", err)
+	}
+}
+
+func TestCaptureAccountingIsPathIndependentBetweenSyncAndProviderEvent(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	ctx := shared.WithOperatorContext(context.Background(), "OperatorContext-test")
+	firstID := seedCheckoutSession(t, db, fmt.Sprintf("test-checkout-sync-equivalence-%d", time.Now().UnixNano()), "authorized", "sync-auth", 1000, false)
+	secondID := seedCheckoutSession(t, db, fmt.Sprintf("test-checkout-event-equivalence-%d", time.Now().UnixNano()), "authorized", "event-auth", 1000, false)
+	if _, err := CaptureSessionWithProvider(ctx, db, &fakeProvider{res: provider.ProviderResult{ProviderReference: "sync-captured", Status: "captured"}}, firstID, provider.RequestMeta{}); err != nil {
+		t.Fatalf("sync capture: %v", err)
+	}
+	if _, err := ApplyAuthoritativeProviderEvent(ctx, db, ProviderEventInput{
+		EventID:           "equivalence-event-" + secondID,
+		OperatorContextID: "OperatorContext-test",
+		PaymentSessionID:  secondID,
+		EventType:         "payment.captured",
+		ProviderStatus:    "captured",
+		ProviderReference: "event-captured",
+		PayloadHash:       strings.Repeat("e", 64),
+		ProcessingSource:  "provider_status_refresh",
+	}); err != nil {
+		t.Fatalf("provider-event capture: %v", err)
+	}
+
+	ledgerSignature := func(sessionID string) string {
+		var signature string
+		err := db.QueryRowContext(ctx, `
+			SELECT string_agg(a.account_type||':'||COALESCE(a.actor_type,'')||':'||COALESCE(a.actor_id,'')||':'||l.debit_credit||':'||l.amount_minor_units::text||':'||l.currency, ',' ORDER BY a.account_type,l.debit_credit,l.amount_minor_units)
+			FROM wlt_ledger_transactions t
+			JOIN wlt_ledger_lines l ON l.ledger_transaction_id=t.id AND l.operator_context_id=t.operator_context_id
+			JOIN wlt_ledger_accounts a ON a.id=l.account_id AND a.operator_context_id=l.operator_context_id
+			WHERE t.operator_context_id='OperatorContext-test' AND t.transaction_type='payment_captured' AND t.reference_type='payment_session' AND t.reference_id=$1`, sessionID).Scan(&signature)
+		if err != nil {
+			t.Fatalf("read ledger signature for %s: %v", sessionID, err)
+		}
+		return signature
+	}
+	if syncSignature, eventSignature := ledgerSignature(firstID), ledgerSignature(secondID); syncSignature != eventSignature {
+		t.Fatalf("capture accounting differs by delivery path: sync=%q event=%q", syncSignature, eventSignature)
 	}
 }

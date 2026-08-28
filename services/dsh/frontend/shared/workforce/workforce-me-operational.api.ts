@@ -8,10 +8,6 @@ import type {
 
 const { request } = createDshHttpClient(resolveWorkforceApiBaseUrl(), "workforce-me-operational", 10000);
 
-export function fetchOwnOperationalCore(): Promise<OperationalCoreResponse> {
-  return request<OperationalCoreResponse>("/workforce/me/operational-core");
-}
-
 export async function listOwnAvailabilityNotices(limit = 50): Promise<readonly ProviderAvailabilityNotice[]> {
   const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
   const result = await request<{ availabilityNotices: ProviderAvailabilityNotice[] }>(
@@ -27,10 +23,12 @@ export async function createOwnAvailabilityNotice(input: {
   readonly serviceZoneId?: string;
   readonly reasonCode: string;
   readonly note?: string;
-}): Promise<ProviderAvailabilityNotice> {
+},
+  idempotencyKey?: string,
+): Promise<ProviderAvailabilityNotice> {
   const result = await request<{ availabilityNotice: ProviderAvailabilityNotice }>(
     "/workforce/me/availability-notices",
-    { method: "POST", body: input },
+    { method: "POST", body: input, idempotencyKey },
   );
   return result.availabilityNotice;
 }
@@ -41,10 +39,10 @@ export async function listOwnProviderIncidents(limit = 50): Promise<readonly Pro
   return result.incidents;
 }
 
-export async function submitOwnProviderIncidentAppeal(incidentId: string, note: string): Promise<ProviderIncident> {
+export async function submitOwnProviderIncidentAppeal(incidentId: string, note: string, idempotencyKey?: string): Promise<ProviderIncident> {
   const result = await request<{ incident: ProviderIncident }>(
     `/workforce/me/incidents/${encodeURIComponent(incidentId)}/appeal`,
-    { method: "POST", body: { note } },
+    { method: "POST", body: { note }, idempotencyKey },
   );
   return result.incident;
 }

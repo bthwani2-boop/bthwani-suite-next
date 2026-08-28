@@ -4,6 +4,9 @@ import path from "node:path";
 import test from "node:test";
 import nextConfig from "../next.config.mjs";
 
+const cspPolicyUrl = new URL("../src/server/csp-policy.ts", import.meta.url).href;
+const { buildControlPanelSecurityHeaders, isStaticAssetPath, STATIC_ASSET_PATH_MATCHER } = await import(cspPolicyUrl);
+
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");
 const stripComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
@@ -11,10 +14,9 @@ const bffProxyPath = "apps/control-panel/runtime/src/server/bff-proxy.adapter.ts
 
 test("control-panel emits governed browser security headers", async () => {
   assert.equal(nextConfig.env?.NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED, "true");
-  const routes = await nextConfig.headers();
-  const governedRoute = routes.find((entry) => entry.source === "/:path*");
-  assert.ok(governedRoute, "global security-header route must exist");
-  const headers = new Map(governedRoute.headers.map(({ key, value }) => [key, value]));
+  const headers = new Map(
+    buildControlPanelSecurityHeaders({ nonce: "test-nonce" }).map(({ key, value }) => [key, value]),
+  );
   for (const header of [
     "Content-Security-Policy",
     "Referrer-Policy",
@@ -28,6 +30,43 @@ test("control-panel emits governed browser security headers", async () => {
   assert.match(csp, /frame-ancestors 'none'/);
   assert.match(csp, /object-src 'none'/);
   assert.match(csp, /connect-src 'self'/);
+});
+
+test("control-panel middleware matcher is a single static string sourced from the canonical CSP authority", () => {
+  assert.equal(typeof STATIC_ASSET_PATH_MATCHER, "string");
+  assert.equal(
+    STATIC_ASSET_PATH_MATCHER,
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  );
+  for (const [path, expected] of [
+    ["/_next/static/foo.css", true],
+    ["/_next/image/foo.png", true],
+    ["/favicon.ico", true],
+    ["/dsh/dashboard", false],
+    ["/api/auth/session", false],
+  ]) {
+    assert.equal(isStaticAssetPath(path), expected, `isStaticAssetPath(${path})`);
+  }
+
+  // Next.js 16 Turbopack requires `config.matcher` to be a plain literal in
+  // `src/middleware.ts`. The middleware file inlines the literal but must keep
+  // it identical to the canonical `STATIC_ASSET_PATH_MATCHER` exported from
+  // `src/server/csp-policy.ts`. This static-source check is the single drift
+  // guard between the literal in middleware and the canonical constant.
+  const middlewareSource = read("apps/control-panel/runtime/src/middleware.ts");
+  assert.ok(
+    middlewareSource.includes("matcher: ["),
+    "middleware must export a config with a matcher array",
+  );
+  assert.ok(
+    middlewareSource.includes(JSON.stringify(STATIC_ASSET_PATH_MATCHER)),
+    "middleware matcher literal must equal the canonical STATIC_ASSET_PATH_MATCHER",
+  );
+  assert.doesNotMatch(
+    middlewareSource,
+    /matcher:\s*\[[A-Za-z_]/,
+    "middleware matcher must be a plain string literal; it must not reference a cross-module identifier",
+  );
 });
 
 test("browser identity storage contains no durable real token store", () => {
@@ -193,18 +232,51 @@ test("production BFF upstreams are server-only and fail closed when absent", () 
   assert.match(proxy, /return null/);
 });
 
-test("web compatibility adapters preserve visible and truthful behavior", () => {
-  const icons = read("apps/control-panel/runtime/stubs/ionicons-stub.js");
-  assert.doesNotMatch(icons, /return\s+null/);
-  assert.match(icons, /aria-label/);
+test("control-panel uses owner-level platform bindings without external package shims", () => {
+  assert.deepEqual(nextConfig.turbopack?.resolveAlias, { "react-native": "react-native-web" });
 
-  const netinfo = read("apps/control-panel/runtime/stubs/netinfo-stub.js");
-  assert.match(netinfo, /navigator\.onLine/);
-  assert.match(netinfo, /addEventListener\("online"/);
-  assert.match(netinfo, /addEventListener\("offline"/);
+  const webpackConfig = nextConfig.webpack({ resolve: { alias: { existing: "value" } } });
+  assert.deepEqual(webpackConfig.resolve.alias, {
+    existing: "value",
+    "react-native$": "react-native-web",
+  });
 
-  const picker = read("apps/control-panel/runtime/stubs/expo-image-picker-web.js");
-  assert.match(picker, /navigator\.mediaDevices\.getUserMedia/);
-  assert.match(picker, /CAMERA_PERMISSION_DENIED/);
-  assert.doesNotMatch(picker, /catch\s*\{\s*finish\(\{ canceled: true/);
+  for (const relativePath of [
+    "apps/control-panel/runtime/stubs/ionicons-stub.js",
+    "apps/control-panel/runtime/stubs/netinfo-stub.js",
+    "apps/control-panel/runtime/stubs/expo-image-picker-web.js",
+    "apps/control-panel/runtime/stubs/expo-image-picker-web.d.ts",
+  ]) {
+    assert.equal(fs.existsSync(path.join(repoRoot, relativePath)), false, `${relativePath} must not exist`);
+  }
+
+  const icon = read("shared/ui-kit/src/components/Icon/Icon.tsx");
+  const webIcon = read("shared/ui-kit/src/components/Icon/icon-renderer.web.tsx");
+  const nativeIcon = read("shared/ui-kit/src/components/Icon/icon-renderer.native.tsx");
+  assert.doesNotMatch(icon, /@react-native-vector-icons\/ionicons/);
+  assert.match(icon, /WebIconRenderer/);
+  assert.match(webIcon, /aria-label/);
+  assert.match(nativeIcon, /@react-native-vector-icons\/ionicons/);
+
+  const dataRuntime = read("shared/data-runtime/src/native-data-adapters.ts");
+  assert.doesNotMatch(dataRuntime, /import\s+.*@react-native-async-storage\/async-storage/);
+  assert.match(dataRuntime, /NATIVE_STORAGE_UNAVAILABLE/);
+  const storage = read("shared/data-runtime/src/storage-adapter.ts");
+  assert.match(storage, /sessionStorage/);
+  assert.doesNotMatch(storage, /@react-native-async-storage\/async-storage/);
+  const nativeProvider = read("shared/data-runtime/src/BthwaniQueryProvider.native.tsx");
+  assert.match(nativeProvider, /native-data-adapters/);
+  assert.match(nativeProvider, /configureBthwaniCacheStorage/);
+  assert.match(nativeProvider, /configureBthwaniDurableStorage/);
+  const connectivity = read("shared/data-runtime/src/connectivity-adapter.ts");
+  assert.match(connectivity, /navigator\.onLine/);
+  assert.match(connectivity, /addEventListener\("online"/);
+  assert.match(connectivity, /addEventListener\("offline"/);
+  const nativeConnectivity = read("shared/data-runtime/src/native-connectivity-adapter.ts");
+  assert.match(nativeConnectivity, /@react-native-community\/netinfo/);
+  assert.doesNotMatch(dataRuntime, /@react-native-community\/netinfo/);
+
+  const dshCapabilities = read("services/dsh/frontend/shared/mobile-capabilities.ts");
+  assert.match(dshCapabilities, /createDshExpoImagePickerAdapter/);
+  assert.doesNotMatch(read("services/dsh/frontend/control-panel/index.ts"), /mobile-capabilities|expo-image-picker/);
 });

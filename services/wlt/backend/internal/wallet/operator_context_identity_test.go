@@ -71,18 +71,31 @@ func TestEnsureWalletForOperatorContextTxSeparatesIdenticalActors(t *testing.T) 
 	}
 }
 
-func TestLegacyEnsureWalletFailsClosed(t *testing.T) {
+func TestScopedWalletReadDoesNotFallBackToLegacyUnscopedRow(t *testing.T) {
 	db := walletTestDB(t)
 	defer db.Close()
-	tx, err := db.Begin()
-	if err != nil {
-		t.Fatalf("begin wallet tx: %v", err)
+	suffix := fmt.Sprint(time.Now().UnixNano())
+	actorID := "legacy-fallback-" + suffix
+	if _, err := db.Exec(`
+		INSERT INTO wlt_wallets (operator_context_id, actor_id, actor_type, status, currency)
+		VALUES ('legacy-unscoped', $1, 'field', 'active', 'YER')`, actorID); err != nil {
+		t.Fatalf("seed legacy wallet row: %v", err)
 	}
-	defer tx.Rollback()
+	defer db.Exec(`DELETE FROM wlt_wallets WHERE operator_context_id='legacy-unscoped' AND actor_id=$1 AND actor_type='field'`, actorID)
 
-	_, err = EnsureWalletTx(tx, "field", "legacy-field", "YER")
+	wallet, err := GetWalletForOperatorContext(db, "OperatorContext-isolated-"+suffix, "field", actorID)
+	if err != nil {
+		t.Fatalf("read scoped wallet: %v", err)
+	}
+	if wallet != nil {
+		t.Fatalf("scoped read fell back to legacy wallet: %+v", wallet)
+	}
+}
+
+func TestEnsureWalletForOperatorContextTxRejectsMissingContextBeforeDatabaseAccess(t *testing.T) {
+	_, err := EnsureWalletForOperatorContextTx(context.Background(), nil, "field", "field-1", "YER")
 	if err == nil || !strings.Contains(err.Error(), "trusted OperatorContext context is required") {
-		t.Fatalf("expected fail-closed OperatorContext error, got %v", err)
+		t.Fatalf("expected fail-closed OperatorContext error before database access, got %v", err)
 	}
 }
 

@@ -196,34 +196,6 @@ export async function resumeOperatorStoreAssortment(
   );
 }
 
-export async function fetchPartnerCatalogAttributes(): Promise<readonly CatalogAttribute[]> {
-  const response = await request<{ readonly attributes: readonly CatalogAttribute[] }>(
-    "/dsh/partner/catalog/attributes",
-  );
-  return response.attributes;
-}
-
-export async function fetchPartnerCatalogAttributeOptions(attributeId: string) {
-  const response = await request<{ readonly options: readonly CatalogAttributeOption[] }>(
-    `/dsh/partner/catalog/attributes/${encodeURIComponent(attributeId)}/options`,
-  );
-  return response.options;
-}
-
-export async function fetchPartnerMasterProductAttributeValues(productId: string) {
-  const response = await request<{ readonly values: readonly MasterProductAttributeValue[] }>(
-    `/dsh/partner/catalog/master-products/${encodeURIComponent(productId)}/attribute-values`,
-  );
-  return response.values;
-}
-
-export async function fetchPartnerMasterProductRelationships(productId: string) {
-  const response = await request<{ readonly relationships: readonly MasterProductRelationship[] }>(
-    `/dsh/partner/catalog/master-products/${encodeURIComponent(productId)}/relationships`,
-  );
-  return response.relationships;
-}
-
 export async function fetchPartnerAssortmentPauses(storeId: string) {
   const response = await request<{ readonly pauses: readonly AssortmentPauseState[] }>(
     `/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment-pauses`,
@@ -251,34 +223,6 @@ export async function resumePartnerStoreAssortment(
     `/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(productId)}/resume`,
     { expectedVersion },
   );
-}
-
-export async function fetchFieldCatalogAttributes(): Promise<readonly CatalogAttribute[]> {
-  const response = await request<{ readonly attributes: readonly CatalogAttribute[] }>(
-    "/dsh/field/catalog/attributes",
-  );
-  return response.attributes;
-}
-
-export async function fetchFieldCatalogAttributeOptions(attributeId: string) {
-  const response = await request<{ readonly options: readonly CatalogAttributeOption[] }>(
-    `/dsh/field/catalog/attributes/${encodeURIComponent(attributeId)}/options`,
-  );
-  return response.options;
-}
-
-export async function fetchFieldMasterProductAttributeValues(productId: string) {
-  const response = await request<{ readonly values: readonly MasterProductAttributeValue[] }>(
-    `/dsh/field/catalog/master-products/${encodeURIComponent(productId)}/attribute-values`,
-  );
-  return response.values;
-}
-
-export async function fetchFieldMasterProductRelationships(productId: string) {
-  const response = await request<{ readonly relationships: readonly MasterProductRelationship[] }>(
-    `/dsh/field/catalog/master-products/${encodeURIComponent(productId)}/relationships`,
-  );
-  return response.relationships;
 }
 
 export async function fetchFieldAssortmentPauses(partnerId: string) {
@@ -319,17 +263,6 @@ export async function retireOperatorStoreAssortment(
 ): Promise<{ readonly assortment: StoreAssortment }> {
   return request<{ readonly assortment: StoreAssortment }>(
     `/dsh/operator/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(productId)}/retire`,
-    { method: "POST", body: input },
-  );
-}
-
-export async function retirePartnerStoreAssortment(
-  storeId: string,
-  productId: string,
-  input: { readonly reason: string; readonly expectedVersion: number },
-): Promise<{ readonly assortment: StoreAssortment }> {
-  return request<{ readonly assortment: StoreAssortment }>(
-    `/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(productId)}/retire`,
     { method: "POST", body: input },
   );
 }

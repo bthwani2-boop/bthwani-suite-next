@@ -10,14 +10,14 @@ describe("Captain route and screen registry", () => {
     const screenRegistry = contract.DSH_CAPTAIN_SCREEN_REGISTRY;
     const screenRouteIds = new Set(screenRegistry.map((item) => item.routeId));
 
-    assert.equal(new Set(routeRecords.map((record) => record.legacyRoute)).size, routeRecords.length);
+    assert.equal(new Set(routeRecords.map((record) => record.route)).size, routeRecords.length);
     assert.equal(routeRecords.length, 18);
     assert.equal(screenRegistry.length, 19);
-    assert.ok(!routeRecords.some((record) => record.legacyRoute === "store-pickup-context"));
+    assert.ok(!routeRecords.some((record) => record.route === "store-pickup-context"));
 
     for (const record of routeRecords) {
       assert.ok(screenRouteIds.has(record.routeId), `missing screen registry entry for ${record.routeId}`);
-      assert.deepEqual(contract.getDshCaptainRouteRecord(record.legacyRoute), record);
+      assert.deepEqual(contract.getDshCaptainRouteRecord(record.route), record);
       assert.equal(contract.getDshCaptainScreenRegistryItem(record.routeId).routeId, record.routeId);
     }
   });

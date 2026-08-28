@@ -1,10 +1,14 @@
-import { bthwaniKeyValueStorage } from "@bthwani/data-runtime";
+import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
+import {
+  MutationIdentityScopeError,
+  resolveMutationIdentityScope,
+} from "@bthwani/data-runtime/mutation-identity-scope";
 import { corrId, createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "captain-cash-in", 12000);
-const ACTIVE_SESSION_KEY = "@bthwani/wlt/captain-cash-in/v1/active";
-const MUTATION_PREFIX = "@bthwani/wlt/captain-cash-in/v1/mutation/";
+const ACTIVE_SESSION_PREFIX = "@bthwani/wlt/captain-cash-in/v3/active/";
+const MUTATION_PREFIX = "@bthwani/wlt/captain-cash-in/v3/mutation/";
 
 export type CaptainCashInSession = {
   readonly id: string;
@@ -21,11 +25,19 @@ export type CaptainCashInSession = {
 };
 
 type TopUpEnvelope = { readonly paymentSession: CaptainCashInSession };
-type StoredSession = CaptainCashInSession & { readonly actorId: string };
+type StoredSession = CaptainCashInSession & {
+  readonly actorId: string;
+  readonly installationId: string;
+};
 type StoredMutationContext = {
   readonly fingerprint: string;
   readonly idempotencyKey: string;
   readonly correlationId: string;
+  readonly scope: {
+    readonly actorId: string;
+    readonly installationId: string;
+    readonly entityId: string;
+  };
 };
 
 export type CaptainCashInErrorState = "offline" | "unknown" | "forbidden" | "not_found" | "conflict" | "error";
@@ -84,34 +96,98 @@ export function newCaptainCashInContext(): { readonly topupReference: string; re
   return { topupReference: id, idempotencyKey: id, correlationId: id };
 }
 
-function mutationStorageKey(operation: string, sessionId?: string): string {
-  return `${MUTATION_PREFIX}${operation}/${sessionId ?? "create"}`;
+function mutationStorageKey(
+  scope: { readonly actorId: string; readonly installationId: string },
+  operation: string,
+  sessionId?: string,
+): string {
+  return `${MUTATION_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}/${operation}/${sessionId ?? "create"}`;
+}
+
+function activeSessionKey(scope: { readonly actorId: string; readonly installationId: string }): string {
+  return `${ACTIVE_SESSION_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}`;
+}
+
+function mutationEntityId(operation: string, sessionId: string | undefined, fingerprint: string): string {
+  return `${operation}/${sessionId ?? "create"}/${fingerprint.slice(0, 32)}`;
+}
+
+function parseStoredMutation(raw: string | null): StoredMutationContext | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<StoredMutationContext>;
+    if (
+      typeof value.fingerprint === "string"
+      && typeof value.idempotencyKey === "string"
+      && typeof value.correlationId === "string"
+      && typeof value.scope?.actorId === "string"
+      && typeof value.scope?.installationId === "string"
+      && typeof value.scope?.entityId === "string"
+    ) {
+      return value as StoredMutationContext;
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 export async function getOrCreateCaptainCashInMutationContext(input: {
+  readonly actorId: string;
   readonly operation: "create" | "authorize" | "capture" | "allocateCollateral";
   readonly sessionId?: string;
   readonly fingerprint: string;
 }): Promise<{ readonly topupReference: string; readonly idempotencyKey: string; readonly correlationId: string }> {
-  const key = mutationStorageKey(input.operation, input.sessionId);
-  const raw = await bthwaniKeyValueStorage.getItem(key);
+  const entityId = mutationEntityId(input.operation, input.sessionId, input.fingerprint);
+  const scope = await resolveMutationIdentityScope(input.actorId, { entityId });
+  const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
+  const key = mutationStorageKey(scoped, input.operation, input.sessionId);
+
+  const raw = await bthwaniDurableStorage.getItem(key);
   if (raw) {
-    try {
-      const stored = JSON.parse(raw) as StoredMutationContext;
-      if (stored.fingerprint === input.fingerprint && stored.idempotencyKey && stored.correlationId) {
-        return { topupReference: stored.idempotencyKey, idempotencyKey: stored.idempotencyKey, correlationId: stored.correlationId };
+    const stored = parseStoredMutation(raw);
+    if (stored && stored.fingerprint === input.fingerprint) {
+      if (stored.scope.actorId !== scoped.actorId) {
+        throw new MutationIdentityScopeError(
+          "actor_mismatch",
+          `cash-in mutation belongs to a different actor (${stored.scope.actorId}); refusing to reuse it for ${scoped.actorId}`,
+        );
       }
-    } catch {
-      // Corrupt local intent is discarded; WLT remains the authority.
+      if (stored.scope.installationId !== scoped.installationId) {
+        throw new MutationIdentityScopeError(
+          "installation_mismatch",
+          `cash-in mutation belongs to a different installation (${stored.scope.installationId}); refusing to reuse it for ${scoped.installationId}`,
+        );
+      }
+      if (stored.scope.entityId !== entityId) {
+        await bthwaniDurableStorage.removeItem(key);
+      } else {
+        return {
+          topupReference: stored.idempotencyKey,
+          idempotencyKey: stored.idempotencyKey,
+          correlationId: stored.correlationId,
+        };
+      }
     }
   }
+
   const context = newCaptainCashInContext();
-  await bthwaniKeyValueStorage.setItem(key, JSON.stringify({ fingerprint: input.fingerprint, ...context } satisfies StoredMutationContext));
+  await bthwaniDurableStorage.setItem(
+    key,
+    JSON.stringify({ fingerprint: input.fingerprint, ...context, scope: scoped } satisfies StoredMutationContext),
+  );
   return context;
 }
 
-export async function clearCaptainCashInMutationContext(operation: "create" | "authorize" | "capture" | "allocateCollateral", sessionId?: string): Promise<void> {
-  await bthwaniKeyValueStorage.removeItem(mutationStorageKey(operation, sessionId));
+export async function clearCaptainCashInMutationContext(
+  actorId: string,
+  operation: "create" | "authorize" | "capture" | "allocateCollateral",
+  sessionId?: string,
+): Promise<void> {
+  const scope = await resolveMutationIdentityScope(actorId, {
+    entityId: mutationEntityId(operation, sessionId, "cleanup"),
+  });
+  await bthwaniDurableStorage.removeItem(mutationStorageKey(scope, operation, sessionId));
 }
 
 export async function createCaptainCashInSession(input: {
@@ -157,25 +233,43 @@ export async function mutateCaptainCashInSession(input: {
   return assertSession(data);
 }
 
-export async function loadStoredCaptainCashInSession(actorId: string): Promise<CaptainCashInSession | null> {
-  const raw = await bthwaniKeyValueStorage.getItem(ACTIVE_SESSION_KEY);
+function parseStoredSession(raw: string | null): StoredSession | null {
   if (!raw) return null;
   try {
-    const stored = JSON.parse(raw) as StoredSession;
-    if (stored.actorId !== actorId) {
-      await bthwaniKeyValueStorage.removeItem(ACTIVE_SESSION_KEY);
-      return null;
+    const parsed = JSON.parse(raw) as Partial<StoredSession>;
+    if (
+      typeof parsed.id === "string"
+      && typeof parsed.actorId === "string"
+      && typeof parsed.installationId === "string"
+    ) {
+      return parsed as StoredSession;
     }
-    return stored.id ? stored : null;
   } catch {
     return null;
   }
+  return null;
 }
 
+export async function loadStoredCaptainCashInSession(actorId: string): Promise<CaptainCashInSession | null> {
+  const scope = await resolveMutationIdentityScope(actorId);
+  const key = activeSessionKey(scope);
+  const stored = parseStoredSession(await bthwaniDurableStorage.getItem(key));
+  if (!stored) return null;
+  if (stored.actorId !== scope.actorId || stored.installationId !== scope.installationId) {
+    await bthwaniDurableStorage.removeItem(key);
+    return null;
+  }
+  const { actorId: _actor, installationId: _install, ...session } = stored;
+  return session.id ? session : null;
+}
 export async function storeCaptainCashInSession(actorId: string, session: CaptainCashInSession): Promise<void> {
-  await bthwaniKeyValueStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({ ...session, actorId } satisfies StoredSession));
+  const scope = await resolveMutationIdentityScope(actorId);
+  await bthwaniDurableStorage.setItem(
+    activeSessionKey(scope),
+    JSON.stringify({ ...session, actorId: scope.actorId, installationId: scope.installationId } satisfies StoredSession),
+  );
 }
-
-export async function clearCaptainCashInSession(): Promise<void> {
-  await bthwaniKeyValueStorage.removeItem(ACTIVE_SESSION_KEY);
+export async function clearCaptainCashInSession(actorId: string): Promise<void> {
+  const scope = await resolveMutationIdentityScope(actorId);
+  await bthwaniDurableStorage.removeItem(activeSessionKey(scope));
 }

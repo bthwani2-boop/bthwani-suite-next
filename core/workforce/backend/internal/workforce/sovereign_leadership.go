@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -131,10 +130,10 @@ func (r *Repository) SovereignAssignmentByActorID(ctx context.Context, actorID s
 	}
 	var assignment SovereignAssignment
 	err = r.db.QueryRowContext(ctx, `
-		SELECT actor_id,permission_bundle,department_scope,starts_on::text,
-		       COALESCE(ends_on::text,''),assignment_status,created_by_actor_id,
-		       updated_by_actor_id,version,created_at,updated_at
-		FROM workforce_sovereign_leadership_assignments WHERE operator_context_id=$1 AND actor_id=$2`, operatorContextID, strings.TrimSpace(actorID)).Scan(
+                SELECT actor_id,permission_bundle,department_scope,starts_on::text,
+                       COALESCE(ends_on::text,''),assignment_status,created_by_actor_id,
+                       updated_by_actor_id,version,created_at,updated_at
+                FROM workforce_sovereign_leadership_assignments WHERE operator_context_id=$1 AND actor_id=$2`, operatorContextID, strings.TrimSpace(actorID)).Scan(
 		&assignment.ActorID, &assignment.PermissionBundle, &assignment.DepartmentScope,
 		&assignment.StartsOn, &assignment.EndsOn, &assignment.AssignmentStatus,
 		&assignment.CreatedByActorID, &assignment.UpdatedByActorID, &assignment.Version,
@@ -146,73 +145,18 @@ func (r *Repository) SovereignAssignmentByActorID(ctx context.Context, actorID s
 	return assignment, err
 }
 
-func (r *Repository) UpsertSovereignAssignment(ctx context.Context, actorID, operatorID string, expectedVersion int, bundle, department, startsOn, endsOn string) (SovereignAssignment, error) {
-	operatorContextID, err := operatorContextID(ctx)
-	if err != nil {
-		return SovereignAssignment{}, err
-	}
-	actorID = strings.TrimSpace(actorID)
-	operatorID = strings.TrimSpace(operatorID)
-	bundle, bundleErr := normalizeSovereignPermissionBundle(bundle)
-	department, err = normalizeSovereignDepartment(department)
-	if err != nil || bundleErr != nil || actorID == "" || operatorID == "" || expectedVersion < 0 {
-		return SovereignAssignment{}, ErrInvalidInput
-	}
-	if strings.TrimSpace(startsOn) == "" {
-		startsOn = time.Now().UTC().Format("2006-01-02")
-	}
-
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return SovereignAssignment{}, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-	var currentVersion int
-	err = tx.QueryRowContext(ctx, `SELECT version FROM workforce_sovereign_leadership_assignments WHERE operator_context_id=$1 AND actor_id=$2 FOR UPDATE`, operatorContextID, actorID).Scan(&currentVersion)
-	if errors.Is(err, sql.ErrNoRows) {
-		if expectedVersion != 0 {
-			return SovereignAssignment{}, ErrVersionConflict
-		}
-		_, err = tx.ExecContext(ctx, `
-			INSERT INTO workforce_sovereign_leadership_assignments(
-				operator_context_id,actor_id,permission_bundle,department_scope,starts_on,ends_on,
-				assignment_status,created_by_actor_id,updated_by_actor_id)
-			VALUES($1,$2,$3,$4,$5::date,NULLIF($6,'')::date,'active',$7,$7)`,
-			operatorContextID, actorID, bundle, department, startsOn, strings.TrimSpace(endsOn), operatorID)
-	} else if err != nil {
-		return SovereignAssignment{}, err
-	} else {
-		if currentVersion != expectedVersion {
-			return SovereignAssignment{}, ErrVersionConflict
-		}
-		_, err = tx.ExecContext(ctx, `
-			UPDATE workforce_sovereign_leadership_assignments
-			SET permission_bundle=$2,department_scope=$3,starts_on=$4::date,
-			    ends_on=NULLIF($5,'')::date,assignment_status='active',
-			    updated_by_actor_id=$6,version=version+1,updated_at=now()
-			WHERE operator_context_id=$7 AND actor_id=$1`, actorID, bundle, department, startsOn, strings.TrimSpace(endsOn), operatorID, operatorContextID)
-	}
-	if err != nil {
-		return SovereignAssignment{}, ErrInvalidInput
-	}
-	if err := tx.Commit(); err != nil {
-		return SovereignAssignment{}, err
-	}
-	return r.SovereignAssignmentByActorID(ctx, actorID)
-}
-
 func (r *Repository) ListSovereignLeadership(ctx context.Context) ([]SovereignLeadershipRecord, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := r.db.QueryContext(ctx, personSelect+`
-		JOIN workforce_sovereign_leadership_assignments a ON a.operator_context_id=p.operator_context_id AND a.actor_id=p.actor_id
-		WHERE a.assignment_status='active'
-		  AND a.operator_context_id=$1
-		  AND a.starts_on <= current_date
-		  AND (a.ends_on IS NULL OR a.ends_on >= current_date)
-		ORDER BY p.created_at DESC`, operatorContextID)
+                JOIN workforce_sovereign_leadership_assignments a ON a.operator_context_id=p.operator_context_id AND a.actor_id=p.actor_id
+                WHERE a.assignment_status='active'
+                  AND a.operator_context_id=$1
+                  AND a.starts_on <= current_date
+                  AND (a.ends_on IS NULL OR a.ends_on >= current_date)
+                ORDER BY p.created_at DESC`, operatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -350,6 +294,17 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 	if err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
 	}
+	boundaryCase, err := s.repo.beginIdentityBoundaryCase(ctx, identityBoundaryCaseInput{
+		OperatorContextID: operator.OperatorContextID, Operation: "create_sovereign_leader", WorkforceKind: "employee",
+		WorkforceCode: workforceCode, RequestHash: requestHash, IdempotencyKey: idempotencyKey,
+		RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role, CorrelationID: correlationID, Payload: input,
+	})
+	if err != nil {
+		return SovereignLeadershipCreationResult{}, false, err
+	}
+	if boundaryCase.WorkforceCode != "" {
+		workforceCode = boundaryCase.WorkforceCode
+	}
 	if s.identity == nil {
 		return SovereignLeadershipCreationResult{}, false, identityclient.ErrUnavailable
 	}
@@ -364,83 +319,99 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		return SovereignLeadershipCreationResult{}, false, identityclient.ErrInvalidActor
 	}
 	actorID := actor.ActorID
-	identityCreated := actor.Created
-	compensate := func() {
-		if !identityCreated {
-			return
-		}
-		if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
-			log.Printf("[workforce] leadership identity compensation failed actor=%s: %v", actorID, compensationErr)
-		}
-	}
-
-	if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
-		if existing.EmployeeProfile == nil {
-			return SovereignLeadershipCreationResult{}, false, ErrWorkforceKindConflict
-		}
-		return SovereignLeadershipCreationResult{}, false, identityclient.ErrProvisionConflict
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, actor); err != nil {
+		return SovereignLeadershipCreationResult{}, false, err
 	}
 
 	if actorID == "" {
 		return SovereignLeadershipCreationResult{}, false, ErrInvalidInput
 	}
 
+	// A retry whose local cone already committed must converge on the
+	// existing employee profile instead of dead-ending on a provision
+	// conflict; only a foreign workforce kind is a true conflict.
 	person, personErr := s.repo.PersonByActorID(ctx, actorID)
-	if errors.Is(personErr, ErrNotFound) {
-		person, personErr = s.repo.CreateEmployee(ctx, actorID, workforceCode, CreateEmployeeInput{
-			FullNameAr: input.FullNameAr, FullNameEn: input.FullNameEn, Username: input.Username, PhoneE164: input.PhoneE164,
-			EngagementType: "employee", EngagementStartDate: input.EngagementStartDate,
-			Department: department, Role: input.PositionTitle, OfficeLocation: input.OfficeLocation,
-			SupervisorActorID: input.SupervisorActorID,
-		})
+	if personErr == nil && person.EmployeeProfile == nil {
+		return SovereignLeadershipCreationResult{}, false, ErrWorkforceKindConflict
 	}
-	if personErr != nil {
-		compensate()
+	if personErr != nil && !errors.Is(personErr, ErrNotFound) {
 		return SovereignLeadershipCreationResult{}, false, personErr
 	}
 
-	governanceVersion := 0
-	if existing, err := s.repo.EmployeeGovernanceByActorID(ctx, actorID); err == nil {
-		governanceVersion = existing.Version
-	} else if !errors.Is(err, ErrNotFound) {
-		compensate()
-		return SovereignLeadershipCreationResult{}, false, err
-	}
-	governance, err := s.repo.UpsertEmployeeGovernance(ctx, actorID, operator.ActorID, UpsertEmployeeGovernanceInput{
-		ExpectedVersion: governanceVersion, PositionTitle: input.PositionTitle, JobGrade: input.JobGrade,
-		EmploymentClass: input.EmploymentClass, GuaranteeType: input.GuaranteeType,
-		GuaranteeStatus: input.GuaranteeStatus, GuaranteeReference: input.GuaranteeReference,
-		ResponsibilityScopes:   cleanScopeValues(input.ResponsibilityScopes),
-		ManagedDepartmentCodes: []string{department}, Notes: input.Notes,
+	// Governed unit 1: employee profile + governance + leadership
+	// assignment commit atomically as one local cone.
+	var governance EmployeeGovernanceProfile
+	var assignment SovereignAssignment
+	unitErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		if errors.Is(personErr, ErrNotFound) {
+			var err error
+			person, err = createEmployeeTx(ctx, tx, actorID, workforceCode, CreateEmployeeInput{
+				FullNameAr: input.FullNameAr, FullNameEn: input.FullNameEn, Username: input.Username, PhoneE164: input.PhoneE164,
+				EngagementType: "employee", EngagementStartDate: input.EngagementStartDate,
+				Department: department, Role: input.PositionTitle, OfficeLocation: input.OfficeLocation,
+				SupervisorActorID: input.SupervisorActorID,
+			})
+			if err != nil {
+				return err
+			}
+		}
+		governanceVersion, err := employeeGovernanceVersionTx(ctx, tx, actorID)
+		if err != nil {
+			return err
+		}
+		governance, err = upsertEmployeeGovernanceTx(ctx, tx, actorID, operator.ActorID, UpsertEmployeeGovernanceInput{
+			ExpectedVersion: governanceVersion, PositionTitle: input.PositionTitle, JobGrade: input.JobGrade,
+			EmploymentClass: input.EmploymentClass, GuaranteeType: input.GuaranteeType,
+			GuaranteeStatus: input.GuaranteeStatus, GuaranteeReference: input.GuaranteeReference,
+			ResponsibilityScopes:   cleanScopeValues(input.ResponsibilityScopes),
+			ManagedDepartmentCodes: []string{department}, Notes: input.Notes,
+		})
+		if err != nil {
+			return err
+		}
+		assignmentVersion, err := sovereignAssignmentVersionTx(ctx, tx, actorID)
+		if err != nil {
+			return err
+		}
+		assignment, err = upsertSovereignAssignmentTx(ctx, tx, actorID, operator.ActorID, assignmentVersion,
+			input.PermissionBundle, department, input.AssignmentStartsOn, input.AssignmentEndsOn)
+		return err
 	})
+	if unitErr != nil {
+		return SovereignLeadershipCreationResult{}, false, unitErr
+	}
+
+	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", boundaryCase.CommandKey+":activation", correlationID)
 	if err != nil {
-		compensate()
 		return SovereignLeadershipCreationResult{}, false, err
 	}
-	assignmentVersion := 0
-	if existing, err := s.repo.SovereignAssignmentByActorID(ctx, actorID); err == nil {
-		assignmentVersion = existing.Version
-	}
-	assignment, err := s.repo.UpsertSovereignAssignment(ctx, actorID, operator.ActorID, assignmentVersion,
-		input.PermissionBundle, department, input.AssignmentStartsOn, input.AssignmentEndsOn)
-	if err != nil {
-		compensate()
-		return SovereignLeadershipCreationResult{}, false, err
-	}
-	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
-	if err != nil {
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, map[string]any{"actor": actor, "activationId": activation.ActivationID}); err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
 	}
 	result := SovereignLeadershipCreationResult{
 		Leadership: SovereignLeadershipRecord{Employee: person, Governance: governance, Assignment: assignment},
 		Activation: activation,
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"sovereign_leadership.created", nil, result.Leadership, input.Notes, correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in CreateSovereignLeader: %v", err)
-	}
-	if encoded, err := json.Marshal(result); err == nil {
-		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_sovereign_leader", idempotencyKey, requestHash, encoded)
+	// Governed unit 2: audit + idempotent response commit atomically, so a
+	// replay never returns a stored result whose activation never issued.
+	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		if err := recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "sovereign_leadership.created", Operation: "create_sovereign_leader",
+			ToState: result.Leadership, Reason: input.Notes, CorrelationID: correlationID, IdempotencyKey: idempotencyKey,
+		}); err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(result)
+		if err != nil {
+			return err
+		}
+		if err := storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_sovereign_leader", idempotencyKey, requestHash, encoded); err != nil {
+			return err
+		}
+		return completeIdentityBoundaryTx(ctx, tx, boundaryCase.ID)
+	}); err != nil {
+		return SovereignLeadershipCreationResult{}, false, err
 	}
 	return result, false, nil
 }
@@ -473,6 +444,18 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 	if err != nil {
 		return DepartmentEmployeeCreationResult{}, false, err
 	}
+	boundaryCase, err := s.repo.beginIdentityBoundaryCase(ctx, identityBoundaryCaseInput{
+		OperatorContextID: operator.OperatorContextID, Operation: "create_department_employee", WorkforceKind: "employee",
+		WorkforceCode: workforceCode, RequestHash: requestHash, IdempotencyKey: idempotencyKey,
+		RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role, CorrelationID: correlationID,
+		Payload: employeeIdentityBoundaryPayload{Input: input, PermissionBundle: "staff"},
+	})
+	if err != nil {
+		return DepartmentEmployeeCreationResult{}, false, err
+	}
+	if boundaryCase.WorkforceCode != "" {
+		workforceCode = boundaryCase.WorkforceCode
+	}
 	if s.identity == nil {
 		return DepartmentEmployeeCreationResult{}, false, identityclient.ErrUnavailable
 	}
@@ -487,37 +470,51 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 		return DepartmentEmployeeCreationResult{}, false, identityclient.ErrInvalidActor
 	}
 	actorID := actor.ActorID
-	identityCreated := actor.Created
-	compensate := func() {
-		if !identityCreated {
-			return
-		}
-		if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
-			log.Printf("[workforce] employee identity compensation failed actor=%s: %v", actorID, compensationErr)
-		}
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, actor); err != nil {
+		return DepartmentEmployeeCreationResult{}, false, err
 	}
 	person, personErr := s.repo.PersonByActorID(ctx, actorID)
 	if errors.Is(personErr, ErrNotFound) {
-		person, personErr = s.repo.CreateEmployee(ctx, actorID, workforceCode, input)
+		// Governed unit 1: the employee profile rows commit atomically.
+		if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+			var err error
+			person, err = createEmployeeTx(ctx, tx, actorID, workforceCode, input)
+			return err
+		}); err != nil {
+			return DepartmentEmployeeCreationResult{}, false, err
+		}
 	} else if personErr == nil && person.EmployeeProfile == nil {
 		return DepartmentEmployeeCreationResult{}, false, ErrWorkforceKindConflict
-	}
-	if personErr != nil {
-		compensate()
+	} else if personErr != nil {
 		return DepartmentEmployeeCreationResult{}, false, personErr
 	}
-	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
+	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", boundaryCase.CommandKey+":activation", correlationID)
 	if err != nil {
-		compensate()
+		return DepartmentEmployeeCreationResult{}, false, err
+	}
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, map[string]any{"actor": actor, "activationId": activation.ActivationID}); err != nil {
 		return DepartmentEmployeeCreationResult{}, false, err
 	}
 	result := DepartmentEmployeeCreationResult{Employee: person, Activation: activation}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"department_employee.created", nil, person, "", correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in CreateDepartmentEmployee: %v", err)
-	}
-	if encoded, err := json.Marshal(result); err == nil {
-		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_department_employee", idempotencyKey, requestHash, encoded)
+	// Governed unit 2: audit + idempotent response commit atomically.
+	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		if err := recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "department_employee.created", Operation: "create_department_employee",
+			ToState: person, CorrelationID: correlationID, IdempotencyKey: idempotencyKey,
+		}); err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(result)
+		if err != nil {
+			return err
+		}
+		if err := storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_department_employee", idempotencyKey, requestHash, encoded); err != nil {
+			return err
+		}
+		return completeIdentityBoundaryTx(ctx, tx, boundaryCase.ID)
+	}); err != nil {
+		return DepartmentEmployeeCreationResult{}, false, err
 	}
 	return result, false, nil
 }

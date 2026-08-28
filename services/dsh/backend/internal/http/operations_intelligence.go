@@ -27,6 +27,7 @@ func RegisterOperationsIntelligenceRoutes(
 ) {
 	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("POST /dsh/internal/workforce/availability-projections", handleWorkforceAvailabilityProjection(db))
+	mux.HandleFunc("GET /dsh/internal/workforce/availability-projections/{idempotencyKey}", handleGetWorkforceAvailabilityProjection(db))
 	mux.HandleFunc("POST /dsh/internal/workforce/provider-media-refs/validate", handleValidateProviderDocumentMedia(db))
 	mux.HandleFunc("GET /dsh/internal/workforce/captains/{captainId}/financial-eligibility", handleWorkforceCaptainFinancialEligibility(db))
 	mux.HandleFunc("GET /dsh/operator/dispatch/capacity-forecast", protected.withPermission("control-panel", DshDispatchCapacityPermissionRead, protected.handleGetServiceAreaCapacityForecast))
@@ -44,6 +45,11 @@ func handleWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
 			store.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required")
 			return
 		}
+		headerIdempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+		if headerIdempotencyKey == "" {
+			store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "deterministic idempotency key is required")
+			return
+		}
 		var input dispatch.ProviderAvailabilityProjectionInput
 		if !decodeProtectedJSON(w, r, &input) {
 			return
@@ -52,10 +58,47 @@ func handleWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
 			store.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_FORBIDDEN", "operator context must match the trusted service context")
 			return
 		}
+		if strings.TrimSpace(input.IdempotencyKey) != "" && strings.TrimSpace(input.IdempotencyKey) != headerIdempotencyKey {
+			store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_MISMATCH", "idempotency key must match the trusted request header")
+			return
+		}
 		input.OperatorContextID = operatorContextID
-		projection, err := dispatch.UpsertProviderAvailabilityProjection(r.Context(), db, input)
+		input.IdempotencyKey = headerIdempotencyKey
+		trustedContext := auth.WithOperatorContext(r.Context(), operatorContextID)
+		projection, err := dispatch.UpsertProviderAvailabilityProjection(trustedContext, db, input)
 		if err != nil {
 			writeGovernedDispatchError(w, err)
+			return
+		}
+		store.SendJSON(w, http.StatusOK, map[string]any{"availabilityProjection": projection})
+	}
+}
+
+func handleGetWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !store.RequireServiceCaller(w, r, "DSH_WORKFORCE_SERVICE_TOKEN", "workforce") {
+			return
+		}
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		if operatorContextID == "" {
+			store.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required")
+			return
+		}
+		idempotencyKey := strings.TrimSpace(r.PathValue("idempotencyKey"))
+		if idempotencyKey == "" {
+			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "idempotency key is required")
+			return
+		}
+		trustedContext := auth.WithOperatorContext(r.Context(), operatorContextID)
+		projection, found, err := dispatch.GetProviderAvailabilityProjectionByIdempotencyKey(
+			trustedContext, db, operatorContextID, idempotencyKey,
+		)
+		if err != nil {
+			writeGovernedDispatchError(w, err)
+			return
+		}
+		if !found {
+			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "availability projection was not found")
 			return
 		}
 		store.SendJSON(w, http.StatusOK, map[string]any{"availabilityProjection": projection})

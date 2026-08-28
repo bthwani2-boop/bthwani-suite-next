@@ -126,3 +126,43 @@ Before closure:
 - no competing governance representation remains for the same material truth.
 
 Governance cleanliness is a closure property only where the root materially touched durable meaning/policy; it is not permission for unrelated documentation sweeps.
+
+## 13. Human-experience, brand and design authority
+
+When a user-facing experience is material, reconcile one coherent authority chain rather than treating screens as isolated styling targets:
+
+```text
+PRODUCT / BRAND TRUTH
+-> USER / ACTOR NEED
+-> JOURNEY / TASK
+-> INFORMATION ARCHITECTURE
+-> INTERACTION / FEEDBACK / RECOVERY
+-> VISUAL LANGUAGE
+-> CONTENT / TERMINOLOGY
+-> SEMANTIC DESIGN-SYSTEM AUTHORITY
+-> CROSS-SURFACE EXPERIENCE
+```
+
+The durable visual-language model, where materially required, may include:
+
+`brand principles | semantic color | typography | spacing/grid/sizing | shape/radius/elevation | iconography | imagery/illustration | motion | density | component anatomy/states | content/microcopy style | platform adaptation`.
+
+Do not invent these dimensions merely to fill a checklist. When a dimension materially affects identity, comprehension, interaction or cross-surface consistency, it requires a canonical owner/source and explicit disposition under `01`.
+
+A design/prototype file, token source, component library, implementation and rendered screen must not survive as competing authorities for the same concept. Determine which representation owns the durable decision and which are derived/evidentiary, then reconcile all affected representations to it.
+
+`VISUAL IDENTITY != LOCAL SCREEN STYLING`. A local screen may adapt to platform or task constraints, but any divergence from the canonical language requires a proven Product/UX/platform reason rather than convenience.
+
+## 14. Content design and terminology authority
+
+Labels, state names, errors, confirmations, destructive-action copy, help text, empty states and recovery guidance are Product/UX semantics when they can change user understanding or action.
+
+For materially shared concepts, establish one canonical terminology/content meaning across surfaces and languages while allowing platform-appropriate phrasing that preserves the same semantics. Localization must not create a different Product truth.
+
+## 15. Usability evidence and controlled experimentation
+
+A design is not proven usable because it is attractive, internally consistent or preferred by an agent/designer. When a material claim depends on real-user comprehension, discoverability or task completion and existing evidence cannot establish it, require appropriate usability/research evidence under `04`.
+
+Experiments, feature flags or staged UX variants are bounded transition/evidence mechanisms only. A material experiment requires a defined owner, hypothesis/decision purpose, audience/scope, measurement/evidence plan, canonical winner/cutover rule and removal/expiry condition. Do not allow an experiment or flag to become permanent parallel Product/UX truth.
+
+External design/platform practice may inform a solution when research is permitted, but it cannot override BThwani Product/Brand authority or justify copying another product's identity.

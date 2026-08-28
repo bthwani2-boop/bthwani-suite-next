@@ -85,10 +85,10 @@ export async function upsertCaptainDispatchProfile(
   return data.candidate;
 }
 
-export async function acceptDispatchAssignment(assignmentId: string): Promise<DshDispatchAssignment> {
+export async function acceptDispatchAssignment(assignmentId: string, idempotencyKey?: string): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/accept`,
-    { method: "POST" },
+    { method: "POST", idempotencyKey: idempotencyKey ?? corrId("captain-dispatch-accept") },
   );
   return data.assignment;
 }
@@ -97,10 +97,11 @@ export async function declineDispatchAssignment(
   assignmentId: string,
   reason: string,
   reasonCode = "captain_declined",
+  idempotencyKey?: string,
 ): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/decline`,
-    { method: "POST", body: { reasonCode, reason } },
+    { method: "POST", body: { reasonCode, reason }, idempotencyKey: idempotencyKey ?? corrId("captain-dispatch-decline") },
   );
   return data.assignment;
 }
@@ -120,19 +121,21 @@ export async function cancelDispatchAssignment(
   assignmentId: string,
   reasonCode: string,
   reason: string,
+  idempotencyKey?: string,
 ): Promise<void> {
   await request<void>(
     `/dsh/operator/dispatch/assignments/${encodeURIComponent(assignmentId)}/cancel`,
-    { method: "POST", body: { reasonCode, reason } },
+    { method: "POST", body: { reasonCode, reason }, idempotencyKey: idempotencyKey ?? corrId("operator-dispatch-cancel") },
   );
 }
 
 export async function expireDispatchAssignments(
   limit = 100,
+  idempotencyKey?: string,
 ): Promise<number> {
   const data = await request<{ expiredCount: number }>(
     "/dsh/operator/dispatch/assignments/expire",
-    { method: "POST", body: { limit } },
+    { method: "POST", body: { limit }, idempotencyKey: idempotencyKey ?? corrId("operator-dispatch-expire") },
   );
   return Math.max(0, Number(data.expiredCount ?? 0));
 }
@@ -181,10 +184,10 @@ export async function updateDeliveryStatus(
   return data.assignment;
 }
 
-export async function submitPoD(assignmentId: string, input: DshSubmitPoDInput): Promise<DshDispatchAssignment> {
+export async function submitPoD(assignmentId: string, input: DshSubmitPoDInput, idempotencyKey?: string): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/pod`,
-    { method: "POST", body: input },
+    { method: "POST", body: input, idempotencyKey: idempotencyKey ?? corrId("captain-dispatch-pod") },
   );
   return data.assignment;
 }
@@ -195,7 +198,7 @@ export async function reportDeliveryException(
 ): Promise<DshDeliveryException> {
   await request<{ exception: DshDeliveryException }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/exceptions`,
-    { method: "POST", body: input },
+    { method: "POST", body: input, idempotencyKey: input.correlationId },
   );
   return fetchCaptainDeliveryException(assignmentId);
 }
@@ -225,10 +228,10 @@ export async function fetchOperatorDeliveryExceptions(status: "open" | "acknowle
   return data.exceptions ?? [];
 }
 
-export async function acknowledgeDeliveryException(id: string, expectedVersion: number): Promise<DshDeliveryException> {
+export async function acknowledgeDeliveryException(id: string, expectedVersion: number, idempotencyKey?: string): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
     `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/acknowledge`,
-    { method: "POST", body: { expectedVersion } },
+    { method: "POST", body: { expectedVersion }, idempotencyKey: idempotencyKey ?? corrId("operator-delivery-exception-ack") },
   );
   return data.exception;
 }
@@ -249,12 +252,14 @@ async function resolveAcknowledgedDeliveryException(
   id: string,
   expectedVersion: number,
   input: DeliveryExceptionResolutionInput,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryException> {
   const path = `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`;
   const execute = async (version: number) => {
     const data = await request<{ exception: DshDeliveryException }>(path, {
       method: "POST",
       body: { expectedVersion: version, ...input },
+      idempotencyKey: idempotencyKey ?? corrId("operator-delivery-exception-resolve"),
     });
     return data.exception;
   };
@@ -263,7 +268,7 @@ async function resolveAcknowledgedDeliveryException(
     return await execute(expectedVersion);
   } catch (error) {
     if (!requiresDeliveryExceptionAcknowledgement(error)) throw error;
-    const acknowledged = await acknowledgeDeliveryException(id, expectedVersion);
+    const acknowledged = await acknowledgeDeliveryException(id, expectedVersion, idempotencyKey ? `${idempotencyKey}:ack` : undefined);
     return execute(acknowledged.version);
   }
 }
@@ -272,11 +277,12 @@ export function resolveDeliveryExceptionRetrySameCaptain(
   id: string,
   expectedVersion: number,
   note: string,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "retry_same_captain",
     note,
-  });
+  }, idempotencyKey);
 }
 
 export function resolveDeliveryExceptionReassignCaptain(
@@ -284,40 +290,43 @@ export function resolveDeliveryExceptionReassignCaptain(
   expectedVersion: number,
   newCaptainId: string,
   note: string,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "reassign_captain",
     newCaptainId,
     note,
-  });
+  }, idempotencyKey);
 }
 
 export function resolveDeliveryExceptionReturnToStore(
   id: string,
   expectedVersion: number,
   note: string,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "return_to_store",
     note,
-  });
+  }, idempotencyKey);
 }
 
 export function resolveDeliveryExceptionCancelOrder(
   id: string,
   expectedVersion: number,
   note: string,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "cancel_order",
     note,
-  });
+  }, idempotencyKey);
 }
 
-export async function arriveCaptainReturnToStore(assignmentId: string): Promise<DshDeliveryException> {
+export async function arriveCaptainReturnToStore(assignmentId: string, idempotencyKey?: string): Promise<DshDeliveryException> {
   await request<{ exception: DshDeliveryException }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/return-to-store/arrive`,
-    { method: "POST" },
+    { method: "POST", idempotencyKey: idempotencyKey ?? corrId("captain-return-arrive") },
   );
   return fetchCaptainDeliveryException(assignmentId);
 }
@@ -329,10 +338,10 @@ export async function fetchPartnerReturnToStore(orderId: string): Promise<DshDel
   return data.exception;
 }
 
-export async function acceptPartnerReturnToStore(orderId: string): Promise<DshDeliveryException> {
+export async function acceptPartnerReturnToStore(orderId: string, idempotencyKey?: string): Promise<DshDeliveryException> {
   await request<{ exception: DshDeliveryException }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/return-to-store/accept`,
-    { method: "POST" },
+    { method: "POST", idempotencyKey: idempotencyKey ?? corrId("partner-return-accept") },
   );
   return fetchPartnerReturnToStore(orderId);
 }

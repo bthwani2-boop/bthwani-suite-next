@@ -21,8 +21,6 @@ import type {
 } from './home-discovery.types';
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from '../_kernel/dsh-api-base-url';
 
-export { loadingState };
-
 function isValidCategoryDestination(category: DshHomeCategoryDto): boolean {
   const target = category.destinationTarget?.trim();
   if (!target) return false;

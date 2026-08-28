@@ -52,7 +52,6 @@ x-bthwani-contracts:
   representativeFinance: ./dsh.representative-finance.openapi.yaml
   runtimeExtensions: ./dsh.runtime-extensions.openapi.yaml
   settlementsCommissions: ./dsh.settlements-commissions.openapi.yaml
-  storeCaptainHandoff: ./dsh.store-captain-handoff.openapi.yaml
   supportGovernance: ./dsh.support-governance.openapi.yaml
   supportMessageDelivery: ./dsh.support-message-delivery.openapi.yaml
   workforceScopes: ./dsh.workforce-scopes.openapi.yaml
@@ -83,14 +82,6 @@ paths:
     $ref: "./paths/discovery.paths.yaml#/~1dsh~1stores"
   /dsh/home-discovery:
     $ref: "./paths/home-discovery.paths.yaml#/~1dsh~1home-discovery"
-  /dsh/field/catalog/domains:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1catalog~1domains"
-  /dsh/field/catalog/nodes:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1catalog~1nodes"
-  /dsh/partner/catalog/domains:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1domains"
-  /dsh/partner/catalog/nodes:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1nodes"
   /dsh/operator/home-discovery/{kind}:
     $ref: "./dsh.home-marketing-governance.openapi.yaml#/paths/~1dsh~1operator~1home-discovery~1{kind}"
   /dsh/operator/home-discovery/{kind}/{itemId}:
@@ -253,8 +244,6 @@ paths:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1orders~1{orderId}~1ready"
   /dsh/operator/orders:
     $ref: "./paths/orders.paths.yaml#/~1dsh~1operator~1orders"
-  /dsh/operator/orders/{orderId}/cancel:
-    $ref: "./paths/orders.paths.yaml#/~1dsh~1operator~1orders~1{orderId}~1cancel"
   /dsh/operator/dispatch/assignments:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1operator~1dispatch~1assignments"
   /dsh/captain/dispatch/assignments:
@@ -281,6 +270,10 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlements~1summary"
   /dsh/control-panel/finance/refunds:
     $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1refunds"
+  /dsh/control-panel/finance/checkout-closures/{outboxId}/retry:
+    $ref: "./dsh.order-workboards.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1checkout-closures~1{outboxId}~1retry"
+  /dsh/control-panel/finance/checkout-closures/{outboxId}/reconcile:
+    $ref: "./dsh.order-workboards.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1checkout-closures~1{outboxId}~1reconcile"
   /dsh/control-panel/finance/references/field-commission:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1references~1field-commission"
   /dsh/control-panel/finance/references/payment-status:
@@ -411,6 +404,10 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1reconciliation-cases~1{caseId}~1assign"
   /dsh/control-panel/finance/reconciliation-cases/{caseId}/resolve:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1reconciliation-cases~1{caseId}~1resolve"
+  /dsh/control-panel/finance/wlt-outbox-events/{eventId}/retry:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1wlt-outbox-events~1{eventId}~1retry"
+  /dsh/control-panel/finance/wlt-outbox/{eventId}/retry:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1wlt-outbox~1{eventId}~1retry"
   /dsh/catalog-approvals:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1catalog-approvals"
   /dsh/catalog-approvals/{recordId}:
@@ -581,12 +578,6 @@ paths:
     $ref: "./paths/system.paths.yaml#/~1dsh~1partner~1activation~1readiness"
   /dsh/partner/scopes:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1scopes"
-  /dsh/partner/invites:
-    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1invites"
-  /dsh/partner/invites/{inviteId}/accept:
-    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1invites~1{inviteId}~1accept"
-  /dsh/partner/invites/{inviteId}/reject:
-    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1invites~1{inviteId}~1reject"
   /dsh/field/partners:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners"
   /dsh/field/partners/drafts:
@@ -625,6 +616,8 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1information-response"
   /dsh/client/special-requests/{requestId}/execution:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1execution"
+  /dsh/client/special-requests/{requestId}/sagas/{sagaId}:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1sagas~1{sagaId}"
   /dsh/operator/special-requests:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1special-requests"
   /dsh/operator/special-requests/{requestId}:
@@ -635,6 +628,8 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1information-request"
   /dsh/operator/special-requests/{requestId}/execution:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1execution"
+  /dsh/operator/special-requests/{requestId}/sagas/{sagaId}:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1sagas~1{sagaId}"
   /dsh/operator/special-requests/{requestId}/dispatch:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1dispatch"
   /dsh/partner/orders/{orderId}/partner-delivery:
@@ -873,10 +868,6 @@ paths:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1field~1catalog~1master-products~1{productId}~1attribute-values"
   /dsh/field/catalog/master-products/{productId}/relationships:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1field~1catalog~1master-products~1{productId}~1relationships"
-  /dsh/field/catalog/stores/{storeId}/assortment:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1catalog~1stores~1{storeId}~1assortment"
-  /dsh/partner/catalog/assortment:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1assortment"
   /dsh/partner/catalog/attributes:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1partner~1catalog~1attributes"
   /dsh/partner/catalog/attributes/{attributeId}/options:
@@ -885,12 +876,6 @@ paths:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1partner~1catalog~1master-products~1{productId}~1attribute-values"
   /dsh/partner/catalog/master-products/{productId}/relationships:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1partner~1catalog~1master-products~1{productId}~1relationships"
-  /dsh/partner/catalog/proposals:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1proposals"
-  /dsh/field/catalog/stores/{storeId}/assortment/{masterProductId}:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1catalog~1stores~1{storeId}~1assortment~1{masterProductId}"
-  /dsh/partner/catalog/assortment/{masterProductId}:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1assortment~1{masterProductId}"
   /dsh/partner/catalog/product-proposals/{proposalId}/withdraw:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1product-proposals~1{proposalId}~1withdraw"
   /dsh/field/me/ratings/summary:
@@ -907,6 +892,8 @@ paths:
     $ref: "./dsh.home-marketing-events.openapi.yaml#/paths/~1dsh~1home-discovery~1events"
   /dsh/internal/workforce/availability-projections:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1availability-projections"
+  /dsh/internal/workforce/availability-projections/{idempotencyKey}:
+    $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1availability-projections~1{idempotencyKey}"
   /dsh/internal/workforce/captains/{captainId}/financial-eligibility:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1captains~1{captainId}~1financial-eligibility"
   /dsh/internal/workforce/provider-media-refs/validate:
@@ -1742,6 +1729,10 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestFinancialReadback"
     DshSpecialRequestExecutionResponse:
       $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestExecutionResponse"
+    DshSpecialRequestSaga:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestSaga"
+    DshSpecialRequestSagaResponse:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestSagaResponse"
     DshPartnerDeliveryTaskStatus:
       $ref: "./components/schemas/partner.schemas.yaml#/DshPartnerDeliveryTaskStatus"
     DshPartnerDeliveryTask:

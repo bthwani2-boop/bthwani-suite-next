@@ -76,7 +76,7 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
 
   const closeInspector = React.useCallback(() => {
     controller.selectStore(null);
-    router.push(buildOperationsHref('partner-stores'));
+    router.push(buildOperationsHref('exceptions', { subGroup: 'stores' }));
   }, [controller, router]);
 
   const updateLifecycle = React.useCallback(
@@ -151,14 +151,14 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
               sla={store.issue || (store.deliveryMode === 'partner_delivery' ? 'توصيل المتجر' : 'توصيل بثواني')}
               onInspect={() => {
                 controller.selectStore(store.id);
-                router.push(buildOperationsHref('partner-stores', { orderId: store.id }));
+                router.push(buildOperationsHref('exceptions', { orderId: store.id, subGroup: 'stores' }));
               }}
               primaryAction={{
                 id: `${store.id}-details`,
                 label: 'عرض الجاهزية',
                 onAction: () => {
                   controller.selectStore(store.id);
-                  router.push(buildOperationsHref('partner-stores', { orderId: store.id }));
+                  router.push(buildOperationsHref('exceptions', { orderId: store.id, subGroup: 'stores' }));
                 },
               }}
             />

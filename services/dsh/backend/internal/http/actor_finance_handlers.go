@@ -10,13 +10,7 @@ import (
 )
 
 func writeWltActorFinanceResponse(w http.ResponseWriter, status int, body []byte, err error) {
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, err)
 }
 
 func decodeActorFinanceJSON(w http.ResponseWriter, r *http.Request, target any) bool {
@@ -44,6 +38,6 @@ func (s *protectedStoreServer) handleCaptainFinanceCommissions(w http.ResponseWr
 		return
 	}
 	query := url.Values{"captainId": {actor.ID}}
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.ledger.commissions.read", nil, query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }

@@ -1,10 +1,14 @@
-import { bthwaniKeyValueStorage } from "@bthwani/data-runtime";
+import { resolveMutationIdentityScope } from "@bthwani/data-runtime/mutation-identity-scope";
+import type { DurableMutationAttemptEnvelope } from "../../shared/_kernel/durable-mutation-attempt-registry.ts";
+import {
+  getOrCreateDurableMutationAttempt,
+  purgeExactDurableMutationAttempt,
+} from "../../shared/_kernel/durable-mutation-attempt-registry.ts";
 
-const STORAGE_KEY = "@bthwani/field-payout-attempt:v1";
-const MAX_ATTEMPT_AGE_MS = 24 * 60 * 60 * 1000;
+const OPERATION = "field-payout-create";
 let fallbackSequence = 0;
 
-type StoredPayoutAttempt = {
+type StoredPayoutAttempt = DurableMutationAttemptEnvelope<{ readonly idempotencyKey: string }> & {
   readonly signature: string;
   readonly idempotencyKey: string;
   readonly createdAtMs: number;
@@ -20,28 +24,28 @@ function stableHash(value: string): string {
 }
 
 function buildAttemptKey(signature: string): string {
-  const randomUUID = globalThis.crypto?.randomUUID?.();
+  const cryptoApi = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  const randomUUID = cryptoApi?.randomUUID?.();
   if (randomUUID) return `field-payout:${randomUUID}`;
   fallbackSequence += 1;
   const timestamp = Date.now();
   return `field-payout:${timestamp.toString(36)}:${fallbackSequence.toString(36)}:${stableHash(`${signature}|${timestamp}|${fallbackSequence}`)}`;
 }
 
-function parseStoredAttempt(raw: string | null): StoredPayoutAttempt | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Partial<StoredPayoutAttempt>;
-    if (
-      typeof parsed.signature !== "string" ||
-      typeof parsed.idempotencyKey !== "string" ||
-      typeof parsed.createdAtMs !== "number"
-    ) {
-      return null;
-    }
-    return parsed as StoredPayoutAttempt;
-  } catch {
-    return null;
-  }
+function parseStoredAttempt(value: unknown): value is StoredPayoutAttempt {
+  if (!value || typeof value !== "object") return false;
+  const parsed = value as Partial<StoredPayoutAttempt>;
+  return typeof parsed.signature === "string"
+    && typeof parsed.fingerprint === "string"
+    && typeof parsed.context?.idempotencyKey === "string"
+    && typeof parsed.createdAtMs === "number"
+    && typeof parsed.scope?.actorId === "string"
+    && typeof parsed.scope?.installationId === "string"
+    && typeof parsed.scope?.entityId === "string";
+}
+
+function payoutEntityId(actorId: string, amountMinorUnits: number, currency: string): string {
+  return `${actorId}|${amountMinorUnits}|${currency.toUpperCase()}`;
 }
 
 export async function getOrCreateFieldPayoutAttempt(
@@ -58,28 +62,44 @@ export async function getOrCreateFieldPayoutAttempt(
   if (!normalizedCurrency) throw new Error("field payout currency is required");
 
   const signature = `${normalizedActorId}|${amountMinorUnits}|${normalizedCurrency}`;
-  const existing = parseStoredAttempt(await bthwaniKeyValueStorage.getItem(STORAGE_KEY));
-  const now = Date.now();
-  if (
-    existing &&
-    existing.signature === signature &&
-    now - existing.createdAtMs <= MAX_ATTEMPT_AGE_MS
-  ) {
-    return existing;
-  }
-
-  const attempt: StoredPayoutAttempt = {
-    signature,
-    idempotencyKey: buildAttemptKey(signature),
-    createdAtMs: now,
-  };
-  await bthwaniKeyValueStorage.setItem(STORAGE_KEY, JSON.stringify(attempt));
-  return attempt;
+  const entityId = payoutEntityId(normalizedActorId, amountMinorUnits, normalizedCurrency);
+  const scope = await resolveMutationIdentityScope(normalizedActorId, { entityId });
+  const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
+  return getOrCreateDurableMutationAttempt({
+    operation: OPERATION,
+    scope: scoped,
+    fingerprint: signature,
+    create: () => {
+      const idempotencyKey = buildAttemptKey(signature);
+      return {
+        signature,
+        fingerprint: signature,
+        idempotencyKey,
+        createdAtMs: Date.now(),
+        scope: scoped,
+        context: { idempotencyKey },
+      };
+    },
+    parse: parseStoredAttempt,
+  });
 }
 
-export async function clearFieldPayoutAttempt(idempotencyKey: string): Promise<void> {
-  const existing = parseStoredAttempt(await bthwaniKeyValueStorage.getItem(STORAGE_KEY));
-  if (existing?.idempotencyKey === idempotencyKey) {
-    await bthwaniKeyValueStorage.removeItem(STORAGE_KEY);
-  }
+export async function clearFieldPayoutAttempt(
+  actorId: string,
+  amountMinorUnits: number,
+  currency: string,
+  signature: string,
+): Promise<void> {
+  const normalizedActorId = actorId.trim();
+  const normalizedCurrency = currency.trim().toUpperCase();
+  const normalizedSignature = signature.trim();
+  if (!normalizedActorId || !normalizedCurrency || !normalizedSignature) return;
+  const entityId = payoutEntityId(normalizedActorId, amountMinorUnits, normalizedCurrency);
+  const scope = await resolveMutationIdentityScope(normalizedActorId, { entityId });
+  await purgeExactDurableMutationAttempt(
+    OPERATION,
+    { actorId: scope.actorId, installationId: scope.installationId, entityId },
+    normalizedSignature,
+    parseStoredAttempt,
+  );
 }

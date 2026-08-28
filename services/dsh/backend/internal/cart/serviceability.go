@@ -377,8 +377,11 @@ func CheckGovernedServiceability(
 	clientLat *float64,
 	clientLng *float64,
 	requestedMode FulfillmentMode,
-) GovernedServiceabilityResult {
-	base := CheckServiceability(ctx, db, storeID, serviceAreaCode, clientLat, clientLng)
+) (GovernedServiceabilityResult, error) {
+	base, err := CheckServiceability(ctx, db, storeID, serviceAreaCode, clientLat, clientLng)
+	if err != nil {
+		return GovernedServiceabilityResult{}, err
+	}
 	result := GovernedServiceabilityResult{
 		ServiceabilityResult: base,
 		RequestedMode:        requestedMode,
@@ -416,13 +419,7 @@ func CheckGovernedServiceability(
 		string(requestedMode),
 	)
 	if err != nil {
-		result.CapacityState = "policy_unavailable"
-		if result.Serviceable {
-			result.Serviceable = false
-			result.Code = "policy_unavailable"
-			result.Reason = "operational policy could not be evaluated"
-		}
-		return result
+		return GovernedServiceabilityResult{}, err
 	}
 
 	result.ActiveOrders = activeOrders
@@ -498,5 +495,5 @@ func CheckGovernedServiceability(
 		}
 	}
 
-	return result
+	return result, nil
 }

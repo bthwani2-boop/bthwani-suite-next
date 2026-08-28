@@ -105,26 +105,19 @@ func isPlatformOperationalRequest(r *http.Request) bool {
 	if r.Method == http.MethodOptions {
 		return false
 	}
-	if r.URL.Path == "/platform/health" || r.URL.Path == "/platform/readiness" {
-		return false
-	}
 	return strings.HasPrefix(r.URL.Path, "/platform/")
 }
 
 func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && r.URL.Path == "/platform/health" {
-			w.Header().Set("Cache-Control", "no-store")
-			status := "HEALTHY"
-			if lastReadinessFailed.Load() {
-				status = "DEGRADED"
-			}
-			sendJSON(w, http.StatusOK, map[string]string{"status": status, "service": "core-platform-control"})
+		// Health and readiness are now handled by the canonical router.
+		// Pass them through to the next handler (the router).
+		if r.Method == http.MethodGet && (r.URL.Path == "/platform/health" || r.URL.Path == "/platform/readiness") {
+			next.ServeHTTP(w, r)
 			return
 		}
 
-		isReadinessRequest := r.Method == http.MethodGet && r.URL.Path == "/platform/readiness"
-		if !isReadinessRequest && !isPlatformOperationalRequest(r) {
+		if !isPlatformOperationalRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -206,10 +199,6 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 			"failure_total", readinessFailures.Load(),
 		)
 
-		if isReadinessRequest {
-			sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-platform-control"})
-			return
-		}
 		w.Header().Set("X-Platform-Control-Runtime-Status", "HEALTHY")
 		next.ServeHTTP(w, r)
 	})

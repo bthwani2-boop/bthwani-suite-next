@@ -52,20 +52,6 @@ export * from "./partner-store-ownership.api";
 export * from "./use-governed-partner-stores-controller";
 export * from "./use-partner-commercial-summary-controller";
 
-export type {
-  DeliveryPricingFulfillmentMode,
-  DeliveryPricingStatus,
-  DeliveryPricingRecord,
-  DeliveryPricingMutationInput,
-  OperatorDeliveryPricingState,
-} from "./operator-delivery-pricing";
-export {
-  fetchOperatorDeliveryPricing,
-  updateOperatorDeliveryPricing,
-  useOperatorDeliveryPricingController,
-  findDeliveryPricing,
-} from "./operator-delivery-pricing";
-
 export {
   fieldListDrafts,
   fieldCreateDraft,

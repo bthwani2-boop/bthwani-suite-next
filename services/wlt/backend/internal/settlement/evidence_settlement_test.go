@@ -7,7 +7,7 @@ import (
 )
 
 func validJRN036SettlementInput() CreateEvidenceSettlementInput {
-	return CreateEvidenceSettlementInput{
+	input := CreateEvidenceSettlementInput{
 		PartnerID:      "partner-1",
 		PeriodStart:    "2026-07-01",
 		PeriodEnd:      "2026-07-07",
@@ -15,27 +15,31 @@ func validJRN036SettlementInput() CreateEvidenceSettlementInput {
 		IdempotencyKey: "settlement:partner-1:2026-07-01:2026-07-07",
 		OrderSources: []VerifiedDeliveredOrderSource{
 			{
-				OrderID:                "order-2",
-				GrossAmountMinorUnits:  20000,
-				Currency:               "YER",
-				DeliveredAt:            time.Date(2026, 7, 4, 12, 0, 0, 0, time.UTC),
-				PricingSnapshotHash:    "price-hash-2",
-				CompletionEventID:      "delivered:order-2",
-				CompletionEvidenceHash: "completion-hash-2",
-				CancellationStatus:     "not_cancelled",
+				OrderID:               "order-2",
+				PaymentSessionID:      "payment-session-2",
+				GrossAmountMinorUnits: 20000,
+				Currency:              "YER",
+				DeliveredAt:           time.Date(2026, 7, 4, 12, 0, 0, 0, time.UTC),
+				PricingSnapshotHash:   "price-hash-2",
+				CompletionEventID:     "delivered:order-2",
+				CancellationStatus:    "not_cancelled",
 			},
 			{
-				OrderID:                "order-1",
-				GrossAmountMinorUnits:  10000,
-				Currency:               "YER",
-				DeliveredAt:            time.Date(2026, 7, 2, 12, 0, 0, 0, time.UTC),
-				PricingSnapshotHash:    "price-hash-1",
-				CompletionEventID:      "delivered:order-1",
-				CompletionEvidenceHash: "completion-hash-1",
-				CancellationStatus:     "not_cancelled",
+				OrderID:               "order-1",
+				PaymentSessionID:      "payment-session-1",
+				GrossAmountMinorUnits: 10000,
+				Currency:              "YER",
+				DeliveredAt:           time.Date(2026, 7, 2, 12, 0, 0, 0, time.UTC),
+				PricingSnapshotHash:   "price-hash-1",
+				CompletionEventID:     "delivered:order-1",
+				CancellationStatus:    "not_cancelled",
 			},
 		},
 	}
+	for index := range input.OrderSources {
+		input.OrderSources[index].CompletionEvidenceHash = expectedCompletionEvidenceHash(input.OrderSources[index])
+	}
+	return input
 }
 
 func TestSettlementEvidenceIsRequiredAndSorted(t *testing.T) {
@@ -69,6 +73,15 @@ func TestSettlementRejectsMissingPricingOrCompletionEvidence(t *testing.T) {
 		if !errors.Is(err, ErrSettlementEvidenceRequired) {
 			t.Fatalf("err=%v want evidence required", err)
 		}
+	}
+}
+
+func TestSettlementRejectsSameHashDifferentTruth(t *testing.T) {
+	input := validJRN036SettlementInput()
+	input.OrderSources[0].GrossAmountMinorUnits++
+	_, _, _, err := normalizeEvidenceSettlementInput(input)
+	if !errors.Is(err, ErrSettlementEvidenceRequired) {
+		t.Fatalf("err=%v want evidence required for changed facts with stale hash", err)
 	}
 }
 

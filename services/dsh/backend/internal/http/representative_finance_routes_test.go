@@ -89,7 +89,7 @@ func TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor(t *testing.T) {
 				gotLegacyOperatorContext = r.Header.Get("X-Operator-Context-ID")
 				mu.Unlock()
 				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write([]byte(`{"wallet":{"actorId":"` + tc.actorID + `","actorType":"` + tc.actorType + `"}}`))
+				_ = json.NewEncoder(w).Encode(map[string]any{"wallet": map[string]string{"actorId": tc.actorID, "actorType": tc.actorType}})
 			})
 
 			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
@@ -127,6 +127,7 @@ func TestRepresentativeOwnLedgerRoutesOverrideActorQuery(t *testing.T) {
 		gotQuery = r.URL.RawQuery
 		gotOperatorContext = r.Header.Get("X-Delegated-Operator-Context")
 		gotLegacyOperatorContext = r.Header.Get("X-Operator-Context-ID")
+		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"ledgerEntries":[]}`))
 	})
 
@@ -168,6 +169,7 @@ func TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback(
 		gotPath = r.URL.Path
 		gotOperatorContext = r.Header.Get("X-Delegated-Operator-Context")
 		gotLegacyOperatorContext = r.Header.Get("X-Operator-Context-ID")
+		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"wallet":{"actorId":"client-9","actorType":"client"}}`))
 	})
 
@@ -208,6 +210,7 @@ func TestControlPanelRepresentativeLedgerPinsActorAndNoStore(t *testing.T) {
 		gotQuery = r.URL.RawQuery
 		gotOperatorContext = r.Header.Get("X-Delegated-Operator-Context")
 		gotLegacyOperatorContext = r.Header.Get("X-Operator-Context-ID")
+		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"ledgerEntries":[]}`))
 	})
 

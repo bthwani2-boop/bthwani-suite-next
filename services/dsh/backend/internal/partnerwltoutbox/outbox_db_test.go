@@ -69,6 +69,7 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 
 	var requestCount int
 	var gotCaller, gotIdempotency, gotCorrelation string
+	var gotBody map[string]string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCount++
 		gotCaller = r.Header.Get("X-Service-Caller")
@@ -76,6 +77,9 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 		gotCorrelation = r.Header.Get("X-Correlation-ID")
 		if r.Method != http.MethodPost || r.URL.Path != "/wlt/payout-destinations/partner/"+partnerID+"/deactivate" {
 			t.Fatalf("unexpected WLT deactivation request: %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("failed to decode WLT deactivation body: %v", err)
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -117,6 +121,9 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 	if gotCaller != "dsh" || gotIdempotency == "" || gotCorrelation != "partner-deactivation-correlation" {
 		t.Fatalf("WLT mutation headers incomplete: caller=%q idempotency=%q correlation=%q", gotCaller, gotIdempotency, gotCorrelation)
 	}
+	if gotBody["reason"] != "integration deactivation" || !strings.HasPrefix(gotBody["evidenceReference"], "dsh-partner-activation:") {
+		t.Fatalf("WLT deactivation evidence incomplete: %#v", gotBody)
+	}
 
 	var status string
 	var attempts int
@@ -143,15 +150,21 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 
 	active := true
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSONError := func(status int, code, message string) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			_ = json.NewEncoder(w).Encode(map[string]string{"code": code, "message": message})
+		}
 		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			writeJSONError(http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "method not allowed")
 			return
 		}
 		requestedPartnerID := strings.TrimPrefix(r.URL.Path, "/wlt/payout-destinations/partner/")
 		if requestedPartnerID != partnerID {
-			http.Error(w, "not found", http.StatusNotFound)
+			writeJSONError(http.StatusNotFound, "NOT_FOUND", "not found")
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"payoutDestination": map[string]any{
 				"id":                            "wpd-reconciliation-ref",

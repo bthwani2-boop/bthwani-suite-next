@@ -17,6 +17,12 @@ export function isDshDeviceLoopbackBridgeEnabled(): boolean {
   return expoFlag === "true" || runtimeFlag === "1" || runtimeFlag === "true";
 }
 
+export function resolveDshLocalRuntimeHost(): string {
+  return isReactNative() && !isDshDeviceLoopbackBridgeEnabled()
+    ? ANDROID_EMULATOR_HOSTNAME
+    : "127.0.0.1";
+}
+
 export function resolveDshApiBaseUrl(): string {
   if (
     typeof process !== "undefined" &&
@@ -37,10 +43,7 @@ export function resolveDshApiBaseUrl(): string {
   }
 
   if (!url) {
-    url =
-      isReactNative() && !isDshDeviceLoopbackBridgeEnabled()
-        ? "http://10.0.2.2:18080"
-        : "http://127.0.0.1:18080";
+    url = `http://${resolveDshLocalRuntimeHost()}:18080`;
   }
   return url;
 }

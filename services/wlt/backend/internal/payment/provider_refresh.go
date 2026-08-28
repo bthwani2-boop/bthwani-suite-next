@@ -14,7 +14,7 @@ import (
 	"wlt-api/internal/shared"
 )
 
-func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
+func HandleRefreshProviderStatus(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionID := r.PathValue("paymentSessionId")
 		session, err := getSession(db, sessionID)
@@ -33,25 +33,37 @@ func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
 		}
 		if session.Status == "captured" || session.Status == "failed" || session.Status == "expired" {
 			shared.SendJSON(w, http.StatusOK, map[string]any{
-				"paymentSession": session,
+				"paymentSession":         session,
 				"providerRefreshSkipped": true,
-				"reason": "session is already terminal",
+				"reason":                 "session is already terminal",
 			})
 			return
 		}
-		client, err := provider.NewDefaultPaymentProvider()
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+		if rail == nil {
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
-		result, err := client.Post(r.Context(), "/financial/card/status", map[string]any{
-			"paymentSessionId":  session.ID,
-			"providerReference": session.ProviderReference,
-			"amountMinorUnits":  session.AmountMinorUnits,
-			"currency":          session.Currency,
-		}, provider.RequestMetaFromHTTP(r, "wlt-provider-status-refresh"))
+		if strings.TrimSpace(session.ProviderReference) == "" {
+			// Without a previously observed provider reference the readback
+			// cannot be bound to this session; an unbound provider answer must
+			// never be projected onto one.
+			shared.SendJSON(w, http.StatusOK, map[string]any{
+				"paymentSession":         session,
+				"providerRefreshSkipped": true,
+				"reason":                 "session has no provider reference to bind a readback",
+			})
+			return
+		}
+		inquiry := provider.StatusInquiry{PaymentSessionID: session.ID, ProviderReference: session.ProviderReference}
+		result, err := rail.Status(r.Context(), inquiry, provider.RequestMetaFromHTTP(r, "wlt-provider-status-refresh"))
 		if err != nil {
 			shared.SendProviderError(w, err)
+			return
+		}
+		if strings.TrimSpace(result.ProviderReference) == "" || strings.TrimSpace(result.ProviderReference) != strings.TrimSpace(session.ProviderReference) {
+			// The provider answered for a different reference than the one this
+			// session holds: refuse to treat the answer as this session's truth.
+			shared.SendError(w, http.StatusBadGateway, "UNBOUND_PROVIDER_REFERENCE", "provider status response does not match this session's provider reference")
 			return
 		}
 		eventType := providerEventTypeForStatus(result.Status)
@@ -64,15 +76,15 @@ func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
 		payload := fmt.Sprintf("%s\x1f%s\x1f%s\x1f%s", session.OperatorContextID, session.ID, result.Status, result.ProviderReference)
 		hash := sha256.Sum256([]byte(payload))
 		application, err := ApplyAuthoritativeProviderEvent(r.Context(), db, ProviderEventInput{
-			EventID:            eventID,
-			OperatorContextID:  session.OperatorContextID,
-			PaymentSessionID:   session.ID,
-			EventType:          eventType,
-			ProviderStatus:     result.Status,
-			ProviderReference:  result.ProviderReference,
-			PayloadHash:        hex.EncodeToString(hash[:]),
-			SignatureTime:      time.Now().UTC(),
-			ProcessingSource:   "provider_status_refresh",
+			EventID:           eventID,
+			OperatorContextID: session.OperatorContextID,
+			PaymentSessionID:  session.ID,
+			EventType:         eventType,
+			ProviderStatus:    result.Status,
+			ProviderReference: result.ProviderReference,
+			PayloadHash:       hex.EncodeToString(hash[:]),
+			SignatureTime:     time.Now().UTC(),
+			ProcessingSource:  "provider_status_refresh",
 		})
 		if errors.Is(err, ErrProviderEventConflict) {
 			shared.SendError(w, http.StatusConflict, "PROVIDER_EVENT_REPLAY_CONFLICT", err.Error())

@@ -37,7 +37,7 @@ func main() {
 	}
 
 	repository := identity.NewRepository(db)
-	baseRouter := identityhttp.NewRouter(repository)
+	baseRouter := identityhttp.NewRouter(repository, db)
 	identityhttp.RegisterEmployeeAccessRoutes(baseRouter, repository)
 	identityhttp.RegisterPartnerAccessRoutes(baseRouter, repository)
 	baseRouter = identityhttp.RbacDefinitionBoundary(repository, baseRouter)

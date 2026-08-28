@@ -200,7 +200,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 	correlationID := r.Header.Get("X-Correlation-Id")
 
 	if isCod {
-		session, err := s.wlt.GetPaymentSession(r.Context(), sessionID)
+		session, err := s.wlt.GetPaymentSession(wlt.WithOperatorContext(r.Context(), actor.OperatorContextID), sessionID)
 		if err != nil {
 			store.SendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "failed to verify COD capacity")
 			return
@@ -575,6 +575,10 @@ func parseDispatchLimit(raw string, fallback int) int {
 
 func writeGovernedDispatchError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, dispatch.ErrAvailabilityProjectionStale):
+		store.SendError(w, http.StatusConflict, "STALE_SOURCE_VERSION", err.Error())
+	case errors.Is(err, dispatch.ErrAvailabilityProjectionIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
 	case errors.Is(err, dispatch.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "DISPATCH_NOT_FOUND", err.Error())
 	case errors.Is(err, dispatch.ErrCaptainNotEligible) || strings.Contains(err.Error(), "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"):

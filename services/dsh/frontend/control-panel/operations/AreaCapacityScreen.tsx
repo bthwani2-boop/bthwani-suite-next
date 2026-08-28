@@ -226,7 +226,7 @@ function CapacityInspector({
     <WebControlPanelInspectorShell title={`المنطقة والسعة — ${zone.name}`} onClose={onClose}>
       <div className={`${styles.surfaceStackSmall} ${styles.surfaceStatePadding}`}>
         <div><strong>المعرّف:</strong> <span dir="ltr">{zone.id}</span></div>
-        <div><strong>رمز المدينة:</strong> {zone.cityCode}</div>
+        <div><strong>رمز نطاق الخدمة:</strong> {zone.serviceAreaCode}</div>
         <div><strong>حالة المنطقة:</strong> {zone.isActive ? 'نشطة' : 'غير نشطة'}</div>
 
         {state.kind === 'loading' ? (
@@ -392,7 +392,7 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
               status={zone.isActive ? 'نشطة' : 'متوقفة'}
               statusTone={zone.isActive ? 'success' : 'warning'}
               recommendation="فتح التفاصيل"
-              reason={`رمز المدينة: ${zone.cityCode}`}
+              reason={`رمز نطاق الخدمة: ${zone.serviceAreaCode}`}
               sla={`آخر تحديث: ${zone.updatedAt}`}
               onInspect={() => setSelectedZoneId(zone.id)}
               primaryAction={{ id: `${zone.id}-inspect`, label: 'عرض السعة', onAction: () => setSelectedZoneId(zone.id) }}

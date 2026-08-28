@@ -7,20 +7,25 @@ import (
 )
 
 type OrderTruthAuditInput struct {
-	OperatorContextID        string
-	ActorID         string
-	ActorRole       string
-	OrderID         string
-	CheckoutIntentID string
-	EventType       string
-	ResultCode      string
-	CorrelationID   string
-	Metadata        map[string]any
+	OperatorContextID string
+	ActorID           string
+	ActorRole         string
+	OrderID           string
+	CheckoutIntentID  string
+	EventType         string
+	ResultCode        string
+	CorrelationID     string
+	Metadata          map[string]any
 }
 
 // RecordOrderTruthAudit is deliberately best-effort at HTTP boundaries. It
 // stores only allow-listed operational metadata and never request bodies,
 // address snapshots, tokens, idempotency keys or provider payloads.
+// Best-effort has an exact meaning here: the business outcome is already
+// committed when this runs, so a failure must never reverse or replace the
+// client response — but callers are required to log the returned error
+// (never discard it), because this row is the only record of why a financial
+// request was accepted or rejected.
 func RecordOrderTruthAudit(db *sql.DB, input OrderTruthAuditInput) error {
 	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
@@ -30,15 +35,23 @@ func RecordOrderTruthAudit(db *sql.DB, input OrderTruthAuditInput) error {
 	input.EventType = strings.TrimSpace(input.EventType)
 	input.ResultCode = strings.TrimSpace(input.ResultCode)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
-	if input.OperatorContextID == "" || input.EventType == "" || input.ResultCode == "" { return ErrInvalid }
-	if input.ActorRole == "" { input.ActorRole = "system" }
+	if input.OperatorContextID == "" || input.EventType == "" || input.ResultCode == "" {
+		return ErrInvalid
+	}
+	if input.ActorRole == "" {
+		input.ActorRole = "system"
+	}
 
 	safe := map[string]any{}
 	for _, key := range []string{"surface", "route", "status", "replay", "version", "outboxStatus"} {
-		if value, ok := input.Metadata[key]; ok { safe[key] = value }
+		if value, ok := input.Metadata[key]; ok {
+			safe[key] = value
+		}
 	}
 	metadata, err := json.Marshal(safe)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	_, err = db.Exec(`
 		INSERT INTO dsh_order_truth_audit
 		(operator_context_id,actor_id,actor_role,order_id,checkout_intent_id,event_type,result_code,correlation_id,metadata)

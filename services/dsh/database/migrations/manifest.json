@@ -3,7 +3,7 @@
   "service": "dsh",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "dsh-999_runtime_schema_alignment.sql",
+  "cutover": "dsh-1042_support_session_operator_context.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -1676,6 +1676,13 @@
       "file": "dsh-999_runtime_schema_alignment.sql",
       "sha256": "4c6ed5cec1906985db3c0f7794c07317a32738fa9ee7a79b3580187272ffa377",
       "historicalPrefix": "999",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 289,
+      "file": "dsh-1042_support_session_operator_context.sql",
+      "sha256": "dc577e1000f9cd01fb82d70deb3a2e4376ae273fe845ddbb89ed1fdf47bdd4d4",
+      "historicalPrefix": "1042",
       "state": "ACTIVE"
     }
   ]

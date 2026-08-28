@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -43,10 +44,9 @@ func reconcilePayoutWithAuthoritativeStatement(t *testing.T, db *sql.DB, operato
 	if err != nil {
 		t.Fatalf("register external provider account: %v", err)
 	}
-	statement, err := ImportAuthoritativeStatement(reconcilerCtx, db, ImportAuthoritativeStatementInput{
+	statementInput := ImportAuthoritativeStatementInput{
 		ExternalProviderAccountID: account.ID,
 		StatementReference:        "statement-" + payoutID,
-		ArtifactSHA256:            fixtureSHA256("artifact:" + payoutID),
 		BusinessDate:              time.Now().UTC().Format(time.DateOnly),
 		Currency:                  "YER",
 		Lines: []AuthoritativeStatementLineInput{{
@@ -57,7 +57,21 @@ func reconcilePayoutWithAuthoritativeStatement(t *testing.T, db *sql.DB, operato
 			DestinationReferenceHash:  destinationHash,
 			SourceRecord:              map[string]any{"fixture": "authoritative"},
 		}},
-	})
+	}
+	businessDate, err := time.Parse(time.DateOnly, statementInput.BusinessDate)
+	if err != nil {
+		t.Fatalf("parse fixture business date: %v", err)
+	}
+	canonicalBytes, err := canonicalStatementArtifactBytes(statementInput, businessDate)
+	if err != nil {
+		t.Fatalf("encode fixture artifact: %v", err)
+	}
+	statementInput.ArtifactSHA256, err = canonicalStatementArtifactSHA256(statementInput, businessDate)
+	if err != nil {
+		t.Fatalf("compute fixture artifact hash: %v", err)
+	}
+	statementInput.ArtifactBytesBase64 = base64.StdEncoding.EncodeToString(canonicalBytes)
+	statement, err := ImportAuthoritativeStatement(reconcilerCtx, db, statementInput)
 	if err != nil {
 		t.Fatalf("import authoritative statement: %v", err)
 	}

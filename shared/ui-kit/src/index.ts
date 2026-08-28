@@ -1,8 +1,6 @@
 export * from "./tokens";
 export * from "./theme";
 export * from "./components";
-export * from "./primitives";
-export * from "./patterns";
 export * from "./format";
 export { BthwaniUiProvider } from "./provider";
 

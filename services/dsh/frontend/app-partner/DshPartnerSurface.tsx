@@ -72,7 +72,6 @@ function DshPartnerSurfaceInner({ route, navigation }: DshPartnerSurfaceProps) {
     if (
       route.kind === 'support-directory'
       || route.kind === 'support-screen'
-      || route.kind === 'order-rejection'
       || route.kind === 'store-courier'
       || route.kind === 'commercial-model'
     ) return 'operations';

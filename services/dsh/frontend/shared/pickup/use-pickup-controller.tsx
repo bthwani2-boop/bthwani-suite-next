@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { corrId } from "../_kernel/dsh-http-request";
 import {
   markPickupReady,
   notifyPickupCustomer,
@@ -47,6 +49,18 @@ export type PickupActionState = {
 
 /** Partner-owned pickup handoff controller backed by the resumable stage read. */
 export function usePickupActionsController(orderId: string) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = useRef<Record<string, string>>({});
+  const commandFor = useCallback((action: string, fingerprint: string) => {
+    if (!actorId) throw new Error("جلسة الشريك غير جاهزة لتنفيذ إجراء الاستلام.");
+    const key = `${actorId}:${orderId}:${action}:${fingerprint}`;
+    const existing = commandIds.current[key];
+    if (existing) return { key, id: existing };
+    const id = corrId(`partner-pickup-${action}`);
+    commandIds.current[key] = id;
+    return { key, id };
+  }, [actorId, orderId]);
   const [state, setState] = useState<PickupActionState>({
     session: null,
     stage: "not_ready",
@@ -134,51 +148,64 @@ export function usePickupActionsController(orderId: string) {
     }
   }, [orderId]);
 
-  const markReady = useCallback(() =>
-    runAction("تم تعليم الطلب كجاهز للاستلام.", () =>
-      markPickupReady(orderId, state.session?.version ?? 0)),
-  [orderId, runAction, state.session?.version]);
+  const runCommand = useCallback(async (
+    successMessage: string,
+    action: string,
+    fingerprint: string,
+    execute: (commandId: string) => Promise<unknown>,
+  ) => {
+    if (!actorId) {
+      setState((current) => ({ ...current, busy: false, isError: true, message: "جلسة الشريك غير جاهزة لتنفيذ إجراء الاستلام." }));
+      return false;
+    }
+    const command = commandFor(action, fingerprint);
+    return runAction(successMessage, () => execute(command.id));
+  }, [actorId, commandFor, runAction]);
 
-  const notify = useCallback(() =>
-    runAction("تم إشعار العميل وإصدار رمز استلام جديد.", () =>
-      notifyPickupCustomer(orderId, { expectedVersion: state.session?.version ?? 0 })),
-  [orderId, runAction, state.session?.version]);
+  const markReady = useCallback(() => {
+    const expectedVersion = state.session?.version ?? 0;
+    return runCommand("تم تعليم الطلب كجاهز للاستلام.", "mark_ready", String(expectedVersion), (commandId) =>
+      markPickupReady(orderId, expectedVersion, commandId));
+  }, [orderId, runCommand, state.session?.version]);
 
-  const customerArrived = useCallback(() =>
-    runAction("تم تسجيل وصول العميل.", () =>
-      markPickupCustomerArrived(orderId, state.session?.version ?? 0)),
-  [orderId, runAction, state.session?.version]);
+  const notify = useCallback(() => {
+    const expectedVersion = state.session?.version ?? 0;
+    return runCommand("تم إشعار العميل وإصدار رمز استلام جديد.", "notify_customer", String(expectedVersion), (commandId) =>
+      notifyPickupCustomer(orderId, { expectedVersion }, commandId));
+  }, [orderId, runCommand, state.session?.version]);
 
-  const verify = useCallback((code: string) =>
-    runAction("تم التحقق من رمز الاستلام وإتمام الطلب.", () =>
-      verifyPickupSession(orderId, { expectedVersion: state.session?.version ?? 0, code })),
-  [orderId, runAction, state.session?.version]);
+  const customerArrived = useCallback(() => {
+    const expectedVersion = state.session?.version ?? 0;
+    return runCommand("تم تسجيل وصول العميل.", "customer_arrived", String(expectedVersion), (commandId) =>
+      markPickupCustomerArrived(orderId, expectedVersion, commandId));
+  }, [orderId, runCommand, state.session?.version]);
 
-  const noShow = useCallback((reason: string) =>
-    runAction("تم تسجيل عدم حضور العميل وإغلاق جلسة الرمز.", () =>
-      markPickupNoShow(orderId, {
-        expectedVersion: state.session?.version ?? 0,
-        reason: reason.trim(),
-      })),
-  [orderId, runAction, state.session?.version]);
+  const verify = useCallback((code: string) => {
+    const expectedVersion = state.session?.version ?? 0;
+    return runCommand("تم التحقق من رمز الاستلام وإتمام الطلب.", "verify_otp", `${expectedVersion}:${code}`, (commandId) =>
+      verifyPickupSession(orderId, { expectedVersion, code }, commandId));
+  }, [orderId, runCommand, state.session?.version]);
 
-  const extendWindow = useCallback((reason: string, newExpiry: string) =>
-    runAction("تم تمديد نافذة الاستلام.", () =>
-      extendPickupWindowAsPartner(orderId, {
-        expectedVersion: state.session?.version ?? 0,
-        reason: reason.trim(),
-        newExpiry,
-      })),
-  [orderId, runAction, state.session?.version]);
+  const noShow = useCallback((reason: string) => {
+    const expectedVersion = state.session?.version ?? 0;
+    const normalizedReason = reason.trim();
+    return runCommand("تم تسجيل عدم حضور العميل وإغلاق جلسة الرمز.", "no_show", `${expectedVersion}:${normalizedReason}`, (commandId) =>
+      markPickupNoShow(orderId, { expectedVersion, reason: normalizedReason }, commandId));
+  }, [orderId, runCommand, state.session?.version]);
 
-  const rescheduleWindow = useCallback((reason: string, newExpiry: string) =>
-    runAction("تمت إعادة فتح نافذة الاستلام. أصدر رمزًا جديدًا وأشعر العميل.", () =>
-      reschedulePickupWindowAsPartner(orderId, {
-        expectedVersion: state.session?.version ?? 0,
-        reason: reason.trim(),
-        newExpiry,
-      })),
-  [orderId, runAction, state.session?.version]);
+  const extendWindow = useCallback((reason: string, newExpiry: string) => {
+    const expectedVersion = state.session?.version ?? 0;
+    const normalizedReason = reason.trim();
+    return runCommand("تم تمديد نافذة الاستلام.", "extend_window", `${expectedVersion}:${normalizedReason}:${newExpiry}`, (commandId) =>
+      extendPickupWindowAsPartner(orderId, { expectedVersion, reason: normalizedReason, newExpiry }, commandId));
+  }, [orderId, runCommand, state.session?.version]);
+
+  const rescheduleWindow = useCallback((reason: string, newExpiry: string) => {
+    const expectedVersion = state.session?.version ?? 0;
+    const normalizedReason = reason.trim();
+    return runCommand("تمت إعادة فتح نافذة الاستلام. أصدر رمزًا جديدًا وأشعر العميل.", "reschedule", `${expectedVersion}:${normalizedReason}:${newExpiry}`, (commandId) =>
+      reschedulePickupWindowAsPartner(orderId, { expectedVersion, reason: normalizedReason, newExpiry }, commandId));
+  }, [orderId, runCommand, state.session?.version]);
 
   return {
     state,
@@ -268,6 +295,18 @@ export function useOperatorPickupsController(
   params: UseOperatorPickupsControllerParams = {},
 ) {
   const { storeId, limit = 100, autoLoad = true } = params;
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = useRef<Record<string, string>>({});
+  const commandFor = useCallback((orderIdValue: string, action: string, expectedVersion: number, reason: string, newExpiry: string) => {
+    if (!actorId) throw new Error("جلسة العمليات غير جاهزة لتمديد نافذة الاستلام.");
+    const key = `${actorId}:${orderIdValue}:${action}:${expectedVersion}:${reason.trim()}:${newExpiry}`;
+    const existing = commandIds.current[key];
+    if (existing) return { key, id: existing };
+    const id = corrId(`operator-pickup-${action}`);
+    commandIds.current[key] = id;
+    return { key, id };
+  }, [actorId]);
   const [listState, setListState] = useState<FetchState<readonly DshPickupSession[]>>({
     loaded: false,
     error: null,
@@ -320,8 +359,9 @@ export function useOperatorPickupsController(
       reason: string,
       newExpiry: string,
       fallback: string,
+      commandId: string,
     ): Promise<OperatorPickupMutationResult> => {
-      return action(orderIdValue, { expectedVersion, reason, newExpiry })
+      return action(orderIdValue, { expectedVersion, reason, newExpiry }, commandId)
         .then((response) => {
           setDetailState({ loaded: true, error: null, offline: false, data: response.session });
           return { ok: true as const, session: response.session };
@@ -340,16 +380,22 @@ export function useOperatorPickupsController(
   );
 
   const extendWindow = useCallback(
-    (orderIdValue: string, expectedVersion: number, reason: string, newExpiry: string) =>
-      executeWindowMutation(
+    async (orderIdValue: string, expectedVersion: number, reason: string, newExpiry: string) => {
+      if (!actorId) {
+        return { ok: false as const, kind: "forbidden" as const, message: "جلسة العمليات غير جاهزة لتمديد نافذة الاستلام." };
+      }
+      const command = commandFor(orderIdValue, "extend_window", expectedVersion, reason, newExpiry);
+      return executeWindowMutation(
         extendPickupWindow,
         orderIdValue,
         expectedVersion,
         reason,
         newExpiry,
         "تعذر تمديد نافذة الاستلام.",
-      ),
-    [executeWindowMutation],
+        command.id,
+      );
+    },
+    [actorId, commandFor, executeWindowMutation],
   );
 
   const rescheduleWindow = useCallback(
@@ -361,8 +407,9 @@ export function useOperatorPickupsController(
         reason,
         newExpiry,
         "تعذر إعادة جدولة نافذة الاستلام.",
+        commandFor(orderIdValue, "reschedule", expectedVersion, reason, newExpiry).id,
       ),
-    [executeWindowMutation],
+    [commandFor, executeWindowMutation],
   );
 
   return {

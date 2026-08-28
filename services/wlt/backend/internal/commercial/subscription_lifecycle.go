@@ -20,6 +20,7 @@ var (
 
 type SubscriptionLifecycle struct {
 	ID                          string   `json:"id"`
+	OperatorContextID           string   `json:"operatorContextId"`
 	ClientID                    string   `json:"clientId"`
 	ProductReference            string   `json:"productReference"`
 	Status                      string   `json:"status"`
@@ -39,7 +40,7 @@ type SubscriptionLifecycle struct {
 	UpdatedAt                   string   `json:"updatedAt"`
 }
 
-const subscriptionLifecycleSelect = `id::TEXT, client_id, product_reference, status,
+const subscriptionLifecycleSelect = `id::TEXT, operator_context_id, client_id, product_reference, status,
 	payment_session_id::TEXT, subscription_purchase_id, starts_at::TEXT, ends_at::TEXT,
 	cancel_at_period_end, cancelled_at::TEXT, cancellation_reason,
 	last_renewal_payment_session_id, compensation_status, compensation_reference,
@@ -51,6 +52,7 @@ func scanSubscriptionLifecycle(row interface{ Scan(dest ...any) error }) (*Subsc
 	var renewalPaymentSessionID, compensationReference sql.NullString
 	if err := row.Scan(
 		&item.ID,
+		&item.OperatorContextID,
 		&item.ClientID,
 		&item.ProductReference,
 		&item.Status,
@@ -134,19 +136,20 @@ type CancelSubscriptionLifecycleInput struct {
 }
 
 type SubscriptionCompensation struct {
-	ID               string  `json:"id"`
-	SubscriptionID   string  `json:"subscriptionId"`
-	ClientID         string  `json:"clientId"`
-	PaymentSessionID string  `json:"paymentSessionId"`
-	Status           string  `json:"status"`
-	Reason           string  `json:"reason"`
-	RefundReference  *string `json:"refundReference,omitempty"`
-	AmountMinorUnits int64   `json:"amountMinorUnits"`
-	Currency         string  `json:"currency"`
-	CorrelationID    string  `json:"correlationId"`
-	CreatedAt        string  `json:"createdAt"`
-	UpdatedAt        string  `json:"updatedAt"`
-	CompletedAt      *string `json:"completedAt,omitempty"`
+	ID                string  `json:"id"`
+	OperatorContextID string  `json:"operatorContextId"`
+	SubscriptionID    string  `json:"subscriptionId"`
+	ClientID          string  `json:"clientId"`
+	PaymentSessionID  string  `json:"paymentSessionId"`
+	Status            string  `json:"status"`
+	Reason            string  `json:"reason"`
+	RefundReference   *string `json:"refundReference,omitempty"`
+	AmountMinorUnits  int64   `json:"amountMinorUnits"`
+	Currency          string  `json:"currency"`
+	CorrelationID     string  `json:"correlationId"`
+	CreatedAt         string  `json:"createdAt"`
+	UpdatedAt         string  `json:"updatedAt"`
+	CompletedAt       *string `json:"completedAt,omitempty"`
 }
 
 func requiredLifecycleHeaders(r *http.Request) (string, string, bool) {
@@ -168,6 +171,10 @@ func validateBoundSubscriptionPayment(
 	tx *sql.Tx,
 	input ActivateSubscriptionLifecycleInput,
 ) (price int64, currency, cycle string, activationPoints int64, err error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return 0, "", "", 0, ErrInvalid
+	}
 	var productStatus string
 	err = tx.QueryRowContext(ctx, `SELECT price_minor_units, currency, billing_cycle, status, activation_points
 		FROM wlt_commercial_products WHERE reference=$1 FOR UPDATE`, input.ProductReference).
@@ -182,13 +189,13 @@ func validateBoundSubscriptionPayment(
 		return 0, "", "", 0, ErrInvalidTransition
 	}
 
-	var paymentClient, paymentStatus, paymentCurrency string
+	var paymentOperatorContext, paymentClient, paymentStatus, paymentCurrency string
 	var paymentAmount int64
 	var purchaseID, productReference, checkoutIntentID, specialRequestID sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT client_id, status, amount_minor_units, currency,
+	err = tx.QueryRowContext(ctx, `SELECT operator_context_id, client_id, status, amount_minor_units, currency,
 		subscription_purchase_id, commercial_product_reference, checkout_intent_id, special_request_id
 		FROM wlt_payment_sessions WHERE id=$1 FOR UPDATE`, input.PaymentSessionID).
-		Scan(&paymentClient, &paymentStatus, &paymentAmount, &paymentCurrency,
+		Scan(&paymentOperatorContext, &paymentClient, &paymentStatus, &paymentAmount, &paymentCurrency,
 			&purchaseID, &productReference, &checkoutIntentID, &specialRequestID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, "", "", 0, ErrNotFound
@@ -201,7 +208,7 @@ func validateBoundSubscriptionPayment(
 	}
 	if !purchaseID.Valid || purchaseID.String != input.SubscriptionPurchaseID ||
 		!productReference.Valid || productReference.String != input.ProductReference ||
-		checkoutIntentID.Valid || specialRequestID.Valid || paymentClient != input.ClientID ||
+		checkoutIntentID.Valid || specialRequestID.Valid || paymentOperatorContext != operatorContextID || paymentClient != input.ClientID ||
 		paymentAmount != price || paymentCurrency != currency {
 		return 0, "", "", 0, ErrPaymentMismatch
 	}
@@ -215,6 +222,10 @@ func appendSubscriptionLifecycleEvent(
 	purchaseID, idempotencyKey, correlationID, actorID string,
 	metadata map[string]any,
 ) error {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return ErrInvalid
+	}
 	if metadata == nil {
 		metadata = map[string]any{}
 	}
@@ -223,12 +234,12 @@ func appendSubscriptionLifecycleEvent(
 		return ErrInvalid
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO wlt_subscription_lifecycle_events
-		(subscription_id, client_id, event_type, from_status, to_status,
+			(operator_context_id, subscription_id, client_id, event_type, from_status, to_status,
 		 payment_session_id, subscription_purchase_id, idempotency_key,
 		 correlation_id, actor_id, metadata)
-		VALUES ($1,$2,$3,NULLIF($4,''),$5,NULLIF($6,''),NULLIF($7,''),$8,$9,$10,$11)
-		ON CONFLICT (idempotency_key) DO NOTHING`,
-		subscriptionID, clientID, eventType, fromStatus, toStatus,
+VALUES ($1,$2,$3,$4,NULLIF($5,''),$6,NULLIF($7,''),NULLIF($8,''),$9,$10,$11,$12)
+			ON CONFLICT (operator_context_id, idempotency_key) DO NOTHING`,
+		operatorContextID, subscriptionID, clientID, eventType, fromStatus, toStatus,
 		paymentSessionID, purchaseID, idempotencyKey, correlationID, actorID, encoded)
 	return err
 }
@@ -239,24 +250,63 @@ func appendActivationLoyaltyEntry(
 	clientID, subscriptionID, purchaseID, correlationID string,
 	points int64,
 ) error {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return ErrInvalid
+	}
 	if points <= 0 {
 		return nil
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_accounts(client_id)
-		VALUES ($1) ON CONFLICT (client_id) DO NOTHING`, clientID); err != nil {
+	if err := ensureActivationLoyaltyAccount(ctx, tx, operatorContextID, clientID); err != nil {
 		return err
+	}
+	return recordActivationLoyaltyEntry(ctx, tx, operatorContextID, clientID, subscriptionID,
+		purchaseID, correlationID, points)
+}
+
+// ensureActivationLoyaltyAccount guarantees the client's loyalty account row
+// exists within the operator context. Both outcomes of the ON CONFLICT insert
+// are valid (0 = already existed, 1 = created); RowsAffected is still
+// inspected so a driver-level failure cannot be mistaken for a silent
+// conflict.
+func ensureActivationLoyaltyAccount(ctx context.Context, tx *sql.Tx, operatorContextID, clientID string) error {
+	result, err := tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_accounts(operator_context_id, client_id)
+		VALUES ($1,$2) ON CONFLICT (operator_context_id, client_id) DO NOTHING`, operatorContextID, clientID)
+	if err != nil {
+		return err
+	}
+	if _, err := result.RowsAffected(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// recordActivationLoyaltyEntry claims the earn entry's command identity
+// BEFORE the account balance is mutated: an entry whose context-scoped
+// idempotency key already exists proves this purchase already credited the
+// account, so a replay must return untouched instead of re-running the
+// balance UPDATE.
+func recordActivationLoyaltyEntry(
+	ctx context.Context,
+	tx *sql.Tx,
+	operatorContextID, clientID, subscriptionID, purchaseID, correlationID string,
+	points int64,
+) error {
+	entryKey := "subscription-activation:" + purchaseID
+	var alreadyEarned bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(
+			SELECT 1 FROM wlt_loyalty_entries
+			WHERE operator_context_id=$1 AND idempotency_key=$2)`, operatorContextID, entryKey).
+		Scan(&alreadyEarned); err != nil {
+		return err
+	}
+	if alreadyEarned {
+		return nil
 	}
 	var balance, lifetime int64
 	if err := tx.QueryRowContext(ctx, `SELECT points_balance, lifetime_points
-		FROM wlt_loyalty_accounts WHERE client_id=$1 FOR UPDATE`, clientID).
-		Scan(&balance, &lifetime); err != nil {
-		return err
-	}
-	balance += points
-	lifetime += points
-	if _, err := tx.ExecContext(ctx, `UPDATE wlt_loyalty_accounts
-		SET points_balance=$2, lifetime_points=$3, updated_at=NOW() WHERE client_id=$1`,
-		clientID, balance, lifetime); err != nil {
+		FROM wlt_loyalty_accounts WHERE operator_context_id=$1 AND client_id=$2 FOR UPDATE`,
+		operatorContextID, clientID).Scan(&balance, &lifetime); err != nil {
 		return err
 	}
 	metadata, _ := json.Marshal(map[string]any{
@@ -264,14 +314,38 @@ func appendActivationLoyaltyEntry(
 		"subscriptionId":         subscriptionID,
 		"subscriptionPurchaseId": purchaseID,
 	})
-	_, err := tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_entries
-		(client_id, direction, points, balance_after, source_type, source_id,
+	// Claim the identity first: the entry is inserted with the post-credit
+	// balance BEFORE the balance moves. RowsAffected == 0 means a concurrent
+	// activation won the context-scoped key despite the pre-gate — abort the
+	// transaction rather than commit an account credit whose entry belongs to
+	// the winner.
+	result, err := tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_entries
+		(operator_context_id, client_id, direction, points, balance_after, source_type, source_id,
 		 idempotency_key, correlation_id, metadata)
-		VALUES ($1,'earn',$2,$3,'subscription_activation',$4,$5,$6,$7)
-		ON CONFLICT (idempotency_key) DO NOTHING`,
-		clientID, points, balance, subscriptionID,
-		"subscription-activation:"+purchaseID, correlationID, metadata)
-	return err
+		VALUES ($1,$2,'earn',$3,$4,'subscription_activation',$5,$6,$7,$8)
+		ON CONFLICT (operator_context_id, idempotency_key) DO NOTHING`,
+		operatorContextID, clientID, points, balance+points, subscriptionID,
+		entryKey, correlationID, metadata)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrConflict
+	}
+	// Identity claimed — now move the money and persist the new balances.
+	balance += points
+	lifetime += points
+	if _, err := tx.ExecContext(ctx, `UPDATE wlt_loyalty_accounts
+		SET points_balance=$3, lifetime_points=$4, updated_at=NOW()
+		WHERE operator_context_id=$1 AND client_id=$2`,
+		operatorContextID, clientID, balance, lifetime); err != nil {
+		return err
+	}
+	return nil
 }
 
 func ActivateSubscriptionLifecycleGoverned(
@@ -280,6 +354,10 @@ func ActivateSubscriptionLifecycleGoverned(
 	input ActivateSubscriptionLifecycleInput,
 	idempotencyKey, correlationID string,
 ) (*SubscriptionLifecycle, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, ErrInvalid
+	}
 	input = normalizeActivationInput(input)
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	correlationID = strings.TrimSpace(correlationID)
@@ -297,7 +375,7 @@ func ActivateSubscriptionLifecycleGoverned(
 
 	existing, existingErr := scanSubscriptionLifecycle(tx.QueryRowContext(ctx,
 		`SELECT `+subscriptionLifecycleSelect+` FROM wlt_client_subscriptions
-		 WHERE subscription_purchase_id=$1 FOR UPDATE`, input.SubscriptionPurchaseID))
+		 WHERE operator_context_id=$1 AND subscription_purchase_id=$2 FOR UPDATE`, operatorContextID, input.SubscriptionPurchaseID))
 	if existingErr == nil {
 		if existing.ClientID != input.ClientID || existing.ProductReference != input.ProductReference ||
 			existing.PaymentSessionID == nil || *existing.PaymentSessionID != input.PaymentSessionID {
@@ -315,7 +393,7 @@ func ActivateSubscriptionLifecycleGoverned(
 	}
 	var activeCount int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM wlt_client_subscriptions
-		WHERE client_id=$1 AND status='active' AND (ends_at IS NULL OR ends_at > NOW())`, input.ClientID).
+			WHERE operator_context_id=$1 AND client_id=$2 AND status='active' AND (ends_at IS NULL OR ends_at > NOW())`, operatorContextID, input.ClientID).
 		Scan(&activeCount); err != nil {
 		return nil, err
 	}
@@ -326,11 +404,11 @@ func ActivateSubscriptionLifecycleGoverned(
 	start := time.Now().UTC()
 	end := cycleEnd(start, cycle)
 	item, err := scanSubscriptionLifecycle(tx.QueryRowContext(ctx, `INSERT INTO wlt_client_subscriptions
-		(client_id, product_reference, status, payment_session_id,
-		 subscription_purchase_id, starts_at, ends_at, lifecycle_correlation_id)
-		VALUES ($1,$2,'active',$3,$4,$5,$6,$7)
+			(operator_context_id, client_id, product_reference, status, payment_session_id,
+			 subscription_purchase_id, starts_at, ends_at, lifecycle_correlation_id)
+		VALUES ($1,$2,$3,'active',$4,$5,$6,$7,$8)
 		RETURNING `+subscriptionLifecycleSelect,
-		input.ClientID, input.ProductReference, input.PaymentSessionID,
+		operatorContextID, input.ClientID, input.ProductReference, input.PaymentSessionID,
 		input.SubscriptionPurchaseID, start, end, correlationID))
 	if err != nil {
 		return nil, err
@@ -352,12 +430,16 @@ func ActivateSubscriptionLifecycleGoverned(
 }
 
 func GetSubscriptionLifecycle(ctx context.Context, db *sql.DB, subscriptionID string) (*SubscriptionLifecycle, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, ErrInvalid
+	}
 	if db == nil || strings.TrimSpace(subscriptionID) == "" {
 		return nil, ErrInvalid
 	}
 	return scanSubscriptionLifecycle(db.QueryRowContext(ctx,
-		`SELECT `+subscriptionLifecycleSelect+` FROM wlt_client_subscriptions WHERE id=$1`,
-		strings.TrimSpace(subscriptionID)))
+		`SELECT `+subscriptionLifecycleSelect+` FROM wlt_client_subscriptions WHERE id=$1 AND operator_context_id=$2`,
+		strings.TrimSpace(subscriptionID), operatorContextID))
 }
 
 func RenewSubscriptionLifecycleGoverned(
@@ -367,6 +449,10 @@ func RenewSubscriptionLifecycleGoverned(
 	input RenewSubscriptionLifecycleInput,
 	idempotencyKey, correlationID string,
 ) (*SubscriptionLifecycle, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, ErrInvalid
+	}
 	subscriptionID = strings.TrimSpace(subscriptionID)
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.ProductReference = strings.TrimSpace(input.ProductReference)
@@ -386,7 +472,7 @@ func RenewSubscriptionLifecycleGoverned(
 	}
 	defer func() { _ = tx.Rollback() }()
 	current, err := scanSubscriptionLifecycle(tx.QueryRowContext(ctx,
-		`SELECT `+subscriptionLifecycleSelect+` FROM wlt_client_subscriptions WHERE id=$1 FOR UPDATE`, subscriptionID))
+		`SELECT `+subscriptionLifecycleSelect+` FROM wlt_client_subscriptions WHERE id=$1 AND operator_context_id=$2 FOR UPDATE`, subscriptionID, operatorContextID))
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +503,7 @@ func RenewSubscriptionLifecycleGoverned(
 	}
 	var usedCount int
 	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM wlt_client_subscriptions
-		WHERE payment_session_id=$1 OR last_renewal_payment_session_id=$1`, input.PaymentSessionID).
+			WHERE operator_context_id=$1 AND (payment_session_id=$2 OR last_renewal_payment_session_id=$2)`, operatorContextID, input.PaymentSessionID).
 		Scan(&usedCount); err != nil {
 		return nil, err
 	}
@@ -432,9 +518,9 @@ func RenewSubscriptionLifecycleGoverned(
 	updated, err := scanSubscriptionLifecycle(tx.QueryRowContext(ctx, `UPDATE wlt_client_subscriptions
 		SET ends_at=$2, last_renewal_payment_session_id=$3,
 		    lifecycle_correlation_id=$4, cancel_at_period_end=FALSE
-		WHERE id=$1 AND version=$5
-		RETURNING `+subscriptionLifecycleSelect,
-		subscriptionID, newEnd, input.PaymentSessionID, correlationID, current.Version))
+WHERE id=$1 AND operator_context_id=$6 AND version=$5
+			RETURNING `+subscriptionLifecycleSelect,
+		subscriptionID, newEnd, input.PaymentSessionID, correlationID, current.Version, operatorContextID))
 	if err != nil {
 		return nil, err
 	}
@@ -457,6 +543,10 @@ func CancelSubscriptionLifecycleGoverned(
 	input CancelSubscriptionLifecycleInput,
 	idempotencyKey, correlationID string,
 ) (*SubscriptionLifecycle, *SubscriptionCompensation, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, nil, ErrInvalid
+	}
 	subscriptionID = strings.TrimSpace(subscriptionID)
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.Reason = strings.TrimSpace(input.Reason)
@@ -475,7 +565,7 @@ func CancelSubscriptionLifecycleGoverned(
 	}
 	defer func() { _ = tx.Rollback() }()
 	current, err := scanSubscriptionLifecycle(tx.QueryRowContext(ctx,
-		`SELECT `+subscriptionLifecycleSelect+` FROM wlt_client_subscriptions WHERE id=$1 FOR UPDATE`, subscriptionID))
+		`SELECT `+subscriptionLifecycleSelect+` FROM wlt_client_subscriptions WHERE id=$1 AND operator_context_id=$2 FOR UPDATE`, subscriptionID, operatorContextID))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -483,7 +573,7 @@ func CancelSubscriptionLifecycleGoverned(
 		return nil, nil, ErrNotFound
 	}
 	if current.Status == "cancelled" {
-		compensation, _ := getSubscriptionCompensationTx(ctx, tx, subscriptionID)
+		compensation, _ := getSubscriptionCompensationTx(ctx, tx, operatorContextID, subscriptionID)
 		return current, compensation, nil
 	}
 	if current.Status != "active" {
@@ -507,14 +597,14 @@ func CancelSubscriptionLifecycleGoverned(
 			}
 			compensationStatus = "pending"
 			compensation, err = scanSubscriptionCompensation(tx.QueryRowContext(ctx, `INSERT INTO wlt_subscription_compensations
-				(subscription_id, client_id, payment_session_id, status, reason,
+					(operator_context_id, subscription_id, client_id, payment_session_id, status, reason,
 				 amount_minor_units, currency, requested_by_actor_id, correlation_id)
-				VALUES ($1,$2,$3,'pending',$4,$5,$6,$2,$7)
-				ON CONFLICT (subscription_id) DO UPDATE SET reason=EXCLUDED.reason
-				RETURNING id::TEXT, subscription_id::TEXT, client_id, payment_session_id,
+VALUES ($1,$2,$3,$4,'pending',$5,$6,$7,$3,$8)
+					ON CONFLICT (operator_context_id, subscription_id) DO UPDATE SET reason=EXCLUDED.reason
+					RETURNING id::TEXT, operator_context_id, subscription_id::TEXT, client_id, payment_session_id,
 				 status, reason, refund_reference, amount_minor_units, currency,
 				 correlation_id, created_at::TEXT, updated_at::TEXT, completed_at::TEXT`,
-				subscriptionID, input.ClientID, *current.PaymentSessionID, input.Reason,
+				operatorContextID, subscriptionID, input.ClientID, *current.PaymentSessionID, input.Reason,
 				amount, currency, correlationID))
 			if err != nil {
 				return nil, nil, err
@@ -526,9 +616,9 @@ func CancelSubscriptionLifecycleGoverned(
 		SET status='cancelled', cancelled_at=NOW(), cancellation_reason=$2,
 		    cancel_at_period_end=FALSE, compensation_status=$3,
 		    lifecycle_correlation_id=$4
-		WHERE id=$1 AND version=$5
-		RETURNING `+subscriptionLifecycleSelect,
-		subscriptionID, input.Reason, compensationStatus, correlationID, current.Version))
+WHERE id=$1 AND operator_context_id=$6 AND version=$5
+			RETURNING `+subscriptionLifecycleSelect,
+		subscriptionID, input.Reason, compensationStatus, correlationID, current.Version, operatorContextID))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -554,7 +644,7 @@ func CancelSubscriptionLifecycleGoverned(
 func scanSubscriptionCompensation(row interface{ Scan(dest ...any) error }) (*SubscriptionCompensation, error) {
 	var item SubscriptionCompensation
 	var refundReference, completedAt sql.NullString
-	if err := row.Scan(&item.ID, &item.SubscriptionID, &item.ClientID, &item.PaymentSessionID,
+	if err := row.Scan(&item.ID, &item.OperatorContextID, &item.SubscriptionID, &item.ClientID, &item.PaymentSessionID,
 		&item.Status, &item.Reason, &refundReference, &item.AmountMinorUnits,
 		&item.Currency, &item.CorrelationID, &item.CreatedAt, &item.UpdatedAt, &completedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -571,14 +661,18 @@ func scanSubscriptionCompensation(row interface{ Scan(dest ...any) error }) (*Su
 	return &item, nil
 }
 
-func getSubscriptionCompensationTx(ctx context.Context, tx *sql.Tx, subscriptionID string) (*SubscriptionCompensation, error) {
-	return scanSubscriptionCompensation(tx.QueryRowContext(ctx, `SELECT id::TEXT, subscription_id::TEXT,
+func getSubscriptionCompensationTx(ctx context.Context, tx *sql.Tx, operatorContextID, subscriptionID string) (*SubscriptionCompensation, error) {
+	return scanSubscriptionCompensation(tx.QueryRowContext(ctx, `SELECT id::TEXT, operator_context_id, subscription_id::TEXT,
 		client_id, payment_session_id, status, reason, refund_reference, amount_minor_units,
 		currency, correlation_id, created_at::TEXT, updated_at::TEXT, completed_at::TEXT
-		FROM wlt_subscription_compensations WHERE subscription_id=$1`, subscriptionID))
+		FROM wlt_subscription_compensations WHERE operator_context_id=$1 AND subscription_id=$2`, operatorContextID, subscriptionID))
 }
 
 func ExpireDueSubscriptions(ctx context.Context, db *sql.DB, clientID, correlationID string) (int, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return 0, ErrInvalid
+	}
 	if db == nil {
 		return 0, ErrInvalid
 	}
@@ -588,10 +682,10 @@ func ExpireDueSubscriptions(ctx context.Context, db *sql.DB, clientID, correlati
 	}
 	defer func() { _ = tx.Rollback() }()
 	query := `SELECT ` + subscriptionLifecycleSelect + ` FROM wlt_client_subscriptions
-		WHERE status='active' AND ends_at IS NOT NULL AND ends_at <= NOW()`
-	args := []any{}
+		WHERE operator_context_id=$1 AND status='active' AND ends_at IS NOT NULL AND ends_at <= NOW()`
+	args := []any{operatorContextID}
 	if strings.TrimSpace(clientID) != "" {
-		query += ` AND client_id=$1`
+		query += ` AND client_id=$2`
 		args = append(args, strings.TrimSpace(clientID))
 	}
 	query += ` FOR UPDATE SKIP LOCKED`
@@ -614,8 +708,8 @@ func ExpireDueSubscriptions(ctx context.Context, db *sql.DB, clientID, correlati
 	for _, item := range due {
 		if _, err := tx.ExecContext(ctx, `UPDATE wlt_client_subscriptions
 			SET status='expired', cancel_at_period_end=FALSE,
-			    lifecycle_correlation_id=$2 WHERE id=$1 AND version=$3`,
-			item.ID, correlationID, item.Version); err != nil {
+			    lifecycle_correlation_id=$2 WHERE id=$1 AND operator_context_id=$4 AND version=$3`,
+			item.ID, correlationID, item.Version, operatorContextID); err != nil {
 			return 0, err
 		}
 		if err := appendSubscriptionLifecycleEvent(ctx, tx, item.ID, item.ClientID,
@@ -638,6 +732,10 @@ type ClientLifecycleBenefits struct {
 }
 
 func GetClientLifecycleBenefits(ctx context.Context, db *sql.DB, clientID, correlationID string) (*ClientLifecycleBenefits, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, ErrInvalid
+	}
 	clientID = strings.TrimSpace(clientID)
 	if db == nil || clientID == "" {
 		return nil, ErrInvalid
@@ -648,9 +746,9 @@ func GetClientLifecycleBenefits(ctx context.Context, db *sql.DB, clientID, corre
 	benefits := &ClientLifecycleBenefits{}
 	var account LoyaltyAccount
 	var tier sql.NullString
-	err := db.QueryRowContext(ctx, `SELECT client_id, points_balance, lifetime_points,
-		tier_reference, updated_at::TEXT FROM wlt_loyalty_accounts WHERE client_id=$1`, clientID).
-		Scan(&account.ClientID, &account.PointsBalance, &account.LifetimePoints, &tier, &account.UpdatedAt)
+	err := db.QueryRowContext(ctx, `SELECT operator_context_id, client_id, points_balance, lifetime_points,
+		tier_reference, updated_at::TEXT FROM wlt_loyalty_accounts WHERE operator_context_id=$1 AND client_id=$2`, operatorContextID, clientID).
+		Scan(&account.OperatorContextID, &account.ClientID, &account.PointsBalance, &account.LifetimePoints, &tier, &account.UpdatedAt)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -662,8 +760,8 @@ func GetClientLifecycleBenefits(ctx context.Context, db *sql.DB, clientID, corre
 	}
 	active, activeErr := scanSubscriptionLifecycle(db.QueryRowContext(ctx,
 		`SELECT `+subscriptionLifecycleSelect+` FROM wlt_client_subscriptions
-		 WHERE client_id=$1 AND status='active' AND (ends_at IS NULL OR ends_at > NOW())
-		 ORDER BY starts_at DESC LIMIT 1`, clientID))
+WHERE operator_context_id=$1 AND client_id=$2 AND status='active' AND (ends_at IS NULL OR ends_at > NOW())
+			 ORDER BY starts_at DESC LIMIT 1`, operatorContextID, clientID))
 	if activeErr != nil && !errors.Is(activeErr, ErrNotFound) {
 		return nil, activeErr
 	}
@@ -671,12 +769,12 @@ func GetClientLifecycleBenefits(ctx context.Context, db *sql.DB, clientID, corre
 		benefits.ActiveSubscription = active
 	}
 	compensation, compensationErr := scanSubscriptionCompensation(db.QueryRowContext(ctx,
-		`SELECT c.id::TEXT, c.subscription_id::TEXT, c.client_id, c.payment_session_id,
-		 c.status, c.reason, c.refund_reference, c.amount_minor_units, c.currency,
-		 c.correlation_id, c.created_at::TEXT, c.updated_at::TEXT, c.completed_at::TEXT
-		 FROM wlt_subscription_compensations c
-		 WHERE c.client_id=$1 AND c.status IN ('pending','failed')
-		 ORDER BY c.created_at DESC LIMIT 1`, clientID))
+		`SELECT c.id::TEXT, c.operator_context_id, c.subscription_id::TEXT, c.client_id, c.payment_session_id,
+			 c.status, c.reason, c.refund_reference, c.amount_minor_units, c.currency,
+			 c.correlation_id, c.created_at::TEXT, c.updated_at::TEXT, c.completed_at::TEXT
+			 FROM wlt_subscription_compensations c
+			 WHERE c.operator_context_id=$1 AND c.client_id=$2 AND c.status IN ('pending','failed')
+			 ORDER BY c.created_at DESC LIMIT 1`, operatorContextID, clientID))
 	if compensationErr != nil && !errors.Is(compensationErr, ErrNotFound) {
 		return nil, compensationErr
 	}

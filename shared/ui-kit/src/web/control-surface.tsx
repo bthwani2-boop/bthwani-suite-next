@@ -1210,22 +1210,19 @@ export function WebControlDisclosureItem({
 
 export type WebCompactSurfaceHeaderProps = {
   title: string;
-  /** @deprecated Use description instead */
-  subtitle?: string;
   description?: string;
   metrics?: ReadonlyArray<{ id: string; title: string; value: string }>;
   onBack?: () => void;
 };
 
-export function WebCompactSurfaceHeader({ title, description, subtitle, onBack, metrics = [] }: WebCompactSurfaceHeaderProps) {
-  const resolvedDescription = description ?? subtitle;
+export function WebCompactSurfaceHeader({ title, description, onBack, metrics = [] }: WebCompactSurfaceHeaderProps) {
   return (
     <>
       <WebControlSurfaceStyles />
       <header className="ui-web-compact-surface-header" dir="rtl">
         <div className="ui-web-compact-surface-header__title-block">
           <h1 className="ui-web-compact-surface-header__title">{title}</h1>
-          {resolvedDescription && <p className="ui-web-compact-surface-header__description">{resolvedDescription}</p>}
+          {description && <p className="ui-web-compact-surface-header__description">{description}</p>}
         </div>
         <div className="ui-web-compact-surface-header__pulse">
           {metrics.map((metric) => (
@@ -1864,3 +1861,7 @@ export function WebControlPanelInspectorShell({ title, onClose, children }: WebC
     </>
   );
 }
+
+// Re-export Website lane components that are actually generic/shared
+export { WebSectionCard, WebSignalCard } from './page-frame';
+export type { WebSectionCardProps, WebSignalCardProps, WebSignalCardTone } from './page-frame';

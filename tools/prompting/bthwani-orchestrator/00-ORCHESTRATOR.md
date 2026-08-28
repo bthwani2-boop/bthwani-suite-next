@@ -1,6 +1,6 @@
 # BThwani Root-Cause Orchestrator
 
-PACKAGE_REVISION: 15
+PACKAGE_REVISION: 20
 PACKAGE_CLASS: UNIFIED_ROOT_CAUSE_EXECUTION_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -24,7 +24,7 @@ PROJECT_FRAME != WORKING_CONE
 OBJECTIVE != AUTHORITY
 OBJECTIVE != ARCHITECTURAL EXCEPTION
 ACTIVE_WORKSET != PROJECT TRUTH
-WORKTREE/EXECUTOR/MODEL != AUTHORITY
+EXECUTOR/MODEL != AUTHORITY
 PLAN != AUTHORITY
 GREEN != CLOSED
 WORKING != JUSTIFIED
@@ -42,7 +42,7 @@ Exactly nine files are semantic owners in this package:
 3. `02-DIAGNOSE-ROOT-CAUSE.md` — evidence, findings, root proof, Source-of-Fix and internal execution-readiness gate.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — live mutation, migration, cutover, restructuring, cleanup/deletion and finishing.
 5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, repository-platform proof, re-diagnosis and fail-closed closure.
-6. `05-OBJECTIVES-PLAYBOOK.md` — objective discovery, decomposition, portable pre-execution declaration and cross-window collision selection.
+6. `05-OBJECTIVES-PLAYBOOK.md` — objective discovery, decomposition, traversal/campaign scheduling, elastic safe delegation, portable pre-execution declaration and cross-window collision selection.
 7. `focus/code-architecture-organization.md` — code/architecture/structure/UI implementation quality.
 8. `focus/governance-product-design.md` — Product/System meaning, UX semantics and durable governance reconciliation.
 9. `focus/data-contracts-runtime-security-quality.md` — data/contracts/runtime/security/quality/tools/CI evidence.
@@ -71,7 +71,7 @@ ACTIVE_WORKSET: <NONE | complete human-known active objective snapshot>
 PRIMARY_FOCUS: <AUTO | explicit focus>
 SCOPE: <AUTO | REPOSITORY | DOMAIN | SERVICE | SURFACE | FEATURE | JOURNEY | PATH | SEMANTIC_SCOPE>
 RESEARCH: <AUTO | INTERNAL_ONLY | EXTERNAL_ALLOWED>
-EXECUTION_LOCATION: <DIRECT_ON_TARGET | existing explicitly human-authorized isolated workspace>
+EXECUTION_LOCATION: DIRECT_ON_TARGET
 ```
 
 There is **one normal root-closure operating loop**, not separate audit/preparation and execution phases.
@@ -144,7 +144,7 @@ MANDATORY plans/diagnose-implementing = NO
 PLAN FILE REQUIRED FOR EXECUTION = NO
 ```
 
-The coordinator/agent may plan in memory or create a temporary task-local planning/evidence artifact **only when it materially improves correctness, coordination or recoverability**. It may choose the suitable local/worktree path supported by its execution environment.
+The coordinator/agent may plan in memory or create a temporary task-local planning/evidence artifact **only when it materially improves correctness, coordination or recoverability**. It must remain outside the repository unless the current human instruction explicitly authorizes otherwise.
 
 Any such artifact:
 
@@ -158,11 +158,11 @@ A supplied historical plan is evidence/context only. Re-resolve live truth befor
 
 ## 4. Objective declaration and concurrent-work law
 
-When concurrent sessions/worktrees/providers exist or are known, `ACTIVE_WORKSET` completeness and missing-snapshot behavior are owned by `05-OBJECTIVES-PLAYBOOK.md` and MUST be satisfied before any new concurrent mutation may be claimed `PARALLEL_SAFE`. Provider names such as ChatGPT, Claude, Manus, Codex or others are optional coordination labels only.
+When concurrent sessions/providers exist or are known, `ACTIVE_WORKSET` completeness and missing-snapshot behavior are owned by `05-OBJECTIVES-PLAYBOOK.md` and MUST be satisfied before any new concurrent mutation may be claimed `PARALLEL_SAFE`. Provider names such as ChatGPT, Claude, Manus, Codex or others are optional coordination labels only.
 
 Before selecting a new concurrently executable Closure Unit, compare every candidate against **every** active objective using `01`/`05`.
 
-Concurrent mutation is allowed only when the candidate is proven `PARALLEL_SAFE` against the complete active workset. A separate worktree alone is not proof of independence.
+Concurrent mutation is allowed only when the candidate is proven `PARALLEL_SAFE` against the complete active workset. Filesystem location is not proof of independence.
 
 If a higher-ranked root collides with active work, classify the collision and choose the next highest proven executable `PARALLEL_SAFE` root. Do not artificially split or weaken the colliding root merely to create parallelism.
 
@@ -175,13 +175,11 @@ BRANCH NAME = target-resolution input only
 NO source-branch hard-coding in orchestration semantics
 ```
 
-Branch/worktree creation is human-only:
+Branch creation is human-only:
 
 ```text
 BRANCH_CREATION_AUTHORITY = HUMAN_ONLY
 AGENT_AUTOMATIC_BRANCH_CREATION = FORBIDDEN
-WORKTREE_CREATION_AUTHORITY = HUMAN_ONLY
-AGENT_AUTOMATIC_WORKTREE_CREATION = FORBIDDEN
 ```
 
 The canonical integration trunk is resolved live from repository policy / explicit authorized intent. Source branches may have arbitrary names.
@@ -239,7 +237,7 @@ workflow_dispatch -> explicit target only
 schedule -> baseline/maintenance only; no inferred PR claim
 ```
 
-Merge readiness requires the exact verified final PR head SHA. After merge, source-branch retirement follows repository policy; another lifecycle begins only from a human-authorized branch/workspace.
+Merge readiness requires the exact verified final head SHA. After merge, source-branch retirement follows repository policy; another lifecycle begins only from a human-authorized branch/workspace.
 
 ## 6. Root-cause closure continuity
 
@@ -305,7 +303,7 @@ Only:
 - `OBJECTIVE_SELECTED` — the human requested selection/recommendation only; portable objective emitted, no mutation authorized.
 - `AUDIT_COMPLETE` — the human explicitly requested read-only audit/reporting; report roots, proof limits and executable next treatment without mutation.
 - `DECISION_REQUIRED` — non-derivable material Product/System/architecture decision.
-- `HUMAN_ACTION_REQUIRED` — human-only topology/repository action such as creating/selecting a required branch/worktree.
+- `HUMAN_ACTION_REQUIRED` — human-only repository action such as creating/selecting a required branch.
 - `AUTHORIZATION_REQUIRED` — missing permission/secret/authorization that cannot be acquired by the agent.
 - `EXTERNAL_UNAVAILABLE` — required external authority/service genuinely unavailable and no sufficient alternative evidence exists.
 - `UNSAFE_TO_PROCEED` — continuing would violate safety/legal/irreversible-operation boundaries.
@@ -319,3 +317,165 @@ The following are **not** stop states by themselves:
 If a deep post-treatment audit can still reasonably discover a material related cleanup, structural, ownership, duplication, legacy, reference, contract, data, runtime, governance or assurance defect that should have been closed with the selected root, that root was never closed.
 
 If another active objective owns an independent cone, do not absorb it merely to make the current objective look comprehensive. Closure means the selected root is complete **and** concurrent boundaries remain consistent, not that one window owns the whole repository.
+
+## 11. Incremental root-closure checkpoint and system-completeness invariant
+
+Execution is incremental by **causally coherent Closure Unit**, not by arbitrary file, layer or symptom count.
+
+For every selected Closure Unit:
+
+```text
+PIN LIVE HEAD
+-> PROVE ROOT + SOURCE-OF-FIX
+-> DISCOVER/CLASSIFY COMPLETE MATERIAL SYSTEM CONE UNDER 01/02
+-> TREAT ACTUAL SOURCE-OF-DEFECT
+-> MIGRATE/CUT OVER ALL AFFECTED WRITERS/READERS/CONSUMERS
+-> DELETE SUPERSEDED/SHADOW/LEGACY AUTHORITY
+-> VERIFY NEAREST INVALIDATED CLAIMS
+-> RE-AUDIT THE UNIT + NEGATIVE SPACE
+-> PROVE UNIT INTERNALLY COMPLETE UNDER 04
+-> COMMIT ONE COHERENT CLOSURE CHECKPOINT
+-> PUSH CURRENT HUMAN-AUTHORIZED BRANCH
+-> VERIFY REMOTE HEAD == INTENDED COMMIT
+-> RE-PIN LIVE HEAD
+-> INGEST NEW LOCAL/REMOTE EVIDENCE
+-> RE-RANK ROOT LANDSCAPE
+-> SELECT NEXT HIGHEST EXECUTABLE ROOT
+```
+
+Independent roots MUST NOT accumulate as one large unpushed mutation set. A commit boundary follows causal closure, not file count.
+
+```text
+DO NOT UNDER-SPLIT ONE ROOT.
+DO NOT OVER-BUNDLE INDEPENDENT ROOTS.
+PUSH = DURABLE CHECKPOINT, NOT REMOTE-CI WAIT BARRIER.
+```
+
+If nearest sufficient proof passes and no material dependency requires remote evidence, continue immediately from the newly pinned HEAD. Remote CI/scanners remain asynchronous evidence and may preempt later work only when their new evidence is materially root-changing or closure-invalidating.
+
+A material root is not closed by fixing its local file. Its **complete causal system cone** must be discovered, explicitly dispositioned, treated, migrated, cut over, cleaned and verified across every applicable domain/service/application/surface/actor/journey/state/transition/handoff/writer/reader/consumer/contract/event/generated binding/data/database/migration/runtime/integration/security/failure-recovery/performance/test/legacy dimension owned by the current root.
+
+```text
+COMPLETE COVERAGE != RUN EVERYTHING
+COMPLETE COVERAGE = EVERY MATERIAL DIMENSION HAS A PROVEN DISPOSITION
+```
+
+Closure levels 1–3 for Closure Unit/objective progression are distinct:
+
+```text
+LEVEL_1_CLOSURE_UNIT = one root/causal cluster fully closed across its complete causal system cone
+LEVEL_2_CAPABILITY_OR_JOURNEY = all material services/surfaces/transitions/handoffs for that capability/journey mutually consistent
+LEVEL_3_FINAL_SYSTEM_CANDIDATE = all closure units required by the current objective reconciled on one exact final candidate
+```
+
+Level 4 repository/system-baseline semantics are introduced in §12. No lower level may be presented as a higher one. `04` owns the proof equation for all closure levels.
+
+## 12. Autonomous convergence, expert-lens and repository-baseline law
+
+The package must resist blind spots, not simulate expertise by multiplying opinions. Expert lenses are independent falsification perspectives over one canonical truth model; they never become parallel authorities, separate product semantics or mandatory separate agents.
+
+For broad repository/system execution, the coordinator runs this convergence loop:
+
+```text
+PIN LIVE SYSTEM
+-> BUILD LIVE TOPOLOGY + MATERIAL LENS DISPOSITIONS UNDER 01
+-> BUILD/RANK ROOT GRAPH UNDER 02
+-> CLOSE HIGHEST EXECUTABLE ROOT UNDER 03/04
+-> COMMIT/PUSH/RE-PIN UNDER §11
+-> INGEST NEW EVIDENCE
+-> REBUILD AFFECTED MODEL + RE-RANK
+-> REPEAT UNTIL NO PROVEN EXECUTABLE MATERIAL ROOT REMAINS
+-> PERFORM A FRESH BROAD ADVERSARIAL RE-AUDIT
+-> NEW MATERIAL ROOT? YES -> REOPEN LOOP
+-> NO -> PROVE FIXED POINT AND CLAIMED BASELINE UNDER 04
+```
+
+A fixed point is evidence-bounded, not a mathematical claim that future defects are impossible. It means a fresh current audit, using all materially applicable lenses and evidence available to the claimed scope, cannot identify another known material root or unknown material coverage obligation.
+
+The coordinator must apply the expert-lens applicability law owned by `01`; `NOT INSPECTED`, `PROBABLY FINE`, `FORGOTTEN` and equivalent implicit states are forbidden for material lenses.
+
+Repository-wide/system-wide work introduces a fourth closure level:
+
+```text
+LEVEL_4_REPOSITORY_SYSTEM_BASELINE
+= the live repository/system scope claimed by the invocation has complete discovered topology,
+  complete material lens and coverage dispositions, zero known material open roots in that claimed scope,
+  zero unknown material cells, zero root-related legacy/noise residue, a clean fresh adversarial re-audit,
+  and exact-candidate final evidence under 04.
+```
+
+`LEVEL_4_REPOSITORY_SYSTEM_BASELINE` is the only level that may support a repository/system-baseline cleanliness claim. Levels 1–3 must never be promoted linguistically into repository-wide completeness.
+
+When the human gives a broad `START`/`AUTO` execution intent, broad discovery may continue until the Level-4 fixed point is reached, but mutation remains incremental by Closure Unit. Discovery breadth never authorizes a repository-wide rewrite or brute-force execution of every tool/component.
+
+## 13. Human-experience and design closure invariant
+
+A user-facing surface is not closed merely because it functions, builds or renders. When human experience is material, the same canonical-truth and fixed-point laws apply to the complete experience chain:
+
+```text
+PRODUCT / BRAND TRUTH
+-> USER / ACTOR NEED
+-> JOURNEY
+-> INFORMATION ARCHITECTURE
+-> INTERACTION MODEL
+-> VISUAL LANGUAGE
+-> SEMANTIC DESIGN TOKENS
+-> CANONICAL COMPONENTS / PATTERNS
+-> SURFACE COMPOSITION
+-> RENDERED EXPERIENCE
+-> REAL INTERACTION / JOURNEY
+-> USABILITY / ACCESSIBILITY / PERCEIVED-PERFORMANCE EVIDENCE
+```
+
+`DESIGN SOURCE != RENDERED EXPERIENCE`. A correct token/component/source representation does not prove the screen or journey is correct in execution. Conversely, a visually attractive screen does not prove Product/UX truth, accessibility, consistency or recoverability.
+
+When internal authority is insufficient and research is allowed/materially required, use current authoritative or high-quality open design/platform evidence as input, classify its applicability, and adapt the proven principle or pattern to BThwani actors, context and brand. External design systems and competitor patterns are evidence, never BThwani Product/Brand authority and never permission to copy a foreign identity.
+
+Human-experience closure is evidence-bounded. Do not claim mathematically unknowable superlatives such as “best design in the world”; prove the materially applicable experience obligations under `01`/`04` on the exact candidate.
+
+## 14. Systemic Completeness Engine
+
+For repository/system-wide `AUTO`, `START`, or equivalent broad execution, local root closure is necessary but not sufficient. The coordinator must operate a **systemic campaign** until the evidence-bounded Level-4 fixed point is proven or a legitimate `00` stop state blocks a dependent cone.
+
+The campaign kernel is:
+
+```text
+PIN LIVE REPOSITORY / PR / HEAD
+-> MAXIMUM USEFUL SAFE READ-ONLY CARTOGRAPHY
+-> BUILD LIVE MULTIPLEX SYSTEM MODEL UNDER 01/05
+-> INDEPENDENTLY CHALLENGE ROOT/BOUNDARY ASSUMPTIONS UNDER 02
+-> BUILD + RANK ROOT GRAPH
+-> SELECT ADAPTIVE EXECUTION TOPOLOGY UNDER 05
+-> BUILD SAFE PARALLELIZATION GRAPH UNDER 05
+-> CLOSE HIGHEST EXECUTABLE ROOT(S) IN COMPLETE CAUSAL UNITS
+-> SERIALIZE SHARED AUTHORITIES / MIGRATIONS / CUTOVERS / REF MOVEMENT
+-> VERIFY + COMMIT/PUSH/RE-PIN
+-> INGEST NEW EVIDENCE
+-> REBUILD INVALIDATED MODEL REGIONS + RE-RANK
+-> REPEAT UNTIL ROOT QUEUE IS EMPTY
+-> RUN MANDATORY LEVEL-4 BASELINE PASSES UNDER 04
+-> RUN FRESH BROAD ADVERSARIAL RE-AUDIT
+-> NEW MATERIAL ROOT? YES -> REOPEN CAMPAIGN
+-> NO -> LEVEL_4_REPOSITORY_SYSTEM_BASELINE MAY BE CLAIMED ONLY UNDER 04
+```
+
+Root selection remains causal: **highest proven executable causal root first**. Treatment traversal is not hard-coded as vertical, horizontal, top-down or surface-by-surface; `05` selects and re-selects the traversal topology from current evidence before mutation and after material model invalidation.
+
+For Level 4, the following baseline families are mandatory applicability domains rather than optional afterthoughts:
+
+```text
+DURABLE GOVERNANCE
+OPERATIONAL SURFACE / CONTROL-PANEL COMPLETENESS
+REPOSITORY / SERVICE / SURFACE STRUCTURAL INTEGRITY
+FRONTEND ENGINEERING COMPLETENESS
+BACKEND ENGINEERING COMPLETENESS
+PRODUCT / JOURNEY / HANDOFF COMPLETENESS
+HUMAN EXPERIENCE
+DATA / CONTRACT / RUNTIME / SECURITY / PRIVACY / RELIABILITY
+ASSURANCE / DELIVERY / TOOL FINDING ACCOUNTING
+LEGACY / SHADOW / DEAD / DUPLICATE / MISPLACED NEGATIVE SPACE
+```
+
+`04` owns the exact proof obligations and the distinction between `PROVEN`, `N/A_PROVEN`, and a legitimate blocked state. A family may not be silently skipped because no current root happened to touch it.
+
+Parallelism is capability- and evidence-bounded. Use the maximum useful safe fan-out for discovery, challenge and independent work, but never manufacture concurrency by splitting one authority/root/cutover. One coordinator retains Product/System reconciliation, root ranking, integration/ref movement and final closure authority.

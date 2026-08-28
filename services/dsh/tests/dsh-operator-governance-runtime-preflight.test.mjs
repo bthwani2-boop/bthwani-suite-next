@@ -12,10 +12,12 @@ describe("DSH operator governance runtime preflight", () => {
   const diagnosis = source("../../../tools/scripts/runtime/diagnose-dsh-smoke-auth-boundary.ps1");
 
   it("runs after runtime startup and catalog readback and before the broad runtime smoke", () => {
-    const runtimeUp = workflow.indexOf('Invoke-Phase "runtime:up"');
-    const catalogReadback = workflow.indexOf('Invoke-Phase "runtime:catalog-readback"');
-    const diagnostic = workflow.indexOf('Invoke-Phase "dsh-operator-governance-preflight"');
-    const broadSmoke = workflow.indexOf('Invoke-Phase "runtime:full:smoke"');
+    const runtimeUp = workflow.indexOf("-Action bootstrap-dev");
+    const catalogReadback = workflow.indexOf("-Action catalog-readback");
+    const diagnostic = workflow.indexOf(
+      "tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1",
+    );
+    const broadSmoke = workflow.indexOf("-Action smoke");
     assert.ok(runtimeUp >= 0);
     assert.ok(catalogReadback > runtimeUp);
     assert.ok(diagnostic > catalogReadback);

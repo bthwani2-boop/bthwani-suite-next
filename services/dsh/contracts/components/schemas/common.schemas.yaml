@@ -640,29 +640,28 @@ DshUpsertPlatformNotificationConfigRequest:
     isEnabled: { type: boolean }
     description: { type: string }
 
-# ── Marketing Schemas ─────────────────────────────────────────────
+# ── Platform Policy Schemas ───────────────────────────────────────
 
 DshZone:
   type: object
-  required: [id, name, status, polygon, cityCode, serviceAreaCode, createdAt, updatedAt]
+  required: [id, name, serviceAreaCode, isActive, description, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     name: { type: string }
-    status: { type: string }
-    polygon: { type: string }
-    cityCode: { type: string }
     serviceAreaCode: { type: string }
+    isActive: { type: boolean }
+    description: { type: string }
+    version: { type: integer, minimum: 1 }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
 
 DshZonesListResponse:
   type: object
-  required: [zones, total]
+  required: [zones]
   properties:
     zones:
       type: array
       items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshZone" }
-    total: { type: integer }
 
 DshZoneResponse:
   type: object
@@ -672,19 +671,21 @@ DshZoneResponse:
 
 DshCreateZoneRequest:
   type: object
-  required: [name, polygon, cityCode, serviceAreaCode]
+  required: [name, serviceAreaCode]
   properties:
+    id: { type: string }
     name: { type: string, minLength: 1 }
-    polygon: { type: string }
-    cityCode: { type: string }
-    serviceAreaCode: { type: string }
+    serviceAreaCode: { type: string, minLength: 1, maxLength: 80 }
+    description: { type: string }
 
 DshUpdateZoneRequest:
   type: object
+  required: [expectedVersion]
   properties:
     name: { type: string }
-    status: { type: string }
-    polygon: { type: string }
+    description: { type: string }
+    isActive: { type: boolean }
+    expectedVersion: { type: integer, minimum: 1 }
 
 DshSlaRule:
   type: object
@@ -983,3 +984,26 @@ DshSpecialRequestExecutionResponse:
   properties:
     execution: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSpecialRequestExecution" }
     financial: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSpecialRequestFinancialReadback" }
+
+DshSpecialRequestSaga:
+  type: object
+  additionalProperties: false
+  required: [id, commandId, operation, specialRequestId, state, attemptCount]
+  properties:
+    id: { type: string, format: uuid }
+    commandId: { type: string, format: uuid }
+    operation: { type: string, enum: [quote, payment_session, cancel] }
+    specialRequestId: { type: string, format: uuid }
+    state: { type: string, enum: [blocked, pending, in_flight, remote_applied, locally_confirmed, completed, retryable, reconciliation_required, failed] }
+    attemptCount: { type: integer, minimum: 0 }
+    remoteReference: { type: [string, "null"] }
+    lastError: { type: [string, "null"] }
+    nextAttemptAt: { type: [string, "null"], format: date-time }
+    completedAt: { type: [string, "null"], format: date-time }
+
+DshSpecialRequestSagaResponse:
+  type: object
+  additionalProperties: false
+  required: [saga]
+  properties:
+    saga: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSpecialRequestSaga" }

@@ -10,17 +10,17 @@ import {
 export type DshPartnerOrderConversationPanelProps = {
   enabledForOrderMode?: DshPartnerOrderConversationMode;
   messages?: readonly DshPartnerOrderConversationMessage[];
-  /** Navigation compatibility only; it is not a message mutation binding. */
-  onOpenFlow?: (flowId: DshPartnerOperationalFlowId) => void;
+  /** Opens the canonical operational flow; it is not a message mutation binding. */
+  onOpenOperationalFlow?: (flowId: DshPartnerOperationalFlowId) => void;
 };
 
 export function DshPartnerOrderConversationPanel({
   enabledForOrderMode = 'pickup',
   messages = [],
-  onOpenFlow,
+  onOpenOperationalFlow,
 }: DshPartnerOrderConversationPanelProps) {
   const visibility = shouldShowDshPartnerOrderConversation(enabledForOrderMode);
-  const hasNavigationCompatibility = typeof onOpenFlow === 'function';
+  const hasNavigationBinding = typeof onOpenOperationalFlow === 'function';
 
   if (visibility === 'disabled-for-mode') {
     return (
@@ -60,8 +60,8 @@ export function DshPartnerOrderConversationPanel({
         </Box>
       )}
       <Text role="bodySm" tone="muted">
-        {hasNavigationCompatibility
-          ? 'مسارات التنقل القديمة متاحة للتوافق فقط، ولا تُعامل كإثبات إرسال أو إقرار قراءة.'
+        {hasNavigationBinding
+          ? 'التنقل إلى المسار التشغيلي المرتبط متاح، ولا يُعامل كإثبات إرسال أو إقرار قراءة.'
           : 'لا يوجد binding تنقل أو mutation للمحادثة في هذا السطح.'}
       </Text>
     </Surface>

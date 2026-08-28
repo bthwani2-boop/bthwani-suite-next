@@ -94,16 +94,38 @@ test("policy surfaces gate reads and writes before invoking their controllers", 
   assert.match(operational, /if \(!canRollback \|\| !selectedAudit\) return/);
 });
 
-test("WLT payout-destination client exposes only operator-context methods", () => {
-  const client = read("services/dsh/backend/internal/wlt/actor_finance_client.go");
-  assert.doesNotMatch(client, /Finance(?:Read|Upsert|Deactivate)PayoutDestination\s*\(/);
-  for (const method of [
-    "FinanceReadPayoutDestinationWithOperatorContext",
-    "FinanceUpsertPayoutDestinationWithOperatorContext",
-    "FinanceDeactivatePayoutDestinationWithOperatorContext",
-  ]) {
-    assert.match(client, new RegExp(`func \\(c \\*Client\\) ${method}\\s*\\(`));
-  }
+test("WLT financial capability uses the canonical DSH facade and registry", () => {
+  const facade = read("services/dsh/backend/internal/wlt/facade_client.go");
+  const registry = read("services/dsh/backend/internal/wlt/operation_registry.go");
+  const responseContract = read("services/dsh/backend/internal/wlt/finance_response_contract.go");
+  const payoutSurface = read("services/dsh/backend/internal/http/payout_destination_finance_control.go");
+  const settlementSurface = read("services/dsh/backend/internal/http/finance_settlement_sources.go");
+  const payoutReadback = read("services/dsh/backend/internal/wlt/payout_destination.go");
+  assert.match(facade, /func \(c \*Client\) ExecuteFinanceRead/);
+  assert.match(facade, /func \(c \*Client\) ExecuteFinanceWrite/);
+  assert.match(facade, /Registry\.GetOperation\(opID\)/);
+  assert.match(facade, /setDelegatedOperatorContextHeader/);
+  assert.match(facade, /normalizeFinanceResponse/);
+  assert.match(registry, /var Registry = NewOperationRegistry\(\)/);
+  assert.match(registry, /finance\.settlements\.create/);
+  for (const operation of [
+    "finance.payout_destinations.read",
+    "finance.payout_destinations.upsert",
+    "finance.payout_destinations.verify",
+    "finance.payout_destinations.deactivate",
+  ]) assert.match(registry, new RegExp(operation.replaceAll(".", "\\.")));
+  assert.match(registry, /FinanceResponseNoContent/);
+  assert.match(responseContract, /func normalizeFinanceResponse/);
+  assert.match(payoutSurface, /ExecuteFinance(Read|Write)/);
+  assert.match(settlementSurface, /ExecuteFinanceWrite[\s\S]*finance\.settlements\.create/);
+  assert.match(payoutReadback, /ExecuteFinance(Read|Write)/);
+  assert.doesNotMatch(payoutReadback, /http\.NewRequestWithContext|c\.http\.Do/);
+  for (const retiredPath of [
+    "services/dsh/backend/internal/wlt/actor_finance_client.go",
+    "services/dsh/backend/internal/wlt/settlement_client.go",
+    "services/dsh/backend/internal/wlt/legacy_test_compat_test.go",
+    "services/dsh/backend/internal/wlt/payment_scope_transport_test.go",
+  ]) assert.equal(fs.existsSync(path.join(repoRoot, retiredPath)), false, `${retiredPath} must remain retired`);
 });
 
 test("local operator grants match the live DSH policy surfaces", () => {

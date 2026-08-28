@@ -127,16 +127,16 @@ export function DshFieldSurface({ route, navigation, installationId }: DshFieldS
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
 
-      {/* Work captured on a retired build cannot be replayed under this
+      {/* Recovered terminal work cannot be replayed automatically under this
           session, so the employee must be told to redo it rather than assume
           it synced. */}
       {offlineSync.quarantinedCount > 0 && (
         <View style={{ padding: spacing[3] }}>
           <InlineNotice
             tone="warning"
-            title="عمل ميداني قديم يحتاج إعادة تنفيذ"
-            description="تم حفظ عمل غير مُرسَل من إصدار سابق للتطبيق ولا يمكن إرساله تلقائيًا. أعد تنفيذ الزيارات أو الفحوصات المتأثرة."
-            code="LEGACY_OFFLINE_WORK_RECOVERED"
+            title="عمل ميداني يحتاج إعادة تنفيذ"
+            description="تم حفظ عمل ميداني لم يُرسل بنجاح ولا يمكن إرساله تلقائيًا. أعد تنفيذ الزيارات أو الفحوصات المتأثرة."
+            code="OFFLINE_WORK_RECOVERED"
           />
         </View>
       )}

@@ -12,8 +12,10 @@ const runtimePhase = fs.readFileSync(
 );
 
 test("runtime proof uses live central-catalog readback", () => {
-  assert.match(runtimeWorkflow, /runtime:catalog-readback/);
+  assert.match(runtimeWorkflow, /-Action bootstrap-dev/);
   assert.match(runtimeWorkflow, /-Action catalog-readback/);
+  assert.match(runtimeWorkflow, /-Action smoke/);
+  assert.match(runtimePhase, /runtime:catalog-readback/);
   assert.match(runtimePhase, /tools\/scripts\/verify-catalog\.ps1/);
   assert.match(runtimePhase, /Central catalog readback failed/);
 });

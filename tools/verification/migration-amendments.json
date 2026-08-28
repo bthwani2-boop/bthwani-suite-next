@@ -586,6 +586,23 @@
         "productionApprovalEvidence": false
       },
       "requiredCorrection": "Record the pre-normalization digest c00c13d8822aee88d93e5911b5e07d1af40bc8a9252c8688d54356c19e8a1f22 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-1046_checkout_financial_failure_classification.sql",
+      "replacementSha256": "7b1c5957650522432d3320f22567562cdb863b65cb5849a00a688b5cc70ea2e0",
+      "acceptedHistoricalSha256": [
+        "7455657bbc6893f68bdd6e98487eeb23fef5cdb9c08342b08ce3efec6a4bffd9"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The original DSH-1046 migration contained a valid BEGIN/COMMIT transaction followed by explanatory comments. The governed migration runner requires the file to end with COMMIT and therefore rejected the otherwise safe migration as a partial transaction envelope. The correction moves those comments before BEGIN without changing SQL behavior. The exact candidate had no successful same-commit runtime evidence for this migration, and clean-install verification failed at the envelope check.",
+      "evidence": {
+        "cleanInstallCommitSha": "d1675926616a7d1e62baa225ab7715c49abfe01a",
+        "cleanInstallResult": "FAILED_AT_THIS_MIGRATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Accept the pre-release checksum 7455657bbc6893f68bdd6e98487eeb23fef5cdb9c08342b08ce3efec6a4bffd9 for legacy ledger reconciliation while using the corrected transaction envelope. No forward-recovery migration is required because the change is comments-only and schema-equivalent."
     }
   ]
 }

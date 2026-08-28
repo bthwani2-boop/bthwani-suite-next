@@ -16,6 +16,6 @@ func (s *server) providerAffiliationRoute(role string) http.HandlerFunc {
 			sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "provider actor id is required")
 			return
 		}
-		handleAffiliationReplace(w, r, s.repo, s.auth, role, actorID)
+		s.handleAffiliationReplace(w, r, role, actorID)
 	}
 }

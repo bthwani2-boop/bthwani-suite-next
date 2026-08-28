@@ -7,10 +7,9 @@
  */
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { subscribeBthwaniConnectivity } from "@bthwani/data-runtime/native-data-adapters";
+import { subscribeBthwaniConnectivity } from "@bthwani/data-runtime/connectivity-adapter";
 import {
   configureFieldOfflineQueueScope,
-  prepareFieldOfflineQueue,
   getDueOperations,
   getUnknownOperations,
   markOperationSynced,
@@ -90,8 +89,6 @@ export function useFieldOfflineSync(
     setState({ kind: "syncing" });
     let reconciliationError: unknown;
     try {
-      const migration = await prepareFieldOfflineQueue();
-      if (migration.quarantined > 0) setQuarantinedCount(migration.quarantined);
       for (const operation of await getUnknownOperations()) {
         const reconciler = reconcilersRef.current?.[operation.operationType];
         if (!reconciler) {

@@ -1,11 +1,7 @@
 export type {
-  AnyOperationsWorkspaceId,
   CanonicalOperationsGroupId,
-  LegacyOperationsWorkspaceId,
-  LegacySectionRedirectId,
   NonOperationsSectionRootId,
   OperationsGroupMeta,
-  OperationsNormalizationResult,
   OperationsPanelId,
   OperationsSubGroupMeta,
   OperationsTertiaryFilterId,
@@ -19,7 +15,6 @@ export {
   buildOperationsHref,
   coerceOperationsPanel,
   getOperationsGroupMeta,
-  normalizeOperationsLocation,
   resolveOperationsStateCopy,
 } from './operations.registry';
 export { ControlPanelDshOperationsScreen, OperationsHubScreen } from './OperationsHubScreen';

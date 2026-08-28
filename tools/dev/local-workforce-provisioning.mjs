@@ -37,6 +37,27 @@ const IDENTITY_WORKFORCE_SERVICE_TOKEN =
   process.env.IDENTITY_WORKFORCE_SERVICE_TOKEN ||
   'LOCAL_ONLY_replace_with_workforce_internal_service_token';
 export const LOCAL_OPERATOR_CONTEXT_ID = process.env.BTHWANI_OPERATOR_CONTEXT_ID || 'local-dsh';
+export const LOCAL_SERVICE_AREA_CODE = 'sana';
+
+export function localServiceAreaPayload(expectedVersion = 0) {
+  return {
+    displayName: 'منطقة صنعاء المحلية',
+    polygon: [
+      [44.15, 15.30],
+      [44.25, 15.30],
+      [44.25, 15.40],
+      [44.15, 15.40],
+      [44.15, 15.30],
+    ],
+    active: true,
+    priority: 100,
+    srid: 4326,
+    overlapPolicy: 'priority_then_code',
+    expectedVersion,
+    reason: 'Provision governed local mobile development data',
+  };
+}
+
 // The local COD journey must have spendable wallet capacity in addition to the
 // protected collateral position. This is a governed development top-up, not a
 // direct wallet write; production balances remain WLT-owned.
@@ -146,18 +167,73 @@ export async function getPasswordToken(username) {
   return result.accessToken;
 }
 
+async function ensureCanonicalServiceArea(operatorToken) {
+  try {
+    const existing = await requestJson(
+      'dsh:get-service-area',
+      `${DSH_API_BASE}/dsh/operator/platform/service-areas/${LOCAL_SERVICE_AREA_CODE}`,
+      { headers: authorization(operatorToken) },
+    );
+    if (!existing?.serviceArea?.serviceAreaCode) {
+      throw new Error('dsh:get-service-area returned no service area');
+    }
+    return existing.serviceArea;
+  } catch (error) {
+    if (!(error instanceof HttpError) || error.status !== 404) throw error;
+    const payload = localServiceAreaPayload(0);
+    const created = await requestJson(
+      'dsh:create-service-area',
+      `${DSH_API_BASE}/dsh/operator/platform/service-areas/${LOCAL_SERVICE_AREA_CODE}`,
+      {
+        method: 'PUT',
+        headers: mutationHeaders(operatorToken, 'service-area-create', payload),
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!created?.serviceArea?.serviceAreaCode) {
+      throw new Error('dsh:create-service-area returned no service area');
+    }
+    return created.serviceArea;
+  }
+}
+
 export async function ensureActiveZone(operatorToken) {
   const result = await requestJson(
     'dsh:list-zones',
     `${DSH_API_BASE}/dsh/operator/platform/zones?includeInactive=true`,
     { headers: authorization(operatorToken) },
   );
-  const active = list(result?.zones).find((zone) => zone?.isActive === true);
+  const zones = list(result?.zones);
+  const active = zones.find((zone) => zone?.isActive === true);
   if (active) return active;
 
+  const localZone = zones.find((zone) => zone?.serviceAreaCode === LOCAL_SERVICE_AREA_CODE);
+  if (localZone) {
+    const payload = {
+      isActive: true,
+      expectedVersion: localZone.version,
+      reason: 'Reactivate governed local mobile development zone',
+    };
+    const reactivated = await requestJson(
+      'dsh:reactivate-zone',
+      `${DSH_API_BASE}/dsh/operator/platform/zones/${encodeURIComponent(localZone.id)}`,
+      {
+        method: 'PATCH',
+        headers: mutationHeaders(operatorToken, 'zone-reactivate', payload),
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!reactivated?.zone?.id) throw new Error('dsh:reactivate-zone returned no zone');
+    return reactivated.zone;
+  }
+
+  // dsh-1043 makes the relationship explicit: an operational zone may only
+  // reference a canonical service-area owner. Never bypass that owner with a
+  // direct database seed or by weakening the foreign key for local fixtures.
+  await ensureCanonicalServiceArea(operatorToken);
   const payload = {
     name: 'منطقة صنعاء المحلية',
-    cityCode: 'sana',
+    serviceAreaCode: LOCAL_SERVICE_AREA_CODE,
     description: 'Local governed mobile development zone',
     reason: 'Provision governed local mobile development data',
   };

@@ -22,6 +22,8 @@ import {
   isSessionExpiredCode,
   workforceErrorMessage,
 } from "./workforce.api";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { corrId } from "../_kernel/dsh-http-request";
 import { fetchZones } from "../platform/platform-policies.api";
 import type { DshZone } from "../platform/platform-policies.types";
 import type {
@@ -43,6 +45,22 @@ import type {
 
 // Shared controllers consumed by BOTH the HR section and the Partners
 // activation tab — one source of truth, no second copy of provider data.
+
+function useWorkforceMutationCommands(targetActorId: string) {
+  const identity = useIdentitySession();
+  const operatorActorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = useMemo(() => new Map<string, string>(), [operatorActorId, targetActorId]);
+  const commandFor = useCallback((action: "update" | "suspend" | "reactivate" | "issueCode" | "revokeCodes", expectedVersion: number, reason: string) => {
+    if (!operatorActorId) throw new Error("جلسة لوحة التحكم غير جاهزة لتنفيذ تغيير حالة الملف.");
+    const key = `${operatorActorId}:${targetActorId}:${action}:${expectedVersion}:${reason.trim()}`;
+    const existing = commandIds.get(key);
+    if (existing) return { key, id: existing };
+    const id = corrId(`workforce-${action}`);
+    commandIds.set(key, id);
+    return { key, id };
+  }, [commandIds, operatorActorId, targetActorId]);
+  return { commandFor, commandIds };
+}
 
 export type WorkforceListState =
   | { kind: "loading" }
@@ -80,6 +98,7 @@ export type WorkforceDetailState =
   | { kind: "ready"; agent: FieldAgentDetail };
 
 export function useFieldAgentDetailController(actorId: string) {
+  const mutationCommands = useWorkforceMutationCommands(actorId);
   const [state, setState] = useState<WorkforceDetailState>({ kind: "loading" });
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
@@ -118,31 +137,53 @@ export function useFieldAgentDetailController(actorId: string) {
   );
 
   const update = useCallback(
-    (input: UpdateFieldAgentInput) => runAction(() => updateFieldAgent(actorId, input)),
-    [actorId, runAction],
+    (input: UpdateFieldAgentInput) => runAction(() => {
+      const command = mutationCommands.commandFor("update", 0, JSON.stringify(input));
+      return updateFieldAgent(actorId, input, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const suspend = useCallback(
-    (expectedVersion: number, reason: string) => runAction(() => suspendFieldAgent(actorId, expectedVersion, reason)),
-    [actorId, runAction],
+    (expectedVersion: number, reason: string) => runAction(() => {
+      const command = mutationCommands.commandFor("suspend", expectedVersion, reason);
+      return suspendFieldAgent(actorId, expectedVersion, reason, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const reactivate = useCallback(
-    (expectedVersion: number, reason: string) => runAction(() => reactivateFieldAgent(actorId, expectedVersion, reason)),
-    [actorId, runAction],
+    (expectedVersion: number, reason: string) => runAction(() => {
+      const command = mutationCommands.commandFor("reactivate", expectedVersion, reason);
+      return reactivateFieldAgent(actorId, expectedVersion, reason, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const issueCode = useCallback(
     (expectedVersion: number) =>
       runAction(async () => {
-        setIssuedCode(await issueFieldAgentActivationCode(actorId, expectedVersion));
+        const command = mutationCommands.commandFor("issueCode", expectedVersion, "");
+        setIssuedCode(await issueFieldAgentActivationCode(actorId, expectedVersion, command.id));
+        mutationCommands.commandIds.delete(command.key);
       }),
-    [actorId, runAction],
+    [actorId, mutationCommands, runAction],
   );
   const revokeCodes = useCallback(
     () =>
       runAction(async () => {
-        await revokeFieldAgentActivationCodes(actorId);
+        const command = mutationCommands.commandFor("revokeCodes", 0, "");
+        await revokeFieldAgentActivationCodes(actorId, command.id);
+        mutationCommands.commandIds.delete(command.key);
         setIssuedCode(null);
       }),
-    [actorId, runAction],
+    [actorId, mutationCommands, runAction],
   );
 
   return { state, reload, actionBusy, actionError, issuedCode, update, suspend, reactivate, issueCode, revokeCodes };
@@ -231,6 +272,7 @@ export type CaptainDetailState =
   | { kind: "ready"; captain: CaptainDetail };
 
 export function useCaptainDetailController(actorId: string) {
+  const mutationCommands = useWorkforceMutationCommands(actorId);
   const [state, setState] = useState<CaptainDetailState>({ kind: "loading" });
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
@@ -269,31 +311,53 @@ export function useCaptainDetailController(actorId: string) {
   );
 
   const update = useCallback(
-    (input: UpdateCaptainInput) => runAction(() => updateCaptain(actorId, input)),
-    [actorId, runAction],
+    (input: UpdateCaptainInput) => runAction(() => {
+      const command = mutationCommands.commandFor("update", 0, JSON.stringify(input));
+      return updateCaptain(actorId, input, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const suspend = useCallback(
-    (expectedVersion: number, reason: string) => runAction(() => suspendCaptain(actorId, expectedVersion, reason)),
-    [actorId, runAction],
+    (expectedVersion: number, reason: string) => runAction(() => {
+      const command = mutationCommands.commandFor("suspend", expectedVersion, reason);
+      return suspendCaptain(actorId, expectedVersion, reason, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const reactivate = useCallback(
-    (expectedVersion: number, reason: string) => runAction(() => reactivateCaptain(actorId, expectedVersion, reason)),
-    [actorId, runAction],
+    (expectedVersion: number, reason: string) => runAction(() => {
+      const command = mutationCommands.commandFor("reactivate", expectedVersion, reason);
+      return reactivateCaptain(actorId, expectedVersion, reason, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const issueCode = useCallback(
     (expectedVersion: number) =>
       runAction(async () => {
-        setIssuedCode(await issueCaptainActivationCode(actorId, expectedVersion));
+        const command = mutationCommands.commandFor("issueCode", expectedVersion, "");
+        setIssuedCode(await issueCaptainActivationCode(actorId, expectedVersion, command.id));
+        mutationCommands.commandIds.delete(command.key);
       }),
-    [actorId, runAction],
+    [actorId, mutationCommands, runAction],
   );
   const revokeCodes = useCallback(
     () =>
       runAction(async () => {
-        await revokeCaptainActivationCodes(actorId);
+        const command = mutationCommands.commandFor("revokeCodes", 0, "");
+        await revokeCaptainActivationCodes(actorId, command.id);
+        mutationCommands.commandIds.delete(command.key);
         setIssuedCode(null);
       }),
-    [actorId, runAction],
+    [actorId, mutationCommands, runAction],
   );
 
   return { state, reload, actionBusy, actionError, issuedCode, update, suspend, reactivate, issueCode, revokeCodes };
@@ -401,6 +465,7 @@ export function useServiceZoneReference() {
 }
 
 export function useProviderActivationController(providerKind: "field" | "captain", actorId: string) {
+  const mutationCommands = useWorkforceMutationCommands(actorId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<FieldAgentDetail | null>(null);
@@ -442,45 +507,52 @@ export function useProviderActivationController(providerKind: "field" | "captain
 
   const issueCode = async () => {
     if (!detail) return;
+    const command = mutationCommands.commandFor("issueCode", detail.version, "");
     setIssuedCode(null);
     await runAction(async () => {
       const res = providerKind === "captain"
-        ? await issueCaptainActivationCode(actorId, detail.version)
-        : await issueFieldAgentActivationCode(actorId, detail.version);
+        ? await issueCaptainActivationCode(actorId, detail.version, command.id)
+        : await issueFieldAgentActivationCode(actorId, detail.version, command.id);
+      mutationCommands.commandIds.delete(command.key);
       setIssuedCode(res);
     });
   };
 
   const revokeCode = async () => {
+    const command = mutationCommands.commandFor("revokeCodes", 0, "");
     setIssuedCode(null);
     await runAction(async () => {
       if (providerKind === "captain") {
-        await revokeCaptainActivationCodes(actorId);
+        await revokeCaptainActivationCodes(actorId, command.id);
       } else {
-        await revokeFieldAgentActivationCodes(actorId);
+        await revokeFieldAgentActivationCodes(actorId, command.id);
       }
+      mutationCommands.commandIds.delete(command.key);
     });
   };
 
-  const suspend = async (reason: string): Promise<boolean> => {
+    const suspend = async (reason: string): Promise<boolean> => {
     if (!detail) return false;
     return runAction(async () => {
+      const command = mutationCommands.commandFor("suspend", detail.version, reason);
       if (providerKind === "captain") {
-        await suspendCaptain(actorId, detail.version, reason);
+        await suspendCaptain(actorId, detail.version, reason, command.id);
       } else {
-        await suspendFieldAgent(actorId, detail.version, reason);
+        await suspendFieldAgent(actorId, detail.version, reason, command.id);
       }
+      mutationCommands.commandIds.delete(command.key);
     });
   };
-
   const reactivate = async (reason: string): Promise<boolean> => {
     if (!detail) return false;
     return runAction(async () => {
+      const command = mutationCommands.commandFor("reactivate", detail.version, reason);
       if (providerKind === "captain") {
-        await reactivateCaptain(actorId, detail.version, reason);
+        await reactivateCaptain(actorId, detail.version, reason, command.id);
       } else {
-        await reactivateFieldAgent(actorId, detail.version, reason);
+        await reactivateFieldAgent(actorId, detail.version, reason, command.id);
       }
+      mutationCommands.commandIds.delete(command.key);
     });
   };
 

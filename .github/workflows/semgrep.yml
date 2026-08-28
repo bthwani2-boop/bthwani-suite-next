@@ -1,192 +1,78 @@
----
 name: Semgrep Code Remote
 
-run-name: >-
-  ${{ github.event_name == 'pull_request' && format('Semgrep PR {0}', github.event.pull_request.number) ||
-  github.event_name == 'push' && format('Semgrep push {0}', github.sha) || format('Semgrep dispatched
-  candidate {0}', inputs.head_sha || github.sha) }}
-
-"on":
-  pull_request:
-    branches: ["**"]
-    types: [opened, synchronize, reopened, ready_for_review]
-  push:
-    branches: ["**"]
-  schedule:
-    - cron: "23 5 * * 1"
-  workflow_dispatch:
+on:
+  workflow_call:
     inputs:
-      mode:
-        description: Scan depth
-        required: true
-        default: full
-        type: choice
-        options: [full, diff]
-      base_ref:
-        description: Base commit/ref required for diff mode
-        required: false
-        type: string
-      pr_number:
-        description: PR number for an exact closure scan
-        required: false
-        type: string
-      head_sha:
-        description: Immutable candidate SHA
-        required: false
-        type: string
-      base_sha:
-        description: Immutable PR base SHA
-        required: false
-        type: string
+      head_sha: {type: string, required: true}
+      base_sha: {type: string, required: true}
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
-  group: semgrep-code-${{ inputs.head_sha || github.event.pull_request.number || github.ref }}
+  group: semgrep-code-${{ inputs.head_sha }}
   cancel-in-progress: true
+
+env:
+  HEAD_SHA: ${{ inputs.head_sha }}
+  BASE_SHA: ${{ inputs.base_sha }}
 
 jobs:
   scan:
-    name: >-
-      ${{ github.event_name == 'pull_request' && 'Semgrep / PR result' || github.event_name == 'push' &&
-      'Semgrep / push result' || 'Semgrep / dispatched result' }}
+    name: Semgrep exact diff
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - name: Resolve event ownership
-        id: owner
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          set -euo pipefail
-          skip="false"
-          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" != "${DEFAULT_BRANCH}" ]]; then
-            count="$(gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/pulls" -f state=open -f \
-            head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" -f base="${DEFAULT_BRANCH}" -f \
-            per_page=100 --jq 'length')"
-            [[ "${count}" == "0" ]] || skip="true"
-          fi
-          echo "skip=${skip}" >> "${GITHUB_OUTPUT}"
-
-      - name: Checkout immutable candidate with history
-        if: ${{ steps.owner.outputs.skip != 'true' }}
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
+      - name: Checkout exact candidate with base history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ env.HEAD_SHA }}
           fetch-depth: 0
           persist-credentials: false
           show-progress: false
-
+      - name: Verify exact candidate identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "${HEAD_SHA}" ]]
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "${BASE_SHA}" "${HEAD_SHA}"
       - name: Set up locked Node runtime
-        if: ${{ steps.owner.outputs.skip != 'true' }}
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
           package-manager-cache: false
-
       - name: Validate Semgrep evidence classifier
-        if: ${{ steps.owner.outputs.skip != 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --test tools/scripts/classify-semgrep-evidence.test.mjs
-
-      - name: Resolve exact scan scope
-        if: ${{ steps.owner.outputs.skip != 'true' }}
-        id: scope
-        shell: bash
-        env:
-          PR_BASE_SHA: ${{ inputs.base_sha || github.event.pull_request.base.sha }}
-          REQUEST_MODE: ${{ inputs.mode }}
-          REQUEST_BASE: ${{ inputs.base_ref }}
-          EXPECTED_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
-          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
-          INPUT_BASE_SHA: ${{ inputs.base_sha }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          actual="$(git rev-parse HEAD)"
-          [[ "${actual}" == "${EXPECTED_SHA}" ]] || { echo "::error::Semgrep checkout drift"; exit 1; }
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && -n "${INPUT_PR_NUMBER:-}" ]]; then
-            [[ "${INPUT_PR_NUMBER}" =~ ^[1-9][0-9]*$ ]] || { echo \
-            "::error::pr_number must be a positive integer"; exit 1; }
-            [[ "${INPUT_BASE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::base_sha must be a full SHA"; exit 1; }
-            pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${INPUT_PR_NUMBER}")"
-            [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${EXPECTED_SHA}" ]] || { echo \
-            "::error::closure PR head drift"; exit 1; }
-            [[ "$(jq -r '.base.sha' <<<"${pr}")" == "${INPUT_BASE_SHA}" ]] || { echo \
-            "::error::closure PR base drift"; exit 1; }
-          fi
-          mode="full"
-          base=""
-          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            mode="diff"
-            base="${PR_BASE_SHA}"
-          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${REQUEST_MODE:-full}" == "diff" ]]; then
-            mode="diff"
-            base="${REQUEST_BASE}"
-          fi
-          if [[ "${mode}" == "diff" ]]; then
-            [[ -n "${base}" ]] || { echo "::error::diff scan requires base"; exit 1; }
-            git fetch --no-tags origin "${base}" || true
-            resolved="$(
-              git rev-parse "${base}^{commit}" 2>/dev/null \
-                || git rev-parse "origin/${base}^{commit}" 2>/dev/null \
-                || true
-            )"
-            [[ "${resolved}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::unable to resolve Semgrep base"; exit 1; }
-            base="$(git merge-base "${resolved}" "${EXPECTED_SHA}")"
-          fi
-          echo "mode=${mode}" >> "${GITHUB_OUTPUT}"
-          echo "base_sha=${base}" >> "${GITHUB_OUTPUT}"
-
+        run: node --test tools/scripts/classify-semgrep-evidence.test.mjs
       - name: Install pinned Semgrep
-        if: ${{ steps.owner.outputs.skip != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
           python3 -m venv "${RUNNER_TEMP}/semgrep-1.172.0"
-          "${RUNNER_TEMP}/semgrep-1.172.0/bin/python" -m pip install \
-            --disable-pip-version-check \
-            --no-input \
-            semgrep==1.172.0
+          "${RUNNER_TEMP}/semgrep-1.172.0/bin/python" -m pip install --disable-pip-version-check --no-input semgrep==1.172.0
           echo "${RUNNER_TEMP}/semgrep-1.172.0/bin" >> "${GITHUB_PATH}"
-
-      - name: Run Semgrep and retain raw evidence
-        if: ${{ steps.owner.outputs.skip != 'true' }}
+      - name: Run Semgrep on the exact diff
         id: semgrep
         continue-on-error: true
         shell: bash
-        env:
-          MODE: ${{ steps.scope.outputs.mode }}
-          BASE_SHA: ${{ steps.scope.outputs.base_sha }}
         run: |
           set +e
           evidence="${RUNNER_TEMP}/semgrep-evidence"
           mkdir -p "${evidence}"
-          args=(scan --config p/default --config p/security-audit --json --metrics=off --exclude=".github/workflows/**")
-          [[ "${MODE}" != "diff" ]] || args+=(--baseline-commit "${BASE_SHA}")
-          semgrep "${args[@]}" . > "${evidence}/semgrep.json" 2> "${evidence}/stderr.log"
+          semgrep scan --config p/default --config p/security-audit --json --metrics=off \
+            --exclude=".github/workflows/**" --baseline-commit "${BASE_SHA}" . \
+            > "${evidence}/semgrep.json" 2> "${evidence}/stderr.log"
           status=$?
           set -e
           echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
-
       - name: Normalize every raw finding and engine condition
-        if: ${{ always() && steps.owner.outputs.skip != 'true' }}
         id: policy
+        if: ${{ always() }}
         continue-on-error: true
         shell: bash
         env:
           SCAN_OUTCOME: ${{ steps.semgrep.outcome }}
-          HEAD_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
-          MODE: ${{ steps.scope.outputs.mode }}
-          BASE_SHA: ${{ steps.scope.outputs.base_sha }}
         run: |
           set -euo pipefail
           src="${RUNNER_TEMP}/semgrep-evidence/semgrep.json"
@@ -196,61 +82,42 @@ jobs:
             --input "${src}" \
             --output-dir "${RUNNER_TEMP}/semgrep-evidence" \
             --head-sha "${HEAD_SHA}" \
-            --mode "${MODE}" \
+            --mode diff \
             --base-sha "${BASE_SHA}"
           summary="${RUNNER_TEMP}/semgrep-evidence/summary.json"
           total="$(jq -r '.totalFindings' "${summary}")"
-          engine_conditions="$(jq -r '.engineConditions' "${summary}")"
-          tool_limitations="$(jq -r '.toolLimitationsProven' "${summary}")"
-          unknown_engine_errors="$(jq -r '.unknownEngineErrors' "${summary}")"
-          classified_engine_errors="$(jq -r '.classifiedEngineErrors' "${summary}")"
-          all_raw_findings_accounted="$(jq -r '.allRawFindingsAccounted' "${summary}")"
-          severities="$(jq -c '.severities' "${summary}")"
+          unknown="$(jq -r '.unknownEngineErrors' "${summary}")"
+          accounted="$(jq -r '.allRawFindingsAccounted' "${summary}")"
           {
-            echo "### Semgrep Code Remote"
+            echo "### Semgrep exact diff"
             echo "- Candidate: \`${HEAD_SHA}\`"
-            echo "- Mode: \`${MODE}\`"
+            echo "- Base: \`${BASE_SHA}\`"
             echo "- Raw findings: \`${total}\`"
-            echo "- Engine conditions: \`${engine_conditions}\`"
-            echo "- Classified engine conditions: \`${classified_engine_errors}\`"
-            echo "- TOOL_LIMITATION_PROVEN: \`${tool_limitations}\`"
-            echo "- Unknown engine errors: \`${unknown_engine_errors}\`"
-            echo "- All raw engine conditions accounted: \`${all_raw_findings_accounted}\`"
-            echo "- Severity distribution: \`${severities}\`"
+            echo "- Unknown engine errors: \`${unknown}\`"
+            echo "- All raw engine conditions accounted: \`${accounted}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
-          [[ "${all_raw_findings_accounted}" == "true" ]] || { echo \
-          "::error::Semgrep raw engine conditions were not fully accounted"; exit 1; }
-          [[ "${unknown_engine_errors}" == "0" ]] || { echo \
-          "::error::Semgrep unknown engine errors=${unknown_engine_errors}"; exit 1; }
-          [[ "${total}" == "0" ]] || { echo \
-          "::error::Semgrep findings require diagnosis/disposition before closure: total=${total}"; exit 1; }
-
+          [[ "${accounted}" == "true" ]] || { echo "::error::Semgrep raw engine conditions were not fully accounted"; exit 1; }
+          [[ "${unknown}" == "0" ]] || { echo "::error::Semgrep unknown engine errors=${unknown}"; exit 1; }
+          [[ "${total}" == "0" ]] || { echo "::error::Semgrep findings require diagnosis/disposition before closure: total=${total}"; exit 1; }
       - name: Upload complete Semgrep evidence
-        if: ${{ always() && steps.owner.outputs.skip != 'true' }}
+        if: ${{ always() }}
         id: artifact
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: >-
-            semgrep-evidence-${{
-              inputs.head_sha || github.event.pull_request.head.sha || github.sha
-            }}-${{ github.run_id }}
+          name: semgrep-evidence-${{ env.HEAD_SHA }}-${{ github.run_id }}
           path: ${{ runner.temp }}/semgrep-evidence
           if-no-files-found: error
           retention-days: 14
-
-      - name: Enforce execution, accounting and evidence
+      - name: Enforce exact Semgrep result
         if: ${{ always() }}
         shell: bash
         env:
-          SKIP: ${{ steps.owner.outputs.skip }}
           SCAN_OUTCOME: ${{ steps.semgrep.outcome }}
           POLICY_OUTCOME: ${{ steps.policy.outcome }}
           ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
         run: |
           set -euo pipefail
-          if [[ "${SKIP}" == "true" ]]; then echo \
-          "development push suppressed because PR owns Semgrep verification"; exit 0; fi
           [[ "${SCAN_OUTCOME}" == "success" ]]
           [[ "${POLICY_OUTCOME}" == "success" ]]
           [[ "${ARTIFACT_OUTCOME}" == "success" ]]

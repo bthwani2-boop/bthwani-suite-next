@@ -1,7 +1,7 @@
 ---
 name: bthwani-cost-aware-subagent-orchestrator
-version: 2026.08.18-v4
-summary: Coordinate independent bounded work units with minimum sufficient context, non-overlapping writes, and deterministic integration.
+version: 2026.08.27-v5
+summary: Maximize useful safe subagent parallelism with bounded context, proven dependency/collision control, and one deterministic integration authority.
 ---
 
 # bthwani-cost-aware-subagent-orchestrator
@@ -9,7 +9,8 @@ summary: Coordinate independent bounded work units with minimum sufficient conte
 ## Invoke when
 
 - The user explicitly requests delegated execution; or
-- two or more independent bounded work units can reduce execution time/context without overlapping writes.
+- parallel read-only discovery/challenge can materially deepen or accelerate evidence; or
+- two or more bounded work units can reduce execution time/context with proven safe coordination.
 
 Do not invoke when coordination costs more than direct execution, when work is indivisible, or when the platform has no real subagent capability.
 
@@ -26,15 +27,16 @@ No agent-role registry, SDLC stage registry, guard registry, or approval graph i
 ## Routing
 
 1. Pin exact repository/branch/SHA.
-2. Split only along proven independent ownership boundaries.
-3. Give each unit one objective, bounded inputs, allowed writes, forbidden writes, dependencies, and focused verification.
-4. Never allow two units to write the same file or a source/generated pair concurrently.
-5. Serialize authoritative owner changes before dependent consumers.
-6. Use the smallest capable executor and smallest useful context.
-7. Reconcile every returned diff before integration.
-8. Re-pin after writes and before final verification.
+2. Build a task-local dependency/collision graph; split by proven causal/authority-independent cones, not arbitrary files/languages/surfaces.
+3. Fan out read-only cartography, negative-space search and independent challenge as widely as useful when real subagent capability exists.
+4. Give each unit one objective, bounded inputs, allowed writes, forbidden writes, dependencies, proof limits and focused verification.
+5. Admit mutation workers only when they are mutually `PARALLEL_SAFE`; never allow concurrent writes to the same authority/file or a source/generated pair.
+6. Serialize canonical-owner changes, shared migrations/cutovers, integration/ref movement and evidence-dependent work before descendants.
+7. Use the smallest capable executor and minimum sufficient context; worker count is elastic, not fixed.
+8. Reconcile every returned finding/diff/provenance record through one coordinator before integration.
+9. Re-pin after material writes; rebuild invalidated dependencies/collisions and immediately refill safe capacity.
 
-Default to direct execution unless delegation has clear material benefit. Default to two parallel workers; increase only when independence is proven.
+Default to **maximum useful safe parallelism** when delegation has material benefit. Do not impose a fixed two-worker ceiling or a fixed minimum. If coordination cost exceeds benefit or the work is indivisible, execute directly.
 
 ## Output
 

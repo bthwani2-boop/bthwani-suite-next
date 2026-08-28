@@ -1,21 +1,6 @@
-// Package checkoutfinanceoutbox implements a durable outbox for closing out a
-// WLT payment session when the DSH-side checkout intent or order it belongs
-// to is cancelled/rejected.
-//
-// Two producers write into this outbox in the SAME database transaction that
-// commits their own state change:
-//   - checkout.CancelIntent, when a checkout intent that already reached
-//     payment_pending (i.e. has a WLT payment session but no order yet) is
-//     cancelled. WLT should simply expire that not-yet-captured session.
-//   - orders.RejectOrder / orders.CancelOrderByOperator, when an order that
-//     already has a WLT payment session reference is rejected or cancelled.
-//     WLT decides internally whether to expire the session, open a pending
-//     refund for review, or no-op if the session already reached a terminal
-//     state.
-//
-// This guarantees the WLT-side closure signal is never lost even if WLT is
-// temporarily unreachable. A background worker drains pending rows and
-// retries with exponential backoff until WLT acknowledges the closure.
+// Package checkoutfinanceoutbox owns the DSH-side durable orchestration record
+// for checkout and order financial closure. WLT remains authoritative for the
+// payment-session, refund, and COD outcomes.
 package checkoutfinanceoutbox
 
 import (
@@ -23,25 +8,36 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
 	EventTypeExpireSession         = "expire_session"
 	EventTypeCancelForOrder        = "cancel_for_order"
 	EventTypeReleaseCodReservation = "release_cod_reservation"
+
+	MaxDeliveryAttempts = 15
+	MaxReadbackAttempts = 5
 )
 
 type Event struct {
-	ID                string
-	EventType         string
-	OperatorContextID string
-	CheckoutIntentID  string
-	PaymentSessionID  string
-	OrderID           string
-	ClientID          string
-	Reason            string
-	CorrelationID     string
-	AttemptCount      int
+	ID                   string
+	EventType            string
+	Status               string
+	OperatorContextID    string
+	CheckoutIntentID     string
+	PaymentSessionID     string
+	OrderID              string
+	ClientID             string
+	Reason               string
+	CorrelationID        string
+	AttemptCount         int
+	ReadbackAttemptCount int
+	FailureDisposition   string
+	FailureClassification string
+	DiagnosticCode       string
+	LeaseToken           string
 }
 
 type EnqueueInput struct {
@@ -54,12 +50,29 @@ type EnqueueInput struct {
 	CorrelationID    string
 }
 
-// Enqueue writes a financial closure event inside tx. OperatorContext ownership is not
-// accepted from the caller: ClaimBatch derives it later from the immutable
-// checkout-intent owner before any WLT delivery or retry.
+func supportedEventType(eventType string) bool {
+	switch strings.TrimSpace(eventType) {
+	case EventTypeExpireSession, EventTypeCancelForOrder, EventTypeReleaseCodReservation:
+		return true
+	default:
+		return false
+	}
+}
+
+func validOperatorContextID(operatorContextID string) bool {
+	return strings.TrimSpace(operatorContextID) != ""
+}
+
+// Enqueue writes a financial closure event inside tx. OperatorContext ownership
+// is never accepted from the caller; ClaimBatch derives it from the immutable
+// checkout-intent owner immediately before delivery.
 func Enqueue(tx *sql.Tx, input EnqueueInput) error {
-	if input.EventType == "" || input.CheckoutIntentID == "" || input.PaymentSessionID == "" || input.ClientID == "" {
-		return fmt.Errorf("checkout finance outbox: eventType, checkoutIntentId, paymentSessionId, and clientId are required")
+	input.EventType = strings.TrimSpace(input.EventType)
+	if !supportedEventType(input.EventType) {
+		return fmt.Errorf("checkout finance outbox: unsupported event type %q", input.EventType)
+	}
+	if input.CheckoutIntentID == "" || input.PaymentSessionID == "" || input.ClientID == "" {
+		return fmt.Errorf("checkout finance outbox: checkoutIntentId, paymentSessionId, and clientId are required")
 	}
 	correlationID := strings.TrimSpace(input.CorrelationID)
 	if correlationID == "" {
@@ -82,7 +95,7 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 // EnqueueCodReservationReleaseForOrder records a WLT reservation release
 // after an order assignment leaves the active dispatch state. It resolves the
 // checkout/session identity from DSH's order bridge, but never derives money
-// locally. The WLT operation is idempotent and remains the financial owner.
+// locally.
 func EnqueueCodReservationReleaseForOrderTx(tx *sql.Tx, orderID, reason, correlationID string) error {
 	if strings.TrimSpace(orderID) == "" {
 		return nil
@@ -93,9 +106,6 @@ func EnqueueCodReservationReleaseForOrderTx(tx *sql.Tx, orderID, reason, correla
 		FROM dsh_orders order_row
 		JOIN dsh_checkout_intents intent ON intent.id = order_row.checkout_intent_id
 		WHERE order_row.id = $1::uuid`, orderID).Scan(&checkoutIntentID, &paymentSessionID, &clientID)
-	if err == sql.ErrNoRows {
-		return fmt.Errorf("resolve order %q for COD reservation release: %w", orderID, err)
-	}
 	if err != nil {
 		return fmt.Errorf("resolve order %q for COD reservation release: %w", orderID, err)
 	}
@@ -114,9 +124,6 @@ func EnqueueCodReservationReleaseForOrderTx(tx *sql.Tx, orderID, reason, correla
 	})
 }
 
-// EnqueueCodReservationReleaseForOrder is the failure-compensation entrypoint
-// used when the reservation was created before a DSH transaction could start.
-// The durable intent is still committed before the request returns.
 func EnqueueCodReservationReleaseForOrder(db *sql.DB, orderID, reason, correlationID string) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -129,10 +136,6 @@ func EnqueueCodReservationReleaseForOrder(db *sql.DB, orderID, reason, correlati
 	return tx.Commit()
 }
 
-// EnqueuePaymentSessionExpiry records the durable compensation for a WLT
-// payment session that was created but could not be attached to its DSH
-// checkout intent. The caller may have already attempted the idempotent WLT
-// operation; the outbox closes the ambiguous/error path without losing it.
 func EnqueuePaymentSessionExpiry(db *sql.DB, checkoutIntentID, paymentSessionID, clientID, reason, correlationID string) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -152,7 +155,24 @@ func EnqueuePaymentSessionExpiry(db *sql.DB, checkoutIntentID, paymentSessionID,
 	return tx.Commit()
 }
 
+func leaseInterval(lease time.Duration) (string, error) {
+	if lease <= 0 {
+		return "", fmt.Errorf("checkout finance outbox lease must be positive")
+	}
+	return fmt.Sprintf("%.6f seconds", lease.Seconds()), nil
+}
+
+// ClaimBatch atomically moves due work into processing and assigns a fencing
+// token. Pending work, durable unknown outcomes, and expired processing leases
+// are all recoverable; failed and sent rows are never claimed automatically.
 func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
+	if limit <= 0 {
+		return []Event{}, nil
+	}
+	leaseValue, err := leaseInterval(lease)
+	if err != nil {
+		return nil, err
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
@@ -160,33 +180,42 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	defer tx.Rollback() //nolint:errcheck
 
 	rows, err := tx.Query(`
-		SELECT outbox.id, outbox.event_type, btrim(intent.operator_context_id),
+		SELECT outbox.id, outbox.event_type, outbox.status,
+		       btrim(COALESCE(intent.operator_context_id, '')),
 		       outbox.checkout_intent_id::text, outbox.payment_session_id,
 		       COALESCE(outbox.order_id::text, ''), outbox.client_id, outbox.reason,
-		       COALESCE(outbox.correlation_id, outbox.checkout_intent_id::text), outbox.attempt_count
+		       COALESCE(outbox.correlation_id, outbox.checkout_intent_id::text),
+		       outbox.attempt_count, outbox.readback_attempt_count,
+		       COALESCE(outbox.failure_disposition, 'none'),
+		       COALESCE(outbox.failure_classification, 'UNKNOWN_REQUIRES_READBACK'),
+		       COALESCE(outbox.diagnostic_code, '')
 		FROM dsh_checkout_financial_closure_outbox outbox
-		JOIN dsh_checkout_intents intent ON intent.id=outbox.checkout_intent_id
-		WHERE outbox.status = 'pending' AND outbox.next_retry_at <= NOW()
-		  AND btrim(intent.operator_context_id) <> ''
-		ORDER BY outbox.created_at
+		JOIN dsh_checkout_intents intent ON intent.id = outbox.checkout_intent_id
+		WHERE (
+			(outbox.status IN ('pending', 'unknown') AND outbox.next_retry_at <= NOW())
+			OR (outbox.status = 'processing' AND (outbox.lease_expires_at IS NULL OR outbox.lease_expires_at <= NOW()))
+		)
+		ORDER BY outbox.created_at, outbox.id
 		LIMIT $1
-		FOR UPDATE OF outbox SKIP LOCKED`,
-		limit,
-	)
+		FOR UPDATE OF outbox SKIP LOCKED`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("claim checkout finance outbox batch: %w", err)
 	}
-	var events []Event
+
+	events := make([]Event, 0, limit)
 	for rows.Next() {
-		var e Event
+		var event Event
 		if err := rows.Scan(
-			&e.ID, &e.EventType, &e.OperatorContextID, &e.CheckoutIntentID, &e.PaymentSessionID,
-			&e.OrderID, &e.ClientID, &e.Reason, &e.CorrelationID, &e.AttemptCount,
+			&event.ID, &event.EventType, &event.Status, &event.OperatorContextID,
+			&event.CheckoutIntentID, &event.PaymentSessionID, &event.OrderID,
+			&event.ClientID, &event.Reason, &event.CorrelationID, &event.AttemptCount,
+							&event.ReadbackAttemptCount, &event.FailureDisposition, &event.FailureClassification, &event.DiagnosticCode,
+
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan checkout finance outbox event: %w", err)
 		}
-		events = append(events, e)
+		events = append(events, event)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
@@ -194,74 +223,19 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	}
 	rows.Close()
 
-	if len(events) > 0 {
-		ids := make([]string, len(events))
-		for i, e := range events {
-			ids[i] = e.ID
-		}
+	for index := range events {
+		events[index].LeaseToken = uuid.NewString()
 		if _, err := tx.Exec(`
 			UPDATE dsh_checkout_financial_closure_outbox
-			SET next_retry_at = NOW() + $2::interval, updated_at = NOW()
-			WHERE id = ANY($1::uuid[])`,
-			pqStringArray(ids), lease.String(),
-		); err != nil {
-			return nil, fmt.Errorf("lease checkout finance outbox batch: %w", err)
+			SET status='processing', lease_token=$2::uuid,
+			    lease_expires_at=NOW()+$3::interval, updated_at=NOW()
+			WHERE id=$1::uuid AND status=$4`,
+			events[index].ID, events[index].LeaseToken, leaseValue, events[index].Status); err != nil {
+			return nil, fmt.Errorf("fence checkout finance outbox event %s: %w", events[index].ID, err)
 		}
 	}
-
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 	return events, nil
-}
-
-func MarkSent(db *sql.DB, id string) error {
-	_, err := db.Exec(`
-		UPDATE dsh_checkout_financial_closure_outbox
-		SET status = 'sent', updated_at = NOW()
-		WHERE id = $1::uuid`,
-		id,
-	)
-	return err
-}
-
-func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
-	nextAttempt := attemptCount + 1
-	if nextAttempt > 15 {
-		_, err := db.Exec(`
-			UPDATE dsh_checkout_financial_closure_outbox
-			SET status = 'failed', attempt_count = $2, last_error = $3, updated_at = NOW()
-			WHERE id = $1::uuid`, id, nextAttempt, cause.Error())
-		return err
-	}
-
-	backoff := time.Duration(1<<uint(min(nextAttempt, 10))) * time.Second
-	if backoff > 30*time.Minute {
-		backoff = 30 * time.Minute
-	}
-	_, err := db.Exec(`
-		UPDATE dsh_checkout_financial_closure_outbox
-		SET attempt_count = $2, last_error = $3, next_retry_at = NOW() + $4::interval, updated_at = NOW()
-		WHERE id = $1::uuid`,
-		id, nextAttempt, cause.Error(), backoff.String(),
-	)
-	return err
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func pqStringArray(values []string) string {
-	out := "{"
-	for i, v := range values {
-		if i > 0 {
-			out += ","
-		}
-		out += `"` + v + `"`
-	}
-	return out + "}"
 }

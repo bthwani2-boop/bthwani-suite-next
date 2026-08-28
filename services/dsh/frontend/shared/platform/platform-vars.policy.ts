@@ -3,48 +3,6 @@
 // Rule: read-only; no local apply/rollback/mark-contract-ready logic lives here.
 // All mutations must go through a backend API or be explicitly disabled-by-policy.
 
-import type {
-  DshPlatformVarStatus,
-  DshPlatformVarRisk,
-} from './platform.types';
-
-// ── Status badge display policy ───────────────────────────────────────────────
-
-export type PlatformVarStatusBadge = {
-  readonly label: string;
-  readonly cssClass: string;
-};
-
-const PLATFORM_VAR_STATUS_BADGE: Record<DshPlatformVarStatus, PlatformVarStatusBadge> = {
-  'runtime-bound':       { label: 'مرتبط تشغيلياً', cssClass: 'badgeBinding' },
-  'contract-required':   { label: 'يتطلب عقداً',    cssClass: 'badgeContract' },
-  'read-only-reference': { label: 'مرجع قراءة',      cssClass: 'badgeReference' },
-  'disabled-by-policy':  { label: 'محجوب بالسياسة', cssClass: 'badgeDisabled' },
-};
-
-// ── Risk display policy ───────────────────────────────────────────────────────
-
-const PLATFORM_VAR_RISK_CSS_CLASS: Record<DshPlatformVarRisk, string> = {
-  low:       'riskLow',
-  medium:    'riskMedium',
-  high:      'riskHigh',
-  financial: 'riskFinancial',
-};
-
-const PLATFORM_VAR_RISK_LABEL: Record<DshPlatformVarRisk, string> = {
-  low:       'منخفضة',
-  medium:    'متوسطة',
-  high:      'عالية',
-  financial: 'مالية',
-};
-
-const PLATFORM_VAR_STATUS_LABEL: Record<DshPlatformVarStatus, string> = {
-  'runtime-bound':       'مرتبط بعقد تشغيل موثق',
-  'contract-required':   'يتطلب عقد Backend أو Provider',
-  'read-only-reference': 'مرجع قراءة فقط',
-  'disabled-by-policy':  'محجوب بالسياسة',
-};
-
 // ── Quick-pick values per var key ─────────────────────────────────────────────
 // Design vars (VAR_UI_*) must use quick-picks exclusively — free-form is forbidden.
 // Operational and financial values are intentionally absent until platform-control
@@ -65,13 +23,6 @@ export const PLATFORM_VAR_QUICK_PICKS: Record<string, readonly string[]> = {
 // Backend API contracts are required before proposals can be saved.
 
 export type PlatformVarMutationAction = 'save-proposed' | 'apply' | 'rollback' | 'mark-contract-ready';
-
-export const PLATFORM_VAR_MUTATION_DISABLED_REASON: Record<PlatformVarMutationAction, string> = {
-  'save-proposed':       'حفظ المقترحات يتطلب عقد platform-control موثق — غير مفعّل حالياً',
-  'apply':               'تطبيق مقترح يتطلب عقد Backend موثق — غير مفعّل حالياً',
-  'rollback':            'الرجوع يتطلب مسار Backend موثق — غير مفعّل حالياً',
-  'mark-contract-ready': 'التعليم بالعقد يتطلب مسار Backend موثق — غير مفعّل حالياً',
-};
 
 export function isPlatformDesignVar(varKey: string): boolean {
   return varKey.startsWith('VAR_UI_');

@@ -1,9 +1,10 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import type { DshSlaAlertStatus, DshSlaRefreshResult } from "../sla/sla.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "partner-delivery-sla-alerts");
 
-export type DshDeliverySLAAlertStatus = "open" | "acknowledged" | "resolved";
+export type DshDeliverySLAAlertStatus = DshSlaAlertStatus;
 
 export type DshDeliverySLAAlert = {
   readonly id: string;
@@ -19,11 +20,7 @@ export type DshDeliverySLAAlert = {
   readonly version: number;
 };
 
-export type DshRefreshSLAAlertsResult = {
-  readonly opened: number;
-  readonly resolved: number;
-  readonly active: number;
-};
+export type DshRefreshSLAAlertsResult = DshSlaRefreshResult;
 
 export async function refreshDeliverySLAAlerts(): Promise<DshRefreshSLAAlertsResult> {
   const response = await request<{ result: DshRefreshSLAAlertsResult }>(

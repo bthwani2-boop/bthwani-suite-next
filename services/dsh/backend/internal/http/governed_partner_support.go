@@ -49,7 +49,7 @@ func (s *administrationSupportServer) handleGetPartnerSupportFinance(w http.Resp
 	query := url.Values{}
 	query.Set("partnerId", partnerID)
 	status, body, err := s.protected.wlt.ExecuteFinanceRead(
-		r.Context(), "finance.settlements.read", "/wlt/settlements/summary", query,
+		r.Context(), "finance.settlements.summary.read", nil, query,
 		r.Header.Get("X-Correlation-ID"), agg.OperatorContextID,
 	)
 	if err != nil {
@@ -60,9 +60,7 @@ func (s *administrationSupportServer) handleGetPartnerSupportFinance(w http.Resp
 		writeSupportRequestError(w, errors.New("WLT returned an invalid finance readback"))
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }
 
 // GET /dsh/operator/support/partners/{partnerId}/operations

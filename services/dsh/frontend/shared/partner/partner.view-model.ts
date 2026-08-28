@@ -2,15 +2,15 @@ import type { DshPartner, DshPartnerSummary, DshPartnerReadiness } from "./partn
 import type { DshPartnerActivationStatus } from "./partner-activation.model";
 import { getDshPartnerActivationStatusLabel, getDshPartnerActivationStateMetadata, getDshPartnerReadinessChecklist } from "./partner-activation.model";
 
-const BUSINESS_VERTICAL_LABELS: Record<string, string> = {
+const BUSINESS_VERTICAL_LABELS: Readonly<Record<string, string>> = {
   "domain-restaurants": "مطاعم",
   "domain-groceries": "مقاضي ومتاجر غذائية",
   "domain-pharmacy": "صيدلية",
   "domain-bthwani-store": "متجر بثواني",
 };
 
-export function getDshBusinessVerticalLabel(verticalId: string, legacyCategory = ""): string {
-  return BUSINESS_VERTICAL_LABELS[verticalId] ?? (legacyCategory && legacyCategory !== "default" ? legacyCategory : "غير محدد");
+export function getDshBusinessVerticalLabel(verticalId: string): string {
+  return BUSINESS_VERTICAL_LABELS[verticalId] ?? "غير محدد";
 }
 
 export type DshPartnerListRowViewModel = {

@@ -54,6 +54,7 @@ func TestHandleFieldMeCommissionsSendsBeneficiaryIDTypeAndOperatorContext(t *tes
 	s, _ := fieldFinanceServer(t, "field-2", func(w http.ResponseWriter, r *http.Request) {
 		requireFieldFinanceOperatorContext(t, r)
 		gotQuery = r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"commissions":[]}`))
 	})

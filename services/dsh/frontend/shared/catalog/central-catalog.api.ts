@@ -1,17 +1,14 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
-import type { DshMediaAsset } from "../media/dsh-media-api.client";
 import type {
   CentralCatalogDomain,
   CentralCatalogNode,
   MasterProduct,
   ProductProposal,
   StoreAssortment,
-  CatalogPlatformPolicy,
   ClientVisibleCatalogResponse,
   CatalogAsset,
   CatalogAssetLink,
-  StoreAssortmentInput,
   StoreAssortmentInventoryInput,
   StoreAssortmentInventory,
   StoreAssortmentPriceInput,
@@ -179,15 +176,6 @@ export async function fetchMasterProductsPage(query?: {
   return { items: resp.masterProducts, total: resp.total, limit: resp.limit, offset: resp.offset };
 }
 
-// fetchMasterProducts is kept as a thin backward-compatible wrapper (items
-// only) so existing consumers — notably services/dsh/frontend/app-field,
-// which this work package must not touch — keep compiling against the
-// pre-pagination array shape. New consumers that need total/limit/offset
-// should call fetchMasterProductsPage instead.
-export async function fetchMasterProducts(query?: Parameters<typeof fetchMasterProductsPage>[0]): Promise<readonly MasterProduct[]> {
-  return (await fetchMasterProductsPage(query)).items;
-}
-
 export async function createMasterProduct(input: {
   readonly domainId: string;
   readonly categoryNodeId: string | null;
@@ -260,12 +248,6 @@ export async function fetchProductProposalsPage(query?: {
   return { items: resp.proposals, total: resp.total, limit: resp.limit, offset: resp.offset };
 }
 
-// See fetchMasterProducts above: kept as an items-only wrapper for
-// backward compatibility with pre-pagination consumers.
-export async function fetchProductProposals(query?: Parameters<typeof fetchProductProposalsPage>[0]): Promise<readonly ProductProposal[]> {
-  return (await fetchProductProposalsPage(query)).items;
-}
-
 export async function transitionProductProposal(
   proposalId: string,
   input: {
@@ -282,35 +264,6 @@ export async function transitionProductProposal(
     body: input,
   });
   return resp.proposal;
-}
-
-export async function fetchCatalogPlatformPolicies(): Promise<readonly CatalogPlatformPolicy[]> {
-  const resp = await request<{ policies: readonly CatalogPlatformPolicy[] }>("/dsh/operator/catalog/platform-policies");
-  return resp.policies;
-}
-
-export async function updateCatalogPlatformPolicy(
-  policyId: string,
-  input: {
-    readonly platformCommissionRate: number;
-    readonly fieldPartnerOnboardingCommissionAmount: number;
-    readonly fieldPartnerOnboardingCommissionCurrency: string;
-    readonly storeOnboardingFeeAmount: number;
-    readonly storeOnboardingFeeCurrency: string;
-    readonly allowsStoreProductCustomImage: boolean;
-    readonly allowsProductProposal: boolean;
-    readonly requiresBarcode: boolean;
-    readonly requiresCatalogReview: boolean;
-    readonly isActive: boolean;
-    readonly effectiveFrom: string;
-    readonly notes: string;
-  },
-): Promise<CatalogPlatformPolicy> {
-  const resp = await request<{ policy: CatalogPlatformPolicy }>(`/dsh/operator/catalog/platform-policies/${encodeURIComponent(policyId)}`, {
-    method: "PUT",
-    body: input,
-  });
-  return resp.policy;
 }
 
 export async function fetchOperatorStoreAssortment(storeId: string): Promise<readonly StoreAssortment[]> {
@@ -367,18 +320,6 @@ export async function fetchPartnerMasterProducts(query?: {
   const path = qs ? `/dsh/partner/catalog/master-products?${qs}` : "/dsh/partner/catalog/master-products";
   const resp = await request<{ masterProducts: readonly MasterProduct[] }>(path);
   return resp.masterProducts;
-}
-
-export async function upsertPartnerStoreAssortment(
-  storeId: string,
-  masterProductId: string,
-  input: StoreAssortmentInput,
-): Promise<StoreAssortment> {
-  const resp = await request<{ assortment: StoreAssortment }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`, {
-    method: "PUT",
-    body: input,
-  });
-  return resp.assortment;
 }
 
 export async function upsertPartnerStoreAssortmentInventory(
@@ -480,27 +421,6 @@ export async function fetchFieldMasterProducts(query?: {
   return resp.masterProducts;
 }
 
-export async function upsertFieldStoreAssortment(
-  partnerId: string,
-  storeId: string,
-  masterProductId: string,
-  input: {
-    readonly unitPrice: number;
-    readonly currency: string;
-    readonly available: boolean;
-    readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
-    readonly localNote: string;
-    readonly customImageObjectKey: string | null;
-    readonly publicationStatus: string;
-  },
-): Promise<StoreAssortment> {
-  const resp = await request<{ assortment: StoreAssortment }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`, {
-    method: "PUT",
-    body: input,
-  });
-  return resp.assortment;
-}
-
 export async function fetchFieldStoreAssortment(partnerId: string): Promise<{
   readonly storeId: string;
   readonly assortment: readonly StoreAssortment[];
@@ -570,12 +490,6 @@ export async function fetchCatalogAssetsPage(query?: { status?: string; limit?: 
   const path = qs ? `/dsh/operator/catalog/assets?${qs}` : "/dsh/operator/catalog/assets";
   const resp = await request<{ assets: readonly CatalogAsset[]; total: number; limit: number; offset: number }>(path);
   return { items: resp.assets, total: resp.total, limit: resp.limit, offset: resp.offset };
-}
-
-// See fetchMasterProducts above: kept as an items-only wrapper for
-// backward compatibility with pre-pagination consumers.
-export async function fetchCatalogAssets(query?: Parameters<typeof fetchCatalogAssetsPage>[0]): Promise<readonly CatalogAsset[]> {
-  return (await fetchCatalogAssetsPage(query)).items;
 }
 
 export interface AssetUploadIntent {
@@ -753,147 +667,4 @@ export async function fetchPublicReels(limit?: number): Promise<readonly PublicR
   const qs = limit ? `?limit=${limit}` : "";
   const resp = await publicRequest<{ reels: readonly PublicReel[] }>(`/dsh/public/reels${qs}`);
   return resp.reels;
-}
-
-// ─── Media Runtime Client ──────────────────────────────────────────────────────
-
-type MediaListQuery = {
-  readonly owner_type: "product" | "store" | "category";
-  readonly owner_id: string;
-  /** Required for owner_type "product": the store this partner is editing the assortment for. */
-  readonly store_id?: string;
-};
-
-type MediaUploadInput = MediaListQuery & {
-  readonly media_type: "image" | "video";
-  readonly purpose: string;
-  readonly filename: string;
-  readonly mime_type: string;
-  readonly file_size_bytes?: number;
-};
-
-// A partner may only attach a custom image to their own store's assortment
-// row for a master product (role=partner_custom_product_image); the master
-// product itself (canonical_product_image) is platform-owned and only an
-// operator may set it. See services/dsh/backend/internal/http/centralcatalog.go
-// authorizeAssetLinkEntity.
-async function resolveAssortmentId(storeId: string, productId: string): Promise<string | null> {
-  const assortments = await fetchPartnerStoreAssortment(storeId);
-  return assortments.find((a) => a.masterProductId === productId)?.id ?? null;
-}
-
-function toPublicUrl(relativeOrAbsolute: string): string {
-  return relativeOrAbsolute.startsWith("http") ? relativeOrAbsolute : `${baseUrl}${relativeOrAbsolute}`;
-}
-
-async function listProductMedia(storeId: string | undefined, productId: string): Promise<readonly DshMediaAsset[]> {
-  if (storeId) {
-    const assortmentId = await resolveAssortmentId(storeId, productId);
-    if (assortmentId) {
-      const links = await fetchCatalogAssetLinks({ entityType: "store_assortment", entityId: assortmentId });
-      const customImage = links.find((link) => link.role === "partner_custom_product_image" && link.status === "approved");
-      if (customImage) {
-        const variant = "original";
-        const mediaPath = `/dsh/public/media/${customImage.assetId}/${variant}`;
-        return [{
-          id: customImage.assetId,
-          entity_id: productId,
-          entity_type: "product",
-          media_key: customImage.assetId,
-          url: toPublicUrl(mediaPath),
-          public_url: toPublicUrl(mediaPath),
-          mime_type: "image/webp",
-          created_at: customImage.createdAt,
-          purpose: "partner_custom_product_image",
-          status: customImage.status,
-        }];
-      }
-    }
-  }
-  const products = await fetchPartnerMasterProducts({ limit: 200 });
-  const product = products.find((item) => item.id === productId);
-  const objectKey = product?.canonicalImageObjectKey;
-  if (!objectKey) return [];
-  const publicUrl = objectKey.startsWith("http") ? objectKey : `${baseUrl}/dsh/media?mediaRef=${encodeURIComponent(objectKey)}`;
-  return [{
-    id: `${productId}-canonical-image`,
-    entity_id: productId,
-    entity_type: "product",
-    media_key: objectKey,
-    url: publicUrl,
-    public_url: publicUrl,
-    mime_type: "image/webp",
-    created_at: product?.updatedAt ?? "",
-    purpose: "canonical_product_image",
-    status: "approved",
-  }];
-}
-
-function unsupportedOwnerType(ownerType: string): never {
-  throw new Error(`media upload is not implemented for owner_type "${ownerType}" yet.`);
-}
-
-export function getDshMediaRuntimeClient() {
-  return {
-    async listAssets(entityId: string, entityType: "product" | "store" | "category"): Promise<readonly DshMediaAsset[]> {
-      if (entityType !== "product") return [];
-      return listProductMedia(undefined, entityId);
-    },
-    async listMedia(query: MediaListQuery): Promise<{ items: readonly DshMediaAsset[] }> {
-      if (query.owner_type !== "product") return { items: [] };
-      return { items: await listProductMedia(query.store_id, query.owner_id) };
-    },
-    async createUploadIntent(input: MediaUploadInput, _headers?: Record<string, string>) {
-      if (input.owner_type !== "product" || !input.store_id) return unsupportedOwnerType(input.owner_type);
-      const intent = await createAssetUploadIntent({
-        fileName: input.filename,
-        mimeType: input.mime_type,
-        sizeBytes: input.file_size_bytes ?? 0,
-      });
-      return { intent: { upload_url: intent.uploadUrl, media_id: intent.asset.id } };
-    },
-    async readLocalUriAsBlob(uri: string): Promise<Blob> {
-      const callFetch = globalThis.fetch;
-      const response = await callFetch(uri);
-      if (!response.ok) throw { code: "storage_unavailable", message: `media source read failed with HTTP ${response.status}` };
-      return response.blob();
-    },
-    async putToPresignedUrl(uploadUrl: string, body: Blob, contentType: string): Promise<void> {
-      const callFetch = globalThis.fetch;
-      const response = await callFetch(uploadUrl, { method: "PUT", body, headers: { "Content-Type": contentType } });
-      if (!response.ok) throw { code: "storage_unavailable", message: `presigned upload failed with HTTP ${response.status}` };
-    },
-    // completeUploadForProduct is the real signature this client needs (mediaId +
-    // store/product context to resolve the assortment to link against); the
-    // generic (mediaId, body, headers) signature below only covers the
-    // "product" owner_type callers currently exercise.
-    async completeUpload(mediaId: string, body?: { readonly store_id?: string; readonly product_id?: string }, _headers?: Record<string, string>) {
-      const asset = await completeAssetUpload(mediaId);
-      const storeId = body?.store_id;
-      const productId = body?.product_id;
-      if (storeId && productId) {
-        const assortmentId = await resolveAssortmentId(storeId, productId);
-        if (assortmentId) {
-          await linkCatalogAsset(asset.id, {
-            entityType: "store_assortment",
-            entityId: assortmentId,
-            role: "partner_custom_product_image",
-            isPrimary: true,
-          });
-        }
-      }
-      return asset;
-    },
-    async deleteMedia(mediaId: string, _headers?: Record<string, string>, context?: { readonly store_id?: string; readonly product_id?: string }): Promise<void> {
-      const storeId = context?.store_id;
-      const productId = context?.product_id;
-      if (!storeId || !productId) return;
-      const assortmentId = await resolveAssortmentId(storeId, productId);
-      if (!assortmentId) return;
-      const links = await fetchCatalogAssetLinks({ entityType: "store_assortment", entityId: assortmentId });
-      const link = links.find((l) => l.assetId === mediaId);
-      if (!link) return;
-      await unlinkCatalogAsset(mediaId, link.id, { entityType: "store_assortment", entityId: assortmentId });
-    },
-  };
 }

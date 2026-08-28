@@ -20,13 +20,6 @@ type GovernedOrderCancellationInput struct {
 	Reason           string `json:"reason"`
 }
 
-// CancelOrderFinancially is retained only as a compile-compatible fail-closed
-// seam for older callers that do not carry authenticated request context. New
-// code must use CancelOrderFinanciallyWithContext.
-func CancelOrderFinancially(db *sql.DB, input GovernedOrderCancellationInput) (*CancelForOrderResult, error) {
-	return nil, fmt.Errorf("authenticated OperatorContext context is required; use CancelOrderFinanciallyWithContext")
-}
-
 func CancelOrderFinanciallyWithContext(ctx context.Context, db *sql.DB, input GovernedOrderCancellationInput) (*CancelForOrderResult, error) {
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
@@ -127,31 +120,6 @@ func HandleGovernedOrderCancellation(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		result, err := CancelOrderFinanciallyWithContext(r.Context(), db, input)
-		writeGovernedCancellationResult(w, result, err)
-	}
-}
-
-// HandleGovernedSessionCancellation preserves the established
-// /payment-sessions/{id}/cancel-for-order route while applying the same
-// ownership checks and atomic refund logic as /wlt/order-cancellations.
-func HandleGovernedSessionCancellation(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var body struct {
-			OrderID  string `json:"orderId"`
-			ClientID string `json:"clientId"`
-			Reason   string `json:"reason"`
-		}
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		if err := decoder.Decode(&body); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-			return
-		}
-		result, err := CancelOrderFinanciallyWithContext(r.Context(), db, GovernedOrderCancellationInput{
-			PaymentSessionID: r.PathValue("paymentSessionId"),
-			OrderID:          body.OrderID,
-			ClientID:         body.ClientID,
-			Reason:           body.Reason,
-		})
 		writeGovernedCancellationResult(w, result, err)
 	}
 }

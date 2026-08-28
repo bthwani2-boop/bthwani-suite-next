@@ -61,7 +61,7 @@ func pricingQuoteBody() string {
 // it, so every quote request answered 404 and checkout lost the sovereign
 // quote without any gate noticing.
 func TestPricingQuoteRouteIsRegisteredAndPrices(t *testing.T) {
-	router := NewRouter(nil, true, openDecisionService{})
+	router := NewRouter(nil, true, openDecisionService{}, nil)
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, pricingQuoteRequest(t, pricingQuoteBody()))
@@ -88,7 +88,7 @@ func TestPricingQuoteRouteIsRegisteredAndPrices(t *testing.T) {
 }
 
 func TestPricingQuoteRouteRejectsUnpriceableRequests(t *testing.T) {
-	router := NewRouter(nil, true, openDecisionService{})
+	router := NewRouter(nil, true, openDecisionService{}, nil)
 	for name, body := range map[string]string{
 		"malformed json": `{`,
 		"unknown field":  strings.Replace(pricingQuoteBody(), `"cartVersion":1`, `"totalMinorUnits":1`, 1),
@@ -107,7 +107,7 @@ func TestPricingQuoteRouteRejectsUnpriceableRequests(t *testing.T) {
 
 func TestPricingQuoteRouteRequiresServiceAuth(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
-	router := NewRouter(nil, true, openDecisionService{})
+	router := NewRouter(nil, true, openDecisionService{}, nil)
 	req := httptest.NewRequest(http.MethodPost, "/wlt/internal/quotes/calculate", strings.NewReader(pricingQuoteBody()))
 	req.Header.Set("X-Delegated-Operator-Context", "pricing-quote-context")
 	rec := httptest.NewRecorder()

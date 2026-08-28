@@ -347,3 +347,82 @@ If an agent/provider chooses to persist a task-local plan, it chooses an appropr
 A plan may summarize evidence, root hypotheses, Source-of-Fix, treatment frontier and verification obligations, but live code/data/runtime/repository evidence always outrank it. Material target movement invalidates affected plan assumptions exactly as it invalidates other stale evidence.
 
 When the human requests read-only audit or objective selection only, report the same decision-quality conclusions in the conversation without manufacturing a repository plan file.
+
+## 16. Independent challenge, state-space and trust-boundary modeling
+
+Before accepting a high-impact root/target/treatment as sufficiently proven, perform an **independent challenger pass** whose objective is to falsify the favored explanation rather than confirm it. Logical independence is required; a different agent/model is optional.
+
+Challenge at least the materially plausible questions:
+
+```text
+IS THIS ROOT ACTUALLY A SYMPTOM?
+WHAT COMPETING CAUSAL PARENT FITS THE EVIDENCE?
+WHAT EVIDENCE WOULD DISPROVE THE TARGET?
+WHAT WRITER/CONSUMER/HANDOFF COULD BE MISSING?
+WHAT STALE STATE, RACE, RETRY, RESTART OR LOST RESPONSE BREAKS THE MODEL?
+WHAT OLD AUTHORITY COULD STILL BE REACHABLE?
+WHAT DATA/RUNTIME READBACK WOULD CONTRADICT THE CLAIMED CUTOVER?
+```
+
+A challenge that exposes a higher causal parent reopens ranking immediately. Challenger output is evidence, not a second authority.
+
+For materially stateful roots, model enough state space to reason about legality and completeness:
+
+```text
+STATE
+EVENT / COMMAND
+ACTOR
+GUARD / PRECONDITION
+CANONICAL DECISION OWNER
+EXPECTED NEXT STATE
+FORBIDDEN TRANSITIONS
+TERMINALITY
+RETRY / DUPLICATE / REPLAY SEMANTICS
+CONCURRENCY / ORDERING CONDITION
+FAILURE / RECOVERY CONDITION
+```
+
+Use the model to expose missing transitions, terminal-state escapes, stale commands, repeated transitions and cross-service disagreement; verification technique selection remains owned by `04`.
+
+For every material security/privacy/trust boundary, model enough of:
+
+```text
+ASSETS
+ACTORS / SERVICE IDENTITIES
+ENTRY POINTS
+TRUSTED VS UNTRUSTED INPUTS
+PRIVILEGES / OBJECT SCOPES
+DATA FLOW
+ABUSE / MISUSE CASES
+REPLAY / CONFUSED-DEPUTY / CROSS-SCOPE CONDITIONS
+FAILURE IMPACT
+CANONICAL MITIGATION OWNER
+REQUIRED FALSIFICATION EVIDENCE
+```
+
+Scanners may support this model but never substitute for it. When a service boundary itself is ambiguous, use a task-local live `SERVICE PASSPORT` view — owner, purpose, owned state/data, contracts/events, dependencies, consumers, trust/failure boundaries — as diagnostic structure only; do not create a persistent registry.
+
+## 17. Human-experience root diagnosis and design-evidence discipline
+
+When a material root affects a user-facing journey or surface, diagnose at the highest relevant human-experience altitude before patching presentation:
+
+```text
+USER / ACTOR NEED
+-> JOURNEY / TASK
+-> INFORMATION ARCHITECTURE
+-> INTERACTION / FEEDBACK / RECOVERY
+-> CONTENT / TERMINOLOGY
+-> BRAND / VISUAL-LANGUAGE AUTHORITY
+-> DESIGN TOKENS / COMPONENT / PATTERN AUTHORITY
+-> SURFACE COMPOSITION
+-> RENDERED BEHAVIOR
+-> USABILITY / ACCESSIBILITY / PERCEIVED-PERFORMANCE EVIDENCE
+```
+
+High-leverage experience-root signals include competing design sources, unjustified local token/style overrides, duplicate component/pattern authority, inconsistent state or error semantics, missing material component states, cross-surface divergence without Product reason, rendered-only defects and high-risk usability assumptions presented as fact.
+
+When internal authority does not determine the design/interaction choice and `01` permits external research, evaluate current authoritative or high-quality open evidence by source authority, recency, platform/context applicability, accessibility implications and licensing/provenance when assets are involved. Extract and compare principles/patterns; do not import another product's identity or use external practice to invent BThwani Product behavior.
+
+For a design root, Source-of-Fix may be Product/Brand governance, semantic tokens, canonical component/pattern, content terminology, surface composition or platform adaptation. A screenshot-local style patch is not root treatment when a higher canonical source is wrong or missing.
+
+`DESIGNER/AGENT CONFIDENCE != USABILITY EVIDENCE`. When a material claim depends on real-user comprehension or task success and cannot be derived from existing evidence, convert the assumption into a falsifiable usability/research obligation rather than self-certifying it.

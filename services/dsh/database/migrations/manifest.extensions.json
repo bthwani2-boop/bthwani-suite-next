@@ -104,7 +104,7 @@
     {
       "ordinal": 254,
       "file": "dsh-1007_marketing_store_publication_command.sql",
-      "sha256": "1c23e8a2bc5105992756800402dfa393372641776c6b6f1f18ea710d8e22a262",
+      "sha256": "1b15650eb490fc96d8e3bda266645853fd50094333e114301d94680c219370a8",
       "historicalPrefix": "1007",
       "state": "ACTIVE"
     },
@@ -302,6 +302,55 @@
       "file": "dsh-1042_retire_local_admin_role_registry.sql",
       "sha256": "e032ad38324f0dd2781cb177d4284cacba24be77d4fcc0f4088a93fed4d2da08",
       "historicalPrefix": null,
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 283,
+      "file": "dsh-1043_zone_service_area_canonical_relationship.sql",
+      "sha256": "5c1115269b2291c5a2383479a9c86541243d1a3edb5bae935771635d59f53d3a",
+      "historicalPrefix": null,
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 284,
+      "file": "dsh-1044_checkout_financial_closure_outbox_state_machine.sql",
+      "sha256": "e39758df42930f8b79336d43d8834d55b8cca706b5ac6d146e0319fbba1baa7f",
+      "historicalPrefix": "1044",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 285,
+      "file": "dsh-1045_workforce_availability_projection_state_machine.sql",
+      "sha256": "edb1bdd6a88596d161297e4c05ad35e68fb4993255cceaacd112a291039a5347",
+      "historicalPrefix": "1045",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 286,
+      "file": "dsh-1046_checkout_financial_failure_classification.sql",
+      "sha256": "7455657bbc6893f68bdd6e98487eeb23fef5cdb9c08342b08ce3efec6a4bffd9",
+      "historicalPrefix": "1046",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 287,
+      "file": "dsh-1047_special_request_durable_sagas.sql",
+      "sha256": "4052630a1569514b178c8db4fb2f976c223ae998d232e845e95f92c63ad445b1",
+      "historicalPrefix": "1047",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 288,
+      "file": "dsh-1048_checkout_payment_session_saga.sql",
+      "sha256": "8d66da3479808d7e1c719c320a94e27f43a40a80c60886d3faf4a6608fff601a",
+      "historicalPrefix": "1048",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 290,
+      "file": "dsh-1049_delivery_proof_review_idempotency.sql",
+      "sha256": "0f8fc3b6cc21fe8a4c4b0ab7cf17c3375729eb0c3e5854dd08727beec3cb646d",
+      "historicalPrefix": "1049",
       "state": "ACTIVE"
     }
   ]

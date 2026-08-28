@@ -9,13 +9,13 @@
       "kind": "shared-service-client",
       "root": "core/identity",
       "sourcePrefixes": ["core/identity/clients/"],
-      "coverage": { "strategy": "node-lcov", "cwd": "core/identity", "testRoots": ["core/identity/tests"] }
+      "coverage": { "strategy": "node-lcov", "cwd": "core/identity", "nodeOptions": ["--experimental-loader", "../../tools/scripts/sonar-ts-loader.mjs"], "testRoots": ["core/identity/tests"] }
     },
     "data-runtime": {
       "kind": "shared-runtime",
       "root": "shared/data-runtime",
       "sourcePrefixes": ["shared/data-runtime/src/"],
-      "coverage": { "strategy": "node-lcov", "cwd": "shared/data-runtime", "testRoots": ["shared/data-runtime/tests"] }
+      "coverage": { "strategy": "node-lcov", "cwd": "shared/data-runtime", "nodeOptions": ["--experimental-loader", "../../tools/scripts/sonar-ts-loader.mjs"], "testRoots": ["shared/data-runtime/tests"] }
     },
     "dsh": {
       "kind": "domain",
@@ -32,6 +32,7 @@
         "strategy": "node-lcov",
         "cwd": ".",
         "prepare": ["pnpm", "--dir", "services/dsh", "run", "build:ts"],
+        "nodeOptions": ["--experimental-loader", "./tools/scripts/sonar-ts-loader.mjs"],
         "testRoots": ["services/dsh/tests/coverage"]
       }
     },
@@ -40,35 +41,33 @@
       "root": "services/wlt",
       "sourcePrefixes": ["services/wlt/frontend/", "services/wlt/service.manifest.ts"],
       "coverage": {
-        "strategy": "node-lcov",
-        "cwd": "services/wlt",
-        "nodeOptions": ["--experimental-loader", "./tests/ts-loader.mjs"],
-        "testRoots": ["services/wlt/tests"]
+        "strategy": "required",
+        "reason": "WLT frontend runtime is DSH-owned; WLT service coverage is provided by the Go coverage matrix."
       }
     },
     "app-field": {
       "kind": "mobile-surface",
       "root": "apps/app-field/runtime",
       "sourcePrefixes": ["apps/app-field/runtime/"],
-      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-field/runtime", "testRoots": ["apps/app-field/runtime/tests"] }
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-field/runtime", "nodeOptions": ["--experimental-loader", "../../../tools/scripts/sonar-ts-loader.mjs"], "testRoots": ["apps/app-field/runtime/tests"] }
     },
     "app-captain": {
       "kind": "mobile-surface",
       "root": "apps/app-captain/runtime",
       "sourcePrefixes": ["apps/app-captain/runtime/"],
-      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-captain/runtime", "testRoots": ["apps/app-captain/runtime/tests"] }
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-captain/runtime", "nodeOptions": ["--experimental-loader", "../../../tools/scripts/sonar-ts-loader.mjs"], "testRoots": ["apps/app-captain/runtime/tests"] }
     },
     "app-client": {
       "kind": "mobile-surface",
       "root": "apps/app-client/runtime",
       "sourcePrefixes": ["apps/app-client/runtime/"],
-      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-client/runtime", "testRoots": ["apps/app-client/runtime/tests"] }
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-client/runtime", "nodeOptions": ["--experimental-loader", "../../../tools/scripts/sonar-ts-loader.mjs"], "testRoots": ["apps/app-client/runtime/tests"] }
     },
     "app-partner": {
       "kind": "mobile-surface",
       "root": "apps/app-partner/runtime",
       "sourcePrefixes": ["apps/app-partner/runtime/"],
-      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-partner/runtime", "testRoots": ["apps/app-partner/runtime/tests"] }
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-partner/runtime", "nodeOptions": ["--experimental-loader", "../../../tools/scripts/sonar-ts-loader.mjs"], "testRoots": ["apps/app-partner/runtime/tests"] }
     },
     "control-panel-config": {
       "kind": "web-runtime-config",
@@ -77,6 +76,7 @@
       "coverage": {
         "strategy": "node-lcov",
         "cwd": ".",
+        "nodeOptions": ["--experimental-loader", "./tools/scripts/sonar-ts-loader.mjs"],
         "testRoots": ["apps/control-panel/runtime/tests"]
       }
     },
@@ -84,13 +84,13 @@
       "kind": "web-surface",
       "root": "apps/control-panel/runtime",
       "sourcePrefixes": ["apps/control-panel/runtime/src/", "shared/control-panel/src/"],
-      "coverage": { "strategy": "node-lcov", "cwd": ".", "testRoots": ["apps/control-panel/runtime/tests"] }
+      "coverage": { "strategy": "node-lcov", "cwd": ".", "nodeOptions": ["--experimental-loader", "./tools/scripts/sonar-ts-loader.mjs"], "testRoots": ["apps/control-panel/runtime/tests"] }
     },
     "ui-kit": {
       "kind": "shared-ui",
       "root": "shared/ui-kit",
       "sourcePrefixes": ["shared/ui-kit/src/"],
-      "coverage": { "strategy": "node-lcov", "cwd": ".", "testRoots": ["shared/ui-kit/tests"] }
+      "coverage": { "strategy": "node-lcov", "cwd": ".", "nodeOptions": ["--experimental-loader", "./tools/scripts/sonar-ts-loader.mjs"], "testRoots": ["shared/ui-kit/tests"] }
     }
   },
   "sonar": {

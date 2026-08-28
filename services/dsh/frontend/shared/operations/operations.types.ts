@@ -80,78 +80,6 @@ type DshOperationsOrderRow = {
   slaLabel: string;
 };
 
-export type LegacyOperationsWorkspaceId =
-  | 'overview'
-  | 'orders'
-  | 'dashboard'
-  | 'dispatch-fleet'
-  | 'tracking-handoff'
-  | 'exceptions-sla'
-  | 'partner-readiness'
-  | 'proxy-shein-awnak'
-  | 'audit-evidence'
-  | 'captain-ops'
-  | 'field-ops'
-  | 'issues'
-  | 'serviceability'
-  | 'guard-status'
-  | 'evidence'
-  | 'order-detail'
-  | 'orderchat'
-  | 'assisted-order-desk'
-  | 'order-rescue'
-  | 'dispatch-assignment'
-  | 'geo-heatmap'
-  | 'sheinproxy'
-  | 'awnak-operations'
-  | 'captain-operations'
-  | 'partner-stores'
-  | 'area-capacity'
-  | 'exceptions-escalations'
-  | 'audit-support-sla'
-  | 'dispatch'
-  | 'live-tracking'
-  | 'exceptions'
-  | 'sla'
-  | 'audit'
-  | 'partner-prep'
-  | 'handoff'
-  | 'proof-review'
-  | 'capacity'
-  | 'partners'
-  | 'catalogs'
-  | 'catalog-categories'
-  | 'marketing'
-  | 'banners'
-  | 'growth'
-  | 'loyalty'
-  | 'smart-signal'
-  | 'reassign'
-  | 'peak-mode'
-  | 'bell'
-  | 'arrival-bell'
-  | 'zone-set'
-  | 'live-map-capacity';
-
-export type LegacySectionRedirectId =
-  | 'support'
-  | 'finance'
-  | 'settlements'
-  | 'cod'
-  | 'refunds'
-  | 'catalogs'
-  | 'catalog-categories'
-  | 'marketing'
-  | 'banners'
-  | 'growth'
-  | 'loyalty'
-  | 'smart-signal'
-  | 'partners'
-  | 'platform'
-  | 'administration';
-
-export type AnyOperationsWorkspaceId = CanonicalOperationsGroupId | LegacyOperationsWorkspaceId | LegacySectionRedirectId | 'orders' | 'overview';
-
 export type NonOperationsSectionRootId = 'support' | 'finance' | 'catalogs' | 'marketing' | 'partners' | 'platform' | 'administration';
 
 export type OperationsSubGroupMeta = {
@@ -169,21 +97,6 @@ export type OperationsGroupMeta = {
   subGroups?: readonly OperationsSubGroupMeta[];
   tertiaryFilters?: readonly OperationsTertiaryFilterId[];
 };
-
-export type OperationsNormalizationResult =
-  | {
-      kind: 'group';
-      group: CanonicalOperationsGroupId;
-      sourceWorkspace?: AnyOperationsWorkspaceId | undefined;
-      panel?: OperationsPanelId | undefined;
-      subGroup?: string | undefined;
-    }
-  | {
-      kind: 'redirect';
-      sourceWorkspace: AnyOperationsWorkspaceId;
-      section: NonOperationsSectionRootId;
-      href: `/dsh/${NonOperationsSectionRootId}`;
-    };
 
 export type OperationsViewState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled';
 

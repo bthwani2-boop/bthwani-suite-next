@@ -3,10 +3,16 @@
 package dshoutbox
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
+
+	"wlt-api/internal/shared"
 )
 
 const (
@@ -188,4 +194,81 @@ func pqStringArray(values []string) string {
 		out += `"` + v + `"`
 	}
 	return out + "}"
+}
+
+// ErrEventNotEligibleForRetry is returned when a retry is requested for an
+// outbox event that is not parked in the terminal 'failed' state.
+var ErrEventNotEligibleForRetry = fmt.Errorf("dsh outbox event is not eligible for retry")
+
+// RequeueFailedForOperatorContext is the explicit operator recovery
+// transition for an outbox event that exhausted its delivery attempts. A
+// terminal 'failed' event otherwise has no exit: the outcome it carries would
+// be permanently undeliverable and DSH's projection would diverge from WLT's
+// truth with no tooling to re-drive delivery. The retry is scoped to the
+// authenticated OperatorContext and requires an explicit reason.
+func RequeueFailedForOperatorContext(ctx context.Context, db *sql.DB, eventID, reason string) error {
+	eventID = strings.TrimSpace(eventID)
+	reason = strings.TrimSpace(reason)
+	if eventID == "" || reason == "" {
+		return fmt.Errorf("eventId and reason are required")
+	}
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return err
+	}
+	result, err := db.ExecContext(ctx, `
+		UPDATE wlt_dsh_outbox_events
+		SET status='pending', attempt_count=0, next_retry_at=NOW(),
+		    last_error=$3, updated_at=NOW()
+		WHERE id=$1::uuid AND status='failed' AND operator_context_id=$2`,
+		eventID, operatorContextID, "manual retry: "+reason)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return ErrEventNotEligibleForRetry
+	}
+	return nil
+}
+
+// HandleRetryFailedEvent is the governed operator surface for re-driving a
+// parked delivery: it requires a delegated finance principal, an
+// authenticated OperatorContext, and an explicit reason, mirroring the
+// reconciliation-case resolution handlers.
+func HandleRetryFailedEvent(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var input struct {
+			Reason string `json:"reason"`
+		}
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8*1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+			return
+		}
+		principal, principalErr := shared.RequireDelegatedFinancePrincipal(r.Context())
+		if principalErr != nil {
+			shared.SendError(w, http.StatusForbidden, "AUTHENTICATED_PRINCIPAL_REQUIRED", principalErr.Error())
+			return
+		}
+		if err := RequeueFailedForOperatorContext(r.Context(), db, r.PathValue("eventId"), input.Reason); err != nil {
+			if errors.Is(err, ErrEventNotEligibleForRetry) {
+				shared.SendError(w, http.StatusConflict, "INVALID_STATE", "dsh outbox event is not parked in failed state")
+				return
+			}
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
+		}
+		shared.SendJSON(w, http.StatusOK, map[string]any{
+			"outboxEvent": map[string]any{
+				"id":        r.PathValue("eventId"),
+				"status":    "retry_scheduled",
+				"retriedBy": principal,
+			},
+		})
+	}
 }

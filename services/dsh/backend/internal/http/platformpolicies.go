@@ -86,11 +86,11 @@ func (s *protectedStoreServer) handleGetZoneServiceability(w http.ResponseWriter
 }
 
 type createZoneRequest struct {
-	ID          string `json:"id,omitempty"`
-	Name        string `json:"name"`
-	CityCode    string `json:"cityCode"`
-	Description string `json:"description,omitempty"`
-	Reason      string `json:"reason,omitempty"`
+	ID              string `json:"id,omitempty"`
+	Name            string `json:"name"`
+	ServiceAreaCode string `json:"serviceAreaCode"`
+	Description     string `json:"description,omitempty"`
+	Reason          string `json:"reason,omitempty"`
 }
 
 type updateZoneRequest struct {
@@ -119,10 +119,10 @@ func (s *protectedStoreServer) handleCreateZone(w http.ResponseWriter, r *http.R
 		return
 	}
 	input := platformpolicies.CreateZoneInput{
-		ID:          req.ID,
-		Name:        req.Name,
-		CityCode:    req.CityCode,
-		Description: req.Description,
+		ID:              req.ID,
+		Name:            req.Name,
+		ServiceAreaCode: req.ServiceAreaCode,
+		Description:     req.Description,
 	}
 	item, err := platformpolicies.CreateZone(r.Context(), s.db, input, mutation)
 	if err != nil {

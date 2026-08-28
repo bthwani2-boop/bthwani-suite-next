@@ -25,21 +25,39 @@ export type ProviderIncidentStatus =
 
 export type TransitionProviderIncidentInput = {
   readonly toStatus: ProviderIncidentStatus;
-  readonly resolutionNote?: string | undefined;
-  readonly wltLedgerReference?: string | undefined;
+  readonly resolutionNote: string;
+  readonly expectedVersion: number;
 };
 
 export type TransitionProviderIncidentResponse = {
-  readonly incident: ProviderIncident;
+  readonly incident?: ProviderIncident | undefined;
+  readonly financialCommand?: ProviderPenaltyCommand | undefined;
+  readonly replayed?: boolean | undefined;
 };
 
-export type ProviderIncidentTransition = {
+export type ProviderPenaltyCommandLifecycle =
+  | "READY"
+  | "IN_FLIGHT"
+  | "REMOTE_OUTCOME_UNKNOWN"
+  | "REMOTE_CONFIRMED"
+  | "LOCAL_PROJECTION_PENDING"
+  | "RECONCILING"
+  | "RETRY_SCHEDULED"
+  | "COMPLETED"
+  | "PERMANENTLY_REJECTED"
+  | "HISTORIC_UNPROVEN";
+
+export type ProviderPenaltyCommand = {
   readonly id: string;
   readonly incidentId: string;
-  readonly fromStatus: ProviderIncidentStatus;
-  readonly toStatus: ProviderIncidentStatus;
-  readonly resolutionNote?: string | undefined;
-  readonly wltLedgerReference?: string | undefined;
-  readonly changedByActorId: string;
-  readonly createdAt: string;
+  readonly incidentSourceVersion: number;
+  readonly operation: "post" | "reverse";
+  readonly commandIdempotencyKey: string;
+  readonly lifecycleState: ProviderPenaltyCommandLifecycle;
+  readonly attemptCount: number;
+  readonly readbackAttemptCount: number;
+  readonly reconciliationState: "NOT_REQUIRED" | "REQUIRED" | "FOUND" | "ABSENT" | "UNPROVEN";
+  readonly remotePenaltyId?: string | undefined;
+  readonly remoteLedgerTransactionId?: string | undefined;
+  readonly terminalDisposition?: string | undefined;
 };

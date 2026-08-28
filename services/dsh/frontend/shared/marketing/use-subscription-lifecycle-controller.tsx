@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { registerIdentityBeforeSessionEndHook } from "@bthwani/core-identity";
+import { registerIdentityBeforeSessionEndHook, useIdentitySession } from "@bthwani/core-identity";
 import { fetchClientBenefits } from "./marketing.api";
 import {
   activateDshSubscriptionPurchase,
@@ -74,6 +74,8 @@ function hasAnyBenefits(benefits: ClientBenefitsPayload): boolean {
 }
 
 export function useSubscriptionLifecycleController() {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : "";
   const [state, setState] = useState<SubscriptionLifecycleViewState>({ kind: "loading" });
   const [busyAction, setBusyAction] = useState<SubscriptionLifecycleAction>(null);
   const [pendingPurchase, setPendingPurchase] = useState<SubscriptionPurchaseRecord>();
@@ -96,10 +98,17 @@ export function useSubscriptionLifecycleController() {
 
   useEffect(() => {
     let active = true;
-    const unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(clearSubscriptionMutationAttempts);
+    if (!actorId) {
+      // Identity restoration and signed-out states are not allowed to touch
+      // actor-scoped durable mutation recovery or cleanup.
+      return () => {
+        active = false;
+      };
+    }
+    const unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(() => clearSubscriptionMutationAttempts(actorId));
     void (async () => {
       try {
-        const recovered = await recoverDshSubscriptionPurchase();
+        const recovered = await recoverDshSubscriptionPurchase(actorId);
         if (active && recovered) {
           setPendingPurchase(recovered.purchase);
           setPaymentSession(recovered.paymentSession);
@@ -113,7 +122,7 @@ export function useSubscriptionLifecycleController() {
       active = false;
       unregisterSessionEndHook();
     };
-  }, [reload]);
+  }, [actorId, reload]);
 
   const run = useCallback(async <T,>(action: Exclude<SubscriptionLifecycleAction, null>, operation: () => Promise<T>) => {
     if (busyAction) throw new Error("SUBSCRIPTION_ACTION_BUSY");
@@ -130,11 +139,11 @@ export function useSubscriptionLifecycleController() {
   }, [busyAction]);
 
   const purchase = useCallback(async (planId: string, paymentMethod: SubscriptionPaymentMethod) => {
-    const response = await run("purchase", () => createDshSubscriptionPurchase(planId, paymentMethod));
+    const response = await run("purchase", () => createDshSubscriptionPurchase(actorId, planId, paymentMethod));
     setPendingPurchase(response.purchase);
     setPaymentSession(response.paymentSession);
     return response;
-  }, [run]);
+  }, [actorId, run]);
 
   const refreshPayment = useCallback(async () => {
     if (!pendingPurchase) return undefined;
@@ -146,26 +155,26 @@ export function useSubscriptionLifecycleController() {
 
   const activate = useCallback(async () => {
     if (!pendingPurchase) return undefined;
-    const response = await run("activate", () => activateDshSubscriptionPurchase(pendingPurchase.id));
+    const response = await run("activate", () => activateDshSubscriptionPurchase(actorId, pendingPurchase.id));
     setPendingPurchase(response.purchase);
     await reload();
     return response;
-  }, [pendingPurchase, reload, run]);
+  }, [actorId, pendingPurchase, reload, run]);
 
   const renew = useCallback(async (subscriptionId: string, paymentMethod: SubscriptionPaymentMethod) => {
-    const response = await run("renew", () => renewDshSubscription(subscriptionId, paymentMethod));
+    const response = await run("renew", () => renewDshSubscription(actorId, subscriptionId, paymentMethod));
     setPendingPurchase(response.purchase);
     setPaymentSession(response.paymentSession);
     return response;
-  }, [run]);
+  }, [actorId, run]);
 
   const cancel = useCallback(async (subscriptionId: string, reason: string) => {
-    const response = await run("cancel", () => cancelDshSubscription(subscriptionId, reason));
+    const response = await run("cancel", () => cancelDshSubscription(actorId, subscriptionId, reason));
     setPendingPurchase(undefined);
     setPaymentSession(undefined);
     await reload();
     return response;
-  }, [reload, run]);
+  }, [actorId, reload, run]);
 
   return useMemo(() => ({
     state,

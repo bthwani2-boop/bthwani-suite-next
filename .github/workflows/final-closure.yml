@@ -1,0 +1,267 @@
+name: BThwani Final Closure
+run-name: Final Closure PR ${{ inputs.pr_number }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open PR number to close exactly
+        required: true
+        type: string
+      expected_head_sha:
+        description: Optional exact expected PR head SHA
+        required: false
+        type: string
+      expected_base_sha:
+        description: Optional exact expected PR base SHA
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+  pull-requests: read
+  security-events: write
+  statuses: write
+
+concurrency:
+  group: bthwani-final-closure-${{ inputs.pr_number }}
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  resolve:
+    name: Resolve exact live PR candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      pr_number: ${{ steps.identity.outputs.pr_number }}
+      head_ref: ${{ steps.identity.outputs.head_ref }}
+      head_sha: ${{ steps.identity.outputs.head_sha }}
+      base_ref: ${{ steps.identity.outputs.base_ref }}
+      base_sha: ${{ steps.identity.outputs.base_sha }}
+      dependency_changed: ${{ steps.identity.outputs.dependency_changed }}
+      docker_changed: ${{ steps.identity.outputs.docker_changed }}
+    steps:
+      - name: Resolve live PR identity
+        id: identity
+        shell: bash
+        env:
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
+        run: |
+          set -euo pipefail
+          [[ "${INPUT_PR_NUMBER}" =~ ^[1-9][0-9]*$ ]] || { echo "::error::an open PR number is required"; exit 1; }
+          pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${INPUT_PR_NUMBER}")"
+          [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::PR is not open"; exit 1; }
+          [[ "$(jq -r '.draft' <<<"${pr}")" == "false" ]] || { echo "::error::Final Closure requires a non-draft PR"; exit 1; }
+          head_ref="$(jq -r '.head.ref' <<<"${pr}")"
+          head_sha="$(jq -r '.head.sha' <<<"${pr}")"
+          base_ref="$(jq -r '.base.ref' <<<"${pr}")"
+          base_sha="$(jq -r '.base.sha' <<<"${pr}")"
+          [[ -z "${EXPECTED_HEAD_SHA:-}" || "${EXPECTED_HEAD_SHA}" == "${head_sha}" ]] || { echo "::error::expected head SHA is stale"; exit 1; }
+          [[ -z "${EXPECTED_BASE_SHA:-}" || "${EXPECTED_BASE_SHA}" == "${base_sha}" ]] || { echo "::error::expected base SHA is stale"; exit 1; }
+          {
+            echo "pr_number=${INPUT_PR_NUMBER}"
+            echo "head_ref=${head_ref}"
+            echo "head_sha=${head_sha}"
+            echo "base_ref=${base_ref}"
+            echo "base_sha=${base_sha}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout exact candidate and derive the canonical changed-file truth
+        id: diff
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ steps.identity.outputs.head_sha }}
+          fetch-depth: 0
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Classify the exact Base-to-Head diff
+        id: classification
+        shell: bash
+        env:
+          BASE_SHA: ${{ steps.identity.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.identity.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git cat-file -e "${HEAD_SHA}^{commit}"
+          git merge-base --is-ancestor "${BASE_SHA}" "${HEAD_SHA}"
+          mapfile -t files < <(git diff --name-only --diff-filter=ACMRDTUXB "${BASE_SHA}" "${HEAD_SHA}" --)
+          dependency=false
+          docker=false
+          for file in "${files[@]}"; do
+            [[ "${file}" =~ (^|/)(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|go\.mod|go\.sum|requirements[^/]*\.txt|poetry\.lock|Cargo\.lock)$ ]] && dependency=true
+            [[ "${file}" == ".dockerignore" || "${file}" =~ (^|/)(Dockerfile(\..*)?|[^/]*\.dockerfile)$ || "${file}" == infra/* ]] && docker=true
+          done
+          echo "dependency_changed=${dependency}" >> "${GITHUB_OUTPUT}"
+          echo "docker_changed=${docker}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### Exact final candidate"
+            echo "- PR: #${{ steps.identity.outputs.pr_number }}"
+            echo "- Head: ${{ steps.identity.outputs.head_ref }}@${HEAD_SHA}"
+            echo "- Base: ${{ steps.identity.outputs.base_ref }}@${BASE_SHA}"
+            echo "- Changed files: ${#files[@]}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  ci:
+    name: Full CI preflight
+    needs: [resolve]
+    if: ${{ needs.resolve.result == 'success' }}
+    uses: ./.github/workflows/ci-check.yml
+    with:
+      full_scope: true
+      pr_number: ${{ needs.resolve.outputs.pr_number }}
+      expected_head_sha: ${{ needs.resolve.outputs.head_sha }}
+      expected_base_sha: ${{ needs.resolve.outputs.base_sha }}
+
+  sonar:
+    name: SonarQube exact analysis
+    needs: [resolve, ci]
+    if: ${{ needs.resolve.result == 'success' && needs.ci.result == 'success' }}
+    uses: ./.github/workflows/sonarqube.yml
+    secrets: inherit
+    with:
+      pr_number: ${{ needs.resolve.outputs.pr_number }}
+      head_sha: ${{ needs.resolve.outputs.head_sha }}
+      base_sha: ${{ needs.resolve.outputs.base_sha }}
+      head_ref: ${{ needs.resolve.outputs.head_ref }}
+      base_ref: ${{ needs.resolve.outputs.base_ref }}
+
+  codeql:
+    name: CodeQL exact analysis
+    needs: [resolve, ci]
+    if: ${{ needs.resolve.result == 'success' && needs.ci.result == 'success' }}
+    uses: ./.github/workflows/codeql.yml
+    with:
+      pr_number: ${{ needs.resolve.outputs.pr_number }}
+      head_sha: ${{ needs.resolve.outputs.head_sha }}
+      base_sha: ${{ needs.resolve.outputs.base_sha }}
+      head_ref: ${{ needs.resolve.outputs.head_ref }}
+      base_ref: ${{ needs.resolve.outputs.base_ref }}
+
+  semgrep:
+    name: Semgrep exact analysis
+    needs: [resolve, ci]
+    if: ${{ needs.resolve.result == 'success' && needs.ci.result == 'success' }}
+    uses: ./.github/workflows/semgrep.yml
+    with:
+      head_sha: ${{ needs.resolve.outputs.head_sha }}
+      base_sha: ${{ needs.resolve.outputs.base_sha }}
+
+  security:
+    name: Security exact analysis
+    needs: [resolve, ci]
+    if: ${{ needs.resolve.result == 'success' && needs.ci.result == 'success' }}
+    uses: ./.github/workflows/security-remote.yml
+    with:
+      pr_number: ${{ needs.resolve.outputs.pr_number }}
+      head_sha: ${{ needs.resolve.outputs.head_sha }}
+      base_sha: ${{ needs.resolve.outputs.base_sha }}
+      head_ref: ${{ needs.resolve.outputs.head_ref }}
+      base_ref: ${{ needs.resolve.outputs.base_ref }}
+
+  dependency:
+    name: Dependency review when applicable
+    needs: [resolve, ci]
+    if: ${{ needs.resolve.result == 'success' && needs.ci.result == 'success' && needs.resolve.outputs.dependency_changed == 'true' }}
+    uses: ./.github/workflows/dependency-review.yml
+    with:
+      pr_number: ${{ needs.resolve.outputs.pr_number }}
+      head_sha: ${{ needs.resolve.outputs.head_sha }}
+      base_sha: ${{ needs.resolve.outputs.base_sha }}
+      base_ref: ${{ needs.resolve.outputs.base_ref }}
+      head_ref: ${{ needs.resolve.outputs.head_ref }}
+      expected_sha: ${{ needs.resolve.outputs.head_sha }}
+
+  lockfile:
+    name: Lockfile integrity when applicable
+    needs: [resolve, ci]
+    if: ${{ needs.resolve.result == 'success' && needs.ci.result == 'success' && needs.resolve.outputs.dependency_changed == 'true' }}
+    uses: ./.github/workflows/lockfile-integrity.yml
+    with:
+      pr_number: ${{ needs.resolve.outputs.pr_number }}
+      head_sha: ${{ needs.resolve.outputs.head_sha }}
+      base_sha: ${{ needs.resolve.outputs.base_sha }}
+
+  docker:
+    name: Docker policy when applicable
+    needs: [resolve, ci]
+    if: ${{ needs.resolve.result == 'success' && needs.ci.result == 'success' && needs.resolve.outputs.docker_changed == 'true' }}
+    uses: ./.github/workflows/docker-runtime-hardening.yml
+    with:
+      pr_number: ${{ needs.resolve.outputs.pr_number }}
+      head_sha: ${{ needs.resolve.outputs.head_sha }}
+      base_sha: ${{ needs.resolve.outputs.base_sha }}
+
+  final:
+    name: BThwani / Final Closure
+    needs: [resolve, ci, sonar, codeql, semgrep, security, dependency, lockfile, docker]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Enforce fail-closed exact closure
+        shell: bash
+        env:
+          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+          BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          RESOLVE_RESULT: ${{ needs.resolve.result }}
+          CI_RESULT: ${{ needs.ci.result }}
+          SONAR_RESULT: ${{ needs.sonar.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+          SEMGREP_RESULT: ${{ needs.semgrep.result }}
+          SECURITY_RESULT: ${{ needs.security.result }}
+          DEPENDENCY_RESULT: ${{ needs.dependency.result }}
+          DEPENDENCY_CHANGED: ${{ needs.resolve.outputs.dependency_changed }}
+          LOCKFILE_RESULT: ${{ needs.lockfile.result }}
+          DOCKER_RESULT: ${{ needs.docker.result }}
+          DOCKER_CHANGED: ${{ needs.resolve.outputs.docker_changed }}
+        run: |
+          set -euo pipefail
+          failures=()
+          for pair in \
+            "resolve:${RESOLVE_RESULT}" \
+            "full-ci:${CI_RESULT}" \
+            "sonar:${SONAR_RESULT}" \
+            "codeql:${CODEQL_RESULT}" \
+            "semgrep:${SEMGREP_RESULT}" \
+            "security:${SECURITY_RESULT}"; do
+            name="${pair%%:*}"
+            result="${pair#*:}"
+            [[ "${result}" == "success" ]] || failures+=("${name}:${result}")
+          done
+          if [[ "${DEPENDENCY_CHANGED}" == "true" ]]; then
+            [[ "${DEPENDENCY_RESULT}" == "success" ]] || failures+=("dependency:${DEPENDENCY_RESULT}")
+            [[ "${LOCKFILE_RESULT}" == "success" ]] || failures+=("lockfile:${LOCKFILE_RESULT}")
+          fi
+          if [[ "${DOCKER_CHANGED}" == "true" ]]; then
+            [[ "${DOCKER_RESULT}" == "success" ]] || failures+=("docker:${DOCKER_RESULT}")
+          fi
+          if (( ${#failures[@]} == 0 )); then
+            live_pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+            [[ "$(jq -r '.state' <<<"${live_pr}")" == "open" ]] || failures+=("target:closed")
+            [[ "$(jq -r '.draft' <<<"${live_pr}")" == "false" ]] || failures+=("target:draft")
+            [[ "$(jq -r '.head.sha' <<<"${live_pr}")" == "${HEAD_SHA}" ]] || failures+=("target:head-moved")
+            [[ "$(jq -r '.base.sha' <<<"${live_pr}")" == "${BASE_SHA}" ]] || failures+=("target:base-moved")
+          fi
+          if (( ${#failures[@]} )); then
+            gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+              -f state=failure -f context='BThwani / Final Closure' \
+              -f description="Final Closure failed: $(IFS=,; echo "${failures[*]}")" >/dev/null || true
+            echo "::error::Final Closure failed for ${HEAD_SHA}: $(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+          gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+            -f state=success -f context='BThwani / Final Closure' \
+            -f description="Exact PR #${PR_NUMBER} closure passed" >/dev/null
+          echo "Exact PR #${PR_NUMBER} closure passed for ${HEAD_SHA}"

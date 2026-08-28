@@ -420,61 +420,37 @@ func (s *Service) CancelForClientInOperatorContext(ctx context.Context, operator
 	if !clientCancellableStatuses[current.Status] {
 		return nil, fmt.Errorf("%w: cannot cancel from status %s", ErrConflict, current.Status)
 	}
-
-	version := current.Version
-	if expectedVersion != nil {
-		version = *expectedVersion
-	}
-
-	status := StatusCancelled
-	update := UpdateInput{
-		Status:         &status,
-		setCancelledAt: true,
-	}
-
-	tx, err := s.repo.DB().Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, id, version, update)
-	if err != nil {
-		return nil, err
-	}
-
+	commandID := "special-request-cancel-" + id
 	correlationID := ""
 	if current.CorrelationID != nil {
-		correlationID = *current.CorrelationID
+		correlationID = strings.TrimSpace(*current.CorrelationID)
 	}
-	// A request with a WLT session cannot become cancelled while the session
-	// remains active. Expiry is performed before the DSH transaction commits;
-	// any WLT failure rolls back the cancellation instead of creating a
-	// cancelled-request/active-payment split truth.
+	paymentSessionID := ""
 	if current.WltPaymentSessionID != nil {
-		if s.wltClient == nil || !s.wltClient.Configured() {
-			return nil, fmt.Errorf("%w: WLT payment session expiry is unavailable", ErrConflict)
-		}
-		if err := s.wltClient.ExpireSession(ctx, *current.WltPaymentSessionID, correlationID); err != nil {
-			return nil, fmt.Errorf("%w: WLT payment session expiry failed: %v", ErrConflict, err)
-		}
+		paymentSessionID = strings.TrimSpace(*current.WltPaymentSessionID)
 	}
-	if err := WriteAuditEvent(tx, id, clientID, "client", "cancel", "", correlationID, requestJSON(current), requestJSON(updated)); err != nil {
-		return nil, fmt.Errorf("write audit event: %w", err)
-	}
-	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
-		EventType:     "special_request_cancelled",
-		EntityType:    "special_request",
-		EntityID:      id,
-		Payload:       requestJSON(updated),
-		CorrelationID: correlationID,
-	}); err != nil {
+	saga, _, err := StartCancelSaga(ctx, s.repo.DB(), CancelSagaInput{
+		OperatorContextID: operatorContextID,
+		SpecialRequestID:  id,
+		ClientID:          clientID,
+		ExpectedVersion:   expectedVersion,
+		CommandID:         commandID,
+		CorrelationID:     correlationID,
+		PaymentSessionID:  paymentSessionID,
+		Reason:            "client cancelled special request",
+	})
+	if err != nil {
 		return nil, err
 	}
-	if err := tx.Commit(); err != nil {
+	if saga.State == SagaRequested {
+		if err := ActivateSaga(ctx, s.repo.DB(), saga.ID); err != nil {
+			return nil, err
+		}
+	}
+	if _, err := DispatchSpecialRequestSaga(ctx, s.repo.DB(), s.wltClient, saga.ID); err != nil {
 		return nil, err
 	}
-	return updated, nil
+	return s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 }
 
 func (s *Service) ApplyOperatorTransition(ctx context.Context, id string, expectedVersion int, in UpdateInput) (*SpecialRequest, error) {

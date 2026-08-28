@@ -600,11 +600,22 @@ components:
     ImportAuthoritativeStatementInput:
       type: object
       additionalProperties: false
-      required: [ externalProviderAccountId, statementReference, artifactSha256, businessDate, closingBalanceMinorUnits, currency, lines ]
+      description: >-
+        The provider ingestion boundary must send the exact canonical artifact
+        bytes and its SHA-256 digest. WLT verifies both byte-for-byte and rejects
+        any caller assertion that does not match the normalized statement facts.
+      required: [ externalProviderAccountId, statementReference, artifactSha256, artifactBytesBase64, businessDate, closingBalanceMinorUnits, currency, lines ]
       properties:
         externalProviderAccountId: { type: string, minLength: 1 }
         statementReference: { type: string, minLength: 1 }
-        artifactSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        artifactSha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+          description: SHA-256 digest asserted by the provider and verified by WLT against the exact artifact bytes.
+        artifactBytesBase64:
+          type: string
+          minLength: 1
+          description: Exact canonical provider artifact bytes encoded as base64; WLT verifies these bytes byte-for-byte.
         businessDate: { type: string, format: date }
         closingBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
         currency: { type: string, minLength: 3, maxLength: 3 }
@@ -622,7 +633,8 @@ components:
           properties:
             id: { type: string }
             statementReference: { type: string }
-            artifactSha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+            artifactSha256: { type: string, pattern: '^[a-f0-9]{64}$', description: Server-computed normalized artifact digest. }
+            statementFingerprint: { type: string, pattern: '^[a-f0-9]{64}$', description: Server-computed statement identity fingerprint; absent only on historical pre-WLT-949 rows. }
     PayoutActorType:
       type: string
       enum: [ partner, captain, field ]

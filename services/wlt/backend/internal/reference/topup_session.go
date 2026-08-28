@@ -21,14 +21,21 @@ type CreateTopUpSessionInput struct {
 	ActorType      string `json:"actorType"`
 	ActorID        string `json:"actorId"`
 	TopUpReference string `json:"topupReference"`
-	// OperatorContextID is a temporary persistence compatibility field. The
-	// HTTP handler ignores any caller value and overwrites it from
-	// authenticated server configuration, matching CreatePaymentSessionInput.
-	OperatorContextID string `json:"operatorContextId"`
+	// OperatorContextID is server-owned partition state. The HTTP transport
+	// never accepts it from a caller; the trusted request context supplies it.
+	OperatorContextID string `json:"-"`
 	AmountMinorUnits  int64  `json:"amountMinorUnits"`
 	Currency          string `json:"currency"`
 	IdempotencyKey    string `json:"-"`
 	CorrelationID     string `json:"-"`
+}
+
+type createTopUpSessionRequest struct {
+	ActorType        string `json:"actorType"`
+	ActorID          string `json:"actorId"`
+	TopUpReference   string `json:"topupReference"`
+	AmountMinorUnits int64  `json:"amountMinorUnits"`
+	Currency         string `json:"currency"`
 }
 
 // CreateTopUpSession derives the topup purpose from ActorType and delegates
@@ -75,18 +82,20 @@ func HandleCreateTopUpSessionTrustedDsh(db *sql.DB) http.HandlerFunc {
 		if !requireDshServiceCaller(w, r) {
 			return
 		}
-		var input CreateTopUpSessionInput
-		if !decodeJSON(w, r, &input) {
+		var request createTopUpSessionRequest
+		if !decodeJSON(w, r, &request) {
 			return
 		}
-		compatibilityScope, err := shared.RequireOperatorContext(r.Context())
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
-			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial compatibility scope is unavailable")
+			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial OperatorContext is unavailable")
 			return
 		}
-		input.OperatorContextID = compatibilityScope
-		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
-		input.CorrelationID = r.Header.Get("X-Correlation-ID")
+		input := CreateTopUpSessionInput{
+			ActorType: request.ActorType, ActorID: request.ActorID, TopUpReference: request.TopUpReference,
+			OperatorContextID: operatorContextID, AmountMinorUnits: request.AmountMinorUnits, Currency: request.Currency,
+			IdempotencyKey: r.Header.Get("Idempotency-Key"), CorrelationID: r.Header.Get("X-Correlation-ID"),
+		}
 		if input.IdempotencyKey == "" {
 			shared.SendError(w, http.StatusBadRequest, "MISSING_IDEMPOTENCY_KEY", "Idempotency-Key is required")
 			return

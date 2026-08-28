@@ -3,7 +3,7 @@
   "service": "workforce",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "workforce-025_operational_affiliation_context_integrity.sql",
+  "cutover": "workforce-028_provider_penalty_financial_saga.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -178,6 +178,41 @@
       "file": "workforce-025_operational_affiliation_context_integrity.sql",
       "sha256": "0770a7640b9a9ace937d81e238b238286e4d5000a37866dc57a1f4613c53fb6a",
       "historicalPrefix": "025",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 26,
+      "file": "workforce-026_availability_outbox_state_machine.sql",
+      "sha256": "cdec5938e1aff894fd431c7646d4f0e72595fdad1b44b76a48fb127396b278fc",
+      "historicalPrefix": "026",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 27,
+      "file": "workforce-027_audit_atomicity_idempotency.sql",
+      "sha256": "ed04724e04f439c3ac554627d2f4d1058795f40ed01aeddbe9739c3aed20b2a3",
+      "historicalPrefix": "027",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 28,
+      "file": "workforce-028_provider_penalty_financial_saga.sql",
+      "sha256": "97bb6c079bc42cff7c4acaab4f153d9243639d8eacdbc2622c58abdedac24288",
+      "historicalPrefix": "028",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 29,
+      "file": "workforce-029_lifecycle_identity_saga.sql",
+      "sha256": "3223697eb7bfff6fe398811b5bbcca9cc370e12a02bfcdd48a4facb9fa960e39",
+      "historicalPrefix": "029",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 30,
+      "file": "workforce-030_identity_boundary_saga.sql",
+      "sha256": "fe297a6bb6572714134fef8da3cd71cf46a6c58073ad3851ba411e021584e516",
+      "historicalPrefix": "030",
       "state": "ACTIVE"
     }
   ]

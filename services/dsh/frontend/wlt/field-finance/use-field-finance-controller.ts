@@ -170,7 +170,12 @@ export function useFieldFinanceController(): FieldFinanceController {
         setSubmitPayoutError(result.message);
         return false;
       }
-      await clearFieldPayoutAttempt(attempt.idempotencyKey);
+      await clearFieldPayoutAttempt(
+        state.wallet.actorId,
+        amountMinorUnits,
+        normalizedCurrency,
+        attempt.signature,
+      );
       load();
       return true;
     } catch (error) {

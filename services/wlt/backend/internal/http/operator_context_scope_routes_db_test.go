@@ -138,7 +138,7 @@ func TestSettlementRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
 	}
 	defer db.Exec(`DELETE FROM wlt_settlements WHERE id IN ($1,$2)`, ownID, foreignID)
 
-	router := NewRouter(db, true, nil)
+	router := NewRouter(db, true, nil, nil)
 	assertDelegatedScopeRoute(t, router,
 		"/wlt/settlements/"+ownID,
 		"/wlt/settlements/"+foreignID,
@@ -175,7 +175,7 @@ func TestCommissionRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
 	}
 	defer db.Exec(`DELETE FROM wlt_commissions WHERE id IN ($1,$2)`, ownID, foreignID)
 
-	router := NewRouter(db, true, nil)
+	router := NewRouter(db, true, nil, nil)
 	assertDelegatedScopeRoute(t, router,
 		"/wlt/commissions/"+ownID,
 		"/wlt/commissions/"+foreignID,
@@ -212,7 +212,7 @@ func TestPayoutRequestRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
 	}
 	defer db.Exec(`DELETE FROM wlt_payout_requests WHERE id IN ($1,$2)`, ownID, foreignID)
 
-	router := NewRouter(db, true, nil)
+	router := NewRouter(db, true, nil, nil)
 	assertDelegatedScopeRoute(t, router,
 		"/wlt/payout-requests/"+ownID,
 		"/wlt/payout-requests/"+foreignID,

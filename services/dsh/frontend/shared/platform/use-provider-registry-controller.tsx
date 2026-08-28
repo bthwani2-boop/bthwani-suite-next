@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { corrId } from "../_kernel/dsh-http-request";
 import {
   getProvider,
   getProviderHealth,
@@ -125,6 +127,18 @@ export function useProviderRegistryController(enabled: boolean): {
   readonly setProviderActive: (providerId: string, active: boolean) => Promise<void>;
   readonly setMapsAndroidKey: (providerId: string, apiKey: string) => Promise<void>;
 } {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = useRef<Record<string, string>>({});
+  const commandFor = useCallback((scope: string) => {
+    if (!actorId) throw new Error("جلسة المشغّل غير جاهزة لتعديل مزوّد الخدمة.");
+    const key = `${actorId}:${scope}`;
+    const existing = commandIds.current[key];
+    if (existing) return existing;
+    const id = corrId("provider-update");
+    commandIds.current[key] = id;
+    return id;
+  }, [actorId]);
   const [state, setState] = useState<ProviderRegistryState>({ kind: "idle" });
   const [detailState, setDetailState] = useState<ProviderDetailState>({ kind: "idle" });
   const [mutationState, setMutationState] = useState<ProviderMutationState>({ kind: "idle" });
@@ -161,9 +175,14 @@ export function useProviderRegistryController(enabled: boolean): {
   }, []);
 
   const setProviderActive = useCallback(async (providerId: string, active: boolean) => {
+    if (!actorId) {
+      setMutationState({ kind: "error", providerId, message: "PROVIDERS_UNAUTHENTICATED" });
+      return;
+    }
+    const idempotencyKey = commandFor(`active:${providerId}:${active}`);
     setMutationState({ kind: "loading", providerId });
     try {
-      const provider = await updateProvider(providerId, { active });
+      const provider = await updateProvider(providerId, { active }, idempotencyKey);
       setMutationState({ kind: "success", providerId });
       setDetailState({ kind: "success", provider });
       await load();
@@ -174,8 +193,7 @@ export function useProviderRegistryController(enabled: boolean): {
         message: resolveProviderError(error),
       });
     }
-  }, [load]);
-
+    }, [actorId, commandFor, load]);
   const setMapsAndroidKey = useCallback(async (providerId: string, apiKey: string) => {
     const trimmed = apiKey.trim();
     if (!/^AIza[0-9A-Za-z_-]{20,}$/.test(trimmed)) {
@@ -187,6 +205,11 @@ export function useProviderRegistryController(enabled: boolean): {
       return;
     }
 
+    if (!actorId) {
+      setMutationState({ kind: "error", providerId, message: "PROVIDERS_UNAUTHENTICATED" });
+      return;
+    }
+    const idempotencyKey = commandFor(`maps-android-key:${providerId}:${trimmed}`);
     setMutationState({ kind: "loading", providerId });
     try {
       const provider = await updateProvider(providerId, {
@@ -202,7 +225,7 @@ export function useProviderRegistryController(enabled: boolean): {
           nativeMobileEasVariable: "GOOGLE_MAPS_ANDROID_API_KEY",
           runtimeEffect: "stored_for_governed_provider_runtime_requires_eas_sync_and_new_binary",
         },
-      });
+      }, idempotencyKey);
       setMutationState({ kind: "success", providerId });
       setDetailState({ kind: "success", provider });
       await load();
@@ -213,8 +236,7 @@ export function useProviderRegistryController(enabled: boolean): {
         message: resolveProviderError(error),
       });
     }
-  }, [load]);
-
+    }, [actorId, commandFor, load]);
   useEffect(() => {
     void load();
   }, [load]);

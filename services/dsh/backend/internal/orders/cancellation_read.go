@@ -6,20 +6,27 @@ import (
 )
 
 type Cancellation struct {
-	ID                     string `json:"id"`
-	OrderID                string `json:"orderId"`
-	ActorID                string `json:"actorId"`
-	ActorRole              string `json:"actorRole"`
-	ReasonCode             string `json:"reasonCode"`
-	ReasonNote             string `json:"reasonNote"`
-	FromStatus             string `json:"fromStatus"`
-	ToStatus               string `json:"toStatus"`
-	FinancialClosureStatus string `json:"financialClosureStatus"`
-	FinancialReference     string `json:"financialReference"`
-	FinancialResultAction  string `json:"financialResultAction"`
-	FinancialFailure       string `json:"financialFailure"`
-	CreatedAt              string `json:"createdAt"`
-	UpdatedAt              string `json:"updatedAt"`
+	ID                             string `json:"id"`
+	OrderID                        string `json:"orderId"`
+	ActorID                        string `json:"actorId"`
+	ActorRole                      string `json:"actorRole"`
+	ReasonCode                     string `json:"reasonCode"`
+	ReasonNote                     string `json:"reasonNote"`
+	FromStatus                     string `json:"fromStatus"`
+	ToStatus                       string `json:"toStatus"`
+	FinancialClosureStatus         string `json:"financialClosureStatus"`
+	FinancialReference             string `json:"financialReference"`
+	FinancialResultAction          string `json:"financialResultAction"`
+	FinancialFailure               string `json:"financialFailure"`
+	FinancialOutboxID              string `json:"financialOutboxId"`
+	FinancialOutboxStatus          string `json:"financialOutboxStatus"`
+	FinancialRecovery              string `json:"financialRecoveryDisposition"`
+	FinancialFailureClassification string `json:"financialFailureClassification"`
+	FinancialDiagnostic            string `json:"financialDiagnosticCode"`
+	FinancialAttempts              int    `json:"financialAttemptCount"`
+	FinancialReadbacks             int    `json:"financialReadbackAttemptCount"`
+	CreatedAt                      string `json:"createdAt"`
+	UpdatedAt                      string `json:"updatedAt"`
 }
 
 func GetCancellation(db *sql.DB, orderID string) (*Cancellation, error) {
@@ -37,11 +44,19 @@ func GetCancellation(db *sql.DB, orderID string) (*Cancellation, error) {
 		       COALESCE(c.financial_reference,''),
 		       COALESCE(o.result_action,''),
 		       COALESCE(o.last_error,''),
+		       COALESCE(o.id::text,''),
+		       COALESCE(o.status,''),
+		       COALESCE(o.failure_disposition,''),
+		       COALESCE(o.failure_classification,'UNKNOWN_REQUIRES_READBACK'),
+		       COALESCE(o.diagnostic_code,''),
+		       COALESCE(o.attempt_count,0),
+		       COALESCE(o.readback_attempt_count,0),
 		       c.created_at::text,
 		       c.updated_at::text
 		FROM dsh_order_cancellations c
 		LEFT JOIN LATERAL (
-			SELECT result_action,last_error
+			SELECT id, result_action, last_error, status, failure_disposition,
+			       failure_classification, diagnostic_code, attempt_count, readback_attempt_count
 			FROM dsh_checkout_financial_closure_outbox
 			WHERE order_id=c.order_id
 			ORDER BY created_at DESC
@@ -60,6 +75,13 @@ func GetCancellation(db *sql.DB, orderID string) (*Cancellation, error) {
 		&cancellation.FinancialReference,
 		&cancellation.FinancialResultAction,
 		&cancellation.FinancialFailure,
+		&cancellation.FinancialOutboxID,
+		&cancellation.FinancialOutboxStatus,
+		&cancellation.FinancialRecovery,
+		&cancellation.FinancialFailureClassification,
+		&cancellation.FinancialDiagnostic,
+		&cancellation.FinancialAttempts,
+		&cancellation.FinancialReadbacks,
 		&cancellation.CreatedAt,
 		&cancellation.UpdatedAt,
 	)

@@ -1,19 +1,23 @@
-// shared/ui-kit — Icon Component
-import React from 'react';
-import { Ionicons } from "@react-native-vector-icons/ionicons";
-import { colorRoles } from '../../tokens';
+// shared/ui-kit — cross-platform Icon contract
+import React from "react";
+import { colorRoles } from "../../tokens";
+import { WebIconRenderer } from "./icon-renderer.web";
+import type { IconProps, IconRenderer } from "./icon.types";
 
-export type IconProps = {
-  name: string;
-  size?: number;
-  tone?: 'brand' | 'success' | 'warning' | 'danger' | 'muted' | 'action';
-  color?: string;
-  style?: any;
-  mirrored?: boolean;
-  accessibilityLabel?: string;
-};
+export type { IconProps, IconRenderer, IconRendererProps } from "./icon.types";
 
-export function Icon({ name, size = 24, tone, color, style, mirrored, accessibilityLabel, ...props }: IconProps) {
+let activeRenderer: IconRenderer = WebIconRenderer;
+
+/**
+ * Registers the renderer owned by a native platform entry point. The web
+ * contract remains the default so importing the shared package never loads a
+ * native icon module.
+ */
+export function configureIconRenderer(renderer: IconRenderer): void {
+  activeRenderer = renderer;
+}
+
+export function Icon({ name, size = 24, tone, color, style, mirrored, accessibilityLabel }: IconProps) {
   let resolvedColor = color;
   if (!resolvedColor && tone) {
     if (tone === 'brand' || tone === 'action') resolvedColor = colorRoles.brandAction;
@@ -28,16 +32,13 @@ export function Icon({ name, size = 24, tone, color, style, mirrored, accessibil
 
   const transform = mirrored ? [{ scaleX: -1 }] : undefined;
 
-  return (
-    <Ionicons
-      name={name as React.ComponentProps<typeof Ionicons>["name"]}
-      size={size}
-      color={resolvedColor}
-      style={[transform ? { transform } : null, style]}
-      accessibilityLabel={accessibilityLabel}
-      {...props}
-    />
-  );
+  return activeRenderer({
+    name,
+    size,
+    color: resolvedColor,
+    style: [transform ? { transform } : null, style],
+    ...(accessibilityLabel === undefined ? {} : { accessibilityLabel }),
+  });
 }
 
 export default Icon;

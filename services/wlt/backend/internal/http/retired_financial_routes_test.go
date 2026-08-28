@@ -18,7 +18,7 @@ func trustedFinancialRouteTestRequest(t *testing.T, method, path string) *http.R
 }
 
 func TestLegacyLedgerWriteRouteIsNotRegistered(t *testing.T) {
-	router := NewRouter(nil, true, nil)
+	router := NewRouter(nil, true, nil, nil)
 	req := trustedFinancialRouteTestRequest(t, http.MethodPost, "/wlt/ledger/entries")
 	res := httptest.NewRecorder()
 
@@ -30,7 +30,7 @@ func TestLegacyLedgerWriteRouteIsNotRegistered(t *testing.T) {
 }
 
 func TestLegacyPartnerPayoutDestinationRoutesAreNotRegistered(t *testing.T) {
-	router := NewRouter(nil, true, nil)
+	router := NewRouter(nil, true, nil, nil)
 	for _, tc := range []struct {
 		method string
 		path   string
@@ -49,7 +49,7 @@ func TestLegacyPartnerPayoutDestinationRoutesAreNotRegistered(t *testing.T) {
 }
 
 func TestUnifiedPayoutDestinationRouteRemainsRegistered(t *testing.T) {
-	router := NewRouter(nil, true, nil)
+	router := NewRouter(nil, true, nil, nil)
 	req := trustedFinancialRouteTestRequest(t, http.MethodPut, "/wlt/payout-destinations/partner/partner-1")
 	res := httptest.NewRecorder()
 

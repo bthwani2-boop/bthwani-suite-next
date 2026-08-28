@@ -38,6 +38,7 @@ var governedRouteHelpers = map[string]struct{}{
 	"read":              {},
 	"mutation":          {},
 	"workforceMutation": {},
+	"workforceRead":     {},
 	"providerMutation":  {},
 }
 

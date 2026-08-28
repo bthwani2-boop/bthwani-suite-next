@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "store-publication");
 
@@ -48,14 +48,15 @@ export async function decideStorePublication(
     readonly override: boolean;
     readonly overrideReason: string;
   },
+  idempotencyKey: string,
 ) {
   return request<{ readonly replayed: boolean }>(
     `/dsh/operator/marketing/stores/${encodeURIComponent(storeId.trim())}/publication`,
     {
       method: "POST",
       body,
-      idempotencyKey: corrId("store-publication-idem"),
-      correlationId: corrId("store-publication-corr"),
+      idempotencyKey,
+      correlationId: idempotencyKey,
       expectedVersion: body.expectedVersion,
     },
   );

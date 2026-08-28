@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-// UnmarshalJSON keeps the financial compatibility scope server-owned. The
+// UnmarshalJSON keeps the financial OperatorContext scope server-owned. The
 // transport accepts business evidence only; operatorContextId is deliberately
 // absent and therefore rejected by DisallowUnknownFields.
 func (input *CreatePaymentSessionInput) UnmarshalJSON(data []byte) error {

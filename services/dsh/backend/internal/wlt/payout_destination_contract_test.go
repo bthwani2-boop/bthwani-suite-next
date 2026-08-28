@@ -21,7 +21,7 @@ func readCanonicalPayoutContract(t *testing.T) string {
 	return string(body)
 }
 
-func TestPartnerPayoutDestinationPathMatchesCanonicalContract(t *testing.T) {
+func TestPayoutDestinationPathMatchesCanonicalContract(t *testing.T) {
 	contract := readCanonicalPayoutContract(t)
 	for _, required := range []string{
 		"/wlt/payout-destinations/{actorType}/{actorId}:",
@@ -37,13 +37,22 @@ func TestPartnerPayoutDestinationPathMatchesCanonicalContract(t *testing.T) {
 	if strings.Contains(contract, "/wlt/payout-destinations/{partnerId}") {
 		t.Fatal("canonical contract must not reintroduce the retired partner-only path")
 	}
-	if got := partnerPayoutDestinationPath("partner-1"); got != "/wlt/payout-destinations/partner/partner-1" {
+	operation, err := Registry.GetOperation("finance.payout_destinations.read")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := operation.Path(map[string]string{"actorType": "partner", "actorId": "partner-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "/wlt/payout-destinations/partner/partner-1" {
 		t.Fatalf("DSH addresses a non-canonical payout destination path: %s", got)
 	}
 }
 
 func TestGetPayoutDestinationRejectsAnotherActorsDestination(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"payoutDestination": map[string]any{
 				"id":                            "wpd-1",

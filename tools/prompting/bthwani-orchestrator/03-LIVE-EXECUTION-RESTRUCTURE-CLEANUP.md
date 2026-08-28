@@ -284,3 +284,29 @@ re-resolve live target/PR HEAD
 ```
 
 For remote atomic Git writes, build one candidate commit from the latest exact parent/tree, re-resolve target immediately before ref movement and update only by non-force fast-forward. If the target moved, reconcile/rebuild/reverify; never overwrite.
+
+## 19. Operational, reconciliation, resource-lifecycle and clean-state treatment
+
+When the selected root materially touches operational behavior, treatment includes the implementation needed to make the repaired truth observable, recoverable and bounded — not only logically correct in a unit test.
+
+As applicable, execute the actual owner-side changes required for:
+
+```text
+CANONICAL SUCCESS / FAILURE / DEGRADATION SIGNALS
+CORRELATION / TRACEABILITY ACROSS HANDOFFS
+DATA RECONCILIATION / DRIFT DETECTION / REPAIR OWNERSHIP
+TIMEOUT / RETRY / BACKOFF / UNKNOWN-RESULT HANDLING
+RESOURCE ACQUIRE / RELEASE / CANCELLATION
+BOUNDED QUEUES / CACHES / RETRIES / CONCURRENCY
+RESTART / PROCESS-DEATH / RESUME SAFETY
+OFFLINE / INTERMITTENT-NETWORK RECOVERY
+BACKUP / RESTORE / FORWARD-RECOVERY CHANGES WHEN DATA RISK REQUIRES THEM
+```
+
+Do not add observability as noise. A signal is justified only when it has a real operator/debugging/assurance consumer and distinguishes a material state that otherwise could fail silently.
+
+Resource lifecycle is part of correctness where leaks or unbounded work can change availability or behavior. Inspect and treat, when material, open bodies/streams/files, database connections/transactions, goroutines/tasks, subscriptions/listeners/timers, caches, queues, retries and cancellation propagation.
+
+Data correctness is not implied by schema correctness. Where authoritative or distributed data can drift, treatment must establish the appropriate owner-side reconciliation/readback/repair path rather than introducing a second writer or manual shadow truth.
+
+Clean-state reproducibility obligations are verification-owned by `04`, but execution must remove hidden machine prerequisites: undeclared tools, manual DB edits, local-only generated source, secret/config assumptions or mutated workspace state that the exact candidate actually depends on.

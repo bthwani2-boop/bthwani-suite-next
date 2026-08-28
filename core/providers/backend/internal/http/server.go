@@ -1,12 +1,14 @@
 package http
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"providers-api/internal/auth"
 	"providers-api/internal/providers"
@@ -23,6 +25,11 @@ func NewRouter(db *sql.DB, service *providers.Service, repo *providers.Repositor
 	s := &server{db: db, service: service, repo: repo, auth: authClient}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /providers/health", s.operatorOnly("provider:read", s.providerHealth))
+	// Readiness is an unauthenticated infrastructure probe; business provider
+	// routes below remain protected by the operator permission boundary.
+	mux.HandleFunc("GET /providers/readiness", func(w http.ResponseWriter, r *http.Request) {
+		s.providerReadiness(w, r, auth.Identity{})
+	})
 	mux.HandleFunc("GET /providers", s.operatorOnly("provider:read", s.listProviders))
 	mux.HandleFunc("GET /providers/{providerId}", s.operatorOnly("provider:read", s.getProvider))
 	mux.HandleFunc("PATCH /providers/{providerId}", s.operatorOnly("provider:update", s.updateProvider))
@@ -127,6 +134,32 @@ func (s *server) providerHealth(w http.ResponseWriter, r *http.Request, identity
 		return
 	}
 	sendJSON(w, http.StatusOK, health)
+}
+
+func (s *server) providerReadiness(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json")
+
+	if s.db == nil {
+		sendJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status": "NOT_READY",
+			"reason": "database_unavailable",
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	if err := s.db.PingContext(ctx); err != nil {
+		sendJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status": "NOT_READY",
+			"reason": "database_unavailable",
+		})
+		return
+	}
+
+	sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY"})
 }
 
 func (s *server) getProvider(w http.ResponseWriter, r *http.Request, identity auth.Identity) {

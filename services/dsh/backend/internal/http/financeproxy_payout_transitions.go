@@ -2,7 +2,6 @@ package http
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 
 	"dsh-api/internal/store"
@@ -26,23 +25,18 @@ func (s *protectedStoreServer) proxyFinancePayoutTransition(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceWriteWithOperatorContextAndPrincipal(
+	opID := "finance.payout_requests." + action
+	status, body, err := s.wlt.ExecuteFinanceWrite(
 		r.Context(),
-		http.MethodPost,
-		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/"+action,
+		opID,
+		map[string]string{"payoutId": payoutID},
 		operatorWriteBody(),
 		correlationForActorMutation(r, "payout-"+action+"-"+payoutID),
 		r.Header.Get("Idempotency-Key"),
 		operatorContextID,
 		actor.ID,
 	)
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, err)
 }
 
 // POST /dsh/control-panel/finance/payout-requests/{payoutId}/complete

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   createEmployee,
@@ -10,6 +10,8 @@ import {
   updateEmployee,
   workforceErrorMessage,
 } from "./workforce.api";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { corrId } from "../_kernel/dsh-http-request";
 import type {
   CreateEmployeeInput,
   Employee,
@@ -17,6 +19,22 @@ import type {
   EngagementStatus,
   UpdateEmployeeInput,
 } from "./workforce.types";
+
+function useEmployeeMutationCommands(targetActorId: string) {
+  const identity = useIdentitySession();
+  const operatorActorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = useMemo(() => new Map<string, string>(), [operatorActorId, targetActorId]);
+  const commandFor = useCallback((action: "update" | "suspend" | "reactivate", expectedVersion: number, reason: string) => {
+    if (!operatorActorId) throw new Error("جلسة لوحة التحكم غير جاهزة لتنفيذ تغيير حالة الموظف.");
+    const key = `${operatorActorId}:${targetActorId}:${action}:${expectedVersion}:${reason.trim()}`;
+    const existing = commandIds.get(key);
+    if (existing) return { key, id: existing };
+    const id = corrId(`workforce-employee-${action}`);
+    commandIds.set(key, id);
+    return { key, id };
+  }, [commandIds, operatorActorId, targetActorId]);
+  return { commandFor, commandIds };
+}
 
 export type EmployeeListState =
   | { kind: "loading" }
@@ -55,6 +73,7 @@ export type EmployeeDetailState =
   | { kind: "ready"; employee: EmployeeDetail };
 
 export function useEmployeeDetailController(actorId: string) {
+  const mutationCommands = useEmployeeMutationCommands(actorId);
   const [state, setState] = useState<EmployeeDetailState>({ kind: "loading" });
   const [actionBusy, setActionBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -95,16 +114,34 @@ export function useEmployeeDetailController(actorId: string) {
   );
 
   const update = useCallback(
-    (input: UpdateEmployeeInput) => runAction(() => updateEmployee(actorId, input)),
-    [actorId, runAction],
+    (input: UpdateEmployeeInput) => runAction(() => {
+      const command = mutationCommands.commandFor("update", 0, JSON.stringify(input));
+      return updateEmployee(actorId, input, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const suspend = useCallback(
-    (expectedVersion: number, reason: string) => runAction(() => suspendEmployee(actorId, expectedVersion, reason)),
-    [actorId, runAction],
+    (expectedVersion: number, reason: string) => runAction(() => {
+      const command = mutationCommands.commandFor("suspend", expectedVersion, reason);
+      return suspendEmployee(actorId, expectedVersion, reason, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const reactivate = useCallback(
-    (expectedVersion: number, reason: string) => runAction(() => reactivateEmployee(actorId, expectedVersion, reason)),
-    [actorId, runAction],
+    (expectedVersion: number, reason: string) => runAction(() => {
+      const command = mutationCommands.commandFor("reactivate", expectedVersion, reason);
+      return reactivateEmployee(actorId, expectedVersion, reason, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
 
   return { state, reload, actionBusy, actionError, update, suspend, reactivate };

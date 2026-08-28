@@ -7,16 +7,13 @@ export type { ViewProps as WebViewProps } from "./platform/web/View";
 export {
 	WebMissionHeroCard,
 	WebPageFrame,
-	WebSectionCard,
-	WebSignalCard,
-} from './web/page-frame';
-export {
-	WebDocumentShell,
-	WebRootBody,
-	WebRootLayout,
 	WebThemeStyle,
-	buildWebRootMetadata,
-} from './web/root-layout';
+} from './web/index';
+export type {
+	WebMissionHeroCardProps,
+	WebPageFrameProps,
+	WebRootLayoutProps,
+} from './web/index';
 
 // ─── Control Panel Lane ────────────────────────────────────────────────────────
 // Use for: staff operations, admin dashboards, control rooms only.
@@ -87,4 +84,22 @@ export {
 	WebControlSurfaceHeader,
 	WebCompactSurfaceHeader,
 	WebSystemSuggestion,
+	WebSectionCard,
+	WebSignalCard,
+} from './web/index';
+export type {
+	WebControlActionButtonProps,
+	WebControlActionCardProps,
+	WebControlDisclosureItemProps,
+	WebControlSurfaceAction,
+	WebControlSurfaceActionTone,
+	WebControlSurfaceHeaderChip,
+	WebControlSurfaceHeaderChipTone,
+	WebControlSurfaceHeaderProps,
+	WebCompactSurfaceHeaderProps,
+	WebSystemSuggestionProps,
+	WebSystemSuggestionActionProps,
+	WebSectionCardProps,
+	WebSignalCardProps,
+	WebSignalCardTone,
 } from './web/index';

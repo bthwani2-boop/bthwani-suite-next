@@ -91,7 +91,7 @@ func RecordHomeContentEvent(ctx context.Context, db *sql.DB, input HomeContentEv
 	result, err := db.ExecContext(ctx, `INSERT INTO `+eventTable+`
 		(id,entity_type,entity_id,surface,viewer_ref)
 		VALUES ($1,$2,$3,'app-client',$4)
-		ON CONFLICT DO NOTHING`,
+		ON CONFLICT (id) DO NOTHING`,
 		fmt.Sprintf("home-%x", digest[:]), entityType, entityID, viewerRef,
 	)
 	if err != nil {

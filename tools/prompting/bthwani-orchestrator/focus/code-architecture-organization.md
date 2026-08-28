@@ -129,3 +129,44 @@ Before closure, inspect every materially affected remaining structure for:
 `ownerless artifact | misplaced file | duplicated authority | unjustified directory | pass-through wrapper | dead alias | stale import/export | obsolete dependency | generated fork | legacy residue | unfinished move/split/merge`.
 
 Known material structural residue tied to the root blocks `CLOSED` under `04`.
+
+## 15. Mobile/client lifecycle and resource correctness
+
+When a mobile/native or long-lived client surface is materially affected, inspect implementation behavior beyond rendered screens:
+
+`secure local storage | session/bootstrap lifecycle | process death | background/resume | app-state transitions | offline/intermittent network | retry/replay | deep links/URL intents | push handling | platform permissions | local persistence/cache reconciliation | cancellation | stale subscriptions/listeners/timers | sensitive client-visible data | native/platform boundary`.
+
+Client convenience must not create alternate Product/System truth. Offline/local state remains subordinate to canonical authority and must define synchronization/conflict/recovery behavior when material.
+
+For frontend/mobile resource-sensitive paths, inspect boundedness and cleanup of subscriptions, listeners, timers, async work, caches, retained state and repeated rendering/fetching. A leak or unbounded retry/render/fetch loop is a correctness/reliability finding when it can materially degrade the user journey or runtime.
+
+Accessibility, localization and RTL are correctness dimensions for materially affected surfaces, not optional polish. Apply the live lens/disposition law in `01` and prove implementation using the technique selector in `04`.
+
+## 16. Design-system implementation and rendered consistency
+
+When design is material, implementation follows the canonical experience/design authority resolved by `focus/governance-product-design.md`; local styling convenience is not an alternate source of truth.
+
+Prefer a semantic design-token chain where a reusable design decision exists:
+
+```text
+CANONICAL DESIGN DECISION
+-> SEMANTIC TOKEN / AUTHORIZED PLATFORM ADAPTATION
+-> CANONICAL COMPONENT
+-> CANONICAL PATTERN
+-> SURFACE COMPOSITION
+-> RENDERED EXPERIENCE
+```
+
+Do not hard-code local color, typography, spacing, sizing, radius/elevation, iconography, motion or state styling when doing so duplicates a materially shared design decision. Local values are acceptable only when evidence proves the value is genuinely local rather than an ungoverned fork.
+
+For materially reusable components/patterns, prove the applicable interaction/state surface instead of only the happy state. Examples may include:
+
+`default | hover/pressed | focus | selected | disabled | loading | empty | error | success | destructive/confirmation | validation | offline/recovery`.
+
+Select only states the component/pattern can actually express; do not manufacture variants to satisfy a checklist.
+
+Cross-surface reuse must preserve semantic identity without forcing identical pixels where platform, viewport, input mode or actor task requires adaptation. Inspect responsive behavior, RTL/localization, text scaling, keyboard/focus, reduced motion, theme support when governed, touch/target behavior and native/platform conventions when material.
+
+`DESIGN SOURCE CORRECT != RENDERED EXPERIENCE CORRECT`. Visual/accessibility/usability verification and rendered-state selection are owned by `04`.
+
+Duplicate components/patterns that independently encode the same material design/interaction decision are a design-authority defect, not merely a refactoring opportunity. Consolidate at the highest reusable owner and migrate all affected consumers before deleting the superseded path.

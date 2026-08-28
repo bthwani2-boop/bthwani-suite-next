@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { corrId } from "../../../shared/_kernel/dsh-http-request";
 import { colorRoles } from "@bthwani/ui-kit";
 import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
 import {
@@ -36,6 +38,18 @@ function errorMessage(error: unknown): string {
 }
 
 export function StorePublicationCommandPanel() {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = useRef<Record<string, string>>({});
+  const commandFor = (scope: string) => {
+    if (!actorId) throw new Error("جلسة المشغّل غير جاهزة لاتخاذ قرار النشر.");
+    const key = `${actorId}:${scope}`;
+    const existing = commandIds.current[key];
+    if (existing) return existing;
+    const id = corrId("store-publication");
+    commandIds.current[key] = id;
+    return id;
+  };
   const [storeId, setStoreId] = useState("");
   const [workspace, setWorkspace] = useState<StorePublicationWorkspace | null>(null);
   const [reason, setReason] = useState("");
@@ -60,16 +74,24 @@ export function StorePublicationCommandPanel() {
 
   async function decide(decision: StorePublicationDecision) {
     if (!workspace) return;
+    if (!actorId) {
+      setMessage("PROVIDERS_UNAUTHENTICATED");
+      return;
+    }
+    const normalizedStoreId = storeId.trim();
+    const normalizedReason = reason.trim();
+    const normalizedOverrideReason = overrideReason.trim();
+    const idempotencyKey = commandFor(`${normalizedStoreId}:${workspace.store.version}:${decision}:${normalizedReason}:${decision === "publish" && override}:${decision === "publish" && override ? normalizedOverrideReason : ""}`);
     setBusy(true);
     setMessage(null);
     try {
-      await decideStorePublication(storeId, {
+      await decideStorePublication(normalizedStoreId, {
         expectedVersion: workspace.store.version,
         decision,
-        reason: reason.trim(),
+        reason: normalizedReason,
         override: decision === "publish" && override,
-        overrideReason: decision === "publish" && override ? overrideReason.trim() : "",
-      });
+        overrideReason: decision === "publish" && override ? normalizedOverrideReason : "",
+      }, idempotencyKey);
       const canonical = await fetchStorePublicationWorkspace(storeId);
       setWorkspace(canonical);
       setMessage(decision === "publish" ? "تم نشر المتجر وتحديث القراءة القانونية." : "تم إخفاء المتجر وتحديث القراءة القانونية.");

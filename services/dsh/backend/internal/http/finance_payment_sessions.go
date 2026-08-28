@@ -43,9 +43,7 @@ func (s *protectedStoreServer) handleFinancePaymentSessionTimeline(w http.Respon
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT payment timeline read failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }
 
 // POST /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status
@@ -75,7 +73,5 @@ func (s *protectedStoreServer) handleRefreshFinancePaymentSessionProviderStatus(
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT provider status refresh failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }

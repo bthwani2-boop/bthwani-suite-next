@@ -35,7 +35,6 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "stubs/expo-image-picker-web.d.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
