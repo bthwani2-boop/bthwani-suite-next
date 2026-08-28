@@ -48,6 +48,17 @@ test("CI control-plane changes run node verification without semantic filename r
   assert.deepEqual(result.required_jobs, ["node"]);
 });
 
+test("CI control-plane changes do not require product Sonar analysis", () => {
+  const result = classifyFiles([".github/workflows/master-sonar.yml"]);
+  assert.equal(result.ci_control_plane, true);
+  assert.equal(result.sonar_required, false);
+});
+
+test("product changes require Sonar analysis", () => {
+  const result = classifyFiles(["services/dsh/backend/internal/cart/cart.go"]);
+  assert.equal(result.sonar_required, true);
+});
+
 test("infrastructure changes require the fixed runtime verification", () => {
   const result = classifyFiles(["infra/docker/compose.runtime.yml"]);
   assert.equal(result.infrastructure, true);

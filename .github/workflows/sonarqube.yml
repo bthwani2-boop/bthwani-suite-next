@@ -45,6 +45,7 @@ jobs:
       node_suites: ${{ steps.node_plan.outputs.suites }}
       go_required: ${{ steps.go_plan.outputs.required }}
       go_matrix: ${{ steps.go_plan.outputs.matrix }}
+      sonar_required: ${{ steps.ci_scope.outputs.sonar_required }}
     steps:
       - name: Checkout immutable candidate source with full history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -165,7 +166,7 @@ jobs:
   node_coverage:
     name: Sonar Node coverage
     needs: [scope]
-    if: ${{ needs.scope.result == 'success' && needs.scope.outputs.node_required == 'true' }}
+    if: ${{ needs.scope.result == 'success' && needs.scope.outputs.sonar_required == 'true' && needs.scope.outputs.node_required == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -247,7 +248,7 @@ jobs:
   go_coverage:
     name: Sonar Go coverage (${{ matrix.service }})
     needs: [scope]
-    if: ${{ needs.scope.result == 'success' && needs.scope.outputs.go_required == 'true' }}
+    if: ${{ needs.scope.result == 'success' && needs.scope.outputs.sonar_required == 'true' && needs.scope.outputs.go_required == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -514,8 +515,9 @@ jobs:
     needs: [scope, node_coverage, go_coverage]
     if: >-
       ${{ always() && needs.scope.result == 'success' &&
-      (needs.scope.outputs.node_required != 'true' || needs.node_coverage.result == 'success') &&
-      (needs.scope.outputs.go_required != 'true' || needs.go_coverage.result == 'success') }}
+      (needs.scope.outputs.sonar_required != 'true' ||
+      ((needs.scope.outputs.node_required != 'true' || needs.node_coverage.result == 'success') &&
+      (needs.scope.outputs.go_required != 'true' || needs.go_coverage.result == 'success'))) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -532,12 +534,18 @@ jobs:
           NODE_REQUIRED: ${{ needs.scope.outputs.node_required }}
           GO_REQUIRED: ${{ needs.scope.outputs.go_required }}
           GO_MATRIX: ${{ needs.scope.outputs.go_matrix }}
+          SONAR_REQUIRED: ${{ needs.scope.outputs.sonar_required }}
         run: |
           set -euo pipefail
           evidence="${RUNNER_TEMP}/sonar-coverage-evidence"
           parts_file="${RUNNER_TEMP}/sonar-coverage-parts.jsonl"
           mkdir -p "${evidence}/reports"
           : > "${parts_file}"
+          if [[ "${SONAR_REQUIRED}" != "true" ]]; then
+            NODE_REQUIRED=false
+            GO_REQUIRED=false
+            GO_MATRIX='[]'
+          fi
 
           artifacts_json() {
             gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
@@ -637,7 +645,7 @@ jobs:
   scan:
     name: SonarQube trusted static analysis
     needs: [scope, assemble]
-    if: ${{ always() && inputs.trusted_scan && needs.scope.result == 'success' && needs.assemble.result == 'success' }}
+    if: ${{ always() && inputs.trusted_scan && needs.scope.result == 'success' && needs.scope.outputs.sonar_required == 'true' && needs.assemble.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -799,23 +807,32 @@ jobs:
           ASSEMBLE_RESULT: ${{ needs.assemble.result }}
           SCAN_RESULT: ${{ needs.scan.result }}
           TRUSTED_SCAN: ${{ inputs.trusted_scan }}
+          SONAR_REQUIRED: ${{ needs.scope.outputs.sonar_required }}
         run: |
           set -euo pipefail
           failures=()
           [[ "${SCOPE_RESULT}" == "success" ]] || failures+=("scope:${SCOPE_RESULT}")
-          if [[ "${NODE_REQUIRED}" == "true" ]]; then
-            [[ "${NODE_RESULT}" == "success" ]] || failures+=("node-coverage:${NODE_RESULT}")
+          if [[ "${SONAR_REQUIRED}" == "true" ]]; then
+            if [[ "${NODE_REQUIRED}" == "true" ]]; then
+              [[ "${NODE_RESULT}" == "success" ]] || failures+=("node-coverage:${NODE_RESULT}")
+            else
+              [[ "${NODE_RESULT}" == "skipped" ]] || failures+=("node-coverage-unexpected:${NODE_RESULT}")
+            fi
+            if [[ "${GO_REQUIRED}" == "true" ]]; then
+              [[ "${GO_RESULT}" == "success" ]] || failures+=("go-coverage:${GO_RESULT}")
+            else
+              [[ "${GO_RESULT}" == "skipped" ]] || failures+=("go-coverage-unexpected:${GO_RESULT}")
+            fi
           else
             [[ "${NODE_RESULT}" == "skipped" ]] || failures+=("node-coverage-unexpected:${NODE_RESULT}")
-          fi
-          if [[ "${GO_REQUIRED}" == "true" ]]; then
-            [[ "${GO_RESULT}" == "success" ]] || failures+=("go-coverage:${GO_RESULT}")
-          else
             [[ "${GO_RESULT}" == "skipped" ]] || failures+=("go-coverage-unexpected:${GO_RESULT}")
           fi
           [[ "${ASSEMBLE_RESULT}" == "success" ]] || failures+=("assemble:${ASSEMBLE_RESULT}")
 
           trusted_scan_required="${TRUSTED_SCAN}"
+          if [[ "${SONAR_REQUIRED}" != "true" ]]; then
+            trusted_scan_required=false
+          fi
           if [[ "${trusted_scan_required}" == "true" ]]; then
             [[ "${SCAN_RESULT}" == "success" ]] || failures+=("trusted-scan:${SCAN_RESULT}")
           else
