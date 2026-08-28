@@ -359,6 +359,13 @@
       "sha256": "51c972526c237019083ada10acc4b32313400283fae331696fd2fda901bbca09",
       "historicalPrefix": "1050",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 292,
+      "file": "dsh-1051_operational_incident_canonical_context.sql",
+      "sha256": "5127334eaf578cf0f37b0fd1b66cf5711405f6bd116ab6984210d5f108fa5b70",
+      "historicalPrefix": "1051",
+      "state": "ACTIVE"
     }
   ]
 }
