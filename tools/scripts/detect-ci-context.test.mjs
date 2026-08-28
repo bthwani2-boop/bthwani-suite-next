@@ -14,6 +14,7 @@ test("backend changes always require the matching backend worker", () => {
   const result = classifyFiles(["services/dsh/backend/internal/cart/cart.go"]);
   assert.equal(result.dsh, true);
   assert.equal(result.backend_required, true);
+  assert.equal(result.runtime_required, false);
   assert.deepEqual(result.required_jobs, ["backends"]);
 });
 
@@ -33,12 +34,14 @@ test("contract changes require diagnostics and node verification", () => {
   assert.deepEqual(result.required_jobs, ["diagnostics", "node"]);
 });
 
-test("database changes route to the owning backend and database checks", () => {
+test("database changes route to the owning backend, database checks, and the runtime consumer", () => {
   const result = classifyFiles(["services/dsh/database/migrations/0002_add_column.sql"]);
   assert.equal(result.dsh, true);
   assert.equal(result.database_changed, true);
   assert.equal(result.backend_required, true);
-  assert.deepEqual(result.required_jobs, ["backends"]);
+  assert.equal(result.runtime_required, true);
+  assert.deepEqual(result.risk_classes, ["schema_runtime"]);
+  assert.deepEqual(result.required_jobs, ["backends", "runtime"]);
 });
 
 test("CI control-plane changes run node verification without semantic filename routing", () => {
@@ -63,6 +66,7 @@ test("infrastructure changes require the fixed runtime verification", () => {
   const result = classifyFiles(["infra/docker/compose.runtime.yml"]);
   assert.equal(result.infrastructure, true);
   assert.equal(result.runtime_required, true);
+  assert.deepEqual(result.risk_classes, ["infrastructure"]);
   assert.deepEqual(result.required_jobs, ["runtime"]);
 });
 
@@ -72,6 +76,56 @@ test("dependency manifests route to node integrity verification", () => {
   assert.equal(result.node, true);
   assert.equal(result.dsh, true);
   assert.deepEqual(result.required_jobs, ["node", "backends"]);
+});
+
+test("authorization and OperatorContext changes require runtime proof", () => {
+  const result = classifyFiles(["core/identity/backend/internal/rbac/roles.go"]);
+  assert.equal(result.identity, true);
+  assert.equal(result.runtime_required, true);
+  assert.deepEqual(result.risk_classes, ["authorization", "identity_rbac"]);
+  assert.deepEqual(result.required_jobs, ["backends", "runtime"]);
+});
+
+test("operator-context authority files require runtime proof", () => {
+  const result = classifyFiles(["services/wlt/backend/internal/shared/operator_context.go"]);
+  assert.equal(result.wlt, true);
+  assert.equal(result.runtime_required, true);
+  assert.ok(result.risk_classes.includes("authorization"));
+});
+
+test("idempotency and replay authority changes require runtime proof", () => {
+  const result = classifyFiles(["services/dsh/frontend/shared/orders/order-cancellation-attempt.ts"]);
+  assert.equal(result.runtime_required, true);
+  assert.ok(result.risk_classes.includes("idempotency"));
+  assert.ok(result.risk_classes.includes("order_journey"));
+});
+
+test("order journey state machine changes require runtime proof", () => {
+  const result = classifyFiles(["services/dsh/backend/internal/orders/transition.go"]);
+  assert.equal(result.dsh, true);
+  assert.equal(result.runtime_required, true);
+  assert.deepEqual(result.risk_classes, ["order_journey"]);
+  assert.deepEqual(result.required_jobs, ["backends", "runtime"]);
+});
+
+test("WLT financial changes require backend, database, and runtime proof", () => {
+  const result = classifyFiles(["services/wlt/backend/internal/payout/payout.go"]);
+  assert.equal(result.wlt, true);
+  assert.equal(result.database_changed, false);
+  assert.equal(result.runtime_required, true);
+  assert.deepEqual(result.risk_classes, ["wlt_monetary"]);
+  assert.deepEqual(result.required_jobs, ["backends", "runtime"]);
+});
+
+test("migration authority changes verify every service database and the runtime consumer", () => {
+  const result = classifyFiles(["infra/docker/scripts/schema-migration-runner.ps1"]);
+  assert.equal(result.migration_authority, true);
+  for (const key of ["dsh", "wlt", "identity", "workforce", "platform", "providers"]) {
+    assert.equal(result[key], true, key);
+  }
+  assert.equal(result.database_changed, true);
+  assert.equal(result.runtime_required, true);
+  assert.deepEqual(result.required_jobs, ["backends", "runtime"]);
 });
 
 test("fullScope enables every owner without adding a tier or profile", () => {

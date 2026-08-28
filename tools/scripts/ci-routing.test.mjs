@@ -118,7 +118,7 @@ test("final closure is explicit only and runs Full CI before analyzers", () => {
   assert.match(workflow, /workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /pull_request:/u);
   assert.match(workflow, /name: Full CI preflight/u);
-  assert.doesNotMatch(workflow, /full_scope:\s*true/u);
+  assert.match(workflow, /full_scope: true/u);
   assert.match(workflow, /needs: \[resolve, ci\]/u);
   for (const worker of ["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml"]) {
     assert.match(workflow, new RegExp(`uses: \.\/.github/workflows/${worker.replace(".", "\\.")}`, "u"), worker);

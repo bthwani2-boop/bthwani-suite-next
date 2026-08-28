@@ -123,6 +123,11 @@ jobs:
       pr_number: ${{ needs.resolve.outputs.pr_number }}
       expected_head_sha: ${{ needs.resolve.outputs.head_sha }}
       expected_base_sha: ${{ needs.resolve.outputs.base_sha }}
+      # Final Closure is the last exact-candidate gate before merge: its
+      # preflight must never be able to skip a proof dimension for a material
+      # change. The router's risk classes keep normal CI proportional; the
+      # final candidate proves the full scope.
+      full_scope: true
 
   sonar:
     name: SonarQube exact analysis
