@@ -213,7 +213,13 @@ jobs:
     needs: [resolve, ci, sonar, codeql, semgrep, security, dependency, lockfile, docker]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      pull-requests: read
+      statuses: write
     steps:
       - name: Enforce fail-closed exact closure
         shell: bash
@@ -260,6 +266,19 @@ jobs:
             [[ "$(jq -r '.head.sha' <<<"${live_pr}")" == "${HEAD_SHA}" ]] || failures+=("target:head-moved")
             [[ "$(jq -r '.base.sha' <<<"${live_pr}")" == "${BASE_SHA}" ]] || failures+=("target:base-moved")
           fi
+          if (( ${#failures[@]} == 0 )); then
+            # Catastrophic-harm domains (identity, WLT/finance, migrations,
+            # auth/authorization, cancellation, workflows) require explicit
+            # human review bound to the exact candidate. GitHub cannot grant
+            # an actor approval for their own pull request, so an approval
+            # with commit_id == HEAD is an independent human decision on this
+            # exact byte state. Stale approvals on older heads do not count.
+            reviews="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" || echo '[]')"
+            approvals_on_head="$(jq -r --arg head "${HEAD_SHA}" '[.[] | select(.state == "APPROVED" and .commit_id == $head)] | length' <<<"${reviews}" || echo 0)"
+            if (( approvals_on_head < 1 )); then
+              failures+=("human-review:0-approvals-bound-to-${HEAD_SHA}")
+            fi
+          fi
           if (( ${#failures[@]} )); then
             gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
@@ -273,3 +292,104 @@ jobs:
             -f state=success -f context='BThwani / Final Closure' \
             -f description="Exact PR #${PR_NUMBER} closure passed" >/dev/null
           echo "Exact PR #${PR_NUMBER} closure passed for ${HEAD_SHA}"
+      - name: Checkout exact candidate for the closure manifest
+        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.resolve.outputs.head_sha }}
+          fetch-depth: 0
+          fetch-tags: false
+          persist-credentials: false
+      - name: Publish the generated exact-candidate closure manifest
+        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+        shell: bash
+        env:
+          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+          BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
+          HEAD_REF: ${{ needs.resolve.outputs.head_ref }}
+          BASE_REF: ${{ needs.resolve.outputs.base_ref }}
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+          CI_RESULT: ${{ needs.ci.result }}
+          SONAR_RESULT: ${{ needs.sonar.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+          SEMGREP_RESULT: ${{ needs.semgrep.result }}
+          SECURITY_RESULT: ${{ needs.security.result }}
+          DEPENDENCY_RESULT: ${{ needs.dependency.result }}
+          LOCKFILE_RESULT: ${{ needs.lockfile.result }}
+          DOCKER_RESULT: ${{ needs.docker.result }}
+        run: |
+          set -euo pipefail
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "${BASE_SHA}" "${HEAD_SHA}"
+          merge_base="$(git merge-base "${BASE_SHA}" "${HEAD_SHA}")"
+          mapfile -t files < <(git diff --name-only --diff-filter=ACMRDTUXB "${BASE_SHA}" "${HEAD_SHA}" --)
+          mapfile -t migrations < <(printf '%s\n' "${files[@]}" | grep -E '/database/migrations/' || true)
+          mapfile -t manifests < <(printf '%s\n' "${files[@]}" | grep -E '/database/migrations/manifest\.json$' || true)
+          amendments_touched="false"
+          printf '%s\n' "${files[@]}" | grep -qx 'tools/verification/migration-amendments.json' && amendments_touched="true"
+          classifier="$(CI_BASE_SHA="${BASE_SHA}" CI_HEAD_SHA="${HEAD_SHA}" node tools/scripts/detect-ci-context.mjs)"
+          risk_classes="$(jq -r '.risk_classes | join(",")' <<<"${classifier}")"
+          required_jobs="$(jq -r '.required_jobs | join(",")' <<<"${classifier}")"
+          reviews="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" || echo '[]')"
+          approvals_on_head="$(jq -r --arg head "${HEAD_SHA}" '[.[] | select(.state == "APPROVED" and .commit_id == $head)] | length' <<<"${reviews}" || echo 0)"
+          manifest="$(mktemp -d)/closure-manifest.json"
+          jq -n \
+            --arg schema "bthwani-closure-manifest/1" \
+            --arg repository "${GITHUB_REPOSITORY}" \
+            --arg runUrl "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg prNumber "${PR_NUMBER}" \
+            --arg headRef "${HEAD_REF}" \
+            --arg headSha "${HEAD_SHA}" \
+            --arg baseRef "${BASE_REF}" \
+            --arg baseSha "${BASE_SHA}" \
+            --arg mergeBase "${merge_base}" \
+            --argjson changedFiles "${#files[@]}" \
+            --argjson files "$(printf '%s\n' "${files[@]}" | jq -R . | jq -s .)" \
+            --arg riskClasses "${risk_classes}" \
+            --arg requiredJobs "${required_jobs}" \
+            --argjson migrations "$(printf '%s\n' "${migrations[@]}" | jq -R . | jq -s .)" \
+            --argjson migrationManifests "$(printf '%s\n' "${manifests[@]}" | jq -R . | jq -s .)" \
+            --arg amendmentsTouched "${amendments_touched}" \
+            --arg ciResult "${CI_RESULT}" \
+            --arg sonarResult "${SONAR_RESULT}" \
+            --arg codeqlResult "${CODEQL_RESULT}" \
+            --arg semgrepResult "${SEMGREP_RESULT}" \
+            --arg securityResult "${SECURITY_RESULT}" \
+            --arg dependencyResult "${DEPENDENCY_RESULT}" \
+            --arg lockfileResult "${LOCKFILE_RESULT}" \
+            --arg dockerResult "${DOCKER_RESULT}" \
+            --argjson approvalsOnHead "${approvals_on_head}" \
+            '{
+              schema: $schema,
+              source: "generated-from-git-truth",
+              repository: $repository,
+              generatedAt: $generatedAt,
+              runUrl: $runUrl,
+              pr: {number: ($prNumber | tonumber), headRef: $headRef, headSha: $headSha, baseRef: $baseRef, baseSha: $baseSha, mergeBaseSha: $mergeBase},
+              candidate: {changedFiles: $changedFiles, files: $files},
+              mandatoryProofs: {riskClasses: ($riskClasses | split(",") | map(select(length > 0))), requiredJobs: ($requiredJobs | split(",") | map(select(length > 0)))},
+              migrations: {changed: $migrations, manifests: $migrationManifests, amendmentsRegistryTouched: ($amendmentsTouched == "true")},
+              analysis: {ci: $ciResult, sonar: $sonarResult, codeql: $codeqlResult, semgrep: $semgrepResult, security: $securityResult, dependency: $dependencyResult, lockfile: $lockfileResult, docker: $dockerResult},
+              humanReview: {required: true, approvalsBoundToHead: $approvalsOnHead}
+            }' > "${manifest}"
+          mkdir -p closure-evidence
+          cp "${manifest}" closure-evidence/closure-manifest.json
+          {
+            echo "### BThwani generated closure manifest (Git truth)"
+            echo "- PR #${PR_NUMBER}: ${HEAD_REF}@${HEAD_SHA} <- ${BASE_REF}@${BASE_SHA}"
+            echo "- Changed files: ${#files[@]} (migrations: ${#migrations[@]}, amendment registry touched: ${amendments_touched})"
+            echo "- Risk classes: ${risk_classes:-none}"
+            echo "- Required jobs: ${required_jobs:-none}"
+            echo "- Approvals bound to head: ${approvals_on_head}"
+            echo "- Manifest artifact: closure-manifest.json (this run)"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          cat "${manifest}"
+      - name: Upload the generated closure manifest
+        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: closure-manifest-${{ needs.resolve.outputs.pr_number }}-${{ needs.resolve.outputs.head_sha }}
+          path: closure-evidence/closure-manifest.json
+          if-no-files-found: error
+          retention-days: 90

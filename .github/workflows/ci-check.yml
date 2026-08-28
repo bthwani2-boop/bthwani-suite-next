@@ -109,6 +109,8 @@ jobs:
         run: node tools/scripts/detect-ci-context.mjs
       - name: Enforce governed migration manifest history
         run: node tools/guards/migration-manifest-drift-gate.mjs --immutable-baseline "${{ steps.identity.outputs.base_sha }}"
+      - name: Enforce verification-workflow source immutability
+        run: node --test tools/scripts/check-ci-source-immutability.test.mjs && node tools/scripts/check-ci-source-immutability.mjs
       - name: Verify Sonar coverage ownership and configuration
         run: node --test tools/guards/sonar-coverage-ownership-gate.test.mjs && node tools/guards/sonar-coverage-ownership-gate.mjs
 

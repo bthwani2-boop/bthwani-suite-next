@@ -28,7 +28,10 @@ const forbiddenPatterns = [
   },
   {
     id: "SOURCE_MUTATING_GIT_COMMAND",
-    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:sudo\s+|env\s+(?:[^\s=]+=[^\s]+\s+)+)?git\s+(?:add|commit|push|merge|rebase|reset|restore|update-ref|checkout\s+(?:-B|--)|switch\s+-C|switch\s+-c|branch\s+-f|tag\s+-f)\b/i,
+    // Read-only inspection commands must stay allowed: `git merge-base` (and
+    // its --is-ancestor form) resolves ancestry without touching any ref, so
+    // only a bare `git merge` is forbidden.
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:sudo\s+|env\s+(?:[^\s=]+=[^\s]+\s+)+)?git\s+(?:add|commit|push|merge(?![a-z-])|rebase|reset|restore|update-ref|checkout\s+(?:-B|--)|switch\s+-C|switch\s+-c|branch\s+-f|tag\s+-f)\b/i,
     reason: "verification workflows must not mutate the worktree, index, refs, commits, tags, or branches",
   },
   {
