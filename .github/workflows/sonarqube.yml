@@ -243,6 +243,8 @@ jobs:
           name: sonar-node-coverage-${{ needs.scope.outputs.head_sha }}-${{ github.run_id }}
           path: ${{ runner.temp }}/sonar-node-evidence
           if-no-files-found: error
+          # Reports live under hidden .sonar/ paths; preserve them in the artifact.
+          include-hidden-files: true
           retention-days: 2
 
   go_coverage:
@@ -508,6 +510,8 @@ jobs:
           name: sonar-go-coverage-${{ matrix.service }}-${{ needs.scope.outputs.head_sha }}-${{ github.run_id }}
           path: ${{ runner.temp }}/sonar-go-evidence
           if-no-files-found: error
+          # Reports live under hidden .sonar/ paths; preserve them in the artifact.
+          include-hidden-files: true
           retention-days: 2
 
   assemble:
@@ -640,6 +644,8 @@ jobs:
           name: sonar-coverage-${{ needs.scope.outputs.head_sha }}-${{ github.run_id }}
           path: ${{ runner.temp }}/sonar-coverage-evidence
           if-no-files-found: error
+          # Reports live under hidden .sonar/ paths; preserve them in the artifact.
+          include-hidden-files: true
           retention-days: 2
 
   scan:
