@@ -11,6 +11,24 @@
       "sourcePrefixes": ["core/identity/clients/"],
       "coverage": { "strategy": "node-lcov", "cwd": "core/identity", "nodeOptions": ["--experimental-loader", "../../tools/scripts/sonar-ts-loader.mjs"], "testRoots": ["core/identity/tests"] }
     },
+    "platform-control": {
+      "kind": "shared-service-manifest",
+      "root": "core/platform-control",
+      "sourcePrefixes": ["core/platform-control/service.manifest.ts"],
+      "coverage": {
+        "strategy": "required",
+        "reason": "Platform Control service manifest is an executable contract/configuration; backend coverage is owned by the platform Go coverage matrix."
+      }
+    },
+    "providers": {
+      "kind": "shared-service-manifest",
+      "root": "core/providers",
+      "sourcePrefixes": ["core/providers/service.manifest.ts"],
+      "coverage": {
+        "strategy": "required",
+        "reason": "Providers service manifest is an executable contract/configuration; backend coverage is owned by the providers Go coverage matrix."
+      }
+    },
     "data-runtime": {
       "kind": "shared-runtime",
       "root": "shared/data-runtime",
@@ -23,10 +41,12 @@
       "sourcePrefixes": [
         "services/dsh/capability-map.extensions.ts",
         "services/dsh/capability-map.ts",
+        "services/dsh/capabilities.ts",
         "services/dsh/contracts/contract-registry.ts",
         "services/dsh/frontend/",
         "services/dsh/runtime-map.ts",
-        "services/dsh/service.manifest.ts"
+        "services/dsh/service.manifest.ts",
+        "services/dsh/surface-map.ts"
       ],
       "coverage": {
         "strategy": "node-lcov",
