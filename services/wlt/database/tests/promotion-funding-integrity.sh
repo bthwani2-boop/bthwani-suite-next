@@ -19,7 +19,8 @@ scalar() {
 }
 
 # Audited commit: a governed partner-funded split commits only with its matching
-# append-only event in the same PostgreSQL transaction.
+# append-only event AND its immutable canonical ledger transaction in the same
+# PostgreSQL transaction (WLT-926 lifecycle).
 "${PSQL[@]}" <<'SQL'
 INSERT INTO wlt_promotion_funding_reservations (
   operator_context_id,external_reference,checkout_intent_id,coupon_redemption_id,
@@ -32,21 +33,35 @@ INSERT INTO wlt_promotion_funding_reservations (
   'reserved','proof-reserve-commit','proof-correlation-commit'
 );
 BEGIN;
-UPDATE wlt_promotion_funding_reservations
-   SET status='committed',order_id='order-proof',committed_at=NOW(),updated_at=NOW()
- WHERE operator_context_id='proof' AND external_reference='proof:commit';
+WITH ledger_tx AS (
+  INSERT INTO wlt_ledger_transactions (
+    transaction_type,reference_type,reference_id,
+    created_by_actor_id,created_by_actor_type,operator_context_id
+  )
+  SELECT 'promotion_funding_committed','promotion_funding_reservation',id,
+         'proof','service','proof'
+    FROM wlt_promotion_funding_reservations
+   WHERE operator_context_id='proof' AND external_reference='proof:commit'
+  RETURNING id
+), committed AS (
+  UPDATE wlt_promotion_funding_reservations
+     SET status='committed',order_id='order-proof',committed_at=NOW(),updated_at=NOW(),
+         commit_ledger_transaction_id=(SELECT id FROM ledger_tx)
+   WHERE operator_context_id='proof' AND external_reference='proof:commit'
+  RETURNING id
+)
 INSERT INTO wlt_promotion_funding_events (
   reservation_id,event_type,from_status,to_status,order_id,
   idempotency_key,correlation_id,reason
 )
 SELECT id,'committed','reserved','committed','order-proof',
        'proof-event-commit','proof-correlation-commit',''
-  FROM wlt_promotion_funding_reservations
- WHERE operator_context_id='proof' AND external_reference='proof:commit';
+  FROM committed;
 COMMIT;
 SQL
 
 [[ "$(scalar "SELECT status FROM wlt_promotion_funding_reservations WHERE operator_context_id='proof' AND external_reference='proof:commit'")" == "committed" ]] || fail "audited commit did not persist"
+[[ "$(scalar "SELECT count(*) FROM wlt_promotion_funding_reservations WHERE operator_context_id='proof' AND external_reference='proof:commit' AND commit_ledger_transaction_id IS NOT NULL")" == "1" ]] || fail "audited commit lost its canonical ledger fact"
 [[ "$(scalar "SELECT count(*) FROM wlt_promotion_funding_events e JOIN wlt_promotion_funding_reservations r ON r.id=e.reservation_id WHERE r.operator_context_id='proof' AND r.external_reference='proof:commit' AND e.event_type='committed'")" == "1" ]] || fail "audited commit event missing"
 
 # Audited release from reserved.
@@ -78,26 +93,42 @@ SQL
 
 [[ "$(scalar "SELECT status || ':' || release_reason FROM wlt_promotion_funding_reservations WHERE operator_context_id='proof' AND external_reference='proof:release'")" == "released:checkout_cancelled" ]] || fail "audited release did not persist"
 
-# Audited reverse from committed, tied to the original order and a governed reason.
+# Audited reverse from committed, tied to the original order, a governed reason,
+# and its own immutable reversal ledger transaction.
 "${PSQL[@]}" <<'SQL'
 BEGIN;
-UPDATE wlt_promotion_funding_reservations
-   SET status='reversed',reversed_at=NOW(),reversal_reason='refund_approved',updated_at=NOW()
- WHERE operator_context_id='proof' AND external_reference='proof:commit';
+WITH reversal_tx AS (
+  INSERT INTO wlt_ledger_transactions (
+    transaction_type,reference_type,reference_id,
+    created_by_actor_id,created_by_actor_type,operator_context_id
+  )
+  SELECT 'promotion_funding_reversed','promotion_funding_commit',commit_ledger_transaction_id,
+         'proof','service','proof'
+    FROM wlt_promotion_funding_reservations
+   WHERE operator_context_id='proof' AND external_reference='proof:commit'
+  RETURNING id
+), reversed AS (
+  UPDATE wlt_promotion_funding_reservations
+     SET status='reversed',reversed_at=NOW(),reversal_reason='refund_approved',updated_at=NOW(),
+         reversal_ledger_transaction_id=(SELECT id FROM reversal_tx)
+   WHERE operator_context_id='proof' AND external_reference='proof:commit'
+  RETURNING id
+)
 INSERT INTO wlt_promotion_funding_events (
   reservation_id,event_type,from_status,to_status,order_id,
   idempotency_key,correlation_id,reason
 )
 SELECT id,'reversed','committed','reversed','order-proof',
        'proof-event-reverse','proof-correlation-reverse','refund_approved'
-  FROM wlt_promotion_funding_reservations
- WHERE operator_context_id='proof' AND external_reference='proof:commit';
+  FROM reversed;
 COMMIT;
 SQL
 
 [[ "$(scalar "SELECT status || ':' || reversal_reason FROM wlt_promotion_funding_reservations WHERE operator_context_id='proof' AND external_reference='proof:commit'")" == "reversed:refund_approved" ]] || fail "audited reverse did not persist"
+[[ "$(scalar "SELECT count(*) FROM wlt_promotion_funding_reservations WHERE operator_context_id='proof' AND external_reference='proof:commit' AND reversal_ledger_transaction_id IS NOT NULL")" == "1" ]] || fail "audited reverse lost its canonical reversal ledger fact"
 
-# An unaudited transition must fail at the deferred constraint and roll back.
+# An unaudited transition must fail: committing without the canonical ledger
+# transaction violates the governed lifecycle and rolls back.
 "${PSQL[@]}" <<'SQL'
 INSERT INTO wlt_promotion_funding_reservations (
   operator_context_id,external_reference,checkout_intent_id,coupon_redemption_id,
@@ -123,7 +154,8 @@ then
 fi
 [[ "$(scalar "SELECT status FROM wlt_promotion_funding_reservations WHERE operator_context_id='proof' AND external_reference='proof:unaudited'")" == "reserved" ]] || fail "unaudited transition was not rolled back"
 
-# A stale event created in an earlier transaction cannot authorize a later update.
+# A stale event created in an earlier transaction cannot authorize a later
+# commit without its canonical ledger fact.
 "${PSQL[@]}" <<'SQL'
 INSERT INTO wlt_promotion_funding_reservations (
   operator_context_id,external_reference,checkout_intent_id,coupon_redemption_id,

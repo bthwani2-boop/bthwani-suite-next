@@ -32,26 +32,40 @@ competing_log="$(mktemp)"
 trap 'rm -f "$commit_log" "$competing_log"' EXIT
 
 # Transaction A acquires the row first and holds it long enough for transaction B
-# to compete for the same reserved state.
+# to compete for the same reserved state. Its commit carries the immutable
+# canonical ledger transaction required by the WLT-926 lifecycle.
 (
   "${PSQL[@]}" >"$commit_log" 2>&1 <<'SQL'
 BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
-UPDATE wlt_promotion_funding_reservations
-   SET status='committed',order_id='order-race',committed_at=NOW(),updated_at=NOW()
- WHERE operator_context_id='concurrency'
-   AND external_reference='proof:race'
-   AND status='reserved';
-SELECT pg_sleep(2);
+WITH ledger_tx AS (
+  INSERT INTO wlt_ledger_transactions (
+    transaction_type,reference_type,reference_id,
+    created_by_actor_id,created_by_actor_type,operator_context_id
+  )
+  SELECT 'promotion_funding_committed','promotion_funding_reservation',id,
+         'proof','service','concurrency'
+    FROM wlt_promotion_funding_reservations
+   WHERE operator_context_id='concurrency'
+     AND external_reference='proof:race'
+     AND status='reserved'
+  RETURNING id
+), committed AS (
+  UPDATE wlt_promotion_funding_reservations
+     SET status='committed',order_id='order-race',committed_at=NOW(),updated_at=NOW(),
+         commit_ledger_transaction_id=(SELECT id FROM ledger_tx)
+   WHERE operator_context_id='concurrency'
+     AND external_reference='proof:race'
+     AND status='reserved'
+  RETURNING id
+)
 INSERT INTO wlt_promotion_funding_events (
   reservation_id,event_type,from_status,to_status,order_id,
   idempotency_key,correlation_id,reason
 )
 SELECT id,'committed','reserved','committed','order-race',
        'proof-event-race-commit','proof-correlation-race',''
-  FROM wlt_promotion_funding_reservations
- WHERE operator_context_id='concurrency'
-   AND external_reference='proof:race'
-   AND status='committed';
+  FROM committed;
+SELECT pg_sleep(2);
 COMMIT;
 SQL
 ) &

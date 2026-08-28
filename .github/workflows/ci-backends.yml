@@ -70,6 +70,7 @@ jobs:
             local migrations="$4"
             local workdir="$5"
             local postgres_image="$6"
+            local tests="$7"
             if [[ "${enabled}" != "true" ]]; then return; fi
             entries="$(jq -c \
               --arg key "${key}" \
@@ -77,22 +78,23 @@ jobs:
               --arg migrations "${migrations}" \
               --arg workdir "${workdir}" \
               --arg postgres_image "${postgres_image}" \
-              '. + [{key:$key,go_mod:$go_mod,migrations:$migrations,workdir:$workdir,postgres_image:$postgres_image}]' \
+              --arg tests "${tests}" \
+              '. + [{key:$key,go_mod:$go_mod,migrations:$migrations,workdir:$workdir,postgres_image:$postgres_image,tests:$tests}]' \
               <<< "${entries}")"
           }
 
           add_backend "${DSH}" dsh services/dsh/backend/go.mod services/dsh/database/migrations \
-          services/dsh/backend postgis/postgis:16-3.4-alpine
+          services/dsh/backend postgis/postgis:16-3.4-alpine services/dsh/database/tests
           add_backend "${WLT}" wlt services/wlt/backend/go.mod services/wlt/database/migrations \
-          services/wlt/backend postgres:16-alpine
+          services/wlt/backend postgres:16-alpine services/wlt/database/tests
           add_backend "${IDENTITY}" identity core/identity/backend/go.mod \
-          core/identity/database/migrations core/identity/backend postgres:16-alpine
+          core/identity/database/migrations core/identity/backend postgres:16-alpine ""
           add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod \
-          core/workforce/database/migrations core/workforce/backend postgres:16-alpine
+          core/workforce/database/migrations core/workforce/backend postgres:16-alpine ""
           add_backend "${PLATFORM}" platform-control core/platform-control/backend/go.mod \
-          core/platform-control/database/migrations core/platform-control/backend postgres:16-alpine
+          core/platform-control/database/migrations core/platform-control/backend postgres:16-alpine ""
           add_backend "${PROVIDERS}" providers core/providers/backend/go.mod \
-          core/providers/database/migrations core/providers/backend postgres:16-alpine
+          core/providers/database/migrations core/providers/backend postgres:16-alpine ""
 
           count="$(jq 'length' <<< "${entries}")"
           echo "count=${count}" >> "${GITHUB_OUTPUT}"
@@ -256,6 +258,55 @@ jobs:
             "$env:BACKEND_KEY migration safety verification failed; complete output is retained as an artifact."
             exit $exitCode
           }
+      - name: Prove clean-install database truth and invariants
+        if: ${{ matrix.tests != '' }}
+        shell: pwsh
+        env:
+          MIGRATION_DIRECTORY: ${{ matrix.migrations }}
+          TESTS_DIRECTORY: ${{ matrix.tests }}
+          BACKEND_KEY: ${{ matrix.key }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $log = Join-Path $env:RUNNER_TEMP "$env:BACKEND_KEY-upgrade-truth.log"
+          $databaseName = "ci_" + ($env:BACKEND_KEY -replace '[^a-z0-9_]', '_') + "_truth"
+          & psql $env:DATABASE_URL -X -q -v ON_ERROR_STOP=1 -c "CREATE DATABASE $databaseName;"
+          if ($LASTEXITCODE -ne 0) { throw "unable to create the clean-install truth database for $env:BACKEND_KEY" }
+          $uri = [System.Uri]$env:DATABASE_URL
+          $truthUrl = "$($uri.Scheme)://$($uri.UserInfo)@$($uri.Host):$($uri.Port)/$databaseName$($uri.Query)"
+          try {
+            $output = & pwsh -NoProfile -ExecutionPolicy Bypass `
+              -File tools/scripts/invoke-database-upgrade-truth.ps1 `
+              -ServiceName $env:BACKEND_KEY `
+              -MigrationDirectory $env:MIGRATION_DIRECTORY `
+              -TestsDirectory $env:TESTS_DIRECTORY `
+              -DatabaseUrl $truthUrl `
+              -SourceCommitSha $env:CANDIDATE_SHA 2>&1
+            $exitCode = $LASTEXITCODE
+            $output | Tee-Object -FilePath $log
+            if ($exitCode -ne 0) {
+              Write-Error "$env:BACKEND_KEY clean-install database truth failed; complete output is retained as an artifact."
+              exit $exitCode
+            }
+          } finally {
+            & psql $env:DATABASE_URL -X -q -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS $databaseName;" | Out-Null
+          }
+      - name: Execute WLT shell invariant proofs
+        if: ${{ matrix.key == 'wlt' }}
+        shell: bash
+        env:
+          PGHOST: localhost
+          PGUSER: ci_runtime
+          PGDATABASE: ci_runtime
+          PGPASSWORD: ci_runtime_password
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/wlt-shell-invariants.log"
+          for proof in promotion-funding-integrity.sh promotion-funding-concurrency.sh; do
+            echo "WLT shell invariant: ${proof}" | tee -a "${log}"
+            bash "services/wlt/database/tests/${proof}" >>"${log}" 2>&1
+          done
+          echo "WLT shell invariant proofs passed" | tee -a "${log}"
       - name: Run WLT database integration tests
         if: ${{ matrix.key == 'wlt' }}
         working-directory: ${{ matrix.workdir }}
@@ -280,6 +331,8 @@ jobs:
           name: ${{ matrix.key }}-database-verification-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/${{ matrix.key }}-migration.log
+            ${{ runner.temp }}/${{ matrix.key }}-upgrade-truth.log
+            ${{ runner.temp }}/wlt-shell-invariants.log
             ${{ runner.temp }}/wlt-database-go-verification.log
           if-no-files-found: warn
           retention-days: 7
