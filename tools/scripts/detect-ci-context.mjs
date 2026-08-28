@@ -38,6 +38,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const diagnosticsRequired = contracts;
   const verificationRequired = node;
   const backendRequired = backend;
+  const sonarRequired = fullScope || frontend || contracts || backend || dependencyChanged || hasPath(files, (file) => file === "sonar-project.properties");
   const requiredJobs = [
     diagnosticsRequired ? "diagnostics" : "",
     verificationRequired ? "node" : "",
@@ -67,6 +68,7 @@ export function classifyFiles(inputFiles, options = {}) {
     backend_required: backendRequired,
     diagnostics_required: diagnosticsRequired,
     runtime_required: runtimeRequired,
+    sonar_required: sonarRequired,
     required_jobs: requiredJobs,
   };
 }
