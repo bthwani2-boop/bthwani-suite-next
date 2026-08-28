@@ -59,10 +59,22 @@ BEGIN
     RAISE EXCEPTION 'missing commission request-hash uniqueness per operator context';
   END IF;
 
-  -- Adjustment idempotency became an operator-context-scoped unique INDEX in
-  -- wlt-107; the old table-level unique CONSTRAINT on idempotency_key is gone.
-  IF to_regclass('public.wlt_commission_adjustments_operator_context_idempotency_uq') IS NULL THEN
-    RAISE EXCEPTION 'missing adjustment idempotency uniqueness per operator context';
+  -- Adjustment idempotency uniqueness is the canonical operator-context-scoped
+  -- PARTIAL unique index from wlt-963 (the exact ON CONFLICT arbiter for
+  -- ApplyGovernedCommissionAdjustment). wlt-964 dropped wlt-107's duplicate
+  -- non-partial composite unique index; a second uniqueness authority on the
+  -- same columns must not reappear.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public'
+      AND indexname = 'uq_wlt_commission_adjustments_operator_context_idempotency'
+      AND indexdef LIKE '%WHERE ((idempotency_key IS NOT NULL) AND (btrim(idempotency_key) <> ''''::text))%'
+  ) THEN
+    RAISE EXCEPTION 'missing canonical partial adjustment idempotency uniqueness per operator context';
+  END IF;
+
+  IF to_regclass('public.wlt_commission_adjustments_operator_context_idempotency_uq') IS NOT NULL THEN
+    RAISE EXCEPTION 'duplicate non-partial adjustment idempotency uniqueness must stay dropped';
   END IF;
 
   IF EXISTS (

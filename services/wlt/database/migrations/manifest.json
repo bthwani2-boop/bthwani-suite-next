@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-963_commission_adjustment_idempotency_partial_index.sql",
+  "cutover": "wlt-964_commission_adjustment_idempotency_single_arbiter.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -934,6 +934,13 @@
       "file": "wlt-963_commission_adjustment_idempotency_partial_index.sql",
       "sha256": "cb99fe49ea9aaa93a18c6ea266b850c19cf93a5d48ebbfc7d63e97f3a66a65ea",
       "historicalPrefix": "963",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 134,
+      "file": "wlt-964_commission_adjustment_idempotency_single_arbiter.sql",
+      "sha256": "7e995870b5b995b90a2ce3ec5cbb36c0da541e8e3fd6f9c57d71cca1a89cced0",
+      "historicalPrefix": "964",
       "state": "ACTIVE"
     }
   ]
