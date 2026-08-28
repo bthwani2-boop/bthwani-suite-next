@@ -99,6 +99,7 @@ jobs:
           CI_HEAD_SHA="${head_sha}" \
           CI_MODE="${mode}" \
           node tools/scripts/detect-ci-context.mjs
+          echo "mode=${mode}" >> "${GITHUB_OUTPUT}"
 
       - name: Test and plan exact Node coverage
         id: node_plan
