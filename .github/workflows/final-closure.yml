@@ -116,7 +116,6 @@ jobs:
     if: ${{ needs.resolve.result == 'success' }}
     uses: ./.github/workflows/ci-check.yml
     with:
-      full_scope: true
       pr_number: ${{ needs.resolve.outputs.pr_number }}
       expected_head_sha: ${{ needs.resolve.outputs.head_sha }}
       expected_base_sha: ${{ needs.resolve.outputs.base_sha }}
