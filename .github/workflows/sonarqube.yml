@@ -657,7 +657,8 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ needs.scope.outputs.head_sha }}
-          fetch-depth: 1
+          # Sonar needs complete history for SCM blame and new-code accuracy.
+          fetch-depth: 0
           persist-credentials: false
           show-progress: false
 

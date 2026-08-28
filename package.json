@@ -13,9 +13,9 @@
     "contracts:redocly": "node tools/scripts/contracts/typecheck.mjs",
     "contracts:lint": "pnpm run contracts:redocly && pnpm run guard:contract-registry-drift",
     "typecheck": "pnpm run affected:typecheck",
-    "typecheck:ts7": "pnpm -r --if-present typecheck:ts7",
+    "typecheck:ts": "pnpm -r --if-present typecheck:ts",
     "typecheck:ts6:compat": "pnpm -r --if-present typecheck:ts6:compat",
-    "typecheck:all": "pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat",
+    "typecheck:all": "pnpm run typecheck:ts && pnpm run typecheck:ts6:compat",
     "build": "pnpm run affected:build",
     "guard:source-integrity": "node --test tools/guards/source-integrity-gate.test.mjs && node tools/guards/source-integrity-gate.mjs",
     "docker:runtime:up": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles dsh,media-storage",
@@ -214,7 +214,7 @@
     "openapi-typescript": "7.13.0",
     "sherif": "1.11.1",
     "size-limit": "^11.1.6",
-    "typescript": "7.0.2",
+    "typescript": "6.0.2",
     "yaml": "2.8.3"
   }
 }
