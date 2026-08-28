@@ -28,9 +28,7 @@ function generateInstallationId(): string {
   if (typeof cryptoApi?.getRandomValues === "function") {
     cryptoApi.getRandomValues(bytes);
   } else {
-    for (let index = 0; index < bytes.length; index += 1) {
-      bytes[index] = Math.floor(Math.random() * 256);
-    }
+    throw new Error("Secure randomness is unavailable; refusing to create an installation identity");
   }
   let hex = "";
   for (let index = 0; index < bytes.length; index += 1) {
