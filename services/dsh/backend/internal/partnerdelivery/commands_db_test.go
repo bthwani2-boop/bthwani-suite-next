@@ -63,7 +63,7 @@ func TestPartnerDeliveryExceptionEvidenceDBIntegration(t *testing.T) {
 	reason := "تعذر الوصول إلى العميل بعد محاولتين موثقتين"
 	evidence := []string{"support-case:case-101", "media:ref-202"}
 	exceptionTask, err := svc.RaiseExceptionCommand(
-		ctx, task.ID, task.Version, reason, evidence,
+		ctx, fixture.operatorContextID, task.ID, task.Version, reason, evidence,
 		actorID, "operator", "corr-exception", "raise-exception-1",
 	)
 	if err != nil {

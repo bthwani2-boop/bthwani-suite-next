@@ -349,7 +349,7 @@ func CreateEvidenceBackedSettlement(ctx context.Context, db *sql.DB, input Creat
         if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_finance_audit_events
                 (operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)
                 VALUES ($1,'settlement',$2,'settlement_calculated',$3,'operator',$4,
-                jsonb_build_object('policyVersion',$5,'grossMinorUnits',$6,'feeMinorUnits',$7,'netMinorUnits',$8))`,
+                jsonb_build_object('policyVersion',$5::bigint,'grossMinorUnits',$6::bigint,'feeMinorUnits',$7::bigint,'netMinorUnits',$8::bigint))`,
                 operatorContextID, settlement.ID, input.OperatorID, correlationID, policy.Version, gross, fee, net); err != nil {
                 return nil, err
         }

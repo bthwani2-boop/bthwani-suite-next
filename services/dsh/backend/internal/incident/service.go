@@ -133,7 +133,7 @@ func (s *Service) Report(ctx context.Context, input ReportInput) (*Incident, err
 		}
 	}
 
-	before, err := s.snapshotState(input.TargetEntityType, input.TargetEntityID)
+	before, err := s.snapshotState(input.OperatorContextID, input.OrderID, input.TargetEntityType, input.TargetEntityID)
 	if err != nil {
 		return nil, err
 	}
@@ -198,16 +198,22 @@ func (s *Service) replayCommand(ctx context.Context, existing *Incident, input R
 	return s.apply(ctx, existing.ID, stored)
 }
 
-func (s *Service) snapshotState(entityType TargetEntityType, entityID string) ([]byte, error) {
+func (s *Service) snapshotState(operatorContextID, orderID string, entityType TargetEntityType, entityID string) ([]byte, error) {
 	switch entityType {
 	case TargetPartnerDeliveryTask:
-		task, err := partnerdelivery.Get(s.db, entityID)
+		task, err := partnerdelivery.GetForOperatorContext(s.db, operatorContextID, entityID)
 		if err != nil {
 			return nil, err
 		}
+		if task.OrderID != orderID {
+			return nil, fmt.Errorf("%w: partner delivery task %s does not belong to order %s", ErrInvalid, entityID, orderID)
+		}
 		return json.Marshal(task)
 	case TargetOrder:
-		order, err := orders.GetOrder(s.db, entityID)
+		if entityID != orderID {
+			return nil, fmt.Errorf("%w: target order id %s does not match order %s", ErrInvalid, entityID, orderID)
+		}
+		order, err := orders.GetOrderForContext(s.db, operatorContextID, entityID)
 		if err != nil {
 			return nil, err
 		}
@@ -246,7 +252,7 @@ func (s *Service) dispatch(ctx context.Context, input ReportInput) ([]byte, erro
 			return nil, fmt.Errorf("%w: raise_exception targets a partner_delivery_task", ErrInvalid)
 		}
 		task, err := partnerdelivery.NewService(s.db, nil).RaiseExceptionCommand(
-			ctx, input.TargetEntityID, input.ExpectedVersion, input.Reason, input.EvidenceReferences,
+			ctx, input.OperatorContextID, input.TargetEntityID, input.ExpectedVersion, input.Reason, input.EvidenceReferences,
 			input.ActorID, input.ActorRole, input.CorrelationID, input.CommandID,
 		)
 		if err != nil {

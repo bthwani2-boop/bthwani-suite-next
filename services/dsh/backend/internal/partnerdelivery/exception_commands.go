@@ -30,7 +30,7 @@ func sanitizeEvidenceReferences(values []string) ([]string, error) {
 	return result, nil
 }
 
-func (s *Service) RaiseExceptionCommand(ctx context.Context, taskID string, expectedVersion int, reason string, evidenceReferences []string, actorID, actorRole, correlationID, commandID string) (*PartnerDeliveryTask, error) {
+func (s *Service) RaiseExceptionCommand(ctx context.Context, operatorContextID, taskID string, expectedVersion int, reason string, evidenceReferences []string, actorID, actorRole, correlationID, commandID string) (*PartnerDeliveryTask, error) {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		return nil, fmt.Errorf("%w: reason is required", ErrInvalid)
@@ -43,23 +43,23 @@ func (s *Service) RaiseExceptionCommand(ctx context.Context, taskID string, expe
 	fingerprint := commandFingerprint("raise_exception", taskID, fmt.Sprint(expectedVersion), reason, string(evidenceJSON))
 	return s.executeCommand(ctx, actorID, commandID, "raise_exception", fingerprint,
 		func() (*PartnerDeliveryTask, error) {
-			return s.raiseExceptionWithEvidence(ctx, taskID, expectedVersion, reason, evidenceJSON, actorID, actorRole, correlationID)
+			return s.raiseExceptionWithEvidence(ctx, operatorContextID, taskID, expectedVersion, reason, evidenceJSON, actorID, actorRole, correlationID)
 		},
 		func() (*PartnerDeliveryTask, bool, error) {
-			task, err := Get(s.db, taskID)
+			task, err := GetForOperatorContext(s.db, operatorContextID, taskID)
 			matched := err == nil && task.Status == StatusException && task.ExceptionReason != nil && *task.ExceptionReason == reason
 			return task, matched, err
 		})
 }
 
-func (s *Service) raiseExceptionWithEvidence(ctx context.Context, taskID string, expectedVersion int, reason string, evidenceJSON []byte, actorID, actorRole, correlationID string) (*PartnerDeliveryTask, error) {
+func (s *Service) raiseExceptionWithEvidence(ctx context.Context, operatorContextID, taskID string, expectedVersion int, reason string, evidenceJSON []byte, actorID, actorRole, correlationID string) (*PartnerDeliveryTask, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	current, err := GetForUpdate(tx, taskID)
+	current, err := GetForUpdateForOperatorContext(tx, operatorContextID, taskID)
 	if err != nil {
 		return nil, err
 	}

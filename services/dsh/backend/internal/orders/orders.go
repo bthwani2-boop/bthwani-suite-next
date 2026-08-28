@@ -95,3 +95,24 @@ func GetClientOrder(db *sql.DB, orderID, operatorContextID, clientID string) (*O
 	order.Items = items
 	return order, nil
 }
+
+func GetOrderForContext(db *sql.DB, operatorContextID, orderID string) (*Order, error) {
+	order, err := scanOrderRow(db.QueryRow(`
+		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status, version,
+		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
+		FROM dsh_orders
+		WHERE id = $1::uuid AND operator_context_id = $2`, orderID, operatorContextID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	items, err := listOrderItems(db, order.ID)
+	if err != nil {
+		return nil, err
+	}
+	order.Items = items
+	return order, nil
+}
+

@@ -366,6 +366,13 @@
       "sha256": "5127334eaf578cf0f37b0fd1b66cf5711405f6bd116ab6984210d5f108fa5b70",
       "historicalPrefix": "1051",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 293,
+      "file": "dsh-1052_aggregate_operator_context_invariants.sql",
+      "sha256": "d8b4ad3790bf74ec3ba3fea3a6e2e2e6ce4d9911a2c5dedc478637d5fc583b8e",
+      "historicalPrefix": "1052",
+      "state": "ACTIVE"
     }
   ]
 }

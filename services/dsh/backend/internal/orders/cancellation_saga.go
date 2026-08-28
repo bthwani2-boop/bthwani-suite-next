@@ -260,15 +260,19 @@ func valueOrEmpty(value *string) string {
 }
 
 type CreateCancellationActionInput struct {
-	ActorID        string
-	CaseID         string
-	ActionType     CancellationActionType
-	Payload        string
-	IdempotencyKey string
-	CorrelationID  string
+	OperatorContextID string
+	OrderID           string
+	ActorID           string
+	CaseID            string
+	ActionType        CancellationActionType
+	Payload           string
+	IdempotencyKey    string
+	CorrelationID     string
 }
 
 func CreateCancellationAction(db *sql.DB, input CreateCancellationActionInput) (OrderCancellationAction, error) {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.CaseID = strings.TrimSpace(input.CaseID)
 	input.Payload = strings.TrimSpace(input.Payload)
@@ -277,6 +281,24 @@ func CreateCancellationAction(db *sql.DB, input CreateCancellationActionInput) (
 
 	if db == nil || input.CaseID == "" || input.IdempotencyKey == "" || input.ActorID == "" {
 		return OrderCancellationAction{}, ErrInvalid
+	}
+
+	if input.OperatorContextID != "" {
+		var orderContext string
+		err := db.QueryRow(`
+			SELECT o.operator_context_id
+			FROM dsh_order_cancellations c
+			JOIN dsh_orders o ON o.id = c.order_id
+			WHERE c.id = $1::uuid`, input.CaseID).Scan(&orderContext)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return OrderCancellationAction{}, ErrNotFound
+			}
+			return OrderCancellationAction{}, err
+		}
+		if orderContext != input.OperatorContextID {
+			return OrderCancellationAction{}, ErrNotFound
+		}
 	}
 
 	var actionID string
@@ -299,18 +321,21 @@ func CreateCancellationAction(db *sql.DB, input CreateCancellationActionInput) (
 }
 
 type ExecuteCancellationActionInput struct {
-	ActorID       string
-	ActionID      string
-	CorrelationID string
+	OperatorContextID string
+	OrderID           string
+	ActorID           string
+	ActionID          string
+	CorrelationID     string
 }
 
 func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput) (OrderCancellationAction, error) {
-	if db == nil || strings.TrimSpace(input.ActionID) == "" {
-		return OrderCancellationAction{}, ErrInvalid
-	}
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	input.OrderID = strings.TrimSpace(input.OrderID)
+	input.ActionID = strings.TrimSpace(input.ActionID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
-	if input.ActorID == "" {
+
+	if db == nil || input.ActionID == "" || input.ActorID == "" {
 		return OrderCancellationAction{}, ErrInvalid
 	}
 
@@ -338,6 +363,24 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 	caseItem, err := scanOrderCancellationCase(tx.QueryRow(orderCancellationSelect+` WHERE id = $1::uuid FOR UPDATE`, action.CancellationID))
 	if err != nil {
 		return OrderCancellationAction{}, err
+	}
+
+	// Validate vertical authority: OrderID and OperatorContextID must match caseItem and Order!
+	if input.OrderID != "" && caseItem.OrderID != input.OrderID {
+		return OrderCancellationAction{}, ErrNotFound
+	}
+	if input.OperatorContextID != "" {
+		var orderContext string
+		err := tx.QueryRow(`SELECT operator_context_id FROM dsh_orders WHERE id = $1::uuid`, caseItem.OrderID).Scan(&orderContext)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return OrderCancellationAction{}, ErrNotFound
+			}
+			return OrderCancellationAction{}, err
+		}
+		if orderContext != input.OperatorContextID || (caseItem.OperatorContextID != "" && caseItem.OperatorContextID != input.OperatorContextID) {
+			return OrderCancellationAction{}, ErrNotFound
+		}
 	}
 
 	// State machine enforcement
@@ -462,20 +505,24 @@ func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, err
 	}
 	if c.Status == CancellationApproved {
 		act, err := CreateCancellationAction(db, CreateCancellationActionInput{
-			ActorID:        input.ActorID,
-			CaseID:         c.ID,
-			ActionType:     CancellationActionExecuteCancel,
-			Payload:        "",
-			IdempotencyKey: "sync-exec-" + input.CorrelationID,
-			CorrelationID:  input.CorrelationID,
+			OperatorContextID: input.OperatorContextID,
+			OrderID:           input.OrderID,
+			ActorID:           input.ActorID,
+			CaseID:            c.ID,
+			ActionType:        CancellationActionExecuteCancel,
+			Payload:           "",
+			IdempotencyKey:    "sync-exec-" + input.CorrelationID,
+			CorrelationID:     input.CorrelationID,
 		})
 		if err != nil {
 			return nil, err
 		}
 		_, err = ExecuteCancellationAction(db, ExecuteCancellationActionInput{
-			ActorID:       input.ActorID,
-			ActionID:      act.ID,
-			CorrelationID: input.CorrelationID,
+			OperatorContextID: input.OperatorContextID,
+			OrderID:           input.OrderID,
+			ActorID:           input.ActorID,
+			ActionID:          act.ID,
+			CorrelationID:     input.CorrelationID,
 		})
 		if err != nil {
 			return nil, err
@@ -485,5 +532,5 @@ func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, err
 	} else if c.Status == CancellationRejected || c.Status == CancellationConflict || c.Status == CancellationUnknown {
 		return nil, ErrConflict
 	}
-	return GetOrder(db, input.OrderID)
+	return GetOrderForContext(db, input.OperatorContextID, input.OrderID)
 }

@@ -241,7 +241,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "ticketReference is required")
 		return
 	}
-	task, err := partnerdelivery.GetByOrderID(s.db, orderID)
+	task, err := partnerdelivery.GetByOrderIDForOperatorContext(s.db, actor.OperatorContextID, orderID)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -266,7 +266,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	updated, err := partnerdelivery.Get(s.db, task.ID)
+	updated, err := partnerdelivery.GetForOperatorContext(s.db, actor.OperatorContextID, task.ID)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -275,12 +275,12 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	limit, offset := parseLimitOffset(r)
-	tasks, err := partnerdelivery.List(s.db, partnerdelivery.ListFilter{
+	tasks, err := partnerdelivery.ListForOperatorContext(s.db, actor.OperatorContextID, partnerdelivery.ListFilter{
 		StoreID: r.URL.Query().Get("storeId"),
 		Status:  r.URL.Query().Get("status"),
 		Limit:   limit,
@@ -298,11 +298,11 @@ func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.Respon
 }
 
 func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	task, err := partnerdelivery.Get(s.db, r.PathValue("taskId"))
+	task, err := partnerdelivery.GetForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("taskId"))
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -311,11 +311,11 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleGetOperatorPartnerDeliveryByOrder(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	task, err := partnerdelivery.GetByOrderID(s.db, r.PathValue("orderId"))
+	task, err := partnerdelivery.GetByOrderIDForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("orderId"))
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return

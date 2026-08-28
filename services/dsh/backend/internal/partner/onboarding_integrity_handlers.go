@@ -30,7 +30,7 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
 		partnerID := partnerIDFromPath(r)
-		if !requireFieldOwnsPartner(w, db, partnerID, actorID) {
+		if !requireFieldOwnsPartner(w, db, r, partnerID, actorID) {
 			return
 		}
 		expectedVersion := expectedPartnerVersion(r)
@@ -138,7 +138,7 @@ func HandleGovernedFieldSubmitPartner(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
 		partnerID := partnerIDFromPath(r)
-		if !requireFieldOwnsPartner(w, db, partnerID, actorID) {
+		if !requireFieldOwnsPartner(w, db, r, partnerID, actorID) {
 			return
 		}
 		var body struct {
@@ -188,7 +188,7 @@ func HandleGovernedFieldCreateVisit(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
 		partnerID := partnerIDFromPath(r)
-		if !requireFieldOwnsPartner(w, db, partnerID, actorID) {
+		if !requireFieldOwnsPartner(w, db, r, partnerID, actorID) {
 			return
 		}
 		var input CreateFieldVisitInput

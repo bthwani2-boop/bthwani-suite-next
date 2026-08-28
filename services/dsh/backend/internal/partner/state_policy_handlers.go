@@ -25,7 +25,7 @@ func HandleGovernedFieldGetPartnerState(db *sql.DB) http.HandlerFunc {
 	inner := HandleGovernedGetPartnerState(db, "app-field")
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
-		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+		if !requireFieldOwnsPartner(w, db, r, partnerIDFromPath(r), actorID) {
 			return
 		}
 		inner(w, r)

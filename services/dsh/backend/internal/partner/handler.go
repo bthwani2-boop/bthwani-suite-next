@@ -61,21 +61,26 @@ func versionFromQuery(r *http.Request) int {
 	return v
 }
 
-// requireFieldOwnsPartner verifies the requesting field actor created the
+// requireFieldOwnsPartner verifies the requesting field actor cre// requireFieldOwnsPartner verifies the requesting field actor created the
 // partner draft at partnerID. Returns false and writes the response if the
 // partner does not exist or belongs to a different field actor.
-func requireFieldOwnsPartner(w http.ResponseWriter, db *sql.DB, partnerID, actorID string) bool {
-	p, err := GetPartner(db, partnerID)
+func requireFieldOwnsPartner(w http.ResponseWriter, db *sql.DB, r *http.Request, partnerID, actorID string) bool {
+	operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+	if !ok || operatorContextID == "" {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return false
+	}
+	err := FieldOwnsPartnerForOperatorContext(db, operatorContextID, partnerID, actorID)
 	if errors.Is(err, ErrNotFound) {
 		sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
 		return false
 	}
-	if err != nil {
-		sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify partner ownership")
+	if errors.Is(err, ErrForbidden) {
+		sendError(w, http.StatusForbidden, "FORBIDDEN", "this partner draft does not belong to you")
 		return false
 	}
-	if p.CreatedByActorID != actorID {
-		sendError(w, http.StatusForbidden, "FORBIDDEN", "this partner draft does not belong to you")
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify partner ownership")
 		return false
 	}
 	return true
@@ -92,7 +97,16 @@ func readinessHandler(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partners/{partnerId}/documents â€” operator, any partner
 func HandleListDocuments(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		docs, err := ListDocuments(db, partnerIDFromPath(r))
+		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		if !ok || operatorContextID == "" {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+			return
+		}
+		docs, err := ListDocumentsForOperatorContext(db, operatorContextID, partnerIDFromPath(r))
+		if errors.Is(err, ErrNotFound) {
+			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
+			return
+		}
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list documents")
 			return
@@ -106,7 +120,7 @@ func HandleFieldListDocuments(db *sql.DB) http.HandlerFunc {
 	inner := HandleListDocuments(db)
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
-		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+		if !requireFieldOwnsPartner(w, db, r, partnerIDFromPath(r), actorID) {
 			return
 		}
 		inner(w, r)
@@ -116,6 +130,11 @@ func HandleFieldListDocuments(db *sql.DB) http.HandlerFunc {
 // POST /dsh/partners/{partnerId}/documents/{documentId}/review
 func HandleReviewDocument(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		if !ok || operatorContextID == "" {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+			return
+		}
 		actorID, _ := actorFromContext(r)
 		var input ReviewDocumentInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -125,7 +144,7 @@ func HandleReviewDocument(db *sql.DB) http.HandlerFunc {
 		input.ReviewedByActorID = actorID
 		input.CorrelationID = correlationID(r)
 
-		doc, rev, err := ReviewDocument(db, partnerIDFromPath(r), documentIDFromPath(r), input)
+		doc, rev, err := ReviewDocumentForOperatorContext(db, operatorContextID, partnerIDFromPath(r), documentIDFromPath(r), input)
 		if errors.Is(err, ErrNotFound) {
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "document not found")
 			return
@@ -145,7 +164,16 @@ func HandleReviewDocument(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partners/{partnerId}/field-visits â€” operator, any partner
 func HandleListFieldVisits(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		visits, err := ListFieldVisits(db, partnerIDFromPath(r))
+		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		if !ok || operatorContextID == "" {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+			return
+		}
+		visits, err := ListFieldVisitsForOperatorContext(db, operatorContextID, partnerIDFromPath(r))
+		if errors.Is(err, ErrNotFound) {
+			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
+			return
+		}
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list field visits")
 			return
@@ -159,7 +187,7 @@ func HandleFieldListFieldVisits(db *sql.DB) http.HandlerFunc {
 	inner := HandleListFieldVisits(db)
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
-		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+		if !requireFieldOwnsPartner(w, db, r, partnerIDFromPath(r), actorID) {
 			return
 		}
 		inner(w, r)
@@ -169,7 +197,16 @@ func HandleFieldListFieldVisits(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partners/{partnerId}/stores
 func HandleListPartnerStores(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stores, err := ListPartnerStores(db, partnerIDFromPath(r))
+		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		if !ok || operatorContextID == "" {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+			return
+		}
+		stores, err := ListPartnerStoresForOperatorContext(db, operatorContextID, partnerIDFromPath(r))
+		if errors.Is(err, ErrNotFound) {
+			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
+			return
+		}
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partner stores")
 			return
@@ -181,7 +218,16 @@ func HandleListPartnerStores(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partners/{partnerId}/audit
 func HandleListAudit(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		events, err := ListActivationEvents(db, partnerIDFromPath(r))
+		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		if !ok || operatorContextID == "" {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+			return
+		}
+		events, err := ListActivationEventsForOperatorContext(db, operatorContextID, partnerIDFromPath(r))
+		if errors.Is(err, ErrNotFound) {
+			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
+			return
+		}
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list audit events")
 			return
@@ -194,6 +240,11 @@ func HandleListAudit(db *sql.DB) http.HandlerFunc {
 
 func uploadDocumentHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		if !ok || operatorContextID == "" {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+			return
+		}
 		actorID, _ := actorFromContext(r)
 		var input UploadDocumentInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -202,7 +253,7 @@ func uploadDocumentHandler(db *sql.DB) http.HandlerFunc {
 		}
 		input.UploadedByActorID = actorID
 
-		doc, err := UploadDocument(db, partnerIDFromPath(r), input)
+		doc, err := UploadDocumentForOperatorContext(db, operatorContextID, partnerIDFromPath(r), input)
 		if errors.Is(err, ErrInvalid) {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 			return
@@ -224,7 +275,7 @@ func HandleFieldUploadDocument(db *sql.DB) http.HandlerFunc {
 	inner := uploadDocumentHandler(db)
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
-		if !requireFieldOwnsPartner(w, db, partnerIDFromPath(r), actorID) {
+		if !requireFieldOwnsPartner(w, db, r, partnerIDFromPath(r), actorID) {
 			return
 		}
 		inner(w, r)
@@ -241,12 +292,17 @@ func HandleAddDocument(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partner/me  â€” partner reads their own profile
 func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		if !ok || operatorContextID == "" {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+			return
+		}
 		partnerID := partnerIDFromContext(r)
 		if partnerID == "" {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "no partner context")
 			return
 		}
-		p, err := GetPartner(db, partnerID)
+		p, err := GetPartnerForOperatorContext(db, operatorContextID, partnerID)
 		if errors.Is(err, ErrNotFound) {
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
 			return

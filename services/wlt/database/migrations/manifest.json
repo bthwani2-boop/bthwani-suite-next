@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-962_wallet_projection_negative_balance.sql",
+  "cutover": "wlt-963_commission_adjustment_idempotency_partial_index.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -869,7 +869,7 @@
     {
       "ordinal": 124,
       "file": "wlt-954_external_statement_provenance.sql",
-      "sha256": "d1705eb614295d330e4f4f33afb2e7246d1911d3b18d68d0ae7fc6748895515d",
+      "sha256": "17de13d85253574dd95e82cd518c70ebfd2e752f597b2463506abc910ae1fafa",
       "historicalPrefix": "954",
       "state": "ACTIVE"
     },
@@ -883,7 +883,7 @@
     {
       "ordinal": 126,
       "file": "wlt-956_external_statement_provenance_evidence.sql",
-      "sha256": "bfff721dcd0e6499c342c49b413c4b4fef343d294eff33149e031026b4e48b7d",
+      "sha256": "4ee0018e6e2fdd8fd6aa182de2c8815f54bcc887d0ff667542bb95e1039408a5",
       "historicalPrefix": "956",
       "state": "ACTIVE"
     },
@@ -897,7 +897,7 @@
     {
       "ordinal": 128,
       "file": "wlt-958_external_statement_verification_link.sql",
-      "sha256": "f4dbe00a39c9a132caf5f73922e8ae018b250a8946f5c16bd22fbc7894b85c7b",
+      "sha256": "69ac9749f5ce78a3f0b9a5b888b46f226d408b824186ac88d26c96d091ea6be5",
       "historicalPrefix": "958",
       "state": "HISTORICAL_IMMUTABLE"
     },

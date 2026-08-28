@@ -495,3 +495,53 @@ func LinkPartnerStoreForOperatorContext(db *sql.DB, operatorContextID, partnerID
 	}
 	return LinkPartnerStore(db, partnerID, storeID, actorID)
 }
+
+func ListDocumentsForOperatorContext(db *sql.DB, operatorContextID, partnerID string) ([]Document, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return nil, err
+	}
+	return ListDocuments(db, partnerID)
+}
+
+func UploadDocumentForOperatorContext(db *sql.DB, operatorContextID, partnerID string, input UploadDocumentInput) (Document, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return Document{}, err
+	}
+	return UploadDocument(db, partnerID, input)
+}
+
+func ReviewDocumentForOperatorContext(db *sql.DB, operatorContextID, partnerID, documentID string, input ReviewDocumentInput) (Document, DocumentReview, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	return ReviewDocument(db, partnerID, documentID, input)
+}
+
+func ListFieldVisitsForOperatorContext(db *sql.DB, operatorContextID, partnerID string) ([]FieldVisit, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return nil, err
+	}
+	return ListFieldVisits(db, partnerID)
+}
+
+func ListPartnerStoresForOperatorContext(db *sql.DB, operatorContextID, partnerID string) ([]PartnerLinkedStore, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return nil, err
+	}
+	return ListPartnerStores(db, partnerID)
+}
+
+func ListActivationEventsForOperatorContext(db *sql.DB, operatorContextID, partnerID string) ([]ActivationEvent, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return nil, err
+	}
+	return ListActivationEvents(db, partnerID)
+}
+
+func TransitionStatusForOperatorContext(db *sql.DB, operatorContextID, partnerID string, input TransitionInput, expectedVersion int) (Partner, ActivationEvent, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return Partner{}, ActivationEvent{}, err
+	}
+	return TransitionStatus(db, partnerID, input, expectedVersion)
+}
+

@@ -203,11 +203,11 @@ func (s *protectedStoreServer) handlePartnerOrderCancellation(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleOperatorOrderCancellation(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	cancellation, err := orders.GetCancellation(s.db, r.PathValue("orderId"))
+	cancellation, err := orders.GetCancellationForContext(s.db, actor.OperatorContextID, r.PathValue("orderId"))
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
@@ -232,18 +232,20 @@ func (s *protectedStoreServer) handleCreateOrderCancellationAction(w http.Respon
 		return
 	}
 	orderID := r.PathValue("orderId")
-	caseItem, err := orders.GetCancellation(s.db, orderID)
+	caseItem, err := orders.GetCancellationForContext(s.db, actor.OperatorContextID, orderID)
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
 	}
 	item, err := orders.CreateCancellationAction(s.db, orders.CreateCancellationActionInput{
-		ActorID:        actor.ID,
-		CaseID:         caseItem.ID,
-		ActionType:     orders.CancellationActionType(body.ActionType),
-		Payload:        body.Payload,
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  correlationID,
+		OperatorContextID: actor.OperatorContextID,
+		OrderID:           orderID,
+		ActorID:           actor.ID,
+		CaseID:            caseItem.ID,
+		ActionType:        orders.CancellationActionType(body.ActionType),
+		Payload:           body.Payload,
+		IdempotencyKey:    idempotencyKey,
+		CorrelationID:     correlationID,
 	})
 	if err != nil {
 		writeOrderCancellationError(w, err)
@@ -261,10 +263,14 @@ func (s *protectedStoreServer) handleExecuteOrderCancellationAction(w http.Respo
 	if !ok {
 		return
 	}
+	orderID := r.PathValue("orderId")
+	actionID := r.PathValue("actionId")
 	item, err := orders.ExecuteCancellationAction(s.db, orders.ExecuteCancellationActionInput{
-		ActorID:       actor.ID,
-		ActionID:      r.PathValue("actionId"),
-		CorrelationID: correlationID,
+		OperatorContextID: actor.OperatorContextID,
+		OrderID:           orderID,
+		ActorID:           actor.ID,
+		ActionID:          actionID,
+		CorrelationID:     correlationID,
 	})
 	if err != nil {
 		writeOrderCancellationError(w, err)
