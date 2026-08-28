@@ -18,13 +18,13 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname='uq_dsh_orders_OperatorContext_order_number'
+    WHERE indexname='uq_dsh_orders_operatorcontext_order_number'
       AND indexdef ILIKE '%UNIQUE%operator_context_id%order_number%'
   ) THEN missing := array_append(missing, 'OperatorContext order-number uniqueness'); END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname='uq_dsh_orders_OperatorContext_correlation'
+    WHERE indexname='uq_dsh_orders_operatorcontext_correlation'
       AND indexdef ILIKE '%UNIQUE%operator_context_id%correlation_id%'
   ) THEN missing := array_append(missing, 'OperatorContext correlation uniqueness'); END IF;
 
@@ -36,7 +36,7 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname='dsh_order_create_idempotency_operator_context_id_checkout_intent_id_key'
+    WHERE indexname='dsh_order_create_idempotency_operator_context_id_checkout_i_key'
       AND indexdef ILIKE '%operator_context_id%checkout_intent_id%'
   ) THEN missing := array_append(missing, 'one order attempt per OperatorContext checkout'); END IF;
 

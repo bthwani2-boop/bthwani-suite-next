@@ -30,15 +30,19 @@ BEGIN
   END IF;
 END $$;
 
+-- The store platform-context contract (dsh-954/dsh-962) requires a trusted
+-- OperatorContext, and the `category` column was retired from dsh_stores.
+SELECT set_config('bthwani.operator_context_id', 'store-governance-fixture', true);
+
 INSERT INTO dsh_stores (
   id, slug, display_name, status, city_code, service_area_code,
-  serviceability_status, is_visible, category, delivery_modes,
+  serviceability_status, is_visible, delivery_modes,
   partner_readiness, catalog_approval_status, marketing_visibility,
   address_line, coverage_summary, operating_hours, delivery_readiness,
   hero_image_url, logo_url, version
 ) VALUES (
   'store-db-proof', 'store-db-proof', 'متجر إثبات الرحلة الرابعة',
-  'published', 'sana', 'haddah', 'serviceable', true, 'default',
+  'published', 'sana', 'haddah', 'serviceable', true,
   ARRAY['delivery']::text[], 'ready', 'approved', 'visible',
   'شارع حدة', 'حدة والمناطق المجاورة', '08:00-23:00', 'ready',
   'https://cdn.example.test/store-cover.jpg', 'https://cdn.example.test/store-logo.jpg', 1

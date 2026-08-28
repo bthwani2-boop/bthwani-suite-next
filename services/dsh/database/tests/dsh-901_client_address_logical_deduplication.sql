@@ -2,6 +2,23 @@
 
 BEGIN;
 
+-- Clean-install invariant fixture: the geofence binding (dsh-906/dsh-981)
+-- requires every live address to resolve inside an active service-area
+-- version, so the proof seeds its own coverage area before inserting.
+DO $$
+BEGIN
+  INSERT INTO dsh_service_area_versions (
+    service_area_code, version, display_name, polygon, active, priority, srid,
+    overlap_policy, effective_from, expires_at, actor_id, actor_surface, reason,
+    correlation_id, created_at
+  ) VALUES (
+    'test-area', 1, 'Invariant fixture coverage',
+    ST_SetSRID(ST_GeomFromGeoJSON('{"type":"Polygon","coordinates":[[[44.10,15.25],[44.30,15.25],[44.30,15.45],[44.10,15.45],[44.10,15.25]]]}'), 4326),
+    TRUE, 100, 4326, 'priority_then_code', NOW() - interval '1 day', NULL,
+    'db-invariant-fixture', 'system', 'clean-install invariant fixture area', NULL, NOW()
+  ) ON CONFLICT (service_area_code, version) DO NOTHING;
+END $$;
+
 DO $$
 DECLARE
   v_client_id text := 'test-address-dedupe-' || replace(gen_random_uuid()::text, '-', '');
@@ -91,6 +108,8 @@ BEGIN
     address_line,
     service_area_code,
     delivery_instructions,
+    latitude,
+    longitude,
     is_default,
     create_idempotency_key
   ) VALUES (
@@ -101,6 +120,8 @@ BEGIN
     'عنوان مختلف للاختبار',
     'test-area',
     'البوابة الرئيسية',
+    15.371,
+    44.195,
     false,
     'address-dedupe:distinct'
   ) RETURNING id INTO v_second_id;

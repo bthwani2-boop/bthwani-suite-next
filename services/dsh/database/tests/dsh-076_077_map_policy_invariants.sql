@@ -20,7 +20,7 @@ BEGIN
   ) VALUES (
     v_area_code,
     'منطقة اختبار',
-    '[[44.10,15.30],[44.20,15.30],[44.20,15.40]]'::jsonb,
+    ST_SetSRID(ST_GeomFromGeoJSON('{"type":"Polygon","coordinates":[[[44.10,15.30],[44.20,15.30],[44.20,15.40],[44.10,15.40],[44.10,15.30]]]}'), 4326),
     true,
     100
   );
@@ -35,7 +35,7 @@ BEGIN
     ) VALUES (
       v_area_code,
       'منطقة مكررة',
-      '[[44.10,15.30],[44.20,15.30],[44.20,15.40]]'::jsonb,
+      ST_SetSRID(ST_GeomFromGeoJSON('{"type":"Polygon","coordinates":[[[44.10,15.30],[44.20,15.30],[44.20,15.40],[44.10,15.40],[44.10,15.30]]]}'), 4326),
       true,
       50
     );
@@ -54,13 +54,13 @@ BEGIN
     ) VALUES (
       'invalid_' || v_suffix,
       'مضلع غير صالح',
-      '{}'::jsonb
+      ST_SetSRID(ST_GeomFromGeoJSON('{"type":"LineString","coordinates":[[44.10,15.30],[44.20,15.30]]}'), 4326)
     );
-  EXCEPTION WHEN check_violation THEN
+  EXCEPTION WHEN OTHERS THEN
     v_invalid_polygon := true;
   END;
   IF NOT v_invalid_polygon THEN
-    RAISE EXCEPTION 'service-area polygon JSON type was not enforced';
+    RAISE EXCEPTION 'service-area polygon geometry type was not enforced';
   END IF;
 
   INSERT INTO dsh_platform_zones (

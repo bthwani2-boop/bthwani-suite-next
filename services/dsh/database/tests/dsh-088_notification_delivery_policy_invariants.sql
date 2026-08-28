@@ -237,7 +237,7 @@ BEGIN
     ) VALUES (
       v_notification_id,
       'in_app',
-      'pending'
+      'queued'
     );
   EXCEPTION WHEN unique_violation THEN
     v_duplicate := true;
@@ -254,7 +254,7 @@ BEGIN
   ) VALUES (
     v_notification_id,
     'push',
-    'pending',
+    'queued',
     0
   );
 
