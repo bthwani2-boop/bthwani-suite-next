@@ -19,7 +19,7 @@ RUN addgroup -S app \
     && adduser -S -G app app
 
 WORKDIR /app
-COPY --from=build --chown=app:app /out/dsh-api /usr/local/bin/dsh-api
+COPY --from=build /out/dsh-api /usr/local/bin/dsh-api
 
 USER app
 EXPOSE 8080
