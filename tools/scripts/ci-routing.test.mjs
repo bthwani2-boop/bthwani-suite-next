@@ -68,6 +68,7 @@ test("Sonar trusted analysis has one explicit master opt-in", () => {
   assert.match(sonar, /trusted_scan: \{type: boolean, required: false, default: false\}/u);
   assert.match(sonar, /if: \$\{\{ always\(\) && inputs\.trusted_scan && needs\.scope\.result == 'success' && needs\.assemble\.result == 'success' \}\}/u);
   assert.match(master, /trusted_scan: true/u);
+  assert.doesNotMatch(master, /head_ref: master|base_ref: master/u);
   assert.doesNotMatch(sonar, /skip_duplicate_push|needs\.ownership|^  ownership:/mu);
 });
 
@@ -90,6 +91,7 @@ test("final closure is explicit only and runs Full CI before analyzers", () => {
   assert.match(workflow, /workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /pull_request:/u);
   assert.match(workflow, /name: Full CI preflight/u);
+  assert.doesNotMatch(workflow, /full_scope:\s*true/u);
   assert.match(workflow, /needs: \[resolve, ci\]/u);
   for (const worker of ["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml"]) {
     assert.match(workflow, new RegExp(`uses: \.\/.github/workflows/${worker.replace(".", "\\.")}`, "u"), worker);
