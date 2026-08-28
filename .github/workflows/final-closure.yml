@@ -273,7 +273,7 @@ jobs:
             # an actor approval for their own pull request, so an approval
             # with commit_id == HEAD is an independent human decision on this
             # exact byte state. Stale approvals on older heads do not count.
-            reviews="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" || echo '[]')"
+            reviews="$(gh api --paginate -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" 2>/dev/null | jq -s 'add // []' || echo '[]')"
             approvals_on_head="$(jq -r --arg head "${HEAD_SHA}" '[.[] | select(.state == "APPROVED" and .commit_id == $head)] | length' <<<"${reviews}" || echo 0)"
             if (( approvals_on_head < 1 )); then
               failures+=("human-review:0-approvals-bound-to-${HEAD_SHA}")
@@ -330,7 +330,7 @@ jobs:
           classifier="$(CI_BASE_SHA="${BASE_SHA}" CI_HEAD_SHA="${HEAD_SHA}" node tools/scripts/detect-ci-context.mjs)"
           risk_classes="$(jq -r '.risk_classes | join(",")' <<<"${classifier}")"
           required_jobs="$(jq -r '.required_jobs | join(",")' <<<"${classifier}")"
-          reviews="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" || echo '[]')"
+          reviews="$(gh api --paginate -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" 2>/dev/null | jq -s 'add // []' || echo '[]')"
           approvals_on_head="$(jq -r --arg head "${HEAD_SHA}" '[.[] | select(.state == "APPROVED" and .commit_id == $head)] | length' <<<"${reviews}" || echo 0)"
           manifest="$(mktemp -d)/closure-manifest.json"
           jq -n \
