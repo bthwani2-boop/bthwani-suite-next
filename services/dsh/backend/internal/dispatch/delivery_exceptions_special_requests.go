@@ -21,22 +21,22 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 	newCaptainID, note, actorID string,
 ) (*DeliveryException, error) {
 	var (
-		specialRequestID string
-		assignmentStatus AssignmentStatus
-		deliveryStatus   DeliveryStatus
-		requestType      specialrequests.RequestType
-		requestStatus    specialrequests.RequestStatus
-		requestVersion   int
-		operatorContextID         string
-		correlationID    sql.NullString
+		specialRequestID  string
+		assignmentStatus  AssignmentStatus
+		deliveryStatus    DeliveryStatus
+		requestType       specialrequests.RequestType
+		requestStatus     specialrequests.RequestStatus
+		requestVersion    int
+		operatorContextID string
+		correlationID     sql.NullString
 	)
 	if err := tx.QueryRow(`
 		SELECT sr.id::text, a.status, d.status, sr.request_type, sr.status, sr.version, sr.operator_context_id, sr.correlation_id
 		FROM dsh_assignments a
 		JOIN dsh_deliveries d ON d.assignment_id = a.id
 		JOIN dsh_special_requests sr ON sr.id = a.special_request_id
-		WHERE a.id = $1::uuid AND a.captain_id = $2
-		FOR UPDATE OF a, d, sr`, current.AssignmentID, current.CaptainID).
+		WHERE a.id = $1::uuid AND a.captain_id = $2 AND sr.operator_context_id = $3
+		FOR UPDATE OF a, d, sr`, current.AssignmentID, current.CaptainID, current.OperatorContextID).
 		Scan(&specialRequestID, &assignmentStatus, &deliveryStatus, &requestType, &requestStatus, &requestVersion, &operatorContextID, &correlationID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -62,9 +62,9 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 
 	var replacementAssignmentID string
 	if err := tx.QueryRow(`
-		INSERT INTO dsh_assignments (special_request_id, captain_id, assigned_by, status, response_deadline_at)
-		VALUES ($1::uuid, $2, $3, 'offered', NOW() + INTERVAL '90 seconds')
-		RETURNING id::text`, specialRequestID, newCaptainID, actorID).Scan(&replacementAssignmentID); err != nil {
+		INSERT INTO dsh_assignments (operator_context_id, special_request_id, captain_id, assigned_by, status, response_deadline_at)
+		VALUES ($1, $2::uuid, $3, $4, 'offered', NOW() + INTERVAL '90 seconds')
+		RETURNING id::text`, current.OperatorContextID, specialRequestID, newCaptainID, actorID).Scan(&replacementAssignmentID); err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(`
@@ -98,8 +98,8 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 		    resolution_action = 'reassign_captain', resolution_note = $2,
 		    replacement_assignment_id = $3::uuid, replacement_captain_id = $4,
 		    version = version + 1, updated_at = NOW()
-		WHERE id = $5::uuid AND version = $6 AND status IN ('open', 'acknowledged')`,
-		actorID, note, replacementAssignmentID, newCaptainID, current.ID, expectedVersion)
+		WHERE id = $5::uuid AND operator_context_id = $7 AND version = $6 AND status IN ('open', 'acknowledged')`,
+		actorID, note, replacementAssignmentID, newCaptainID, current.ID, expectedVersion, current.OperatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -135,5 +135,5 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 		return nil, err
 	}
 
-	return getDeliveryExceptionForUpdate(tx, current.ID)
+	return getDeliveryExceptionForUpdateForContext(tx, current.OperatorContextID, current.ID)
 }

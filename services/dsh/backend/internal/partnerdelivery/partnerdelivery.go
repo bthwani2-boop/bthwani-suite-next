@@ -143,6 +143,24 @@ func GetForUpdateByOrderID(tx *sql.Tx, orderID string) (*PartnerDeliveryTask, er
 	return t, err
 }
 
+// GetForUpdateByOrderIDForOperatorContext locks the task only when its source
+// order belongs to the trusted operator context.
+func GetForUpdateByOrderIDForOperatorContext(tx *sql.Tx, operatorContextID, orderID string) (*PartnerDeliveryTask, error) {
+	if strings.TrimSpace(operatorContextID) == "" || strings.TrimSpace(orderID) == "" {
+		return nil, ErrInvalid
+	}
+	query := `SELECT ` + taskColumnsPrefixed + `
+		FROM dsh_partner_delivery_tasks t
+		JOIN dsh_orders o ON o.id=t.order_id
+		WHERE t.order_id=$1::uuid AND o.operator_context_id=$2
+		FOR UPDATE OF t`
+	t, err := scanTask(tx.QueryRow(query, orderID, operatorContextID).Scan)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return t, err
+}
+
 // GetByOrderIDForOperatorContext returns the task row for order_id if it belongs to operatorContextID.
 func GetByOrderIDForOperatorContext(db *sql.DB, operatorContextID, orderID string) (*PartnerDeliveryTask, error) {
 	if strings.TrimSpace(operatorContextID) == "" || strings.TrimSpace(orderID) == "" {
@@ -295,4 +313,3 @@ func ListForOperatorContext(db *sql.DB, operatorContextID string, filter ListFil
 	}
 	return tasks, rows.Err()
 }
-

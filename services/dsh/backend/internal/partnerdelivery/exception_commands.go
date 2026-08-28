@@ -40,8 +40,8 @@ func (s *Service) RaiseExceptionCommand(ctx context.Context, operatorContextID, 
 		return nil, err
 	}
 	evidenceJSON, _ := json.Marshal(evidenceReferences)
-	fingerprint := commandFingerprint("raise_exception", taskID, fmt.Sprint(expectedVersion), reason, string(evidenceJSON))
-	return s.executeCommand(ctx, actorID, commandID, "raise_exception", fingerprint,
+	fingerprint := commandFingerprint("raise_exception", operatorContextID, taskID, fmt.Sprint(expectedVersion), reason, string(evidenceJSON))
+	return s.executeCommand(ctx, operatorContextID, actorID, commandID, "raise_exception", fingerprint,
 		func() (*PartnerDeliveryTask, error) {
 			return s.raiseExceptionWithEvidence(ctx, operatorContextID, taskID, expectedVersion, reason, evidenceJSON, actorID, actorRole, correlationID)
 		},
@@ -78,15 +78,16 @@ func (s *Service) raiseExceptionWithEvidence(ctx context.Context, operatorContex
 		    exception_reported_at = NOW(),
 		    version = version + 1,
 		    updated_at = NOW()
-		WHERE id = $4 AND version = $5`,
-		string(StatusException), reason, string(evidenceJSON), taskID, expectedVersion)
+		WHERE id = $4 AND version = $5
+		  AND EXISTS (SELECT 1 FROM dsh_orders o WHERE o.id = dsh_partner_delivery_tasks.order_id AND o.operator_context_id = $6)`,
+		string(StatusException), reason, string(evidenceJSON), taskID, expectedVersion, operatorContextID)
 	if err != nil {
 		return nil, err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return nil, ErrVersionConflict
 	}
-	updated, err := scanTask(tx.QueryRow(`SELECT `+taskColumns+` FROM dsh_partner_delivery_tasks WHERE id = $1`, taskID).Scan)
+	updated, err := scanTask(tx.QueryRow(`SELECT `+taskColumnsPrefixed+` FROM dsh_partner_delivery_tasks t JOIN dsh_orders o ON o.id=t.order_id WHERE t.id = $1 AND o.operator_context_id = $2`, taskID, operatorContextID).Scan)
 	if err != nil {
 		return nil, err
 	}
@@ -99,5 +100,5 @@ func (s *Service) raiseExceptionWithEvidence(ctx context.Context, operatorContex
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return Get(s.db, updated.ID)
+	return GetForOperatorContext(s.db, operatorContextID, updated.ID)
 }

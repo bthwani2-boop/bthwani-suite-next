@@ -156,10 +156,10 @@ func TestReplacementAssignmentImmediatelySupersedesStoreCaptainHandoffDBIntegrat
 	}
 	if _, err = tx.Exec(`
 		INSERT INTO dsh_assignments (
-			order_id, captain_id, assigned_by, status, response_deadline_at
+			operator_context_id, order_id, captain_id, assigned_by, status, response_deadline_at
 		) VALUES (
-			$1::uuid, $2, 'operator-reassignment-test', 'offered', NOW() + interval '90 seconds'
-		)`, fixture.OrderID, fixture.CaptainID+"-replacement"); err != nil {
+			$1, $2::uuid, $3, 'operator-reassignment-test', 'offered', NOW() + interval '90 seconds'
+		)`, fixture.OperatorContextID, fixture.OrderID, fixture.CaptainID+"-replacement"); err != nil {
 		t.Fatal(err)
 	}
 	if err = tx.Commit(); err != nil {

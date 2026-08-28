@@ -3,6 +3,7 @@ package dispatch
 import (
 	"database/sql"
 	"errors"
+	"strings"
 
 	"dsh-api/internal/orders"
 	"dsh-api/internal/specialrequests"
@@ -12,6 +13,20 @@ func lockAssignment(tx *sql.Tx, assignmentID, captainID string) (*Assignment, er
 	row := tx.QueryRow(assignmentSelectSQL()+`
 		WHERE a.id = $1::uuid AND a.captain_id = $2
 		FOR UPDATE OF a, d`, assignmentID, captainID)
+	assignment, err := scanAssignmentRowWithDelivery(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return assignment, err
+}
+
+func lockAssignmentForOperatorContext(tx *sql.Tx, operatorContextID, assignmentID, captainID string) (*Assignment, error) {
+	if strings.TrimSpace(operatorContextID) == "" {
+		return nil, ErrInvalid
+	}
+	row := tx.QueryRow(assignmentSelectSQL()+`
+		WHERE a.id = $1::uuid AND a.captain_id = $2 AND a.operator_context_id = $3
+		FOR UPDATE OF a, d`, assignmentID, captainID, operatorContextID)
 	assignment, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound

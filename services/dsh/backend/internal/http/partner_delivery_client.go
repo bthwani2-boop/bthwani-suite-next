@@ -38,7 +38,7 @@ func (s *protectedStoreServer) handleGetClientPartnerDeliveryTask(w http.Respons
 		return
 	}
 
-	task, err := partnerdelivery.GetByOrderID(s.db, order.ID)
+	task, err := partnerdelivery.GetByOrderIDForOperatorContext(s.db, actor.OperatorContextID, order.ID)
 	if errors.Is(err, partnerdelivery.ErrNotFound) {
 		store.SendJSON(w, http.StatusOK, map[string]any{"task": nil, "stage": "unassigned"})
 		return

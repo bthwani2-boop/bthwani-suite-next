@@ -86,7 +86,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.Respon
 	if !ok {
 		return
 	}
-	task, err := partnerdelivery.GetByOrderID(s.db, ownedOrder.ID)
+	task, err := partnerdelivery.GetByOrderIDForOperatorContext(s.db, actor.OperatorContextID, ownedOrder.ID)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -124,7 +124,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.Respon
 	}
 
 	updated, err := partnerdelivery.NewService(s.db, s.workforce).SubmitProofCommand(
-		r.Context(), task.ID, task.Version, "photo", mediaRef,
+		r.Context(), actor.OperatorContextID, task.ID, task.Version, "photo", mediaRef,
 		actor.ID, actor.Role, correlationID, commandID,
 	)
 	if err != nil {

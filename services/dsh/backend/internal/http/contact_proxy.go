@@ -22,7 +22,7 @@ func (s *protectedStoreServer) handleCaptainContactProxy(w http.ResponseWriter, 
 
 	assignmentID := r.PathValue("assignmentId")
 
-	assignment, err := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
+	assignment, err := dispatch.GetCaptainAssignmentForOperatorContext(s.db, actor.OperatorContextID, assignmentID, actor.ID)
 	if err != nil {
 		if errors.Is(err, dispatch.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "dispatch assignment not found")

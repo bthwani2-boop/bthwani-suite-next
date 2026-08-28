@@ -50,9 +50,9 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 
 	var assignmentID string
 	if err := db.QueryRow(`
-		INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at)
-		VALUES($1::uuid,$2,'operator-test','accepted',NOW()+INTERVAL '90 seconds',NOW())
-		RETURNING id::text`, orderID, captainID).Scan(&assignmentID); err != nil {
+		INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at)
+		VALUES($1,$2::uuid,$3,'operator-test','accepted',NOW()+INTERVAL '90 seconds',NOW())
+		RETURNING id::text`, operatorContextID, orderID, captainID).Scan(&assignmentID); err != nil {
 		t.Fatalf("insert assignment: %v", err)
 	}
 	if _, err := db.Exec(`
@@ -98,7 +98,7 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 		t.Fatalf("location must remain available during exception response: %v", err)
 	}
 
-	queue, err := ListOperatorDeliveryExceptions(db, DeliveryExceptionOpen, 100)
+	queue, err := ListOperatorDeliveryExceptions(db, operatorContextID, DeliveryExceptionOpen, 100)
 	if err != nil {
 		t.Fatalf("list operator exceptions: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 		t.Fatalf("reported exception missing from operator queue")
 	}
 
-	acknowledged, err := AcknowledgeDeliveryException(db, item.ID, item.Version, "operator-1")
+	acknowledged, err := AcknowledgeDeliveryException(db, operatorContextID, item.ID, item.Version, "operator-1")
 	if err != nil {
 		t.Fatalf("acknowledge delivery exception: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 		t.Fatalf("unexpected acknowledged state: %+v", acknowledged)
 	}
 
-	resolved, err := ResolveDeliveryExceptionRetrySameCaptain(db, item.ID, acknowledged.Version, "تم التواصل مع العميل والسماح بإعادة المحاولة", "operator-1")
+	resolved, err := ResolveDeliveryExceptionRetrySameCaptain(db, operatorContextID, item.ID, acknowledged.Version, "تم التواصل مع العميل والسماح بإعادة المحاولة", "operator-1")
 	if err != nil {
 		t.Fatalf("resolve delivery exception: %v", err)
 	}

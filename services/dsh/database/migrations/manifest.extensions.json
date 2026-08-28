@@ -373,6 +373,34 @@
       "sha256": "d8b4ad3790bf74ec3ba3fea3a6e2e2e6ce4d9911a2c5dedc478637d5fc583b8e",
       "historicalPrefix": "1052",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 294,
+      "file": "dsh-1053_incident_payload_and_delivery_context.sql",
+      "sha256": "f03d8eff1ac9a153019b612a6eea3cd99f552ec5970049a0fc357ad7797a4256",
+      "historicalPrefix": "1053",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 295,
+      "file": "dsh-1054_partner_delivery_command_receipt_context.sql",
+      "sha256": "0888a98fff2557585c669b53cc590f4b4d1960818a602e2b5d0f60bd2d6880a1",
+      "historicalPrefix": "1054",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 296,
+      "file": "dsh-1055_dispatch_assignment_context_integrity.sql",
+      "sha256": "a0032b196944beadef29b0d28a551b20edd55fee44a6d71a3a24c49021437020",
+      "historicalPrefix": "1055",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 297,
+      "file": "dsh-1056_delivery_sla_alert_context.sql",
+      "sha256": "686ac61adbbacb7c6a4b2307d4e54017b158be6535f872d8d9543ca6ec113c1a",
+      "historicalPrefix": "1056",
+      "state": "ACTIVE"
     }
   ]
 }

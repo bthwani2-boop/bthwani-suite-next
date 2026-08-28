@@ -16,7 +16,7 @@ func (s *protectedStoreServer) handleIssueDeliveryPIN(w http.ResponseWriter, r *
 	if !ok {
 		return
 	}
-	issued, err := dispatch.IssueDeliveryPIN(s.db, r.PathValue("orderId"), actor.ID)
+	issued, err := dispatch.IssueDeliveryPINForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("orderId"), actor.ID)
 	if err != nil {
 		writeDeliveryProofError(w, err)
 		return
@@ -76,7 +76,7 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 			purpose = "delivery_signature"
 		}
 		var orderID string
-		if err := s.db.QueryRowContext(r.Context(), `SELECT order_id FROM dsh_assignments WHERE id = $1::uuid`, assignmentID).Scan(&orderID); err != nil {
+		if err := s.db.QueryRowContext(r.Context(), `SELECT order_id FROM dsh_assignments WHERE id = $1::uuid AND operator_context_id = $2`, assignmentID, actor.OperatorContextID).Scan(&orderID); err != nil {
 			s.removeDeliveryProofObject(r, "", uploaded.storageKey)
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "assignment not found")
 			return
@@ -105,6 +105,7 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 			}
 		}
 		input = dispatch.SubmitDeliveryProofInput{
+			OperatorContextID:     actor.OperatorContextID,
 			Method:                method,
 			PIN:                   pin,
 			RecipientRelationship: strings.TrimSpace(r.FormValue("recipientRelationship")),
@@ -150,6 +151,7 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 			return
 		}
 		input = dispatch.SubmitDeliveryProofInput{
+			OperatorContextID:     actor.OperatorContextID,
 			Method:                body.Method,
 			PIN:                   strings.TrimSpace(body.PIN),
 			PhotoMediaRef:         strings.TrimSpace(body.PhotoMediaRef),
@@ -186,7 +188,7 @@ func (s *protectedStoreServer) handleGetCaptainDeliveryProof(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	proof, err := dispatch.GetCaptainDeliveryProof(s.db, r.PathValue("assignmentId"), actor.ID)
+	proof, err := dispatch.GetCaptainDeliveryProofForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		writeDeliveryProofError(w, err)
 		return
@@ -199,7 +201,7 @@ func (s *protectedStoreServer) handleGetClientDeliveryProof(w http.ResponseWrite
 	if !ok {
 		return
 	}
-	proof, err := dispatch.GetClientDeliveryProof(s.db, r.PathValue("orderId"), actor.ID)
+	proof, err := dispatch.GetClientDeliveryProofForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("orderId"), actor.ID)
 	if err != nil {
 		writeDeliveryProofError(w, err)
 		return
@@ -208,12 +210,12 @@ func (s *protectedStoreServer) handleGetClientDeliveryProof(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleListOperatorDeliveryProofs(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	status := dispatch.DeliveryProofStatus(strings.TrimSpace(r.URL.Query().Get("status")))
-	proofs, err := dispatch.ListOperatorDeliveryProofs(s.db, status, 100)
+	proofs, err := dispatch.ListOperatorDeliveryProofsForOperatorContext(s.db, actor.OperatorContextID, status, 100)
 	if err != nil {
 		writeDeliveryProofError(w, err)
 		return
@@ -226,11 +228,11 @@ func (s *protectedStoreServer) handleListOperatorDeliveryProofs(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleGetOperatorDeliveryProof(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	proof, err := dispatch.GetOperatorDeliveryProof(s.db, r.PathValue("proofId"))
+	proof, err := dispatch.GetOperatorDeliveryProofForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("proofId"))
 	if err != nil {
 		writeDeliveryProofError(w, err)
 		return
@@ -264,10 +266,11 @@ func (s *protectedStoreServer) handleReviewOperatorDeliveryProof(w http.Response
 		return
 	}
 	proof, err := dispatch.ReviewDeliveryProof(s.db, r.PathValue("proofId"), actor.ID, dispatch.ReviewDeliveryProofInput{
-		ExpectedVersion: body.ExpectedVersion,
-		Reason:          strings.TrimSpace(body.Reason),
-		Accept:          accept,
-		IdempotencyKey:  idempotencyKey,
+		OperatorContextID: actor.OperatorContextID,
+		ExpectedVersion:   body.ExpectedVersion,
+		Reason:            strings.TrimSpace(body.Reason),
+		Accept:            accept,
+		IdempotencyKey:    idempotencyKey,
 	})
 	if err != nil {
 		writeDeliveryProofError(w, err)

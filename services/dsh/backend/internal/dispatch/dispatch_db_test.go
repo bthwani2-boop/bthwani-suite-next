@@ -97,10 +97,10 @@ func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) 
 	}
 
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_assignments (order_id, captain_id, assigned_by, status, response_deadline_at, accepted_at)
-		VALUES ($1::uuid, $2, 'operator-test', 'accepted', NOW() + interval '1 hour', NOW())
+		INSERT INTO dsh_assignments (operator_context_id, order_id, captain_id, assigned_by, status, response_deadline_at, accepted_at)
+		VALUES ($1, $2::uuid, $3, 'operator-test', 'accepted', NOW() + interval '1 hour', NOW())
 		RETURNING id::text`,
-		orderID, captainID,
+		operatorContextID, orderID, captainID,
 	).Scan(&assignmentID); err != nil {
 		t.Fatalf("failed to insert test assignment: %v", err)
 	}

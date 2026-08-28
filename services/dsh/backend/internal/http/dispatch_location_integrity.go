@@ -149,8 +149,8 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 	err = s.db.QueryRowContext(r.Context(), `
 		SELECT location_recorded_at, last_latitude, last_longitude
 		FROM dsh_assignments
-		WHERE id = $1::uuid AND captain_id = $2`,
-		r.PathValue("assignmentId"), actor.ID,
+		WHERE id = $1::uuid AND captain_id = $2 AND operator_context_id = $3`,
+		r.PathValue("assignmentId"), actor.ID, actor.OperatorContextID,
 	).Scan(&previousRecordedAt, &previousLatitude, &previousLongitude)
 	if errors.Is(err, sql.ErrNoRows) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "dispatch assignment not found")
@@ -162,7 +162,7 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 	}
 
 	if sameDispatchLocationSample(recordedAt, body.Latitude, body.Longitude, previousRecordedAt, previousLatitude, previousLongitude) {
-		assignment, getErr := dispatch.GetCaptainAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
+		assignment, getErr := dispatch.GetCaptainAssignmentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID)
 		s.writeDispatchResult(w, http.StatusOK, assignment, getErr)
 		return
 	}

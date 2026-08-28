@@ -35,8 +35,8 @@ func TestDeliveryExceptionReassignsBeforePickupAtomicallyDBIntegration(t *testin
 	}
 	var oldAssignmentID string
 	if err := db.QueryRow(`
-		INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at)
-		VALUES($1::uuid,$2,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, orderID, oldCaptainID).Scan(&oldAssignmentID); err != nil {
+		INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at)
+		VALUES($1,$2::uuid,$3,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, operatorContextID, orderID, oldCaptainID).Scan(&oldAssignmentID); err != nil {
 		t.Fatalf("insert assignment: %v", err)
 	}
 	if _, err := db.Exec(`INSERT INTO dsh_deliveries(assignment_id,order_id,captain_id,status) VALUES($1::uuid,$2::uuid,$3,'driver_arrived_store')`, oldAssignmentID, orderID, oldCaptainID); err != nil {
@@ -57,7 +57,7 @@ func TestDeliveryExceptionReassignsBeforePickupAtomicallyDBIntegration(t *testin
 	if err != nil {
 		t.Fatalf("report exception: %v", err)
 	}
-	resolved, err := ResolveDeliveryExceptionReassignCaptain(db, item.ID, item.Version, newCaptainID, "تم التحقق من العطل وإعادة الإسناد", "operator-1")
+	resolved, err := ResolveDeliveryExceptionReassignCaptain(db, operatorContextID, item.ID, item.Version, newCaptainID, "تم التحقق من العطل وإعادة الإسناد", "operator-1")
 	if err != nil {
 		t.Fatalf("resolve reassign: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestDeliveryExceptionReassignsBeforePickupAtomicallyDBIntegration(t *testin
 		t.Fatalf("captain inboxes not switched atomically: old=%+v new=%+v", oldInbox, newInbox)
 	}
 
-	replayed, err := ResolveDeliveryExceptionReassignCaptain(db, item.ID, item.Version, newCaptainID, "تم التحقق من العطل وإعادة الإسناد", "operator-1")
+	replayed, err := ResolveDeliveryExceptionReassignCaptain(db, operatorContextID, item.ID, item.Version, newCaptainID, "تم التحقق من العطل وإعادة الإسناد", "operator-1")
 	if err != nil || replayed.ReplacementAssignmentID == nil || *replayed.ReplacementAssignmentID != *resolved.ReplacementAssignmentID {
 		t.Fatalf("expected idempotent resolved reassignment, got %+v err=%v", replayed, err)
 	}
@@ -124,7 +124,7 @@ func TestDeliveryExceptionRejectsReassignmentAfterPickupDBIntegration(t *testing
 		t.Fatal(err)
 	}
 	var assignmentID string
-	if err := db.QueryRow(`INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at) VALUES($1::uuid,$2,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, orderID, captainID).Scan(&assignmentID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at) VALUES($1,$2::uuid,$3,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, operatorContextID, orderID, captainID).Scan(&assignmentID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`INSERT INTO dsh_deliveries(assignment_id,order_id,captain_id,status) VALUES($1::uuid,$2::uuid,$3,'picked_up')`, assignmentID, orderID, captainID); err != nil {
@@ -144,7 +144,7 @@ func TestDeliveryExceptionRejectsReassignmentAfterPickupDBIntegration(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ResolveDeliveryExceptionReassignCaptain(db, item.ID, item.Version, "other-captain", "محاولة إعادة إسناد غير مسموحة", "operator-1"); !errors.Is(err, ErrConflict) {
+	if _, err := ResolveDeliveryExceptionReassignCaptain(db, operatorContextID, item.ID, item.Version, "other-captain", "محاولة إعادة إسناد غير مسموحة", "operator-1"); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected reassignment conflict after pickup, got %v", err)
 	}
 }

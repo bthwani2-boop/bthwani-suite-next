@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"dsh-api/internal/dispatch"
@@ -256,10 +257,15 @@ func (s *protectedStoreServer) handleGetPartnerDispatchTrackingReference(w http.
 }
 
 func (s *protectedStoreServer) handleListDispatchTrackingAlerts(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.ActorFromContext(r.Context()); !ok {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
 		return
 	}
-	assignments, err := dispatch.ListOperatorAssignments(s.db, 200)
+	if strings.TrimSpace(actor.OperatorContextID) == "" {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
+	assignments, err := dispatch.ListOperatorAssignmentsInOperatorContext(s.db, actor.OperatorContextID, 200)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list dispatch tracking alerts")
 		return

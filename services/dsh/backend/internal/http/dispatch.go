@@ -39,7 +39,7 @@ func (s *protectedStoreServer) handlePushDispatchLocation(w http.ResponseWriter,
 		}
 		input.RecordedAt = &parsed
 	}
-	assignment, err := dispatch.PushLocation(s.db, r.PathValue("assignmentId"), actor.ID, input)
+	assignment, err := dispatch.PushLocationForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID, input)
 	s.writeDispatchResult(w, http.StatusOK, assignment, err)
 }
 
@@ -61,7 +61,8 @@ func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWrit
 		return
 	}
 	item, err := dispatch.ReportDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID, dispatch.ReportDeliveryExceptionInput{
-		ReasonCode: body.ReasonCode, Note: body.Note,
+		OperatorContextID: actor.OperatorContextID,
+		ReasonCode:        body.ReasonCode, Note: body.Note,
 		CorrelationID: operationalCorrelationID(r, body.CorrelationID),
 		Latitude:      body.Latitude, Longitude: body.Longitude,
 		ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
@@ -79,7 +80,7 @@ func (s *protectedStoreServer) handleGetCaptainDeliveryException(w http.Response
 	if !ok {
 		return
 	}
-	item, err := dispatch.GetCaptainOpenDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID)
+	item, err := dispatch.GetCaptainOpenDeliveryExceptionForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -89,11 +90,11 @@ func (s *protectedStoreServer) handleGetCaptainDeliveryException(w http.Response
 
 // GET /dsh/operator/delivery-exceptions
 func (s *protectedStoreServer) handleListOperatorDeliveryExceptions(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	items, err := dispatch.ListOperatorDeliveryExceptions(s.db, dispatch.DeliveryExceptionStatus(r.URL.Query().Get("status")), 100)
+	items, err := dispatch.ListOperatorDeliveryExceptions(s.db, actor.OperatorContextID, dispatch.DeliveryExceptionStatus(r.URL.Query().Get("status")), 100)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -156,7 +157,7 @@ func (s *protectedStoreServer) handleAcknowledgeDeliveryException(w http.Respons
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	item, err := dispatch.AcknowledgeDeliveryException(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, actor.ID)
+	item, err := dispatch.AcknowledgeDeliveryException(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, actor.ID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -183,13 +184,13 @@ func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWri
 	var err error
 	switch body.Action {
 	case "retry_same_captain":
-		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
 	case "reassign_captain":
-		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
 	case "return_to_store":
-		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
 	case "cancel_order":
-		item, err = dispatch.ResolveDeliveryExceptionCancelOrder(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionCancelOrder(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
 	default:
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
 		return
@@ -207,7 +208,7 @@ func (s *protectedStoreServer) handleArriveReturnToStore(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	item, err := dispatch.CaptainArriveReturnToStore(s.db, r.PathValue("assignmentId"), actor.ID)
+	item, err := dispatch.CaptainArriveReturnToStoreForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return

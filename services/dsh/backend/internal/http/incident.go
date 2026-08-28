@@ -10,7 +10,7 @@ import (
 )
 
 // IncidentPermissionOverride gates every sovereign-intervention entry point
-// (cancel, suspend, raise_exception against a partner-owned task). It is
+// (cancel and raise_exception against a partner-owned task). It is
 // deliberately distinct from the ordinary control-panel permissions so an
 // operator role can read/monitor without being able to override.
 const IncidentPermissionOverride = "incident.override"
@@ -23,6 +23,7 @@ type reportIncidentBody struct {
 	Reason             string   `json:"reason"`
 	TicketReference    string   `json:"ticketReference"`
 	CorrelationID      string   `json:"correlationId"`
+	CommandID          string   `json:"commandId"`
 	ExpectedVersion    int      `json:"expectedVersion"`
 	EvidenceReferences []string `json:"evidenceReferences"`
 	ReasonCode         string   `json:"reasonCode"`
@@ -91,6 +92,7 @@ func (s *protectedStoreServer) handleReportOperationalIncident(w http.ResponseWr
 		ActorID:            actor.ID,
 		ActorRole:          actor.Role,
 		CorrelationID:      operationalCorrelationID(r, body.CorrelationID),
+		CommandID:          strings.TrimSpace(body.CommandID),
 		ExpectedVersion:    body.ExpectedVersion,
 		EvidenceReferences: body.EvidenceReferences,
 		ReasonCode:         body.ReasonCode,

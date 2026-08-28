@@ -32,6 +32,7 @@ func TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration(t *te
 	resolutionNote := "تمت مطابقة الطرد وإضافة القطعة الناقصة"
 	resolved, err := ResolveDeliveryExceptionRetrySameCaptain(
 		db,
+		item.OperatorContextID,
 		item.ID,
 		item.Version,
 		resolutionNote,
@@ -98,6 +99,7 @@ func TestHandoffExceptionReassignmentSupersedesCustodyDBIntegration(t *testing.T
 	replacementCaptainID := fixture.CaptainID + "-replacement"
 	resolved, err := ResolveDeliveryExceptionReassignCaptain(
 		db,
+		item.OperatorContextID,
 		item.ID,
 		item.Version,
 		replacementCaptainID,

@@ -178,10 +178,13 @@ func sameIncidentCommand(existing *Incident, input ReportInput) bool {
 		return false
 	}
 	stored, ok := existing.commandInput()
-	if ok {
-		return reflect.DeepEqual(commandEnvelope(normalizeReportInput(stored)), commandEnvelope(normalizeReportInput(input)))
+	if !ok {
+		// A legacy row without the canonical envelope cannot prove that all
+		// material command fields are identical. Never infer equality from
+		// the projected columns; fail closed and return a collision.
+		return false
 	}
-	return existing.OperatorContextID == input.OperatorContextID && existing.OrderID == input.OrderID && existing.TargetEntityType == input.TargetEntityType && existing.TargetEntityID == input.TargetEntityID && existing.IncidentType == input.IncidentType && existing.Reason == input.Reason && existing.TicketReference == input.TicketReference && existing.ActorID == input.ActorID && existing.ActorRole == input.ActorRole && input.ExpectedVersion == 0 && len(input.EvidenceReferences) == 0 && input.CommandID == "" && input.ReasonCode == "" && input.ReasonNote == ""
+	return reflect.DeepEqual(commandEnvelope(normalizeReportInput(stored)), commandEnvelope(normalizeReportInput(input)))
 }
 
 func (s *Service) replayCommand(ctx context.Context, existing *Incident, input ReportInput) (*Incident, error) {
@@ -231,7 +234,7 @@ func (s *Service) apply(ctx context.Context, incidentID string, input ReportInpu
 		if _, err := s.db.ExecContext(ctx, `
 			UPDATE dsh_operational_incidents
 			SET status = 'failed', failure_reason = $2, updated_at = NOW()
-			WHERE id = $1`, incidentID, applyErr.Error()); err != nil {
+			WHERE id = $1 AND operator_context_id = $3`, incidentID, applyErr.Error(), input.OperatorContextID); err != nil {
 			return nil, err
 		}
 		return nil, applyErr
@@ -239,7 +242,7 @@ func (s *Service) apply(ctx context.Context, incidentID string, input ReportInpu
 	if _, err := s.db.ExecContext(ctx, `
 		UPDATE dsh_operational_incidents
 		SET status = 'applied', after_state = $2::jsonb, applied_at = NOW(), updated_at = NOW()
-		WHERE id = $1`, incidentID, nullableJSON(after)); err != nil {
+		WHERE id = $1 AND operator_context_id = $3`, incidentID, nullableJSON(after), input.OperatorContextID); err != nil {
 		return nil, err
 	}
 	return Get(s.db, incidentID, input.OperatorContextID)

@@ -10,13 +10,14 @@ import (
 )
 
 type outboundHandoffFixture struct {
-	AssignmentID     string
-	CaptainID        string
-	OrderID          string
-	StoreID          string
-	PartnerID        string
-	CheckoutIntentID string
-	CartID           string
+	OperatorContextID string
+	AssignmentID      string
+	CaptainID         string
+	OrderID           string
+	StoreID           string
+	PartnerID         string
+	CheckoutIntentID  string
+	CartID            string
 }
 
 func seedOutboundHandoffFixture(t *testing.T, db *sql.DB) outboundHandoffFixture {
@@ -24,12 +25,13 @@ func seedOutboundHandoffFixture(t *testing.T, db *sql.DB) outboundHandoffFixture
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	fixture := outboundHandoffFixture{
-		CaptainID: "handoff-captain-" + suffix,
-		StoreID:   "handoff-store-" + suffix,
-		PartnerID: "handoff-partner-" + suffix,
+		OperatorContextID: "handoff-OperatorContext-" + suffix,
+		CaptainID:         "handoff-captain-" + suffix,
+		StoreID:           "handoff-store-" + suffix,
+		PartnerID:         "handoff-partner-" + suffix,
 	}
 	clientID := "handoff-client-" + suffix
-	operatorContextID := "handoff-OperatorContext-" + suffix
+	operatorContextID := fixture.OperatorContextID
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_partners (id, legal_name_ar, display_name, legal_identity_number, primary_phone)
@@ -71,9 +73,9 @@ func seedOutboundHandoffFixture(t *testing.T, db *sql.DB) outboundHandoffFixture
 		t.Fatalf("insert order: %v", err)
 	}
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_assignments (order_id, captain_id, assigned_by, status, response_deadline_at, accepted_at)
-		VALUES ($1::uuid, $2, 'operator-test', 'accepted', NOW() + interval '1 hour', NOW())
-		RETURNING id::text`, fixture.OrderID, fixture.CaptainID,
+		INSERT INTO dsh_assignments (operator_context_id, order_id, captain_id, assigned_by, status, response_deadline_at, accepted_at)
+		VALUES ($1, $2::uuid, $3, 'operator-test', 'accepted', NOW() + interval '1 hour', NOW())
+		RETURNING id::text`, fixture.OperatorContextID, fixture.OrderID, fixture.CaptainID,
 	).Scan(&fixture.AssignmentID); err != nil {
 		t.Fatalf("insert assignment: %v", err)
 	}
@@ -195,9 +197,9 @@ func TestOutboundHandoffReassignmentSupersedesPriorAttemptDBIntegration(t *testi
 		t.Fatal(err)
 	}
 	if err = tx.QueryRow(`
-		INSERT INTO dsh_assignments (order_id, captain_id, assigned_by, status, response_deadline_at, accepted_at)
-		VALUES ($1::uuid, $2, 'operator-reassign-test', 'accepted', NOW() + interval '1 hour', NOW())
-		RETURNING id::text`, fixture.OrderID, newCaptainID).Scan(&newAssignmentID); err != nil {
+		INSERT INTO dsh_assignments (operator_context_id, order_id, captain_id, assigned_by, status, response_deadline_at, accepted_at)
+		VALUES ($1, $2::uuid, $3, 'operator-reassign-test', 'accepted', NOW() + interval '1 hour', NOW())
+		RETURNING id::text`, fixture.OperatorContextID, fixture.OrderID, newCaptainID).Scan(&newAssignmentID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = tx.Exec(`

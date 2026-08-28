@@ -88,6 +88,7 @@ type DeliveryProof struct {
 }
 
 type SubmitDeliveryProofInput struct {
+	OperatorContextID     string
 	Method                DeliveryProofMethod
 	PIN                   string
 	PhotoMediaRef         string
@@ -101,13 +102,26 @@ type SubmitDeliveryProofInput struct {
 }
 
 type ReviewDeliveryProofInput struct {
-	ExpectedVersion int
-	Reason          string
-	Accept          bool
-	IdempotencyKey  string
+	OperatorContextID string
+	ExpectedVersion   int
+	Reason            string
+	Accept            bool
+	IdempotencyKey    string
 }
 
 func IssueDeliveryPIN(db *sql.DB, orderID, clientID string) (*IssuedDeliveryPIN, error) {
+	return issueDeliveryPIN(db, "", orderID, clientID)
+}
+
+func IssueDeliveryPINForOperatorContext(db *sql.DB, operatorContextID, orderID, clientID string) (*IssuedDeliveryPIN, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return issueDeliveryPIN(db, operatorContextID, orderID, clientID)
+}
+
+func issueDeliveryPIN(db *sql.DB, operatorContextID, orderID, clientID string) (*IssuedDeliveryPIN, error) {
 	orderID = strings.TrimSpace(orderID)
 	clientID = strings.TrimSpace(clientID)
 	if orderID == "" || clientID == "" {
@@ -127,9 +141,10 @@ func IssueDeliveryPIN(db *sql.DB, orderID, clientID string) (*IssuedDeliveryPIN,
 		JOIN dsh_deliveries d ON d.assignment_id = a.id
 		JOIN dsh_orders o ON o.id = a.order_id
 		WHERE a.order_id = $1::uuid AND o.client_id = $2
+		  AND ($3 = '' OR o.operator_context_id = $3)
 		ORDER BY a.created_at DESC
 		LIMIT 1
-		FOR UPDATE OF a, d`, orderID, clientID).Scan(&assignmentID, &assignmentStatus, &deliveryStatus)
+		FOR UPDATE OF a, d`, orderID, clientID, operatorContextID).Scan(&assignmentID, &assignmentStatus, &deliveryStatus)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -194,6 +209,7 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	input.PIN = strings.TrimSpace(input.PIN)
 	input.PhotoMediaRef = strings.TrimSpace(input.PhotoMediaRef)
 	input.SignatureMediaRef = strings.TrimSpace(input.SignatureMediaRef)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	if assignmentID == "" || captainID == "" || input.IdempotencyKey == "" {
 		return nil, fmt.Errorf("%w: assignment, captain and idempotencyKey are required", ErrInvalid)
 	}
@@ -222,6 +238,16 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	}
 	defer tx.Rollback()
 
+	var current *Assignment
+	if input.OperatorContextID == "" {
+		current, err = lockAssignment(tx, assignmentID, captainID)
+	} else {
+		current, err = lockAssignmentForOperatorContext(tx, input.OperatorContextID, assignmentID, captainID)
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	if replay, replayErr := getDeliveryProofByIdempotency(tx, assignmentID, input.IdempotencyKey, fingerprint); replayErr != nil || replay != nil {
 		if replayErr != nil {
 			return nil, replayErr
@@ -232,10 +258,6 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 		return replay, nil
 	}
 
-	current, err := lockAssignment(tx, assignmentID, captainID)
-	if err != nil {
-		return nil, err
-	}
 	if current.OrderID == "" {
 		return nil, fmt.Errorf("%w: delivery proof applies to customer orders only", ErrInvalid)
 	}
@@ -314,12 +336,16 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetCaptainDeliveryProof(db, assignmentID, captainID)
+	if input.OperatorContextID == "" {
+		return GetCaptainDeliveryProof(db, assignmentID, captainID)
+	}
+	return GetCaptainDeliveryProofForOperatorContext(db, input.OperatorContextID, assignmentID, captainID)
 }
 
 func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDeliveryProofInput) (*DeliveryProof, error) {
 	proofID = strings.TrimSpace(proofID)
 	operatorID = strings.TrimSpace(operatorID)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	if proofID == "" || operatorID == "" || len(input.IdempotencyKey) < 8 || input.ExpectedVersion <= 0 || len(input.Reason) < 5 {
@@ -346,13 +372,16 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		if err = tx.Commit(); err != nil {
 			return nil, err
 		}
-		return GetOperatorDeliveryProof(db, proofID)
+		if input.OperatorContextID == "" {
+			return GetOperatorDeliveryProof(db, proofID)
+		}
+		return GetOperatorDeliveryProofForOperatorContext(db, input.OperatorContextID, proofID)
 	}
 	if !errors.Is(receiptErr, sql.ErrNoRows) {
 		return nil, receiptErr
 	}
 
-	proof, _, err := scanDeliveryProofRow(tx.QueryRow(deliveryProofSelectSQL()+` WHERE p.id=$1::uuid FOR UPDATE`, proofID))
+	proof, _, err := scanDeliveryProofRow(tx.QueryRow(deliveryProofSelectSQL()+` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE p.id=$1::uuid AND ($2='' OR a.operator_context_id=$2) FOR UPDATE OF p`, proofID, input.OperatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -370,7 +399,10 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		if err = tx.Commit(); err != nil {
 			return nil, err
 		}
-		return GetOperatorDeliveryProof(db, proofID)
+		if input.OperatorContextID == "" {
+			return GetOperatorDeliveryProof(db, proofID)
+		}
+		return GetOperatorDeliveryProofForOperatorContext(db, input.OperatorContextID, proofID)
 	} else if !errors.Is(receiptErr, sql.ErrNoRows) {
 		return nil, receiptErr
 	}
@@ -402,7 +434,10 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		if err = tx.Commit(); err != nil {
 			return nil, err
 		}
-		return GetOperatorDeliveryProof(db, proofID)
+		if input.OperatorContextID == "" {
+			return GetOperatorDeliveryProof(db, proofID)
+		}
+		return GetOperatorDeliveryProofForOperatorContext(db, input.OperatorContextID, proofID)
 	}
 
 	if !input.Accept {
@@ -445,7 +480,13 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		proof.Status = DeliveryProofAccepted
 		proof.ReviewedByActorID = operatorID
 		proof.ReviewReason = input.Reason
-		current, lockErr := lockAssignment(tx, proof.AssignmentID, proof.CaptainID)
+		var current *Assignment
+		var lockErr error
+		if input.OperatorContextID == "" {
+			current, lockErr = lockAssignment(tx, proof.AssignmentID, proof.CaptainID)
+		} else {
+			current, lockErr = lockAssignmentForOperatorContext(tx, input.OperatorContextID, proof.AssignmentID, proof.CaptainID)
+		}
 		if lockErr != nil {
 			return nil, lockErr
 		}
@@ -462,13 +503,30 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetOperatorDeliveryProof(db, proofID)
+	if input.OperatorContextID == "" {
+		return GetOperatorDeliveryProof(db, proofID)
+	}
+	return GetOperatorDeliveryProofForOperatorContext(db, input.OperatorContextID, proofID)
 }
 
 func GetCaptainDeliveryProof(db *sql.DB, assignmentID, captainID string) (*DeliveryProof, error) {
+	return getCaptainDeliveryProof(db, "", assignmentID, captainID)
+}
+
+func GetCaptainDeliveryProofForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string) (*DeliveryProof, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return getCaptainDeliveryProof(db, operatorContextID, assignmentID, captainID)
+}
+
+func getCaptainDeliveryProof(db *sql.DB, operatorContextID, assignmentID, captainID string) (*DeliveryProof, error) {
 	proof, _, err := scanDeliveryProofRow(db.QueryRow(deliveryProofSelectSQL()+`
+		JOIN dsh_assignments a ON a.id=p.assignment_id
 		WHERE p.assignment_id=$1::uuid AND p.captain_id=$2
-		ORDER BY p.created_at DESC LIMIT 1`, assignmentID, captainID))
+		  AND ($3='' OR a.operator_context_id=$3)
+		ORDER BY p.created_at DESC LIMIT 1`, assignmentID, captainID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -476,10 +534,23 @@ func GetCaptainDeliveryProof(db *sql.DB, assignmentID, captainID string) (*Deliv
 }
 
 func GetClientDeliveryProof(db *sql.DB, orderID, clientID string) (*DeliveryProof, error) {
+	return getClientDeliveryProof(db, "", orderID, clientID)
+}
+
+func GetClientDeliveryProofForOperatorContext(db *sql.DB, operatorContextID, orderID, clientID string) (*DeliveryProof, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return getClientDeliveryProof(db, operatorContextID, orderID, clientID)
+}
+
+func getClientDeliveryProof(db *sql.DB, operatorContextID, orderID, clientID string) (*DeliveryProof, error) {
 	proof, _, err := scanDeliveryProofRow(db.QueryRow(deliveryProofSelectSQL()+`
 		JOIN dsh_orders o ON o.id=p.order_id
 		WHERE p.order_id=$1::uuid AND o.client_id=$2 AND p.status='accepted'
-		ORDER BY p.accepted_at DESC LIMIT 1`, orderID, clientID))
+		  AND ($3='' OR o.operator_context_id=$3)
+		ORDER BY p.accepted_at DESC LIMIT 1`, orderID, clientID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -487,7 +558,27 @@ func GetClientDeliveryProof(db *sql.DB, orderID, clientID string) (*DeliveryProo
 }
 
 func GetOperatorDeliveryProof(db *sql.DB, proofID string) (*DeliveryProof, error) {
-	proof, _, err := scanDeliveryProofRow(db.QueryRow(deliveryProofSelectSQL()+` WHERE p.id=$1::uuid`, proofID))
+	return getOperatorDeliveryProof(db, "", proofID)
+}
+
+func GetOperatorDeliveryProofForOperatorContext(db *sql.DB, operatorContextID, proofID string) (*DeliveryProof, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return getOperatorDeliveryProof(db, operatorContextID, proofID)
+}
+
+func getOperatorDeliveryProof(db *sql.DB, operatorContextID, proofID string) (*DeliveryProof, error) {
+	query := deliveryProofSelectSQL()
+	args := []any{proofID}
+	if operatorContextID == "" {
+		query += ` WHERE p.id=$1::uuid`
+	} else {
+		query += ` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE p.id=$1::uuid AND a.operator_context_id=$2`
+		args = append(args, operatorContextID)
+	}
+	proof, _, err := scanDeliveryProofRow(db.QueryRow(query, args...))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -495,6 +586,18 @@ func GetOperatorDeliveryProof(db *sql.DB, proofID string) (*DeliveryProof, error
 }
 
 func ListOperatorDeliveryProofs(db *sql.DB, status DeliveryProofStatus, limit int) ([]DeliveryProof, error) {
+	return listOperatorDeliveryProofs(db, "", status, limit)
+}
+
+func ListOperatorDeliveryProofsForOperatorContext(db *sql.DB, operatorContextID string, status DeliveryProofStatus, limit int) ([]DeliveryProof, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return listOperatorDeliveryProofs(db, operatorContextID, status, limit)
+}
+
+func listOperatorDeliveryProofs(db *sql.DB, operatorContextID string, status DeliveryProofStatus, limit int) ([]DeliveryProof, error) {
 	if status != "" && !isDeliveryProofStatus(status) {
 		return nil, fmt.Errorf("%w: unsupported delivery proof status", ErrInvalid)
 	}
@@ -503,8 +606,16 @@ func ListOperatorDeliveryProofs(db *sql.DB, status DeliveryProofStatus, limit in
 	}
 	query := deliveryProofSelectSQL()
 	args := []any{}
+	if operatorContextID != "" {
+		query += ` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE a.operator_context_id=$1`
+		args = append(args, operatorContextID)
+	}
 	if status != "" {
-		query += ` WHERE p.status=$1`
+		if operatorContextID == "" {
+			query += ` WHERE p.status=$1`
+		} else {
+			query += ` AND p.status=$2`
+		}
 		args = append(args, string(status))
 	}
 	query += fmt.Sprintf(` ORDER BY p.submitted_at ASC LIMIT $%d`, len(args)+1)
@@ -853,6 +964,7 @@ func hashDeliveryPIN(assignmentID, pin string) (string, error) {
 
 func deliveryProofReviewFingerprint(proofID, operatorID string, input ReviewDeliveryProofInput) string {
 	raw := strings.Join([]string{
+		input.OperatorContextID,
 		proofID,
 		operatorID,
 		fmt.Sprintf("%t", input.Accept),
@@ -876,6 +988,7 @@ func deliveryProofFingerprint(assignmentID, captainID string, input SubmitDelive
 		capturedAtToken = capturedAt.UTC().Format(time.RFC3339Nano)
 	}
 	raw := strings.Join([]string{
+		input.OperatorContextID,
 		assignmentID,
 		captainID,
 		string(input.Method),

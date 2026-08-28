@@ -110,12 +110,13 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 		return
 	}
 	item, err := dispatch.ReportDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID, dispatch.ReportDeliveryExceptionInput{
-		ReasonCode:    body.ReasonCode,
-		Note:          strings.TrimSpace(body.Note),
-		CorrelationID: operationalCorrelationID(r, body.CorrelationID),
-		Latitude:      body.Latitude,
-		Longitude:     body.Longitude,
-		ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
+		OperatorContextID: actor.OperatorContextID,
+		ReasonCode:        body.ReasonCode,
+		Note:              strings.TrimSpace(body.Note),
+		CorrelationID:     operationalCorrelationID(r, body.CorrelationID),
+		Latitude:          body.Latitude,
+		Longitude:         body.Longitude,
+		ProofMediaRef:     strings.TrimSpace(body.ProofMediaRef),
 	})
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
@@ -132,7 +133,7 @@ func (s *protectedStoreServer) handleResolveDeliveryExceptionGoverned(w http.Res
 	if !ok {
 		return
 	}
-	current, err := dispatch.GetDeliveryException(s.db, r.PathValue("exceptionId"))
+	current, err := dispatch.GetDeliveryExceptionForContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"))
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -155,13 +156,13 @@ func (s *protectedStoreServer) handleResolveDeliveryExceptionGoverned(w http.Res
 	var item *dispatch.DeliveryException
 	switch body.Action {
 	case "retry_same_captain":
-		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, current.ID, body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, actor.OperatorContextID, current.ID, body.ExpectedVersion, body.Note, actor.ID)
 	case "reassign_captain":
-		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, current.ID, body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, actor.OperatorContextID, current.ID, body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
 	case "return_to_store":
-		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, current.ID, body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, actor.OperatorContextID, current.ID, body.ExpectedVersion, body.Note, actor.ID)
 	case "cancel_order":
-		item, err = dispatch.ResolveDeliveryExceptionCancelOrder(s.db, current.ID, body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionCancelOrder(s.db, actor.OperatorContextID, current.ID, body.ExpectedVersion, body.Note, actor.ID)
 	default:
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
 		return

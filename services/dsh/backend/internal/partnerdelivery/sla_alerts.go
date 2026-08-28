@@ -20,6 +20,7 @@ const (
 // computed-on-read DeliverySLA in sla.go.
 type DeliverySLAAlert struct {
 	ID                    string
+	OperatorContextID     string
 	TaskID                string
 	OrderID               string
 	StoreID               string
@@ -36,7 +37,7 @@ type DeliverySLAAlert struct {
 }
 
 const deliverySLAAlertColumns = `
-	id::text, task_id, order_id::text, store_id, leg, status, detected_at,
+	id::text, operator_context_id, task_id, order_id::text, store_id, leg, status, detected_at,
 	acknowledged_by_actor_id, acknowledged_at, resolved_at, correlation_id,
 	version, created_at, updated_at
 `
@@ -45,7 +46,7 @@ func scanDeliverySLAAlert(scan func(...any) error) (*DeliverySLAAlert, error) {
 	var a DeliverySLAAlert
 	var leg string
 	err := scan(
-		&a.ID, &a.TaskID, &a.OrderID, &a.StoreID, &leg, &a.Status, &a.DetectedAt,
+		&a.ID, &a.OperatorContextID, &a.TaskID, &a.OrderID, &a.StoreID, &leg, &a.Status, &a.DetectedAt,
 		&a.AcknowledgedByActorID, &a.AcknowledgedAt, &a.ResolvedAt, &a.CorrelationID,
 		&a.Version, &a.CreatedAt, &a.UpdatedAt,
 	)
@@ -71,13 +72,14 @@ type RefreshDeliverySLAAlertsResult struct {
 // depends on which of four timestamps is set, which is materially harder
 // to express as a single declarative condition than preparation's
 // single-deadline case.
-func RefreshDeliverySLAAlerts(db *sql.DB, correlationID string, now time.Time) (*RefreshDeliverySLAAlertsResult, error) {
+func RefreshDeliverySLAAlerts(db *sql.DB, operatorContextID, correlationID string, now time.Time) (*RefreshDeliverySLAAlertsResult, error) {
 	correlationID = strings.TrimSpace(correlationID)
-	if db == nil || correlationID == "" {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if db == nil || operatorContextID == "" || correlationID == "" {
 		return nil, ErrInvalid
 	}
 
-	tasks, err := List(db, ListFilter{Limit: 500})
+	tasks, err := ListForOperatorContext(db, operatorContextID, ListFilter{Limit: 500})
 	if err != nil {
 		return nil, err
 	}
@@ -106,10 +108,10 @@ func RefreshDeliverySLAAlerts(db *sql.DB, correlationID string, now time.Time) (
 	opened := 0
 	for taskID, info := range overdue {
 		res, err := tx.Exec(`
-			INSERT INTO dsh_delivery_sla_alerts (task_id, order_id, store_id, leg, detected_at, correlation_id)
-			VALUES ($1, $2::uuid, $3, $4, $5, $6)
+			INSERT INTO dsh_delivery_sla_alerts (operator_context_id, task_id, order_id, store_id, leg, detected_at, correlation_id)
+			VALUES ($1, $2, $3::uuid, $4, $5, $6, $7)
 			ON CONFLICT (task_id, leg) WHERE status IN ('open','acknowledged') DO NOTHING`,
-			taskID, info.orderID, info.storeID, string(info.leg), now, correlationID)
+			operatorContextID, taskID, info.orderID, info.storeID, string(info.leg), now, correlationID)
 		if err != nil {
 			return nil, err
 		}
@@ -117,7 +119,7 @@ func RefreshDeliverySLAAlerts(db *sql.DB, correlationID string, now time.Time) (
 		opened += int(count)
 	}
 
-	rows, err := tx.Query(`SELECT id, task_id, leg FROM dsh_delivery_sla_alerts WHERE status IN ('open','acknowledged')`)
+	rows, err := tx.Query(`SELECT id, task_id, leg FROM dsh_delivery_sla_alerts WHERE operator_context_id = $1 AND status IN ('open','acknowledged')`, operatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +154,7 @@ func RefreshDeliverySLAAlerts(db *sql.DB, correlationID string, now time.Time) (
 	}
 
 	var active int
-	if err := tx.QueryRow(`SELECT COUNT(*) FROM dsh_delivery_sla_alerts WHERE status IN ('open','acknowledged')`).Scan(&active); err != nil {
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM dsh_delivery_sla_alerts WHERE operator_context_id = $1 AND status IN ('open','acknowledged')`, operatorContextID).Scan(&active); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -163,8 +165,9 @@ func RefreshDeliverySLAAlerts(db *sql.DB, correlationID string, now time.Time) (
 
 // ListDeliverySLAAlerts returns alerts matching status (or all, if empty),
 // newest first.
-func ListDeliverySLAAlerts(db *sql.DB, status SLAAlertStatus, limit int) ([]DeliverySLAAlert, error) {
-	if db == nil {
+func ListDeliverySLAAlerts(db *sql.DB, operatorContextID string, status SLAAlertStatus, limit int) ([]DeliverySLAAlert, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if db == nil || operatorContextID == "" {
 		return nil, ErrInvalid
 	}
 	if limit <= 0 || limit > 500 {
@@ -174,9 +177,9 @@ func ListDeliverySLAAlerts(db *sql.DB, status SLAAlertStatus, limit int) ([]Deli
 	rows, err := db.Query(`
 		SELECT `+deliverySLAAlertColumns+`
 		FROM dsh_delivery_sla_alerts
-		WHERE ($1 = '' OR status = $1)
+		WHERE operator_context_id = $1 AND ($2 = '' OR status = $2)
 		ORDER BY CASE status WHEN 'open' THEN 0 WHEN 'acknowledged' THEN 1 ELSE 2 END, detected_at DESC
-		LIMIT $2`, statusValue, limit)
+		LIMIT $3`, operatorContextID, statusValue, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -193,24 +196,26 @@ func ListDeliverySLAAlerts(db *sql.DB, status SLAAlertStatus, limit int) ([]Deli
 }
 
 type AcknowledgeDeliverySLAAlertInput struct {
-	AlertID         string
-	ActorID         string
-	ExpectedVersion int
+	OperatorContextID string
+	AlertID           string
+	ActorID           string
+	ExpectedVersion   int
 }
 
 func AcknowledgeDeliverySLAAlert(db *sql.DB, input AcknowledgeDeliverySLAAlertInput) (*DeliverySLAAlert, error) {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.AlertID = strings.TrimSpace(input.AlertID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
-	if db == nil || input.AlertID == "" || input.ActorID == "" || input.ExpectedVersion < 1 {
+	if db == nil || input.OperatorContextID == "" || input.AlertID == "" || input.ActorID == "" || input.ExpectedVersion < 1 {
 		return nil, ErrInvalid
 	}
 	alert, err := scanDeliverySLAAlert(db.QueryRow(`
 		UPDATE dsh_delivery_sla_alerts
-		SET status = 'acknowledged', acknowledged_by_actor_id = $2, acknowledged_at = NOW(),
+		SET status = 'acknowledged', acknowledged_by_actor_id = $3, acknowledged_at = NOW(),
 		    version = version + 1, updated_at = NOW()
-		WHERE id = $1::uuid AND status = 'open' AND version = $3
+		WHERE id = $1::uuid AND operator_context_id = $2 AND status = 'open' AND version = $4
 		RETURNING `+deliverySLAAlertColumns,
-		input.AlertID, input.ActorID, input.ExpectedVersion,
+		input.AlertID, input.OperatorContextID, input.ActorID, input.ExpectedVersion,
 	).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrVersionConflict

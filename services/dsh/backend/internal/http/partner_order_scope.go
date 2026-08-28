@@ -30,7 +30,7 @@ func (s *protectedStoreServer) partnerOrder(
 		return store.StoreActor{}, nil, false
 	}
 
-	order, err := orders.GetOrder(s.db, orderID)
+	order, err := orders.GetOrderForContext(s.db, actor.OperatorContextID, orderID)
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return store.StoreActor{}, nil, false

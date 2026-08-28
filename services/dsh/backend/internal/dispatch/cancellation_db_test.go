@@ -65,9 +65,9 @@ func TestCancelledOrderRemovesCaptainTaskAndRejectsStaleAcceptDBIntegration(t *t
 
 	var assignmentID string
 	if err := db.QueryRow(`
-		INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at)
-		VALUES($1::uuid,$2,'operator-test','offered',NOW()+INTERVAL '90 seconds')
-		RETURNING id::text`, orderID, captainID).Scan(&assignmentID); err != nil {
+		INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at)
+		VALUES($1,$2::uuid,$3,'operator-test','offered',NOW()+INTERVAL '90 seconds')
+		RETURNING id::text`, operatorContextID, orderID, captainID).Scan(&assignmentID); err != nil {
 		t.Fatalf("insert assignment: %v", err)
 	}
 	if _, err := db.Exec(`

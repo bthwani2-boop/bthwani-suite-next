@@ -72,16 +72,16 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_partners (id, legal_name_ar, display_name, legal_identity_number, primary_phone)
-		VALUES ($1, 'شريك اختبار', 'PD Test Partner', $1, '700000001')`,
-		f.partnerID); err != nil {
+		INSERT INTO dsh_partners (id, operator_context_id, legal_name_ar, display_name, legal_identity_number, primary_phone)
+		VALUES ($1, $2, 'شريك اختبار', 'PD Test Partner', $1, '700000001')`,
+		f.partnerID, f.operatorContextID); err != nil {
 		t.Fatalf("failed to insert test partner: %v", err)
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
-		VALUES ($1, $1, 'PD Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
-		f.storeID, f.partnerID); err != nil {
+		INSERT INTO dsh_stores (id, operator_context_id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
+		VALUES ($1, $2, $1, 'PD Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true, $3)`,
+		f.storeID, f.operatorContextID, f.partnerID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
 

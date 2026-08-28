@@ -557,6 +557,18 @@ func CreateGovernedAssignment(db *sql.DB, input GovernedCreateAssignmentInput) (
 }
 
 func AcceptGovernedAssignment(db *sql.DB, assignmentID, captainID string) (*Assignment, error) {
+	return acceptGovernedAssignment(db, "", assignmentID, captainID)
+}
+
+func AcceptGovernedAssignmentForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string) (*Assignment, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return acceptGovernedAssignment(db, operatorContextID, assignmentID, captainID)
+}
+
+func acceptGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmentID, captainID string) (*Assignment, error) {
 	assignmentID = strings.TrimSpace(assignmentID)
 	captainID = strings.TrimSpace(captainID)
 	if assignmentID == "" || captainID == "" {
@@ -567,14 +579,20 @@ func AcceptGovernedAssignment(db *sql.DB, assignmentID, captainID string) (*Assi
 		return nil, err
 	}
 	defer tx.Rollback()
-	current, err := lockAssignment(tx, assignmentID, captainID)
+	var current *Assignment
+	if requestedOperatorContextID == "" {
+		current, err = lockAssignment(tx, assignmentID, captainID)
+	} else {
+		current, err = lockAssignmentForOperatorContext(tx, requestedOperatorContextID, assignmentID, captainID)
+	}
 	if err != nil {
 		return nil, err
 	}
-	var operatorContextID string
-	if err = tx.QueryRow(`SELECT operator_context_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID); err != nil {
+	var assignmentContextID string
+	if err = tx.QueryRow(`SELECT operator_context_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&assignmentContextID); err != nil {
 		return nil, err
 	}
+	operatorContextID := assignmentContextID
 	if current.Status != AssignmentOffered {
 		return nil, fmt.Errorf("%w: assignment already actioned", ErrConflict)
 	}
@@ -605,10 +623,25 @@ func AcceptGovernedAssignment(db *sql.DB, assignmentID, captainID string) (*Assi
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetCaptainAssignment(db, assignmentID, captainID)
+	if operatorContextID == "" {
+		return GetCaptainAssignment(db, assignmentID, captainID)
+	}
+	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }
 
 func DeclineGovernedAssignment(db *sql.DB, assignmentID, captainID, reasonCode, reason string) (*Assignment, error) {
+	return declineGovernedAssignment(db, "", assignmentID, captainID, reasonCode, reason)
+}
+
+func DeclineGovernedAssignmentForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID, reasonCode, reason string) (*Assignment, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return declineGovernedAssignment(db, operatorContextID, assignmentID, captainID, reasonCode, reason)
+}
+
+func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmentID, captainID, reasonCode, reason string) (*Assignment, error) {
 	assignmentID = strings.TrimSpace(assignmentID)
 	captainID = strings.TrimSpace(captainID)
 	reasonCode = strings.TrimSpace(reasonCode)
@@ -621,14 +654,20 @@ func DeclineGovernedAssignment(db *sql.DB, assignmentID, captainID, reasonCode, 
 		return nil, err
 	}
 	defer tx.Rollback()
-	current, err := lockAssignment(tx, assignmentID, captainID)
+	var current *Assignment
+	if requestedOperatorContextID == "" {
+		current, err = lockAssignment(tx, assignmentID, captainID)
+	} else {
+		current, err = lockAssignmentForOperatorContext(tx, requestedOperatorContextID, assignmentID, captainID)
+	}
 	if err != nil {
 		return nil, err
 	}
-	var operatorContextID string
-	if err = tx.QueryRow(`SELECT operator_context_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID); err != nil {
+	var assignmentContextID string
+	if err = tx.QueryRow(`SELECT operator_context_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&assignmentContextID); err != nil {
 		return nil, err
 	}
+	operatorContextID := assignmentContextID
 	if current.Status != AssignmentOffered {
 		return nil, fmt.Errorf("%w: assignment already actioned", ErrConflict)
 	}
@@ -664,7 +703,10 @@ func DeclineGovernedAssignment(db *sql.DB, assignmentID, captainID, reasonCode, 
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetCaptainAssignment(db, assignmentID, captainID)
+	if operatorContextID == "" {
+		return GetCaptainAssignment(db, assignmentID, captainID)
+	}
+	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }
 
 func ExpireOverdueAssignments(db *sql.DB, operatorContextID, actorID string, limit int) (int, error) {
@@ -734,6 +776,18 @@ func expireAssignmentTx(tx *sql.Tx, operatorContextID string, current *Assignmen
 }
 
 func CancelGovernedAssignment(db *sql.DB, assignmentID, actorID, reasonCode, reason string) error {
+	return cancelGovernedAssignment(db, "", assignmentID, actorID, reasonCode, reason)
+}
+
+func CancelGovernedAssignmentForOperatorContext(db *sql.DB, operatorContextID, assignmentID, actorID, reasonCode, reason string) error {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return cancelGovernedAssignment(db, operatorContextID, assignmentID, actorID, reasonCode, reason)
+}
+
+func cancelGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmentID, actorID, reasonCode, reason string) error {
 	assignmentID = strings.TrimSpace(assignmentID)
 	actorID = strings.TrimSpace(actorID)
 	reasonCode = strings.TrimSpace(reasonCode)
@@ -746,7 +800,7 @@ func CancelGovernedAssignment(db *sql.DB, assignmentID, actorID, reasonCode, rea
 		return err
 	}
 	defer tx.Rollback()
-	row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid FOR UPDATE OF a,d`, assignmentID)
+	row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid AND ($2='' OR a.operator_context_id=$2) FOR UPDATE OF a,d`, assignmentID, requestedOperatorContextID)
 	current, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
@@ -832,7 +886,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 		if replayCaptainID != input.CaptainID || replaySupersedesID != input.AssignmentID {
 			return nil, fmt.Errorf("%w: idempotency key belongs to another reassignment", ErrConflict)
 		}
-		row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid AND a.captain_id=$2`, replayID, replayCaptainID)
+		row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid AND a.captain_id=$2 AND a.operator_context_id=$3`, replayID, replayCaptainID, input.OperatorContextID)
 		item, readErr := scanAssignmentRowWithDelivery(row)
 		if readErr != nil {
 			return nil, readErr
@@ -846,7 +900,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 		return nil, err
 	}
 
-	row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid FOR UPDATE OF a,d`, input.AssignmentID)
+	row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid AND a.operator_context_id=$2 FOR UPDATE OF a,d`, input.AssignmentID, input.OperatorContextID)
 	current, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound

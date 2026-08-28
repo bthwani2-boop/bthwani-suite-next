@@ -174,7 +174,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		return
 	}
 
-	assignment, err := dispatch.GetCaptainAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
+	assignment, err := dispatch.GetCaptainAssignmentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -225,10 +225,10 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 	}
 
 	originalAssignment := assignment
-	acceptedAssignment, err := dispatch.AcceptGovernedAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
+	acceptedAssignment, err := dispatch.AcceptGovernedAssignmentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		if isCod && originalAssignment != nil && originalAssignment.OrderID != "" {
-			currentAssignment, readErr := dispatch.GetCaptainAssignment(s.db, originalAssignment.ID, actor.ID)
+			currentAssignment, readErr := dispatch.GetCaptainAssignmentForOperatorContext(s.db, actor.OperatorContextID, originalAssignment.ID, actor.ID)
 			if readErr != nil && !errors.Is(readErr, dispatch.ErrNotFound) {
 				store.SendError(w, http.StatusServiceUnavailable, "COD_RESERVATION_RELEASE_UNCERTAIN", "assignment state could not be reconciled after acceptance failure")
 				return
@@ -265,8 +265,8 @@ func (s *protectedStoreServer) handleDeclineGovernedDispatchAssignment(w http.Re
 		return
 	}
 	assignmentID := r.PathValue("assignmentId")
-	assignment, err := dispatch.DeclineGovernedAssignment(
-		s.db, assignmentID, actor.ID, body.ReasonCode, body.Reason,
+	assignment, err := dispatch.DeclineGovernedAssignmentForOperatorContext(
+		s.db, actor.OperatorContextID, assignmentID, actor.ID, body.ReasonCode, body.Reason,
 	)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
@@ -421,8 +421,8 @@ func (s *protectedStoreServer) handleCancelGovernedDispatchAssignment(w http.Res
 		return
 	}
 	assignmentID := r.PathValue("assignmentId")
-	if err := dispatch.CancelGovernedAssignment(
-		s.db, assignmentID, actor.ID, body.ReasonCode, body.Reason,
+	if err := dispatch.CancelGovernedAssignmentForOperatorContext(
+		s.db, actor.OperatorContextID, assignmentID, actor.ID, body.ReasonCode, body.Reason,
 	); err != nil {
 		writeGovernedDispatchError(w, err)
 		return

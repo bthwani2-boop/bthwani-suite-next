@@ -46,14 +46,14 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 		}
 		var sLat, sLng, cLat, cLng sql.NullFloat64
 		err := s.db.QueryRowContext(r.Context(), `
-			SELECT s.latitude, s.longitude,
+		SELECT s.latitude, s.longitude,
 			       NULLIF(o.delivery_address_snapshot->>'latitude', '')::float8,
 			       NULLIF(o.delivery_address_snapshot->>'longitude', '')::float8
 			FROM dsh_assignments a
 			JOIN dsh_orders o ON o.id = a.order_id
 			JOIN dsh_stores s ON s.id = o.store_id
-			WHERE a.id = $1::uuid
-		`, assignmentID).Scan(&sLat, &sLng, &cLat, &cLng)
+			WHERE a.id = $1::uuid AND a.operator_context_id = $2
+		`, assignmentID, actor.OperatorContextID).Scan(&sLat, &sLng, &cLat, &cLng)
 		if errors.Is(err, sql.ErrNoRows) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "assignment or order location was not found")
 			return
@@ -78,8 +78,9 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 		}
 	}
 
-	assignment, err := dispatch.UpdateDeliveryStatusGovernedIdempotentVersioned(
+	assignment, err := dispatch.UpdateDeliveryStatusGovernedIdempotentVersionedForOperatorContext(
 		s.db,
+		actor.OperatorContextID,
 		assignmentID,
 		actor.ID,
 		body.Status,
@@ -106,8 +107,9 @@ func (s *protectedStoreServer) handleConfirmPartnerStoreCaptainHandoff(w http.Re
 	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
 		return
 	}
-	item, err := dispatch.ConfirmStoreCaptainHandoffIdempotent(
+	item, err := dispatch.ConfirmStoreCaptainHandoffIdempotentForOperatorContext(
 		s.db,
+		actor.OperatorContextID,
 		r.PathValue("orderId"),
 		storeID,
 		actor.ID,

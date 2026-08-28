@@ -1,5 +1,5 @@
 // Package incident implements dsh_operational_incidents: the record of a
-// sovereign platform intervention (cancel, suspend, raise_exception)
+// sovereign platform intervention (cancel, raise_exception)
 // against a partner-owned execution surface. An incident is written before
 // its consequence is applied, so "why an override happened" survives as a
 // queryable fact independent of the target entity's own audit trail.
@@ -22,7 +22,6 @@ type TargetEntityType string
 
 const (
 	TargetPartnerDeliveryTask TargetEntityType = "partner_delivery_task"
-	TargetPickupSession       TargetEntityType = "pickup_session"
 	TargetOrder               TargetEntityType = "order"
 )
 
@@ -31,7 +30,6 @@ type IncidentType string
 const (
 	TypeRaiseException IncidentType = "raise_exception"
 	TypeCancel         IncidentType = "cancel"
-	TypeSuspend        IncidentType = "suspend"
 )
 
 type Status string

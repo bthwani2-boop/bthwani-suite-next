@@ -48,7 +48,7 @@ func TestSameIncidentCommandRejectsAllMaterialDivergence(t *testing.T) {
 		{"different ticket", func(in *ReportInput) { in.TicketReference = "ticket-2" }},
 		{"different actor role", func(in *ReportInput) { in.ActorRole = "supervisor" }},
 		{"different target entity id", func(in *ReportInput) { in.TargetEntityID = "99999999-9999-9999-9999-999999999999" }},
-		{"different incident type", func(in *ReportInput) { in.IncidentType = TypeSuspend }},
+		{"different incident type", func(in *ReportInput) { in.IncidentType = IncidentType("suspend") }},
 		{"different correlation id", func(in *ReportInput) { in.CorrelationID = "corr-2" }},
 		{"different operator context", func(in *ReportInput) { in.OperatorContextID = "operator-context-2" }},
 		{"different expected version", func(in *ReportInput) { in.ExpectedVersion = 8 }},
@@ -79,5 +79,26 @@ func TestSameIncidentCommandRejectsNilCorrelationID(t *testing.T) {
 	input := ReportInput{OrderID: "1", CorrelationID: "x"}
 	if sameIncidentCommand(existing, input) {
 		t.Fatal("nil correlation_id on existing must not match")
+	}
+}
+
+func TestSameIncidentCommandRejectsMissingCanonicalPayload(t *testing.T) {
+	corr := "corr-legacy"
+	existing := &Incident{
+		OrderID:           "1",
+		CorrelationID:     &corr,
+		Reason:            "same projected reason",
+		TicketReference:   "same-ticket",
+		OperatorContextID: "operator-context-1",
+	}
+	input := ReportInput{
+		OrderID:           "1",
+		CorrelationID:     corr,
+		Reason:            "same projected reason",
+		TicketReference:   "same-ticket",
+		OperatorContextID: "operator-context-1",
+	}
+	if sameIncidentCommand(existing, input) {
+		t.Fatal("an existing row without command_payload must not be treated as an identical command")
 	}
 }

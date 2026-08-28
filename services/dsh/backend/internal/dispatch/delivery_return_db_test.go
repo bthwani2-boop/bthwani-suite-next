@@ -28,7 +28,7 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	var assignmentID string
-	if err := db.QueryRow(`INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at) VALUES($1::uuid,$2,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, orderID, captainID).Scan(&assignmentID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at) VALUES($1,$2::uuid,$3,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, operatorContextID, orderID, captainID).Scan(&assignmentID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`INSERT INTO dsh_deliveries(assignment_id,order_id,captain_id,status) VALUES($1::uuid,$2::uuid,$3,'picked_up')`, assignmentID, orderID, captainID); err != nil {
@@ -44,7 +44,7 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	returning, err := ResolveDeliveryExceptionReturnToStore(db, item.ID, item.Version, "إعادة الطلب إلى المتجر بعد رفض المستلم", "operator-1")
+	returning, err := ResolveDeliveryExceptionReturnToStore(db, operatorContextID, item.ID, item.Version, "إعادة الطلب إلى المتجر بعد رفض المستلم", "operator-1")
 	if err != nil {
 		t.Fatalf("start return: %v", err)
 	}
@@ -85,14 +85,14 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if orderStatus != "return_arrived_store" || deliveryStatus != "return_arrived_store" || assignmentStatus != "accepted" {
 		t.Fatalf("arrival handshake mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
 	}
-	returned, err := AcceptReturnToStoreByPartner(db, orderID, "partner-return-receipt-test")
+	returned, err := AcceptReturnToStoreByPartner(db, operatorContextID, orderID, "partner-return-receipt-test")
 	if err != nil {
 		t.Fatalf("partner accept return: %v", err)
 	}
 	if returned.ReturnedAt == nil || returned.ReturnAcceptedByActorID == nil {
 		t.Fatalf("partner receipt was not recorded: %+v", returned)
 	}
-	returnedReplay, err := AcceptReturnToStoreByPartner(db, orderID, "partner-return-receipt-retry")
+	returnedReplay, err := AcceptReturnToStoreByPartner(db, operatorContextID, orderID, "partner-return-receipt-retry")
 	if err != nil {
 		t.Fatalf("partner receipt replay: %v", err)
 	}

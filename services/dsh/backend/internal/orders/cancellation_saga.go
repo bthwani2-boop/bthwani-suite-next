@@ -503,9 +503,13 @@ func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, err
 	if err != nil {
 		return nil, err
 	}
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if operatorContextID == "" {
+		operatorContextID = c.OperatorContextID
+	}
 	if c.Status == CancellationApproved {
 		act, err := CreateCancellationAction(db, CreateCancellationActionInput{
-			OperatorContextID: input.OperatorContextID,
+			OperatorContextID: operatorContextID,
 			OrderID:           input.OrderID,
 			ActorID:           input.ActorID,
 			CaseID:            c.ID,
@@ -518,7 +522,7 @@ func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, err
 			return nil, err
 		}
 		_, err = ExecuteCancellationAction(db, ExecuteCancellationActionInput{
-			OperatorContextID: input.OperatorContextID,
+			OperatorContextID: operatorContextID,
 			OrderID:           input.OrderID,
 			ActorID:           input.ActorID,
 			ActionID:          act.ID,
@@ -532,5 +536,5 @@ func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, err
 	} else if c.Status == CancellationRejected || c.Status == CancellationConflict || c.Status == CancellationUnknown {
 		return nil, ErrConflict
 	}
-	return GetOrderForContext(db, input.OperatorContextID, input.OrderID)
+	return GetOrderForContext(db, operatorContextID, input.OrderID)
 }

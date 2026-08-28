@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"dsh-api/internal/orders"
@@ -91,14 +92,18 @@ type PoDInput struct {
 }
 
 type PushLocationInput struct {
-	Latitude   float64
-	Longitude  float64
-	RecordedAt *time.Time
+	OperatorContextID string
+	Latitude          float64
+	Longitude         float64
+	RecordedAt        *time.Time
 }
 
 func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, error) {
 	if input.OrderID == "" || input.CaptainID == "" || input.ActorID == "" {
 		return nil, fmt.Errorf("%w: orderId, captainId, and actor are required", ErrInvalid)
+	}
+	if strings.TrimSpace(input.OperatorContextID) == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
 	tx, err := db.Begin()
 	if err != nil {
@@ -107,7 +112,7 @@ func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, err
 	defer tx.Rollback()
 
 	var fulfillmentMode string
-	err = tx.QueryRow(`SELECT fulfillment_mode FROM dsh_orders WHERE id = $1::uuid`, input.OrderID).Scan(&fulfillmentMode)
+	err = tx.QueryRow(`SELECT fulfillment_mode FROM dsh_orders WHERE id = $1::uuid AND operator_context_id = $2`, input.OrderID, input.OperatorContextID).Scan(&fulfillmentMode)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -130,11 +135,11 @@ func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, err
 	}
 
 	assignment, err := scanAssignmentRow(tx.QueryRow(`
-		INSERT INTO dsh_assignments (order_id, captain_id, assigned_by, status, response_deadline_at)
-		VALUES ($1::uuid, $2, $3, $4, NOW() + INTERVAL '90 seconds')
+		INSERT INTO dsh_assignments (operator_context_id, order_id, captain_id, assigned_by, status, response_deadline_at)
+		VALUES ($1, $2::uuid, $3, $4, $5, NOW() + INTERVAL '90 seconds')
 		RETURNING id::text, order_id::text, captain_id, assigned_by, status,
 		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
-		input.OrderID, input.CaptainID, input.ActorID, string(AssignmentOffered)))
+		input.OperatorContextID, input.OrderID, input.CaptainID, input.ActorID, string(AssignmentOffered)))
 	if err != nil {
 		return nil, err
 	}
@@ -157,6 +162,7 @@ func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, err
 }
 
 func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) (*Assignment, error) {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	if input.SpecialRequestID == "" || input.CaptainID == "" || input.ActorID == "" {
 		return nil, fmt.Errorf("%w: specialRequestId, captainId, and actor are required", ErrInvalid)
 	}
@@ -173,8 +179,9 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	err = tx.QueryRow(`
 		SELECT id::text, captain_id
 		FROM dsh_assignments
-		WHERE special_request_id = $1::uuid AND status IN ('offered', 'accepted')
-		FOR UPDATE`, input.SpecialRequestID).Scan(&existingAssignmentID, &existingCaptainID)
+		WHERE special_request_id = $1::uuid AND operator_context_id = $2
+		  AND status IN ('offered', 'accepted')
+		FOR UPDATE`, input.SpecialRequestID, input.OperatorContextID).Scan(&existingAssignmentID, &existingCaptainID)
 	if err == nil {
 		if existingCaptainID != input.CaptainID {
 			return nil, fmt.Errorf("%w: special request already has an active assignment for another captain", ErrConflict)
@@ -192,11 +199,11 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	}
 
 	assignment, err := scanAssignmentRow(tx.QueryRow(`
-		INSERT INTO dsh_assignments (special_request_id, captain_id, assigned_by, status, response_deadline_at)
-		VALUES ($1::uuid, $2, $3, $4, NOW() + INTERVAL '90 seconds')
+		INSERT INTO dsh_assignments (operator_context_id, special_request_id, captain_id, assigned_by, status, response_deadline_at)
+		VALUES ($1, $2::uuid, $3, $4, $5, NOW() + INTERVAL '90 seconds')
 		RETURNING id::text, COALESCE(order_id::text, ''), captain_id, assigned_by, status,
 		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
-		input.SpecialRequestID, input.CaptainID, input.ActorID, string(AssignmentOffered)))
+		input.OperatorContextID, input.SpecialRequestID, input.CaptainID, input.ActorID, string(AssignmentOffered)))
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			return nil, fmt.Errorf("%w: special request already has an active assignment", ErrConflict)
@@ -357,6 +364,19 @@ func UpdateDeliveryStatus(db *sql.DB, assignmentID, captainID string, status Del
 }
 
 func PushLocation(db *sql.DB, assignmentID, captainID string, input PushLocationInput) (*Assignment, error) {
+	return pushLocation(db, assignmentID, captainID, input)
+}
+
+func PushLocationForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string, input PushLocationInput) (*Assignment, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	input.OperatorContextID = operatorContextID
+	return pushLocation(db, assignmentID, captainID, input)
+}
+
+func pushLocation(db *sql.DB, assignmentID, captainID string, input PushLocationInput) (*Assignment, error) {
 	if input.Latitude < -90 || input.Latitude > 90 {
 		return nil, fmt.Errorf("%w: latitude must be between -90 and 90", ErrInvalid)
 	}
@@ -369,7 +389,13 @@ func PushLocation(db *sql.DB, assignmentID, captainID string, input PushLocation
 	}
 	defer tx.Rollback()
 
-	current, err := lockAssignment(tx, assignmentID, captainID)
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	var current *Assignment
+	if operatorContextID == "" {
+		current, err = lockAssignment(tx, assignmentID, captainID)
+	} else {
+		current, err = lockAssignmentForOperatorContext(tx, operatorContextID, assignmentID, captainID)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +418,10 @@ func PushLocation(db *sql.DB, assignmentID, captainID string, input PushLocation
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetCaptainAssignment(db, assignmentID, captainID)
+	if operatorContextID == "" {
+		return GetCaptainAssignment(db, assignmentID, captainID)
+	}
+	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }
 
 func SubmitPoD(db *sql.DB, assignmentID, captainID string, input PoDInput) (*Assignment, error) {
@@ -484,6 +513,20 @@ func GetCaptainAssignment(db *sql.DB, assignmentID, captainID string) (*Assignme
 	return assignment, err
 }
 
+func GetCaptainAssignmentForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string) (*Assignment, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" || strings.TrimSpace(assignmentID) == "" || strings.TrimSpace(captainID) == "" {
+		return nil, fmt.Errorf("%w: operator context, assignment, and captain are required", ErrInvalid)
+	}
+	row := db.QueryRow(assignmentSelectSQL()+`
+		WHERE a.id = $1::uuid AND a.captain_id = $2 AND a.operator_context_id = $3`, assignmentID, captainID, operatorContextID)
+	assignment, err := scanAssignmentRowWithDelivery(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return assignment, err
+}
+
 func updateAssignmentStatus(db *sql.DB, assignmentID, captainID string, status AssignmentStatus, deliveryStatus DeliveryStatus, orderStatus orders.OrderStatus, note string) (*Assignment, error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -558,12 +601,29 @@ func updateDeliveryProgress(db *sql.DB, assignmentID, captainID string, allowed 
 }
 
 func updateDeliveryProgressVersioned(db *sql.DB, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus, expectedVersion int) (*Assignment, error) {
+	return updateDeliveryProgressVersionedForContext(db, "", assignmentID, captainID, allowed, next, orderStatus, expectedVersion)
+}
+
+func updateDeliveryProgressVersionedForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus, expectedVersion int) (*Assignment, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return updateDeliveryProgressVersionedForContext(db, operatorContextID, assignmentID, captainID, allowed, next, orderStatus, expectedVersion)
+}
+
+func updateDeliveryProgressVersionedForContext(db *sql.DB, operatorContextID, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus, expectedVersion int) (*Assignment, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
-	current, err := lockAssignment(tx, assignmentID, captainID)
+	var current *Assignment
+	if operatorContextID == "" {
+		current, err = lockAssignment(tx, assignmentID, captainID)
+	} else {
+		current, err = lockAssignmentForOperatorContext(tx, operatorContextID, assignmentID, captainID)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -610,5 +670,8 @@ func updateDeliveryProgressVersioned(db *sql.DB, assignmentID, captainID string,
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetCaptainAssignment(db, assignmentID, captainID)
+	if operatorContextID == "" {
+		return GetCaptainAssignment(db, assignmentID, captainID)
+	}
+	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }

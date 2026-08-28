@@ -71,12 +71,13 @@ type DeliveryException struct {
 }
 
 type ReportDeliveryExceptionInput struct {
-	ReasonCode    DeliveryExceptionReasonCode
-	Note          string
-	CorrelationID string
-	Latitude      *float64
-	Longitude     *float64
-	ProofMediaRef string
+	OperatorContextID string
+	ReasonCode        DeliveryExceptionReasonCode
+	Note              string
+	CorrelationID     string
+	Latitude          *float64
+	Longitude         *float64
+	ProofMediaRef     string
 }
 
 var validDeliveryExceptionReasons = map[DeliveryExceptionReasonCode]bool{
@@ -179,7 +180,13 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	}
 	defer tx.Rollback()
 
-	current, err := lockAssignment(tx, assignmentID, captainID)
+	requestedOperatorContextID := strings.TrimSpace(input.OperatorContextID)
+	var current *Assignment
+	if requestedOperatorContextID == "" {
+		current, err = lockAssignment(tx, assignmentID, captainID)
+	} else {
+		current, err = lockAssignmentForOperatorContext(tx, requestedOperatorContextID, assignmentID, captainID)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +209,9 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 			}
 			return nil, err
 		}
+	}
+	if requestedOperatorContextID != "" && requestedOperatorContextID != operatorContextID {
+		return nil, ErrNotFound
 	}
 
 	// Idempotency is evaluated before current-state eligibility so a retried
@@ -258,8 +268,9 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	return GetDeliveryException(db, id)
 }
 
-func AcknowledgeDeliveryException(db *sql.DB, id string, expectedVersion int, actorID string) (*DeliveryException, error) {
-	if strings.TrimSpace(id) == "" || strings.TrimSpace(actorID) == "" || expectedVersion <= 0 {
+func AcknowledgeDeliveryException(db *sql.DB, operatorContextID, id string, expectedVersion int, actorID string) (*DeliveryException, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" || strings.TrimSpace(id) == "" || strings.TrimSpace(actorID) == "" || expectedVersion <= 0 {
 		return nil, fmt.Errorf("%w: id, expectedVersion, and actor are required", ErrInvalid)
 	}
 	tx, err := db.Begin()
@@ -268,7 +279,7 @@ func AcknowledgeDeliveryException(db *sql.DB, id string, expectedVersion int, ac
 	}
 	defer tx.Rollback()
 
-	current, err := getDeliveryExceptionForUpdate(tx, id)
+	current, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +297,7 @@ func AcknowledgeDeliveryException(db *sql.DB, id string, expectedVersion int, ac
 		UPDATE dsh_delivery_exceptions
 		SET status='acknowledged', acknowledged_at=NOW(), acknowledged_by_actor_id=$1,
 		    version=version+1, updated_at=NOW()
-		WHERE id=$2::uuid AND version=$3 AND status='open'`, actorID, id, expectedVersion)
+		WHERE id=$2::uuid AND operator_context_id=$4 AND version=$3 AND status='open'`, actorID, id, expectedVersion, operatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -296,12 +307,13 @@ func AcknowledgeDeliveryException(db *sql.DB, id string, expectedVersion int, ac
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetDeliveryException(db, id)
+	return GetDeliveryExceptionForContext(db, operatorContextID, id)
 }
 
-func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
+func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, operatorContextID, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	note = strings.TrimSpace(note)
-	if strings.TrimSpace(id) == "" || strings.TrimSpace(actorID) == "" || expectedVersion <= 0 || len(note) < 5 {
+	if operatorContextID == "" || strings.TrimSpace(id) == "" || strings.TrimSpace(actorID) == "" || expectedVersion <= 0 || len(note) < 5 {
 		return nil, fmt.Errorf("%w: id, expectedVersion, actor, and a resolution note are required", ErrInvalid)
 	}
 	if len(note) > 1000 {
@@ -313,7 +325,7 @@ func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, id string, expectedVer
 		return nil, err
 	}
 	defer tx.Rollback()
-	current, err := getDeliveryExceptionForUpdate(tx, id)
+	current, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -349,8 +361,8 @@ func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, id string, expectedVer
 		SET status='resolved', resolved_at=NOW(), resolved_by_actor_id=$1,
 		    resolution_action='retry_same_captain', resolution_note=$2,
 		    version=version+1, updated_at=NOW()
-		WHERE id=$3::uuid AND version=$4 AND status IN ('open','acknowledged')`,
-		actorID, note, id, expectedVersion)
+		WHERE id=$3::uuid AND operator_context_id=$5 AND version=$4 AND status IN ('open','acknowledged')`,
+		actorID, note, id, expectedVersion, operatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -360,14 +372,15 @@ func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, id string, expectedVer
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetDeliveryException(db, id)
+	return GetDeliveryExceptionForContext(db, operatorContextID, id)
 }
 
-func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVersion int, newCaptainID, note, actorID string) (*DeliveryException, error) {
+func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, operatorContextID, id string, expectedVersion int, newCaptainID, note, actorID string) (*DeliveryException, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	newCaptainID = strings.TrimSpace(newCaptainID)
 	note = strings.TrimSpace(note)
 	actorID = strings.TrimSpace(actorID)
-	if strings.TrimSpace(id) == "" || expectedVersion <= 0 || newCaptainID == "" || actorID == "" || len(note) < 5 {
+	if operatorContextID == "" || strings.TrimSpace(id) == "" || expectedVersion <= 0 || newCaptainID == "" || actorID == "" || len(note) < 5 {
 		return nil, fmt.Errorf("%w: id, expectedVersion, replacement captain, actor, and note are required", ErrInvalid)
 	}
 	if len(note) > 1000 {
@@ -379,7 +392,7 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVers
 		return nil, err
 	}
 	defer tx.Rollback()
-	current, err := getDeliveryExceptionForUpdate(tx, id)
+	current, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +417,7 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVers
 		if err := tx.Commit(); err != nil {
 			return nil, err
 		}
-		return GetDeliveryException(db, id)
+		return GetDeliveryExceptionForContext(db, operatorContextID, id)
 	}
 
 	var assignmentStatus AssignmentStatus
@@ -453,9 +466,9 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVers
 
 	var replacementAssignmentID string
 	if err := tx.QueryRow(`
-		INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at)
-		VALUES($1::uuid,$2,$3,'offered',NOW()+INTERVAL '90 seconds')
-		RETURNING id::text`, current.OrderID, newCaptainID, actorID).Scan(&replacementAssignmentID); err != nil {
+		INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at)
+		VALUES($1,$2::uuid,$3,$4,'offered',NOW()+INTERVAL '90 seconds')
+		RETURNING id::text`, operatorContextID, current.OrderID, newCaptainID, actorID).Scan(&replacementAssignmentID); err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(`
@@ -471,8 +484,8 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVers
 		    resolution_action='reassign_captain', resolution_note=$2,
 		    replacement_assignment_id=$3::uuid, replacement_captain_id=$4,
 		    version=version+1, updated_at=NOW()
-		WHERE id=$5::uuid AND version=$6 AND status IN ('open','acknowledged')`,
-		actorID, note, replacementAssignmentID, newCaptainID, id, expectedVersion)
+		WHERE id=$5::uuid AND operator_context_id=$7 AND version=$6 AND status IN ('open','acknowledged')`,
+		actorID, note, replacementAssignmentID, newCaptainID, id, expectedVersion, operatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -482,7 +495,7 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVers
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetDeliveryException(db, id)
+	return GetDeliveryExceptionForContext(db, operatorContextID, id)
 }
 
 // ResolveDeliveryExceptionCancelOrder resolves an open/acknowledged delivery
@@ -500,17 +513,18 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, id string, expectedVers
 // steps guarded by idempotent keys: cancelling the order, then marking the
 // exception resolved. A retry after a partial failure is safe - CancelOrder
 // replays by correlationId and the exception update is guarded by version.
-func ResolveDeliveryExceptionCancelOrder(db *sql.DB, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
+func ResolveDeliveryExceptionCancelOrder(db *sql.DB, operatorContextID, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	note = strings.TrimSpace(note)
 	actorID = strings.TrimSpace(actorID)
-	if strings.TrimSpace(id) == "" || expectedVersion <= 0 || actorID == "" || len(note) < 5 {
+	if operatorContextID == "" || strings.TrimSpace(id) == "" || expectedVersion <= 0 || actorID == "" || len(note) < 5 {
 		return nil, fmt.Errorf("%w: id, expectedVersion, actor, and cancellation note are required", ErrInvalid)
 	}
 	if len(note) > 1000 {
 		return nil, fmt.Errorf("%w: cancellation note must not exceed 1000 characters", ErrInvalid)
 	}
 
-	current, err := GetDeliveryException(db, id)
+	current, err := GetDeliveryExceptionForContext(db, operatorContextID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -539,12 +553,13 @@ func ResolveDeliveryExceptionCancelOrder(db *sql.DB, id string, expectedVersion 
 	}
 
 	if _, err := orders.CancelOrderSync(db, orders.CreateCancellationCaseInput{
-		OrderID:       current.OrderID,
-		ActorID:       actorID,
-		ActorRole:     "operator",
-		ReasonCode:    "operational_failure",
-		ReasonNote:    note,
-		CorrelationID: "delivery-exception-cancel:" + id,
+		OrderID:           current.OrderID,
+		OperatorContextID: operatorContextID,
+		ActorID:           actorID,
+		ActorRole:         "operator",
+		ReasonCode:        "operational_failure",
+		ReasonNote:        note,
+		CorrelationID:     "delivery-exception-cancel:" + id,
 	}); err != nil {
 		if errors.Is(err, orders.ErrConflict) {
 			return nil, fmt.Errorf("%w: order is no longer eligible for governed cancellation", ErrConflict)
@@ -565,8 +580,8 @@ func ResolveDeliveryExceptionCancelOrder(db *sql.DB, id string, expectedVersion 
 		SET status='resolved', resolved_at=NOW(), resolved_by_actor_id=$1,
 		    resolution_action='cancel_order', resolution_note=$2,
 		    version=version+1, updated_at=NOW()
-		WHERE id=$3::uuid AND version=$4 AND status IN ('open','acknowledged')`,
-		actorID, note, id, expectedVersion)
+		WHERE id=$3::uuid AND operator_context_id=$5 AND version=$4 AND status IN ('open','acknowledged')`,
+		actorID, note, id, expectedVersion, operatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -576,13 +591,14 @@ func ResolveDeliveryExceptionCancelOrder(db *sql.DB, id string, expectedVersion 
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetDeliveryException(db, id)
+	return GetDeliveryExceptionForContext(db, operatorContextID, id)
 }
 
-func ResolveDeliveryExceptionReturnToStore(db *sql.DB, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
+func ResolveDeliveryExceptionReturnToStore(db *sql.DB, operatorContextID, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	note = strings.TrimSpace(note)
 	actorID = strings.TrimSpace(actorID)
-	if strings.TrimSpace(id) == "" || expectedVersion <= 0 || actorID == "" || len(note) < 5 {
+	if operatorContextID == "" || strings.TrimSpace(id) == "" || expectedVersion <= 0 || actorID == "" || len(note) < 5 {
 		return nil, fmt.Errorf("%w: id, expectedVersion, actor, and return note are required", ErrInvalid)
 	}
 	if len(note) > 1000 {
@@ -593,7 +609,7 @@ func ResolveDeliveryExceptionReturnToStore(db *sql.DB, id string, expectedVersio
 		return nil, err
 	}
 	defer tx.Rollback()
-	current, err := getDeliveryExceptionForUpdate(tx, id)
+	current, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -642,7 +658,7 @@ func ResolveDeliveryExceptionReturnToStore(db *sql.DB, id string, expectedVersio
 		SET status='resolved', resolved_at=NOW(), resolved_by_actor_id=$1,
 		    resolution_action='return_to_store', resolution_note=$2,
 		    return_started_at=NOW(), version=version+1, updated_at=NOW()
-		WHERE id=$3::uuid AND version=$4 AND status IN ('open','acknowledged')`, actorID, note, id, expectedVersion)
+		WHERE id=$3::uuid AND operator_context_id=$5 AND version=$4 AND status IN ('open','acknowledged')`, actorID, note, id, expectedVersion, operatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -652,10 +668,22 @@ func ResolveDeliveryExceptionReturnToStore(db *sql.DB, id string, expectedVersio
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetDeliveryException(db, id)
+	return GetDeliveryExceptionForContext(db, operatorContextID, id)
 }
 
 func CaptainArriveReturnToStore(db *sql.DB, assignmentID, captainID string) (*DeliveryException, error) {
+	return captainArriveReturnToStore(db, "", assignmentID, captainID)
+}
+
+func CaptainArriveReturnToStoreForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string) (*DeliveryException, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return captainArriveReturnToStore(db, operatorContextID, assignmentID, captainID)
+}
+
+func captainArriveReturnToStore(db *sql.DB, operatorContextID, assignmentID, captainID string) (*DeliveryException, error) {
 	assignmentID = strings.TrimSpace(assignmentID)
 	captainID = strings.TrimSpace(captainID)
 	if assignmentID == "" || captainID == "" {
@@ -669,15 +697,16 @@ func CaptainArriveReturnToStore(db *sql.DB, assignmentID, captainID string) (*De
 
 	var assignmentStatus AssignmentStatus
 	var deliveryStatus DeliveryStatus
-	var orderID, orderStatus string
+	var orderID, orderStatus, assignmentOperatorContextID string
 	if err := tx.QueryRow(`
-		SELECT a.status,d.status,a.order_id::text,o.status
+		SELECT a.status,d.status,a.order_id::text,o.status,a.operator_context_id
 		FROM dsh_assignments a
 		JOIN dsh_deliveries d ON d.assignment_id=a.id
 		JOIN dsh_orders o ON o.id=a.order_id
 		WHERE a.id=$1::uuid AND a.captain_id=$2
-		FOR UPDATE OF a,d,o`, assignmentID, captainID).
-		Scan(&assignmentStatus, &deliveryStatus, &orderID, &orderStatus); err != nil {
+		  AND ($3 = '' OR a.operator_context_id=$3)
+		FOR UPDATE OF a,d,o`, assignmentID, captainID, operatorContextID).
+		Scan(&assignmentStatus, &deliveryStatus, &orderID, &orderStatus, &assignmentOperatorContextID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -688,8 +717,9 @@ func CaptainArriveReturnToStore(db *sql.DB, assignmentID, captainID string) (*De
 		SELECT `+deliveryExceptionColumns+`
 		FROM dsh_delivery_exceptions e
 		WHERE e.assignment_id=$1::uuid AND e.status='resolved'
+		  AND e.operator_context_id=$2
 		  AND e.resolution_action='return_to_store' AND e.returned_at IS NULL
-		ORDER BY e.resolved_at DESC LIMIT 1 FOR UPDATE`, assignmentID)
+		ORDER BY e.resolved_at DESC LIMIT 1 FOR UPDATE`, assignmentID, assignmentOperatorContextID)
 	item, err := scanDeliveryException(row.Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -721,15 +751,24 @@ func CaptainArriveReturnToStore(db *sql.DB, assignmentID, captainID string) (*De
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetDeliveryException(db, item.ID)
+	if operatorContextID == "" {
+		return GetDeliveryException(db, item.ID)
+	}
+	return GetDeliveryExceptionForContext(db, operatorContextID, item.ID)
 }
 
-func GetPartnerReturnToStore(db *sql.DB, orderID string) (*DeliveryException, error) {
+func GetPartnerReturnToStore(db *sql.DB, operatorContextID, orderID string) (*DeliveryException, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" || strings.TrimSpace(orderID) == "" {
+		return nil, fmt.Errorf("%w: operator context and order are required", ErrInvalid)
+	}
 	row := db.QueryRow(`
 		SELECT `+deliveryExceptionColumns+`
 		FROM dsh_delivery_exceptions e
-		WHERE e.order_id=$1::uuid AND e.status='resolved' AND e.resolution_action='return_to_store'
-		ORDER BY e.resolved_at DESC LIMIT 1`, orderID)
+		JOIN dsh_orders o ON o.id=e.order_id
+		WHERE e.operator_context_id=$1 AND o.operator_context_id=$1 AND e.order_id=$2::uuid
+		  AND e.status='resolved' AND e.resolution_action='return_to_store'
+		ORDER BY e.resolved_at DESC LIMIT 1`, operatorContextID, orderID)
 	item, err := scanDeliveryException(row.Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -737,10 +776,11 @@ func GetPartnerReturnToStore(db *sql.DB, orderID string) (*DeliveryException, er
 	return item, err
 }
 
-func AcceptReturnToStoreByPartner(db *sql.DB, orderID, actorID string) (*DeliveryException, error) {
+func AcceptReturnToStoreByPartner(db *sql.DB, operatorContextID, orderID, actorID string) (*DeliveryException, error) {
 	orderID = strings.TrimSpace(orderID)
 	actorID = strings.TrimSpace(actorID)
-	if orderID == "" || actorID == "" {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" || orderID == "" || actorID == "" {
 		return nil, fmt.Errorf("%w: order and partner actor are required", ErrInvalid)
 	}
 	tx, err := db.Begin()
@@ -752,8 +792,10 @@ func AcceptReturnToStoreByPartner(db *sql.DB, orderID, actorID string) (*Deliver
 	row := tx.QueryRow(`
 		SELECT `+deliveryExceptionColumns+`
 		FROM dsh_delivery_exceptions e
-		WHERE e.order_id=$1::uuid AND e.status='resolved' AND e.resolution_action='return_to_store'
-		ORDER BY e.resolved_at DESC LIMIT 1 FOR UPDATE`, orderID)
+		JOIN dsh_orders o ON o.id=e.order_id
+		WHERE e.operator_context_id=$1 AND o.operator_context_id=$1 AND e.order_id=$2::uuid
+		  AND e.status='resolved' AND e.resolution_action='return_to_store'
+		ORDER BY e.resolved_at DESC LIMIT 1 FOR UPDATE`, operatorContextID, orderID)
 	item, err := scanDeliveryException(row.Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -805,11 +847,20 @@ func AcceptReturnToStoreByPartner(db *sql.DB, orderID, actorID string) (*Deliver
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetDeliveryException(db, item.ID)
+	return GetDeliveryExceptionForContext(db, operatorContextID, item.ID)
 }
 
 func getDeliveryExceptionForUpdate(tx *sql.Tx, id string) (*DeliveryException, error) {
 	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.id=$1::uuid FOR UPDATE`, id)
+	item, err := scanDeliveryException(row.Scan)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return item, err
+}
+
+func getDeliveryExceptionForUpdateForContext(tx *sql.Tx, operatorContextID, id string) (*DeliveryException, error) {
+	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.id=$1::uuid AND e.operator_context_id=$2 FOR UPDATE`, id, operatorContextID)
 	item, err := scanDeliveryException(row.Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -833,12 +884,31 @@ func ensureNoOpenDeliveryException(tx *sql.Tx, assignmentID string) error {
 }
 
 func GetCaptainOpenDeliveryException(db *sql.DB, assignmentID, captainID string) (*DeliveryException, error) {
+	return getCaptainOpenDeliveryException(db, "", assignmentID, captainID)
+}
+
+func GetCaptainOpenDeliveryExceptionForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string) (*DeliveryException, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return getCaptainOpenDeliveryException(db, operatorContextID, assignmentID, captainID)
+}
+
+func getCaptainOpenDeliveryException(db *sql.DB, operatorContextID, assignmentID, captainID string) (*DeliveryException, error) {
+	assignmentID = strings.TrimSpace(assignmentID)
+	captainID = strings.TrimSpace(captainID)
+	if assignmentID == "" || captainID == "" {
+		return nil, fmt.Errorf("%w: assignment and captain are required", ErrInvalid)
+	}
 	row := db.QueryRow(`
 		SELECT `+deliveryExceptionColumns+`
 		FROM dsh_delivery_exceptions e
 		JOIN dsh_assignments a ON a.id=e.assignment_id
-		WHERE e.assignment_id=$1::uuid AND a.captain_id=$2 AND (e.status IN ('open','acknowledged') OR (e.status='resolved' AND e.resolution_action='return_to_store' AND e.returned_at IS NULL))
-		ORDER BY e.reported_at DESC LIMIT 1`, assignmentID, captainID)
+		WHERE e.assignment_id=$1::uuid AND a.captain_id=$2
+		  AND ($3 = '' OR (a.operator_context_id=$3 AND e.operator_context_id=$3))
+		  AND (e.status IN ('open','acknowledged') OR (e.status='resolved' AND e.resolution_action='return_to_store' AND e.returned_at IS NULL))
+		ORDER BY e.reported_at DESC LIMIT 1`, assignmentID, captainID, operatorContextID)
 	item, err := scanDeliveryException(row.Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -855,7 +925,24 @@ func GetDeliveryException(db *sql.DB, id string) (*DeliveryException, error) {
 	return item, err
 }
 
-func ListOperatorDeliveryExceptions(db *sql.DB, status DeliveryExceptionStatus, limit int) ([]DeliveryException, error) {
+func GetDeliveryExceptionForContext(db *sql.DB, operatorContextID, id string) (*DeliveryException, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" || strings.TrimSpace(id) == "" {
+		return nil, ErrInvalid
+	}
+	row := db.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.id=$1::uuid AND e.operator_context_id=$2`, id, operatorContextID)
+	item, err := scanDeliveryException(row.Scan)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return item, err
+}
+
+func ListOperatorDeliveryExceptions(db *sql.DB, operatorContextID string, status DeliveryExceptionStatus, limit int) ([]DeliveryException, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
@@ -868,9 +955,9 @@ func ListOperatorDeliveryExceptions(db *sql.DB, status DeliveryExceptionStatus, 
 	rows, err := db.Query(`
 		SELECT `+deliveryExceptionColumns+`
 		FROM dsh_delivery_exceptions e
-		WHERE e.status=$1
+		WHERE e.operator_context_id=$1 AND e.status=$2
 		ORDER BY CASE e.severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 ELSE 3 END, e.reported_at ASC
-		LIMIT $2`, string(status), limit)
+		LIMIT $3`, operatorContextID, string(status), limit)
 	if err != nil {
 		return nil, err
 	}

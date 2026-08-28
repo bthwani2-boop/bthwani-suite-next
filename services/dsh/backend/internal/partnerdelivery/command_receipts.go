@@ -39,6 +39,7 @@ func normalizeCommandIdentity(actorID, commandID string) (string, string, error)
 
 func (s *Service) executeCommand(
 	ctx context.Context,
+	operatorContextID string,
 	actorID string,
 	commandID string,
 	action string,
@@ -46,6 +47,10 @@ func (s *Service) executeCommand(
 	invoke func() (*PartnerDeliveryTask, error),
 	reconcile func() (*PartnerDeliveryTask, bool, error),
 ) (*PartnerDeliveryTask, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	actorID, commandID, err := normalizeCommandIdentity(actorID, commandID)
 	if err != nil {
 		return nil, err
@@ -57,7 +62,7 @@ func (s *Service) executeCommand(
 	}
 	defer conn.Close()
 
-	lockKey := "partner_delivery|" + actorID + "|" + commandID
+	lockKey := "partner_delivery|" + operatorContextID + "|" + actorID + "|" + commandID
 	if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_lock(hashtextextended($1, 0))`, lockKey); err != nil {
 		return nil, err
 	}
@@ -69,14 +74,14 @@ func (s *Service) executeCommand(
 	err = conn.QueryRowContext(ctx, `
 		SELECT action, request_fingerprint, task_id
 		FROM dsh_partner_delivery_command_receipts
-		WHERE actor_id = $1 AND command_id = $2`, actorID, commandID).
+		WHERE operator_context_id = $1 AND actor_id = $2 AND command_id = $3`, operatorContextID, actorID, commandID).
 		Scan(&receipt.Action, &receipt.Fingerprint, &receipt.TaskID)
 	if err == nil {
 		if receipt.Action != action || receipt.Fingerprint != fingerprint {
 			return nil, ErrIdempotencyConflict
 		}
 		if receipt.TaskID.Valid && receipt.TaskID.String != "" {
-			return Get(s.db, receipt.TaskID.String)
+			return GetForOperatorContext(s.db, operatorContextID, receipt.TaskID.String)
 		}
 		return nil, fmt.Errorf("%w: command receipt is incomplete", ErrConflict)
 	}
@@ -103,11 +108,11 @@ func (s *Service) executeCommand(
 
 	_, err = conn.ExecContext(ctx, `
 		INSERT INTO dsh_partner_delivery_command_receipts
-			(actor_id, command_id, action, request_fingerprint, task_id, completed_at)
-		VALUES ($1, $2, $3, $4, $5, NOW())`,
-		actorID, commandID, action, fingerprint, task.ID)
+			(operator_context_id, actor_id, command_id, action, request_fingerprint, task_id, completed_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+		operatorContextID, actorID, commandID, action, fingerprint, task.ID)
 	if err != nil {
 		return nil, err
 	}
-	return Get(s.db, task.ID)
+	return GetForOperatorContext(s.db, operatorContextID, task.ID)
 }

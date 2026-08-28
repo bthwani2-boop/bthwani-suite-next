@@ -99,10 +99,14 @@ func TestOperatorCancellationStopsDependentDispatchWorkDBIntegration(t *testing.
 	})
 
 	var assignmentID string
+	var operatorContextID string
+	if err := db.QueryRow(`SELECT operator_context_id FROM dsh_orders WHERE id=$1::uuid`, order.ID).Scan(&operatorContextID); err != nil {
+		t.Fatalf("read order operator context: %v", err)
+	}
 	if err := db.QueryRow(`
-		INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at)
-		VALUES($1::uuid,$2,$3,'accepted',NOW()+INTERVAL '90 seconds',NOW())
-		RETURNING id::text`, order.ID, "captain-cancellation-test", "operator-cancellation-test").Scan(&assignmentID); err != nil {
+		INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at)
+		VALUES($1,$2::uuid,$3,$4,'accepted',NOW()+INTERVAL '90 seconds',NOW())
+		RETURNING id::text`, operatorContextID, order.ID, "captain-cancellation-test", "operator-cancellation-test").Scan(&assignmentID); err != nil {
 		t.Fatalf("insert assignment: %v", err)
 	}
 	if _, err := db.Exec(`

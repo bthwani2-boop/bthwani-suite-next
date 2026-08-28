@@ -101,8 +101,8 @@ func (s *protectedStoreServer) handlePartnerCancelOrder(w http.ResponseWriter, r
 		return
 	}
 
-	order, _ := orders.GetOrder(s.db, ownedOrder.ID)
-	cancellation, _ := orders.GetCancellation(s.db, ownedOrder.ID)
+	order, _ := orders.GetOrderForContext(s.db, actor.OperatorContextID, ownedOrder.ID)
+	cancellation, _ := orders.GetCancellationForContext(s.db, actor.OperatorContextID, ownedOrder.ID)
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order), "cancellation": cancellation})
 }
 
@@ -148,22 +148,8 @@ func (s *protectedStoreServer) handleOperatorCancelOrderGoverned(w http.Response
 		writeOrderCancellationError(w, err)
 		return
 	}
-	_, err = orders.CancelOrderSync(s.db, orders.CreateCancellationCaseInput{
-		OrderID:           orderID,
-		OperatorContextID: actor.OperatorContextID,
-		ActorID:           actor.ID,
-		ActorRole:         "operator",
-		ReasonCode:        body.ReasonCode,
-		ReasonNote:        body.ReasonNote,
-		CorrelationID:     cancellationCorrelation(r, body),
-	})
-	if err != nil {
-		writeOrderCancellationError(w, err)
-		return
-	}
-
-	order, _ := orders.GetOrder(s.db, orderID)
-	cancellation, _ := orders.GetCancellation(s.db, orderID)
+	order, _ := orders.GetOrderForContext(s.db, actor.OperatorContextID, orderID)
+	cancellation, _ := orders.GetCancellationForContext(s.db, actor.OperatorContextID, orderID)
 	store.SendJSON(w, http.StatusOK, map[string]any{
 		"order":        marshalOrder(order),
 		"cancellation": cancellation,
@@ -181,7 +167,7 @@ func (s *protectedStoreServer) handleClientOrderCancellation(w http.ResponseWrit
 		writeOrderCancellationError(w, err)
 		return
 	}
-	cancellation, err := orders.GetCancellation(s.db, orderID)
+	cancellation, err := orders.GetCancellationForContext(s.db, actor.OperatorContextID, orderID)
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
@@ -190,11 +176,11 @@ func (s *protectedStoreServer) handleClientOrderCancellation(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handlePartnerOrderCancellation(w http.ResponseWriter, r *http.Request) {
-	_, ownedOrder, ok := s.partnerOrder(w, r)
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	cancellation, err := orders.GetCancellation(s.db, ownedOrder.ID)
+	cancellation, err := orders.GetCancellationForContext(s.db, actor.OperatorContextID, ownedOrder.ID)
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return

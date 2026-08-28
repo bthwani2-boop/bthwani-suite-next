@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 func ensureNoActiveStoreCaptainHandoffException(db *sql.DB, assignmentID string) error {
@@ -32,7 +33,7 @@ func UpdateDeliveryStatusGovernedIdempotent(
 	captainID string,
 	status DeliveryStatus,
 ) (*Assignment, error) {
-	return updateDeliveryStatusGovernedIdempotent(db, assignmentID, captainID, status, 0)
+	return updateDeliveryStatusGovernedIdempotent(db, "", assignmentID, captainID, status, 0)
 }
 
 func UpdateDeliveryStatusGovernedIdempotentVersioned(
@@ -45,11 +46,44 @@ func UpdateDeliveryStatusGovernedIdempotentVersioned(
 	if expectedVersion < 1 {
 		return nil, fmt.Errorf("%w: assignment version is required", ErrInvalid)
 	}
-	return updateDeliveryStatusGovernedIdempotent(db, assignmentID, captainID, status, expectedVersion)
+	return updateDeliveryStatusGovernedIdempotent(db, "", assignmentID, captainID, status, expectedVersion)
+}
+
+func UpdateDeliveryStatusGovernedIdempotentForOperatorContext(
+	db *sql.DB,
+	operatorContextID string,
+	assignmentID string,
+	captainID string,
+	status DeliveryStatus,
+) (*Assignment, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return updateDeliveryStatusGovernedIdempotent(db, operatorContextID, assignmentID, captainID, status, 0)
+}
+
+func UpdateDeliveryStatusGovernedIdempotentVersionedForOperatorContext(
+	db *sql.DB,
+	operatorContextID string,
+	assignmentID string,
+	captainID string,
+	status DeliveryStatus,
+	expectedVersion int,
+) (*Assignment, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	if expectedVersion < 1 {
+		return nil, fmt.Errorf("%w: assignment version is required", ErrInvalid)
+	}
+	return updateDeliveryStatusGovernedIdempotent(db, operatorContextID, assignmentID, captainID, status, expectedVersion)
 }
 
 func updateDeliveryStatusGovernedIdempotent(
 	db *sql.DB,
+	operatorContextID string,
 	assignmentID string,
 	captainID string,
 	status DeliveryStatus,
@@ -61,7 +95,13 @@ func updateDeliveryStatusGovernedIdempotent(
 		return nil, fmt.Errorf("%w: unsupported delivery status", ErrInvalid)
 	}
 
-	current, err := GetCaptainAssignment(db, assignmentID, captainID)
+	var current *Assignment
+	var err error
+	if operatorContextID == "" {
+		current, err = GetCaptainAssignment(db, assignmentID, captainID)
+	} else {
+		current, err = GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -72,9 +112,15 @@ func updateDeliveryStatusGovernedIdempotent(
 	}
 	if current.Delivery.Status != status {
 		if expectedVersion > 0 {
-			return UpdateDeliveryStatusGovernedVersioned(db, assignmentID, captainID, status, expectedVersion)
+			if operatorContextID == "" {
+				return UpdateDeliveryStatusGovernedVersioned(db, assignmentID, captainID, status, expectedVersion)
+			}
+			return UpdateDeliveryStatusGovernedVersionedForOperatorContext(db, operatorContextID, assignmentID, captainID, status, expectedVersion)
 		}
-		return UpdateDeliveryStatusGoverned(db, assignmentID, captainID, status)
+		if operatorContextID == "" {
+			return UpdateDeliveryStatusGoverned(db, assignmentID, captainID, status)
+		}
+		return UpdateDeliveryStatusGovernedForOperatorContext(db, operatorContextID, assignmentID, captainID, status)
 	}
 
 	if status == DeliveryPickedUp {
@@ -109,17 +155,47 @@ func ConfirmStoreCaptainHandoffIdempotent(
 	storeID string,
 	actorID string,
 ) (*StoreCaptainHandoff, error) {
+	return confirmStoreCaptainHandoffIdempotent(db, "", orderID, storeID, actorID)
+}
+
+func ConfirmStoreCaptainHandoffIdempotentForOperatorContext(
+	db *sql.DB,
+	operatorContextID string,
+	orderID string,
+	storeID string,
+	actorID string,
+) (*StoreCaptainHandoff, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
+	return confirmStoreCaptainHandoffIdempotent(db, operatorContextID, orderID, storeID, actorID)
+}
+
+func confirmStoreCaptainHandoffIdempotent(
+	db *sql.DB,
+	operatorContextID string,
+	orderID string,
+	storeID string,
+	actorID string,
+) (*StoreCaptainHandoff, error) {
 	if orderID == "" || storeID == "" || actorID == "" {
 		return nil, fmt.Errorf("%w: order, store, and partner actor are required", ErrInvalid)
 	}
 
-	item, err := scanStoreCaptainHandoff(db.QueryRow(
-		storeCaptainHandoffSelect+`
+	query := storeCaptainHandoffSelect + `
 		WHERE order_id = $1::uuid AND store_id = $2
+		  AND ($3 = '' OR EXISTS (
+			SELECT 1 FROM dsh_orders o
+			WHERE o.id = dsh_store_captain_handoffs.order_id AND o.operator_context_id = $3
+		  ))
 		ORDER BY created_at DESC
-		LIMIT 1`,
+		LIMIT 1`
+	item, err := scanStoreCaptainHandoff(db.QueryRow(
+		query,
 		orderID,
 		storeID,
+		operatorContextID,
 	))
 	if err == nil {
 		if item.Status == "partner_confirmed" || item.Status == "completed" {
@@ -133,5 +209,8 @@ func ConfirmStoreCaptainHandoffIdempotent(
 		return nil, err
 	}
 
-	return ConfirmStoreCaptainHandoff(db, orderID, storeID, actorID)
+	if operatorContextID == "" {
+		return ConfirmStoreCaptainHandoff(db, orderID, storeID, actorID)
+	}
+	return ConfirmStoreCaptainHandoffForOperatorContext(db, operatorContextID, orderID, storeID, actorID)
 }
