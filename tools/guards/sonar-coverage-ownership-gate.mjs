@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -5,6 +6,7 @@ import {
   listCodeFiles,
   listFiles,
   read,
+  repoRoot,
 } from "./_guard-utils.mjs";
 import { loadCoverageOwnershipModel } from "../scripts/generate-sonar-node-coverage.mjs";
 
@@ -47,6 +49,18 @@ function propertyValue(lines, key) {
   });
   if (!entry) return null;
   return entry.line.slice(entry.line.indexOf("=") + 1).trim();
+}
+
+function propertyValues(lines, prefix) {
+  const values = new Map();
+  for (const {line} of lines) {
+    const separator = line.indexOf("=");
+    if (separator < 0) continue;
+    const key = line.slice(0, separator).trim();
+    if (!key.startsWith(prefix)) continue;
+    values.set(key.slice(prefix.length), line.slice(separator + 1).trim());
+  }
+  return values;
 }
 
 function discoverTsconfigFiles(files, model) {
@@ -116,12 +130,58 @@ export function auditSonarConfiguration({
     .split(",")
     .map((value) => value.trim());
   if (exclusions.includes("**/*.sql")) {
-    violations.push({file: SONAR_PROPERTIES, message: "SQL must not be globally excluded from Sonar source analysis"});
+    const requiredAuthority = [
+      "SQL exclusion authority:",
+      "tools/scripts/check-dsh-database-contract.mjs",
+      "tools/guards/migration-manifest-drift-gate.mjs",
+    ];
+    if (!requiredAuthority.every((marker) => String(sonarProperties ?? "").includes(marker))) {
+      violations.push({file: SONAR_PROPERTIES, message: "SQL exclusion requires the canonical migration/seed authority markers"});
+    }
+  }
+
+  const criteriaIds = new Set((propertyValue(lines, "sonar.issue.ignore.multicriteria") ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean));
+  const criteria = propertyValues(lines, "sonar.issue.ignore.multicriteria.");
+  const ignoredGoSqlFiles = new Map();
+  for (const id of criteriaIds) {
+    const ruleKey = criteria.get(`${id}.ruleKey`);
+    const resourceKey = criteria.get(`${id}.resourceKey`);
+    if (ruleKey !== "go:S2077") continue;
+    if (!resourceKey) {
+      violations.push({file: SONAR_PROPERTIES, message: `go:S2077 suppression ${id} must declare an exact resourceKey`});
+      continue;
+    }
+    if (/[?*\[\]]/u.test(resourceKey) || !/\.go$/u.test(resourceKey) || resourceKey.startsWith("../")) {
+      violations.push({file: SONAR_PROPERTIES, message: `go:S2077 suppression ${id} must target one exact Go file`});
+      continue;
+    }
+    const normalizedResource = normalizePath(resourceKey);
+    if (!/^((?:core|services)\/[^/]+)\/backend\/.+\.go$/u.test(normalizedResource)) {
+      violations.push({file: SONAR_PROPERTIES, message: `go:S2077 suppression ${id} must target a governed backend Go file`});
+      continue;
+    }
+    if (!fs.existsSync(path.join(repoRoot, normalizedResource))) {
+      violations.push({file: SONAR_PROPERTIES, message: `go:S2077 suppression ${id} targets a missing file: ${normalizedResource}`});
+      continue;
+    }
+    if (ignoredGoSqlFiles.has(normalizedResource)) {
+      violations.push({file: SONAR_PROPERTIES, message: `duplicate go:S2077 suppression target: ${normalizedResource}`});
+    }
+    ignoredGoSqlFiles.set(normalizedResource, id);
   }
 
   for (const {line, lineNumber} of lines) {
-    if (/go:S2077|safeConstantSql/iu.test(line)) {
-      violations.push({file: SONAR_PROPERTIES, line: lineNumber, message: "broad go:S2077 suppression is not permitted"});
+    if (/safeConstantSql/iu.test(line)) {
+      violations.push({file: SONAR_PROPERTIES, line: lineNumber, message: "retired broad SQL suppression identifier is not permitted"});
+    }
+    if (/go:S2077/iu.test(line)) {
+      const match = line.match(/^sonar\.issue\.ignore\.multicriteria\.([^.]+)\.ruleKey=/u);
+      if (!match || !criteriaIds.has(match[1])) {
+        violations.push({file: SONAR_PROPERTIES, line: lineNumber, message: "go:S2077 suppression must be an exact declared multicriteria entry"});
+      }
     }
   }
 
