@@ -19,7 +19,7 @@ RUN addgroup -S app \
     && adduser -S -G app app
 
 WORKDIR /app
-COPY --from=build --chown=app:app /out/wlt-api /usr/local/bin/wlt-api
+COPY --from=build /out/wlt-api /usr/local/bin/wlt-api
 
 USER app
 EXPOSE 8083

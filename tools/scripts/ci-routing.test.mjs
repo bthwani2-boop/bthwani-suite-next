@@ -72,6 +72,17 @@ test("Sonar trusted analysis has one explicit master opt-in", () => {
   assert.doesNotMatch(sonar, /skip_duplicate_push|needs\.ownership|^  ownership:/mu);
 });
 
+test("trusted full Sonar analysis generates coverage for every Go source owner", () => {
+  const sonar = read(".github/workflows/sonarqube.yml");
+  assert.match(sonar, /MODE: \$\{\{ steps\.ci_scope\.outputs\.mode \}\}/u);
+  assert.match(sonar, /TRUSTED_SCAN: \$\{\{ inputs\.trusted_scan \}\}/u);
+  assert.match(
+    sonar,
+    /if \[\[ "\$\{MODE\}" == "full" && "\$\{TRUSTED_SCAN\}" == "true" \]\]; then\s+services=\(dsh wlt identity workforce platform providers\)/u,
+  );
+  assert.match(sonar, /needs\.scope\.outputs\.go_required == 'true'.*-Dsonar\.go\.coverage\.reportPaths/su);
+});
+
 test("the affected router is based on the exact current Base-to-Head diff", () => {
   const router = read("tools/scripts/detect-ci-context.mjs");
   assert.match(router, /\["diff", "--name-only"/u);

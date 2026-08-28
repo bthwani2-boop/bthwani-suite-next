@@ -116,6 +116,8 @@ jobs:
         id: go_plan
         shell: bash
         env:
+          MODE: ${{ steps.ci_scope.outputs.mode }}
+          TRUSTED_SCAN: ${{ inputs.trusted_scan }}
           DSH: ${{ steps.ci_scope.outputs.dsh }}
           WLT: ${{ steps.ci_scope.outputs.wlt }}
           IDENTITY: ${{ steps.ci_scope.outputs.identity }}
@@ -125,12 +127,16 @@ jobs:
         run: |
           set -euo pipefail
           services=()
-          [[ "${DSH}" == "true" ]] && services+=(dsh)
-          [[ "${WLT}" == "true" ]] && services+=(wlt)
-          [[ "${IDENTITY}" == "true" ]] && services+=(identity)
-          [[ "${WORKFORCE}" == "true" ]] && services+=(workforce)
-          [[ "${PLATFORM}" == "true" ]] && services+=(platform)
-          [[ "${PROVIDERS}" == "true" ]] && services+=(providers)
+          if [[ "${MODE}" == "full" && "${TRUSTED_SCAN}" == "true" ]]; then
+            services=(dsh wlt identity workforce platform providers)
+          else
+            [[ "${DSH}" == "true" ]] && services+=(dsh)
+            [[ "${WLT}" == "true" ]] && services+=(wlt)
+            [[ "${IDENTITY}" == "true" ]] && services+=(identity)
+            [[ "${WORKFORCE}" == "true" ]] && services+=(workforce)
+            [[ "${PLATFORM}" == "true" ]] && services+=(platform)
+            [[ "${PROVIDERS}" == "true" ]] && services+=(providers)
+          fi
 
           if (( ${#services[@]} == 0 )); then
             echo 'required=false' >> "${GITHUB_OUTPUT}"
