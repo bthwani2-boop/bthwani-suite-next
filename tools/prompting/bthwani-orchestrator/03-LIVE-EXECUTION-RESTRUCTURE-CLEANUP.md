@@ -310,3 +310,47 @@ Resource lifecycle is part of correctness where leaks or unbounded work can chan
 Data correctness is not implied by schema correctness. Where authoritative or distributed data can drift, treatment must establish the appropriate owner-side reconciliation/readback/repair path rather than introducing a second writer or manual shadow truth.
 
 Clean-state reproducibility obligations are verification-owned by `04`, but execution must remove hidden machine prerequisites: undeclared tools, manual DB edits, local-only generated source, secret/config assumptions or mutated workspace state that the exact candidate actually depends on.
+
+## 20. Material execution-obligation invariant
+
+Under mutation-authorized intent, every material finding inside the selected Closure Unit becomes an execution obligation once `02` has sufficiently proven its Root Cause, Canonical Target and Source-of-Fix.
+
+```text
+PROVEN + EXECUTABLE + INSIDE SELECTED CLOSURE UNIT
+!= OPTIONAL RECOMMENDATION
+```
+
+A material finding may terminate only as:
+
+`TREATED_AND_VERIFIED | VERIFIED_UNCHANGED | N/A_PROVEN`
+
+or through a legitimate stop state owned by `00`.
+
+`FOUND | RECOMMENDED | SHOULD_FIX | TODO | FOLLOW_UP | LATER | DEFERRED | READY_TO_IMPLEMENT | IMPLEMENTATION_PLAN` are not terminal dispositions for an executable material obligation.
+
+Known material migration, backfill, regeneration, cutover, writer/reader/consumer migration, reference repair, deletion, cleanup or finishing obligations tied to the selected root remain part of the same execution obligation even after the primary visible symptom disappears.
+
+This section does not redefine finding status ownership from `02` or closure ownership from `04`; it defines the execution consequence of a sufficiently proven material finding while mutation is authorized.
+
+## 21. Human-experience findings are executable system findings
+
+When a material Product/UX/Interaction/Design finding lies inside the selected Closure Unit and its correct target behavior is derivable or otherwise proven under `focus/governance-product-design.md`, it is a real execution obligation, not presentation advice.
+
+Applicable findings may include:
+
+`missing capability | missing screen/action/state | broken navigation | missing feedback/readback | broken recovery | journey friction | terminology/state mismatch | design-authority drift | duplicate component/pattern authority | accessibility defect | RTL/localization defect | responsive defect | rendered-state defect | cross-surface UX inconsistency`.
+
+Treatment follows the highest proven Source-of-Fix rather than the visible screen:
+
+```text
+PRODUCT / UX SEMANTICS
+-> DESIGN / CONTENT AUTHORITY
+-> CANONICAL TOKEN / COMPONENT / PATTERN when applicable
+-> SURFACE IMPLEMENTATION
+-> ALL MATERIALLY AFFECTED CONSUMERS
+-> RENDERED / INTERACTION / JOURNEY VERIFICATION UNDER 04
+```
+
+Concrete implementation structure remains owned by `focus/code-architecture-organization.md`; Product/UX meaning remains owned by `focus/governance-product-design.md`; exact rendered and journey proof remains owned by `04`.
+
+Do not close a user-facing root merely because backend semantics are correct. Do not close it merely because one rendered screen looks correct while journey, state, authority, accessibility, localization, recovery or cross-surface behavior remains materially wrong or unverified.
