@@ -789,8 +789,8 @@ jobs:
             ${{ inputs.base_ref && format('-Dsonar.pullrequest.base={0}', inputs.base_ref) || '' }}
             ${{ inputs.head_ref && format('-Dsonar.pullrequest.branch={0}', inputs.head_ref) || '' }}
             ${{ inputs.head_sha && format('-Dsonar.scm.revision={0}', inputs.head_sha) || '' }}
-            -Dsonar.javascript.lcov.reportPaths=.sonar/node-coverage/lcov.info
-            -Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out
+            ${{ needs.scope.outputs.node_required == 'true' && '-Dsonar.javascript.lcov.reportPaths=.sonar/node-coverage/lcov.info' || '' }}
+            ${{ needs.scope.outputs.go_required == 'true' && '-Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out' || '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
