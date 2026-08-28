@@ -75,7 +75,6 @@ func GetOrder(db *sql.DB, orderID string) (*Order, error) {
 	order.Items = items
 	return order, nil
 }
-
 func GetClientOrder(db *sql.DB, orderID, operatorContextID, clientID string) (*Order, error) {
 	order, err := scanOrderRow(db.QueryRow(`
 		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status, version,
@@ -115,4 +114,3 @@ func GetOrderForContext(db *sql.DB, operatorContextID, orderID string) (*Order, 
 	order.Items = items
 	return order, nil
 }
-

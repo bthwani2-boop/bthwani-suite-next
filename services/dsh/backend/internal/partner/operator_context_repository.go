@@ -544,4 +544,3 @@ func TransitionStatusForOperatorContext(db *sql.DB, operatorContextID, partnerID
 	}
 	return TransitionStatus(db, partnerID, input, expectedVersion)
 }
-

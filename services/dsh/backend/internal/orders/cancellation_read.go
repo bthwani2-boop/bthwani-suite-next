@@ -94,7 +94,6 @@ func GetCancellation(db *sql.DB, orderID string) (*Cancellation, error) {
 	}
 	return &cancellation, nil
 }
-
 func GetCancellationForContext(db *sql.DB, operatorContextID, orderID string) (*Cancellation, error) {
 	if strings.TrimSpace(operatorContextID) == "" || strings.TrimSpace(orderID) == "" {
 		return nil, ErrInvalid
@@ -163,4 +162,3 @@ func GetCancellationForContext(db *sql.DB, operatorContextID, orderID string) (*
 	}
 	return &cancellation, nil
 }
-
