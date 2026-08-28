@@ -928,6 +928,13 @@
       "sha256": "709a79062601fd213e01a94fe315c2611beae2eaebbc417ba30aba798516d687",
       "historicalPrefix": "962",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 133,
+      "file": "wlt-963_commission_adjustment_idempotency_partial_index.sql",
+      "sha256": "cb99fe49ea9aaa93a18c6ea266b850c19cf93a5d48ebbfc7d63e97f3a66a65ea",
+      "historicalPrefix": "963",
+      "state": "ACTIVE"
     }
   ]
 }
