@@ -627,9 +627,9 @@ func ApplyGovernedCommissionAdjustment(
 		 reason, correlation_id, metadata)
 		VALUES ($1,'commission_adjustment',$2,$3,$4,'operator',$5,$6,
 		        jsonb_build_object(
-		          'commissionId',$7,
-		          'deltaMinorUnits',$8,
-		          'resultAmountMinorUnits',$9))`,
+		          'commissionId',$7::text,
+			          'deltaMinorUnits',$8::bigint,
+			          'resultAmountMinorUnits',$9::bigint))`,
 		operatorContextID,
 		adjustmentID,
 		eventType,
