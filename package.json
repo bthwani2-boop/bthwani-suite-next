@@ -18,6 +18,7 @@
     "typecheck:all": "pnpm run typecheck:ts && pnpm run typecheck:ts6:compat",
     "build": "pnpm run affected:build",
     "guard:source-integrity": "node --test tools/guards/source-integrity-gate.test.mjs && node tools/guards/source-integrity-gate.mjs",
+    "guard:sonar-coverage-ownership": "node --test tools/guards/sonar-coverage-ownership-gate.test.mjs && node tools/guards/sonar-coverage-ownership-gate.mjs",
     "docker:runtime:up": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles dsh,media-storage",
     "docker:runtime:down": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles dsh,media-storage",
     "docker:runtime:reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action reset -Profiles dsh,media-storage -Force",

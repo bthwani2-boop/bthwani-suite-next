@@ -9,6 +9,11 @@ const startsWithAny = (file, prefixes) => prefixes.some((prefix) => file.startsW
 const isDependencyManifest = (file) => /(^|\/)(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|go\.mod|go\.sum|requirements[^/]*\.txt|poetry\.lock|Cargo\.lock)$/u.test(file);
 const isDockerFile = (file) => file === ".dockerignore" || /(^|\/)(Dockerfile(?:\..*)?|[^/]*\.dockerfile)$/u.test(file);
 
+export function resolveFullScope({ fullScope = process.env.CI_FULL_SCOPE, mode = process.env.CI_MODE } = {}) {
+  return String(fullScope ?? "false").trim().toLowerCase() === "true" ||
+    String(mode ?? "").trim().toLowerCase() === "full";
+}
+
 export function classifyFiles(inputFiles, options = {}) {
   const files = sorted(inputFiles);
   const fullScope = options.fullScope === true;
@@ -96,7 +101,7 @@ function writeOutputs(outputs) {
 function main() {
   const baseSha = String(process.env.CI_BASE_SHA ?? "").trim();
   const headSha = String(process.env.CI_HEAD_SHA ?? "HEAD").trim() || "HEAD";
-  const fullScope = String(process.env.CI_FULL_SCOPE ?? "false").trim().toLowerCase() === "true";
+  const fullScope = resolveFullScope();
   const provided = String(process.env.CI_CHANGED_FILES ?? "").trim();
   const files = provided ? provided.split(/\r?\n/u).map(normalizePath).filter(Boolean) : readChangedFiles(baseSha, headSha);
   const classification = classifyFiles(files, { fullScope });

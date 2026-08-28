@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyFiles } from "./detect-ci-context.mjs";
+import { classifyFiles, resolveFullScope } from "./detect-ci-context.mjs";
 
 test("governance text does not widen executable verification", () => {
   const result = classifyFiles(["governance/policies/engineering.md"]);
@@ -80,6 +80,12 @@ test("fullScope enables every owner without adding a tier or profile", () => {
     assert.equal(result[key], true, key);
   }
   assert.deepEqual(result.required_jobs, ["diagnostics", "node", "backends", "runtime"]);
+});
+
+test("CI_MODE=full enables full scope for reusable Sonar callers", () => {
+  assert.equal(resolveFullScope({ fullScope: "false", mode: "full" }), true);
+  assert.equal(resolveFullScope({ fullScope: "false", mode: "affected" }), false);
+  assert.equal(classifyFiles([], { fullScope: resolveFullScope({ mode: "full" }) }).sonar_required, true);
 });
 
 test("router output has no legacy control-plane concepts", () => {

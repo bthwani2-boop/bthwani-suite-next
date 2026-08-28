@@ -62,6 +62,14 @@ test("ci-check exposes the one manual affected-verification entrypoint", () => {
   assert.doesNotMatch(workflow, /workflow_run:|repository_dispatch|actions\/workflows\//u);
 });
 
+test("CI and Sonar enforce the same repository-wide Sonar ownership contract", () => {
+  for (const file of [".github/workflows/ci-check.yml", ".github/workflows/sonarqube.yml"]) {
+    const workflow = read(file);
+    assert.match(workflow, /sonar-coverage-ownership-gate\.test\.mjs/u, file);
+    assert.match(workflow, /sonar-coverage-ownership-gate\.mjs/u, file);
+  }
+});
+
 test("Sonar trusted analysis has one explicit master opt-in", () => {
   const sonar = read(".github/workflows/sonarqube.yml");
   const master = read(".github/workflows/master-sonar.yml");

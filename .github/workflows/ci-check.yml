@@ -107,6 +107,8 @@ jobs:
           CI_HEAD_SHA: ${{ steps.identity.outputs.head_sha }}
           CI_FULL_SCOPE: ${{ inputs.full_scope }}
         run: node tools/scripts/detect-ci-context.mjs
+      - name: Verify Sonar coverage ownership and configuration
+        run: node --test tools/guards/sonar-coverage-ownership-gate.test.mjs && node tools/guards/sonar-coverage-ownership-gate.mjs
 
   diagnostics:
     name: Contract diagnostics

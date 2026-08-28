@@ -60,6 +60,9 @@ jobs:
         with:
           node-version: "24.17.0"
 
+      - name: Verify Sonar coverage ownership and configuration
+        run: node --test tools/guards/sonar-coverage-ownership-gate.test.mjs && node tools/guards/sonar-coverage-ownership-gate.mjs
+
       - name: Determine exact affected Sonar scope
         id: ci_scope
         shell: bash
