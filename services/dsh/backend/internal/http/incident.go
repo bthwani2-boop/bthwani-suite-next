@@ -33,6 +33,7 @@ func marshalOperationalIncident(inc *incident.Incident) map[string]any {
 	return map[string]any{
 		"id":                inc.ID,
 		"orderId":           inc.OrderID,
+		"operatorContextId": inc.OperatorContextID,
 		"targetEntityType":  inc.TargetEntityType,
 		"targetEntityId":    inc.TargetEntityID,
 		"incidentType":      inc.IncidentType,
@@ -103,15 +104,16 @@ func (s *protectedStoreServer) handleReportOperationalIncident(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleListOperatorIncidents(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	limit, offset := parseLimitOffset(r)
 	incidents, err := incident.List(s.db, incident.ListFilter{
-		OrderID: r.URL.Query().Get("orderId"),
-		Limit:   limit,
-		Offset:  offset,
+		OperatorContextID: actor.OperatorContextID,
+		OrderID:           r.URL.Query().Get("orderId"),
+		Limit:             limit,
+		Offset:            offset,
 	})
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list operational incidents")
@@ -125,11 +127,11 @@ func (s *protectedStoreServer) handleListOperatorIncidents(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleGetOperatorIncident(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	inc, err := incident.Get(s.db, r.PathValue("incidentId"))
+	inc, err := incident.Get(s.db, r.PathValue("incidentId"), actor.OperatorContextID)
 	if err != nil {
 		writeOperationalIncidentError(w, err)
 		return

@@ -46,6 +46,7 @@ const (
 type Incident struct {
 	ID                string
 	OrderID           string
+	OperatorContextID string
 	TargetEntityType  TargetEntityType
 	TargetEntityID    string
 	IncidentType      IncidentType
@@ -60,26 +61,27 @@ type Incident struct {
 	PartnerNotified   bool
 	PartnerNotifiedAt *time.Time
 	CorrelationID     *string
+	CommandPayload    json.RawMessage
 	AppliedAt         *time.Time
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }
 
 const incidentColumns = `
-	id, order_id::text, target_entity_type, target_entity_id, incident_type, status,
-	reason, ticket_reference, actor_id, actor_role,
-	before_state, after_state, failure_reason,
-	partner_notified, partner_notified_at, correlation_id, applied_at,
+		id, order_id::text, operator_context_id, target_entity_type, target_entity_id, incident_type, status,
+		reason, ticket_reference, actor_id, actor_role,
+		before_state, after_state, failure_reason,
+		partner_notified, partner_notified_at, correlation_id, command_payload, applied_at,
 	created_at, updated_at
 `
 
 func scanIncident(scan func(...any) error) (*Incident, error) {
 	var inc Incident
 	err := scan(
-		&inc.ID, &inc.OrderID, &inc.TargetEntityType, &inc.TargetEntityID, &inc.IncidentType, &inc.Status,
+		&inc.ID, &inc.OrderID, &inc.OperatorContextID, &inc.TargetEntityType, &inc.TargetEntityID, &inc.IncidentType, &inc.Status,
 		&inc.Reason, &inc.TicketReference, &inc.ActorID, &inc.ActorRole,
 		&inc.BeforeState, &inc.AfterState, &inc.FailureReason,
-		&inc.PartnerNotified, &inc.PartnerNotifiedAt, &inc.CorrelationID, &inc.AppliedAt,
+		&inc.PartnerNotified, &inc.PartnerNotifiedAt, &inc.CorrelationID, &inc.CommandPayload, &inc.AppliedAt,
 		&inc.CreatedAt, &inc.UpdatedAt,
 	)
 	if err != nil {
@@ -89,9 +91,12 @@ func scanIncident(scan func(...any) error) (*Incident, error) {
 }
 
 // Get returns the incident row by id.
-func Get(db *sql.DB, id string) (*Incident, error) {
-	query := `SELECT ` + incidentColumns + ` FROM dsh_operational_incidents WHERE id = $1`
-	inc, err := scanIncident(db.QueryRow(query, id).Scan)
+func Get(db *sql.DB, id string, operatorContextID string) (*Incident, error) {
+	if operatorContextID == "" {
+		return nil, ErrInvalid
+	}
+	query := `SELECT ` + incidentColumns + ` FROM dsh_operational_incidents WHERE id = $1 AND operator_context_id = $2`
+	inc, err := scanIncident(db.QueryRow(query, id, operatorContextID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -100,9 +105,10 @@ func Get(db *sql.DB, id string) (*Incident, error) {
 
 // ListFilter narrows List by order.
 type ListFilter struct {
-	OrderID string
-	Limit   int
-	Offset  int
+	OperatorContextID string
+	OrderID           string
+	Limit             int
+	Offset            int
 }
 
 func clampLimit(limit int) int {
@@ -114,10 +120,14 @@ func clampLimit(limit int) int {
 
 // List returns incidents matching filter, newest first.
 func List(db *sql.DB, filter ListFilter) ([]Incident, error) {
+	if filter.OperatorContextID == "" {
+		return nil, ErrInvalid
+	}
 	limit := clampLimit(filter.Limit)
-	where := "WHERE 1=1"
+	where := "WHERE operator_context_id = $1"
 	var args []any
-	idx := 1
+	args = append(args, filter.OperatorContextID)
+	idx := 2
 	if filter.OrderID != "" {
 		where += " AND order_id = $" + itoa(idx) + "::uuid"
 		args = append(args, filter.OrderID)

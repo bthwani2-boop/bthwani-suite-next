@@ -4,30 +4,38 @@ import "testing"
 
 func TestSameIncidentCommandRejectsAllMaterialDivergence(t *testing.T) {
 	base := Incident{
-		OrderID:          "11111111-1111-1111-1111-111111111111",
-		TargetEntityType: TargetOrder,
-		TargetEntityID:   "11111111-1111-1111-1111-111111111111",
-		IncidentType:     TypeCancel,
-		Reason:           "governed cancellation",
-		TicketReference:  "ticket-1",
-		ActorID:          "actor-1",
-		ActorRole:        "operator",
+		OrderID:           "11111111-1111-1111-1111-111111111111",
+		OperatorContextID: "operator-context-1",
+		TargetEntityType:  TargetOrder,
+		TargetEntityID:    "11111111-1111-1111-1111-111111111111",
+		IncidentType:      TypeCancel,
+		Reason:            "governed cancellation",
+		TicketReference:   "ticket-1",
+		ActorID:           "actor-1",
+		ActorRole:         "operator",
 	}
 	corr := "corr-1"
 	base.CorrelationID = &corr
 
 	baseInput := ReportInput{
-		OrderID:          base.OrderID,
-		TargetEntityType: base.TargetEntityType,
-		TargetEntityID:   base.TargetEntityID,
-		IncidentType:     base.IncidentType,
-		Reason:           base.Reason,
-		TicketReference:  base.TicketReference,
-		ActorID:          base.ActorID,
-		ActorRole:        base.ActorRole,
-		CorrelationID:    corr,
+		OrderID:            base.OrderID,
+		OperatorContextID:  base.OperatorContextID,
+		TargetEntityType:   base.TargetEntityType,
+		TargetEntityID:     base.TargetEntityID,
+		IncidentType:       base.IncidentType,
+		Reason:             base.Reason,
+		TicketReference:    base.TicketReference,
+		ActorID:            base.ActorID,
+		ActorRole:          base.ActorRole,
+		CorrelationID:      corr,
+		ExpectedVersion:    7,
+		EvidenceReferences: []string{"evidence-1"},
+		CommandID:          "command-1",
+		ReasonCode:         "operational_failure",
+		ReasonNote:         "note-1",
 	}
 
+	base.CommandPayload = mustMarshal(commandEnvelope(baseInput))
 	if !sameIncidentCommand(&base, baseInput) {
 		t.Fatal("identical input must match")
 	}
@@ -42,6 +50,12 @@ func TestSameIncidentCommandRejectsAllMaterialDivergence(t *testing.T) {
 		{"different target entity id", func(in *ReportInput) { in.TargetEntityID = "99999999-9999-9999-9999-999999999999" }},
 		{"different incident type", func(in *ReportInput) { in.IncidentType = TypeSuspend }},
 		{"different correlation id", func(in *ReportInput) { in.CorrelationID = "corr-2" }},
+		{"different operator context", func(in *ReportInput) { in.OperatorContextID = "operator-context-2" }},
+		{"different expected version", func(in *ReportInput) { in.ExpectedVersion = 8 }},
+		{"different evidence", func(in *ReportInput) { in.EvidenceReferences = []string{"evidence-2"} }},
+		{"different command id", func(in *ReportInput) { in.CommandID = "command-2" }},
+		{"different reason code", func(in *ReportInput) { in.ReasonCode = "customer_request" }},
+		{"different reason note", func(in *ReportInput) { in.ReasonNote = "note-2" }},
 	}
 	for _, d := range divergences {
 		t.Run(d.name, func(t *testing.T) {
