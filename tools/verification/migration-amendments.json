@@ -603,6 +603,23 @@
         "productionApprovalEvidence": false
       },
       "requiredCorrection": "Accept the pre-release checksum 7455657bbc6893f68bdd6e98487eeb23fef5cdb9c08342b08ce3efec6a4bffd9 for legacy ledger reconciliation while using the corrected transaction envelope. No forward-recovery migration is required because the change is comments-only and schema-equivalent."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-958_external_statement_verification_link.sql",
+      "replacementSha256": "69ac9749f5ce78a3f0b9a5b888b46f226d408b824186ac88d26c96d091ea6be5",
+      "acceptedHistoricalSha256": [
+        "f4dbe00a39c9a132caf5f73922e8ae018b250a8946f5c16bd22fbc7894b85c7b"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release operator-context closure added trigger suspension around WLT-958's bounded downgrade of legacy provider labels that lacked an immutable verification receipt. The migration remains schema-equivalent, but the historical file is marked HISTORICAL_IMMUTABLE and the drift gate must retain the original checksum for databases that recorded it before this correction. No production WLT runtime evidence exists for the corrected candidate.",
+      "evidence": {
+        "cleanInstallCommitSha": "406d67d1a0e864d008aba59d0426376bd3dd9d58",
+        "cleanInstallResult": "NOT_RUN",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep the corrected WLT-958 source and register the original pre-release checksum as accepted historical evidence so the governed ledger can reconcile both forms without rewriting an applied migration or weakening the immutable migration policy."
     }
   ]
 }

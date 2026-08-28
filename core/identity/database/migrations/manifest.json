@@ -304,7 +304,7 @@
       "file": "identity-042_support_session_rotation.sql",
       "sha256": "b8daceb40c01ec779782f2a0b2a283c08637b548530676b5cb61d73a97d8d29e",
       "historicalPrefix": null,
-      "state": "ACTIVE"
+      "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 44,
