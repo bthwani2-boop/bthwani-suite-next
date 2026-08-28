@@ -58,14 +58,14 @@ func requireCurrentCanonicalRole(ctx context.Context, identityClient *auth.Clien
 	return definition, nil
 }
 
-func lockFailedTerminalIntentTx(ctx context.Context, tx *sql.Tx, operationType, requestID string) error {
+func lockFailedTerminalIntentTx(ctx context.Context, tx *sql.Tx, operatorContextID, operationType, requestID string) error {
 	var status string
 	if err := tx.QueryRowContext(ctx, `
 		SELECT status
 		FROM dsh_admin_canonical_mutation_intents
-		WHERE operation_type = $1 AND request_id = $2
+		WHERE operator_context_id = $1 AND operation_type = $2 AND request_id = $3
 		FOR UPDATE
-	`, operationType, requestID).Scan(&status); err != nil {
+	`, operatorContextID, operationType, requestID).Scan(&status); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("%w: request has no canonical execution", ErrConflict)
 		}
@@ -85,26 +85,26 @@ func supersessionConflict(err error) error {
 	return err
 }
 
-func appendTerminalSupersessionAuditTx(ctx context.Context, tx *sql.Tx, actorID, action, operationType, oldRequestID, replacementRequestID string) error {
+func appendTerminalSupersessionAuditTx(ctx context.Context, tx *sql.Tx, operatorContextID, actorID, action, operationType, oldRequestID, replacementRequestID string) error {
 	_, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_admin_audit
-			(actor_id, action, target_id, detail, sensitivity, correlation_id, metadata)
+			(operator_context_id, actor_id, action, target_id, detail, sensitivity, correlation_id, metadata)
 		VALUES
-			($1, $2, $3,
+			($1, $2, $3, $4,
 			 jsonb_build_object(
-			   'request_id', $5::text,
+			   'request_id', $6::text,
 			   'decision', 'superseded',
-			   'action_type', $4::text,
+			   'action_type', $5::text,
 			   'reason_provided', TRUE
 			 )::text,
-			 'restricted', $3,
+			 'restricted', $4,
 			 jsonb_build_object(
-			   'request_id', $5::text,
+			   'request_id', $6::text,
 			   'decision', 'superseded',
-			   'action_type', $4::text,
+			   'action_type', $5::text,
 			   'reason_provided', TRUE
 			 ))
-	`, actorID, action, oldRequestID, operationType, replacementRequestID)
+	`, operatorContextID, actorID, action, oldRequestID, operationType, replacementRequestID)
 	return err
 }
 
@@ -115,13 +115,17 @@ func SupersedeFailedRoleAssignmentApproval(ctx context.Context, db *sql.DB, iden
 	if db == nil || strings.TrimSpace(actorID) == "" || strings.TrimSpace(requestID) == "" {
 		return nil, ErrInvalid
 	}
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, contextErr
+	}
 	params, err := normalizeTerminalSupersessionParams(params)
 	if err != nil {
 		return nil, err
 	}
 
 	var preflightRoleName string
-	if err := db.QueryRowContext(ctx, `SELECT role_name FROM dsh_admin_approval_requests WHERE id = $1`, requestID).Scan(&preflightRoleName); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT role_name FROM dsh_admin_approval_requests WHERE operator_context_id = $1 AND id = $2`, operatorContextID, requestID).Scan(&preflightRoleName); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -142,9 +146,9 @@ func SupersedeFailedRoleAssignmentApproval(ctx context.Context, db *sql.DB, iden
 	if err := tx.QueryRowContext(ctx, `
 		SELECT id, action_type, target_actor_id, role_name, COALESCE(expected_role_version, 0), requested_by, reason, status, version
 		FROM dsh_admin_approval_requests
-		WHERE id = $1
+		WHERE operator_context_id = $1 AND id = $2
 		FOR UPDATE
-	`, requestID).Scan(
+	`, operatorContextID, requestID).Scan(
 		&old.ID, &old.ActionType, &old.TargetActorID, &old.RoleName, &old.ExpectedRoleVersion, &old.RequestedBy,
 		&old.Reason, &old.Status, &old.Version,
 	); err != nil {
@@ -156,33 +160,33 @@ func SupersedeFailedRoleAssignmentApproval(ctx context.Context, db *sql.DB, iden
 	if old.Status != "pending" || old.Version != params.ExpectedVersion || old.RoleName != preflightRoleName || actorID == old.TargetActorID {
 		return nil, ErrConflict
 	}
-	if err := lockFailedTerminalIntentTx(ctx, tx, "role-assignment", old.ID); err != nil {
+	if err := lockFailedTerminalIntentTx(ctx, tx, operatorContextID, "role-assignment", old.ID); err != nil {
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE dsh_admin_approval_requests
 		SET status = 'superseded', superseded_by = $1, superseded_reason_code = $2,
 		    superseded_at = NOW(), version = version + 1, updated_at = NOW()
-		WHERE id = $3 AND status = 'pending' AND version = $4
-	`, actorID, params.ReasonCode, old.ID, old.Version); err != nil {
+		WHERE operator_context_id = $3 AND id = $4 AND status = 'pending' AND version = $5
+	`, actorID, params.ReasonCode, operatorContextID, old.ID, old.Version); err != nil {
 		return nil, supersessionConflict(err)
 	}
 
 	var replacement RoleAssignmentApproval
 	if err := tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_admin_approval_requests
-			(action_type, target_actor_id, role_name, expected_role_version, requested_by, reason, status, supersedes_request_id)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
+			(operator_context_id, action_type, target_actor_id, role_name, expected_role_version, requested_by, reason, status, supersedes_request_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)
 		RETURNING id, action_type, target_actor_id, role_name, expected_role_version, requested_by, reason, status,
 		          version, created_at, updated_at
-	`, old.ActionType, old.TargetActorID, old.RoleName, currentRole.Version, actorID, params.ReplacementReason, old.ID).Scan(
+	`, operatorContextID, old.ActionType, old.TargetActorID, old.RoleName, currentRole.Version, actorID, params.ReplacementReason, old.ID).Scan(
 		&replacement.ID, &replacement.ActionType, &replacement.TargetActorID, &replacement.RoleName,
 		&replacement.ExpectedRoleVersion, &replacement.RequestedBy, &replacement.Reason, &replacement.Status, &replacement.Version,
 		&replacement.CreatedAt, &replacement.UpdatedAt,
 	); err != nil {
 		return nil, supersessionConflict(err)
 	}
-	if err := appendTerminalSupersessionAuditTx(ctx, tx, actorID, "ROLE_ASSIGNMENT_SUPERSEDED", "role-assignment", old.ID, replacement.ID); err != nil {
+	if err := appendTerminalSupersessionAuditTx(ctx, tx, operatorContextID, actorID, "ROLE_ASSIGNMENT_SUPERSEDED", "role-assignment", old.ID, replacement.ID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -207,6 +211,10 @@ func SupersedeFailedRoleDefinitionRequest(ctx context.Context, db *sql.DB, ident
 	if db == nil || strings.TrimSpace(actorID) == "" || strings.TrimSpace(requestID) == "" {
 		return nil, ErrInvalid
 	}
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, contextErr
+	}
 	params, err := normalizeTerminalSupersessionParams(params)
 	if err != nil {
 		return nil, err
@@ -216,8 +224,8 @@ func SupersedeFailedRoleDefinitionRequest(ctx context.Context, db *sql.DB, ident
 	if err := db.QueryRowContext(ctx, `
 		SELECT role_name, description, active, permissions, surfaces, version
 		FROM dsh_admin_role_definition_requests
-		WHERE id = $1
-	`, requestID).Scan(
+		WHERE operator_context_id = $1 AND id = $2
+	`, operatorContextID, requestID).Scan(
 		&preflight.roleName, &preflight.description, &preflight.active,
 		&preflight.permissionsJSON, &preflight.surfacesJSON, &preflight.version,
 	); err != nil {
@@ -263,9 +271,9 @@ func SupersedeFailedRoleDefinitionRequest(ctx context.Context, db *sql.DB, ident
 		SELECT id, role_name, description, active, expected_role_version, permissions, surfaces,
 		       requested_by, reason, status, version
 		FROM dsh_admin_role_definition_requests
-		WHERE id = $1
+		WHERE operator_context_id = $1 AND id = $2
 		FOR UPDATE
-	`, requestID).Scan(
+	`, operatorContextID, requestID).Scan(
 		&old.ID, &old.RoleName, &old.Description, &old.Active, &old.ExpectedRoleVersion,
 		&lockedPermissions, &lockedSurfaces, &old.RequestedBy, &old.Reason, &old.Status, &old.Version,
 	); err != nil {
@@ -279,27 +287,27 @@ func SupersedeFailedRoleDefinitionRequest(ctx context.Context, db *sql.DB, ident
 		!bytes.Equal(lockedPermissions, preflight.permissionsJSON) || !bytes.Equal(lockedSurfaces, preflight.surfacesJSON) {
 		return nil, ErrConflict
 	}
-	if err := lockFailedTerminalIntentTx(ctx, tx, "role-definition-upsert", old.ID); err != nil {
+	if err := lockFailedTerminalIntentTx(ctx, tx, operatorContextID, "role-definition-upsert", old.ID); err != nil {
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE dsh_admin_role_definition_requests
 		SET status = 'superseded', superseded_by = $1, superseded_reason_code = $2,
 		    superseded_at = NOW(), version = version + 1, updated_at = NOW()
-		WHERE id = $3 AND status = 'pending' AND version = $4
-	`, actorID, params.ReasonCode, old.ID, old.Version); err != nil {
+		WHERE operator_context_id = $3 AND id = $4 AND status = 'pending' AND version = $5
+	`, actorID, params.ReasonCode, operatorContextID, old.ID, old.Version); err != nil {
 		return nil, supersessionConflict(err)
 	}
 
 	var replacement RoleDefinitionRequest
 	if err := tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_admin_role_definition_requests
-			(role_name, description, active, expected_role_version, permissions, surfaces,
+			(operator_context_id, role_name, description, active, expected_role_version, permissions, surfaces,
 			 requested_by, reason, status, supersedes_request_id)
-		VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, 'pending', $9)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8, $9, 'pending', $10)
 		RETURNING id, role_name, description, active, expected_role_version, permissions, surfaces,
 		          requested_by, reason, status, version, created_at, updated_at
-	`, old.RoleName, old.Description, old.Active, currentRoleVersion, string(permissionsJSON), string(lockedSurfaces),
+	`, operatorContextID, old.RoleName, old.Description, old.Active, currentRoleVersion, string(permissionsJSON), string(lockedSurfaces),
 		actorID, params.ReplacementReason, old.ID).Scan(
 		&replacement.ID, &replacement.RoleName, &replacement.Description, &replacement.Active,
 		&replacement.ExpectedRoleVersion, &permissionsJSON, &lockedSurfaces, &replacement.RequestedBy,
@@ -313,7 +321,7 @@ func SupersedeFailedRoleDefinitionRequest(ctx context.Context, db *sql.DB, ident
 	if err := json.Unmarshal(lockedSurfaces, &replacement.Surfaces); err != nil {
 		return nil, err
 	}
-	if err := appendTerminalSupersessionAuditTx(ctx, tx, actorID, "ROLE_DEFINITION_SUPERSEDED", "role-definition-upsert", old.ID, replacement.ID); err != nil {
+	if err := appendTerminalSupersessionAuditTx(ctx, tx, operatorContextID, actorID, "ROLE_DEFINITION_SUPERSEDED", "role-definition-upsert", old.ID, replacement.ID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -329,13 +337,17 @@ func SupersedeFailedRollbackRequest(ctx context.Context, db *sql.DB, identityCli
 	if db == nil || strings.TrimSpace(actorID) == "" || strings.TrimSpace(requestID) == "" {
 		return nil, ErrInvalid
 	}
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, contextErr
+	}
 	params, err := normalizeTerminalSupersessionParams(params)
 	if err != nil {
 		return nil, err
 	}
 
 	var preflightRoleName string
-	if err := db.QueryRowContext(ctx, `SELECT role_name FROM dsh_admin_rollback_requests WHERE id = $1`, requestID).Scan(&preflightRoleName); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT role_name FROM dsh_admin_rollback_requests WHERE operator_context_id = $1 AND id = $2`, operatorContextID, requestID).Scan(&preflightRoleName); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -360,10 +372,12 @@ func SupersedeFailedRollbackRequest(ctx context.Context, db *sql.DB, identityCli
 		       rollback.requested_by, rollback.reason, rollback.status, rollback.version,
 		       COALESCE(source.reviewed_by, ''), source.status
 		FROM dsh_admin_rollback_requests AS rollback
-		JOIN dsh_admin_approval_requests AS source ON source.id = rollback.source_approval_id
-		WHERE rollback.id = $1
+		JOIN dsh_admin_approval_requests AS source
+		  ON source.id = rollback.source_approval_id
+		 AND source.operator_context_id = rollback.operator_context_id
+		WHERE rollback.operator_context_id = $1 AND rollback.id = $2
 		FOR UPDATE OF rollback
-	`, requestID).Scan(
+	`, operatorContextID, requestID).Scan(
 		&old.ID, &old.SourceApprovalID, &old.SourceActionType, &old.InverseActionType,
 		&old.TargetActorID, &old.RoleName, &old.ExpectedRoleVersion, &old.RequestedBy, &old.Reason, &old.Status,
 		&old.Version, &old.SourceApprovedBy, &sourceStatus,
@@ -377,27 +391,27 @@ func SupersedeFailedRollbackRequest(ctx context.Context, db *sql.DB, identityCli
 		sourceStatus != "approved" || actorID == old.TargetActorID {
 		return nil, ErrConflict
 	}
-	if err := lockFailedTerminalIntentTx(ctx, tx, "role-rollback", old.ID); err != nil {
+	if err := lockFailedTerminalIntentTx(ctx, tx, operatorContextID, "role-rollback", old.ID); err != nil {
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE dsh_admin_rollback_requests
 		SET status = 'superseded', superseded_by = $1, superseded_reason_code = $2,
 		    superseded_at = NOW(), version = version + 1, updated_at = NOW()
-		WHERE id = $3 AND status = 'pending' AND version = $4
-	`, actorID, params.ReasonCode, old.ID, old.Version); err != nil {
+		WHERE operator_context_id = $3 AND id = $4 AND status = 'pending' AND version = $5
+	`, actorID, params.ReasonCode, operatorContextID, old.ID, old.Version); err != nil {
 		return nil, supersessionConflict(err)
 	}
 
 	var replacement RollbackRequest
 	if err := tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_admin_rollback_requests
-			(source_approval_id, inverse_action_type, target_actor_id, role_name, expected_role_version,
+			(operator_context_id, source_approval_id, inverse_action_type, target_actor_id, role_name, expected_role_version,
 			 requested_by, reason, status, supersedes_request_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9)
 		RETURNING id, source_approval_id, inverse_action_type, target_actor_id, role_name, expected_role_version,
 		          requested_by, reason, status, version, created_at, updated_at
-	`, old.SourceApprovalID, old.InverseActionType, old.TargetActorID, old.RoleName, currentRole.Version,
+	`, operatorContextID, old.SourceApprovalID, old.InverseActionType, old.TargetActorID, old.RoleName, currentRole.Version,
 		actorID, params.ReplacementReason, old.ID).Scan(
 		&replacement.ID, &replacement.SourceApprovalID, &replacement.InverseActionType,
 		&replacement.TargetActorID, &replacement.RoleName, &replacement.ExpectedRoleVersion, &replacement.RequestedBy,
@@ -408,7 +422,7 @@ func SupersedeFailedRollbackRequest(ctx context.Context, db *sql.DB, identityCli
 	}
 	replacement.SourceActionType = old.SourceActionType
 	replacement.SourceApprovedBy = old.SourceApprovedBy
-	if err := appendTerminalSupersessionAuditTx(ctx, tx, actorID, "ROLLBACK_SUPERSEDED", "role-rollback", old.ID, replacement.ID); err != nil {
+	if err := appendTerminalSupersessionAuditTx(ctx, tx, operatorContextID, actorID, "ROLLBACK_SUPERSEDED", "role-rollback", old.ID, replacement.ID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {

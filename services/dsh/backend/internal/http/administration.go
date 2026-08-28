@@ -62,7 +62,7 @@ func (s *protectedStoreServer) handleListAdminAudit(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
-	entries, err := administration.ListAdminAudit(s.db, r.URL.Query().Get("actorId"), 100)
+	entries, err := administration.ListAdminAudit(r.Context(), s.db, r.URL.Query().Get("actorId"), 100)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list audit")
 		return

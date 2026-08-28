@@ -568,6 +568,11 @@ func (s *protectedStoreServer) requirePermission(
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 		return store.StoreActor{}, false
 	}
+	if strings.TrimSpace(identity.OperatorContextID) == "" || strings.TrimSpace(identity.OperatorContextID) == "legacy-unscoped" {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "session has no executable operator context")
+		return store.StoreActor{}, false
+	}
+	*r = *r.WithContext(auth.WithOperatorContext(r.Context(), identity.OperatorContextID))
 	if surface != dshActorSurface("operator") || identity.SessionSurface != surface {
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "control-panel session is required")
 		return store.StoreActor{}, false

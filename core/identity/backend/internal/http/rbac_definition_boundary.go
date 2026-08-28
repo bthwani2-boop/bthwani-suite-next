@@ -39,6 +39,11 @@ func dshRbacServiceOnly(next http.HandlerFunc) http.HandlerFunc {
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "service token is required")
 			return
 		}
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		if operatorContextID == "" || operatorContextID == "legacy-unscoped" {
+			sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "X-Operator-Context-ID is required")
+			return
+		}
 		next(w, r)
 	}
 }
@@ -95,7 +100,7 @@ func handleRoleDefinitionWrite(authority *identity.PermissionEnforcer) http.Hand
 		}
 		active := *request.Active
 		expectedVersion := *request.ExpectedVersion
-		role, err := authority.UpsertRoleDefinitionWithOptions(r.Context(), r.PathValue("roleName"), request.Description, active, expectedVersion, request.Permissions, idempotencyKey, "dsh")
+		role, err := authority.UpsertRoleDefinitionWithOptions(r.Context(), strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")), r.PathValue("roleName"), request.Description, active, expectedVersion, request.Permissions, idempotencyKey, "dsh")
 		switch {
 		case errors.Is(err, identity.ErrInvalidRoleName), errors.Is(err, identity.ErrPermissionNotInVocabulary), errors.Is(err, identity.ErrIdempotencyKeyRequired):
 			sendError(w, http.StatusBadRequest, "INVALID_ROLE_DEFINITION", err.Error())

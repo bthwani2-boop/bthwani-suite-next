@@ -401,6 +401,13 @@
       "sha256": "686ac61adbbacb7c6a4b2307d4e54017b158be6535f872d8d9543ca6ec113c1a",
       "historicalPrefix": "1056",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 298,
+      "file": "dsh-1057_administration_operator_context_scope.sql",
+      "sha256": "bf2d5ff64b578bc4de22dd0368d4e05cc22cc5521fd7cc71d2d7ad947f538f04",
+      "historicalPrefix": "1057",
+      "state": "ACTIVE"
     }
   ]
 }

@@ -311,6 +311,13 @@
       "file": "identity-043_actor_operator_context_immutability.sql",
       "sha256": "af27ce5ba8497ff1dcb9c32f4e98bf0ddfa4b1c067616b493e557757e724adc9",
       "historicalPrefix": null,
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 45,
+      "file": "identity-044_rbac_operator_context_ledger.sql",
+      "sha256": "28d25c44d75d85a07650feccdd675c39fbf1654a12efb8bdb67529cb46770e36",
+      "historicalPrefix": null,
       "state": "ACTIVE"
     }
   ]

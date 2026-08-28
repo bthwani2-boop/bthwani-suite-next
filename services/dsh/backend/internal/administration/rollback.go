@@ -61,6 +61,10 @@ func CreateRollbackRequest(ctx context.Context, db *sql.DB, actorID string, appr
 	if db == nil {
 		return nil, ErrInvalid
 	}
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, contextErr
+	}
 	if len(strings.TrimSpace(params.Reason)) < 5 {
 		return nil, errors.New("reason too short")
 	}
@@ -75,8 +79,8 @@ func CreateRollbackRequest(ctx context.Context, db *sql.DB, actorID string, appr
 	err = tx.QueryRowContext(ctx, `
 		SELECT action_type, target_actor_id, role_name, status, COALESCE(reviewed_by, '')
 		FROM dsh_admin_approval_requests
-		WHERE id = $1
-	`, approvalID).Scan(&actionType, &targetActor, &roleName, &status, &sourceApprovedBy)
+		WHERE operator_context_id = $1 AND id = $2
+	`, operatorContextID, approvalID).Scan(&actionType, &targetActor, &roleName, &status, &sourceApprovedBy)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
@@ -98,10 +102,10 @@ func CreateRollbackRequest(ctx context.Context, db *sql.DB, actorID string, appr
 	var req RollbackRequest
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_admin_rollback_requests
-			(source_approval_id, inverse_action_type, target_actor_id, role_name, requested_by, reason, status)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+			(operator_context_id, source_approval_id, inverse_action_type, target_actor_id, role_name, requested_by, reason, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
 		RETURNING id, source_approval_id, inverse_action_type, target_actor_id, role_name, requested_by, reason, status, version, created_at, updated_at
-	`, approvalID, inverseAction, targetActor, roleName, actorID, params.Reason).Scan(
+	`, operatorContextID, approvalID, inverseAction, targetActor, roleName, actorID, params.Reason).Scan(
 		&req.ID, &req.SourceApprovalID, &req.InverseActionType, &req.TargetActorID, &req.RoleName,
 		&req.RequestedBy, &req.Reason, &req.Status, &req.Version, &req.CreatedAt, &req.UpdatedAt,
 	)
@@ -113,12 +117,12 @@ func CreateRollbackRequest(ctx context.Context, db *sql.DB, actorID string, appr
 	req.ExecutionStatus = "not_started"
 
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-		VALUES ($1, 'ROLLBACK_REQUESTED', $2,
-		        jsonb_build_object('request_id', $2::text,
-		                           'action_type', $3::text, 'reason_provided', TRUE)::text,
-		        'restricted', $2)
-	`, actorID, req.ID, inverseAction); err != nil {
+		INSERT INTO dsh_admin_audit (operator_context_id, actor_id, action, target_id, detail, sensitivity, correlation_id)
+		VALUES ($1, $2, 'ROLLBACK_REQUESTED', $3,
+		        jsonb_build_object('request_id', $3::text,
+		                           'action_type', $4::text, 'reason_provided', TRUE)::text,
+		        'restricted', $3)
+	`, operatorContextID, actorID, req.ID, inverseAction); err != nil {
 		return nil, err
 	}
 
@@ -132,6 +136,10 @@ func CreateRollbackRequest(ctx context.Context, db *sql.DB, actorID string, appr
 func ListRollbackRequests(ctx context.Context, db *sql.DB, status string) ([]RollbackRequest, error) {
 	if db == nil {
 		return nil, ErrInvalid
+	}
+	operatorContextID, err := requireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	query := `
@@ -147,13 +155,17 @@ func ListRollbackRequests(ctx context.Context, db *sql.DB, status string) ([]Rol
 		       rollback.created_at, rollback.updated_at, rollback.reviewed_at,
 		       COALESCE(source.reviewed_by, '')
 		FROM dsh_admin_rollback_requests rollback
-		JOIN dsh_admin_approval_requests source ON source.id = rollback.source_approval_id
+		JOIN dsh_admin_approval_requests source
+		  ON source.id = rollback.source_approval_id
+		 AND source.operator_context_id = rollback.operator_context_id
 		LEFT JOIN dsh_admin_canonical_mutation_intents intent
 		  ON intent.operation_type = 'role-rollback' AND intent.request_id = rollback.id
+		 AND intent.operator_context_id = rollback.operator_context_id
 	`
-	args := []interface{}{}
+	query += ` WHERE rollback.operator_context_id = $1 `
+	args := []interface{}{operatorContextID}
 	if status != "" {
-		query += ` WHERE rollback.status = $1 `
+		query += ` AND rollback.status = $2 `
 		args = append(args, status)
 	}
 	query += ` ORDER BY rollback.created_at DESC`
@@ -180,7 +192,7 @@ func ListRollbackRequests(ctx context.Context, db *sql.DB, status string) ([]Rol
 	return out, rows.Err()
 }
 
-func getRollbackRequest(ctx context.Context, db *sql.DB, requestID string) (*RollbackRequest, error) {
+func getRollbackRequest(ctx context.Context, db *sql.DB, operatorContextID, requestID string) (*RollbackRequest, error) {
 	var req RollbackRequest
 	if err := db.QueryRowContext(ctx, `
 		SELECT rollback.id, rollback.source_approval_id, source.action_type,
@@ -195,11 +207,14 @@ func getRollbackRequest(ctx context.Context, db *sql.DB, requestID string) (*Rol
 		       rollback.created_at, rollback.updated_at, rollback.reviewed_at,
 		       COALESCE(source.reviewed_by, '')
 		FROM dsh_admin_rollback_requests rollback
-		JOIN dsh_admin_approval_requests source ON source.id = rollback.source_approval_id
+		JOIN dsh_admin_approval_requests source
+		  ON source.id = rollback.source_approval_id
+		 AND source.operator_context_id = rollback.operator_context_id
 		LEFT JOIN dsh_admin_canonical_mutation_intents intent
 		  ON intent.operation_type = 'role-rollback' AND intent.request_id = rollback.id
-		WHERE rollback.id = $1
-	`, requestID).Scan(
+		 AND intent.operator_context_id = rollback.operator_context_id
+		WHERE rollback.operator_context_id = $1 AND rollback.id = $2
+	`, operatorContextID, requestID).Scan(
 		&req.ID, &req.SourceApprovalID, &req.SourceActionType, &req.InverseActionType,
 		&req.TargetActorID, &req.RoleName, &req.ExpectedRoleVersion, &req.RequestedBy, &req.Reason, &req.Status,
 		&req.ExecutionStatus, &req.ReviewedBy, &req.ReviewNote, &req.Version, &req.CreatedAt, &req.UpdatedAt,
@@ -220,6 +235,10 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 	if db == nil {
 		return nil, ErrInvalid
 	}
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, contextErr
+	}
 	if params.Decision != "approved" && params.Decision != "rejected" {
 		return nil, errors.New("invalid decision")
 	}
@@ -237,9 +256,11 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 		       rollback.requested_by, rollback.reason, rollback.status, rollback.version,
 		       COALESCE(source.reviewed_by, '')
 		FROM dsh_admin_rollback_requests rollback
-		JOIN dsh_admin_approval_requests source ON source.id = rollback.source_approval_id
-		WHERE rollback.id = $1 FOR UPDATE OF rollback
-	`, requestID).Scan(
+		JOIN dsh_admin_approval_requests source
+		  ON source.id = rollback.source_approval_id
+		 AND source.operator_context_id = rollback.operator_context_id
+		WHERE rollback.operator_context_id = $1 AND rollback.id = $2 FOR UPDATE OF rollback
+	`, operatorContextID, requestID).Scan(
 		&req.ID, &req.SourceApprovalID, &req.SourceActionType, &req.InverseActionType,
 		&req.TargetActorID, &req.RoleName, &req.ExpectedRoleVersion, &req.RequestedBy, &req.Reason,
 		&req.Status, &req.Version, &req.SourceApprovedBy,
@@ -264,18 +285,18 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 		if err = tx.QueryRowContext(ctx, `
 			UPDATE dsh_admin_rollback_requests
 			SET status = 'rejected', reviewed_by = $1, review_note = $2, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
-			WHERE id = $3 AND status = 'pending' AND version = $4
+			WHERE operator_context_id = $3 AND id = $4 AND status = 'pending' AND version = $5
 			RETURNING version, updated_at, reviewed_at
-		`, actorID, params.ReviewNote, requestID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
+		`, actorID, params.ReviewNote, operatorContextID, requestID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
 			return nil, errors.New("version conflict")
 		}
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-			VALUES ($1, 'ROLLBACK_REJECTED', $2,
-			        jsonb_build_object('request_id', $2::text, 'decision', 'rejected',
-			                           'action_type', $3::text, 'note_provided', btrim($4::text) <> '')::text,
-			        'restricted', $2)
-		`, actorID, req.ID, req.InverseActionType, params.ReviewNote); err != nil {
+			INSERT INTO dsh_admin_audit (operator_context_id, actor_id, action, target_id, detail, sensitivity, correlation_id)
+			VALUES ($1, $2, 'ROLLBACK_REJECTED', $3,
+			        jsonb_build_object('request_id', $3::text, 'decision', 'rejected',
+			                           'action_type', $4::text, 'note_provided', btrim($5::text) <> '')::text,
+			        'restricted', $3)
+		`, operatorContextID, actorID, req.ID, req.InverseActionType, params.ReviewNote); err != nil {
 			return nil, err
 		}
 		if err := tx.Commit(); err != nil {
@@ -290,6 +311,7 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 	}
 
 	intentPayload, _ := json.Marshal(roleMutationIntentPayload{
+		OperatorContextID:   operatorContextID,
 		TargetActorID:       req.TargetActorID,
 		RoleName:            req.RoleName,
 		ExpectedRoleVersion: req.ExpectedRoleVersion,
@@ -297,7 +319,7 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 		ReviewerID:          actorID,
 		ReviewNote:          params.ReviewNote,
 	})
-	if err := enqueueCanonicalMutationTx(ctx, tx, "role-rollback", req.ID, string(intentPayload)); err != nil {
+	if err := enqueueCanonicalMutationTx(ctx, tx, operatorContextID, "role-rollback", req.ID, string(intentPayload)); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -306,7 +328,7 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 	if _, err := executeCanonicalMutationNow(ctx, db, identityClient, "role-rollback", req.ID); err != nil {
 		return nil, err
 	}
-	readback, err := getRollbackRequest(ctx, db, req.ID)
+	readback, err := getRollbackRequest(ctx, db, operatorContextID, req.ID)
 	if err != nil {
 		return nil, err
 	}

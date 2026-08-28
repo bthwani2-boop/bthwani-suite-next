@@ -265,7 +265,7 @@ func TestListActorRoleAssignmentsReadsDurableInactiveMemberships(t *testing.T) {
 	defer server.Close()
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-identity-secret", "")
-	assignments, err := client.ListActorRoleAssignments(context.Background(), "actor-1")
+	assignments, err := client.ListActorRoleAssignments(WithOperatorContext(context.Background(), "operator-main"), "actor-1")
 	if err != nil {
 		t.Fatalf("unexpected durable assignment read error: %v", err)
 	}
@@ -306,10 +306,11 @@ func TestRoleMutationCarriesVersionFenceAndMapsConflict(t *testing.T) {
 	defer server.Close()
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-identity-secret", "")
-	if _, err := client.GrantRoleWithIdempotency(context.Background(), "actor-1", "operations_support", "reviewer-1", 7, "intent-1"); err != ErrRbacVersionConflict {
+	operatorContext := WithOperatorContext(context.Background(), "operator-main")
+	if _, err := client.GrantRoleWithIdempotency(operatorContext, "actor-1", "operations_support", "reviewer-1", 7, "intent-1"); err != ErrRbacVersionConflict {
 		t.Fatalf("grant conflict mapping = %v", err)
 	}
-	if err := client.RevokeRoleWithIdempotency(context.Background(), "actor-1", "operations_support", "reviewer-1", 7, "intent-1"); err != ErrRbacVersionConflict {
+	if err := client.RevokeRoleWithIdempotency(operatorContext, "actor-1", "operations_support", "reviewer-1", 7, "intent-1"); err != ErrRbacVersionConflict {
 		t.Fatalf("revoke conflict mapping = %v", err)
 	}
 }

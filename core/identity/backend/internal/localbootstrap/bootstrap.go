@@ -157,7 +157,7 @@ WHERE id = ANY($1)`, pq.Array(fixtureActorIDs()))
 		if err := json.Unmarshal(projectedJSON, &projected); err != nil {
 			return false, err
 		}
-		effective, err := repository.Enforcer.GetActorPermissions(ctx, fixture.id)
+		effective, err := repository.Enforcer.GetActorPermissions(ctx, config.OperatorContextID, fixture.id)
 		if err != nil || !permissionSetEqual(projected, effective) {
 			return false, err
 		}

@@ -297,6 +297,10 @@ func (c *Client) ResolvePermissions(ctx context.Context, actorID string) ([]Perm
 	if strings.TrimSpace(actorID) == "" {
 		return nil, ErrIdentityUnavailable
 	}
+	operatorContextID, ok := OperatorContextIDFromContext(ctx)
+	if !ok || operatorContextID == "legacy-unscoped" {
+		return nil, ErrIdentityUnavailable
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/permissions/resolve", nil)
 	if err != nil {
@@ -307,6 +311,7 @@ func (c *Client) ResolvePermissions(ctx context.Context, actorID string) ([]Perm
 	req.URL.RawQuery = q.Encode()
 	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -366,6 +371,10 @@ func (c *Client) rbacRequestWithHeaders(ctx context.Context, method, path string
 	if c.baseURL == "" || c.internalServiceToken == "" {
 		return nil, ErrIdentityUnavailable
 	}
+	operatorContextID, ok := OperatorContextIDFromContext(ctx)
+	if !ok || operatorContextID == "legacy-unscoped" {
+		return nil, ErrIdentityUnavailable
+	}
 	var bodyReader io.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)
@@ -390,6 +399,7 @@ func (c *Client) rbacRequestWithHeaders(ctx context.Context, method, path string
 	}
 	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	for key, value := range headers {
 		if strings.TrimSpace(value) != "" {
 			req.Header.Set(key, value)
