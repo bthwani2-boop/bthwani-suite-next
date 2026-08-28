@@ -49,10 +49,11 @@ func TestDeliveryExceptionReassignsBeforePickupAtomicallyDBIntegration(t *testin
 	})
 
 	item, err := ReportDeliveryException(db, oldAssignmentID, oldCaptainID, ReportDeliveryExceptionInput{
-		ReasonCode:    ExceptionVehicleBreakdown,
-		Note:          "تعطلت المركبة قبل استلام الطلب",
-		CorrelationID: "reassign-command-" + suffix,
-		ProofMediaRef: "media://vehicle-breakdown/" + suffix,
+		OperatorContextID: operatorContextID,
+		ReasonCode:        ExceptionVehicleBreakdown,
+		Note:              "تعطلت المركبة قبل استلام الطلب",
+		CorrelationID:     "reassign-command-" + suffix,
+		ProofMediaRef:     "media://vehicle-breakdown/" + suffix,
 	})
 	if err != nil {
 		t.Fatalf("report exception: %v", err)
@@ -136,10 +137,11 @@ func TestDeliveryExceptionRejectsReassignmentAfterPickupDBIntegration(t *testing
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
 	})
 	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{
-		ReasonCode:    ExceptionVehicleBreakdown,
-		Note:          "تعطل بعد استلام الطلب",
-		CorrelationID: "blocked-reassign-" + suffix,
-		ProofMediaRef: "media://vehicle-breakdown/" + suffix,
+		OperatorContextID: operatorContextID,
+		ReasonCode:        ExceptionVehicleBreakdown,
+		Note:              "تعطل بعد استلام الطلب",
+		CorrelationID:     "blocked-reassign-" + suffix,
+		ProofMediaRef:     "media://vehicle-breakdown/" + suffix,
 	})
 	if err != nil {
 		t.Fatal(err)

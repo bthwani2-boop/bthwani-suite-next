@@ -49,10 +49,11 @@ func TestDeliveryExceptionCancelsOrderBeforePickupDBIntegration(t *testing.T) {
 	})
 
 	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{
-		ReasonCode:    ExceptionVehicleBreakdown,
-		Note:          "تعطلت المركبة قبل استلام الطلب من المتجر",
-		CorrelationID: "cancel-command-" + suffix,
-		ProofMediaRef: "media://vehicle-breakdown/" + suffix,
+		OperatorContextID: operatorContextID,
+		ReasonCode:        ExceptionVehicleBreakdown,
+		Note:              "تعطلت المركبة قبل استلام الطلب من المتجر",
+		CorrelationID:     "cancel-command-" + suffix,
+		ProofMediaRef:     "media://vehicle-breakdown/" + suffix,
 	})
 	if err != nil {
 		t.Fatalf("report exception: %v", err)
@@ -131,10 +132,11 @@ func TestDeliveryExceptionRejectsDirectCancelAfterPickupDBIntegration(t *testing
 	})
 
 	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{
-		ReasonCode:    ExceptionDamagedOrder,
-		Note:          "تضرر الطلب بعد الاستلام",
-		CorrelationID: "cancel-blocked-" + suffix,
-		ProofMediaRef: "media://damaged-order/" + suffix,
+		OperatorContextID: operatorContextID,
+		ReasonCode:        ExceptionDamagedOrder,
+		Note:              "تضرر الطلب بعد الاستلام",
+		CorrelationID:     "cancel-blocked-" + suffix,
+		ProofMediaRef:     "media://damaged-order/" + suffix,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -177,7 +179,7 @@ func TestDeliveryExceptionCancelRejectsStaleVersionDBIntegration(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
 	})
 
-	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{ReasonCode: ExceptionOther, Note: "سبب آخر يستدعي المراجعة", CorrelationID: "cancel-stale-" + suffix})
+	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{OperatorContextID: operatorContextID, ReasonCode: ExceptionOther, Note: "سبب آخر يستدعي المراجعة", CorrelationID: "cancel-stale-" + suffix})
 	if err != nil {
 		t.Fatal(err)
 	}

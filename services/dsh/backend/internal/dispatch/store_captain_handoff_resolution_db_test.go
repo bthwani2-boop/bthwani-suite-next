@@ -21,9 +21,10 @@ func TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration(t *te
 		fixture.StoreID,
 		"partner-resolution-actor",
 		ReportDeliveryExceptionInput{
-			ReasonCode:    ExceptionHandoffShortage,
-			Note:          "قطعة ناقصة وتم إيقاف تسليم العهدة",
-			CorrelationID: "handoff-resolution-retry:" + fixture.AssignmentID,
+			OperatorContextID: fixture.OperatorContextID,
+			ReasonCode:        ExceptionHandoffShortage,
+			Note:              "قطعة ناقصة وتم إيقاف تسليم العهدة",
+			CorrelationID:     "handoff-resolution-retry:" + fixture.AssignmentID,
 		},
 	)
 	if err != nil {
@@ -91,9 +92,10 @@ func TestHandoffExceptionReassignmentSupersedesCustodyDBIntegration(t *testing.T
 		fixture.AssignmentID,
 		fixture.CaptainID,
 		ReportDeliveryExceptionInput{
-			ReasonCode:    ExceptionHandoffMismatch,
-			Note:          "بيانات الطرد لا تطابق الطلب ويجب تغيير الكابتن",
-			CorrelationID: "handoff-resolution-reassign:" + fixture.AssignmentID,
+			OperatorContextID: fixture.OperatorContextID,
+			ReasonCode:        ExceptionHandoffMismatch,
+			Note:              "بيانات الطرد لا تطابق الطلب ويجب تغيير الكابتن",
+			CorrelationID:     "handoff-resolution-reassign:" + fixture.AssignmentID,
 		},
 	)
 	if err != nil {

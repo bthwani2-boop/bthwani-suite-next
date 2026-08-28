@@ -69,6 +69,7 @@ func validateHandoffExceptionPayload(
 
 func validateExistingHandoffExceptionCommand(
 	db *sql.DB,
+	operatorContextID string,
 	exceptionID string,
 	recordedActorID string,
 	recordedRole string,
@@ -79,7 +80,7 @@ func validateExistingHandoffExceptionCommand(
 	if recordedActorID != expectedActorID || recordedRole != string(expectedRole) {
 		return nil, fmt.Errorf("%w: correlationId already belongs to another reporter", ErrConflict)
 	}
-	item, err := GetDeliveryException(db, exceptionID)
+	item, err := GetDeliveryExceptionForContext(db, operatorContextID, exceptionID)
 	if err != nil {
 		return nil, err
 	}
@@ -91,20 +92,24 @@ func validateExistingHandoffExceptionCommand(
 
 func findCaptainHandoffExceptionReplay(
 	db *sql.DB,
+	operatorContextID string,
 	assignmentID string,
 	captainID string,
 	input ReportDeliveryExceptionInput,
 ) (*DeliveryException, bool, error) {
 	var exceptionID, recordedActorID, recordedRole string
 	err := db.QueryRow(`
-		SELECT e.id::text, r.actor_id, r.actor_role
-		FROM dsh_delivery_exceptions e
-		JOIN dsh_delivery_exception_reporters r ON r.exception_id = e.id
-		WHERE e.assignment_id = $1::uuid
-		  AND e.captain_id = $2
-		  AND e.correlation_id = $3
-		ORDER BY e.reported_at DESC
-		LIMIT 1`, assignmentID, captainID, input.CorrelationID).Scan(
+                SELECT e.id::text, r.actor_id, r.actor_role
+                FROM dsh_delivery_exceptions e
+                JOIN dsh_delivery_exception_reporters r ON r.exception_id = e.id
+                JOIN dsh_assignments a ON a.id = e.assignment_id
+                WHERE e.assignment_id = $1::uuid
+                  AND e.captain_id = $2
+                  AND e.correlation_id = $3
+                  AND e.operator_context_id = $4
+                  AND a.operator_context_id = $4
+                ORDER BY e.reported_at DESC
+                LIMIT 1`, assignmentID, captainID, input.CorrelationID, operatorContextID).Scan(
 		&exceptionID,
 		&recordedActorID,
 		&recordedRole,
@@ -117,6 +122,7 @@ func findCaptainHandoffExceptionReplay(
 	}
 	item, err := validateExistingHandoffExceptionCommand(
 		db,
+		operatorContextID,
 		exceptionID,
 		recordedActorID,
 		recordedRole,
@@ -129,6 +135,7 @@ func findCaptainHandoffExceptionReplay(
 
 func findPartnerHandoffExceptionReplay(
 	db *sql.DB,
+	operatorContextID string,
 	orderID string,
 	storeID string,
 	actorID string,
@@ -136,15 +143,17 @@ func findPartnerHandoffExceptionReplay(
 ) (*DeliveryException, bool, error) {
 	var exceptionID, recordedActorID, recordedRole string
 	err := db.QueryRow(`
-		SELECT e.id::text, r.actor_id, r.actor_role
-		FROM dsh_delivery_exceptions e
-		JOIN dsh_delivery_exception_reporters r ON r.exception_id = e.id
-		JOIN dsh_orders o ON o.id = e.order_id
-		WHERE e.order_id = $1::uuid
-		  AND o.store_id = $2
-		  AND e.correlation_id = $3
-		ORDER BY e.reported_at DESC
-		LIMIT 1`, orderID, storeID, input.CorrelationID).Scan(
+                SELECT e.id::text, r.actor_id, r.actor_role
+                FROM dsh_delivery_exceptions e
+                JOIN dsh_delivery_exception_reporters r ON r.exception_id = e.id
+                JOIN dsh_orders o ON o.id = e.order_id
+                WHERE e.order_id = $1::uuid
+                  AND o.store_id = $2
+                  AND e.correlation_id = $3
+                  AND e.operator_context_id = $4
+                  AND o.operator_context_id = $4
+                ORDER BY e.reported_at DESC
+                LIMIT 1`, orderID, storeID, input.CorrelationID, operatorContextID).Scan(
 		&exceptionID,
 		&recordedActorID,
 		&recordedRole,
@@ -157,6 +166,7 @@ func findPartnerHandoffExceptionReplay(
 	}
 	item, err := validateExistingHandoffExceptionCommand(
 		db,
+		operatorContextID,
 		exceptionID,
 		recordedActorID,
 		recordedRole,
@@ -173,6 +183,10 @@ func ReportCaptainStoreCaptainHandoffException(
 	captainID string,
 	input ReportDeliveryExceptionInput,
 ) (*DeliveryException, error) {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	if input.OperatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	assignmentID = strings.TrimSpace(assignmentID)
 	captainID = strings.TrimSpace(captainID)
 	input.Note = strings.TrimSpace(input.Note)
@@ -183,7 +197,7 @@ func ReportCaptainStoreCaptainHandoffException(
 	if err := validateStoreCaptainHandoffExceptionInput(input); err != nil {
 		return nil, err
 	}
-	if existing, found, err := findCaptainHandoffExceptionReplay(db, assignmentID, captainID, input); found || err != nil {
+	if existing, found, err := findCaptainHandoffExceptionReplay(db, input.OperatorContextID, assignmentID, captainID, input); found || err != nil {
 		return existing, err
 	}
 	return reportStoreCaptainHandoffException(
@@ -204,6 +218,10 @@ func ReportPartnerStoreCaptainHandoffException(
 	actorID string,
 	input ReportDeliveryExceptionInput,
 ) (*DeliveryException, error) {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	if input.OperatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	orderID = strings.TrimSpace(orderID)
 	storeID = strings.TrimSpace(storeID)
 	actorID = strings.TrimSpace(actorID)
@@ -215,21 +233,23 @@ func ReportPartnerStoreCaptainHandoffException(
 	if err := validateStoreCaptainHandoffExceptionInput(input); err != nil {
 		return nil, err
 	}
-	if existing, found, err := findPartnerHandoffExceptionReplay(db, orderID, storeID, actorID, input); found || err != nil {
+	if existing, found, err := findPartnerHandoffExceptionReplay(db, input.OperatorContextID, orderID, storeID, actorID, input); found || err != nil {
 		return existing, err
 	}
 
 	var assignmentID, captainID string
 	err := db.QueryRow(`
-		SELECT h.assignment_id::text, h.captain_id
-		FROM dsh_store_captain_handoffs h
-		JOIN dsh_assignments a ON a.id = h.assignment_id
-		WHERE h.order_id = $1::uuid
-		  AND h.store_id = $2
-		  AND h.status IN ('awaiting_partner', 'partner_confirmed')
-		  AND a.status = 'accepted'
-		ORDER BY h.created_at DESC
-		LIMIT 1`, orderID, storeID).Scan(&assignmentID, &captainID)
+                SELECT h.assignment_id::text, h.captain_id
+                FROM dsh_store_captain_handoffs h
+                JOIN dsh_assignments a ON a.id = h.assignment_id
+                JOIN dsh_orders o ON o.id = h.order_id
+                WHERE h.order_id = $1::uuid
+                  AND h.store_id = $2
+                  AND h.status IN ('awaiting_partner', 'partner_confirmed')
+                  AND a.status = 'accepted'
+                  AND o.operator_context_id = $3
+                ORDER BY h.created_at DESC
+                LIMIT 1`, orderID, storeID, input.OperatorContextID).Scan(&assignmentID, &captainID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -281,14 +301,14 @@ func reportStoreCaptainHandoffException(
 
 	var orderID, storeID, captainID, assignmentStatus, deliveryStatus, handoffStatus, operatorContextID string
 	err = tx.QueryRow(`
-		SELECT o.id::text, o.store_id, o.operator_context_id,
-		       a.captain_id, a.status, d.status, h.status
-		FROM dsh_store_captain_handoffs h
-		JOIN dsh_assignments a ON a.id = h.assignment_id
-		JOIN dsh_deliveries d ON d.assignment_id = a.id
-		JOIN dsh_orders o ON o.id = h.order_id
-		WHERE h.assignment_id = $1::uuid
-		FOR UPDATE OF h, a, d, o`, assignmentID).Scan(
+                SELECT o.id::text, o.store_id, o.operator_context_id,
+                       a.captain_id, a.status, d.status, h.status
+                FROM dsh_store_captain_handoffs h
+                JOIN dsh_assignments a ON a.id = h.assignment_id
+                JOIN dsh_deliveries d ON d.assignment_id = a.id
+                JOIN dsh_orders o ON o.id = h.order_id
+                WHERE h.assignment_id = $1::uuid
+                FOR UPDATE OF h, a, d, o`, assignmentID).Scan(
 		&orderID,
 		&storeID,
 		&operatorContextID,
@@ -302,6 +322,9 @@ func reportStoreCaptainHandoffException(
 	}
 	if err != nil {
 		return nil, err
+	}
+	if operatorContextID != input.OperatorContextID {
+		return nil, ErrNotFound
 	}
 	if expectedStoreID != "" && storeID != expectedStoreID {
 		return nil, ErrNotFound
@@ -326,9 +349,9 @@ func reportStoreCaptainHandoffException(
 		}
 		var recordedActorID, recordedRole string
 		if err = tx.QueryRow(`
-			SELECT actor_id, actor_role
-			FROM dsh_delivery_exception_reporters
-			WHERE exception_id = $1::uuid`, existing.ID).Scan(&recordedActorID, &recordedRole); err != nil {
+                        SELECT actor_id, actor_role
+                        FROM dsh_delivery_exception_reporters
+                        WHERE exception_id = $1::uuid`, existing.ID).Scan(&recordedActorID, &recordedRole); err != nil {
 			return nil, err
 		}
 		if recordedActorID != reporterActorID || recordedRole != string(reporterRole) {
@@ -342,11 +365,12 @@ func reportStoreCaptainHandoffException(
 
 	var openID string
 	err = tx.QueryRow(`
-		SELECT id::text
-		FROM dsh_delivery_exceptions
-		WHERE assignment_id = $1::uuid
-		  AND status IN ('open', 'acknowledged')
-		LIMIT 1`, assignmentID).Scan(&openID)
+                SELECT id::text
+                FROM dsh_delivery_exceptions
+                WHERE assignment_id = $1::uuid
+                  AND operator_context_id = $2
+                  AND status IN ('open', 'acknowledged')
+                LIMIT 1`, assignmentID, operatorContextID).Scan(&openID)
 	if err == nil {
 		return nil, fmt.Errorf("%w: an active delivery exception already exists", ErrConflict)
 	}
@@ -356,32 +380,32 @@ func reportStoreCaptainHandoffException(
 
 	var exceptionID string
 	err = tx.QueryRow(`
-		INSERT INTO dsh_delivery_exceptions (
-			operator_context_id,
-			assignment_id,
-			order_id,
-			captain_id,
-			reason_code,
-			note,
-			delivery_status_at_report,
-			severity,
-			correlation_id,
-			reported_latitude,
-			reported_longitude
-		) VALUES (
-			$1,
-			$2::uuid,
-			$3::uuid,
-			$4,
-			$5,
-			$6,
-			$7,
-			'high',
-			$8,
-			$9,
-			$10
-		)
-		RETURNING id::text`,
+                INSERT INTO dsh_delivery_exceptions (
+                        operator_context_id,
+                        assignment_id,
+                        order_id,
+                        captain_id,
+                        reason_code,
+                        note,
+                        delivery_status_at_report,
+                        severity,
+                        correlation_id,
+                        reported_latitude,
+                        reported_longitude
+                ) VALUES (
+                        $1,
+                        $2::uuid,
+                        $3::uuid,
+                        $4,
+                        $5,
+                        $6,
+                        $7,
+                        'high',
+                        $8,
+                        $9,
+                        $10
+                )
+                RETURNING id::text`,
 		operatorContextID,
 		assignmentID,
 		orderID,
@@ -398,11 +422,11 @@ func reportStoreCaptainHandoffException(
 	}
 
 	result, err := tx.Exec(`
-		UPDATE dsh_delivery_exception_reporters
-		SET actor_id = $1,
-		    actor_role = $2,
-		    reported_at = NOW()
-		WHERE exception_id = $3::uuid`, reporterActorID, string(reporterRole), exceptionID)
+                UPDATE dsh_delivery_exception_reporters
+                SET actor_id = $1,
+                    actor_role = $2,
+                    reported_at = NOW()
+                WHERE exception_id = $3::uuid`, reporterActorID, string(reporterRole), exceptionID)
 	if err != nil {
 		return nil, err
 	}
@@ -415,5 +439,5 @@ func reportStoreCaptainHandoffException(
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetDeliveryException(db, exceptionID)
+	return GetDeliveryExceptionForContext(db, operatorContextID, exceptionID)
 }

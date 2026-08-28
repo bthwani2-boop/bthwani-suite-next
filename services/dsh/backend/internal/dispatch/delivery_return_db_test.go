@@ -40,7 +40,7 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
 	})
 
-	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{ReasonCode: ExceptionRecipientRefused, Note: "رفض العميل استلام الطلب بعد الوصول", CorrelationID: "return-command-" + suffix})
+	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{OperatorContextID: operatorContextID, ReasonCode: ExceptionRecipientRefused, Note: "رفض العميل استلام الطلب بعد الوصول", CorrelationID: "return-command-" + suffix})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,21 +58,21 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if orderStatus != "returning_to_store" || deliveryStatus != "returning_to_store" || assignmentStatus != "accepted" {
 		t.Fatalf("return start mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
 	}
-	if _, err := PushLocation(db, operatorContextID, assignmentID, captainID, PushLocationInput{Latitude: 15.37, Longitude: 44.19}); err != nil {
+	if _, err := PushLocationForOperatorContext(db, operatorContextID, assignmentID, captainID, PushLocationInput{Latitude: 15.37, Longitude: 44.19}); err != nil {
 		t.Fatalf("GPS must remain active during return: %v", err)
 	}
-	visible, err := GetCaptainOpenDeliveryException(db, assignmentID, captainID)
+	visible, err := GetCaptainOpenDeliveryExceptionForOperatorContext(db, operatorContextID, assignmentID, captainID)
 	if err != nil || visible.ID != item.ID {
 		t.Fatalf("return decision must remain visible to captain: %+v err=%v", visible, err)
 	}
-	arrived, err := CaptainArriveReturnToStore(db, assignmentID, captainID)
+	arrived, err := CaptainArriveReturnToStoreForOperatorContext(db, operatorContextID, assignmentID, captainID)
 	if err != nil {
 		t.Fatalf("captain arrive return: %v", err)
 	}
 	if arrived.ReturnArrivedAt == nil || arrived.ReturnedAt != nil {
 		t.Fatalf("captain arrival must not complete store receipt: %+v", arrived)
 	}
-	arrivedReplay, err := CaptainArriveReturnToStore(db, assignmentID, captainID)
+	arrivedReplay, err := CaptainArriveReturnToStoreForOperatorContext(db, operatorContextID, assignmentID, captainID)
 	if err != nil {
 		t.Fatalf("captain arrival replay: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if orderStatus != "returned_to_store" || deliveryStatus != "returned_to_store" || assignmentStatus != "completed" {
 		t.Fatalf("partner receipt completion mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
 	}
-	if _, err := GetCaptainOpenDeliveryException(db, assignmentID, captainID); !errors.Is(err, ErrNotFound) {
+	if _, err := GetCaptainOpenDeliveryExceptionForOperatorContext(db, operatorContextID, assignmentID, captainID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("accepted return must leave captain exception view, got %v", err)
 	}
 	inbox, err := ListCaptainAssignments(db, captainID, 50)

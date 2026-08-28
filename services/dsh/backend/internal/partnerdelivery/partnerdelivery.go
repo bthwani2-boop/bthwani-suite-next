@@ -62,19 +62,19 @@ type PartnerDeliveryTask struct {
 }
 
 const taskColumns = `
-	id, order_id::text, store_id, branch_id, store_courier_id, status,
-	assigned_at, picked_up_at, departed_at, arrived_at,
-	proof_method, proof_reference, completed_at,
-	exception_reason, exception_evidence_references, exception_reported_at,
-	version, created_at, updated_at
+        id, order_id::text, store_id, branch_id, store_courier_id, status,
+        assigned_at, picked_up_at, departed_at, arrived_at,
+        proof_method, proof_reference, completed_at,
+        exception_reason, exception_evidence_references, exception_reported_at,
+        version, created_at, updated_at
 `
 
 const taskColumnsPrefixed = `
-	t.id, t.order_id::text, t.store_id, t.branch_id, t.store_courier_id, t.status,
-	t.assigned_at, t.picked_up_at, t.departed_at, t.arrived_at,
-	t.proof_method, t.proof_reference, t.completed_at,
-	t.exception_reason, t.exception_evidence_references, t.exception_reported_at,
-	t.version, t.created_at, t.updated_at
+        t.id, t.order_id::text, t.store_id, t.branch_id, t.store_courier_id, t.status,
+        t.assigned_at, t.picked_up_at, t.departed_at, t.arrived_at,
+        t.proof_method, t.proof_reference, t.completed_at,
+        t.exception_reason, t.exception_evidence_references, t.exception_reported_at,
+        t.version, t.created_at, t.updated_at
 `
 
 func itoa(i int) string {
@@ -105,38 +105,17 @@ func scanTask(scan func(...any) error) (*PartnerDeliveryTask, error) {
 	return &t, nil
 }
 
-// GetForUpdate locks and returns the task row for id within tx.
-func GetForUpdate(tx *sql.Tx, id string) (*PartnerDeliveryTask, error) {
-	query := `SELECT ` + taskColumns + ` FROM dsh_partner_delivery_tasks WHERE id = $1 FOR UPDATE`
-	t, err := scanTask(tx.QueryRow(query, id).Scan)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	return t, err
-}
-
 // GetForUpdateForOperatorContext locks and returns the task row for id within tx for the given operator context.
 func GetForUpdateForOperatorContext(tx *sql.Tx, operatorContextID, id string) (*PartnerDeliveryTask, error) {
 	if strings.TrimSpace(operatorContextID) == "" || strings.TrimSpace(id) == "" {
 		return nil, ErrInvalid
 	}
 	query := `SELECT ` + taskColumnsPrefixed + `
-		FROM dsh_partner_delivery_tasks t
-		JOIN dsh_orders o ON o.id = t.order_id
-		WHERE t.id = $1 AND o.operator_context_id = $2
-		FOR UPDATE OF t`
+                FROM dsh_partner_delivery_tasks t
+                JOIN dsh_orders o ON o.id = t.order_id
+                WHERE t.id = $1 AND o.operator_context_id = $2
+                FOR UPDATE OF t`
 	t, err := scanTask(tx.QueryRow(query, id, operatorContextID).Scan)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	return t, err
-}
-
-// GetForUpdateByOrderID locks and returns the task row for order_id within
-// tx, if one exists.
-func GetForUpdateByOrderID(tx *sql.Tx, orderID string) (*PartnerDeliveryTask, error) {
-	query := `SELECT ` + taskColumns + ` FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid FOR UPDATE`
-	t, err := scanTask(tx.QueryRow(query, orderID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -150,10 +129,10 @@ func GetForUpdateByOrderIDForOperatorContext(tx *sql.Tx, operatorContextID, orde
 		return nil, ErrInvalid
 	}
 	query := `SELECT ` + taskColumnsPrefixed + `
-		FROM dsh_partner_delivery_tasks t
-		JOIN dsh_orders o ON o.id=t.order_id
-		WHERE t.order_id=$1::uuid AND o.operator_context_id=$2
-		FOR UPDATE OF t`
+                FROM dsh_partner_delivery_tasks t
+                JOIN dsh_orders o ON o.id=t.order_id
+                WHERE t.order_id=$1::uuid AND o.operator_context_id=$2
+                FOR UPDATE OF t`
 	t, err := scanTask(tx.QueryRow(query, orderID, operatorContextID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -167,30 +146,10 @@ func GetByOrderIDForOperatorContext(db *sql.DB, operatorContextID, orderID strin
 		return nil, ErrInvalid
 	}
 	query := `SELECT ` + taskColumnsPrefixed + `
-		FROM dsh_partner_delivery_tasks t
-		JOIN dsh_orders o ON o.id = t.order_id
-		WHERE t.order_id = $1::uuid AND o.operator_context_id = $2`
+                FROM dsh_partner_delivery_tasks t
+                JOIN dsh_orders o ON o.id = t.order_id
+                WHERE t.order_id = $1::uuid AND o.operator_context_id = $2`
 	t, err := scanTask(db.QueryRow(query, orderID, operatorContextID).Scan)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	return t, err
-}
-
-// GetByOrderID returns the task row for order_id, if one exists.
-func GetByOrderID(db *sql.DB, orderID string) (*PartnerDeliveryTask, error) {
-	query := `SELECT ` + taskColumns + ` FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid`
-	t, err := scanTask(db.QueryRow(query, orderID).Scan)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	return t, err
-}
-
-// Get returns the task row by id.
-func Get(db *sql.DB, id string) (*PartnerDeliveryTask, error) {
-	query := `SELECT ` + taskColumns + ` FROM dsh_partner_delivery_tasks WHERE id = $1`
-	t, err := scanTask(db.QueryRow(query, id).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -203,9 +162,9 @@ func GetForOperatorContext(db *sql.DB, operatorContextID, id string) (*PartnerDe
 		return nil, ErrInvalid
 	}
 	query := `SELECT ` + taskColumnsPrefixed + `
-		FROM dsh_partner_delivery_tasks t
-		JOIN dsh_orders o ON o.id = t.order_id
-		WHERE t.id = $1 AND o.operator_context_id = $2`
+                FROM dsh_partner_delivery_tasks t
+                JOIN dsh_orders o ON o.id = t.order_id
+                WHERE t.id = $1 AND o.operator_context_id = $2`
 	t, err := scanTask(db.QueryRow(query, id, operatorContextID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -228,46 +187,6 @@ func clampLimit(limit int) int {
 	return limit
 }
 
-// List returns partner delivery tasks matching filter, newest first.
-func List(db *sql.DB, filter ListFilter) ([]PartnerDeliveryTask, error) {
-	limit := clampLimit(filter.Limit)
-	where := "WHERE 1=1"
-	var args []any
-	idx := 1
-	if filter.StoreID != "" {
-		where += " AND store_id = $" + itoa(idx)
-		args = append(args, filter.StoreID)
-		idx++
-	}
-	if filter.Status != "" {
-		where += " AND status = $" + itoa(idx)
-		args = append(args, filter.Status)
-		idx++
-	}
-	query := `SELECT ` + taskColumns + ` FROM dsh_partner_delivery_tasks ` + where +
-		` ORDER BY created_at DESC LIMIT $` + itoa(idx) + ` OFFSET $` + itoa(idx+1)
-	args = append(args, limit, filter.Offset)
-
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var tasks []PartnerDeliveryTask
-	for rows.Next() {
-		t, err := scanTask(rows.Scan)
-		if err != nil {
-			return nil, err
-		}
-		tasks = append(tasks, *t)
-	}
-	if tasks == nil {
-		tasks = []PartnerDeliveryTask{}
-	}
-	return tasks, rows.Err()
-}
-
 // ListForOperatorContext returns partner delivery tasks matching filter for operatorContextID.
 func ListForOperatorContext(db *sql.DB, operatorContextID string, filter ListFilter) ([]PartnerDeliveryTask, error) {
 	if strings.TrimSpace(operatorContextID) == "" {
@@ -288,10 +207,10 @@ func ListForOperatorContext(db *sql.DB, operatorContextID string, filter ListFil
 		idx++
 	}
 	query := `SELECT ` + taskColumnsPrefixed + `
-		FROM dsh_partner_delivery_tasks t
-		JOIN dsh_orders o ON o.id = t.order_id
-		` + where + `
-		ORDER BY t.created_at DESC LIMIT $` + itoa(idx) + ` OFFSET $` + itoa(idx+1)
+                FROM dsh_partner_delivery_tasks t
+                JOIN dsh_orders o ON o.id = t.order_id
+                ` + where + `
+                ORDER BY t.created_at DESC LIMIT $` + itoa(idx) + ` OFFSET $` + itoa(idx+1)
 	args = append(args, limit, filter.Offset)
 
 	rows, err := db.Query(query, args...)

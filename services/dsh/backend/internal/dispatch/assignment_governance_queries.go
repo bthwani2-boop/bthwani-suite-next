@@ -12,7 +12,7 @@ import (
 
 type AssignmentGovernance struct {
 	AssignmentID           string     `json:"assignmentId"`
-	OperatorContextID               string     `json:"operatorContextId"`
+	OperatorContextID      string     `json:"operatorContextId"`
 	ServiceAreaCode        string     `json:"serviceAreaCode"`
 	Priority               int        `json:"priority"`
 	DistanceMeters         *int       `json:"distanceMeters,omitempty"`

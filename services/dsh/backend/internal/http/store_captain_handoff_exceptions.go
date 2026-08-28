@@ -46,12 +46,13 @@ func (s *protectedStoreServer) handleReportCaptainStoreCaptainHandoffException(w
 		r.PathValue("assignmentId"),
 		actor.ID,
 		dispatch.ReportDeliveryExceptionInput{
-			ReasonCode:    body.ReasonCode,
-			Note:          body.Note,
-			CorrelationID: correlationID,
-			Latitude:      body.Latitude,
-			Longitude:     body.Longitude,
-			ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
+			OperatorContextID: actor.OperatorContextID,
+			ReasonCode:        body.ReasonCode,
+			Note:              body.Note,
+			CorrelationID:     correlationID,
+			Latitude:          body.Latitude,
+			Longitude:         body.Longitude,
+			ProofMediaRef:     strings.TrimSpace(body.ProofMediaRef),
 		},
 	)
 	if err != nil {
@@ -92,12 +93,13 @@ func (s *protectedStoreServer) handleReportPartnerStoreCaptainHandoffException(w
 		storeID,
 		actor.ID,
 		dispatch.ReportDeliveryExceptionInput{
-			ReasonCode:    body.ReasonCode,
-			Note:          body.Note,
-			CorrelationID: correlationID,
-			Latitude:      body.Latitude,
-			Longitude:     body.Longitude,
-			ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
+			OperatorContextID: actor.OperatorContextID,
+			ReasonCode:        body.ReasonCode,
+			Note:              body.Note,
+			CorrelationID:     correlationID,
+			Latitude:          body.Latitude,
+			Longitude:         body.Longitude,
+			ProofMediaRef:     strings.TrimSpace(body.ProofMediaRef),
 		},
 	)
 	if err != nil {

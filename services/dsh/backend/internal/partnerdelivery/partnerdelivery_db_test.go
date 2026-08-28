@@ -72,24 +72,24 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_partners (id, operator_context_id, legal_name_ar, display_name, legal_identity_number, primary_phone)
-		VALUES ($1, $2, 'شريك اختبار', 'PD Test Partner', $1, '700000001')`,
+                INSERT INTO dsh_partners (id, operator_context_id, legal_name_ar, display_name, legal_identity_number, primary_phone)
+                VALUES ($1, $2, 'شريك اختبار', 'PD Test Partner', $1, '700000001')`,
 		f.partnerID, f.operatorContextID); err != nil {
 		t.Fatalf("failed to insert test partner: %v", err)
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_stores (id, operator_context_id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
-		VALUES ($1, $2, $1, 'PD Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true, $3)`,
+                INSERT INTO dsh_stores (id, operator_context_id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
+                VALUES ($1, $2, $1, 'PD Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true, $3)`,
 		f.storeID, f.operatorContextID, f.partnerID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
 
 	var cartID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
-		VALUES ($1, $2, 'partner_delivery', 'active')
-		RETURNING id::text`,
+                INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode, state)
+                VALUES ($1, $2, 'partner_delivery', 'active')
+                RETURNING id::text`,
 		f.clientID, f.storeID,
 	).Scan(&cartID); err != nil {
 		t.Fatalf("failed to insert test cart: %v", err)
@@ -97,23 +97,23 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 
 	var checkoutIntentID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (
-			operator_context_id, client_id, cart_id, store_id, state, fulfillment_mode, payment_method,
-			subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
-			total_minor_units, currency, pricing_snapshot_hash
-		)
-		VALUES ($1, $2, $3::uuid, $4, 'confirmed', 'partner_delivery', 'wallet',
-		        1000, 0, 0, 1000, 'YER', repeat('d', 64))
-		RETURNING id::text`,
+                INSERT INTO dsh_checkout_intents (
+                        operator_context_id, client_id, cart_id, store_id, state, fulfillment_mode, payment_method,
+                        subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
+                        total_minor_units, currency, pricing_snapshot_hash
+                )
+                VALUES ($1, $2, $3::uuid, $4, 'confirmed', 'partner_delivery', 'wallet',
+                        1000, 0, 0, 1000, 'YER', repeat('d', 64))
+                RETURNING id::text`,
 		f.operatorContextID, f.clientID, cartID, f.storeID,
 	).Scan(&checkoutIntentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
 
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_orders (operator_context_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
-		VALUES ($1, $2::uuid, $3, 'partner_delivery', $4, $5)
-		RETURNING id::text`,
+                INSERT INTO dsh_orders (operator_context_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
+                VALUES ($1, $2::uuid, $3, 'partner_delivery', $4, $5)
+                RETURNING id::text`,
 		f.operatorContextID, checkoutIntentID, f.storeID, f.clientID, orderStatus,
 	).Scan(&f.orderID); err != nil {
 		t.Fatalf("failed to insert test order: %v", err)
@@ -121,20 +121,20 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 
 	f.courierID = "courier-" + suffix
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_captain_memberships
-		  (id, captain_actor_id, affiliation, partner_id, store_id, status,
-		   branch_assignment, delivery_assignment)
-		VALUES ($1,$1,'PARTNER',$2,$3,'active','branch-test','partner-delivery')`,
+                INSERT INTO dsh_captain_memberships
+                  (id, captain_actor_id, affiliation, partner_id, store_id, status,
+                   branch_assignment, delivery_assignment)
+                VALUES ($1,$1,'PARTNER',$2,$3,'active','branch-test','partner-delivery')`,
 		f.courierID, f.partnerID, f.storeID); err != nil {
 		t.Fatalf("failed to insert governed store courier membership: %v", err)
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_media_refs (
-			media_ref, storage_key, owner_actor_id, owner_actor_role,
-			partner_id, store_id, purpose, content_type, original_filename
-		)
-		VALUES ($1, $2, $3, 'partner', $4, $5, 'partner_delivery_proof', 'image/jpeg', 'partner-proof.jpg')`,
+                INSERT INTO dsh_media_refs (
+                        media_ref, storage_key, owner_actor_id, owner_actor_role,
+                        partner_id, store_id, purpose, content_type, original_filename
+                )
+                VALUES ($1, $2, $3, 'partner', $4, $5, 'partner_delivery_proof', 'image/jpeg', 'partner-proof.jpg')`,
 		f.proofRef, "tests/partner-delivery/"+suffix, f.courierID, f.partnerID, f.storeID); err != nil {
 		t.Fatalf("failed to insert governed partner proof media: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestAssignCourierBeforeReadyRejectedDBIntegration(t *testing.T) {
 	f := seedFixture(t, db, "preparing")
 
 	svc := NewService(db, mockWFServer(t))
-	_, err := svc.AssignCourier(context.Background(), f.orderID, f.courierID, "operator-1", "operator", "")
+	_, err := svc.AssignCourierCommand(context.Background(), f.operatorContextID, f.orderID, f.courierID, "operator-1", "operator", "", "cmd-before-ready")
 	if !errors.Is(err, ErrNotReadyForAssignment) {
 		t.Fatalf("expected ErrNotReadyForAssignment, got %v", err)
 	}
@@ -182,18 +182,18 @@ func TestAssignCourierIneligibleCourierRejectedDBIntegration(t *testing.T) {
 
 	staffID := "staff-1"
 	svc := NewService(db, mockWFServer(t))
-	if _, err := svc.AssignCourier(ctx, f.orderID, staffID, "operator-1", "operator", ""); !errors.Is(err, ErrCourierIneligible) {
+	if _, err := svc.AssignCourierCommand(ctx, f.operatorContextID, f.orderID, staffID, "operator-1", "operator", "", "cmd-ineligible-role"); !errors.Is(err, ErrCourierIneligible) {
 		t.Fatalf("expected ErrCourierIneligible for wrong role, got %v", err)
 	}
 
 	pausedCourierID := "paused-1"
-	if _, err := svc.AssignCourier(ctx, f.orderID, pausedCourierID, "operator-1", "operator", ""); !errors.Is(err, ErrCourierIneligible) {
+	if _, err := svc.AssignCourierCommand(ctx, f.operatorContextID, f.orderID, pausedCourierID, "operator-1", "operator", "", "cmd-ineligible-paused"); !errors.Is(err, ErrCourierIneligible) {
 		t.Fatalf("expected ErrCourierIneligible for paused status, got %v", err)
 	}
 
 	other := seedFixture(t, db, "ready_for_pickup")
 	other.courierID = "other-store-" + other.courierID
-	if _, err := svc.AssignCourier(ctx, f.orderID, other.courierID, "operator-1", "operator", ""); !errors.Is(err, ErrCourierIneligible) {
+	if _, err := svc.AssignCourierCommand(ctx, f.operatorContextID, f.orderID, other.courierID, "operator-1", "operator", "", "cmd-ineligible-cross-store"); !errors.Is(err, ErrCourierIneligible) {
 		t.Fatalf("expected ErrCourierIneligible for cross-store courier, got %v", err)
 	}
 }
@@ -203,15 +203,15 @@ func TestAssignCourierDoubleAssignRejectedDBIntegration(t *testing.T) {
 	f := seedFixture(t, db, "ready_for_pickup")
 	svc := NewService(db, mockWFServer(t))
 
-	task, err := svc.AssignCourier(context.Background(), f.orderID, f.courierID, "operator-1", "operator", "")
+	task, err := svc.AssignCourierCommand(context.Background(), f.operatorContextID, f.orderID, f.courierID, "operator-1", "operator", "", "cmd-assign-once")
 	if err != nil {
-		t.Fatalf("first AssignCourier failed: %v", err)
+		t.Fatalf("first AssignCourierCommand failed: %v", err)
 	}
 	if task.Status != StatusAssigned {
 		t.Fatalf("expected status assigned, got %s", task.Status)
 	}
 
-	if _, err := svc.AssignCourier(context.Background(), f.orderID, f.courierID, "operator-1", "operator", ""); !errors.Is(err, ErrAlreadyAssigned) {
+	if _, err := svc.AssignCourierCommand(context.Background(), f.operatorContextID, f.orderID, "other-courier-1", "operator-1", "operator", "", "cmd-assign-twice"); !errors.Is(err, ErrAlreadyAssigned) {
 		t.Fatalf("expected ErrAlreadyAssigned on double-assign, got %v", err)
 	}
 }
@@ -222,16 +222,16 @@ func TestAssignCourierVersionConflictOnConcurrentUpdateDBIntegration(t *testing.
 	svc := NewService(db, mockWFServer(t))
 	ctx := context.Background()
 
-	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "")
+	task, err := svc.AssignCourierCommand(ctx, f.operatorContextID, f.orderID, f.courierID, "operator-1", "operator", "", "cmd-version-conflict")
 	if err != nil {
-		t.Fatalf("AssignCourier failed: %v", err)
+		t.Fatalf("AssignCourierCommand failed: %v", err)
 	}
 
 	if _, err := db.ExecContext(ctx, `UPDATE dsh_partner_delivery_tasks SET version = version + 1, updated_at = NOW() WHERE id = $1`, task.ID); err != nil {
 		t.Fatalf("failed to simulate concurrent update: %v", err)
 	}
 
-	if _, err := svc.MarkDeparted(ctx, task.ID, task.Version, "courier-1", "partner", ""); !errors.Is(err, ErrVersionConflict) {
+	if _, err := svc.MarkDepartedCommand(ctx, f.operatorContextID, task.ID, task.Version, "courier-1", "partner", "", "cmd-depart-conflict"); !errors.Is(err, ErrVersionConflict) {
 		t.Fatalf("expected ErrVersionConflict, got %v", err)
 	}
 }
@@ -242,11 +242,11 @@ func TestPartnerDeliveryDepartureRequiresPickupDBIntegration(t *testing.T) {
 	svc := NewService(db, mockWFServer(t))
 	ctx := context.Background()
 
-	task, err := svc.AssignCourier(ctx, f.orderID, f.courierID, "operator-1", "operator", "corr-departure")
+	task, err := svc.AssignCourierCommand(ctx, f.operatorContextID, f.orderID, f.courierID, "operator-1", "operator", "corr-departure", "cmd-assign-departure")
 	if err != nil {
-		t.Fatalf("AssignCourier failed: %v", err)
+		t.Fatalf("AssignCourierCommand failed: %v", err)
 	}
-	if _, err := svc.MarkDeparted(ctx, task.ID, task.Version, f.courierID, "partner", "corr-departure"); !errors.Is(err, ErrConflict) {
+	if _, err := svc.MarkDepartedCommand(ctx, f.operatorContextID, task.ID, task.Version, f.courierID, "partner", "corr-departure", "cmd-depart-no-pickup"); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected ErrConflict when departing before pickup, got %v", err)
 	}
 	if got := readOrderStatus(t, db, f.orderID); got != "ready_for_pickup" {

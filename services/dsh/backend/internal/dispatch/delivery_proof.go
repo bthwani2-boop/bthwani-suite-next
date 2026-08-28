@@ -109,10 +109,6 @@ type ReviewDeliveryProofInput struct {
 	IdempotencyKey    string
 }
 
-func IssueDeliveryPIN(db *sql.DB, orderID, clientID string) (*IssuedDeliveryPIN, error) {
-	return issueDeliveryPIN(db, "", orderID, clientID)
-}
-
 func IssueDeliveryPINForOperatorContext(db *sql.DB, operatorContextID, orderID, clientID string) (*IssuedDeliveryPIN, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
@@ -122,6 +118,10 @@ func IssueDeliveryPINForOperatorContext(db *sql.DB, operatorContextID, orderID, 
 }
 
 func issueDeliveryPIN(db *sql.DB, operatorContextID, orderID, clientID string) (*IssuedDeliveryPIN, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	orderID = strings.TrimSpace(orderID)
 	clientID = strings.TrimSpace(clientID)
 	if orderID == "" || clientID == "" {
@@ -136,15 +136,15 @@ func issueDeliveryPIN(db *sql.DB, operatorContextID, orderID, clientID string) (
 
 	var assignmentID, deliveryStatus, assignmentStatus string
 	err = tx.QueryRow(`
-		SELECT a.id::text, a.status, d.status
-		FROM dsh_assignments a
-		JOIN dsh_deliveries d ON d.assignment_id = a.id
-		JOIN dsh_orders o ON o.id = a.order_id
-		WHERE a.order_id = $1::uuid AND o.client_id = $2
-		  AND ($3 = '' OR o.operator_context_id = $3)
-		ORDER BY a.created_at DESC
-		LIMIT 1
-		FOR UPDATE OF a, d`, orderID, clientID, operatorContextID).Scan(&assignmentID, &assignmentStatus, &deliveryStatus)
+                SELECT a.id::text, a.status, d.status
+                FROM dsh_assignments a
+                JOIN dsh_deliveries d ON d.assignment_id = a.id
+                JOIN dsh_orders o ON o.id = a.order_id
+                WHERE a.order_id = $1::uuid AND o.client_id = $2
+                  AND o.operator_context_id = $3
+                ORDER BY a.created_at DESC
+                LIMIT 1
+                FOR UPDATE OF a, d`, orderID, clientID, operatorContextID).Scan(&assignmentID, &assignmentStatus, &deliveryStatus)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -171,22 +171,22 @@ func issueDeliveryPIN(db *sql.DB, operatorContextID, orderID, clientID string) (
 
 	var challenge DeliveryVerificationChallenge
 	err = tx.QueryRow(`
-		INSERT INTO dsh_delivery_verification_challenges
-			(assignment_id, order_id, client_id, pin_hash, pin_expires_at, failed_attempts, max_attempts, issued_at, consumed_at, version)
-		VALUES ($1::uuid, $2::uuid, $3, $4, $5, 0, 5, $6, NULL, 1)
-		ON CONFLICT (assignment_id) DO UPDATE SET
-			order_id = EXCLUDED.order_id,
-			client_id = EXCLUDED.client_id,
-			pin_hash = EXCLUDED.pin_hash,
-			pin_expires_at = EXCLUDED.pin_expires_at,
-			failed_attempts = 0,
-			max_attempts = 5,
-			issued_at = EXCLUDED.issued_at,
-			consumed_at = NULL,
-			version = dsh_delivery_verification_challenges.version + 1,
-			updated_at = NOW()
-		RETURNING id::text, assignment_id::text, order_id::text, client_id,
-			pin_expires_at, failed_attempts, max_attempts, issued_at, consumed_at, version`,
+                INSERT INTO dsh_delivery_verification_challenges
+                        (assignment_id, order_id, client_id, pin_hash, pin_expires_at, failed_attempts, max_attempts, issued_at, consumed_at, version)
+                VALUES ($1::uuid, $2::uuid, $3, $4, $5, 0, 5, $6, NULL, 1)
+                ON CONFLICT (assignment_id) DO UPDATE SET
+                        order_id = EXCLUDED.order_id,
+                        client_id = EXCLUDED.client_id,
+                        pin_hash = EXCLUDED.pin_hash,
+                        pin_expires_at = EXCLUDED.pin_expires_at,
+                        failed_attempts = 0,
+                        max_attempts = 5,
+                        issued_at = EXCLUDED.issued_at,
+                        consumed_at = NULL,
+                        version = dsh_delivery_verification_challenges.version + 1,
+                        updated_at = NOW()
+                RETURNING id::text, assignment_id::text, order_id::text, client_id,
+                        pin_expires_at, failed_attempts, max_attempts, issued_at, consumed_at, version`,
 		assignmentID, orderID, clientID, pinHash, expiresAt, now,
 	).Scan(
 		&challenge.ID, &challenge.AssignmentID, &challenge.OrderID, &challenge.ClientID,
@@ -210,6 +210,9 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	input.PhotoMediaRef = strings.TrimSpace(input.PhotoMediaRef)
 	input.SignatureMediaRef = strings.TrimSpace(input.SignatureMediaRef)
 	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	if input.OperatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	if assignmentID == "" || captainID == "" || input.IdempotencyKey == "" {
 		return nil, fmt.Errorf("%w: assignment, captain and idempotencyKey are required", ErrInvalid)
 	}
@@ -239,11 +242,7 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	defer tx.Rollback()
 
 	var current *Assignment
-	if input.OperatorContextID == "" {
-		current, err = lockAssignment(tx, assignmentID, captainID)
-	} else {
-		current, err = lockAssignmentForOperatorContext(tx, input.OperatorContextID, assignmentID, captainID)
-	}
+	current, err = lockAssignmentForOperatorContext(tx, input.OperatorContextID, assignmentID, captainID)
 	if err != nil {
 		return nil, err
 	}
@@ -320,10 +319,10 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 		}
 	} else {
 		result, updateErr := tx.Exec(`
-			UPDATE dsh_deliveries
-			SET pod_method=$1, pod_reference=COALESCE(NULLIF($2,''),NULLIF($3,'')),
-			    delivery_proof_id=$4::uuid, pod_review_status='pending_review', updated_at=NOW()
-			WHERE assignment_id=$5::uuid AND captain_id=$6 AND status='arrived_customer'`,
+                        UPDATE dsh_deliveries
+                        SET pod_method=$1, pod_reference=COALESCE(NULLIF($2,''),NULLIF($3,'')),
+                            delivery_proof_id=$4::uuid, pod_review_status='pending_review', updated_at=NOW()
+                        WHERE assignment_id=$5::uuid AND captain_id=$6 AND status='arrived_customer'`,
 			string(input.Method), input.PhotoMediaRef, input.SignatureMediaRef, proof.ID, assignmentID, captainID,
 		)
 		if updateErr != nil {
@@ -336,9 +335,6 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	if input.OperatorContextID == "" {
-		return GetCaptainDeliveryProof(db, assignmentID, captainID)
-	}
 	return GetCaptainDeliveryProofForOperatorContext(db, input.OperatorContextID, assignmentID, captainID)
 }
 
@@ -348,6 +344,9 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
+	if input.OperatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	if proofID == "" || operatorID == "" || len(input.IdempotencyKey) < 8 || input.ExpectedVersion <= 0 || len(input.Reason) < 5 {
 		return nil, fmt.Errorf("%w: proof, operator, idempotency key, expectedVersion and review reason are required", ErrInvalid)
 	}
@@ -361,10 +360,10 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 
 	var storedProofID, storedFingerprint string
 	receiptErr := tx.QueryRow(`
-		SELECT proof_id::text, request_fingerprint
-		FROM dsh_delivery_proof_review_receipts
-		WHERE operator_id=$1 AND idempotency_key=$2
-		FOR UPDATE`, operatorID, input.IdempotencyKey).Scan(&storedProofID, &storedFingerprint)
+                SELECT proof_id::text, request_fingerprint
+                FROM dsh_delivery_proof_review_receipts
+                WHERE operator_id=$1 AND idempotency_key=$2
+                FOR UPDATE`, operatorID, input.IdempotencyKey).Scan(&storedProofID, &storedFingerprint)
 	if receiptErr == nil {
 		if storedProofID != proofID || storedFingerprint != fingerprint {
 			return nil, ErrIdempotencyConflict
@@ -372,16 +371,13 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		if err = tx.Commit(); err != nil {
 			return nil, err
 		}
-		if input.OperatorContextID == "" {
-			return GetOperatorDeliveryProof(db, proofID)
-		}
 		return GetOperatorDeliveryProofForOperatorContext(db, input.OperatorContextID, proofID)
 	}
 	if !errors.Is(receiptErr, sql.ErrNoRows) {
 		return nil, receiptErr
 	}
 
-	proof, _, err := scanDeliveryProofRow(tx.QueryRow(deliveryProofSelectSQL()+` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE p.id=$1::uuid AND ($2='' OR a.operator_context_id=$2) FOR UPDATE OF p`, proofID, input.OperatorContextID))
+	proof, _, err := scanDeliveryProofRow(tx.QueryRow(deliveryProofSelectSQL()+` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE p.id=$1::uuid AND a.operator_context_id=$2 FOR UPDATE OF p`, proofID, input.OperatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -389,18 +385,15 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		return nil, err
 	}
 	if receiptErr = tx.QueryRow(`
-		SELECT proof_id::text, request_fingerprint
-		FROM dsh_delivery_proof_review_receipts
-		WHERE operator_id=$1 AND idempotency_key=$2
-		FOR UPDATE`, operatorID, input.IdempotencyKey).Scan(&storedProofID, &storedFingerprint); receiptErr == nil {
+                SELECT proof_id::text, request_fingerprint
+                FROM dsh_delivery_proof_review_receipts
+                WHERE operator_id=$1 AND idempotency_key=$2
+                FOR UPDATE`, operatorID, input.IdempotencyKey).Scan(&storedProofID, &storedFingerprint); receiptErr == nil {
 		if storedProofID != proofID || storedFingerprint != fingerprint {
 			return nil, ErrIdempotencyConflict
 		}
 		if err = tx.Commit(); err != nil {
 			return nil, err
-		}
-		if input.OperatorContextID == "" {
-			return GetOperatorDeliveryProof(db, proofID)
 		}
 		return GetOperatorDeliveryProofForOperatorContext(db, input.OperatorContextID, proofID)
 	} else if !errors.Is(receiptErr, sql.ErrNoRows) {
@@ -413,19 +406,19 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		return nil, fmt.Errorf("%w: only pending proof can be reviewed", ErrConflict)
 	}
 	receiptResult, err := tx.Exec(`
-		INSERT INTO dsh_delivery_proof_review_receipts
-			(proof_id, operator_id, idempotency_key, request_fingerprint)
-		VALUES ($1::uuid, $2, $3, $4)
-		ON CONFLICT (operator_id, idempotency_key) DO NOTHING`, proofID, operatorID, input.IdempotencyKey, fingerprint)
+                INSERT INTO dsh_delivery_proof_review_receipts
+                        (proof_id, operator_id, idempotency_key, request_fingerprint)
+                VALUES ($1::uuid, $2, $3, $4)
+                ON CONFLICT (operator_id, idempotency_key) DO NOTHING`, proofID, operatorID, input.IdempotencyKey, fingerprint)
 	if err != nil {
 		return nil, err
 	}
 	if affected, _ := receiptResult.RowsAffected(); affected != 1 {
 		if err = tx.QueryRow(`
-			SELECT proof_id::text, request_fingerprint
-			FROM dsh_delivery_proof_review_receipts
-			WHERE operator_id=$1 AND idempotency_key=$2
-			FOR UPDATE`, operatorID, input.IdempotencyKey).Scan(&storedProofID, &storedFingerprint); err != nil {
+                        SELECT proof_id::text, request_fingerprint
+                        FROM dsh_delivery_proof_review_receipts
+                        WHERE operator_id=$1 AND idempotency_key=$2
+                        FOR UPDATE`, operatorID, input.IdempotencyKey).Scan(&storedProofID, &storedFingerprint); err != nil {
 			return nil, err
 		}
 		if storedProofID != proofID || storedFingerprint != fingerprint {
@@ -434,18 +427,15 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		if err = tx.Commit(); err != nil {
 			return nil, err
 		}
-		if input.OperatorContextID == "" {
-			return GetOperatorDeliveryProof(db, proofID)
-		}
 		return GetOperatorDeliveryProofForOperatorContext(db, input.OperatorContextID, proofID)
 	}
 
 	if !input.Accept {
 		result, updateErr := tx.Exec(`
-			UPDATE dsh_delivery_proofs
-			SET status='rejected', reviewed_at=NOW(), reviewed_by_actor_id=$2,
-			    review_reason=$3, rejected_at=NOW(), version=version+1, updated_at=NOW()
-			WHERE id=$1::uuid AND version=$4 AND status IN ('submitted','pending_review')`,
+                        UPDATE dsh_delivery_proofs
+                        SET status='rejected', reviewed_at=NOW(), reviewed_by_actor_id=$2,
+                            review_reason=$3, rejected_at=NOW(), version=version+1, updated_at=NOW()
+                        WHERE id=$1::uuid AND version=$4 AND status IN ('submitted','pending_review')`,
 			proofID, operatorID, input.Reason, input.ExpectedVersion,
 		)
 		if updateErr != nil {
@@ -455,9 +445,9 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 			return nil, fmt.Errorf("%w: delivery proof review lost its expected version", ErrConflict)
 		}
 		_, err = tx.Exec(`
-			UPDATE dsh_deliveries
-			SET pod_review_status='rejected', updated_at=NOW()
-			WHERE assignment_id=$1::uuid AND delivery_proof_id=$2::uuid AND status='arrived_customer'`,
+                        UPDATE dsh_deliveries
+                        SET pod_review_status='rejected', updated_at=NOW()
+                        WHERE assignment_id=$1::uuid AND delivery_proof_id=$2::uuid AND status='arrived_customer'`,
 			proof.AssignmentID, proof.ID,
 		)
 		if err != nil {
@@ -465,10 +455,10 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		}
 	} else {
 		result, updateErr := tx.Exec(`
-			UPDATE dsh_delivery_proofs
-			SET status='accepted', reviewed_at=NOW(), reviewed_by_actor_id=$2,
-			    review_reason=$3, accepted_at=NOW(), version=version+1, updated_at=NOW()
-			WHERE id=$1::uuid AND version=$4 AND status IN ('submitted','pending_review')`,
+                        UPDATE dsh_delivery_proofs
+                        SET status='accepted', reviewed_at=NOW(), reviewed_by_actor_id=$2,
+                            review_reason=$3, accepted_at=NOW(), version=version+1, updated_at=NOW()
+                        WHERE id=$1::uuid AND version=$4 AND status IN ('submitted','pending_review')`,
 			proofID, operatorID, input.Reason, input.ExpectedVersion,
 		)
 		if updateErr != nil {
@@ -481,12 +471,7 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		proof.ReviewedByActorID = operatorID
 		proof.ReviewReason = input.Reason
 		var current *Assignment
-		var lockErr error
-		if input.OperatorContextID == "" {
-			current, lockErr = lockAssignment(tx, proof.AssignmentID, proof.CaptainID)
-		} else {
-			current, lockErr = lockAssignmentForOperatorContext(tx, input.OperatorContextID, proof.AssignmentID, proof.CaptainID)
-		}
+		current, lockErr := lockAssignmentForOperatorContext(tx, input.OperatorContextID, proof.AssignmentID, proof.CaptainID)
 		if lockErr != nil {
 			return nil, lockErr
 		}
@@ -503,14 +488,7 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	if input.OperatorContextID == "" {
-		return GetOperatorDeliveryProof(db, proofID)
-	}
 	return GetOperatorDeliveryProofForOperatorContext(db, input.OperatorContextID, proofID)
-}
-
-func GetCaptainDeliveryProof(db *sql.DB, assignmentID, captainID string) (*DeliveryProof, error) {
-	return getCaptainDeliveryProof(db, "", assignmentID, captainID)
 }
 
 func GetCaptainDeliveryProofForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string) (*DeliveryProof, error) {
@@ -522,19 +500,19 @@ func GetCaptainDeliveryProofForOperatorContext(db *sql.DB, operatorContextID, as
 }
 
 func getCaptainDeliveryProof(db *sql.DB, operatorContextID, assignmentID, captainID string) (*DeliveryProof, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	proof, _, err := scanDeliveryProofRow(db.QueryRow(deliveryProofSelectSQL()+`
-		JOIN dsh_assignments a ON a.id=p.assignment_id
-		WHERE p.assignment_id=$1::uuid AND p.captain_id=$2
-		  AND ($3='' OR a.operator_context_id=$3)
-		ORDER BY p.created_at DESC LIMIT 1`, assignmentID, captainID, operatorContextID))
+                JOIN dsh_assignments a ON a.id=p.assignment_id
+                WHERE p.assignment_id=$1::uuid AND p.captain_id=$2
+                  AND a.operator_context_id=$3
+                ORDER BY p.created_at DESC LIMIT 1`, assignmentID, captainID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	return proof, err
-}
-
-func GetClientDeliveryProof(db *sql.DB, orderID, clientID string) (*DeliveryProof, error) {
-	return getClientDeliveryProof(db, "", orderID, clientID)
 }
 
 func GetClientDeliveryProofForOperatorContext(db *sql.DB, operatorContextID, orderID, clientID string) (*DeliveryProof, error) {
@@ -546,19 +524,19 @@ func GetClientDeliveryProofForOperatorContext(db *sql.DB, operatorContextID, ord
 }
 
 func getClientDeliveryProof(db *sql.DB, operatorContextID, orderID, clientID string) (*DeliveryProof, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	proof, _, err := scanDeliveryProofRow(db.QueryRow(deliveryProofSelectSQL()+`
-		JOIN dsh_orders o ON o.id=p.order_id
-		WHERE p.order_id=$1::uuid AND o.client_id=$2 AND p.status='accepted'
-		  AND ($3='' OR o.operator_context_id=$3)
-		ORDER BY p.accepted_at DESC LIMIT 1`, orderID, clientID, operatorContextID))
+                JOIN dsh_orders o ON o.id=p.order_id
+                WHERE p.order_id=$1::uuid AND o.client_id=$2 AND p.status='accepted'
+                  AND o.operator_context_id=$3
+                ORDER BY p.accepted_at DESC LIMIT 1`, orderID, clientID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	return proof, err
-}
-
-func GetOperatorDeliveryProof(db *sql.DB, proofID string) (*DeliveryProof, error) {
-	return getOperatorDeliveryProof(db, "", proofID)
 }
 
 func GetOperatorDeliveryProofForOperatorContext(db *sql.DB, operatorContextID, proofID string) (*DeliveryProof, error) {
@@ -570,23 +548,17 @@ func GetOperatorDeliveryProofForOperatorContext(db *sql.DB, operatorContextID, p
 }
 
 func getOperatorDeliveryProof(db *sql.DB, operatorContextID, proofID string) (*DeliveryProof, error) {
-	query := deliveryProofSelectSQL()
-	args := []any{proofID}
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
-		query += ` WHERE p.id=$1::uuid`
-	} else {
-		query += ` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE p.id=$1::uuid AND a.operator_context_id=$2`
-		args = append(args, operatorContextID)
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
+	query := deliveryProofSelectSQL() + ` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE p.id=$1::uuid AND a.operator_context_id=$2`
+	args := []any{proofID, operatorContextID}
 	proof, _, err := scanDeliveryProofRow(db.QueryRow(query, args...))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	return proof, err
-}
-
-func ListOperatorDeliveryProofs(db *sql.DB, status DeliveryProofStatus, limit int) ([]DeliveryProof, error) {
-	return listOperatorDeliveryProofs(db, "", status, limit)
 }
 
 func ListOperatorDeliveryProofsForOperatorContext(db *sql.DB, operatorContextID string, status DeliveryProofStatus, limit int) ([]DeliveryProof, error) {
@@ -598,24 +570,20 @@ func ListOperatorDeliveryProofsForOperatorContext(db *sql.DB, operatorContextID 
 }
 
 func listOperatorDeliveryProofs(db *sql.DB, operatorContextID string, status DeliveryProofStatus, limit int) ([]DeliveryProof, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	if status != "" && !isDeliveryProofStatus(status) {
 		return nil, fmt.Errorf("%w: unsupported delivery proof status", ErrInvalid)
 	}
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
-	query := deliveryProofSelectSQL()
-	args := []any{}
-	if operatorContextID != "" {
-		query += ` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE a.operator_context_id=$1`
-		args = append(args, operatorContextID)
-	}
+	query := deliveryProofSelectSQL() + ` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE a.operator_context_id=$1`
+	args := []any{operatorContextID}
 	if status != "" {
-		if operatorContextID == "" {
-			query += ` WHERE p.status=$1`
-		} else {
-			query += ` AND p.status=$2`
-		}
+		query += ` AND p.status=$2`
 		args = append(args, string(status))
 	}
 	query += fmt.Sprintf(` ORDER BY p.submitted_at ASC LIMIT $%d`, len(args)+1)
@@ -695,10 +663,10 @@ func validateDeliveryProofInput(input SubmitDeliveryProofInput) error {
 func ensureNoOpenDeliveryProof(tx *sql.Tx, assignmentID string) error {
 	var exists bool
 	if err := tx.QueryRow(`
-		SELECT EXISTS (
-			SELECT 1 FROM dsh_delivery_proofs
-			WHERE assignment_id=$1::uuid AND status IN ('submitted','pending_review')
-		)`, assignmentID).Scan(&exists); err != nil {
+                SELECT EXISTS (
+                        SELECT 1 FROM dsh_delivery_proofs
+                        WHERE assignment_id=$1::uuid AND status IN ('submitted','pending_review')
+                )`, assignmentID).Scan(&exists); err != nil {
 		return err
 	}
 	if exists {
@@ -710,10 +678,10 @@ func ensureNoOpenDeliveryProof(tx *sql.Tx, assignmentID string) error {
 func validateDeliveryProofMedia(tx *sql.Tx, mediaRef, captainID, purpose, orderID string) (bool, error) {
 	var scanStatus string
 	if err := tx.QueryRow(`
-		SELECT scan_status FROM dsh_media_refs
-		WHERE media_ref=$1 AND owner_actor_id=$2 AND owner_actor_role='captain'
-		  AND purpose=$3 AND order_id=$4::uuid AND content_type LIKE 'image/%'
-	`, mediaRef, captainID, purpose, orderID).Scan(&scanStatus); err != nil {
+                SELECT scan_status FROM dsh_media_refs
+                WHERE media_ref=$1 AND owner_actor_id=$2 AND owner_actor_role='captain'
+                  AND purpose=$3 AND order_id=$4::uuid AND content_type LIKE 'image/%'
+        `, mediaRef, captainID, purpose, orderID).Scan(&scanStatus); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return false, fmt.Errorf("%w: proof media is missing, unowned, cross-order bound, or has the wrong purpose", ErrInvalid)
 		}
@@ -731,10 +699,10 @@ func verifyDeliveryPIN(tx *sql.Tx, assignmentID, pin string) (string, error) {
 	var failedAttempts, maxAttempts int
 	var consumedAt sql.NullTime
 	err := tx.QueryRow(`
-		SELECT id::text, pin_hash, pin_expires_at, failed_attempts, max_attempts, consumed_at
-		FROM dsh_delivery_verification_challenges
-		WHERE assignment_id=$1::uuid
-		FOR UPDATE`, assignmentID).Scan(&id, &storedHash, &expiresAt, &failedAttempts, &maxAttempts, &consumedAt)
+                SELECT id::text, pin_hash, pin_expires_at, failed_attempts, max_attempts, consumed_at
+                FROM dsh_delivery_verification_challenges
+                WHERE assignment_id=$1::uuid
+                FOR UPDATE`, assignmentID).Scan(&id, &storedHash, &expiresAt, &failedAttempts, &maxAttempts, &consumedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", fmt.Errorf("%w: delivery PIN has not been issued", ErrConflict)
 	}
@@ -748,9 +716,9 @@ func verifyDeliveryPIN(tx *sql.Tx, assignmentID, pin string) (string, error) {
 	matches := validFormat && bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(assignmentID+":"+pin)) == nil
 	if !matches {
 		result, updateErr := tx.Exec(`
-			UPDATE dsh_delivery_verification_challenges
-			SET failed_attempts=failed_attempts+1, version=version+1, updated_at=NOW()
-			WHERE id=$1::uuid AND failed_attempts < max_attempts AND consumed_at IS NULL`, id)
+                        UPDATE dsh_delivery_verification_challenges
+                        SET failed_attempts=failed_attempts+1, version=version+1, updated_at=NOW()
+                        WHERE id=$1::uuid AND failed_attempts < max_attempts AND consumed_at IS NULL`, id)
 		if updateErr != nil {
 			return "", updateErr
 		}
@@ -788,18 +756,18 @@ func insertDeliveryProof(
 		acceptedAt = time.Now().UTC()
 	}
 	proof, _, err := scanDeliveryProofRow(tx.QueryRow(`
-		INSERT INTO dsh_delivery_proofs
-			(assignment_id,order_id,captain_id,verification_challenge_id,method,status,
-			 photo_media_ref,signature_media_ref,recipient_relationship,recipient_name,captured_latitude,captured_longitude,captured_at,
-			 accepted_at,idempotency_key,request_fingerprint)
-		VALUES ($1::uuid,$2::uuid,$3,NULLIF($4,'')::uuid,$5,$6,NULLIF($7,''),NULLIF($8,''),$9,NULLIF($10,''),$11,$12,$13,$14,$15,$16)
-		RETURNING id::text,assignment_id::text,order_id::text,captain_id,
-			COALESCE(verification_challenge_id::text,''),method,status,
-			COALESCE(photo_media_ref,''),COALESCE(signature_media_ref,''),
-			recipient_relationship,COALESCE(recipient_name,''),
-			captured_latitude,captured_longitude,captured_at,submitted_at,reviewed_at,
-			COALESCE(reviewed_by_actor_id,''),COALESCE(review_reason,''),accepted_at,rejected_at,
-			idempotency_key,request_fingerprint,version,created_at,updated_at`,
+                INSERT INTO dsh_delivery_proofs
+                        (assignment_id,order_id,captain_id,verification_challenge_id,method,status,
+                         photo_media_ref,signature_media_ref,recipient_relationship,recipient_name,captured_latitude,captured_longitude,captured_at,
+                         accepted_at,idempotency_key,request_fingerprint)
+                VALUES ($1::uuid,$2::uuid,$3,NULLIF($4,'')::uuid,$5,$6,NULLIF($7,''),NULLIF($8,''),$9,NULLIF($10,''),$11,$12,$13,$14,$15,$16)
+                RETURNING id::text,assignment_id::text,order_id::text,captain_id,
+                        COALESCE(verification_challenge_id::text,''),method,status,
+                        COALESCE(photo_media_ref,''),COALESCE(signature_media_ref,''),
+                        recipient_relationship,COALESCE(recipient_name,''),
+                        captured_latitude,captured_longitude,captured_at,submitted_at,reviewed_at,
+                        COALESCE(reviewed_by_actor_id,''),COALESCE(review_reason,''),accepted_at,rejected_at,
+                        idempotency_key,request_fingerprint,version,created_at,updated_at`,
 		current.ID, current.OrderID, current.CaptainID, challengeID, string(input.Method), string(status),
 		input.PhotoMediaRef, input.SignatureMediaRef, input.RecipientRelationship, input.RecipientName, input.CapturedLatitude, input.CapturedLongitude,
 		capturedAt, acceptedAt, input.IdempotencyKey, fingerprint,
@@ -823,10 +791,10 @@ func finalizeAcceptedDeliveryProof(tx *sql.Tx, operatorContextID string, current
 	// verification_challenge_id. pod_reference is reserved for captain-owned
 	// delivery-proof media because the database trigger validates that contract.
 	deliveryResult, err := tx.Exec(`
-		UPDATE dsh_deliveries
-		SET status='delivered', pod_method=$1, pod_reference=$2, delivery_proof_id=$3::uuid,
-		    pod_review_status='accepted', pod_verified_at=NOW(), updated_at=NOW()
-		WHERE assignment_id=$4::uuid AND captain_id=$5 AND status='arrived_customer'`,
+                UPDATE dsh_deliveries
+                SET status='delivered', pod_method=$1, pod_reference=$2, delivery_proof_id=$3::uuid,
+                    pod_review_status='accepted', pod_verified_at=NOW(), updated_at=NOW()
+                WHERE assignment_id=$4::uuid AND captain_id=$5 AND status='arrived_customer'`,
 		string(proof.Method), proofReference, proof.ID, proof.AssignmentID, captainID,
 	)
 	if err != nil {
@@ -836,10 +804,10 @@ func finalizeAcceptedDeliveryProof(tx *sql.Tx, operatorContextID string, current
 		return fmt.Errorf("%w: delivery completion lost its expected state", ErrConflict)
 	}
 	assignmentResult, err := tx.Exec(`
-		UPDATE dsh_assignments
-		SET status='completed', completed_at=NOW(), updated_at=NOW(),
-		    last_latitude=NULL, last_longitude=NULL, location_recorded_at=NULL
-		WHERE id=$1::uuid AND captain_id=$2 AND status='accepted'`, proof.AssignmentID, captainID)
+                UPDATE dsh_assignments
+                SET status='completed', completed_at=NOW(), updated_at=NOW(),
+                    last_latitude=NULL, last_longitude=NULL, location_recorded_at=NULL
+                WHERE id=$1::uuid AND captain_id=$2 AND status='accepted'`, proof.AssignmentID, captainID)
 	if err != nil {
 		return err
 	}
@@ -848,9 +816,9 @@ func finalizeAcceptedDeliveryProof(tx *sql.Tx, operatorContextID string, current
 	}
 	if proof.VerificationChallengeID != "" {
 		challengeResult, challengeErr := tx.Exec(`
-			UPDATE dsh_delivery_verification_challenges
-			SET consumed_at=COALESCE(consumed_at,NOW()), version=version+1, updated_at=NOW()
-			WHERE id=$1::uuid AND consumed_at IS NULL`, proof.VerificationChallengeID)
+                        UPDATE dsh_delivery_verification_challenges
+                        SET consumed_at=COALESCE(consumed_at,NOW()), version=version+1, updated_at=NOW()
+                        WHERE id=$1::uuid AND consumed_at IS NULL`, proof.VerificationChallengeID)
 		if challengeErr != nil {
 			return challengeErr
 		}
@@ -880,7 +848,7 @@ func enqueueWltDeliveryCompletion(tx *sql.Tx, operatorContextID, orderID, captai
 
 func getDeliveryProofByIdempotency(tx *sql.Tx, assignmentID, key, fingerprint string) (*DeliveryProof, error) {
 	proof, storedFingerprint, err := scanDeliveryProofRow(tx.QueryRow(deliveryProofSelectSQL()+`
-		WHERE p.assignment_id=$1::uuid AND p.idempotency_key=$2`, assignmentID, key))
+                WHERE p.assignment_id=$1::uuid AND p.idempotency_key=$2`, assignmentID, key))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -895,13 +863,13 @@ func getDeliveryProofByIdempotency(tx *sql.Tx, assignmentID, key, fingerprint st
 
 func deliveryProofSelectSQL() string {
 	return `SELECT p.id::text,p.assignment_id::text,p.order_id::text,p.captain_id,
-		COALESCE(p.verification_challenge_id::text,''),p.method,p.status,
-		COALESCE(p.photo_media_ref,''),COALESCE(p.signature_media_ref,''),
-		p.recipient_relationship,COALESCE(p.recipient_name,''),
-		p.captured_latitude,p.captured_longitude,p.captured_at,p.submitted_at,p.reviewed_at,
-		COALESCE(p.reviewed_by_actor_id,''),COALESCE(p.review_reason,''),p.accepted_at,p.rejected_at,
-		p.idempotency_key,p.request_fingerprint,p.version,p.created_at,p.updated_at
-	FROM dsh_delivery_proofs p`
+                COALESCE(p.verification_challenge_id::text,''),p.method,p.status,
+                COALESCE(p.photo_media_ref,''),COALESCE(p.signature_media_ref,''),
+                p.recipient_relationship,COALESCE(p.recipient_name,''),
+                p.captured_latitude,p.captured_longitude,p.captured_at,p.submitted_at,p.reviewed_at,
+                COALESCE(p.reviewed_by_actor_id,''),COALESCE(p.review_reason,''),p.accepted_at,p.rejected_at,
+                p.idempotency_key,p.request_fingerprint,p.version,p.created_at,p.updated_at
+        FROM dsh_delivery_proofs p`
 }
 
 type deliveryProofScanner interface {

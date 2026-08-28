@@ -55,9 +55,10 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 	}
 
 	input := ReportDeliveryExceptionInput{
-		ReasonCode:    ExceptionHandoffShortage,
-		Note:          "قطعة واحدة غير موجودة في الطرد عند المطابقة",
-		CorrelationID: "partner-handoff-shortage:" + fixture.AssignmentID,
+		OperatorContextID: fixture.OperatorContextID,
+		ReasonCode:        ExceptionHandoffShortage,
+		Note:              "قطعة واحدة غير موجودة في الطرد عند المطابقة",
+		CorrelationID:     "partner-handoff-shortage:" + fixture.AssignmentID,
 	}
 	item, err := ReportPartnerStoreCaptainHandoffException(
 		db,
@@ -172,9 +173,10 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 	}
 
 	input := ReportDeliveryExceptionInput{
-		ReasonCode:    ExceptionHandoffMismatch,
-		Note:          "محتوى الطرد لا يطابق تفاصيل الطلب المعروضة",
-		CorrelationID: "captain-handoff-mismatch:" + fixture.AssignmentID,
+		OperatorContextID: fixture.OperatorContextID,
+		ReasonCode:        ExceptionHandoffMismatch,
+		Note:              "محتوى الطرد لا يطابق تفاصيل الطلب المعروضة",
+		CorrelationID:     "captain-handoff-mismatch:" + fixture.AssignmentID,
 	}
 	item, err := ReportCaptainStoreCaptainHandoffException(
 		db,

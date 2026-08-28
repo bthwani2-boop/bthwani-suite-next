@@ -10,25 +10,27 @@ func TestOrderCancellationCancelsPartnerDeliveryTaskDBIntegration(t *testing.T) 
 	fixture := seedFixture(t, db, "ready_for_pickup")
 	service := NewService(db, mockWFServer(t))
 
-	task, err := service.AssignCourier(
+	task, err := service.AssignCourierCommand(
 		context.Background(),
+		fixture.operatorContextID,
 		fixture.orderID,
 		fixture.courierID,
 		"operator-1",
 		"operator",
 		"cancel-command-19",
+		"cmd-cancel-19",
 	)
 	if err != nil {
 		t.Fatalf("AssignCourier failed: %v", err)
 	}
 
 	if _, err := db.Exec(`
-		UPDATE dsh_orders
-		SET status='cancelled_by_operator',
-		    cancellation_reason_code='operational_failure',
-		    cancellation_note='تعذر استمرار توصيل المتجر',
-		    updated_at=NOW()
-		WHERE id=$1::uuid`, fixture.orderID); err != nil {
+                UPDATE dsh_orders
+                SET status='cancelled_by_operator',
+                    cancellation_reason_code='operational_failure',
+                    cancellation_note='تعذر استمرار توصيل المتجر',
+                    updated_at=NOW()
+                WHERE id=$1::uuid`, fixture.orderID); err != nil {
 		t.Fatalf("failed to cancel partner-delivery order: %v", err)
 	}
 
@@ -37,9 +39,9 @@ func TestOrderCancellationCancelsPartnerDeliveryTaskDBIntegration(t *testing.T) 
 		version int
 	)
 	if err := db.QueryRow(`
-		SELECT status, version
-		FROM dsh_partner_delivery_tasks
-		WHERE id=$1`, task.ID).Scan(&status, &version); err != nil {
+                SELECT status, version
+                FROM dsh_partner_delivery_tasks
+                WHERE id=$1`, task.ID).Scan(&status, &version); err != nil {
 		t.Fatalf("failed to read cancelled partner-delivery task: %v", err)
 	}
 	if status != string(StatusCancelled) {

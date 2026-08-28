@@ -135,20 +135,20 @@ func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, err
 	}
 
 	assignment, err := scanAssignmentRow(tx.QueryRow(`
-		INSERT INTO dsh_assignments (operator_context_id, order_id, captain_id, assigned_by, status, response_deadline_at)
-		VALUES ($1, $2::uuid, $3, $4, $5, NOW() + INTERVAL '90 seconds')
-		RETURNING id::text, order_id::text, captain_id, assigned_by, status,
-		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
+                INSERT INTO dsh_assignments (operator_context_id, order_id, captain_id, assigned_by, status, response_deadline_at)
+                VALUES ($1, $2::uuid, $3, $4, $5, NOW() + INTERVAL '90 seconds')
+                RETURNING id::text, order_id::text, captain_id, assigned_by, status,
+                          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
 		input.OperatorContextID, input.OrderID, input.CaptainID, input.ActorID, string(AssignmentOffered)))
 	if err != nil {
 		return nil, err
 	}
 	delivery, err := scanDeliveryRow(tx.QueryRow(`
-		INSERT INTO dsh_deliveries (assignment_id, order_id, captain_id, status)
-		VALUES ($1::uuid, $2::uuid, $3, $4)
-		RETURNING id::text, assignment_id::text, order_id::text, captain_id, status,
-		          COALESCE(pod_method, ''), COALESCE(pod_reference, ''), COALESCE(note, ''),
-		          created_at, updated_at`,
+                INSERT INTO dsh_deliveries (assignment_id, order_id, captain_id, status)
+                VALUES ($1::uuid, $2::uuid, $3, $4)
+                RETURNING id::text, assignment_id::text, order_id::text, captain_id, status,
+                          COALESCE(pod_method, ''), COALESCE(pod_reference, ''), COALESCE(note, ''),
+                          created_at, updated_at`,
 		assignment.ID, input.OrderID, input.CaptainID, string(DeliveryAssigned)))
 	if err != nil {
 		return nil, err
@@ -177,11 +177,11 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 
 	var existingAssignmentID, existingCaptainID string
 	err = tx.QueryRow(`
-		SELECT id::text, captain_id
-		FROM dsh_assignments
-		WHERE special_request_id = $1::uuid AND operator_context_id = $2
-		  AND status IN ('offered', 'accepted')
-		FOR UPDATE`, input.SpecialRequestID, input.OperatorContextID).Scan(&existingAssignmentID, &existingCaptainID)
+                SELECT id::text, captain_id
+                FROM dsh_assignments
+                WHERE special_request_id = $1::uuid AND operator_context_id = $2
+                  AND status IN ('offered', 'accepted')
+                FOR UPDATE`, input.SpecialRequestID, input.OperatorContextID).Scan(&existingAssignmentID, &existingCaptainID)
 	if err == nil {
 		if existingCaptainID != input.CaptainID {
 			return nil, fmt.Errorf("%w: special request already has an active assignment for another captain", ErrConflict)
@@ -189,7 +189,7 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 		if err := tx.Commit(); err != nil {
 			return nil, err
 		}
-		return GetCaptainAssignment(db, existingAssignmentID, input.CaptainID)
+		return GetCaptainAssignmentForOperatorContext(db, input.OperatorContextID, existingAssignmentID, input.CaptainID)
 	}
 	if err != sql.ErrNoRows {
 		return nil, err
@@ -199,10 +199,10 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	}
 
 	assignment, err := scanAssignmentRow(tx.QueryRow(`
-		INSERT INTO dsh_assignments (operator_context_id, special_request_id, captain_id, assigned_by, status, response_deadline_at)
-		VALUES ($1, $2::uuid, $3, $4, $5, NOW() + INTERVAL '90 seconds')
-		RETURNING id::text, COALESCE(order_id::text, ''), captain_id, assigned_by, status,
-		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
+                INSERT INTO dsh_assignments (operator_context_id, special_request_id, captain_id, assigned_by, status, response_deadline_at)
+                VALUES ($1, $2::uuid, $3, $4, $5, NOW() + INTERVAL '90 seconds')
+                RETURNING id::text, COALESCE(order_id::text, ''), captain_id, assigned_by, status,
+                          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
 		input.OperatorContextID, input.SpecialRequestID, input.CaptainID, input.ActorID, string(AssignmentOffered)))
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
@@ -213,11 +213,11 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	assignment.SpecialRequestID = input.SpecialRequestID
 
 	delivery, err := scanDeliveryRow(tx.QueryRow(`
-		INSERT INTO dsh_deliveries (assignment_id, special_request_id, captain_id, status)
-		VALUES ($1::uuid, $2::uuid, $3, $4)
-		RETURNING id::text, assignment_id::text, COALESCE(order_id::text, ''), captain_id, status,
-		          COALESCE(pod_method, ''), COALESCE(pod_reference, ''), COALESCE(note, ''),
-		          created_at, updated_at`,
+                INSERT INTO dsh_deliveries (assignment_id, special_request_id, captain_id, status)
+                VALUES ($1::uuid, $2::uuid, $3, $4)
+                RETURNING id::text, assignment_id::text, COALESCE(order_id::text, ''), captain_id, status,
+                          COALESCE(pod_method, ''), COALESCE(pod_reference, ''), COALESCE(note, ''),
+                          created_at, updated_at`,
 		assignment.ID, input.SpecialRequestID, input.CaptainID, string(DeliveryAssigned)))
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
@@ -237,11 +237,11 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	}
 
 	result, err := tx.Exec(`
-		UPDATE dsh_special_requests
-		SET dispatch_assignment_id = $1,
-		    captain_assigned_at = COALESCE(captain_assigned_at, NOW()),
-		    version = version + 1, updated_at = NOW()
-		WHERE id = $2 AND operator_context_id = $3`,
+                UPDATE dsh_special_requests
+                SET dispatch_assignment_id = $1,
+                    captain_assigned_at = COALESCE(captain_assigned_at, NOW()),
+                    version = version + 1, updated_at = NOW()
+                WHERE id = $2 AND operator_context_id = $3`,
 		assignment.ID, input.SpecialRequestID, input.OperatorContextID)
 	if err != nil {
 		return nil, err
@@ -271,31 +271,17 @@ func ListCaptainAssignments(db *sql.DB, captainID string, limit int) ([]Assignme
 		limit = 50
 	}
 	rows, err := db.Query(assignmentSelectSQL()+`
-		LEFT JOIN dsh_orders o ON o.id = a.order_id
-		WHERE a.captain_id = $1
-		  AND a.status IN ('offered','accepted')
-		  AND d.status NOT IN ('delivered','cancelled')
-		  AND (a.order_id IS NULL OR o.status NOT IN (
-		    'cancelled_by_client', 'cancelled_by_store', 'cancelled_by_operator',
-		    'cancelled_no_driver', 'failed_payment', 'failed_dispatch',
-		    'delivered', 'returned_to_store'
-		  ))
-		ORDER BY a.created_at DESC
-		LIMIT $2`, captainID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	return scanAssignments(rows)
-}
-
-func ListOperatorAssignments(db *sql.DB, limit int) ([]Assignment, error) {
-	if limit <= 0 || limit > 200 {
-		limit = 50
-	}
-	rows, err := db.Query(assignmentSelectSQL()+`
-		ORDER BY a.created_at DESC
-		LIMIT $1`, limit)
+                LEFT JOIN dsh_orders o ON o.id = a.order_id
+                WHERE a.captain_id = $1
+                  AND a.status IN ('offered','accepted')
+                  AND d.status NOT IN ('delivered','cancelled')
+                  AND (a.order_id IS NULL OR o.status NOT IN (
+                    'cancelled_by_client', 'cancelled_by_store', 'cancelled_by_operator',
+                    'cancelled_no_driver', 'failed_payment', 'failed_dispatch',
+                    'delivered', 'returned_to_store'
+                  ))
+                ORDER BY a.created_at DESC
+                LIMIT $2`, captainID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -308,10 +294,10 @@ func GetClientTracking(db *sql.DB, orderID, clientID string) (*Assignment, error
 		return nil, fmt.Errorf("%w: orderId and client actor are required", ErrInvalid)
 	}
 	row := db.QueryRow(assignmentSelectSQL()+`
-		JOIN dsh_orders o ON o.id = a.order_id
-		WHERE a.order_id = $1::uuid AND o.client_id = $2
-		ORDER BY a.created_at DESC
-		LIMIT 1`, orderID, clientID)
+                JOIN dsh_orders o ON o.id = a.order_id
+                WHERE a.order_id = $1::uuid AND o.client_id = $2
+                ORDER BY a.created_at DESC
+                LIMIT 1`, orderID, clientID)
 	assignment, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -328,10 +314,10 @@ func GetPartnerTracking(db *sql.DB, orderID, storeID string) (*Assignment, error
 		return nil, fmt.Errorf("%w: orderId and store actor are required", ErrInvalid)
 	}
 	row := db.QueryRow(assignmentSelectSQL()+`
-		JOIN dsh_orders o ON o.id = a.order_id
-		WHERE a.order_id = $1::uuid AND o.store_id = $2
-		ORDER BY a.created_at DESC
-		LIMIT 1`, orderID, storeID)
+                JOIN dsh_orders o ON o.id = a.order_id
+                WHERE a.order_id = $1::uuid AND o.store_id = $2
+                ORDER BY a.created_at DESC
+                LIMIT 1`, orderID, storeID)
 	assignment, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -361,10 +347,6 @@ func UpdateDeliveryStatus(db *sql.DB, operatorContextID, assignmentID, captainID
 	default:
 		return nil, fmt.Errorf("%w: unsupported delivery status", ErrInvalid)
 	}
-}
-
-func PushLocation(db *sql.DB, operatorContextID, assignmentID, captainID string, input PushLocationInput) (*Assignment, error) {
-	return pushLocation(db, operatorContextID, assignmentID, captainID, input)
 }
 
 func PushLocationForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string, input PushLocationInput) (*Assignment, error) {
@@ -406,18 +388,15 @@ func pushLocation(db *sql.DB, operatorContextID, assignmentID, captainID string,
 		recordedAt = input.RecordedAt.UTC()
 	}
 	_, err = tx.Exec(`
-		UPDATE dsh_assignments
-		SET last_latitude = $1, last_longitude = $2, location_recorded_at = $3, updated_at = NOW()
-		WHERE id = $4::uuid AND captain_id = $5`,
+                UPDATE dsh_assignments
+                SET last_latitude = $1, last_longitude = $2, location_recorded_at = $3, updated_at = NOW()
+                WHERE id = $4::uuid AND captain_id = $5`,
 		input.Latitude, input.Longitude, recordedAt, assignmentID, captainID)
 	if err != nil {
 		return nil, err
 	}
 	if err = tx.Commit(); err != nil {
 		return nil, err
-	}
-	if operatorContextID == "" {
-		return GetCaptainAssignment(db, assignmentID, captainID)
 	}
 	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }
@@ -466,18 +445,18 @@ func SubmitPoD(db *sql.DB, operatorContextID, assignmentID, captainID string, in
 		}
 	}
 	_, err = tx.Exec(`
-		UPDATE dsh_deliveries
-		SET status = $1, pod_method = $2, pod_reference = $3, note = NULLIF($4, ''), updated_at = NOW()
-		WHERE assignment_id = $5::uuid AND captain_id = $6`,
+                UPDATE dsh_deliveries
+                SET status = $1, pod_method = $2, pod_reference = $3, note = NULLIF($4, ''), updated_at = NOW()
+                WHERE assignment_id = $5::uuid AND captain_id = $6`,
 		string(DeliveryDelivered), input.Method, input.Reference, input.Note, assignmentID, captainID)
 	if err != nil {
 		return nil, err
 	}
 	_, err = tx.Exec(`
-		UPDATE dsh_assignments
-		SET status = $1, completed_at = NOW(), updated_at = NOW(),
-		    last_latitude = NULL, last_longitude = NULL, location_recorded_at = NULL
-		WHERE id = $2::uuid AND captain_id = $3`,
+                UPDATE dsh_assignments
+                SET status = $1, completed_at = NOW(), updated_at = NOW(),
+                    last_latitude = NULL, last_longitude = NULL, location_recorded_at = NULL
+                WHERE id = $2::uuid AND captain_id = $3`,
 		string(AssignmentCompleted), assignmentID, captainID)
 	if err != nil {
 		return nil, err
@@ -507,7 +486,7 @@ func enqueueWltDeliveryCompletedNotification(tx *sql.Tx, operatorContextID, orde
 
 func GetCaptainAssignment(db *sql.DB, assignmentID, captainID string) (*Assignment, error) {
 	row := db.QueryRow(assignmentSelectSQL()+`
-		WHERE a.id = $1::uuid AND a.captain_id = $2`, assignmentID, captainID)
+                WHERE a.id = $1::uuid AND a.captain_id = $2`, assignmentID, captainID)
 	assignment, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -521,7 +500,7 @@ func GetCaptainAssignmentForOperatorContext(db *sql.DB, operatorContextID, assig
 		return nil, fmt.Errorf("%w: operator context, assignment, and captain are required", ErrInvalid)
 	}
 	row := db.QueryRow(assignmentSelectSQL()+`
-		WHERE a.id = $1::uuid AND a.captain_id = $2 AND a.operator_context_id = $3`, assignmentID, captainID, operatorContextID)
+                WHERE a.id = $1::uuid AND a.captain_id = $2 AND a.operator_context_id = $3`, assignmentID, captainID, operatorContextID)
 	assignment, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -575,23 +554,23 @@ func updateAssignmentStatus(db *sql.DB, operatorContextID, assignmentID, captain
 	}
 	if status == AssignmentDeclined {
 		_, err = tx.Exec(`
-			UPDATE dsh_assignments
-			SET status = $1, declined_at = NOW(), updated_at = NOW(),
-			    last_latitude = NULL, last_longitude = NULL, location_recorded_at = NULL
-			WHERE id = $2::uuid AND captain_id = $3`, string(status), assignmentID, captainID)
+                        UPDATE dsh_assignments
+                        SET status = $1, declined_at = NOW(), updated_at = NOW(),
+                            last_latitude = NULL, last_longitude = NULL, location_recorded_at = NULL
+                        WHERE id = $2::uuid AND captain_id = $3`, string(status), assignmentID, captainID)
 	} else {
 		_, err = tx.Exec(`
-			UPDATE dsh_assignments
-			SET status = $1, accepted_at = NOW(), updated_at = NOW()
-			WHERE id = $2::uuid AND captain_id = $3`, string(status), assignmentID, captainID)
+                        UPDATE dsh_assignments
+                        SET status = $1, accepted_at = NOW(), updated_at = NOW()
+                        WHERE id = $2::uuid AND captain_id = $3`, string(status), assignmentID, captainID)
 	}
 	if err != nil {
 		return nil, err
 	}
 	_, err = tx.Exec(`
-		UPDATE dsh_deliveries
-		SET status = $1, updated_at = NOW()
-		WHERE assignment_id = $2::uuid AND captain_id = $3`,
+                UPDATE dsh_deliveries
+                SET status = $1, updated_at = NOW()
+                WHERE assignment_id = $2::uuid AND captain_id = $3`,
 		string(deliveryStatus), assignmentID, captainID)
 	if err != nil {
 		return nil, err
@@ -599,22 +578,14 @@ func updateAssignmentStatus(db *sql.DB, operatorContextID, assignmentID, captain
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetCaptainAssignment(db, assignmentID, captainID)
+	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }
 
 func updateDeliveryProgress(db *sql.DB, operatorContextID, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus) (*Assignment, error) {
-	return updateDeliveryProgressVersioned(db, operatorContextID, assignmentID, captainID, allowed, next, orderStatus, 0)
+	return updateDeliveryProgressVersionedForContext(db, operatorContextID, assignmentID, captainID, allowed, next, orderStatus, 0)
 }
 
 func updateDeliveryProgressVersioned(db *sql.DB, operatorContextID, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus, expectedVersion int) (*Assignment, error) {
-	return updateDeliveryProgressVersionedForContext(db, operatorContextID, assignmentID, captainID, allowed, next, orderStatus, expectedVersion)
-}
-
-func updateDeliveryProgressVersionedForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus, expectedVersion int) (*Assignment, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
-	}
 	return updateDeliveryProgressVersionedForContext(db, operatorContextID, assignmentID, captainID, allowed, next, orderStatus, expectedVersion)
 }
 
@@ -661,22 +632,19 @@ func updateDeliveryProgressVersionedForContext(db *sql.DB, operatorContextID, as
 		}
 	}
 	_, err = tx.Exec(`
-		UPDATE dsh_assignments SET version=version+1, updated_at=NOW()
-		WHERE id=$1::uuid AND captain_id=$2`, assignmentID, captainID)
+                UPDATE dsh_assignments SET version=version+1, updated_at=NOW()
+                WHERE id=$1::uuid AND captain_id=$2`, assignmentID, captainID)
 	if err != nil {
 		return nil, err
 	}
 	_, err = tx.Exec(`
-		UPDATE dsh_deliveries SET status=$1, updated_at=NOW()
-		WHERE assignment_id=$2::uuid AND captain_id=$3`, string(next), assignmentID, captainID)
+                UPDATE dsh_deliveries SET status=$1, updated_at=NOW()
+                WHERE assignment_id=$2::uuid AND captain_id=$3`, string(next), assignmentID, captainID)
 	if err != nil {
 		return nil, err
 	}
 	if err = tx.Commit(); err != nil {
 		return nil, err
-	}
-	if operatorContextID == "" {
-		return GetCaptainAssignment(db, assignmentID, captainID)
 	}
 	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }
