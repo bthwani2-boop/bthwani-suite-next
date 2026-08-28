@@ -34,6 +34,7 @@ type CommissionAdjustmentView struct {
 	DeltaMinorUnits int64  `json:"deltaMinorUnits"`
 	Reason          string `json:"reason"`
 	OperatorID      string `json:"operatorId"`
+	IdempotencyKey  string `json:"idempotencyKey"`
 	CreatedAt       string `json:"createdAt"`
 }
 
@@ -321,7 +322,7 @@ func GetGovernedCommissionDetail(
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
-	rows, err := db.QueryContext(ctx, `SELECT id,delta_minor_units,reason,operator_id,created_at::text
+	rows, err := db.QueryContext(ctx, `SELECT id,delta_minor_units,reason,operator_id,idempotency_key,created_at::text
 		FROM wlt_commission_adjustments
 		WHERE operator_context_id=$1 AND commission_id=$2 ORDER BY created_at,id`, operatorContextID, commission.ID)
 	if err != nil {
@@ -330,7 +331,7 @@ func GetGovernedCommissionDetail(
 	defer rows.Close()
 	for rows.Next() {
 		var item CommissionAdjustmentView
-		if err := rows.Scan(&item.ID, &item.DeltaMinorUnits, &item.Reason, &item.OperatorID, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.DeltaMinorUnits, &item.Reason, &item.OperatorID, &item.IdempotencyKey, &item.CreatedAt); err != nil {
 			return nil, err
 		}
 		detail.Adjustments = append(detail.Adjustments, item)

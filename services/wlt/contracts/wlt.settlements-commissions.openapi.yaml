@@ -211,7 +211,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [ deltaMinorUnits, reason, operatorId ]
+              required: [ deltaMinorUnits, reason, operatorId, idempotencyKey ]
               properties:
                 deltaMinorUnits: { type: integer, not: { enum: [ 0 ] } }
                 reason: { type: string, minLength: 1 }
@@ -539,10 +539,11 @@ components:
           type: array
           items:
             type: object
-            required: [ id, deltaMinorUnits, reason, operatorId, createdAt ]
+            required: [ id, deltaMinorUnits, reason, operatorId, idempotencyKey, createdAt ]
             properties:
               id: { type: string }
               deltaMinorUnits: { type: integer }
               reason: { type: string }
               operatorId: { type: string }
+              idempotencyKey: { type: string, minLength: 1 }
               createdAt: { type: string, format: date-time }

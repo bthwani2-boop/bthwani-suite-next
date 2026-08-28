@@ -34,7 +34,7 @@ import {
 } from '../../shared/dispatch';
 import {
   FINANCIAL_CLOSURE_LABELS,
-  cancelOrder,
+  executeDurableOrderCancellation,
   fetchOrderCancellation,
   type DshOrderCancellation,
 } from '../../shared/orders';
@@ -127,15 +127,6 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
   const router = useRouter();
   const identity = useIdentitySession();
   const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
-  const commandIds = React.useRef<Record<string, string>>({});
-  const commandFor = React.useCallback((key: string) => {
-    const scopedKey = `${actorId ?? 'anonymous'}:${key}`;
-    const existing = commandIds.current[scopedKey];
-    if (existing) return { key: scopedKey, id: existing };
-    const id = `operator-dispatch:${scopedKey}:${Date.now()}`;
-    commandIds.current[scopedKey] = id;
-    return { key: scopedKey, id };
-  }, [actorId]);
   const [state, setState] = React.useState<WorkspaceState>({ kind: 'loading' });
   const [captains, setCaptains] = React.useState<readonly Captain[]>([]);
   const [captainsState, setCaptainsState] = React.useState<'loading' | 'ready' | 'error'>('loading');
@@ -210,8 +201,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
 
   const runDeliveryAction = React.useCallback(async (
     item: DshDeliveryException,
-    actionKey: string,
-    action: (commandId: string) => Promise<unknown>,
+    action: () => Promise<unknown>,
     fallbackMessage: string,
   ) => {
     if (!actorId) {
@@ -226,11 +216,9 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       });
       return;
     }
-    const command = commandFor(`${item.id}:${item.version}:${actionKey}:${note.trim()}`);
     setActionState({ kind: 'submitting', id: item.id });
     try {
-      await action(command.id);
-      delete commandIds.current[command.key];
+      await action();
       setSelectedDeliveryId(null);
       await load();
     } catch (error) {
@@ -247,11 +235,9 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       setActionState({ kind: 'error', id: item.id, message: 'جلسة العمليات غير جاهزة لاعتماد الاستثناء.' });
       return;
     }
-    const command = commandFor(`ack:${item.id}:${item.version}`);
     setActionState({ kind: 'submitting', id: item.id });
     try {
-      await acknowledgeDeliveryException(item.id, item.version, command.id);
-      delete commandIds.current[command.key];
+      await acknowledgeDeliveryException(item.id, item.version);
       setSelectedDeliveryId(null);
       await load();
     } catch (error) {
@@ -261,7 +247,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         message: error instanceof Error ? error.message : 'تعذر اعتماد الاستثناء.',
       });
     }
-  }, [actorId, commandFor, load]);
+  }, [actorId, load]);
 
   const cancelReturnedOrder = React.useCallback(async (item: DshDeliveryException) => {
     if (!item.returnedAt) {
@@ -276,16 +262,16 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       setActionState({ kind: 'error', id: item.id, message: 'جلسة العمليات غير جاهزة للإلغاء المالي.' });
       return;
     }
-    const command = commandFor(`return-cancel:${item.id}:${note.trim()}`);
     setActionState({ kind: 'submitting', id: item.id });
     try {
-      const response = await cancelOrder('operator', item.orderId, {
+      const response = await executeDurableOrderCancellation({
+        surface: 'operator',
+        actorId,
+        orderId: item.orderId,
         reasonCode: 'operational_failure',
         reasonNote: `إلغاء بعد استلام المرتجع: ${note.trim()}`,
-        commandId: command.id,
-        correlationId: command.id,
+        ticketReference: `delivery-exception:${item.id}`,
       });
-      delete commandIds.current[command.key];
       setReturnCancellations((current) => ({ ...current, [item.orderId]: response.cancellation }));
       await load();
     } catch (error) {
@@ -295,7 +281,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         message: error instanceof Error ? error.message : 'تعذر تنفيذ الإلغاء المالي الحاكم.',
       });
     }
-  }, [actorId, commandFor, load, note]);
+  }, [actorId, load, note]);
 
   const resolveReadiness = React.useCallback(async (
     item: DshReadinessEscalation,
@@ -417,12 +403,10 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
             disabled={actionState.kind === 'submitting'}
             onClick={() => void runDeliveryAction(
               selectedDelivery,
-              'retry_same_captain',
-              (commandId) => resolveDeliveryExceptionRetrySameCaptain(
+              () => resolveDeliveryExceptionRetrySameCaptain(
                 selectedDelivery.id,
                 selectedDelivery.version,
                 note.trim(),
-                commandId,
               ),
               'تعذر حل الاستثناء.',
             )}
@@ -437,13 +421,11 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
                 selectedDelivery,
-                'reassign_captain',
-                (commandId) => resolveDeliveryExceptionReassignCaptain(
+                () => resolveDeliveryExceptionReassignCaptain(
                   selectedDelivery.id,
                   selectedDelivery.version,
                   selectedReplacementCaptainId,
                   note.trim(),
-                  commandId,
                 ),
                 'تعذر إعادة إسناد المهمة.',
               )}
@@ -457,12 +439,10 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               disabled={actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
                 selectedDelivery,
-                'cancel_order',
-                (commandId) => resolveDeliveryExceptionCancelOrder(
+                () => resolveDeliveryExceptionCancelOrder(
                   selectedDelivery.id,
                   selectedDelivery.version,
                   note.trim(),
-                  commandId,
                 ),
                 'تعذر إلغاء الطلب مباشرة.',
               )}
@@ -476,12 +456,10 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               disabled={actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
                 selectedDelivery,
-                'return_to_store',
-                (commandId) => resolveDeliveryExceptionReturnToStore(
+                () => resolveDeliveryExceptionReturnToStore(
                   selectedDelivery.id,
                   selectedDelivery.version,
                   note.trim(),
-                  commandId,
                 ),
                 'تعذر بدء إرجاع الطلب.',
               )}

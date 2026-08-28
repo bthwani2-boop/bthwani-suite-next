@@ -15,6 +15,7 @@ import (
 var (
 	ErrNotFound = errors.New("operational incident not found")
 	ErrInvalid  = errors.New("invalid operational incident input")
+	ErrConflict = errors.New("operational incident command identity conflict")
 )
 
 type TargetEntityType string

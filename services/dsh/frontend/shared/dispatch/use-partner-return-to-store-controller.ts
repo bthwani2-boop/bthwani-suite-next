@@ -17,7 +17,6 @@ function isNotFound(error: unknown): boolean {
 export function usePartnerReturnToStoreController(orderId: string) {
   const identity = useIdentitySession();
   const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
-  const commandRef = React.useRef<{ readonly actorId: string; readonly id: string } | null>(null);
   const [state, setState] = React.useState<PartnerReturnToStoreState>({ kind: 'loading' });
 
   const load = React.useCallback(async () => {
@@ -47,13 +46,9 @@ export function usePartnerReturnToStoreController(orderId: string) {
       setState({ kind: 'error', message: 'جلسة الشريك غير جاهزة لتأكيد استلام المرتجع.' });
       return false;
     }
-    const existing = commandRef.current?.actorId === actorId ? commandRef.current : null;
-    const command = existing ?? { actorId, id: `partner-return-accept:${actorId}:${orderId}:${Date.now()}` };
-    commandRef.current = command;
     setState((current) => current.kind === 'ready' ? { ...current, accepting: true } : current);
     try {
-      const item = await acceptPartnerReturnToStore(orderId, command.id);
-      commandRef.current = null;
+      const item = await acceptPartnerReturnToStore(orderId);
       setState({ kind: 'ready', item, accepting: false });
       return true;
     } catch (error) {

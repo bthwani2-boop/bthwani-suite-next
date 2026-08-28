@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -12,10 +13,11 @@ import (
 )
 
 var (
-	ErrCollaborationNotFound  = errors.New("onboarding collaboration object not found")
-	ErrCollaborationForbidden = errors.New("onboarding collaboration access forbidden")
-	ErrCollaborationReadOnly  = errors.New("field onboarding collaboration is read-only")
-	ErrCollaborationInvalid   = errors.New("invalid onboarding collaboration input")
+	ErrCollaborationNotFound            = errors.New("onboarding collaboration object not found")
+	ErrCollaborationForbidden           = errors.New("onboarding collaboration access forbidden")
+	ErrCollaborationReadOnly            = errors.New("field onboarding collaboration is read-only")
+	ErrCollaborationInvalid             = errors.New("invalid onboarding collaboration input")
+	ErrCollaborationIdempotencyConflict = errors.New("onboarding collaboration message identity conflict")
 )
 
 type CollaborationThread struct {
@@ -142,7 +144,9 @@ func LoadCollaborationView(ctx context.Context, db *sql.DB, actorID, surface, op
 }
 
 func AddCollaborationMessage(ctx context.Context, db *sql.DB, actorID, surface, operatorContextID, partnerID, assignmentID, documentID string, input CollaborationMessageInput) (CollaborationMessage, error) {
-	if len(strings.TrimSpace(input.Body)) == 0 || len(input.Body) > 4000 || strings.TrimSpace(input.ClientMessageID) == "" {
+	body := strings.TrimSpace(input.Body)
+	clientMessageID := strings.TrimSpace(input.ClientMessageID)
+	if len(body) == 0 || len(body) > 4000 || len(clientMessageID) < 8 || len(clientMessageID) > 200 {
 		return CollaborationMessage{}, ErrCollaborationInvalid
 	}
 	thread, err := GetOrCreateCollaborationThread(ctx, db, actorID, surface, operatorContextID, partnerID, assignmentID, documentID)
@@ -173,12 +177,30 @@ func AddCollaborationMessage(ctx context.Context, db *sql.DB, actorID, surface, 
 	var message CollaborationMessage
 	var refsValue []string
 	err = tx.QueryRowContext(ctx, `
+		SELECT id, thread_id, sender_actor_id, sender_surface, body, attachment_media_refs,
+		       client_message_id, sequence_number, created_at
+		FROM dsh_onboarding_collaboration_messages
+		WHERE thread_id=$1 AND sender_actor_id=$2 AND client_message_id=$3`,
+		thread.ID, actorID, clientMessageID).Scan(
+		&message.ID, &message.ThreadID, &message.SenderActorID, &message.SenderSurface,
+		&message.Body, pq.Array(&refsValue), &message.ClientMessageID,
+		&message.SequenceNumber, &message.CreatedAt)
+	if err == nil {
+		message.AttachmentMediaRefs = refsValue
+		if message.SenderSurface != surface || message.Body != body || !slices.Equal(message.AttachmentMediaRefs, refs) {
+			return CollaborationMessage{}, ErrCollaborationIdempotencyConflict
+		}
+		return message, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return CollaborationMessage{}, err
+	}
+	err = tx.QueryRowContext(ctx, `
         INSERT INTO dsh_onboarding_collaboration_messages
             (thread_id, sender_actor_id, sender_surface, body, attachment_media_refs, client_message_id, sequence_number)
         VALUES ($1,$2,$3,$4,$5,$6,(SELECT COALESCE(MAX(sequence_number),0)+1 FROM dsh_onboarding_collaboration_messages WHERE thread_id=$1))
-        ON CONFLICT (thread_id, sender_actor_id, client_message_id) DO UPDATE SET body=EXCLUDED.body
-        RETURNING id, thread_id, sender_actor_id, sender_surface, body, attachment_media_refs, client_message_id, sequence_number, created_at`,
-		thread.ID, actorID, surface, strings.TrimSpace(input.Body), pq.Array(refs), input.ClientMessageID).Scan(
+		RETURNING id, thread_id, sender_actor_id, sender_surface, body, attachment_media_refs, client_message_id, sequence_number, created_at`,
+		thread.ID, actorID, surface, body, pq.Array(refs), clientMessageID).Scan(
 		&message.ID, &message.ThreadID, &message.SenderActorID, &message.SenderSurface, &message.Body, pq.Array(&refsValue), &message.ClientMessageID, &message.SequenceNumber, &message.CreatedAt)
 	if err != nil {
 		return CollaborationMessage{}, err

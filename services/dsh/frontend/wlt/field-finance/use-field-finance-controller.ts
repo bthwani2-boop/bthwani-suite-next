@@ -1,19 +1,12 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import {
   fetchFieldMeWallet,
   fetchFieldMeLedgerEntries,
   fetchFieldMeCommissions,
-  fetchFieldMePayoutRequests,
-  submitFieldMePayoutRequest,
   type FieldWallet,
   type FieldLedgerEntry,
   type FieldCommission,
-  type FieldPayoutRequest,
 } from "./field-finance.api";
-import {
-  clearFieldPayoutAttempt,
-  getOrCreateFieldPayoutAttempt,
-} from "./field-payout-attempt";
 
 type FieldFinanceState =
   | { kind: "idle" }
@@ -29,10 +22,8 @@ type FieldFinanceState =
       wallet: FieldWallet;
       ledgerEntries: FieldLedgerEntry[];
       commissions: FieldCommission[];
-      payoutRequests: FieldPayoutRequest[];
       ledgerError: string | null;
       commissionsError: string | null;
-      payoutRequestsError: string | null;
     };
 
 type Action =
@@ -42,10 +33,8 @@ type Action =
       wallet: FieldWallet;
       ledgerEntries: FieldLedgerEntry[];
       commissions: FieldCommission[];
-      payoutRequests: FieldPayoutRequest[];
       ledgerError: string | null;
       commissionsError: string | null;
-      payoutRequestsError: string | null;
     }
   | { type: "ERROR"; message: string; code: string };
 
@@ -59,10 +48,8 @@ function reducer(_state: FieldFinanceState, action: Action): FieldFinanceState {
         wallet: action.wallet,
         ledgerEntries: action.ledgerEntries,
         commissions: action.commissions,
-        payoutRequests: action.payoutRequests,
         ledgerError: action.ledgerError,
         commissionsError: action.commissionsError,
-        payoutRequestsError: action.payoutRequestsError,
       };
     case "ERROR":
       return { kind: "error", message: action.message, code: action.code };
@@ -72,16 +59,10 @@ function reducer(_state: FieldFinanceState, action: Action): FieldFinanceState {
 export type FieldFinanceController = {
   readonly state: FieldFinanceState;
   readonly refresh: () => void;
-  readonly submittingPayout: boolean;
-  readonly submitPayoutError: string | null;
-  readonly submitPayoutRequest: (amountMinorUnits: number, currency: string) => Promise<boolean>;
 };
 
 export function useFieldFinanceController(): FieldFinanceController {
   const [state, dispatch] = useReducer(reducer, { kind: "idle" });
-  const [submittingPayout, setSubmittingPayout] = useState(false);
-  const [submitPayoutError, setSubmitPayoutError] = useState<string | null>(null);
-  const submittingRef = useRef(false);
 
   const load = useCallback(() => {
     dispatch({ type: "LOADING" });
@@ -90,9 +71,8 @@ export function useFieldFinanceController(): FieldFinanceController {
       fetchFieldMeWallet(),
       fetchFieldMeLedgerEntries(),
       fetchFieldMeCommissions(),
-      fetchFieldMePayoutRequests(),
     ])
-      .then(([walletResult, ledgerResult, commissionsResult, payoutsResult]) => {
+      .then(([walletResult, ledgerResult, commissionsResult]) => {
         if (!walletResult.ok) {
           dispatch({ type: "ERROR", message: walletResult.message, code: walletResult.code ?? "INTERNAL_ERROR" });
           return;
@@ -102,10 +82,8 @@ export function useFieldFinanceController(): FieldFinanceController {
           wallet: walletResult.wallet,
           ledgerEntries: ledgerResult.ok ? ledgerResult.ledgerEntries : [],
           commissions: commissionsResult.ok ? commissionsResult.commissions : [],
-          payoutRequests: payoutsResult.ok ? payoutsResult.payoutRequests : [],
           ledgerError: ledgerResult.ok ? null : ledgerResult.message,
           commissionsError: commissionsResult.ok ? null : commissionsResult.message,
-          payoutRequestsError: payoutsResult.ok ? null : payoutsResult.message,
         });
       })
       .catch((error: unknown) => {
@@ -126,66 +104,5 @@ export function useFieldFinanceController(): FieldFinanceController {
     load();
   }, [load]);
 
-  const submitPayoutRequest = useCallback(async (
-    amountMinorUnits: number,
-    currency: string,
-  ): Promise<boolean> => {
-    if (submittingRef.current) {
-      setSubmitPayoutError("يوجد طلب صرف قيد الإرسال بالفعل.");
-      return false;
-    }
-    if (state.kind !== "loaded") {
-      setSubmitPayoutError("يجب تحميل المحفظة قبل إرسال طلب الصرف.");
-      return false;
-    }
-    if (!Number.isSafeInteger(amountMinorUnits) || amountMinorUnits <= 0) {
-      setSubmitPayoutError("مبلغ الصرف غير صالح.");
-      return false;
-    }
-    const normalizedCurrency = currency.trim().toUpperCase();
-    if (normalizedCurrency !== state.wallet.currency.trim().toUpperCase()) {
-      setSubmitPayoutError("عملة طلب الصرف لا تطابق عملة المحفظة.");
-      return false;
-    }
-    if (amountMinorUnits > state.wallet.availableBalanceMinorUnits) {
-      setSubmitPayoutError("مبلغ الصرف أكبر من الرصيد المتاح.");
-      return false;
-    }
-
-    submittingRef.current = true;
-    setSubmittingPayout(true);
-    setSubmitPayoutError(null);
-    try {
-      const attempt = await getOrCreateFieldPayoutAttempt(
-        state.wallet.actorId,
-        amountMinorUnits,
-        normalizedCurrency,
-      );
-      const result = await submitFieldMePayoutRequest(
-        amountMinorUnits,
-        normalizedCurrency,
-        attempt.idempotencyKey,
-      );
-      if (!result.ok) {
-        setSubmitPayoutError(result.message);
-        return false;
-      }
-      await clearFieldPayoutAttempt(
-        state.wallet.actorId,
-        amountMinorUnits,
-        normalizedCurrency,
-        attempt.signature,
-      );
-      load();
-      return true;
-    } catch (error) {
-      setSubmitPayoutError(error instanceof Error ? error.message : String(error));
-      return false;
-    } finally {
-      submittingRef.current = false;
-      setSubmittingPayout(false);
-    }
-  }, [load, state]);
-
-  return { state, refresh: load, submittingPayout, submitPayoutError, submitPayoutRequest };
+  return { state, refresh: load };
 }

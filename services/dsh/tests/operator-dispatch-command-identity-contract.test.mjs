@@ -12,20 +12,20 @@ const api = readFileSync(
   "utf8",
 );
 
-test("operator dispatch decisions require an authenticated actor and stable command map", () => {
+test("operator dispatch decisions require an authenticated actor and canonical state transitions", () => {
   assert.match(screen, /const identity = useIdentitySession\(\)/);
   assert.match(screen, /const actorId = identity\.state\.kind === 'authenticated'/);
-  assert.match(screen, /const commandIds = React\.useRef<Record<string, string>>\(\{\}\)/);
   assert.match(screen, /if \(!actorId\) \{[\s\S]*جلسة العمليات غير جاهزة لتنفيذ القرار/);
-  assert.match(screen, /await action\(command\.id\)/);
-  assert.match(screen, /acknowledgeDeliveryException\(item\.id, item\.version, command\.id\)/);
+  assert.match(screen, /await action\(\)/);
+  assert.match(screen, /acknowledgeDeliveryException\(item\.id, item\.version\)/);
+  assert.doesNotMatch(screen, /commandIds|operator-dispatch:|Date\.now/);
 });
 
-test("operator dispatch resolution transport forwards explicit idempotency keys", () => {
-  assert.match(api, /acknowledgeDeliveryException\(id: string, expectedVersion: number, idempotencyKey\?: string\)/);
-  assert.match(api, /idempotencyKey: idempotencyKey \?\? corrId\("operator-delivery-exception-ack"\)/);
-  assert.match(api, /idempotencyKey: idempotencyKey \?\? corrId\("operator-delivery-exception-resolve"\)/);
-  assert.match(screen, /commandId: command\.id/);
+test("exception decisions remove shadow keys while returned-order cancellation stays durable", () => {
+  assert.match(api, /acknowledgeDeliveryException\(id: string, expectedVersion: number\)/);
+  assert.doesNotMatch(api, /operator-delivery-exception-ack|operator-delivery-exception-resolve/);
+  assert.match(screen, /executeDurableOrderCancellation\(\{/);
+  assert.match(screen, /ticketReference: `delivery-exception:\$\{item\.id\}`/);
 });
 
 console.log("operator-dispatch-command-identity-contract: PASS");

@@ -1,14 +1,17 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { CpBadge, CpButton, CpSelect, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
 import {
   cancelFieldOnboardingAssignment,
   addOperatorOnboardingMessage,
+  clearOnboardingCollaborationMessageAttempt,
   createOnboardingChangeRequest,
   createFieldOnboardingAssignment,
   getOperatorOnboardingCollaboration,
+  getOrCreateOnboardingCollaborationMessageAttempt,
   listOperatorFieldOnboardingAssignments,
   reassignFieldOnboardingAssignment,
   type FieldOnboardingAssignment,
@@ -25,6 +28,8 @@ const STATUS_LABELS: Record<FieldOnboardingAssignment["status"], string> = {
 };
 
 function CollaborationPanel({ item }: { readonly item: FieldOnboardingAssignment }) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const [view, setView] = useState<OnboardingCollaborationView | null>(null);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -45,10 +50,29 @@ function CollaborationPanel({ item }: { readonly item: FieldOnboardingAssignment
 
   async function send() {
     if (!item.draftPartnerId || !body.trim()) return;
+    if (!actorId) {
+      setError("انتهت جلسة الهوية. سجّل الدخول ثم أعد المحاولة.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      await addOperatorOnboardingMessage(item.draftPartnerId, { body: body.trim(), clientMessageId: `cp-${item.id}-${Date.now()}` }, item.id);
+      const attemptIntent = {
+        surface: "control-panel" as const,
+        actorId,
+        partnerId: item.draftPartnerId,
+        assignmentId: item.id,
+        body,
+      };
+      const attempt = await getOrCreateOnboardingCollaborationMessageAttempt(attemptIntent);
+      const message = await addOperatorOnboardingMessage(item.draftPartnerId, {
+        body: body.trim(),
+        clientMessageId: attempt.clientMessageId,
+      }, item.id);
+      if (message.clientMessageId !== attempt.clientMessageId || message.body !== body.trim()) {
+        throw new Error("لم تحفظ القراءة المرجعية هوية رسالة المتابعة ومحتواها كما أُرسلا.");
+      }
+      await clearOnboardingCollaborationMessageAttempt(attemptIntent, attempt.signature);
       setBody("");
       await load();
     } catch (cause) {

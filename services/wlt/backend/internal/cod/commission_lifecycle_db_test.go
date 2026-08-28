@@ -12,10 +12,10 @@ import (
 )
 
 type governedCommissionFixture struct {
-	ctx      context.Context
+	ctx               context.Context
 	operatorContextID string
-	actorID  string
-	item     *Commission
+	actorID           string
+	item              *Commission
 }
 
 func createGovernedCommissionLifecycleFixture(t *testing.T, db *sql.DB) governedCommissionFixture {
@@ -245,5 +245,43 @@ func TestGovernedCommissionLifecycleReverseAfterSettled(t *testing.T) {
 		"double-reverse-"+fixture.item.ID,
 	); err != ErrCommissionNotInExpectedState {
 		t.Fatalf("expected ErrCommissionNotInExpectedState on double reverse, got %v", err)
+	}
+}
+
+func TestGovernedCommissionAdjustmentReadbackPreservesIdempotencyIdentity(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+	fixture := createGovernedCommissionLifecycleFixture(t, db)
+	key := "adjust-readback-" + fixture.item.ID
+	input := CommissionAdjustmentInput{
+		DeltaMinorUnits: 100,
+		Reason:          "verified correction",
+		OperatorID:      "operator-adjust",
+		IdempotencyKey:  key,
+	}
+
+	if _, err := ApplyGovernedCommissionAdjustment(
+		fixture.ctx, db, fixture.item.ID, input, "adjust-correlation-first",
+	); err != nil {
+		t.Fatalf("apply governed commission adjustment: %v", err)
+	}
+	if _, err := ApplyGovernedCommissionAdjustment(
+		fixture.ctx, db, fixture.item.ID, input, "adjust-correlation-replay",
+	); err != nil {
+		t.Fatalf("replay governed commission adjustment: %v", err)
+	}
+
+	detail, err := GetGovernedCommissionDetail(fixture.ctx, db, fixture.item.ID)
+	if err != nil {
+		t.Fatalf("read governed commission detail: %v", err)
+	}
+	if detail == nil || len(detail.Adjustments) != 1 {
+		t.Fatalf("expected one canonical adjustment after replay, got %+v", detail)
+	}
+	if detail.Adjustments[0].IdempotencyKey != key {
+		t.Fatalf("expected adjustment idempotency key %q, got %q", key, detail.Adjustments[0].IdempotencyKey)
 	}
 }

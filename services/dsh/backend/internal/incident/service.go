@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -60,6 +61,9 @@ func (s *Service) Report(ctx context.Context, input ReportInput) (*Incident, err
 	}
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.TargetEntityID = strings.TrimSpace(input.TargetEntityID)
+	input.ActorID = strings.TrimSpace(input.ActorID)
+	input.ActorRole = strings.TrimSpace(input.ActorRole)
+	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 	if input.OrderID == "" || input.TargetEntityID == "" {
 		return nil, fmt.Errorf("%w: orderId and targetEntityId are required", ErrInvalid)
 	}
@@ -70,6 +74,15 @@ func (s *Service) Report(ctx context.Context, input ReportInput) (*Incident, err
 		input.CommandID = strings.TrimSpace(input.CommandID)
 		if input.CommandID == "" {
 			return nil, fmt.Errorf("%w: commandId is required", ErrInvalid)
+		}
+	}
+	if input.CorrelationID != "" {
+		existing, err := s.findCommand(ctx, input)
+		if err == nil {
+			return s.replayCommand(ctx, existing, input)
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
 		}
 	}
 
@@ -84,15 +97,53 @@ func (s *Service) Report(ctx context.Context, input ReportInput) (*Incident, err
 			(order_id, target_entity_type, target_entity_id, incident_type, status,
 			 reason, ticket_reference, actor_id, actor_role, before_state, correlation_id)
 		VALUES ($1::uuid, $2, $3, $4, 'open', $5, $6, $7, $8, $9::jsonb, $10)
+		ON CONFLICT DO NOTHING
 		RETURNING id`,
 		input.OrderID, string(input.TargetEntityType), input.TargetEntityID, string(input.IncidentType),
 		input.Reason, input.TicketReference, input.ActorID, input.ActorRole, nullableJSON(before), nullableString(input.CorrelationID),
 	).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) && input.CorrelationID != "" {
+		existing, findErr := s.findCommand(ctx, input)
+		if findErr != nil {
+			return nil, findErr
+		}
+		return s.replayCommand(ctx, existing, input)
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	return s.apply(ctx, id, input)
+}
+
+func (s *Service) findCommand(ctx context.Context, input ReportInput) (*Incident, error) {
+	return scanIncident(s.db.QueryRowContext(ctx, `
+		SELECT `+incidentColumns+`
+		FROM dsh_operational_incidents
+		WHERE order_id=$1::uuid AND actor_id=$2 AND correlation_id=$3`,
+		input.OrderID, input.ActorID, input.CorrelationID).Scan)
+}
+
+func sameIncidentCommand(existing *Incident, input ReportInput) bool {
+	return existing != nil && existing.OrderID == input.OrderID &&
+		existing.TargetEntityType == input.TargetEntityType &&
+		existing.TargetEntityID == input.TargetEntityID &&
+		existing.IncidentType == input.IncidentType &&
+		existing.Reason == input.Reason &&
+		existing.TicketReference == input.TicketReference &&
+		existing.ActorID == input.ActorID &&
+		existing.ActorRole == input.ActorRole &&
+		existing.CorrelationID != nil && *existing.CorrelationID == input.CorrelationID
+}
+
+func (s *Service) replayCommand(ctx context.Context, existing *Incident, input ReportInput) (*Incident, error) {
+	if !sameIncidentCommand(existing, input) {
+		return nil, ErrConflict
+	}
+	if existing.Status == StatusApplied {
+		return existing, nil
+	}
+	return s.apply(ctx, existing.ID, input)
 }
 
 func (s *Service) snapshotState(entityType TargetEntityType, entityID string) ([]byte, error) {

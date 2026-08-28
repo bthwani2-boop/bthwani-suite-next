@@ -7,20 +7,28 @@ const controller = readFileSync(
   resolve(process.cwd(), "services/dsh/frontend/shared/orders/use-order-cancellation-controller.tsx"),
   "utf8",
 );
+const attempt = readFileSync(
+  resolve(process.cwd(), "services/dsh/frontend/shared/orders/order-cancellation-attempt.ts"),
+  "utf8",
+);
+const api = readFileSync(
+  resolve(process.cwd(), "services/dsh/frontend/shared/orders/order-cancellation.api.ts"),
+  "utf8",
+);
 
-test("order cancellation retries retain one command identity per request fingerprint", () => {
-  assert.match(controller, /const commandIds = useRef<Record<string, string>>\(\{\}\)/);
-  assert.match(controller, /const commandKey = JSON\.stringify\(\{[\s\S]*surface,[\s\S]*orderId,[\s\S]*reasonCode:/);
-  assert.match(controller, /commandIds\.current\[commandKey\] \|\| corrId\(/);
-  assert.match(controller, /const commandInput = input\.commandId\?\.trim\(\)/);
-  assert.match(controller, /delete commandIds\.current\[commandKey\];/);
+test("order cancellation retries use the durable actor-scoped command owner", () => {
+  assert.match(controller, /const identity = useIdentitySession\(\)/);
+  assert.match(controller, /executeDurableOrderCancellation\(\{/);
+  assert.doesNotMatch(controller, /commandIds|useRef|corrId/);
+  assert.match(attempt, /getOrCreateDurableMutationAttempt\(\{/);
+  assert.match(attempt, /response\.cancellation\.correlationId !== attempt\.correlationId/);
+  assert.match(attempt, /clearOrderCancellationAttempt\(normalized, attempt\.signature\)/);
 });
 
-test("order cancellation does not discard the command identity on ambiguous failures", () => {
-  assert.match(
-    controller,
-    /if \(classified\.kind === "invalid" \|\| classified\.kind === "permission_denied" \|\| classified\.kind === "not_found"\) \{\s*delete commandIds\.current\[commandKey\];/,
-  );
+test("order cancellation transport requires the canonical command and correlation", () => {
+  assert.match(api, /input: CanonicalCancelOrderInput/);
+  assert.match(api, /if \(!commandId \|\| !correlationId\)/);
+  assert.doesNotMatch(api, /corrId|commandId\?\.trim\(\) \|\|/);
 });
 
 console.log("order-cancellation-retry-contract: PASS");

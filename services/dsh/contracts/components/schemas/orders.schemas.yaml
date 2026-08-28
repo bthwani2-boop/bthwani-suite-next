@@ -175,6 +175,7 @@ DshOrderCancellation:
     - actorRole
     - reasonCode
     - reasonNote
+    - correlationId
     - fromStatus
     - toStatus
     - financialClosureStatus
@@ -199,6 +200,7 @@ DshOrderCancellation:
       enum: [client, partner, operator, system]
     reasonCode: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderCancellationReasonCode" }
     reasonNote: { type: string }
+    correlationId: { type: string, minLength: 1, maxLength: 200 }
     fromStatus: { type: string }
     toStatus: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderStatus" }
     financialClosureStatus: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshFinancialClosureStatus" }

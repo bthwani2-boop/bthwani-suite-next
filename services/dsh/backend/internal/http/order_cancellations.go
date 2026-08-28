@@ -44,6 +44,8 @@ func writeOrderCancellationError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 	case errors.Is(err, incident.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	case errors.Is(err, incident.ErrConflict):
+		store.SendError(w, http.StatusConflict, "INCIDENT_IDEMPOTENCY_CONFLICT", "cancellation command identity was already used with different incident details")
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "order cancellation failed")
 	}

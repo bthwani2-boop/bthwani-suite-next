@@ -17,7 +17,6 @@ import {
   spacing,
 } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
-import { corrId } from '../../shared/_kernel/dsh-http-request';
 import {
   arriveCaptainReturnToStore,
   fetchCaptainDeliveryException,
@@ -82,7 +81,6 @@ export function DshCaptainPoDSubmissionScreen({
   const theme = useTheme() as { surfaceInset?: string; brandStrong?: string; text?: string };
   const identity = useIdentitySession();
   const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
-  const returnCommandRef = React.useRef<{ readonly actorId: string; readonly id: string } | null>(null);
   const proofController = useCaptainDeliveryProofController(assignmentId);
   const [pin, setPin] = React.useState('');
   const [evidenceKind, setEvidenceKind] = React.useState<CaptainDeliveryEvidenceKind>('photo');
@@ -166,14 +164,10 @@ export function DshCaptainPoDSubmissionScreen({
       setExceptionLoadError('جلسة الكابتن غير جاهزة لتأكيد الوصول بالمرتجع.');
       return;
     }
-    const existing = returnCommandRef.current?.actorId === actorId ? returnCommandRef.current : null;
-    const command = existing ?? { actorId, id: corrId('captain-return-arrive') };
-    returnCommandRef.current = command;
     setArrivingReturn(true);
     setExceptionLoadError(null);
     try {
-      const item = await arriveCaptainReturnToStore(assignmentId, command.id);
-      returnCommandRef.current = null;
+      const item = await arriveCaptainReturnToStore(assignmentId);
       setActiveException(item);
     } catch (error) {
       setExceptionLoadError(error instanceof Error ? error.message : 'تعذر تثبيت تسليم المرتجع للمتجر.');

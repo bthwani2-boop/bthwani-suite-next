@@ -26,7 +26,6 @@ export async function getOperatorOnboardingCollaboration(partnerId: string, assi
 export async function addOperatorOnboardingMessage(partnerId: string, input: OnboardingCollaborationMessageInput, assignmentId?: string, documentId?: string): Promise<OnboardingCollaborationMessage> {
   const result = await request<{ message: OnboardingCollaborationMessage }>(`/dsh/operator/partners/${encodeURIComponent(partnerId)}/collaboration${contextQuery(assignmentId, documentId)}`, {
     method: "POST",
-    idempotencyKey: input.clientMessageId,
     body: input,
   });
   return result.message;
@@ -55,7 +54,6 @@ export async function getFieldOnboardingCollaboration(partnerId: string, assignm
 export async function addFieldOnboardingMessage(partnerId: string, input: OnboardingCollaborationMessageInput, assignmentId?: string, documentId?: string): Promise<OnboardingCollaborationMessage> {
   const result = await request<{ message: OnboardingCollaborationMessage }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/collaboration${contextQuery(assignmentId, documentId)}`, {
     method: "POST",
-    idempotencyKey: input.clientMessageId,
     body: input,
   });
   return result.message;

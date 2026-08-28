@@ -27,6 +27,7 @@ export type PayoutDestination = {
 
 export type ActorPayoutRequest = {
   readonly id: string;
+  readonly idempotencyKey: string;
   readonly beneficiaryActorId: string;
   readonly beneficiaryActorType: PayoutActorType;
   readonly payoutDestinationId: string;

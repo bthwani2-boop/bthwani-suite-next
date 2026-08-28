@@ -59,6 +59,8 @@ func writeOperationalIncidentError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "operational incident not found")
 	case errors.Is(err, incident.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	case errors.Is(err, incident.ErrConflict):
+		store.SendError(w, http.StatusConflict, "INCIDENT_IDEMPOTENCY_CONFLICT", "incident command identity was already used with different details")
 	default:
 		store.SendError(w, http.StatusUnprocessableEntity, "INCIDENT_APPLY_FAILED", err.Error())
 	}
@@ -79,7 +81,7 @@ func (s *protectedStoreServer) handleReportOperationalIncident(w http.ResponseWr
 	}
 	reported, err := incident.NewService(s.db).Report(r.Context(), incident.ReportInput{
 		OrderID:            strings.TrimSpace(body.OrderID),
-		OperatorContextID:           actor.OperatorContextID,
+		OperatorContextID:  actor.OperatorContextID,
 		TargetEntityType:   incident.TargetEntityType(strings.TrimSpace(body.TargetEntityType)),
 		TargetEntityID:     strings.TrimSpace(body.TargetEntityID),
 		IncidentType:       incident.IncidentType(strings.TrimSpace(body.IncidentType)),

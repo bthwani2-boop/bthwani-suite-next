@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { Badge, Box, Button, Text, TextField } from '@bthwani/ui-kit';
 import {
   FINANCIAL_CLOSURE_LABELS,
@@ -116,6 +117,8 @@ export function OrderJourneyOperatorIntervention({
   order,
   onChanged,
 }: OrderJourneyOperatorInterventionProps) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
   const [reasonCode, setReasonCode] = React.useState<OperatorCancellationReasonCode>('operational_failure');
   const [reasonNote, setReasonNote] = React.useState('');
   const [ticketReference, setTicketReference] = React.useState('');
@@ -168,6 +171,11 @@ export function OrderJourneyOperatorIntervention({
   const noteRequired = reasonCode === 'other';
 
   const submit = async () => {
+    if (!actorId) {
+      setState('error');
+      setMessage('انتهت جلسة العمليات. سجّل الدخول ثم أعد المحاولة.');
+      return;
+    }
     if (noteRequired && !reasonNote.trim()) {
       setState('error');
       setMessage('التوضيح مطلوب عند اختيار سبب آخر.');
@@ -181,7 +189,7 @@ export function OrderJourneyOperatorIntervention({
     setState('loading');
     setMessage('');
     try {
-      await cancelOperatorOrder(order.id, reasonCode, reasonNote, ticketReference.trim());
+      await cancelOperatorOrder(order.id, actorId, reasonCode, reasonNote, ticketReference.trim());
       await onChanged();
       setState('success');
       setReasonNote('');

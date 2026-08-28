@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { Card, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
@@ -10,6 +11,7 @@ import { formatWltMoney } from '@bthwani/dsh/wlt';
 import {
   adjustCommission,
   confirmCommission,
+  fetchCommissionDetail,
   rejectCommission,
   reverseCommission,
   settleCommission,
@@ -18,6 +20,11 @@ import {
   type CommissionPolicyInput,
   type RepresentativeActorType,
 } from '@bthwani/dsh/wlt';
+import {
+  clearCommissionAdjustmentAttempt,
+  getOrCreateCommissionAdjustmentAttempt,
+  type CommissionAdjustmentAttemptIntent,
+} from "../../wlt/commissions/commission-adjustment-attempt";
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),
@@ -82,6 +89,8 @@ function validatePolicy(policy: CommissionPolicyInput): string | null {
 }
 
 export function CommissionGovernancePanel() {
+  const identity = useIdentitySession();
+  const operatorActorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const [commissions, setCommissions] = useState<readonly Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +164,23 @@ export function CommissionGovernancePanel() {
             setError("قيمة التعديل يجب أن تكون عددًا صحيحًا غير صفري مع سبب إلزامي.");
             return;
           }
-          await adjustCommission(commission.id, deltaMinorUnits, reason);
+          if (!operatorActorId) throw new Error("يجب استعادة هوية المشغل قبل تعديل العمولة.");
+          const attemptIntent: CommissionAdjustmentAttemptIntent = {
+            operatorActorId,
+            commissionId: commission.id,
+            deltaMinorUnits,
+            reason,
+          };
+          const attempt = await getOrCreateCommissionAdjustmentAttempt(attemptIntent);
+          let detail = await fetchCommissionDetail(commission.id);
+          if (!detail.adjustments.some((adjustment) => adjustment.idempotencyKey === attempt.idempotencyKey)) {
+            await adjustCommission(commission.id, deltaMinorUnits, reason, attempt.idempotencyKey);
+            detail = await fetchCommissionDetail(commission.id);
+          }
+          if (!detail.adjustments.some((adjustment) => adjustment.idempotencyKey === attempt.idempotencyKey)) {
+            throw new Error("لم تُثبت القراءة المالية الراجعة تعديل العمولة بعد؛ أعد المحاولة بنفس القيم.");
+          }
+          await clearCommissionAdjustmentAttempt(attemptIntent, attempt.signature);
         }
         setNotice("تم تنفيذ الإجراء وتحديث الحقيقة المالية من WLT.");
         await load();
@@ -165,7 +190,7 @@ export function CommissionGovernancePanel() {
         setBusy(null);
       }
     },
-    [load],
+    [load, operatorActorId],
   );
 
   const savePolicy = useCallback(async () => {

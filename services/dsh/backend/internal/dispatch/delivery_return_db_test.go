@@ -72,6 +72,13 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if arrived.ReturnArrivedAt == nil || arrived.ReturnedAt != nil {
 		t.Fatalf("captain arrival must not complete store receipt: %+v", arrived)
 	}
+	arrivedReplay, err := CaptainArriveReturnToStore(db, assignmentID, captainID)
+	if err != nil {
+		t.Fatalf("captain arrival replay: %v", err)
+	}
+	if arrivedReplay.ID != arrived.ID || arrivedReplay.ReturnArrivedAt == nil || !arrivedReplay.ReturnArrivedAt.Equal(*arrived.ReturnArrivedAt) {
+		t.Fatalf("captain arrival replay did not preserve canonical receipt: original=%+v replay=%+v", arrived, arrivedReplay)
+	}
 	if err := db.QueryRow(`SELECT o.status,d.status,a.status FROM dsh_orders o JOIN dsh_assignments a ON a.order_id=o.id JOIN dsh_deliveries d ON d.assignment_id=a.id WHERE a.id=$1::uuid`, assignmentID).Scan(&orderStatus, &deliveryStatus, &assignmentStatus); err != nil {
 		t.Fatal(err)
 	}
@@ -84,6 +91,23 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	}
 	if returned.ReturnedAt == nil || returned.ReturnAcceptedByActorID == nil {
 		t.Fatalf("partner receipt was not recorded: %+v", returned)
+	}
+	returnedReplay, err := AcceptReturnToStoreByPartner(db, orderID, "partner-return-receipt-retry")
+	if err != nil {
+		t.Fatalf("partner receipt replay: %v", err)
+	}
+	if returnedReplay.ID != returned.ID || returnedReplay.ReturnedAt == nil || !returnedReplay.ReturnedAt.Equal(*returned.ReturnedAt) || returnedReplay.ReturnAcceptedByActorID == nil || *returnedReplay.ReturnAcceptedByActorID != "partner-return-receipt-test" {
+		t.Fatalf("partner receipt replay did not preserve the original canonical receipt: original=%+v replay=%+v", returned, returnedReplay)
+	}
+	var arrivalEvents, receiptEvents int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_order_status_events WHERE order_id=$1::uuid AND from_status='returning_to_store' AND to_status='return_arrived_store'`, orderID).Scan(&arrivalEvents); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_order_status_events WHERE order_id=$1::uuid AND from_status='return_arrived_store' AND to_status='returned_to_store'`, orderID).Scan(&receiptEvents); err != nil {
+		t.Fatal(err)
+	}
+	if arrivalEvents != 1 || receiptEvents != 1 {
+		t.Fatalf("return replays duplicated lifecycle events: arrival=%d receipt=%d", arrivalEvents, receiptEvents)
 	}
 	if err := db.QueryRow(`SELECT o.status,d.status,a.status FROM dsh_orders o JOIN dsh_assignments a ON a.order_id=o.id JOIN dsh_deliveries d ON d.assignment_id=a.id WHERE a.id=$1::uuid`, assignmentID).Scan(&orderStatus, &deliveryStatus, &assignmentStatus); err != nil {
 		t.Fatal(err)

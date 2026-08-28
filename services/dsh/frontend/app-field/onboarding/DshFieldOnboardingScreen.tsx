@@ -44,7 +44,9 @@ import {
 } from '../../shared/mobile-capabilities';
 import {
   addFieldOnboardingMessage,
+  clearOnboardingCollaborationMessageAttempt,
   getFieldOnboardingCollaboration,
+  getOrCreateOnboardingCollaborationMessageAttempt,
   markFieldOnboardingRead,
   type OnboardingCollaborationView,
 } from '../../shared/field-assignment';
@@ -176,10 +178,30 @@ export function DshFieldOnboardingScreen({
 
   const sendCollaborationMessage = React.useCallback(async () => {
     if (!partnerId || !assignmentPrefill?.id || !collaborationBody.trim()) return;
+    const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
+    if (!actorId) {
+      setCollaborationError('انتهت جلسة الهوية. سجّل الدخول ثم أعد المحاولة.');
+      return;
+    }
     setCollaborationSubmitting(true);
     setCollaborationError(null);
     try {
-      await addFieldOnboardingMessage(partnerId, { body: collaborationBody.trim(), clientMessageId: `field-${assignmentPrefill.id}-${Date.now()}` }, assignmentPrefill.id);
+      const attemptIntent = {
+        surface: 'app-field' as const,
+        actorId,
+        partnerId,
+        assignmentId: assignmentPrefill.id,
+        body: collaborationBody,
+      };
+      const attempt = await getOrCreateOnboardingCollaborationMessageAttempt(attemptIntent);
+      const message = await addFieldOnboardingMessage(partnerId, {
+        body: collaborationBody.trim(),
+        clientMessageId: attempt.clientMessageId,
+      }, assignmentPrefill.id);
+      if (message.clientMessageId !== attempt.clientMessageId || message.body !== collaborationBody.trim()) {
+        throw new Error('لم تحفظ القراءة المرجعية هوية رسالة المتابعة ومحتواها كما أُرسلا.');
+      }
+      await clearOnboardingCollaborationMessageAttempt(attemptIntent, attempt.signature);
       setCollaborationBody('');
       await reloadCollaboration();
     } catch (cause) {
@@ -187,7 +209,7 @@ export function DshFieldOnboardingScreen({
     } finally {
       setCollaborationSubmitting(false);
     }
-  }, [assignmentPrefill?.id, collaborationBody, partnerId, reloadCollaboration]);
+  }, [assignmentPrefill?.id, collaborationBody, identity.state, partnerId, reloadCollaboration]);
 
   const pickEvidenceFile = React.useCallback(async (
     source: EvidencePickSource,
