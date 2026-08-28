@@ -669,8 +669,7 @@ jobs:
     name: SonarQube trusted static analysis
     needs: [ownership, scope, assemble]
     if: >-
-      ${{ needs.ownership.outputs.skip_duplicate_push != 'true' &&
-      needs.scope.result == 'success' && needs.assemble.result == 'success' &&
+      ${{ needs.scope.result == 'success' && needs.assemble.result == 'success' &&
       (github.event_name == 'workflow_call' ||
       (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) ||
       (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)) }}
