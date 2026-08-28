@@ -492,8 +492,10 @@ func TestUnknownOutcomeRequiresReadbackBeforeRetryDBIntegration(t *testing.T) {
 	}
 
 	var expireCalls, readbackCalls int
+	expirePath := "/wlt/payment-sessions/" + paymentSessionID + "/expire"
+	readbackPath := "/wlt/payment-sessions/" + paymentSessionID
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
+		if r.Method == http.MethodPost && r.URL.Path == expirePath {
 			expireCalls++
 			if expireCalls == 1 {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -502,14 +504,18 @@ func TestUnknownOutcomeRequiresReadbackBeforeRetryDBIntegration(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		readbackCalls++
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		status := "reference_created"
-		if readbackCalls > 1 {
-			status = "expired"
+		if r.Method == http.MethodGet && r.URL.Path == readbackPath {
+			readbackCalls++
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			status := "reference_created"
+			if readbackCalls > 1 {
+				status = "expired"
+			}
+			_, _ = w.Write([]byte(`{"paymentSession":{"id":"` + paymentSessionID + `","status":"` + status + `"}}`))
+			return
 		}
-		_, _ = w.Write([]byte(`{"paymentSession":{"id":"` + paymentSessionID + `","status":"` + status + `"}}`))
+		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer server.Close()
 	client := wlt.NewClient(server.URL, "test-service-token")
