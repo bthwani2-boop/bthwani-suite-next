@@ -97,7 +97,9 @@ func (s *Service) Report(ctx context.Context, input ReportInput) (*Incident, err
 			(order_id, target_entity_type, target_entity_id, incident_type, status,
 			 reason, ticket_reference, actor_id, actor_role, before_state, correlation_id)
 		VALUES ($1::uuid, $2, $3, $4, 'open', $5, $6, $7, $8, $9::jsonb, $10)
-		ON CONFLICT DO NOTHING
+		ON CONFLICT (order_id, actor_id, correlation_id)
+		    WHERE correlation_id IS NOT NULL AND btrim(correlation_id) <> ''
+		DO NOTHING
 		RETURNING id`,
 		input.OrderID, string(input.TargetEntityType), input.TargetEntityID, string(input.IncidentType),
 		input.Reason, input.TicketReference, input.ActorID, input.ActorRole, nullableJSON(before), nullableString(input.CorrelationID),
