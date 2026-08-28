@@ -637,7 +637,7 @@ jobs:
   scan:
     name: SonarQube trusted static analysis
     needs: [scope, assemble]
-    if: ${{ inputs.trusted_scan && needs.scope.result == 'success' && needs.assemble.result == 'success' }}
+    if: ${{ always() && inputs.trusted_scan && needs.scope.result == 'success' && needs.assemble.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
