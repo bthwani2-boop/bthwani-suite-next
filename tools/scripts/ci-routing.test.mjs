@@ -83,6 +83,14 @@ test("trusted full Sonar analysis generates coverage for every Go source owner",
   assert.match(sonar, /needs\.scope\.outputs\.go_required == 'true'.*-Dsonar\.go\.coverage\.reportPaths/su);
 });
 
+test("Sonar scope publishes the computed mode to downstream jobs", () => {
+  const sonar = read(".github/workflows/sonarqube.yml");
+  assert.match(
+    sonar,
+    /CI_MODE="\$\{mode\}" \\\s*node tools\/scripts\/detect-ci-context\.mjs\s+echo "mode=\$\{mode\}" >> "\$\{GITHUB_OUTPUT\}"/u,
+  );
+});
+
 test("the affected router is based on the exact current Base-to-Head diff", () => {
   const router = read("tools/scripts/detect-ci-context.mjs");
   assert.match(router, /\["diff", "--name-only"/u);
