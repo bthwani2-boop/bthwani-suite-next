@@ -13,6 +13,7 @@ on:
       base_sha: {type: string, required: true}
       head_ref: {type: string, required: false, default: ""}
       base_ref: {type: string, required: false, default: ""}
+      trusted_scan: {type: boolean, required: false, default: false}
     secrets:
       SONAR_TOKEN:
         required: true
@@ -26,35 +27,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ownership:
-    name: Resolve branch event ownership
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      skip_duplicate_push: ${{ steps.owner.outputs.skip_duplicate_push }}
-    steps:
-      - name: Resolve push versus PR ownership
-        id: owner
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BRANCH: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          skip=false
-          if [[ "${EVENT_NAME}" == "push" && "${BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
-            # Development branches do not spend remote Sonar compute.
-            # Exact Sonar is mandatory inside trusted Final Closure.
-            skip=true
-          fi
-          echo "skip_duplicate_push=${skip}" >> "${GITHUB_OUTPUT}"
-
   scope:
     name: Resolve exact Sonar candidate scope
-    needs: [ownership]
-    if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
@@ -190,10 +164,8 @@ jobs:
 
   node_coverage:
     name: Sonar Node coverage
-    needs: [ownership, scope]
-    if: >-
-      ${{ needs.ownership.outputs.skip_duplicate_push != 'true' &&
-      needs.scope.result == 'success' && needs.scope.outputs.node_required == 'true' }}
+    needs: [scope]
+    if: ${{ needs.scope.result == 'success' && needs.scope.outputs.node_required == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -274,10 +246,8 @@ jobs:
 
   go_coverage:
     name: Sonar Go coverage (${{ matrix.service }})
-    needs: [ownership, scope]
-    if: >-
-      ${{ needs.ownership.outputs.skip_duplicate_push != 'true' &&
-      needs.scope.result == 'success' && needs.scope.outputs.go_required == 'true' }}
+    needs: [scope]
+    if: ${{ needs.scope.result == 'success' && needs.scope.outputs.go_required == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -541,10 +511,9 @@ jobs:
 
   assemble:
     name: Assemble exact Sonar coverage evidence
-    needs: [ownership, scope, node_coverage, go_coverage]
+    needs: [scope, node_coverage, go_coverage]
     if: >-
-      ${{ always() && needs.ownership.outputs.skip_duplicate_push != 'true' &&
-      needs.scope.result == 'success' &&
+      ${{ always() && needs.scope.result == 'success' &&
       (needs.scope.outputs.node_required != 'true' || needs.node_coverage.result == 'success') &&
       (needs.scope.outputs.go_required != 'true' || needs.go_coverage.result == 'success') }}
     runs-on: ubuntu-24.04
@@ -667,12 +636,8 @@ jobs:
 
   scan:
     name: SonarQube trusted static analysis
-    needs: [ownership, scope, assemble]
-    if: >-
-      ${{ needs.scope.result == 'success' && needs.assemble.result == 'success' &&
-      (github.event_name == 'workflow_call' ||
-      (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) ||
-      (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)) }}
+    needs: [scope, assemble]
+    if: ${{ inputs.trusted_scan && needs.scope.result == 'success' && needs.assemble.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -818,7 +783,7 @@ jobs:
     name: >-
       ${{ github.event_name == 'pull_request' && 'SonarQube / PR result' || github.event_name == 'push' &&
       'SonarQube / push result' || 'SonarQube / dispatched result' }}
-    needs: [ownership, scope, node_coverage, go_coverage, assemble, scan]
+    needs: [scope, node_coverage, go_coverage, assemble, scan]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -826,8 +791,6 @@ jobs:
       - name: Enforce progressive exact Sonar results
         shell: bash
         env:
-          OWNERSHIP_RESULT: ${{ needs.ownership.result }}
-          SKIP_DUPLICATE_PUSH: ${{ needs.ownership.outputs.skip_duplicate_push }}
           SCOPE_RESULT: ${{ needs.scope.result }}
           NODE_REQUIRED: ${{ needs.scope.outputs.node_required }}
           NODE_RESULT: ${{ needs.node_coverage.result }}
@@ -835,20 +798,9 @@ jobs:
           GO_RESULT: ${{ needs.go_coverage.result }}
           ASSEMBLE_RESULT: ${{ needs.assemble.result }}
           SCAN_RESULT: ${{ needs.scan.result }}
-          EVENT_NAME: ${{ github.event_name }}
-          REF_NAME: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          TRUSTED_SCAN: ${{ inputs.trusted_scan }}
         run: |
           set -euo pipefail
-          [[ "${OWNERSHIP_RESULT}" == "success" ]] || {
-            echo "::error::Sonar ownership failed"
-            exit 1
-          }
-          if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
-            echo "development push skipped because the PR event owns Sonar verification"
-            exit 0
-          fi
-
           failures=()
           [[ "${SCOPE_RESULT}" == "success" ]] || failures+=("scope:${SCOPE_RESULT}")
           if [[ "${NODE_REQUIRED}" == "true" ]]; then
@@ -863,12 +815,7 @@ jobs:
           fi
           [[ "${ASSEMBLE_RESULT}" == "success" ]] || failures+=("assemble:${ASSEMBLE_RESULT}")
 
-          trusted_scan_required=false
-          if [[ "${EVENT_NAME}" == "workflow_call" || \
-                ( "${EVENT_NAME}" == "workflow_dispatch" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) || \
-                ( "${EVENT_NAME}" == "push" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
-            trusted_scan_required=true
-          fi
+          trusted_scan_required="${TRUSTED_SCAN}"
           if [[ "${trusted_scan_required}" == "true" ]]; then
             [[ "${SCAN_RESULT}" == "success" ]] || failures+=("trusted-scan:${SCAN_RESULT}")
           else

@@ -19,3 +19,4 @@ jobs:
       base_sha: ${{ github.event.before }}
       head_ref: master
       base_ref: master
+      trusted_scan: true
