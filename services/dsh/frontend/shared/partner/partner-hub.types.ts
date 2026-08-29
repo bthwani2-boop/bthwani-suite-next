@@ -48,19 +48,6 @@ export type SummaryItem = {
   tone?: 'default' | 'brand' | 'success' | 'warning' | 'info' | 'danger';
 };
 
-export type NotificationPreferenceId =
-  | 'orders'
-  | 'operations'
-  | 'inventory'
-  | 'finance'
-  | 'marketing'
-  | 'system'
-  | 'sound'
-  | 'dailyDigest'
-  | 'priorityOnly';
-
-export type NotificationPreferenceState = Record<NotificationPreferenceId, boolean>;
-
 // Coverage zone shape is owned centrally in partner.types.ts as
 // `DshPartnerCoverageZone` (identical shape). Re-export instead of
 // duplicating the type definition.

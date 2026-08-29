@@ -19,6 +19,8 @@ import {
   getWltDshPartnerOperationalModeCommission,
   WltDshPartnerBridge,
 } from "@bthwani/dsh/wlt";
+import { useNotificationsController } from "../../shared/notifications";
+import type { DshNotificationPreference } from "../../shared/notifications";
 import { resolveDshStoreClientVisibility } from "../../shared/partner/dsh-client-visibility.model";
 import {
   isDshPartnerActivationComplete,
@@ -31,8 +33,6 @@ import {
 } from "../../shared/partner";
 import type {
   BThwaniAppearanceMode,
-  NotificationPreferenceId,
-  NotificationPreferenceState,
   PartnerCoverageZone,
   PartnerOperationalMode,
 } from "../../shared/partner/partner-hub.types";
@@ -60,18 +60,6 @@ function useAppPartnerAppearance() {
   const [mode, setMode] = React.useState<BThwaniAppearanceMode>("lightPremium");
   return { hydrated: true, mode, setMode };
 }
-
-const failClosedNotificationPreferences: NotificationPreferenceState = {
-  orders: false,
-  operations: false,
-  inventory: false,
-  finance: false,
-  marketing: false,
-  system: false,
-  sound: false,
-  dailyDigest: false,
-  priorityOnly: false,
-};
 
 type PartnerStoreSettingsPayload = {
   readonly deliveryModes: readonly string[];
@@ -185,16 +173,16 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     mode: appearanceMode,
     setMode: setAppearanceMode,
   } = useAppPartnerAppearance();
+  const {
+    preferenceState: notificationPreferenceState,
+    busyAction: notificationBusyAction,
+    actionError: notificationActionError,
+    reload: reloadNotifications,
+    savePreference: saveNotificationPreference,
+  } = useNotificationsController(identity.state.kind);
 
   const [internalSection, setInternalSection] =
     React.useState<PartnerHubSection>("hub");
-  const [notificationPreferences, setNotificationPreferences] =
-    React.useState<NotificationPreferenceState>(
-      failClosedNotificationPreferences,
-    );
-  const [notificationError, setNotificationError] = React.useState<string | null>(
-    null,
-  );
   const [showAdvancedNotifications, setShowAdvancedNotifications] =
     React.useState(false);
   const [selectedModeId, setSelectedModeId] = React.useState<string>("");
@@ -244,32 +232,10 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     void loadStoreRuntime();
   }, [loadStoreRuntime]);
 
-  const updateNotificationPreference = React.useCallback(
-    (preferenceId: NotificationPreferenceId, nextValue: boolean) => {
-      const previous = notificationPreferences[preferenceId];
-      setNotificationError(null);
-      setNotificationPreferences((current) => ({
-        ...current,
-        [preferenceId]: nextValue,
-      }));
-      void import("../../shared/notifications")
-        .then(({ updateNotificationPreferences }) =>
-          updateNotificationPreferences(preferenceId, nextValue),
-        )
-        .catch((error: unknown) => {
-          setNotificationPreferences((current) => ({
-            ...current,
-            [preferenceId]: previous,
-          }));
-          setNotificationError(
-            error instanceof Error
-              ? error.message
-              : "تعذر حفظ تفضيل الإشعار.",
-          );
-        });
-    },
-    [notificationPreferences],
-  );
+  const notificationPreferences: readonly DshNotificationPreference[] =
+    notificationPreferenceState.kind === "success"
+      ? notificationPreferenceState.preferences
+      : [];
 
   const openOrderAlerts = React.useCallback(() => {
     onOpenOperationalFlow?.("order-alerts");
@@ -545,19 +511,18 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           icon={sectionCopy.settings.icon}
           onBack={() => updateSection("hub")}
         >
-          {notificationError ? (
-            <StateView
-              tone="danger"
-              title="تعذر حفظ تفضيل الإشعار"
-              description={notificationError}
-            />
-          ) : null}
           <PartnerHubSettingsPanel
             appearanceMode={appearanceMode}
             appearanceHydrated={appearanceHydrated}
             setAppearanceMode={setAppearanceMode}
             notificationPreferences={notificationPreferences}
-            updateNotificationPreference={updateNotificationPreference}
+            notificationPreferenceState={notificationPreferenceState.kind}
+            notificationPreferenceError={notificationPreferenceState.kind === "error"
+              ? notificationPreferenceState.message
+              : notificationActionError}
+            notificationBusy={notificationBusyAction !== null}
+            onSaveNotificationPreference={saveNotificationPreference}
+            onReloadNotificationPreferences={reloadNotifications}
             showAdvancedNotifications={showAdvancedNotifications}
             setShowAdvancedNotifications={setShowAdvancedNotifications}
             resolvedListingEnabled={resolvedListingEnabled}

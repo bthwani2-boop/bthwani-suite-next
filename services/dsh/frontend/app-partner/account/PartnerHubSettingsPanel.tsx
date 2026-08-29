@@ -1,15 +1,132 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { Box, Chip, Divider, Icon, radius, Text, spacing, typography, useDirection } from '@bthwani/ui-kit';
-import { wltDshPartnerUiCopy } from "@bthwani/dsh/wlt";
-import type { BThwaniAppearanceMode, NotificationPreferenceId, NotificationPreferenceState } from '../../shared/partner/partner-hub.types';
+import {
+  Box,
+  Button,
+  Chip,
+  Divider,
+  Icon,
+  StateView,
+  Surface,
+  radius,
+  Text,
+  spacing,
+  typography,
+  useDirection,
+} from '@bthwani/ui-kit';
+import type { BThwaniAppearanceMode } from '@bthwani/ui-kit';
+import type {
+  DshNotificationChannel,
+  DshNotificationPreference,
+  DshUpdateNotificationPreferenceInput,
+} from '../../shared/notifications';
 import { partnerHubTheme, SettingsOptionRow } from './PartnerHubNav';
+
+type PartnerNotificationPreferenceStateKind = 'idle' | 'loading' | 'success' | 'error';
+
+type NotificationTopicMeta = {
+  readonly title: string;
+  readonly subtitle: string;
+  readonly icon: React.ComponentProps<typeof Icon>['name'];
+};
+
+const notificationTopicMeta: Readonly<Record<string, NotificationTopicMeta>> = {
+  orders: {
+    title: 'تنبيهات الطلبات',
+    subtitle: 'الطلبات الجديدة، التأخير، وحالات الموافقة والإفراج.',
+    icon: 'receipt-outline',
+  },
+  operations: {
+    title: 'تنبيهات التشغيل',
+    subtitle: 'الفرع، الفريق، ساعات العمل، والتوصيات السريعة للورديات.',
+    icon: 'people-outline',
+  },
+  inventory: {
+    title: 'تنبيهات المخزون',
+    subtitle: 'النواقص، المنتجات منخفضة الكمية، وتغييرات الجاهزية.',
+    icon: 'cube-outline',
+  },
+  finance: {
+    title: 'تنبيهات المحفظة',
+    subtitle: 'التسويات، الأرصدة، وأحداث المحفظة المالية.',
+    icon: 'wallet-outline',
+  },
+  marketing: {
+    title: 'التسويق والنمو',
+    subtitle: 'العروض والتوصيات الموسمية والفرص المقترحة للنمو.',
+    icon: 'megaphone-outline',
+  },
+  system: {
+    title: 'تنبيهات النظام',
+    subtitle: 'الهوية، الإعدادات، وحالة الربط العام للحساب.',
+    icon: 'shield-checkmark-outline',
+  },
+  sound: {
+    title: 'الصوت والاهتزاز',
+    subtitle: 'تفعيل التنبيه السمعي والاهتزازي عند وجود حدث مهم.',
+    icon: 'volume-high-outline',
+  },
+  dailyDigest: {
+    title: 'ملخص يومي مختصر',
+    subtitle: 'استلام ملخص يومي موحّد بدل فتح أكثر من شاشة منفصلة.',
+    icon: 'calendar-outline',
+  },
+  priorityOnly: {
+    title: 'العاجلة فقط',
+    subtitle: 'تقليل التشويش وإبراز الحالات ذات الأولوية العالية فقط.',
+    icon: 'flash-outline',
+  },
+};
+
+function getNotificationTopicMeta(topic: string): NotificationTopicMeta {
+  return notificationTopicMeta[topic] ?? {
+    title: topic,
+    subtitle: 'تفضيل محفوظ من DSH لهذا الحساب.',
+    icon: 'notifications-outline',
+  };
+}
+
+function preferenceInput(
+  preference: DshNotificationPreference,
+  patch: Partial<DshUpdateNotificationPreferenceInput>,
+): DshUpdateNotificationPreferenceInput {
+  return {
+    topic: preference.topic,
+    enabled: preference.enabled,
+    channels: preference.channels,
+    quietHoursStart: preference.quietHoursStart,
+    quietHoursEnd: preference.quietHoursEnd,
+    locale: preference.locale,
+    timezone: preference.timezone || 'Asia/Aden',
+    ...patch,
+  };
+}
+
+function toggledChannels(
+  current: readonly DshNotificationChannel[],
+  channel: DshNotificationChannel,
+): readonly DshNotificationChannel[] {
+  if (current.includes(channel)) {
+    const next = current.filter((item) => item !== channel);
+    return next.length > 0 ? next : ['in_app'];
+  }
+  return [...current, channel];
+}
+
+function channelLabel(channel: DshNotificationChannel): string {
+  return channel === 'push' ? 'Push' : 'داخل التطبيق';
+}
 
 export function PartnerHubSettingsPanel({
   appearanceMode,
+  appearanceHydrated,
   setAppearanceMode,
   notificationPreferences,
-  updateNotificationPreference,
+  notificationPreferenceState,
+  notificationPreferenceError,
+  notificationBusy,
+  onSaveNotificationPreference,
+  onReloadNotificationPreferences,
   showAdvancedNotifications,
   setShowAdvancedNotifications,
   resolvedListingEnabled,
@@ -20,10 +137,16 @@ export function PartnerHubSettingsPanel({
   openOperationsDirectory,
 }: {
   appearanceMode: BThwaniAppearanceMode;
-  appearanceHydrated?: boolean;
+  appearanceHydrated: boolean;
   setAppearanceMode: (mode: BThwaniAppearanceMode) => void;
-  notificationPreferences: NotificationPreferenceState;
-  updateNotificationPreference: (preferenceId: NotificationPreferenceId, nextValue: boolean) => void;
+  notificationPreferences: readonly DshNotificationPreference[];
+  notificationPreferenceState: PartnerNotificationPreferenceStateKind;
+  notificationPreferenceError?: string | null;
+  notificationBusy: boolean;
+  onSaveNotificationPreference: (
+    input: DshUpdateNotificationPreferenceInput,
+  ) => Promise<boolean>;
+  onReloadNotificationPreferences: () => Promise<void>;
   showAdvancedNotifications: boolean;
   setShowAdvancedNotifications: (next: boolean) => void;
   resolvedListingEnabled: boolean;
@@ -35,76 +158,7 @@ export function PartnerHubSettingsPanel({
 }) {
   const { direction } = useDirection();
   const theme = partnerHubTheme;
-
-  const primaryNotificationRows = [
-    {
-      id: 'orders' as const,
-      title: 'تنبيهات الطلبات',
-      subtitle: 'الطلبات الجديدة، التأخير، وحالات الموافقة والإفراج.',
-      icon: 'receipt-outline' as const,
-      value: notificationPreferences.orders,
-    },
-    {
-      id: 'operations' as const,
-      title: 'تنبيهات التشغيل',
-      subtitle: 'الفرع، الفريق، ساعات العمل، والتوصيات السريعة للورديات.',
-      icon: 'people-outline' as const,
-      value: notificationPreferences.operations,
-    },
-    {
-      id: 'inventory' as const,
-      title: 'تنبيهات المخزون',
-      subtitle: 'النواقص، المنتجات منخفضة الكمية، وتغييرات الجاهزية.',
-      icon: 'cube-outline' as const,
-      value: notificationPreferences.inventory,
-    },
-    {
-      id: 'finance' as const,
-      title: wltDshPartnerUiCopy.financeNotificationTitle,
-      subtitle: wltDshPartnerUiCopy.financeNotificationSubtitle,
-      icon: 'wallet-outline' as const,
-      value: notificationPreferences.finance,
-    },
-  ];
-
-  const secondaryNotificationRows = [
-    {
-      id: 'marketing' as const,
-      title: 'التسويق والنمو',
-      subtitle: 'العروض والتوصيات الموسمية والفرص المقترحة للنمو.',
-      icon: 'megaphone-outline' as const,
-      value: notificationPreferences.marketing,
-    },
-    {
-      id: 'system' as const,
-      title: 'تنبيهات النظام',
-      subtitle: 'الهوية، الإعدادات، وحالة الربط العام للحساب.',
-      icon: 'shield-checkmark-outline' as const,
-      value: notificationPreferences.system,
-    },
-    {
-      id: 'sound' as const,
-      title: 'الصوت والاهتزاز',
-      subtitle: 'تفعيل التنبيه السمعي والاهتزازي عند وجود حدث مهم.',
-      icon: 'volume-high-outline' as const,
-      value: notificationPreferences.sound,
-    },
-    {
-      id: 'dailyDigest' as const,
-      title: 'ملخص يومي مختصر',
-      subtitle: 'استلام ملخص يومي موحّد بدل فتح أكثر من شاشة منفصلة.',
-      icon: 'calendar-outline' as const,
-      value: notificationPreferences.dailyDigest,
-    },
-    {
-      id: 'priorityOnly' as const,
-      title: 'العاجلة فقط',
-      subtitle: 'تقليل التشويش وإبراز الحالات ذات الأولوية العالية فقط.',
-      icon: 'flash-outline' as const,
-      value: notificationPreferences.priorityOnly,
-    },
-  ];
-
+  const appearanceDisabled = !appearanceHydrated;
   const rowDirection = direction === 'rtl' ? 'row-reverse' : 'row';
 
   return (
@@ -155,9 +209,14 @@ export function PartnerHubSettingsPanel({
               borderWidth: 1,
               borderColor: theme.line,
               gap: spacing[1],
+              opacity: appearanceDisabled ? 0.56 : 1,
             }}
           >
             <Pressable
+              disabled={appearanceDisabled}
+              accessibilityRole="button"
+              accessibilityLabel="المظهر الفاتح"
+              accessibilityState={{ disabled: appearanceDisabled, selected: appearanceMode === 'lightPremium' }}
               onPress={() => setAppearanceMode('lightPremium')}
               style={{
                 paddingHorizontal: spacing[3],
@@ -177,6 +236,10 @@ export function PartnerHubSettingsPanel({
               </Text>
             </Pressable>
             <Pressable
+              disabled={appearanceDisabled}
+              accessibilityRole="button"
+              accessibilityLabel="المظهر الداكن"
+              accessibilityState={{ disabled: appearanceDisabled, selected: appearanceMode === 'darkGlass' }}
               onPress={() => setAppearanceMode('darkGlass')}
               style={{
                 paddingHorizontal: spacing[3],
@@ -201,33 +264,106 @@ export function PartnerHubSettingsPanel({
 
       <Box padding={4} gap={3} background="surface">
         <Text role="titleSm">الإشعارات</Text>
-        {primaryNotificationRows.map((item) => (
-          <SettingsOptionRow
-            key={item.id}
-            icon={item.icon}
-            title={item.title}
-            subtitle={item.subtitle}
-            value={item.value}
-            onValueChange={(nextValue) => updateNotificationPreference(item.id, nextValue)}
+        {notificationPreferenceState === 'idle' || notificationPreferenceState === 'loading' ? (
+          <StateView loading title="جارٍ تحميل التفضيلات" description="نقرأ تفضيلات هذا الحساب من DSH." />
+        ) : notificationPreferenceState === 'error' ? (
+          <StateView
+            tone="warning"
+            title="تعذر تحميل التفضيلات"
+            description={notificationPreferenceError ?? 'تعذر قراءة تفضيلات هذا الحساب من DSH.'}
+            actionLabel="إعادة المحاولة"
+            onActionPress={() => { void onReloadNotificationPreferences(); }}
           />
-        ))}
-        <Pressable onPress={() => setShowAdvancedNotifications(!showAdvancedNotifications)}>
-          <Text role="bodyStrong" tone="action">
-            {showAdvancedNotifications ? 'إخفاء الإعدادات المتقدمة' : 'عرض الإعدادات المتقدمة'}
-          </Text>
-        </Pressable>
-        {showAdvancedNotifications
-          ? secondaryNotificationRows.map((item) => (
-              <SettingsOptionRow
-                key={item.id}
-                icon={item.icon}
-                title={item.title}
-                subtitle={item.subtitle}
-                value={item.value}
-                onValueChange={(nextValue) => updateNotificationPreference(item.id, nextValue)}
-              />
-            ))
-          : null}
+        ) : notificationPreferences.length === 0 ? (
+          <StateView title="لا توجد تفضيلات مخصصة" description="تستخدم الإشعارات إعدادات المنصة الافتراضية لهذا الحساب." />
+        ) : (
+          notificationPreferences.map((preference) => {
+            const meta = getNotificationTopicMeta(preference.topic);
+            return (
+              <React.Fragment key={preference.topic}>
+                <SettingsOptionRow
+                  icon={meta.icon}
+                  title={meta.title}
+                  subtitle={meta.subtitle}
+                  value={preference.enabled}
+                  disabled={notificationBusy}
+                  onValueChange={(nextValue) => {
+                    void onSaveNotificationPreference(preferenceInput(preference, { enabled: nextValue }));
+                  }}
+                />
+                {showAdvancedNotifications ? (
+                  <Surface tone="inset" padding={3} gap={2}>
+                    <Text role="caption" tone="muted">القنوات: {preference.channels.map(channelLabel).join('، ')}</Text>
+                    <Box layoutDirection="row" gap={2}>
+                      {(['in_app', 'push'] as const).map((channel) => (
+                        <Button
+                          key={channel}
+                          label={`${preference.channels.includes(channel) ? '✓ ' : ''}${channelLabel(channel)}`}
+                          tone={preference.channels.includes(channel) ? 'primary' : 'secondary'}
+                          size="sm"
+                          fullWidth={false}
+                          disabled={notificationBusy}
+                          onPress={() => {
+                            void onSaveNotificationPreference(preferenceInput(preference, {
+                              channels: toggledChannels(preference.channels, channel),
+                            }));
+                          }}
+                        />
+                      ))}
+                    </Box>
+                    <Box layoutDirection="row" gap={2}>
+                      <Button
+                        label={preference.quietHoursStart ? 'إلغاء وقت الهدوء' : 'هدوء 22:00–07:00'}
+                        tone="secondary"
+                        size="sm"
+                        fullWidth={false}
+                        disabled={notificationBusy}
+                        onPress={() => {
+                          void onSaveNotificationPreference(preferenceInput(preference, preference.quietHoursStart
+                            ? { quietHoursStart: undefined, quietHoursEnd: undefined }
+                            : { quietHoursStart: '22:00', quietHoursEnd: '07:00' }));
+                        }}
+                      />
+                      <Button
+                        label={preference.locale === 'ar' ? 'العربية' : 'English'}
+                        tone="secondary"
+                        size="sm"
+                        fullWidth={false}
+                        disabled={notificationBusy}
+                        onPress={() => {
+                          void onSaveNotificationPreference(preferenceInput(preference, {
+                            locale: preference.locale === 'ar' ? 'en' : 'ar',
+                          }));
+                        }}
+                      />
+                    </Box>
+                    <Text role="caption" tone="muted">
+                      {preference.quietHoursStart && preference.quietHoursEnd
+                        ? `وقت الهدوء: ${preference.quietHoursStart}–${preference.quietHoursEnd} (${preference.timezone})`
+                        : `لا يوجد وقت هدوء (${preference.timezone})`}
+                    </Text>
+                  </Surface>
+                ) : null}
+              </React.Fragment>
+            );
+          })
+        )}
+        {notificationPreferenceError && notificationPreferenceState === 'success' ? (
+          <StateView tone="danger" title="تعذر حفظ تفضيل الإشعار" description={notificationPreferenceError} />
+        ) : null}
+        {notificationPreferenceState === 'success' && notificationPreferences.length > 0 ? (
+          <Pressable
+            disabled={notificationBusy}
+            accessibilityRole="button"
+            accessibilityLabel={showAdvancedNotifications ? 'إخفاء الإعدادات المتقدمة' : 'عرض الإعدادات المتقدمة'}
+            accessibilityState={{ disabled: notificationBusy, expanded: showAdvancedNotifications }}
+            onPress={() => setShowAdvancedNotifications(!showAdvancedNotifications)}
+          >
+            <Text role="bodyStrong" tone="action">
+              {showAdvancedNotifications ? 'إخفاء الإعدادات المتقدمة' : 'عرض الإعدادات المتقدمة'}
+            </Text>
+          </Pressable>
+        ) : null}
       </Box>
 
       <Box padding={4} gap={3} background="surface">
