@@ -1,5 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 import type {
   DshFieldVisit,
   DshReadinessCheck,
@@ -30,15 +31,36 @@ const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "field-readiness
 export type FieldMutationContext = {
   readonly correlationId: string;
   readonly idempotencyKey: string;
+  /** Canonical local identity of the business intent. Never sent as an HTTP header. */
+  readonly intentFingerprint?: string;
 };
 
-function stableHash(value: string): string {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
+type MutationIdentityPart = readonly [
+  "undefined" | "null" | "string" | "number" | "boolean" | "bigint",
+  string,
+];
+
+function normalizeIdentityPart(part: unknown): MutationIdentityPart {
+  if (part === undefined) return ["undefined", ""];
+  if (part === null) return ["null", ""];
+  if (typeof part === "string") return ["string", part.trim()];
+  if (typeof part === "number") {
+    if (!Number.isFinite(part)) throw new Error("field mutation identity contains a non-finite number");
+    return ["number", String(part)];
   }
-  return (hash >>> 0).toString(36);
+  if (typeof part === "boolean") return ["boolean", String(part)];
+  if (typeof part === "bigint") return ["bigint", part.toString()];
+  throw new Error("field mutation identity parts must be scalar values");
+}
+
+function buildIntentFingerprint(operation: string, identityParts: readonly unknown[]): string {
+  const normalizedOperation = operation.trim();
+  if (!normalizedOperation) throw new Error("field mutation operation is required");
+  const normalizedParts = identityParts.map(normalizeIdentityPart);
+  if (!normalizedParts.some(([, value]) => value.length > 0)) {
+    throw new Error(`field mutation ${normalizedOperation} has no stable business identity`);
+  }
+  return JSON.stringify([normalizedOperation, normalizedParts]);
 }
 
 export function buildFieldMutationContext(
@@ -46,28 +68,37 @@ export function buildFieldMutationContext(
   identityParts: readonly unknown[],
   supplied?: FieldMutationContext,
 ): FieldMutationContext {
+  const normalizedOperation = operation.trim();
+  const intentFingerprint = buildIntentFingerprint(normalizedOperation, identityParts);
   const suppliedCorrelation = supplied?.correlationId.trim() ?? "";
   const suppliedIdempotency = supplied?.idempotencyKey.trim() ?? "";
-  if (suppliedCorrelation || suppliedIdempotency) {
+  const suppliedFingerprint = supplied?.intentFingerprint?.trim() ?? "";
+
+  if (suppliedCorrelation || suppliedIdempotency || suppliedFingerprint) {
     if (!suppliedCorrelation || !suppliedIdempotency) {
       throw new Error("field mutation correlation and idempotency must be supplied together");
+    }
+    if (suppliedFingerprint && suppliedFingerprint !== intentFingerprint) {
+      throw new Error("field mutation context does not match the current business intent");
     }
     return {
       correlationId: suppliedCorrelation,
       idempotencyKey: suppliedIdempotency,
+      intentFingerprint,
     };
   }
 
-  const identity = identityParts
-    .map((part) => (part === undefined || part === null ? "" : String(part).trim()))
-    .join("|");
-  if (!identity.replaceAll("|", "")) {
-    throw new Error(`field mutation ${operation} has no stable business identity`);
-  }
-  const fingerprint = stableHash(`${operation}|${identity}`);
   return {
-    correlationId: `field:${operation}:${fingerprint}`,
-    idempotencyKey: `field:${operation}:${fingerprint}`,
+    idempotencyKey: `field:${normalizedOperation}:${secureRandomId()}`,
+    correlationId: `field:${normalizedOperation}:corr:${secureRandomId()}`,
+    intentFingerprint,
+  };
+}
+
+function mutationRequestContext(context: FieldMutationContext) {
+  return {
+    correlationId: context.correlationId,
+    idempotencyKey: context.idempotencyKey,
   };
 }
 
@@ -76,14 +107,14 @@ export async function createFieldVisit(
   input: DshCreateVisitInput,
   supplied?: FieldMutationContext,
 ): Promise<DshFieldVisit> {
-  const headers = buildFieldMutationContext(
+  const context = buildFieldMutationContext(
     "create-visit",
     [storeId, input.visitType ?? "onboarding", input.startLocation.capturedAt],
     supplied,
   );
   const data = await request<{ visit: DshFieldVisit }>(
     `/dsh/field/stores/${encodeURIComponent(storeId)}/visits`,
-    { method: "POST", body: input, ...headers },
+    { method: "POST", body: input, ...mutationRequestContext(context) },
   );
   return data.visit;
 }
@@ -100,10 +131,10 @@ export async function completeFieldVisit(
   input: DshCompleteVisitInput,
   supplied?: FieldMutationContext,
 ): Promise<DshFieldVisit> {
-  const headers = buildFieldMutationContext("complete-visit", [visitId], supplied);
+  const context = buildFieldMutationContext("complete-visit", [visitId], supplied);
   const data = await request<{ visit: DshFieldVisit }>(
     `/dsh/field/visits/${encodeURIComponent(visitId)}/complete`,
-    { method: "POST", body: input, ...headers },
+    { method: "POST", body: input, ...mutationRequestContext(context) },
   );
   return data.visit;
 }
@@ -113,14 +144,14 @@ export async function upsertReadinessCheck(
   input: DshUpsertCheckInput,
   supplied?: FieldMutationContext,
 ): Promise<DshReadinessCheck> {
-  const headers = buildFieldMutationContext(
+  const context = buildFieldMutationContext(
     "upsert-check",
     [visitId, input.checkType, input.status, input.evidenceUrl ?? "", input.notes ?? ""],
     supplied,
   );
   const data = await request<{ check: DshReadinessCheck }>(
     `/dsh/field/visits/${encodeURIComponent(visitId)}/checks`,
-    { method: "PUT", body: input, ...headers },
+    { method: "PUT", body: input, ...mutationRequestContext(context) },
   );
   return data.check;
 }
@@ -137,14 +168,14 @@ export async function createReadinessEscalation(
   input: DshCreateEscalationInput,
   supplied?: FieldMutationContext,
 ): Promise<DshReadinessEscalation> {
-  const headers = buildFieldMutationContext(
+  const context = buildFieldMutationContext(
     "create-escalation",
     [storeId, input.visitId ?? "", input.severity, input.category, input.description],
     supplied,
   );
   const data = await request<{ escalation: DshReadinessEscalation }>(
     `/dsh/field/stores/${encodeURIComponent(storeId)}/escalations`,
-    { method: "POST", body: input, ...headers },
+    { method: "POST", body: input, ...mutationRequestContext(context) },
   );
   return data.escalation;
 }
@@ -162,14 +193,14 @@ export async function updateEscalation(
   input: DshUpdateEscalationInput,
   supplied?: FieldMutationContext,
 ): Promise<DshReadinessEscalation> {
-  const headers = buildFieldMutationContext(
+  const context = buildFieldMutationContext(
     "update-escalation",
     [escalationId, input.status, input.resolutionNote ?? ""],
     supplied,
   );
   const data = await request<{ escalation: DshReadinessEscalation }>(
     `/dsh/operator/field-readiness/escalations/${encodeURIComponent(escalationId)}`,
-    { method: "PATCH", body: input, ...headers },
+    { method: "PATCH", body: input, ...mutationRequestContext(context) },
   );
   return data.escalation;
 }
