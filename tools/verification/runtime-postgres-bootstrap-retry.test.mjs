@@ -109,6 +109,9 @@ test("partner onboarding closes the canonical store publication journey", () => 
   assert.match(dshRuntimeDispatcher, /\$profileList -contains "wlt" -or \$SeedWlt[\s\S]*clientParameters\.WltEnabled/);
   assert.match(phaseScript, /\$runtimeParameters\.SeedWlt = \$true/);
   assert.match(dshClientHomeSmoke, /\$checkoutAttempt = \[guid\]::NewGuid\(\)\.ToString\(\)/);
+  assert.match(dshCatalogSmoke, /clientCheckoutProductId/);
+  assert.match(dshClientHomeSmoke, /\$state\.clientCheckoutProductId/);
+  assert.doesNotMatch(dshClientHomeSmoke, /\$state\.masterProductId/);
   assert.match(dshClientHomeSmoke, /"Idempotency-Key" = "smoke-checkout-cart-\$checkoutAttempt"/);
   assert.match(dshClientHomeSmoke, /\$checkoutHeaders\["Idempotency-Key"\] = "smoke-checkout-intent-\$checkoutAttempt"/);
   assert.match(dshClientHomeSmoke, /-Headers \$checkoutHeaders/);

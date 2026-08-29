@@ -16,9 +16,9 @@ $identityApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_AP
 $identityBaseUrl = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_API_BASE_URL)) { "http://localhost:$identityApiHostPort" } else { $env:IDENTITY_API_BASE_URL }
 
 $state = Get-Content -LiteralPath $StatePath -Raw | ConvertFrom-Json
-$smokeCatalogProductId = [string]$state.masterProductId
+$smokeCatalogProductId = [string]$state.clientCheckoutProductId
 if ([string]::IsNullOrWhiteSpace($smokeCatalogProductId)) {
-  throw "DSH client smoke state is missing masterProductId"
+  throw "DSH client smoke state is missing clientCheckoutProductId"
 }
 
 $identityPassword = Get-LocalPassword
