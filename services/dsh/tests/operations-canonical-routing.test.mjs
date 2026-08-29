@@ -12,6 +12,14 @@ const hubSource = readFileSync(
   "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
   "utf8",
 );
+const heatmapSource = readFileSync(
+  "services/dsh/frontend/control-panel/operations/OperationsHeatmapScreen.tsx",
+  "utf8",
+);
+const operationsPermissionSource = readFileSync(
+  "services/dsh/frontend/shared/operations/use-operations-permission.ts",
+  "utf8",
+);
 const types = readFileSync(
   "services/dsh/frontend/shared/operations/operations.types.ts",
   "utf8",
@@ -54,5 +62,19 @@ test("published operations subgroups mount their canonical dedicated workspaces"
   assert.match(hubSource, /rescue:\s*OrderRescueScreen/);
   assert.match(hubSource, /audit:\s*AuditSupportSlaScreen/);
   assert.match(hubSource, /proofs:\s*DeliveryProofReviewScreen/);
+  assert.match(hubSource, /heatmap:\s*OperationsHeatmapScreen/);
   assert.match(hubSource, /zones:\s*AreaCapacityScreen/);
+});
+
+test("operations heatmap consumes the governed DSH runtime and existing maps authority", () => {
+  assert.match(heatmapSource, /\/dsh\/operator\/dispatch\/heatmap/);
+  assert.match(heatmapSource, /GoogleMapsWebCanvas/);
+  assert.match(heatmapSource, /centerLatitude/);
+  assert.match(heatmapSource, /centerLongitude/);
+  assert.match(heatmapSource, /freshCount/);
+  assert.match(heatmapSource, /staleCount/);
+  assert.match(heatmapSource, /lostCount/);
+  assert.match(heatmapSource, /هذه حالة فارغة مثبتة وليست صفراً مصطنعاً/);
+  assert.match(operationsPermissionSource, /group === 'dispatch-capacity'/);
+  assert.match(operationsPermissionSource, /: \{ actions: \['operations\.read'\] \}/);
 });
