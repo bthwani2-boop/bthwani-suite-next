@@ -32,7 +32,8 @@ export { useFieldEscalationSubmissionController } from "./use-field-escalation-s
 export {
   configureFieldOfflineQueueStorage,
   configureFieldOfflineQueueScope,
-  clearFieldOfflineQueue,
+  detachFieldOfflineQueueScope,
+  discardFieldOfflineRecoveryState,
   enqueueFieldOperation,
   markOperationSynced,
   markOperationUnknown,
