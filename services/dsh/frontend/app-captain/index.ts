@@ -44,6 +44,9 @@ export {
   WorkforceProfileProvider,
   useWorkforceProfile,
 } from "../shared/workforce";
+export {
+  fetchOwnCaptainReadiness as fetchCaptainOperationalReadiness,
+} from "../shared/dispatch";
 export type {
   DshCaptainReadiness,
   DshCaptainReadiness as CaptainOperationalReadiness,
