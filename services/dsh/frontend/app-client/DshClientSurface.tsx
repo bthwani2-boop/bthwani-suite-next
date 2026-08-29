@@ -26,7 +26,6 @@ import { TicketDetailScreen } from "./support/TicketDetailScreen";
 import { SheinForm } from "../shared/shein/SheinForm";
 import { AwnakForm } from "../shared/awnak/AwnakForm";
 import { ClientSpecialRequestsScreen, useSpecialRequestsController } from "../shared/special-requests";
-import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
 import type { DshHomeSpecialRequestTarget } from "../shared/home-discovery";
 import { useOrderTruthCollectionController, toOrderTruthSummary, type OrderTruth } from "../shared/order-truth";
 import { fetchActiveCart } from "../shared/cart";
@@ -176,10 +175,10 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
       content = <OrderTrackingScreen orderId={route.orderId} onBack={navigation.back} onOpenPickup={openPickupSession} onOpenOrderSupport={openOrderSupport} onOpenNotifications={() => navigate({ kind: "notifications" })} />;
       break;
     case "special-request-shein":
-      content = <SheinForm onBack={navigation.back} onViewRequests={() => navigate({ kind: "special-requests" }, "replace")} onSubmit={(data) => specialRequestController.submit({ requestType: "SHEIN_ASSISTED_PURCHASE", idempotencyKey: generateSpecialRequestIdempotencyKey(), ...data })} />;
+      content = <SheinForm onBack={navigation.back} onViewRequests={() => navigate({ kind: "special-requests" }, "replace")} onSubmit={(data) => specialRequestController.submit({ requestType: "SHEIN_ASSISTED_PURCHASE", ...data })} />;
       break;
     case "special-request-awnak":
-      content = <AwnakForm onBack={navigation.back} onViewRequests={() => navigate({ kind: "special-requests" }, "replace")} onSubmit={(data) => specialRequestController.submit({ requestType: "AWNAK_ERRAND", idempotencyKey: generateSpecialRequestIdempotencyKey(), ...data })} />;
+      content = <AwnakForm onBack={navigation.back} onViewRequests={() => navigate({ kind: "special-requests" }, "replace")} onSubmit={(data) => specialRequestController.submit({ requestType: "AWNAK_ERRAND", ...data })} />;
       break;
     case "home":
       content = <HomeDiscoveryRoute searchQuery={searchQuery} onStorePress={(storeId) => navigate({ kind: "store", storeId })} onSpecialRequestPress={openSpecialRequestType} onMarketingAction={openHomeMarketingAction} />;

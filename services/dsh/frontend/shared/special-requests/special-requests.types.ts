@@ -1,6 +1,7 @@
 import type { components } from "../../../clients/generated/dsh-api";
 
 export type DshCreateSpecialRequest = components["schemas"]["DshCreateSpecialRequest"];
+export type DshCreateSpecialRequestInput = Omit<DshCreateSpecialRequest, "idempotencyKey">;
 export type DshSpecialRequestResponse = components["schemas"]["DshSpecialRequestResponse"];
 export type DshSpecialRequestListResponse = components["schemas"]["DshSpecialRequestListResponse"];
 export type DshUpdateSpecialRequest = components["schemas"]["DshUpdateSpecialRequest"];

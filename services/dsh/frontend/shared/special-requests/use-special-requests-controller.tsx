@@ -21,7 +21,7 @@ import {
 } from "./special-requests.api";
 import type {
   ClassifiedSpecialRequestError,
-  DshCreateSpecialRequest,
+  DshCreateSpecialRequestInput,
   DshSpecialRequestInformationExchange,
   DshSpecialRequestResponse,
   DshUpdateSpecialRequest,
@@ -38,6 +38,11 @@ import {
 } from "./special-requests.controller-core";
 import { specialRequestIdleState, specialRequestListLoadState } from "./special-requests.states";
 import type { DshSpecialRequestListLoadState, DshSpecialRequestState } from "./special-requests.states";
+import {
+  clearSpecialRequestCreateAttempt,
+  fingerprintSpecialRequestInput,
+  getOrCreateSpecialRequestCreateAttempt,
+} from "./special-request-create-attempt";
 
 function listLoadStateForError(error: ClassifiedSpecialRequestError): DshSpecialRequestListLoadState {
   switch (error.kind) {
@@ -68,18 +73,28 @@ export function useSpecialRequestsController() {
   }, [actorId]);
   const [state, setState] = useState<DshSpecialRequestState>(specialRequestIdleState());
 
-  const submit = useCallback(async (input: DshCreateSpecialRequest): Promise<boolean> => {
+  const submit = useCallback(async (input: DshCreateSpecialRequestInput): Promise<boolean> => {
     if (state.kind === "submitting") return false;
+    if (!actorId) {
+      setState(resolveSubmitError({ kind: "forbidden" }));
+      return false;
+    }
     setState(beginSubmit());
     try {
-      const created = await createSpecialRequest(input, { idempotencyKey: input.idempotencyKey });
-      setState(resolveSubmitSuccess(await fetchClientSpecialRequest(created.id)));
+      const attempt = await getOrCreateSpecialRequestCreateAttempt(actorId, input);
+      const created = await createSpecialRequest(
+        { ...input, idempotencyKey: attempt.context.idempotencyKey },
+        { idempotencyKey: attempt.context.idempotencyKey },
+      );
+      const readback = await fetchClientSpecialRequest(created.id);
+      await clearSpecialRequestCreateAttempt(actorId, fingerprintSpecialRequestInput(input));
+      setState(resolveSubmitSuccess(readback));
       return true;
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
       return false;
     }
-  }, [state.kind]);
+  }, [actorId, state.kind]);
 
   const cancel = useCallback(async (id: string, expectedVersion?: number) => {
     if (state.kind === "submitting") return;

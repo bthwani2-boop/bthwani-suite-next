@@ -370,6 +370,26 @@ test("client payment choices honor the provider capability boundary", () => {
   );
 });
 
+test("special-request creation keeps one actor-scoped idempotency attempt until readback", () => {
+  const attempt = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/special-request-create-attempt.ts",
+    [
+      "client-special-request-create",
+      "getOrCreateDurableMutationAttempt",
+      "purgeExactDurableMutationAttempt",
+      "fingerprintSpecialRequestInput",
+    ],
+  );
+  assert.match(attempt, /Omit<DshCreateSpecialRequest, "idempotencyKey">/);
+  const controller = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/use-special-requests-controller.tsx",
+    ["getOrCreateSpecialRequestCreateAttempt", "fetchClientSpecialRequest(created.id)", "clearSpecialRequestCreateAttempt"],
+  );
+  assert.doesNotMatch(controller, /generateSpecialRequestIdempotencyKey/);
+  const surface = source("services/dsh/frontend/app-client/DshClientSurface.tsx");
+  assert.doesNotMatch(surface, /generateSpecialRequestIdempotencyKey/);
+});
+
 test("privacy-safe order sharing uses temporary Expo files and no sensitive references", () => {
   const platform = assertMarkers(
     "apps/app-client/runtime/src/platform/client-platform-actions.ts",
