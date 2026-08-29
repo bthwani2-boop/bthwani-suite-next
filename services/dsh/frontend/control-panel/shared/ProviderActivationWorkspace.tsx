@@ -239,13 +239,14 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
         {managerAllowed ? (
           <Box gap={2}>
             <ActorActivationCard
-              actorId={actorId}
-              expectedActorType={providerKind}
-              expectedSurface={`app-${providerKind}`}
-              issuedByActorId="dsh-operator" // Would normally come from auth context
-              disabled={!isReadyToIssue}
+              latestActivation={latest}
+              issuedCode={issuedCode}
+              busy={actionBusy}
+              onIssue={issueCode}
+              onRevoke={revokeCode}
+              issueDisabled={!isReadyToIssue}
               {...(!isReadyToIssue
-                ? { disabledReason: "لا يمكن الإصدار إلا إذا كانت الهوية جاهزة وجميع المتطلبات مكتملة" }
+                ? { issueDisabledReason: "لا يمكن الإصدار إلا إذا كانت الهوية جاهزة وجميع المتطلبات مكتملة" }
                 : {})}
             />
 

@@ -9,9 +9,14 @@ import { StoreAdminTable } from "./StoreAdminTable";
 import { StoreDetailAdminPanel } from "./StoreDetailAdminPanel";
 import { StoreAdminStateView } from "./StoreAdminStateView";
 import { StoreGovernanceActions } from "./StoreGovernanceActions";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../../shared/session/control-panel-permissions";
 
 export function StoreManagementScreen() {
   const controller = useStoreAdminController("authenticated");
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canManage = hasServiceControlPanelPermission(identity, "dsh", "partners.manage");
   const selectedDetail =
     controller.detailState?.kind === "success" ? controller.detailState.detail : null;
 
@@ -21,6 +26,7 @@ export function StoreManagementScreen() {
       header={
         <CpPageHeader title="إدارة المتاجر">
           {controller.kpi !== null && <StoreAdminKpiStrip kpi={controller.kpi} />}
+          {!canManage ? <span>قراءة فقط — حوكمة المتجر تتطلب صلاحية partners.manage.</span> : null}
         </CpPageHeader>
       }
       filters={<StoreAdminFilters filters={controller.filters} onChange={controller.setFilters} />}
@@ -54,10 +60,11 @@ export function StoreManagementScreen() {
     >
       <>
         {selectedDetail !== null && (
-          <StoreGovernanceActions
-            store={selectedDetail}
-            actionState={controller.actionState}
-            onSubmit={(input) => controller.govern(selectedDetail.id, input)}
+            <StoreGovernanceActions
+              store={selectedDetail}
+              actionState={controller.actionState}
+              canManage={canManage}
+              onSubmit={(input) => controller.govern(selectedDetail.id, input)}
           />
         )}
         <StoreAdminTable

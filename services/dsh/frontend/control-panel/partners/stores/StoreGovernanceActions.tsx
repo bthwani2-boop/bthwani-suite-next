@@ -13,10 +13,11 @@ import type {
 type Props = {
   readonly store: DshStoreAdminDetail;
   readonly actionState: StoreActionState;
+  readonly canManage: boolean;
   readonly onSubmit: (input: OperatorStoreGovernanceRequest) => Promise<void>;
 };
 
-export function StoreGovernanceActions({ store, actionState, onSubmit }: Props) {
+export function StoreGovernanceActions({ store, actionState, canManage, onSubmit }: Props) {
   const [action, setAction] = useState<OperatorStoreGovernanceRequest["action"]>("lifecycle");
   const [value, setValue] = useState("paused");
   const [reason, setReason] = useState("");
@@ -67,60 +68,64 @@ export function StoreGovernanceActions({ store, actionState, onSubmit }: Props) 
           كل إجراء محمي بالهوية، version check، idempotency، وسجل تدقيق.
         </p>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "0.75rem" }}>
-        <CpSelect
-          value={action}
-          aria-label="نوع إجراء الحوكمة"
-          options={[
-            { value: "lifecycle", label: "دورة حياة المتجر" },
-            { value: "serviceability", label: "قابلية الخدمة" },
-            { value: "partner-readiness", label: "جاهزية الشريك" },
-            { value: "catalog-approval", label: "اعتماد الكتالوج" },
-          ]}
-          onChange={(next) => {
-            const nextAction = next as OperatorStoreGovernanceRequest["action"];
-            setAction(nextAction);
-            setValue(
-              nextAction === "serviceability" ? "serviceable"
-                : nextAction === "partner-readiness" ? "pending"
-                : nextAction === "catalog-approval" ? "draft"
-                : "paused",
-            );
-          }}
-        />
-        <CpSelect
-          value={value}
-          aria-label="القيمة الجديدة"
-          options={options}
-          onChange={setValue}
-        />
-        <CpTextInput
-          value={reason}
-          onChange={setReason}
-          placeholder="سبب الإجراء"
-          aria-label="سبب إجراء الحوكمة"
-        />
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        <CpButton
-          disabled={
-            reason.trim().length < 3 ||
-            actionState.kind === "submitting"
-          }
-          onClick={() => void onSubmit({
-            expectedVersion: store.version,
-            action,
-            value,
-            reason: reason.trim(),
-          })}
-        >
-          {actionState.kind === "submitting" ? "جاري التطبيق…" : "تطبيق الإجراء وتسجيله"}
-        </CpButton>
-        {actionState.kind === "success" && <span role="status">تم التطبيق والتدقيق.</span>}
-        {(actionState.kind === "error" || actionState.kind === "conflict") && (
-          <span role="alert">{actionState.message}</span>
-        )}
-      </div>
+      {canManage ? (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: "0.75rem" }}>
+            <CpSelect
+              value={action}
+              aria-label="نوع إجراء الحوكمة"
+              options={[
+                { value: "lifecycle", label: "دورة حياة المتجر" },
+                { value: "serviceability", label: "قابلية الخدمة" },
+                { value: "partner-readiness", label: "جاهزية الشريك" },
+                { value: "catalog-approval", label: "اعتماد الكتالوج" },
+              ]}
+              onChange={(next) => {
+                const nextAction = next as OperatorStoreGovernanceRequest["action"];
+                setAction(nextAction);
+                setValue(
+                  nextAction === "serviceability" ? "serviceable"
+                    : nextAction === "partner-readiness" ? "pending"
+                    : nextAction === "catalog-approval" ? "draft"
+                    : "paused",
+                );
+              }}
+            />
+            <CpSelect
+              value={value}
+              aria-label="القيمة الجديدة"
+              options={options}
+              onChange={setValue}
+            />
+            <CpTextInput
+              value={reason}
+              onChange={setReason}
+              placeholder="سبب الإجراء"
+              aria-label="سبب إجراء الحوكمة"
+            />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <CpButton
+              disabled={
+                reason.trim().length < 3 ||
+                actionState.kind === "submitting"
+              }
+              onClick={() => void onSubmit({
+                expectedVersion: store.version,
+                action,
+                value,
+                reason: reason.trim(),
+              })}
+            >
+              {actionState.kind === "submitting" ? "جاري التطبيق…" : "تطبيق الإجراء وتسجيله"}
+            </CpButton>
+            {actionState.kind === "success" && <span role="status">تم التطبيق والتدقيق.</span>}
+            {(actionState.kind === "error" || actionState.kind === "conflict") && (
+              <span role="alert">{actionState.message}</span>
+            )}
+          </div>
+        </>
+      ) : <span>قراءة فقط — لا يمكن تعديل حوكمة المتجر بهذه الجلسة.</span>}
       {action === "lifecycle" && (value === "paused" || value === "suspended" || value === "closed") && (
         <div style={{ marginTop: "0.75rem", padding: "0.5rem", background: "var(--bthwani-control-panel-surface-muted)", color: "var(--bthwani-control-panel-danger)", borderRadius: "0.25rem" }}>
           <strong>تنبيه:</strong> سيؤثر هذا الإجراء فوراً على المتجر ولن يظهر للعملاء الجدد. سيتم إلغاء الطلبات غير المكتملة بناءً على الإجراء.
