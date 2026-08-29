@@ -12,7 +12,7 @@ import {
   colorRoles,
   brandScale,
 } from "@bthwani/ui-kit";
-import { shareClientTextDocument } from "../../../../../apps/app-client/runtime/src/platform/client-platform-actions";
+import { useDshClientPlatform } from "../client-platform-context";
 import {
   bidiIsolate,
   buildOrderTruthAccessibilityLabel,
@@ -66,6 +66,7 @@ type Props = {
 };
 
 function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (id: string) => void }) {
+  const { shareTextDocument } = useDshClientPlatform();
   const [expanded, setExpanded] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
@@ -81,7 +82,7 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
     if (sharing) return;
     setSharing(true);
     setShareError(null);
-    const shared = await shareClientTextDocument({
+    const shared = await shareTextDocument({
       fileNamePrefix: `bthwani-order-${order.orderNumber}`,
       contents: shareableOrderSummary(order),
       dialogTitle: `مشاركة ملخص الطلب ${order.orderNumber}`,

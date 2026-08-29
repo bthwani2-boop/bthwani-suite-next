@@ -22,8 +22,7 @@ import {
   radius,
   spacing,
 } from "@bthwani/ui-kit";
-import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
-import { createClientEphemeralId } from "../../../../../apps/app-client/runtime/src/platform/client-platform-actions";
+import { useDshClientPlatform } from "../client-platform-context";
 import {
   fetchHomePublicReels,
   recordHomeMarketingEvent,
@@ -69,6 +68,7 @@ export function HomeDiscoveryShell({
   onMarketingAction,
   onRetry,
 }: Props) {
+  const { createEphemeralId } = useDshClientPlatform();
   const isRtl = I18nManager.isRTL;
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
@@ -76,7 +76,7 @@ export function HomeDiscoveryShell({
   const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
   const [reelsLoadState, setReelsLoadState] = React.useState<HomeReelsLoadState>("idle");
   const [videoOpenRequest, setVideoOpenRequest] = React.useState(0);
-  const [viewerRef] = React.useState(() => createClientEphemeralId("home"));
+  const [viewerRef] = React.useState(() => createEphemeralId("home"));
   const reelsRequestSequence = React.useRef(0);
   const recordedImpressions = React.useRef(new Set<string>());
 
@@ -377,6 +377,7 @@ function CategoryOption({
   readonly isRtl: boolean;
   readonly onPress: () => void;
 }) {
+  const { RemoteImage } = useDshClientPlatform();
   const iconIsImageUrl = /^https?:\/\//i.test(icon) || icon.startsWith("/");
 
   return (
@@ -398,7 +399,7 @@ function CategoryOption({
       <Text style={[styles.dropdownLabel, selected && styles.dropdownLabelActive]}>{label}</Text>
       <View style={[styles.emojiContainer, selected && styles.emojiContainerActive]}>
         {iconIsImageUrl ? (
-          <ClientRemoteImage
+          <RemoteImage
             uri={icon}
             style={styles.dropdownIconImage}
             contentFit="contain"

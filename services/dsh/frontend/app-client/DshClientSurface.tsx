@@ -3,7 +3,7 @@ import { StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "./shell/AppHeader";
 import { BottomNavBar, type BottomNavItem } from "./shell/BottomNavBar";
-import { openClientExternalUrl, performClientSelectionHaptic } from "../../../../apps/app-client/runtime/src/platform/client-platform-actions";
+import { useDshClientPlatform } from "./client-platform-context";
 import { LoadingState, brandScale, colorRoles, Icon, StateView } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "./home-discovery/HomeDiscoveryRoute";
 import { StoreDiscoveryRoute } from "./store/StoreDiscoveryRoute";
@@ -74,6 +74,7 @@ function isClientTab(value: string): value is ClientTab {
 
 export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
   const insets = useSafeAreaInsets();
+  const { selectionHaptic, openExternalUrl } = useDshClientPlatform();
   const activeTab = routeTab(route);
   const [activeCartDiscovery, setActiveCartDiscovery] = useState<"idle" | "loading" | "empty" | "error">("idle");
   const [cartRetryToken, setCartRetryToken] = useState(0);
@@ -88,9 +89,9 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
   }, [ordersState]);
 
   const navigate = useCallback((nextRoute: DshClientRoute, mode: "push" | "replace" = "push") => {
-    void performClientSelectionHaptic();
+    void selectionHaptic();
     navigation.navigate(nextRoute, mode);
-  }, [navigation]);
+  }, [navigation, selectionHaptic]);
 
   const cartStoreId = route.kind === "cart" ? route.storeId : undefined;
   useEffect(() => {
@@ -124,8 +125,8 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
   const openHomeMarketingAction = useCallback((actionType: string, actionTarget: string) => {
     const target = actionTarget.trim();
     if (actionType === "store" && target) navigate({ kind: "store", storeId: target });
-    else if (actionType === "external") void openClientExternalUrl(target);
-  }, [navigate]);
+    else if (actionType === "external") void openExternalUrl(target);
+  }, [navigate, openExternalUrl]);
   const openSpecialRequestType = useCallback((requestType: DshHomeSpecialRequestTarget) => {
     navigate({ kind: requestType === "SHEIN_ASSISTED_PURCHASE" ? "special-request-shein" : "special-request-awnak" });
   }, [navigate]);
@@ -221,7 +222,7 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
           {...(activeOrder ? { tickerStatusLabel: "طلب نشط", tickerMessage: `طلبك #${activeOrder.orderNumber} · ${toOrderTruthSummary(activeOrder).statusLabel}`, onTickerPress: () => navigate({ kind: "order", orderId: activeOrder.id }) } : {})}
           searchSlot={isSearchActive ? <TextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="ابحث عن متجر أو فئة..." placeholderTextColor={colorRoles.textMuted} style={{ height: 36, backgroundColor: colorRoles.surfaceBase, borderRadius: 18, paddingHorizontal: 16, textAlign: "right", flex: 1, fontSize: 14 }} autoFocus /> : undefined}
           actions={[
-            { icon: <Icon name={isSearchActive ? "close-outline" : "search-outline"} size={20} color={colorRoles.surfaceBase} />, accessibilityLabel: "بحث", onPress: () => { void performClientSelectionHaptic(); if (isSearchActive) setSearchQuery(""); setIsSearchActive((value) => !value); } },
+            { icon: <Icon name={isSearchActive ? "close-outline" : "search-outline"} size={20} color={colorRoles.surfaceBase} />, accessibilityLabel: "بحث", onPress: () => { void selectionHaptic(); if (isSearchActive) setSearchQuery(""); setIsSearchActive((value) => !value); } },
             { icon: <Icon name="notifications-outline" size={20} color={colorRoles.surfaceBase} />, accessibilityLabel: "الإشعارات", onPress: () => navigate({ kind: "notifications" }) },
             { icon: <Icon name="cart-outline" size={20} color={colorRoles.surfaceBase} />, accessibilityLabel: "عربة التسوق", onPress: () => navigate({ kind: "cart" }) },
           ]}

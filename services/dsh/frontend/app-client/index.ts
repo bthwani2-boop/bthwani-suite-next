@@ -1,6 +1,15 @@
 export { DshClientSurface } from "./DshClientSurface";
 export type { DshClientSurfaceProps } from "./DshClientSurface";
 export {
+  DshClientPlatformProvider,
+  useDshClientPlatform,
+} from "./client-platform-context";
+export type {
+  DshClientPlatform,
+  DshClientRemoteImageProps,
+  DshClientShareTextDocumentInput,
+} from "./client-platform-context";
+export {
   dshClientRouteFromActionUrl,
   dshClientRouteToPath,
 } from "./client-navigation";

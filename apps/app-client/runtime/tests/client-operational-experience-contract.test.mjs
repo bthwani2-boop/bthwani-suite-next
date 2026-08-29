@@ -48,11 +48,25 @@ test("client native wiring leaves inbound URL navigation to Expo Router", () => 
   assert.match(platform, /linking: Linking/);
 });
 
+test("client platform capabilities cross the runtime boundary through the DSH adapter", () => {
+  const surface = assertMarkers(
+    "services/dsh/frontend/app-client/DshClientSurface.tsx",
+    ["useDshClientPlatform", "selectionHaptic", "openExternalUrl"],
+  );
+  assert.doesNotMatch(surface, /apps\/app-client\/runtime/);
+  const runtime = assertMarkers(
+    "apps/app-client/runtime/src/App.tsx",
+    ["DshClientPlatformProvider", "RemoteImage: ClientRemoteImage", "selectionHaptic: performClientSelectionHaptic", "shareTextDocument: shareClientTextDocument"],
+  );
+  assert.match(runtime, /<DshClientPlatformProvider platform=\{clientPlatform\}>/);
+});
+
 test("client discovery exposes real search, cached images, and a persistent donor-style reels launcher", () => {
   const discovery = assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx",
     [
-      "createClientEphemeralId",
+      "useDshClientPlatform",
+      "createEphemeralId",
       "searchQuery",
       "normalizedQuery",
       "setReels([])",
@@ -183,7 +197,7 @@ test("client order and support routes remain navigable and failure-safe", () => 
   );
   assertMarkers(
     "services/dsh/frontend/app-client/DshClientSurface.tsx",
-    ["openClientExternalUrl", "onOpenPickup={openPickupSession}", "onOpenOrderSupport={openOrderSupport}", "performClientSelectionHaptic"],
+    ["openExternalUrl", "onOpenPickup={openPickupSession}", "onOpenOrderSupport={openOrderSupport}", "selectionHaptic"],
   );
 });
 
@@ -275,7 +289,7 @@ test("privacy-safe order sharing uses temporary Expo files and no sensitive refe
 
   const orders = assertMarkers(
     "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
-    ["shareClientTextDocument", "shareableOrderSummary", "مشاركة الملخص"],
+    ["shareTextDocument", "shareableOrderSummary", "مشاركة الملخص"],
   );
   const summaryStart = orders.indexOf("function shareableOrderSummary");
   const summaryEnd = orders.indexOf("type Props", summaryStart);
