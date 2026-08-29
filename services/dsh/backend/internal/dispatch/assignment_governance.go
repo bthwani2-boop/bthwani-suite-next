@@ -556,25 +556,48 @@ func CreateGovernedAssignment(db *sql.DB, input GovernedCreateAssignmentInput) (
 	return assignment, false, nil
 }
 
-func AcceptGovernedAssignmentForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string) (*Assignment, error) {
+func AcceptGovernedAssignmentForOperatorContext(
+	db *sql.DB,
+	operatorContextID,
+	assignmentID,
+	captainID,
+	idempotencyKey,
+	correlationID string,
+) (*Assignment, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
 		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
-	return acceptGovernedAssignment(db, operatorContextID, assignmentID, captainID)
+	return acceptGovernedAssignment(db, operatorContextID, assignmentID, captainID, idempotencyKey, correlationID)
 }
 
-func acceptGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmentID, captainID string) (*Assignment, error) {
+func acceptGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmentID, captainID, idempotencyKey, correlationID string) (*Assignment, error) {
 	assignmentID = strings.TrimSpace(assignmentID)
 	captainID = strings.TrimSpace(captainID)
 	if assignmentID == "" || captainID == "" {
 		return nil, fmt.Errorf("%w: assignmentId and captainId are required", ErrInvalid)
+	}
+	command, err := newCaptainAssignmentCommand(
+		requestedOperatorContextID, captainID, assignmentID, "accept", idempotencyKey, correlationID,
+	)
+	if err != nil {
+		return nil, err
 	}
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
+	replayed, err := beginCaptainAssignmentCommand(tx, command)
+	if err != nil {
+		return nil, err
+	}
+	if replayed {
+		if err = tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetCaptainAssignmentForOperatorContext(db, requestedOperatorContextID, assignmentID, captainID)
+	}
 	current, err := lockAssignmentForOperatorContext(tx, requestedOperatorContextID, assignmentID, captainID)
 	if err != nil {
 		return nil, err
@@ -607,6 +630,9 @@ func acceptGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignment
 		"accepted", "CAPTAIN_ACCEPTED", "", captainID, "captain", nil); err != nil {
 		return nil, err
 	}
+	if err = recordCaptainAssignmentCommand(tx, command); err != nil {
+		return nil, err
+	}
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -616,15 +642,24 @@ func acceptGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignment
 	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }
 
-func DeclineGovernedAssignmentForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID, reasonCode, reason string) (*Assignment, error) {
+func DeclineGovernedAssignmentForOperatorContext(
+	db *sql.DB,
+	operatorContextID,
+	assignmentID,
+	captainID,
+	reasonCode,
+	reason,
+	idempotencyKey,
+	correlationID string,
+) (*Assignment, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
 		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
-	return declineGovernedAssignment(db, operatorContextID, assignmentID, captainID, reasonCode, reason)
+	return declineGovernedAssignment(db, operatorContextID, assignmentID, captainID, reasonCode, reason, idempotencyKey, correlationID)
 }
 
-func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmentID, captainID, reasonCode, reason string) (*Assignment, error) {
+func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmentID, captainID, reasonCode, reason, idempotencyKey, correlationID string) (*Assignment, error) {
 	assignmentID = strings.TrimSpace(assignmentID)
 	captainID = strings.TrimSpace(captainID)
 	reasonCode = strings.TrimSpace(reasonCode)
@@ -632,11 +667,28 @@ func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmen
 	if assignmentID == "" || captainID == "" || reasonCode == "" || reason == "" {
 		return nil, fmt.Errorf("%w: assignmentId, captainId, reasonCode, and reason are required", ErrInvalid)
 	}
+	command, err := newCaptainAssignmentCommand(
+		requestedOperatorContextID, captainID, assignmentID, "decline", idempotencyKey, correlationID,
+		reasonCode, reason,
+	)
+	if err != nil {
+		return nil, err
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
+	replayed, err := beginCaptainAssignmentCommand(tx, command)
+	if err != nil {
+		return nil, err
+	}
+	if replayed {
+		if err = tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetCaptainAssignmentForOperatorContext(db, requestedOperatorContextID, assignmentID, captainID)
+	}
 	current, err := lockAssignmentForOperatorContext(tx, requestedOperatorContextID, assignmentID, captainID)
 	if err != nil {
 		return nil, err
@@ -672,6 +724,9 @@ func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmen
 		return nil, err
 	}
 	if err = checkoutfinanceoutbox.EnqueueCodReservationReleaseForOrderTx(tx, current.OrderID, "declined: "+reasonCode, current.OrderID); err != nil {
+		return nil, err
+	}
+	if err = recordCaptainAssignmentCommand(tx, command); err != nil {
 		return nil, err
 	}
 	if err = tx.Commit(); err != nil {

@@ -159,6 +159,10 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
+		return
+	}
 
 	readiness, err := s.getCaptainAggregatedReadiness(r, actor.OperatorContextID, actor.ID)
 	if err != nil {
@@ -197,8 +201,6 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		tx.Rollback()
 	}
 
-	correlationID := r.Header.Get("X-Correlation-Id")
-
 	if isCod {
 		session, err := s.wlt.GetPaymentSession(wlt.WithOperatorContext(r.Context(), actor.OperatorContextID), sessionID)
 		if err != nil {
@@ -212,7 +214,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		orderAmount = session.TenderAllocation.CashOnDeliveryAmountMinorUnits
 		orderCurrency = session.Currency
 		if orderAmount > 0 {
-			_, _, err = s.wlt.ReserveCodCapacity(r.Context(), assignment.OrderID, checkoutIntentID, actor.ID, orderAmount, orderCurrency, correlationID, "accept_"+assignment.ID)
+			_, _, err = s.wlt.ReserveCodCapacity(r.Context(), assignment.OrderID, checkoutIntentID, actor.ID, orderAmount, orderCurrency, correlationID, idempotencyKey)
 			if err != nil {
 				if strings.Contains(err.Error(), "INSUFFICIENT") {
 					store.SendError(w, http.StatusConflict, "INSUFFICIENT_COD_CAPACITY", "insufficient COD capacity to accept this order")
@@ -225,7 +227,9 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 	}
 
 	originalAssignment := assignment
-	acceptedAssignment, err := dispatch.AcceptGovernedAssignmentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID)
+	acceptedAssignment, err := dispatch.AcceptGovernedAssignmentForOperatorContext(
+		s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID, idempotencyKey, correlationID,
+	)
 	if err != nil {
 		if isCod && originalAssignment != nil && originalAssignment.OrderID != "" {
 			currentAssignment, readErr := dispatch.GetCaptainAssignmentForOperatorContext(s.db, actor.OperatorContextID, originalAssignment.ID, actor.ID)
@@ -249,11 +253,16 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		writeGovernedDispatchError(w, err)
 		return
 	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	store.SendJSON(w, http.StatusOK, map[string]any{"assignment": payload})
 }
 
 func (s *protectedStoreServer) handleDeclineGovernedDispatchAssignment(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
+	if !ok {
+		return
+	}
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
 	if !ok {
 		return
 	}
@@ -266,7 +275,7 @@ func (s *protectedStoreServer) handleDeclineGovernedDispatchAssignment(w http.Re
 	}
 	assignmentID := r.PathValue("assignmentId")
 	assignment, err := dispatch.DeclineGovernedAssignmentForOperatorContext(
-		s.db, actor.OperatorContextID, assignmentID, actor.ID, body.ReasonCode, body.Reason,
+		s.db, actor.OperatorContextID, assignmentID, actor.ID, body.ReasonCode, body.Reason, idempotencyKey, correlationID,
 	)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
@@ -277,6 +286,7 @@ func (s *protectedStoreServer) handleDeclineGovernedDispatchAssignment(w http.Re
 		writeGovernedDispatchError(w, err)
 		return
 	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	store.SendJSON(w, http.StatusOK, map[string]any{"assignment": payload})
 }
 
@@ -575,6 +585,8 @@ func parseDispatchLimit(raw string, fallback int) int {
 
 func writeGovernedDispatchError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, dispatch.ErrIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different Captain dispatch command")
 	case errors.Is(err, dispatch.ErrAvailabilityProjectionStale):
 		store.SendError(w, http.StatusConflict, "STALE_SOURCE_VERSION", err.Error())
 	case errors.Is(err, dispatch.ErrAvailabilityProjectionIdempotencyConflict):

@@ -27,15 +27,16 @@ export function fetchOwnCaptainAvailability(): Promise<DshCaptainAvailability> {
   return request<DshCaptainAvailability>("/dsh/captain/dispatch/availability");
 }
 
-export type DshCaptainAvailabilityMutationContext = {
+export type DshCaptainCommandContext = {
   readonly idempotencyKey: string;
   readonly correlationId: string;
 };
+export type DshCaptainAvailabilityMutationContext = DshCaptainCommandContext;
 
 export async function setOwnCaptainAvailability(
   status: Extract<DshCaptainAvailabilityStatus, "available" | "unavailable">,
   expectedVersion: number,
-  mutation: DshCaptainAvailabilityMutationContext,
+  mutation: DshCaptainCommandContext,
 ): Promise<DshCaptainAvailability> {
   const readback = await request<DshCaptainAvailability>("/dsh/captain/dispatch/availability", {
     method: "PATCH",
@@ -97,10 +98,17 @@ export async function upsertCaptainDispatchProfile(
   return data.candidate;
 }
 
-export async function acceptDispatchAssignment(assignmentId: string, idempotencyKey?: string): Promise<DshDispatchAssignment> {
+export async function acceptDispatchAssignment(
+  assignmentId: string,
+  mutation: DshCaptainCommandContext,
+): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/accept`,
-    { method: "POST", idempotencyKey: idempotencyKey ?? corrId("captain-dispatch-accept") },
+    {
+      method: "POST",
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
   return data.assignment;
 }
@@ -109,11 +117,16 @@ export async function declineDispatchAssignment(
   assignmentId: string,
   reason: string,
   reasonCode = "captain_declined",
-  idempotencyKey?: string,
+  mutation: DshCaptainCommandContext,
 ): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/decline`,
-    { method: "POST", body: { reasonCode, reason }, idempotencyKey: idempotencyKey ?? corrId("captain-dispatch-decline") },
+    {
+      method: "POST",
+      body: { reasonCode, reason },
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
   return data.assignment;
 }

@@ -11,6 +11,10 @@ import {
 import { corrId } from '../_kernel/dsh-http-request';
 import { useIdentitySession } from '@bthwani/core-identity';
 import {
+  clearCaptainAssignmentCommandAttempt,
+  getOrCreateCaptainAssignmentCommandAttempt,
+} from './captain-assignment-command-attempt';
+import {
   flushPendingForegroundDispatchLocations,
   syncForegroundDispatchLocation,
   type DshDispatchLocationSyncResult,
@@ -94,25 +98,46 @@ export function useCaptainOrderRuntime() {
   }, [actorId]);
 
   const acceptTask = React.useCallback(
-    (assignmentId: string, _captainId: string) => {
-      const command = commandFor(`accept:${assignmentId}`);
-      return acceptDispatchAssignment(assignmentId, command.id).then((result) => {
-        delete commandIds.current[command.key];
-        return result;
-      });
+    async (assignmentId: string, _captainId: string) => {
+      const currentActorId = actorId;
+      if (!currentActorId) throw new Error('جلسة الكابتن غير جاهزة لتنفيذ العملية.');
+      const intent = { actorId: currentActorId, assignmentId, decision: 'accept' as const };
+      const attempt = await getOrCreateCaptainAssignmentCommandAttempt(intent);
+      let result;
+      try {
+        result = await acceptDispatchAssignment(assignmentId, attempt.context);
+      } catch {
+        result = await acceptDispatchAssignment(assignmentId, attempt.context);
+      }
+      await clearCaptainAssignmentCommandAttempt(intent, attempt.signature);
+      return result;
     },
-    [commandFor],
+    [actorId],
   );
 
   const declineTask = React.useCallback(
-    (assignmentId: string, _captainId: string, reason: string) => {
-      const command = commandFor(`decline:${assignmentId}:${reason}`);
-      return declineDispatchAssignment(assignmentId, reason, 'captain_declined', command.id).then((result) => {
-        delete commandIds.current[command.key];
-        return result;
-      });
+    async (assignmentId: string, _captainId: string, reason: string) => {
+      const currentActorId = actorId;
+      if (!currentActorId) throw new Error('جلسة الكابتن غير جاهزة لتنفيذ العملية.');
+      const normalizedReason = reason.trim();
+      const intent = {
+        actorId: currentActorId,
+        assignmentId,
+        decision: 'decline' as const,
+        reasonCode: 'captain_declined',
+        reason: normalizedReason,
+      };
+      const attempt = await getOrCreateCaptainAssignmentCommandAttempt(intent);
+      let result;
+      try {
+        result = await declineDispatchAssignment(assignmentId, normalizedReason, 'captain_declined', attempt.context);
+      } catch {
+        result = await declineDispatchAssignment(assignmentId, normalizedReason, 'captain_declined', attempt.context);
+      }
+      await clearCaptainAssignmentCommandAttempt(intent, attempt.signature);
+      return result;
     },
-    [commandFor],
+    [actorId],
   );
 
   const transitionDeliveryStatus = React.useCallback(
