@@ -79,6 +79,17 @@ test("control-panel authentication preserves governed DSH and WLT return paths",
   assert.match(source, /resolveControlPanelReturnTo\(pathname\)/);
 });
 
+test("control-panel route ancestry is segment-bound and rejects sibling prefixes", () => {
+  assert.equal(routes.isControlPanelRouteWithin("/dsh/operations", "/dsh/operations"), true);
+  assert.equal(routes.isControlPanelRouteWithin("/dsh/operations/live-orders", "/dsh/operations"), true);
+  assert.equal(routes.isControlPanelRouteWithin("/dsh/operations-legacy", "/dsh/operations"), false);
+  assert.equal(routes.isControlPanelRouteWithin("/wlt/finance-old", "/wlt/finance"), false);
+  assert.equal(routes.isGovernedControlPanelShellPath("/dshx"), false);
+  assert.equal(routes.isGovernedControlPanelShellPath("/wltx/finance"), false);
+  assert.match(navigationSource, /isControlPanelRouteWithin\(pathname, item\.route\)/);
+  assert.doesNotMatch(navigationSource, /pathname\.startsWith\(item\.route\)/);
+});
+
 test("control-panel section navigation and deep links share one fail-closed read contract", () => {
   assert.match(navigationSource, /readRequirements:/);
   assert.match(navigationSource, /canReadDshNavItem/);
