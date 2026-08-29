@@ -116,17 +116,6 @@ export function SovereignLeadershipPanel() {
     void reload();
   }, [reload]);
 
-  if (!canRead && !canCreate) {
-    return (
-      <CpStatePanel
-        role="alert"
-        title="صلاحية القيادة السيادية مطلوبة"
-        description="تتطلب قراءة الكادر leadership:read أو إنشاء التكليفات leadership:create على Workforce."
-        code="WORKFORCE_LEADERSHIP_PERMISSION_REQUIRED"
-      />
-    );
-  }
-
   const availableBundles = useMemo(
     () => references?.permissionBundles.filter((bundle) =>
       employmentClass !== "" && bundle.allowedEmploymentClasses.includes(employmentClass),
@@ -173,6 +162,17 @@ export function SovereignLeadershipPanel() {
       !submitting,
     [dateError, department, employmentClass, fullNameAr, permissionBundle, phoneE164, positionTitle, submitting, username],
   );
+
+  if (!canRead && !canCreate) {
+    return (
+      <CpStatePanel
+        role="alert"
+        title="صلاحية القيادة السيادية مطلوبة"
+        description="تتطلب قراءة الكادر leadership:read أو إنشاء التكليفات leadership:create على Workforce."
+        code="WORKFORCE_LEADERSHIP_PERMISSION_REQUIRED"
+      />
+    );
+  }
 
   const submit = async () => {
     const currentDateError = assignmentDateError(assignmentStartsOn, assignmentEndsOn);
