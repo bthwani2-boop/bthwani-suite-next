@@ -20,40 +20,58 @@ export function usePartnerOrdersRuntime(route: string, storeId?: string) {
   const [state, setState] = React.useState<PartnerOrdersState>(
     route === 'inbox' ? 'loading' : 'disabled',
   );
+  const mountedRef = React.useRef(true);
+  const requestSeqRef = React.useRef(0);
 
-  const fetchOrders = React.useCallback(async () => {
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestSeqRef.current += 1;
+    };
+  }, []);
+
+  const fetchOrders = React.useCallback(async (): Promise<boolean> => {
+    const requestSeq = ++requestSeqRef.current;
     const scopedStoreId = storeId?.trim();
-    if (!scopedStoreId) {
-      setOrders([]);
-      setState('loading');
-      return;
+    const routeCanReadOrders = route === 'inbox' || route === 'bell';
+
+    if (!routeCanReadOrders) {
+      if (mountedRef.current) {
+        setOrders([]);
+        setState('disabled');
+      }
+      return false;
     }
+
+    if (!scopedStoreId) {
+      if (mountedRef.current) {
+        setOrders([]);
+        setState('loading');
+      }
+      return false;
+    }
+
+    setState('loading');
     try {
       const result = await fetchPartnerOrders(undefined, scopedStoreId);
+      if (!mountedRef.current || requestSeq !== requestSeqRef.current) return false;
       const nextOrders = result.map(mapDshOrderToPartnerOrderItem);
       setOrders(nextOrders);
       setState(nextOrders.length === 0 ? 'empty' : 'ready');
+      return true;
     } catch (error) {
+      if (!mountedRef.current || requestSeq !== requestSeqRef.current) return false;
       const classified = classifyOrderError(error);
       setOrders([]);
       setState(classified.kind === 'offline' ? 'offline' : 'error');
+      return false;
     }
-  }, [storeId]);
+  }, [route, storeId]);
 
   React.useEffect(() => {
-    if (route !== 'inbox' && route !== 'bell') {
-      setOrders([]);
-      setState('disabled');
-      return;
-    }
-    if (!storeId?.trim()) {
-      setOrders([]);
-      setState('loading');
-      return;
-    }
-    setState('loading');
     void fetchOrders();
-  }, [route, storeId, fetchOrders]);
+  }, [fetchOrders]);
 
   return {
     orders,
