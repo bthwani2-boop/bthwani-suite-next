@@ -79,7 +79,8 @@ export function useWltPaymentController(input?: {
   const walletBalance = wallet?.availableBalanceMinorUnits ?? 0;
   const currency = input?.currency?.trim().toUpperCase() ?? "";
   const hasUsableWallet = Boolean(
-    wallet &&
+    providerPaymentsEnabled &&
+      wallet &&
       !walletLoading &&
       currency &&
       wallet.currency.toUpperCase() === currency,
@@ -88,10 +89,10 @@ export function useWltPaymentController(input?: {
   const hasPartialWallet = hasUsableWallet && walletBalance > 0 && walletBalance < total;
 
   const setPaymentMethod = useCallback((method: PaymentMethodKey) => {
-    if (method === "wallet" && !hasSufficientWallet) return;
-    if (method === "mixed" && !hasPartialWallet) return;
+    if (method === "wallet" && (!providerPaymentsEnabled || !hasSufficientWallet)) return;
+    if (method === "mixed" && (!providerPaymentsEnabled || !hasPartialWallet)) return;
     setPaymentMethodState(method);
-  }, [hasPartialWallet, hasSufficientWallet]);
+  }, [hasPartialWallet, hasSufficientWallet, providerPaymentsEnabled]);
 
   const paymentDecisionOptions = useMemo<readonly PaymentDecisionOption[]>(
     () => [
@@ -107,14 +108,18 @@ export function useWltPaymentController(input?: {
         id: "wallet",
         title: "من رصيد محفظة بثواني",
         description: "خصم فوري مباشر من رصيد محفظتك الرقمية.",
-        disabled: !hasSufficientWallet,
-        statusLabel: wallet === null
+        disabled: !providerPaymentsEnabled || !hasSufficientWallet,
+        statusLabel: !providerPaymentsEnabled
+          ? "غير متاح حاليًا"
+          : wallet === null
           ? (walletLoading ? "جاري الفحص..." : "متاح")
           : hasSufficientWallet
             ? (paymentMethod === "wallet" ? "محدد" : "متاح")
             : (!currency ? "يتطلب إجماليًا معتمدًا" : walletBalance === 0 ? "الرصيد: 0" : "رصيد غير كافٍ"),
         statusTone: hasSufficientWallet ? (paymentMethod === "wallet" ? "action" : "success") : "warning",
-        helperText: wallet
+        helperText: !providerPaymentsEnabled
+          ? "الدفع من المحفظة غير مفعّل حاليًا لهذا التطبيق."
+          : wallet
           ? `رصيد المحفظة الحالي: ${formatWltMoney(walletBalance, wallet.currency)}`
           : "متصلة مباشرة بالنظام المالي WLT.",
       },
@@ -122,10 +127,14 @@ export function useWltPaymentController(input?: {
         id: "mixed",
         title: "دفع مختلط (محفظة + نقدًا)",
         description: "استخدام رصيد المحفظة المتوفر ودفع المتبقي نقدًا.",
-        disabled: !hasPartialWallet,
-        statusLabel: hasPartialWallet ? (paymentMethod === "mixed" ? "محدد" : "متاح") : "غير متاح",
+        disabled: !providerPaymentsEnabled || !hasPartialWallet,
+        statusLabel: !providerPaymentsEnabled
+          ? "غير متاح حاليًا"
+          : hasPartialWallet ? (paymentMethod === "mixed" ? "محدد" : "متاح") : "غير متاح",
         statusTone: paymentMethod === "mixed" ? "action" : "info",
-        helperText: wallet && hasPartialWallet
+        helperText: !providerPaymentsEnabled
+          ? "الدفع المختلط غير مفعّل حاليًا لهذا التطبيق."
+          : wallet && hasPartialWallet
           ? `رصيدك ${formatWltMoney(walletBalance, wallet.currency)} والباقي نقدًا.`
           : "يتم احتساب الرصيد المتاح وتكملة الباقي نقدًا.",
       },

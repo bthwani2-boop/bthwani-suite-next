@@ -347,6 +347,22 @@ test("checkout keeps an unresolved payment intent visible and blocks duplicate s
   );
 });
 
+test("client payment choices honor the provider capability boundary", () => {
+  const payment = assertMarkers(
+    "services/dsh/frontend/wlt/payment/use-wlt-payment-controller.tsx",
+    [
+      "providerPaymentsEnabled &&",
+      "method === \"wallet\" && (!providerPaymentsEnabled || !hasSufficientWallet)",
+      "method === \"mixed\" && (!providerPaymentsEnabled || !hasPartialWallet)",
+      "disabled: !providerPaymentsEnabled || !hasSufficientWallet",
+      "disabled: !providerPaymentsEnabled || !hasPartialWallet",
+      "الدفع من المحفظة غير مفعّل حاليًا لهذا التطبيق.",
+      "الدفع المختلط غير مفعّل حاليًا لهذا التطبيق.",
+    ],
+  );
+  assert.match(payment, /providerPaymentsEnabled/);
+});
+
 test("privacy-safe order sharing uses temporary Expo files and no sensitive references", () => {
   const platform = assertMarkers(
     "apps/app-client/runtime/src/platform/client-platform-actions.ts",
