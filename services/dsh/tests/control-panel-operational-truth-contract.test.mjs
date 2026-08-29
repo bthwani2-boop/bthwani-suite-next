@@ -18,6 +18,14 @@ const supportDashboard = readFileSync(
   "services/dsh/frontend/control-panel/support/SupportDashboardScreen.tsx",
   "utf8",
 );
+const financeDashboard = readFileSync(
+  "services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx",
+  "utf8",
+);
+const payoutPanel = readFileSync(
+  "services/dsh/frontend/control-panel/finance/PayoutRequestsPanel.tsx",
+  "utf8",
+);
 
 test("marketing kpis are rendered only when backed by the owning API", () => {
   assert.match(marketingDashboard, /metrics\.isBackedByApi\s*\?\s*\(/);
@@ -38,6 +46,20 @@ test("support kpis require both runtime sources to be proven", () => {
   assert.match(supportDashboard, /supportMetricsProven \? buildSupportKpiMetrics\(tickets, incidents\) : null/);
   assert.match(supportDashboard, /تعذر إثبات مؤشرات الدعم/);
   assert.match(supportDashboard, /لن تُعرض أرقام صفرية أو جزئية على أنها حقيقة تشغيلية/);
+});
+
+test("finance hub metrics fail closed and published finance owners are composed explicitly", () => {
+  assert.match(financeDashboard, /financeHubProven = activeState === "ready" && runtimeFinance\?\.state === "runtime"/);
+  assert.match(financeDashboard, /لن تُعرض مؤشرات Finance Hub حتى تُثبت القراءة الحية من WLT/);
+  assert.match(financeDashboard, /activeSub === "payments"[\s\S]*<PaymentSessionOperationsScreen \/>/);
+  assert.match(financeDashboard, /activeSub === "client-wallets"[\s\S]*actorType="client" lockActorType/);
+  assert.match(financeDashboard, /activeSub === "partner-wallets"[\s\S]*actorType="partner" lockActorType/);
+  assert.match(financeDashboard, /activeSub === "captain-wallets"[\s\S]*actorType="captain" lockActorType/);
+  assert.match(financeDashboard, /activeSub === "commissions"[\s\S]*<CommissionGovernancePanel/);
+  assert.match(financeDashboard, /activeSub === "reconciliation"[\s\S]*<ReconciliationCasesPanel/);
+  assert.match(financeDashboard, /activeSub === "partners"[\s\S]*<GovernedSettlementPanel/);
+  assert.match(financeDashboard, /FinanceCapabilityGap/);
+  assert.doesNotMatch(payoutPanel, /GovernedSettlementPanel|CommissionGovernancePanel/);
 });
 
 test("operational dashboard does not request partner or dispatch reads without their permissions", () => {
