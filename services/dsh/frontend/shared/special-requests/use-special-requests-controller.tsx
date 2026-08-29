@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { corrId } from "../_kernel/dsh-http-request";
 import {
   approveSpecialRequestQuote,
   assignSpecialRequestDispatch,
@@ -43,6 +42,10 @@ import {
   fingerprintSpecialRequestInput,
   getOrCreateSpecialRequestCreateAttempt,
 } from "./special-request-create-attempt";
+import {
+  clearClientSpecialRequestCommandAttempt,
+  getOrCreateClientSpecialRequestCommandAttempt,
+} from "./client-special-request-command-attempt";
 
 function listLoadStateForError(error: ClassifiedSpecialRequestError): DshSpecialRequestListLoadState {
   switch (error.kind) {
@@ -61,16 +64,6 @@ function listLoadStateForError(error: ClassifiedSpecialRequestError): DshSpecial
 export function useSpecialRequestsController() {
   const identity = useIdentitySession();
   const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
-  const commandIds = useRef<Record<string, string>>({});
-  const commandFor = useCallback((scope: string) => {
-    if (!actorId) throw new Error("جلسة العميل غير جاهزة لتنفيذ طلب الخدمة.");
-    const key = `${actorId}:${scope}`;
-    const existing = commandIds.current[key];
-    if (existing) return existing;
-    const id = corrId("client-special-request");
-    commandIds.current[key] = id;
-    return id;
-  }, [actorId]);
   const [state, setState] = useState<DshSpecialRequestState>(specialRequestIdleState());
 
   const submit = useCallback(async (input: DshCreateSpecialRequestInput): Promise<boolean> => {
@@ -102,30 +95,48 @@ export function useSpecialRequestsController() {
       setState(resolveSubmitError({ kind: "forbidden" }));
       return;
     }
-    const commandId = commandFor(`cancel:${id}:${expectedVersion ?? "current"}`);
     setState(beginSubmit());
     try {
-      await cancelSpecialRequest(id, expectedVersion, commandId);
-      setState(resolveCancelSuccess(await fetchClientSpecialRequest(id)));
+      const attempt = await getOrCreateClientSpecialRequestCommandAttempt({
+        actorId,
+        requestId: id,
+        action: "cancel",
+        expectedVersion,
+      });
+      await cancelSpecialRequest(id, expectedVersion, attempt.context);
+      const readback = await fetchClientSpecialRequest(id);
+      if (readback.status === "cancelled") {
+        await clearClientSpecialRequestCommandAttempt({ actorId, requestId: id, action: "cancel", expectedVersion }, attempt.signature);
+      }
+      setState(resolveCancelSuccess(readback));
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
     }
-    }, [actorId, commandFor, state.kind]);
+    }, [actorId, state.kind]);
   const approveQuote = useCallback(async (id: string, expectedVersion: number) => {
     if (state.kind === "submitting") return;
     if (!actorId) {
       setState(resolveSubmitError({ kind: "forbidden" }));
       return;
     }
-    const commandId = commandFor(`approve-quote:${id}:${expectedVersion}`);
     setState(beginSubmit());
     try {
-      await approveSpecialRequestQuote(id, expectedVersion, commandId);
-      setState(resolveApproveQuoteSuccess(await fetchClientSpecialRequest(id)));
+      const attempt = await getOrCreateClientSpecialRequestCommandAttempt({
+        actorId,
+        requestId: id,
+        action: "approve-quote",
+        expectedVersion,
+      });
+      await approveSpecialRequestQuote(id, expectedVersion, attempt.context);
+      const readback = await fetchClientSpecialRequest(id);
+      if (readback.wltPaymentSessionId) {
+        await clearClientSpecialRequestCommandAttempt({ actorId, requestId: id, action: "approve-quote", expectedVersion }, attempt.signature);
+      }
+      setState(resolveApproveQuoteSuccess(readback));
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
     }
-    }, [actorId, commandFor, state.kind]);
+    }, [actorId, state.kind]);
   const reload = useCallback(async (id: string) => {
     try {
       setState(resolveSubmitSuccess(await fetchClientSpecialRequest(id)));
@@ -178,16 +189,6 @@ export function useClientSpecialRequestsListController(
     const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
   const identity = useIdentitySession();
   const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
-  const commandIds = useRef<Record<string, string>>({});
-  const commandFor = useCallback((scope: string) => {
-    if (!actorId) throw new Error("جلسة العميل غير جاهزة لتنفيذ طلب الخدمة.");
-    const key = `${actorId}:${scope}`;
-    const existing = commandIds.current[key];
-    if (existing) return existing;
-    const id = corrId("client-special-request");
-    commandIds.current[key] = id;
-    return id;
-  }, [actorId]);
   const load = useCallback(async () => {
     setLoadState("loading");
     try {
@@ -232,13 +233,20 @@ export function useClientSpecialRequestsListController(
         setLoadState("forbidden");
         return Promise.resolve(false);
       }
-      const commandId = commandFor(`cancel:${request.id}:${request.version}`);
       return runMutation(
         request,
-        () => cancelSpecialRequest(request.id, request.version, commandId),
+        async () => {
+          const intent = { actorId, requestId: request.id, action: "cancel" as const, expectedVersion: request.version };
+          const attempt = await getOrCreateClientSpecialRequestCommandAttempt(intent);
+          await cancelSpecialRequest(request.id, request.version, attempt.context);
+          const readback = await fetchClientSpecialRequest(request.id);
+          if (readback.status === "cancelled") {
+            await clearClientSpecialRequestCommandAttempt(intent, attempt.signature);
+          }
+        },
       );
     },
-    [actorId, commandFor, runMutation],
+    [actorId, runMutation],
   );
 
   const approveQuote = useCallback(
@@ -247,13 +255,20 @@ export function useClientSpecialRequestsListController(
         setLoadState("forbidden");
         return Promise.resolve(false);
       }
-      const commandId = commandFor(`approve-quote:${request.id}:${request.version}`);
       return runMutation(
         request,
-        () => approveSpecialRequestQuote(request.id, request.version, commandId),
+        async () => {
+          const intent = { actorId, requestId: request.id, action: "approve-quote" as const, expectedVersion: request.version };
+          const attempt = await getOrCreateClientSpecialRequestCommandAttempt(intent);
+          await approveSpecialRequestQuote(request.id, request.version, attempt.context);
+          const readback = await fetchClientSpecialRequest(request.id);
+          if (readback.wltPaymentSessionId) {
+            await clearClientSpecialRequestCommandAttempt(intent, attempt.signature);
+          }
+        },
       );
     },
-    [actorId, commandFor, runMutation],
+    [actorId, runMutation],
   );
 
   const respondInformation = useCallback((

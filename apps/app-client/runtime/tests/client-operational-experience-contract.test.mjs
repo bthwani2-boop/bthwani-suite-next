@@ -274,6 +274,31 @@ test("client preparation decisions keep one actor-scoped command until readback"
   );
 });
 
+test("client special-request saga commands survive restart through durable identity", () => {
+  const attempt = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/client-special-request-command-attempt.ts",
+    ["client-special-request-command", "resolveMutationIdentityScope", "getOrCreateDurableMutationAttempt", "purgeExactDurableMutationAttempt"],
+  );
+  assert.match(attempt, /entityId: `special-request:\$\{normalized\.requestId\}:\$\{normalized\.action\}`/);
+  const controller = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/use-special-requests-controller.tsx",
+    ["getOrCreateClientSpecialRequestCommandAttempt", "clearClientSpecialRequestCommandAttempt", "fetchClientSpecialRequest"],
+  );
+  assert.match(controller, /cancelSpecialRequest\(id, expectedVersion, attempt\.context\)/);
+  assert.match(controller, /approveSpecialRequestQuote\(id, expectedVersion, attempt\.context\)/);
+  const api = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/special-requests.api.ts",
+    ["idempotencyKey: mutation.idempotencyKey", "correlationId: mutation.correlationId"],
+  );
+  assert.match(api, /Promise<void>/);
+  const contract = assertMarkers(
+    "services/dsh/contracts/paths/misc.paths.yaml",
+    ["cancelDshClientSpecialRequest", "approveDshSpecialRequestQuote", "DshSpecialRequestSagaResponse", "IdempotencyKey", "CorrelationId"],
+  );
+  assert.match(contract, /description: Durable cancellation saga accepted/);
+  assert.match(contract, /description: Durable payment-session saga accepted/);
+});
+
 test("client order delivery projections distinguish unavailable data from readback failure", () => {
   const controller = assertMarkers(
     "services/dsh/frontend/shared/orders/use-client-order-controller.ts",
