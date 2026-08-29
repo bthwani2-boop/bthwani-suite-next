@@ -15,6 +15,7 @@ import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
 } from '../../shared/delivery/use-captain-order-runtime';
+import type { CaptainDeliveryAction } from '../../shared/delivery/captain.surface.types';
 import { DshCaptainMapLayer } from './DshCaptainMapLayer';
 
 export type OperationalCaptainExecutionScreenProps = {
@@ -22,12 +23,15 @@ export type OperationalCaptainExecutionScreenProps = {
   readonly orderId: string;
   readonly captainId: string;
   readonly currentStageLabel: string;
+  readonly activeDeliveryAction: CaptainDeliveryAction;
+  readonly deliveryActionState: 'idle' | 'loading' | 'success' | 'error';
+  readonly deliveryActionMessage: string | null;
   readonly handoffExceptionEnabled: boolean;
-  readonly podRequired: boolean;
   readonly onBack: () => void;
   readonly onRefresh: () => void | Promise<void>;
-  readonly onConfirmPickup: () => void;
-  readonly onConfirmDelivery: () => void;
+  readonly onConfirmStoreArrival: () => Promise<boolean>;
+  readonly onConfirmPickup: () => Promise<boolean>;
+  readonly onConfirmCustomerArrival: () => Promise<boolean>;
   readonly onOpenPod: () => void;
   readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<unknown>;
 };
@@ -51,12 +55,15 @@ export function OperationalCaptainExecutionScreen({
   orderId,
   captainId,
   currentStageLabel,
+  activeDeliveryAction,
+  deliveryActionState,
+  deliveryActionMessage,
   handoffExceptionEnabled,
-  podRequired,
   onBack,
   onRefresh,
+  onConfirmStoreArrival,
   onConfirmPickup,
-  onConfirmDelivery,
+  onConfirmCustomerArrival,
   onOpenPod,
   onPushLocation,
 }: OperationalCaptainExecutionScreenProps) {
@@ -70,6 +77,22 @@ export function OperationalCaptainExecutionScreen({
   const loadExistingHandoffException = handoffException.loadExisting;
   const readbackBlocksPickup = handoffExceptionEnabled && handoffReadback.kind !== 'clear';
   const handoffBlocked = handoffExceptionKind !== 'idle' || readbackBlocksPickup;
+  const actionBlocked = deliveryActionState === 'loading'
+    || !activeDeliveryAction.enabled
+    || (activeDeliveryAction.id === 'pickup' && handoffBlocked);
+
+  const runPrimaryAction = () => {
+    if (actionBlocked) return;
+    if (activeDeliveryAction.id === 'arrive_store') {
+      void onConfirmStoreArrival();
+    } else if (activeDeliveryAction.id === 'pickup') {
+      void onConfirmPickup();
+    } else if (activeDeliveryAction.id === 'arrive_customer') {
+      void onConfirmCustomerArrival();
+    } else if (activeDeliveryAction.id === 'open_pod') {
+      onOpenPod();
+    }
+  };
 
   React.useEffect(() => {
     if (!handoffExceptionEnabled || !assignmentId) return undefined;
@@ -228,11 +251,22 @@ export function OperationalCaptainExecutionScreen({
         <Surface tone="raised" gap={3}>
           <Text role="bodyStrong">إجراءات المهمة</Text>
           <Box gap={2}>
-            <Button
-              label="تأكيد الاستلام"
-              disabled={handoffBlocked}
-              onPress={onConfirmPickup}
-            />
+            {activeDeliveryAction.enabled ? (
+              <>
+                <Text role="bodySm" tone="muted">{activeDeliveryAction.description}</Text>
+                <Button
+                  label={activeDeliveryAction.label}
+                  disabled={actionBlocked}
+                  onPress={runPrimaryAction}
+                />
+              </>
+            ) : (
+              <StateView
+                title={activeDeliveryAction.label}
+                description="لا يوجد إجراء قانوني إضافي من شاشة التنفيذ لهذه الحالة الحالية."
+                tone="info"
+              />
+            )}
             {handoffExceptionEnabled
               && handoffExceptionKind === 'idle'
               && handoffReadback.kind === 'clear' ? (
@@ -242,11 +276,16 @@ export function OperationalCaptainExecutionScreen({
                   onPress={() => handoffException.begin(assignmentId)}
                 />
               ) : null}
-            <Button
-              label={podRequired ? 'فتح إثبات التسليم' : 'تأكيد التسليم'}
-              tone="secondary"
-              onPress={podRequired ? onOpenPod : onConfirmDelivery}
-            />
+            {deliveryActionMessage ? (
+              <StateView
+                title={deliveryActionState === 'success' ? 'تم تحديث المرحلة' : 'تعذر تثبيت المرحلة'}
+                description={deliveryActionMessage}
+                tone={deliveryActionState === 'success' ? 'success' : 'danger'}
+                {...(deliveryActionState === 'error'
+                  ? { actionLabel: 'إعادة المحاولة', onActionPress: runPrimaryAction }
+                  : {})}
+              />
+            ) : null}
           </Box>
         </Surface>
       </MobileScrollView>

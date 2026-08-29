@@ -81,6 +81,8 @@ export function useDshCaptainSurfaceBinding(
     setDeclineSheetState: lifecycle.setDeclineSheetState,
     setIsPickupSheetVisible: lifecycle.setIsPickupSheetVisible,
     setPickupSheetState: lifecycle.setPickupSheetState,
+    setDeliveryActionState: lifecycle.setDeliveryActionState,
+    setDeliveryActionMessage: lifecycle.setDeliveryActionMessage,
     setActiveOrderPhase: lifecycle.setActiveOrderPhase,
     setActiveOrderMessages: chatModel.setActiveOrderMessages,
     setCaptainPodState: podUpload.setCaptainPodState,

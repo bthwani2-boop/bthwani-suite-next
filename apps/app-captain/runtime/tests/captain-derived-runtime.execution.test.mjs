@@ -23,8 +23,10 @@ const assignmentStatusLabels = {
 };
 const deliveryStatusLabels = {
   assigned: "تم إنشاء المهمة",
+  driver_assigned: "الكابتن مستلم المهمة",
   driver_arrived_store: "وصل الكابتن للمتجر",
   picked_up: "تم الاستلام من المتجر",
+  arrived_customer: "وصل الكابتن للعميل",
 };
 
 function assignment(deliveryStatus = "assigned") {
@@ -59,7 +61,12 @@ test("captain runtime adapter is bound to the canonical pure derived policy", ()
   }
 });
 
-test("captain active assignment switches the next action from pickup to delivery", () => {
+test("captain active assignment exposes only the next legal DSH action", () => {
+  const beforeStoreArrival = buildCaptainOrderSummaryPolicy(
+    assignment("driver_assigned"),
+    assignmentStatusLabels,
+    deliveryStatusLabels,
+  );
   const beforePickup = buildCaptainOrderSummaryPolicy(
     assignment("driver_arrived_store"),
     assignmentStatusLabels,
@@ -70,10 +77,17 @@ test("captain active assignment switches the next action from pickup to delivery
     assignmentStatusLabels,
     deliveryStatusLabels,
   );
+  const afterCustomerArrival = buildCaptainOrderSummaryPolicy(
+    assignment("arrived_customer"),
+    assignmentStatusLabels,
+    deliveryStatusLabels,
+  );
 
   assert.equal(beforePickup.orderId, "order-42");
+  assert.equal(beforeStoreArrival.nextActionLabel, "تأكيد الوصول للمتجر");
   assert.equal(beforePickup.nextActionLabel, "تأكيد الاستلام");
-  assert.equal(afterPickup.nextActionLabel, "تأكيد التسليم");
+  assert.equal(afterPickup.nextActionLabel, "تأكيد الوصول للعميل");
+  assert.equal(afterCustomerArrival.nextActionLabel, "فتح إثبات التسليم");
   assert.match(afterPickup.currentStageLabel, /الاستلام/);
   assert.equal(afterPickup.etaLabel, "مقبولة");
 });
@@ -88,6 +102,7 @@ test("captain empty assignment is explicit and cannot invent an active order", (
       etaLabel: "",
       currentStageLabel: "",
       nextActionLabel: "",
+      deliveryActionId: "none",
     },
   );
 });
@@ -144,7 +159,7 @@ test("unavailable captain is fail-closed before inbox state is considered", () =
 });
 
 test("captain presentation policy enforces GPS, store-courier and proof boundaries", () => {
-  const normal = buildCaptainPresentationPolicy(state(), true);
+  const normal = buildCaptainPresentationPolicy(state({ activeDeliveryStatus: "arrived_customer" }), true);
   assert.equal(normal.isCaptainAvailable, true);
   assert.equal(normal.isGpsEnabled, true);
   assert.equal(normal.captainPodRequired, true);
@@ -155,14 +170,32 @@ test("captain presentation policy enforces GPS, store-courier and proof boundari
   assert.equal(gpsDisabled.isGpsEnabled, false);
 
   const storeCourier = buildCaptainPresentationPolicy(
-    state({ captainAppMode: "store_courier_mode" }),
+    state({ captainAppMode: "store_courier_mode", activeDeliveryStatus: "arrived_customer" }),
     true,
   );
   assert.equal(storeCourier.isStoreCourierMode, true);
   assert.equal(storeCourier.captainPodRequired, true);
 
-  const withoutAssignment = buildCaptainPresentationPolicy(state(), false);
+  const withoutAssignment = buildCaptainPresentationPolicy(state({ activeDeliveryStatus: "arrived_customer" }), false);
   assert.equal(withoutAssignment.captainPodRequired, false);
+});
+
+test("captain delivery action is derived from the canonical delivery status", () => {
+  const cases = [
+    ["driver_assigned", "تأكيد الوصول للمتجر", "arrive_store"],
+    ["driver_arrived_store", "تأكيد الاستلام", "pickup"],
+    ["picked_up", "تأكيد الوصول للعميل", "arrive_customer"],
+    ["arrived_customer", "فتح إثبات التسليم", "open_pod"],
+  ];
+  for (const [status, label, actionId] of cases) {
+    const summary = buildCaptainOrderSummaryPolicy(
+      assignment(status),
+      assignmentStatusLabels,
+      deliveryStatusLabels,
+    );
+    assert.equal(summary.nextActionLabel, label);
+    assert.equal(summary.deliveryActionId, actionId);
+  }
 });
 
 test("captain navigation highlights only the canonical section for each mode", () => {

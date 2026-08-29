@@ -5,6 +5,8 @@
 import React from 'react';
 import type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
 
+export type DeliveryActionState = 'idle' | 'loading' | 'success' | 'error';
+
 export function useDeliveryLifecycle() {
   const [inboxState, setInboxState] = React.useState<'ready' | 'loading' | 'empty' | 'offer-accepting' | 'offer-accepted' | 'delivered' | 'error'>('loading');
   const [activeOrderPhase, setActiveOrderPhase] = React.useState<ActiveOrderPhase>('pickup');
@@ -15,6 +17,8 @@ export function useDeliveryLifecycle() {
   const [declineSheetState, setDeclineSheetState] = React.useState<'ready' | 'loading' | 'success' | 'error'>('ready');
   const [declineOrderId, setDeclineOrderId] = React.useState('');
   const [pickupSheetState, setPickupSheetState] = React.useState<'ready' | 'loading' | 'success' | 'error'>('ready');
+  const [deliveryActionState, setDeliveryActionState] = React.useState<DeliveryActionState>('idle');
+  const [deliveryActionMessage, setDeliveryActionMessage] = React.useState<string | null>(null);
 
   return {
     inboxState,
@@ -35,5 +39,9 @@ export function useDeliveryLifecycle() {
     setDeclineOrderId,
     pickupSheetState,
     setPickupSheetState,
+    deliveryActionState,
+    setDeliveryActionState,
+    deliveryActionMessage,
+    setDeliveryActionMessage,
   };
 }

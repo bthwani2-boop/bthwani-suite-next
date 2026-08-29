@@ -17,6 +17,9 @@ import {
   trackingLoadingState,
   trackingReturnedToStoreState,
 } from "./dispatch.states";
+import { nextDeliveryStatus } from "./delivery-status-flow";
+
+export { nextDeliveryStatus } from "./delivery-status-flow";
 
 export type DispatchErrorKind = "permission_denied" | "offline" | "conflict" | "not_found" | "error";
 
@@ -84,12 +87,5 @@ export function resolvePoDValidation(input: DshSubmitPoDInput) {
   if (!input.reference.trim()) {
     return { kind: "error" as const, message: "مرجع إثبات التسليم مطلوب." };
   }
-  return null;
-}
-
-export function nextDeliveryStatus(current: DshDeliveryStatus): DshDeliveryStatus | null {
-  if (current === "driver_assigned") return "driver_arrived_store";
-  if (current === "driver_arrived_store") return "picked_up";
-  if (current === "picked_up") return "arrived_customer";
   return null;
 }

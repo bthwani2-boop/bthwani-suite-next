@@ -18,6 +18,7 @@ import type { DshCaptainOrderDetailSummary, DshCaptainOrderMessage } from '../..
 
 export const OrderDetailSection = React.memo(function OrderDetailSection({
 	summary,
+	primaryAction,
 	onConfirmPickup,
 	onConfirmDelivery,
 	onOpenNextOrder,
@@ -25,6 +26,7 @@ export const OrderDetailSection = React.memo(function OrderDetailSection({
 	onRetry,
 }: {
 	summary?: DshCaptainOrderDetailSummary | undefined;
+	primaryAction?: { readonly label: string; readonly onPress: () => void; readonly disabled?: boolean } | undefined;
 	onConfirmPickup?: (() => void) | undefined;
 	onConfirmDelivery?: (() => void) | undefined;
 	onOpenNextOrder?: (() => void) | undefined;
@@ -36,8 +38,8 @@ export const OrderDetailSection = React.memo(function OrderDetailSection({
 	const [localMessages, setLocalMessages] = React.useState<DshCaptainOrderMessage[]>([]);
 	const [draftText, setDraftText] = React.useState('');
 
-	const primaryActionLabel = onConfirmPickup ? 'تأكيد الاستلام' : onConfirmDelivery ? 'تأكيد التسليم' : undefined;
-	const primaryAction = onConfirmPickup ?? onConfirmDelivery;
+	const primaryActionLabel = primaryAction?.label ?? (onConfirmPickup ? 'تأكيد الاستلام' : onConfirmDelivery ? 'تأكيد التسليم' : undefined);
+	const primaryActionHandler = primaryAction?.onPress ?? onConfirmPickup ?? onConfirmDelivery;
 	const secondaryActionLabel = onOpenNextOrder ? 'فتح الطلب التالي' : onRetry ? 'إعادة المحاولة' : undefined;
 	const secondaryAction = onOpenNextOrder ?? onRetry;
 
@@ -186,7 +188,8 @@ export const OrderDetailSection = React.memo(function OrderDetailSection({
 			primaryActionLabel={primaryActionLabel}
 			secondaryActionLabel={secondaryActionLabel}
 			tertiaryActionLabel={onBackToInbox ? 'العودة إلى الصندوق' : undefined}
-			onPrimaryAction={primaryAction}
+			onPrimaryAction={primaryActionHandler}
+			primaryActionDisabled={primaryAction?.disabled}
 			onSecondaryAction={secondaryAction}
 			onTertiaryAction={onBackToInbox}
 			onRetry={onRetry}

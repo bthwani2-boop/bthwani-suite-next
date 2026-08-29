@@ -61,12 +61,15 @@ export function DshCaptainOrderJourneyRenderer(
           orderId={props.activeOrderId}
           captainId={props.captainRuntimeId}
           currentStageLabel={props.activeSummary?.currentStageLabel ?? 'لا توجد مهمة نشطة'}
+          activeDeliveryAction={props.activeDeliveryAction}
+          deliveryActionState={props.deliveryActionState}
+          deliveryActionMessage={props.deliveryActionMessage}
           handoffExceptionEnabled={props.activeDeliveryStatus === 'driver_arrived_store'}
-          podRequired={props.captainPodRequired}
           onBack={props.onBack}
           onRefresh={props.onRetryInbox}
+          onConfirmStoreArrival={props.onConfirmStoreArrival}
           onConfirmPickup={props.onConfirmPickup}
-          onConfirmDelivery={props.onConfirmDelivery}
+          onConfirmCustomerArrival={props.onConfirmCustomerArrival}
           onOpenPod={props.onOpenPod}
           onPushLocation={props.onPushLocation}
         />

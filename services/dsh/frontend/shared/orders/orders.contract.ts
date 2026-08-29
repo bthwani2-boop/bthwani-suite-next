@@ -48,6 +48,12 @@ export type DshCaptainOrderMode =
   | 'order-get'
   | 'order-details';
 export type DshCaptainOrderStage = 'offer' | 'accepted' | 'pickup' | 'delivery' | 'proof' | 'closed';
+export type DshCaptainDeliveryActionId =
+  | 'arrive_store'
+  | 'pickup'
+  | 'arrive_customer'
+  | 'open_pod'
+  | 'none';
 
 export type DshCaptainOrderBellItem = {
   /** Dispatch assignment id — the id every accept/decline/pickup/deliver mutation targets. */
@@ -77,7 +83,8 @@ export type DshCaptainOrderAction =
   | 'deliver'
   | 'proof-upload'
   | 'back-to-inbox'
-  | 'next-order';
+  | 'next-order'
+  | DshCaptainDeliveryActionId;
 
 export type DshCaptainOrderProofStatus = 'idle' | 'pending' | 'uploaded' | 'verified' | 'failed';
 export type DshCaptainOrdersScreenState =
@@ -98,6 +105,7 @@ export type DshCaptainOrderDetailSummary = {
   etaLabel: string;
   currentStageLabel: string;
   nextActionLabel: string;
+  deliveryActionId: DshCaptainDeliveryActionId;
 };
 
 export type DshPartnerOrderAlertId =

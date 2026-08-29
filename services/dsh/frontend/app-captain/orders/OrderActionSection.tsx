@@ -2,9 +2,9 @@ import React from 'react';
 import { KeyValueList } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
 import type {
+	DshCaptainDeliveryActionId,
 	DshCaptainOrderAction,
 	DshCaptainOrderDetailSummary,
-	DshCaptainOrderStage,
 } from '../../shared/orders';
 
 export const OrderActionSection = React.memo(function OrderActionSection({
@@ -13,39 +13,35 @@ export const OrderActionSection = React.memo(function OrderActionSection({
 	onActionPress,
 	onBackToInbox,
 }: {
-	action: Exclude<DshCaptainOrderAction, 'proof-upload' | 'back-to-inbox' | 'next-order'>;
+	action: Exclude<DshCaptainDeliveryActionId, 'none'>;
 	summary?: DshCaptainOrderDetailSummary | undefined;
 	onActionPress?: ((action: DshCaptainOrderAction) => void) | undefined;
 	onBackToInbox?: (() => void) | undefined;
 }) {
-	const actionCopy: Record<typeof action, { title: string; subtitle: string; primaryLabel: string; secondaryLabel?: string; kind: DshCaptainOrderStage }> = {
-		accept: {
-			title: 'قبول الطلب',
-			subtitle: 'أكد أن الكابتن قبل الطلب والتزم بالاستلام.',
-			primaryLabel: 'قبول الطلب',
+	const actionCopy: Record<typeof action, { title: string; subtitle: string; primaryLabel: string; secondaryLabel?: string }> = {
+		arrive_store: {
+			title: 'الوصول إلى المتجر',
+			subtitle: 'ثبّت الوصول من GPS المصدق قبل بدء تسليم العهدة.',
+			primaryLabel: 'تأكيد الوصول للمتجر',
 			secondaryLabel: 'العودة إلى دليل الدعم',
-			kind: 'accepted',
-		},
-		'order-offer-reject': {
-			title: 'رفض العرض',
-			subtitle: 'ارفض العرض مع سبب تشغيلي ظاهر.',
-			primaryLabel: 'رفض الطلب',
-			secondaryLabel: 'العودة إلى دليل الدعم',
-			kind: 'offer',
 		},
 		pickup: {
 			title: 'استلام الطلب',
-			subtitle: 'أكد استلام الفرع قبل بدء مرحلة التوصيل.',
+			subtitle: 'أكد استلام الفرع بعد اكتمال تأكيد عهدة المتجر.',
 			primaryLabel: 'تأكيد الاستلام',
 			secondaryLabel: 'العودة إلى دليل الدعم',
-			kind: 'pickup',
 		},
-		deliver: {
-			title: 'تسليم الطلب',
-			subtitle: 'أغلق المسار مع تأكيد التسليم النهائي.',
-			primaryLabel: 'تأكيد التسليم',
+		arrive_customer: {
+			title: 'الوصول إلى العميل',
+			subtitle: 'ثبّت الوصول من GPS المصدق قبل فتح إثبات التسليم.',
+			primaryLabel: 'تأكيد الوصول للعميل',
 			secondaryLabel: 'العودة إلى دليل الدعم',
-			kind: 'delivery',
+		},
+		open_pod: {
+			title: 'إثبات التسليم',
+			subtitle: 'افتح إثبات التسليم بعد تثبيت الوصول إلى العميل.',
+			primaryLabel: 'فتح إثبات التسليم',
+			secondaryLabel: 'العودة إلى دليل الدعم',
 		},
 	};
 

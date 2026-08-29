@@ -109,6 +109,8 @@ export function useDshCaptainSurfaceModel({
     declineSheetState: lifecycle.declineSheetState,
     declineOrderId: lifecycle.declineOrderId,
     pickupSheetState: lifecycle.pickupSheetState,
+    deliveryActionState: lifecycle.deliveryActionState,
+    deliveryActionMessage: lifecycle.deliveryActionMessage,
   };
 
   const derived: DshCaptainSurfaceDerived = React.useMemo(
@@ -126,6 +128,8 @@ export function useDshCaptainSurfaceModel({
     setGpsStatus: gpsModel.setGpsStatus,
     setIsPickupSheetVisible: lifecycle.setIsPickupSheetVisible,
     setPickupSheetState: lifecycle.setPickupSheetState,
+    setDeliveryActionState: lifecycle.setDeliveryActionState,
+    setDeliveryActionMessage: lifecycle.setDeliveryActionMessage,
     setIsDeliverySheetVisible: lifecycle.setIsDeliverySheetVisible,
     setIsDeclineSheetVisible: lifecycle.setIsDeclineSheetVisible,
     setDeclineOrderId: lifecycle.setDeclineOrderId,

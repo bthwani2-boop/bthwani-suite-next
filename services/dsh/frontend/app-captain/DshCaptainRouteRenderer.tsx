@@ -17,13 +17,13 @@ import {
 import type { DshCaptainRoute } from "./dsh-captain.types";
 import type {
   CaptainAvailabilityMeta,
+  CaptainDeliveryAction,
   CaptainDeliveryExceptionDraft,
   CaptainSupportRoute,
   DshCaptainLocationPush,
 } from "../shared/delivery";
 import { DshEntryScreen } from "./account/DshCaptainEntryScreen";
 import {
-  CaptainDeliveryConfirmSheet,
   CaptainOrderDetailScreen,
   CaptainOrdersInboxScreen,
   CaptainPickupConfirmSheet,
@@ -51,6 +51,8 @@ export type DshCaptainRouteRendererProps = {
   readonly route: DshCaptainRoute;
   readonly activeAssignmentId: string;
   readonly activeOrderId: string;
+  readonly activeDeliveryStatus: import('../shared/dispatch').DshDeliveryStatus | '';
+  readonly activeDeliveryAction: CaptainDeliveryAction;
   readonly activeOrderDisplayId: string;
   readonly activeSummary: CaptainOrderDetailSummary | null;
   readonly inboxItems: readonly DshCaptainOrderBellItem[];
@@ -66,6 +68,8 @@ export type DshCaptainRouteRendererProps = {
   readonly declineOrderId: string;
   readonly declineSheetState: "ready" | "loading" | "success" | "error";
   readonly pickupSheetState: "ready" | "loading" | "success" | "error";
+  readonly deliveryActionState: "idle" | "loading" | "success" | "error";
+  readonly deliveryActionMessage: string | null;
   readonly captainPodState: PodScreenState;
   readonly captainPodPhotoUri: string | undefined;
   readonly showBottomNav: boolean;
@@ -86,8 +90,9 @@ export type DshCaptainRouteRendererProps = {
   readonly wltSummaryLabel: string;
   readonly onOpenOrder: (id: string) => void;
   readonly onRetryInbox: () => void;
-  readonly onConfirmPickup: () => void;
-  readonly onConfirmDelivery: () => void;
+  readonly onConfirmStoreArrival: () => Promise<boolean>;
+  readonly onConfirmPickup: () => Promise<boolean>;
+  readonly onConfirmCustomerArrival: () => Promise<boolean>;
   readonly onConfirmPodSubmission: () => void;
   readonly onReportPodFailure: (draft: CaptainDeliveryExceptionDraft) => Promise<DshDeliveryException | undefined>;
   readonly onCapturePhoto: () => void;
@@ -145,6 +150,8 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     activeOrderId,
     activeOrderDisplayId,
     activeSummary,
+    activeDeliveryStatus,
+    activeDeliveryAction,
     inboxItems,
     inboxState,
     captainRuntimeId,
@@ -153,11 +160,12 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     isCaptainAvailable,
     selectedSupportScreen,
     isPickupSheetVisible,
-    isDeliverySheetVisible,
     isDeclineSheetVisible,
     declineOrderId,
     declineSheetState,
     pickupSheetState,
+    deliveryActionState,
+    deliveryActionMessage,
     captainPodState,
     captainPodPhotoUri,
     showBottomNav,
@@ -172,8 +180,9 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     wltSummaryLabel,
     onOpenOrder,
     onRetryInbox,
+    onConfirmStoreArrival,
     onConfirmPickup,
-    onConfirmDelivery,
+    onConfirmCustomerArrival,
     onConfirmPodSubmission,
     onReportPodFailure,
     onCapturePhoto,
@@ -182,7 +191,6 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     onGoToInbox,
     onGoToAccount,
     onClosePickupSheet,
-    onCloseDeliverySheet,
     onCloseDeclineSheet,
     onConfirmDecline,
     onAcceptTask,
@@ -225,10 +233,29 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
       return (
         <>
           <Box gap={3}>
-            <CaptainOrderDetailScreen summary={activeSummary} onConfirmPickup={onConfirmPickup} onConfirmDelivery={onConfirmDelivery} onOpenNextOrder={onGoToInbox} onRetry={onRetryInbox} />
+            <CaptainOrderDetailScreen
+              summary={activeSummary}
+              primaryAction={activeDeliveryAction.enabled ? {
+                label: activeDeliveryAction.label,
+                disabled: deliveryActionState === 'loading',
+                onPress: () => {
+                  if (activeDeliveryAction.id === 'arrive_store') void onConfirmStoreArrival();
+                  else if (activeDeliveryAction.id === 'pickup') void onConfirmPickup();
+                  else if (activeDeliveryAction.id === 'arrive_customer') void onConfirmCustomerArrival();
+                },
+              } : undefined}
+              onOpenNextOrder={onGoToInbox}
+              onRetry={onRetryInbox}
+            />
+            {deliveryActionMessage ? (
+              <StateView
+                title={deliveryActionState === 'success' ? activeDeliveryAction.label : 'تعذر تثبيت المرحلة'}
+                description={deliveryActionMessage}
+                tone={deliveryActionState === 'success' ? 'success' : 'danger'}
+              />
+            ) : null}
           </Box>
           <CaptainPickupConfirmSheet visible={isPickupSheetVisible} orderTitle={activeSummary.orderId} state={pickupSheetState} onConfirm={onConfirmPickup} onCancel={onClosePickupSheet} />
-          <CaptainDeliveryConfirmSheet visible={isDeliverySheetVisible} orderTitle={activeSummary.orderId} onConfirm={onConfirmDelivery} onCancel={onCloseDeliverySheet} />
           <OfferDeclineSheet visible={isDeclineSheetVisible} offerId={declineOrderId} state={declineSheetState} onConfirmDecline={onConfirmDecline} onClose={onCloseDeclineSheet} />
         </>
       );
@@ -244,7 +271,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     }
 
     if (route === "pod-submission") {
-      if (!hasActiveAssignment || !captainPodRequired) {
+      if (!hasActiveAssignment || !captainPodRequired || activeDeliveryStatus !== 'arrived_customer') {
         return <StateView title="إثبات التسليم غير مطلوب" description="لم تعد المهمة الحية متطلب PoD صالحًا لهذا الكابتن." tone="warning" actionLabel="العودة إلى المهمة" onActionPress={onBack} />;
       }
       return <DshCaptainPoDSubmissionScreen state={captainPodState} assignmentId={activeAssignmentId} orderId={activeOrderId} exceptionReportingEnabled onCapturePhoto={onCapturePhoto} onConfirm={onConfirmPodSubmission} onReportFailure={onReportPodFailure} onRetry={onRetryPod} onBack={captainPodState === "success" ? onGoToInbox : onBack} {...(captainPodPhotoUri ? { photoUri: captainPodPhotoUri } : {})} />;

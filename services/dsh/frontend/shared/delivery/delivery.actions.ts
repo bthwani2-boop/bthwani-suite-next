@@ -8,6 +8,7 @@ import type { StoreCourierStage, ActiveOrderPhase } from './delivery.contract';
 import { useCaptainOrderRuntime, type CaptainDeliveryExceptionDraft } from './use-captain-order-runtime';
 import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
 import { fetchCaptainDeliveryProof } from '../delivery-proof/delivery-proof.api';
+import { classifyDispatchError } from '../dispatch/dispatch.api';
 
 export type DeliveryActionsDeps = {
   captainRuntimeId: string;
@@ -24,6 +25,8 @@ export type DeliveryActionsDeps = {
   setDeclineSheetState: (s: any) => void;
   setIsPickupSheetVisible: (v: boolean) => void;
   setPickupSheetState: (s: any) => void;
+  setDeliveryActionState: (s: any) => void;
+  setDeliveryActionMessage: (s: string | null) => void;
   setActiveOrderPhase: (p: any) => void;
   setActiveOrderMessages: React.Dispatch<React.SetStateAction<CompactOrderChatMessage[]>>;
   setCaptainPodState: (s: any) => void;
@@ -43,6 +46,8 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     setDeclineSheetState,
     setIsPickupSheetVisible,
     setPickupSheetState,
+    setDeliveryActionState,
+    setDeliveryActionMessage,
     setActiveOrderPhase,
     setActiveOrderMessages,
     setCaptainPodState,
@@ -50,6 +55,34 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
   } = deps;
 
   const captainOrderRuntime = useCaptainOrderRuntime();
+
+  const deliveryActionErrorMessage = React.useCallback((error: unknown): string => {
+    const classified = classifyDispatchError(error);
+    if (classified.kind === 'permission_denied') return 'لا تملك صلاحية تنفيذ هذه المرحلة.';
+    if (classified.kind === 'offline') return 'لا يوجد اتصال. لم تتغير المرحلة محليًا؛ أعد المحاولة عند عودة الشبكة.';
+    if (classified.kind === 'conflict') return classified.message ?? 'تغيرت المهمة أو سبق تنفيذ المرحلة. حدّث القراءة ثم أعد المحاولة.';
+    return classified.message ?? 'تعذر تثبيت المرحلة. لم تتغير الحقيقة المحلية؛ أعد المحاولة.';
+  }, []);
+
+  const runDeliveryTransition = React.useCallback(async (
+    transition: () => Promise<unknown>,
+    successMessage: string,
+  ): Promise<boolean> => {
+    setDeliveryActionState('loading');
+    setDeliveryActionMessage(null);
+    try {
+      await transition();
+      await Promise.resolve(refreshInbox());
+      setDeliveryActionState('success');
+      setDeliveryActionMessage(successMessage);
+      return true;
+    } catch (error) {
+      console.error('[captain:delivery-transition]', error);
+      setDeliveryActionState('error');
+      setDeliveryActionMessage(deliveryActionErrorMessage(error));
+      return false;
+    }
+  }, [deliveryActionErrorMessage, refreshInbox, setDeliveryActionMessage, setDeliveryActionState]);
 
   const handleAcceptTask = React.useCallback(async (assignmentId: string): Promise<boolean> => {
     if (!captainRuntimeId || !assignmentId) {
@@ -91,6 +124,18 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     }
   }, [captainOrderRuntime, captainRuntimeId, refreshInbox, setDeclineSheetState, setIsDeclineSheetVisible]);
 
+  const confirmStoreArrival = React.useCallback(async (): Promise<boolean> => {
+    if (!captainRuntimeId || !activeAssignmentId) {
+      setDeliveryActionState('error');
+      setDeliveryActionMessage('لا توجد مهمة نشطة مرتبطة بالكابتن.');
+      return false;
+    }
+    return runDeliveryTransition(
+      () => captainOrderRuntime.confirmStoreArrival(activeAssignmentId, captainRuntimeId),
+      'تم تثبيت الوصول للمتجر من DSH. راجع جاهزية العهدة قبل الاستلام.',
+    );
+  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, runDeliveryTransition, setDeliveryActionMessage, setDeliveryActionState]);
+
   const confirmPickup = React.useCallback(async (): Promise<boolean> => {
     if (!captainRuntimeId || !activeAssignmentId) {
       setPickupSheetState('error');
@@ -98,8 +143,14 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     }
     try {
       setPickupSheetState('loading');
-      await captainOrderRuntime.confirmPickup(activeAssignmentId, captainRuntimeId);
-      await Promise.resolve(refreshInbox());
+      const transitioned = await runDeliveryTransition(
+        () => captainOrderRuntime.confirmPickup(activeAssignmentId, captainRuntimeId),
+        'تم تثبيت الاستلام. المرحلة التالية هي الوصول إلى العميل.',
+      );
+      if (!transitioned) {
+        setPickupSheetState('error');
+        return false;
+      }
       setPickupSheetState('success');
       setIsPickupSheetVisible(false);
       setPickupSheetState('ready');
@@ -114,16 +165,19 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
       setPickupSheetState('error');
       return false;
     }
-  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, refreshInbox, setPickupSheetState, setIsPickupSheetVisible, setActiveOrderPhase, setActiveOrderMessages]);
+  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, runDeliveryTransition, setPickupSheetState, setIsPickupSheetVisible, setActiveOrderPhase, setActiveOrderMessages]);
 
-  const confirmDelivery = React.useCallback(async (): Promise<boolean> => {
+  const confirmCustomerArrival = React.useCallback(async (): Promise<boolean> => {
     if (!captainRuntimeId || !activeAssignmentId) {
-      setCaptainPodState('error');
+      setDeliveryActionState('error');
+      setDeliveryActionMessage('لا توجد مهمة نشطة مرتبطة بالكابتن.');
       return false;
     }
-    setCaptainPodState('ready');
-    return true;
-  }, [activeAssignmentId, captainRuntimeId, setCaptainPodState]);
+    return runDeliveryTransition(
+      () => captainOrderRuntime.confirmCustomerArrival(activeAssignmentId, captainRuntimeId),
+      'تم تثبيت الوصول للعميل من DSH. افتح إثبات التسليم لإكمال التسليم.',
+    );
+  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, runDeliveryTransition, setDeliveryActionMessage, setDeliveryActionState]);
 
   const confirmPodSubmission = React.useCallback(async () => {
     if (!captainRuntimeId || !activeAssignmentId) {
@@ -178,5 +232,5 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     }
   }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, setCaptainPodState]);
 
-  return { handleAcceptTask, handleDeclineConfirm, confirmPickup, confirmDelivery, confirmPodSubmission, reportPodFailure };
+  return { handleAcceptTask, handleDeclineConfirm, confirmStoreArrival, confirmPickup, confirmCustomerArrival, confirmPodSubmission, reportPodFailure };
 }

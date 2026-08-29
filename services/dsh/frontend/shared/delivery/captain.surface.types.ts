@@ -2,9 +2,21 @@ import type { CaptainSupportRoute, CompactOrderChatMessage, CaptainAvailabilityS
 import type { DshCaptainRoute } from './captain.contract';
 import type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
 import type { DshDeliveryStatus } from '../dispatch';
-import type { DshCaptainOrderBellItem, DshCaptainOrderDetailSummary } from '../orders';
+import type {
+  DshCaptainDeliveryActionId,
+  DshCaptainOrderBellItem,
+  DshCaptainOrderDetailSummary,
+} from '../orders';
 import type { CaptainPodState } from '../media/pod/pod-upload-flow';
 export type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
+
+export type CaptainDeliveryActionId = DshCaptainDeliveryActionId;
+export type CaptainDeliveryAction = {
+  readonly id: CaptainDeliveryActionId;
+  readonly label: string;
+  readonly description: string;
+  readonly enabled: boolean;
+};
 
 export type CaptainHomeTickerAction =
   | 'toggle-availability'
@@ -38,6 +50,8 @@ export type DshCaptainSurfaceState = {
   declineSheetState: 'ready' | 'loading' | 'success' | 'error';
   declineOrderId: string;
   pickupSheetState: 'ready' | 'loading' | 'success' | 'error';
+  deliveryActionState: 'idle' | 'loading' | 'success' | 'error';
+  deliveryActionMessage: string | null;
 };
 
 export type DshCaptainSurfaceDerived = {
@@ -50,6 +64,7 @@ export type DshCaptainSurfaceDerived = {
   currentAvailabilityMeta: CaptainAvailabilityMeta;
   activeOrderDisplayId: string;
   activeSummary: DshCaptainOrderDetailSummary;
+  activeDeliveryAction: CaptainDeliveryAction;
   homeTicker: {
     statusLabel: string;
     message: string;

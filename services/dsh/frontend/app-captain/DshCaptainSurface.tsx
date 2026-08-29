@@ -267,7 +267,8 @@ function AuthenticatedCaptainSurface({
           route={state.route}
           activeAssignmentId={state.activeAssignmentId}
           activeOrderId={state.activeOrderId}
-          activeDeliveryStatus={state.activeDeliveryStatus}
+           activeDeliveryStatus={state.activeDeliveryStatus}
+           activeDeliveryAction={derived.activeDeliveryAction}
           isActiveAssignmentOperational={isActiveAssignmentOperational}
           activeOrderDisplayId={derived.activeOrderDisplayId}
           activeSummary={state.activeAssignmentId ? derived.activeSummary : null}
@@ -284,8 +285,10 @@ function AuthenticatedCaptainSurface({
           declineOrderId={state.declineOrderId}
           declineSheetState={state.declineSheetState}
           pickupSheetState={state.pickupSheetState}
-          captainPodState={state.captainPodState}
-          captainPodPhotoUri={state.captainPodPhotoUri}
+           captainPodState={state.captainPodState}
+           captainPodPhotoUri={state.captainPodPhotoUri}
+           deliveryActionState={state.deliveryActionState}
+           deliveryActionMessage={state.deliveryActionMessage}
           showBottomNav={derived.showBottomNav}
           bottomNavNode={bottomNav}
           dshClientId={captainId}
@@ -298,23 +301,25 @@ function AuthenticatedCaptainSurface({
           wltSummaryLabel="الرصيد من WLT"
           onOpenOrder={(assignmentId) => navigation.navigate({ kind: "detail", assignmentId })}
           onRetryInbox={() => void actions.refreshInbox()}
-          onConfirmPickup={() => void actions.confirmPickup()}
-          onConfirmDelivery={() => {
-            void actions.confirmDelivery().then((readyForProof) => {
-              if (
-                readyForProof
+           onConfirmStoreArrival={() => actions.confirmStoreArrival()}
+           onConfirmPickup={() => actions.confirmPickup()}
+           onConfirmCustomerArrival={() => {
+             return actions.confirmCustomerArrival().then((readyForProof) => {
+               if (
+                 readyForProof
                 && operationalAssignmentId
                 && !operationalAssignmentAmbiguous
               ) {
                 navigation.navigate({ kind: "pod-submission", assignmentId: operationalAssignmentId });
-              } else if (readyForProof) {
-                goToInbox();
-              }
-            });
-          }}
-          onOpenPod={() => {
-            if (isActiveAssignmentOperational && operationalAssignmentId) {
-              navigation.navigate({ kind: "pod-submission", assignmentId: operationalAssignmentId });
+               } else if (readyForProof) {
+                 goToInbox();
+               }
+               return readyForProof;
+             });
+           }}
+           onOpenPod={() => {
+             if (isActiveAssignmentOperational && operationalAssignmentId && state.activeDeliveryStatus === 'arrived_customer') {
+               navigation.navigate({ kind: "pod-submission", assignmentId: operationalAssignmentId });
             } else {
               goToInbox();
             }

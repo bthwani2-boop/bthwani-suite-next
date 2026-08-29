@@ -8,6 +8,7 @@ import {
   buildCaptainHomeTickerPolicy,
   buildCaptainOrderSummaryPolicy,
   buildCaptainPresentationPolicy,
+  resolveCaptainDeliveryAction,
 } from './captain.derived.policy';
 import { ASSIGNMENT_STATUS_LABELS, DELIVERY_STATUS_LABELS, type DshDispatchAssignment } from '../dispatch/dispatch.types';
 import type { DshCaptainOrderDetailSummary } from '../orders';
@@ -50,6 +51,7 @@ export function buildCaptainDerived(
     ...presentation,
     currentAvailabilityMeta,
     activeSummary,
+    activeDeliveryAction: resolveCaptainDeliveryAction(activeAssignment?.delivery.status),
     homeTicker,
   };
 }

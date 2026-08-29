@@ -180,7 +180,7 @@ export function DshCaptainOrderGetScreen({
   if (!summary) {
     return <StateView title="تفاصيل المهمة غير متاحة" description="حدّث صندوق المهام ثم أعد الفتح." tone="warning" onActionPress={onBack} actionLabel={onBack ? 'العودة' : undefined} />;
   }
-  const nextAction = summary.nextActionLabel.includes('تسليم') ? 'deliver' : 'pickup';
+  const nextAction = summary.deliveryActionId;
   return (
     <DshOperationScreen
       state="ready"
@@ -190,7 +190,11 @@ export function DshCaptainOrderGetScreen({
         <Box gap={4}>
           <OrderDetailSection summary={summary} />
           <Divider />
-          <OrderActionSection action={nextAction} summary={summary} onActionPress={onActionPress} />
+          {nextAction === 'none' ? (
+            <StateView title="لا يوجد إجراء متاح" description={summary.nextActionLabel} tone="info" />
+          ) : (
+            <OrderActionSection action={nextAction} summary={summary} onActionPress={onActionPress} />
+          )}
         </Box>
       }
       primaryActionLabel={onBack ? 'العودة' : undefined}
@@ -341,6 +345,7 @@ export function CaptainOrdersInboxScreen(props: Pick<DshCaptainOrdersScreenProps
 
 export function CaptainOrderDetailScreen({
   summary,
+  primaryAction,
   onConfirmPickup,
   onConfirmDelivery,
   onOpenNextOrder,
@@ -348,11 +353,12 @@ export function CaptainOrderDetailScreen({
   onRetry,
 }: {
   summary?: DshCaptainOrderDetailSummary | undefined;
+  primaryAction?: { readonly label: string; readonly onPress: () => void; readonly disabled?: boolean } | undefined;
   onConfirmPickup?: () => void;
   onConfirmDelivery?: () => void;
   onOpenNextOrder?: () => void;
   onBackToInbox?: (() => void) | undefined;
   onRetry?: (() => void) | undefined;
 }) {
-  return <OrderDetailSection summary={summary} onConfirmPickup={onConfirmPickup} onConfirmDelivery={onConfirmDelivery} onOpenNextOrder={onOpenNextOrder} onBackToInbox={onBackToInbox} onRetry={onRetry} />;
+  return <OrderDetailSection summary={summary} primaryAction={primaryAction} onConfirmPickup={onConfirmPickup} onConfirmDelivery={onConfirmDelivery} onOpenNextOrder={onOpenNextOrder} onBackToInbox={onBackToInbox} onRetry={onRetry} />;
 }

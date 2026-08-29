@@ -15,7 +15,11 @@ import {
   syncForegroundDispatchLocation,
   type DshDispatchLocationSyncResult,
 } from '../dispatch/dispatch-location.api';
-import type { DshDeliveryException, DshDeliveryExceptionReasonCode } from '../dispatch/dispatch.types';
+import type {
+  DshDeliveryException,
+  DshDeliveryExceptionReasonCode,
+  DshDeliveryStatus,
+} from '../dispatch/dispatch.types';
 
 export type CaptainDeliveryExceptionDraft = {
   readonly reasonCode: DshDeliveryExceptionReasonCode;
@@ -111,22 +115,66 @@ export function useCaptainOrderRuntime() {
     [commandFor],
   );
 
-  const confirmPickup = React.useCallback(
-    async (assignmentId: string, _captainId: string) => {
+  const transitionDeliveryStatus = React.useCallback(
+    async (
+      assignmentId: string,
+      _captainId: string,
+      expectedStatus: DshDeliveryStatus,
+      nextStatus: DshDeliveryStatus,
+      requiresArrivalLocation: boolean,
+    ) => {
       const assignments = await fetchCaptainDispatchAssignments();
       const assignment = assignments.find((item) => item.id === assignmentId);
       if (!assignment || !Number.isInteger(assignment.version) || assignment.version < 1) {
-        throw new Error('تعذر قراءة إصدار مهمة التوصيل. حدّث المهمة قبل الاستلام.');
+        throw new Error('تعذر قراءة إصدار مهمة التوصيل. حدّث المهمة قبل تثبيت المرحلة.');
       }
-      const command = commandFor(`pickup:${assignmentId}:${assignment.version}`);
-      const result = await updateDeliveryStatus(assignmentId, 'picked_up', {
+      if (assignment.delivery.status !== expectedStatus) {
+        throw new Error('تغيرت مرحلة المهمة. حدّث المهمة قبل تنفيذ الإجراء التالي.');
+      }
+      const coordinates = requiresArrivalLocation ? await readCaptainForegroundLocation() : undefined;
+      const command = commandFor(`${nextStatus}:${assignmentId}:${assignment.version}`);
+      const result = await updateDeliveryStatus(assignmentId, nextStatus, {
         expectedVersion: assignment.version,
         idempotencyKey: command.id,
+        ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
       });
       delete commandIds.current[command.key];
       return result;
     },
     [commandFor],
+  );
+
+  const confirmStoreArrival = React.useCallback(
+    (assignmentId: string, captainId: string) => transitionDeliveryStatus(
+      assignmentId,
+      captainId,
+      'driver_assigned',
+      'driver_arrived_store',
+      true,
+    ),
+    [transitionDeliveryStatus],
+  );
+
+  const confirmPickup = React.useCallback(
+    (assignmentId: string, captainId: string) => transitionDeliveryStatus(
+      assignmentId,
+      captainId,
+      'driver_arrived_store',
+      'picked_up',
+      false,
+    ),
+    [transitionDeliveryStatus],
+  );
+
+  const confirmCustomerArrival = React.useCallback(
+    (assignmentId: string, captainId: string) => transitionDeliveryStatus(
+      assignmentId,
+      captainId,
+      'picked_up',
+      'arrived_customer',
+      true,
+    ),
+    [transitionDeliveryStatus],
   );
 
   const pushLocation = React.useCallback(
@@ -165,11 +213,13 @@ export function useCaptainOrderRuntime() {
     () => ({
       acceptTask,
       declineTask,
+      confirmStoreArrival,
       confirmPickup,
+      confirmCustomerArrival,
       pushLocation,
       failDelivery,
     }),
-    [acceptTask, confirmPickup, declineTask, failDelivery, pushLocation],
+    [acceptTask, confirmCustomerArrival, confirmPickup, confirmStoreArrival, declineTask, failDelivery, pushLocation],
   );
 }
 
