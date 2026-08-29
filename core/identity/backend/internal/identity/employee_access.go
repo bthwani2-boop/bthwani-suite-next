@@ -83,6 +83,8 @@ func employeeDshPermissions(bundle string) []Permission {
 			"finance.read", "finance.manage",
 			"analytics.read",
 			"operations.read", "operations.manage",
+			"partner_delivery.read", "partner_delivery.manage",
+			"pickup.read", "pickup.manage",
 			"dsh.service_zones.read", "dsh.service_zones.manage",
 			"dsh.fulfillment_sla.read", "dsh.fulfillment_sla.manage",
 			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
@@ -109,6 +111,8 @@ func employeeDshPermissions(bundle string) []Permission {
 	case EmployeeBundleOperationsManager:
 		return grant(
 			"operations.read", "operations.manage",
+			"partner_delivery.read", "partner_delivery.manage",
+			"pickup.read", "pickup.manage",
 			"dsh.service_zones.read", "dsh.service_zones.manage",
 			"dsh.fulfillment_sla.read", "dsh.fulfillment_sla.manage",
 			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
