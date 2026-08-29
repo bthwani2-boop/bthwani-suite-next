@@ -109,7 +109,9 @@ if ($PreparedRuntime) {
 } else {
   Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles $dshProfileString
 }
-Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles $dshProfileString
+$seedProfiles = @($dshProfiles)
+if ($profileList -contains "wlt") { $seedProfiles += "wlt" }
+Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles ($seedProfiles -join ",")
 
 $statePath = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-dsh-smoke-$([Guid]::NewGuid().ToString('N')).json"
 try {
