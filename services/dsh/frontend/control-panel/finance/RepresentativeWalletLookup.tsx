@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, StateView, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
@@ -77,6 +77,12 @@ export function RepresentativeWalletLookup({ actorType: initialActorType = "clie
   const [actorType, setActorType] = useState<RepresentativeWalletActorType>(initialActorType);
   const [actorId, setActorId] = useState("");
   const [state, setState] = useState<LookupState>({ kind: "idle" });
+
+  useEffect(() => {
+    setActorType(initialActorType);
+    setActorId("");
+    setState({ kind: "idle" });
+  }, [initialActorType]);
 
   const normalizedActorId = useMemo(() => actorId.trim(), [actorId]);
   const lookup = async () => {
@@ -225,7 +231,9 @@ export function RepresentativeWalletLookup({ actorType: initialActorType = "clie
                           <Text role="body" tone={entry.debitCredit === "credit" ? "success" : "danger"}>{amountLabel(entry.amountMinorUnits, entry.currency)}</Text>
                         </CpTableCell>
                         <CpTableCell>{amountLabel(entry.balanceAfter, entry.currency)}</CpTableCell>
-                        <CpTableCell>{entry.referenceId || entry.orderId || "—"}</CpTableCell>
+                        <CpTableCell>
+                          <CpMutedInline tight>{entry.referenceId || entry.sourceId || entry.description}</CpMutedInline>
+                        </CpTableCell>
                       </tr>
                     ))}
                   </tbody>
@@ -235,10 +243,8 @@ export function RepresentativeWalletLookup({ actorType: initialActorType = "clie
           </div>
         </div>
       )}
-
-      <CpMutedInline tight>
-        لا تُقبل مبالغ أو أرصدة من الواجهة، ولا تُنشئ هذه الشاشة ledger أو wallet موازيًا؛ القراءة فقط من owner المالي.
-      </CpMutedInline>
     </Card>
   );
 }
+
+export default RepresentativeWalletLookup;
