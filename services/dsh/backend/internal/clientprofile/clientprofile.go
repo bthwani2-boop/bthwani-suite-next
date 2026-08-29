@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	ErrNotFound              = errors.New("client profile not found")
-	ErrConflict              = errors.New("client profile version conflict")
-	ErrInvalid               = errors.New("client profile mutation is invalid")
-	ErrIdempotencyConflict   = errors.New("client profile idempotency conflict")
+	ErrNotFound            = errors.New("client profile not found")
+	ErrConflict            = errors.New("client profile version conflict")
+	ErrInvalid             = errors.New("client profile mutation is invalid")
+	ErrIdempotencyConflict = errors.New("client profile idempotency conflict")
 )
 
 type ClientProfile struct {

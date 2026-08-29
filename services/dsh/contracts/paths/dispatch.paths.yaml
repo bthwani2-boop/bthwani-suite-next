@@ -71,6 +71,10 @@
     summary: Captain changes only their available or unavailable operational state.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/ExpectedVersion"
     requestBody:
       required: true
       content:
