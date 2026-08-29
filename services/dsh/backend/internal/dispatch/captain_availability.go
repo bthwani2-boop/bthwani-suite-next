@@ -1,7 +1,9 @@
 package dispatch
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -23,17 +25,24 @@ type CaptainAvailability struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+type captainAvailabilityQuerier interface {
+	QueryRow(query string, args ...any) *sql.Row
+}
+
 func GetCaptainAvailability(db *sql.DB, operatorContextID, captainID string) (*CaptainAvailability, error) {
 	operatorContextID, captainID, err := normalizeCaptainAvailabilityIdentity(operatorContextID, captainID)
 	if err != nil {
 		return nil, err
 	}
+	return getCaptainAvailability(captainAvailabilityQuerier(db), operatorContextID, captainID)
+}
 
+func getCaptainAvailability(queryer captainAvailabilityQuerier, operatorContextID, captainID string) (*CaptainAvailability, error) {
 	var dispatchStatus string
 	var version int
 	var updatedAt time.Time
 	var noticeType sql.NullString
-	err = db.QueryRow(`
+	err := queryer.QueryRow(`
 		SELECT p.availability_status, p.version, p.updated_at,
 		       (
 		         SELECT lower(NULLIF(btrim(absence.notice_type), ''))
@@ -64,7 +73,16 @@ func GetCaptainAvailability(db *sql.DB, operatorContextID, captainID string) (*C
 	}, nil
 }
 
-func SetCaptainAvailability(db *sql.DB, operatorContextID, captainID, actorID, status string, expectedVersion int) (*CaptainAvailability, error) {
+func SetCaptainAvailability(
+	db *sql.DB,
+	operatorContextID,
+	captainID,
+	actorID,
+	status string,
+	expectedVersion int,
+	idempotencyKey,
+	correlationID string,
+) (*CaptainAvailability, error) {
 	operatorContextID, captainID, err := normalizeCaptainAvailabilityIdentity(operatorContextID, captainID)
 	if err != nil {
 		return nil, err
@@ -73,17 +91,65 @@ func SetCaptainAvailability(db *sql.DB, operatorContextID, captainID, actorID, s
 	if actorID == "" {
 		return nil, fmt.Errorf("%w: actorId is required", ErrInvalid)
 	}
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	correlationID = strings.TrimSpace(correlationID)
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		return nil, fmt.Errorf("%w: Idempotency-Key must contain between 8 and 200 characters", ErrInvalid)
+	}
+	if len(correlationID) < 8 || len(correlationID) > 200 {
+		return nil, fmt.Errorf("%w: X-Correlation-ID must contain between 8 and 200 characters", ErrInvalid)
+	}
+	if expectedVersion < 1 {
+		return nil, fmt.Errorf("%w: expectedVersion must be a positive integer", ErrInvalid)
+	}
 
 	dispatchStatus, err := normalizeCaptainDispatchAvailability(status)
 	if err != nil {
 		return nil, err
 	}
+	fingerprint := captainAvailabilityCommandFingerprint(
+		operatorContextID,
+		captainID,
+		actorID,
+		dispatchStatus,
+		expectedVersion,
+	)
 
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.Exec(
+		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+		operatorContextID+"|captain-availability|"+actorID+"|"+idempotencyKey,
+	); err != nil {
+		return nil, err
+	}
+
+	var storedCaptainID, storedFingerprint string
+	receiptErr := tx.QueryRow(`
+		SELECT captain_id, request_fingerprint
+		FROM dsh_captain_availability_command_receipts
+		WHERE operator_context_id = $1 AND actor_id = $2 AND idempotency_key = $3
+		FOR UPDATE
+	`, operatorContextID, actorID, idempotencyKey).Scan(&storedCaptainID, &storedFingerprint)
+	if receiptErr == nil {
+		if storedCaptainID != captainID || storedFingerprint != fingerprint {
+			return nil, ErrIdempotencyConflict
+		}
+		availability, err := getCaptainAvailability(tx, operatorContextID, captainID)
+		if err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return availability, nil
+	}
+	if !errors.Is(receiptErr, sql.ErrNoRows) {
+		return nil, receiptErr
+	}
 
 	var currentVersion int
 	if err := tx.QueryRow(`
@@ -97,7 +163,7 @@ func SetCaptainAvailability(db *sql.DB, operatorContextID, captainID, actorID, s
 		}
 		return nil, err
 	}
-	if expectedVersion > 0 && expectedVersion != currentVersion {
+	if expectedVersion != currentVersion {
 		return nil, fmt.Errorf("%w: captain profile version changed", ErrConflict)
 	}
 	if dispatchStatus == CaptainDispatchAvailabilityOnline {
@@ -129,7 +195,7 @@ func SetCaptainAvailability(db *sql.DB, operatorContextID, captainID, actorID, s
 		    updated_at = NOW()
 		WHERE operator_context_id = $1
 		  AND captain_id = $2
-		  AND ($5 = 0 OR version = $5)
+		  AND version = $5
 	`, operatorContextID, captainID, dispatchStatus, actorID, expectedVersion)
 	if err != nil {
 		return nil, err
@@ -141,10 +207,57 @@ func SetCaptainAvailability(db *sql.DB, operatorContextID, captainID, actorID, s
 	if affected != 1 {
 		return nil, fmt.Errorf("%w: captain profile version changed", ErrConflict)
 	}
+
+	availability, err := getCaptainAvailability(tx, operatorContextID, captainID)
+	if err != nil {
+		return nil, err
+	}
+	result, err = tx.Exec(`
+		INSERT INTO dsh_captain_availability_command_receipts
+			(operator_context_id, actor_id, captain_id, idempotency_key, request_fingerprint, correlation_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (operator_context_id, actor_id, idempotency_key) DO NOTHING
+	`, operatorContextID, actorID, captainID, idempotencyKey, fingerprint, correlationID)
+	if err != nil {
+		return nil, err
+	}
+	if affected, err := result.RowsAffected(); err != nil {
+		return nil, err
+	} else if affected != 1 {
+		if err := tx.QueryRow(`
+			SELECT captain_id, request_fingerprint
+			FROM dsh_captain_availability_command_receipts
+			WHERE operator_context_id = $1 AND actor_id = $2 AND idempotency_key = $3
+			FOR UPDATE
+		`, operatorContextID, actorID, idempotencyKey).Scan(&storedCaptainID, &storedFingerprint); err != nil {
+			return nil, err
+		}
+		if storedCaptainID != captainID || storedFingerprint != fingerprint {
+			return nil, ErrIdempotencyConflict
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetCaptainAvailability(db, operatorContextID, captainID)
+	return availability, nil
+}
+
+func captainAvailabilityCommandFingerprint(
+	operatorContextID,
+	captainID,
+	actorID,
+	dispatchStatus string,
+	expectedVersion int,
+) string {
+	value := strings.Join([]string{
+		operatorContextID,
+		captainID,
+		actorID,
+		dispatchStatus,
+		fmt.Sprintf("%d", expectedVersion),
+	}, "\x00")
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
 }
 
 func normalizeCaptainAvailabilityIdentity(operatorContextID, captainID string) (string, string, error) {

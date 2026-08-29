@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -44,18 +45,31 @@ func (s *protectedStoreServer) handleSetCaptainAvailability(w http.ResponseWrite
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
+		return
+	}
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if len(correlationID) < 8 || len(correlationID) > 200 {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_REQUIRED", "X-Correlation-ID must contain between 8 and 200 characters")
+		return
+	}
 	availability, err := dispatch.SetCaptainAvailability(
-		s.db, operatorContextID, actor.ID, actor.ID, body.Status, body.ExpectedVersion,
+		s.db, operatorContextID, actor.ID, actor.ID, body.Status, body.ExpectedVersion, idempotencyKey, correlationID,
 	)
 	if err != nil {
 		writeCaptainAvailabilityError(w, err)
 		return
 	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	store.SendJSON(w, http.StatusOK, availability)
 }
 
 func writeCaptainAvailabilityError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, dispatch.ErrIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different Captain availability command")
 	case strings.Contains(err.Error(), "captain profile not found"):
 		store.SendError(w, http.StatusConflict, "CAPTAIN_PROFILE_REQUIRED", "Captain dispatch profile is not provisioned")
 	case strings.Contains(err.Error(), "version changed"):

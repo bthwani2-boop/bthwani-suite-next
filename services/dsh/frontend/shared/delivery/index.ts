@@ -21,6 +21,7 @@ export * from './captain.surface-model';
 export type * from './captain-surface.binding';
 export * from './captain-service-mode.model';
 export * from './captain-availability.model';
+export * from './captain-availability-attempt';
 export * from './captain-gps.model';
 export * from './captain-profile.model';
 export * from './captain.derived';

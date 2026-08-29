@@ -436,6 +436,13 @@
       "sha256": "9861712fcedda80b8252cdfba53ce7cf9579542a5ad272353910ab8d23040598",
       "historicalPrefix": "1061",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 303,
+      "file": "dsh-1062_captain_availability_command_receipts.sql",
+      "sha256": "302c855f20b8795444ace34834306e07c90bfd0dc595636f66f9c0ba23c36278",
+      "historicalPrefix": "1062",
+      "state": "ACTIVE"
     }
   ]
 }

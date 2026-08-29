@@ -27,14 +27,27 @@ export function fetchOwnCaptainAvailability(): Promise<DshCaptainAvailability> {
   return request<DshCaptainAvailability>("/dsh/captain/dispatch/availability");
 }
 
-export function setOwnCaptainAvailability(
+export type DshCaptainAvailabilityMutationContext = {
+  readonly idempotencyKey: string;
+  readonly correlationId: string;
+};
+
+export async function setOwnCaptainAvailability(
   status: Extract<DshCaptainAvailabilityStatus, "available" | "unavailable">,
   expectedVersion: number,
+  mutation: DshCaptainAvailabilityMutationContext,
 ): Promise<DshCaptainAvailability> {
-  return request<DshCaptainAvailability>("/dsh/captain/dispatch/availability", {
+  const readback = await request<DshCaptainAvailability>("/dsh/captain/dispatch/availability", {
     method: "PATCH",
     body: { status, expectedVersion },
+    idempotencyKey: mutation.idempotencyKey,
+    correlationId: mutation.correlationId,
+    expectedVersion,
   });
+  if (readback.status !== status || readback.version <= expectedVersion) {
+    throw new Error("Captain availability mutation returned a non-canonical readback");
+  }
+  return readback;
 }
 
 export function fetchOperatorCaptainReadiness(captainId: string): Promise<DshCaptainReadiness> {

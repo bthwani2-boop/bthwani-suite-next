@@ -34,6 +34,8 @@ export type DshCaptainSurfaceState = {
   inboxItems: DshCaptainOrderBellItem[];
   selectedSupportScreen: CaptainSupportRoute;
   captainAvailabilityStatus: CaptainAvailabilityStatus;
+  availabilityBusy: boolean;
+  availabilityError: string | null;
   gpsStatus: CaptainGpsStatus;
   captainAppMode: CaptainAppMode;
   captainPodState: CaptainPodState;

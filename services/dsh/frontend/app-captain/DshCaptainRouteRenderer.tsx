@@ -63,6 +63,8 @@ export type DshCaptainRouteRendererProps = {
   readonly captainPodRequired: boolean;
   readonly isStoreCourierMode: boolean;
   readonly isCaptainAvailable: boolean;
+  readonly availabilityBusy: boolean;
+  readonly availabilityError: string | null;
   readonly selectedSupportScreen: CaptainSupportRoute;
   readonly isDeclineSheetVisible: boolean;
   readonly declineOrderId: string;
@@ -110,6 +112,7 @@ export type DshCaptainRouteRendererProps = {
   readonly onSetAppearanceMode: (mode: BThwaniAppearanceMode) => void;
   readonly onToggleStoreCourierMode: (next: boolean) => void;
   readonly onToggleAvailability: (available: boolean) => void;
+  readonly onRetryAvailability: () => void;
   readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<unknown>;
 };
 
@@ -158,6 +161,8 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     captainPodRequired,
     isStoreCourierMode,
     isCaptainAvailable,
+    availabilityBusy,
+    availabilityError,
     selectedSupportScreen,
     isDeclineSheetVisible,
     declineOrderId,
@@ -198,6 +203,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     onSetAppearanceMode,
     onToggleStoreCourierMode,
     onToggleAvailability,
+    onRetryAvailability,
     onPushLocation,
   } = props;
 
@@ -210,7 +216,10 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
         <DshEntryScreen
           state={captainEntryState}
           isAvailable={isCaptainAvailable}
+          availabilityBusy={availabilityBusy}
+          availabilityError={availabilityError}
           onToggleAvailability={onToggleAvailability}
+          onRetryAvailability={onRetryAvailability}
           onOpenOffersPress={onGoToInbox}
           {...(hasActiveAssignment
             ? {

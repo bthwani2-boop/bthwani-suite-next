@@ -280,6 +280,8 @@ function AuthenticatedCaptainSurface({
           captainPodRequired={derived.captainPodRequired && isActiveAssignmentOperational}
           isStoreCourierMode={derived.isStoreCourierMode}
           isCaptainAvailable={derived.isCaptainAvailable}
+          availabilityBusy={state.availabilityBusy}
+          availabilityError={state.availabilityError}
           selectedSupportScreen={state.selectedSupportScreen}
            isDeclineSheetVisible={state.isDeclineSheetVisible}
           declineOrderId={state.declineOrderId}
@@ -372,6 +374,7 @@ function AuthenticatedCaptainSurface({
             navigation.navigate({ kind: "home" }, "replace");
           }}
           onToggleAvailability={(available) => actions.setCaptainAvailabilityStatus(available ? "available" : "unavailable")}
+          onRetryAvailability={() => void actions.refreshAvailability()}
           onPushLocation={actions.pushLocation}
         />
       </View>
