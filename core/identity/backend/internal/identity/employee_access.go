@@ -78,6 +78,7 @@ func employeeDshPermissions(bundle string) []Permission {
 			"catalog.seed.read",
 			"catalog.bulk.import", "catalog.bulk.export", "catalog.bulk.edit",
 			"catalog.audit.read", "catalog.cleanup.manage",
+			"catalog.approval.read", "catalog.approval.manage",
 			"marketing.read", "marketing.manage",
 			"finance.read", "finance.manage",
 			"analytics.read",

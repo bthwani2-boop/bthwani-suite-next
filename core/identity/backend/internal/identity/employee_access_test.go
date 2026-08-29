@@ -140,7 +140,7 @@ func TestEmployeeBundlesGrantOnlyTheirExactDshDomain(t *testing.T) {
 		},
 		{
 			bundle: EmployeeBundlePlatformOwner, department: "platform",
-			required: []string{"platform:read", "platform.manage"},
+			required: []string{"platform:read", "platform.manage", "catalog.approval.read", "catalog.approval.manage"},
 		},
 	}
 
