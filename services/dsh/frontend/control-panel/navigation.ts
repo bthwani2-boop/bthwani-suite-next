@@ -1,4 +1,7 @@
-import { CONTROL_PANEL_SECTION_ROUTES } from "../shared/control-panel-routes";
+import {
+  CONTROL_PANEL_SECTION_ROUTES,
+  isControlPanelRouteWithin,
+} from "../shared/control-panel-routes";
 import {
   hasAnyControlPanelPermissionAlternative,
   type ControlPanelPermissionAlternatives,
@@ -118,5 +121,5 @@ export function resolveDshNavigationItem(pathname: string | null): (typeof DSH_N
   if (!pathname) return undefined;
   return [...DSH_NAV_ITEMS]
     .sort((a, b) => b.route.length - a.route.length)
-    .find((item) => pathname.startsWith(item.route));
+    .find((item) => isControlPanelRouteWithin(pathname, item.route));
 }
