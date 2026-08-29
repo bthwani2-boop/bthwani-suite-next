@@ -149,26 +149,34 @@ jobs:
         with:
           go-version-file: ${{ matrix.go_mod }}
           cache-dependency-path: ${{ matrix.workdir }}/go.sum
-      - name: Test and build backend
+      - name: Collect Go test and build evidence
         working-directory: ${{ matrix.workdir }}
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           log="${RUNNER_TEMP}/${{ matrix.key }}-go-verification.log"
-          printf 'backend verification mode=selected-module packages=./...\n' | tee "${log}"
+          : >"${log}"
+          failures=()
 
-          if ! go test ./... -count=1 >>"${log}" 2>&1; then
-            echo "::error title=${{ matrix.key }} Go verification failed::The complete log is stored as an artifact."
+          printf '===== go test ./... -count=1 =====\n' | tee -a "${log}"
+          go test ./... -count=1 >>"${log}" 2>&1
+          test_code=$?
+          (( test_code == 0 )) || failures+=("go-test:${test_code}")
+
+          printf '\n===== go build ./... =====\n' | tee -a "${log}"
+          go build ./... >>"${log}" 2>&1
+          build_code=$?
+          (( build_code == 0 )) || failures+=("go-build:${build_code}")
+
+          if (( ${#failures[@]} )); then
+            echo "::error title=${{ matrix.key }} Go verification failed::Collected $(IFS=,; echo "${failures[*]}"). Complete log is stored as an artifact."
             grep -E \
             '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' \
-            "${log}" | tail -n 80 || true
-            tail -n 160 "${log}"
+            "${log}" | tail -n 120 || true
+            tail -n 220 "${log}"
             exit 1
           fi
-          if ! go build ./... >>"${log}" 2>&1; then
-            tail -n 160 "${log}"
-            exit 1
-          fi
+          echo "Go test and build both passed." | tee -a "${log}"
       - name: Upload verification logs
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

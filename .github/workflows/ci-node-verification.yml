@@ -94,7 +94,7 @@ jobs:
           }
           if [[ "${FULL_SCOPE}" == "true" ]]; then
             for target in typecheck lint test build; do
-              run_check "${target}" pnpm exec nx run-many -t "${target}" --all --outputStyle=stream
+              run_check "${target}" pnpm exec nx run-many -t "${target}" --all --outputStyle=stream --skip-nx-cache
             done
           else
             for target in typecheck lint test; do

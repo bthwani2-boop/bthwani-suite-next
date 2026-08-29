@@ -31,7 +31,7 @@ test("orchestrator package keeps its declared nine owners and revision", () => {
   }
   assert.deepEqual(actual.sort(), [...orchestratorFiles].sort());
   const entrypoint = read("tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md");
-  assert.match(entrypoint, /PACKAGE_REVISION: 21/u);
+  assert.match(entrypoint, /PACKAGE_REVISION: 22/u);
   assert.match(entrypoint, /Exactly nine files are semantic owners/u);
   for (const relativePath of orchestratorFiles) assert.equal(exists(`tools/prompting/bthwani-orchestrator/${relativePath}`), true, relativePath);
 });
@@ -252,4 +252,47 @@ test("exact candidate and fail-closed status remain the final authority", () => 
   assert.match(workflow, /statuses\/\$\{HEAD_SHA\}/u);
   assert.match(workflow, /state=success/u);
   assert.match(workflow, /state=failure/u);
+});
+
+test("remaining evidence collectors do not mask independently executable failures", () => {
+  const contracts = read(".github/workflows/ci-node-diagnostics.yml");
+  const runtime = read(".github/workflows/ci-runtime.yml");
+  const backends = read(".github/workflows/ci-backends.yml");
+  assert.match(contracts, /Enforce complete contract diagnostic collection/u);
+  assert.match(contracts, /BLOCKED_BY materialize/u);
+  assert.match(runtime, /Enforce complete runtime evidence collection/u);
+  assert.match(runtime, /BLOCKED_BY bootstrap/u);
+  assert.match(backends, /Collect Go test and build evidence/u);
+  assert.match(backends, /go-test:/u);
+  assert.match(backends, /go-build:/u);
+});
+
+test("full Node verification bypasses Nx computation cache while affected verification stays incremental", () => {
+  const workflow = read(".github/workflows/ci-node-verification.yml");
+  assert.match(workflow, /run-many -t "\$\{target\}" --all --outputStyle=stream --skip-nx-cache/u);
+  assert.match(workflow, /run-affected-verification\.mjs/u);
+});
+
+test("orchestrator forbids false green and broad rerun churn", () => {
+  const verify = read("tools/prompting/bthwani-orchestrator/04-VERIFY-REDIAGNOSE-CLOSE.md");
+  assert.match(verify, /NOT_COVERED/u);
+  assert.match(verify, /BLOCKED_BY/u);
+  assert.match(verify, /Discovery is an evidence stream, not an execution barrier/u);
+  assert.match(verify, /do not dispatch another broad remote wave/u);
+  assert.match(verify, /rerun only invalidated\/newly-required proof/u);
+});
+
+test("assurance routing includes semantic control-plane authorities", () => {
+  const router = read("tools/scripts/detect-ci-context.mjs");
+  for (const path of [".agents/", ".opencodereview/", "tools/prompting/", "governance/"]) {
+    assert.ok(router.includes(`"${path}"`), path);
+  }
+});
+
+test("deep discovery utilities are evidence tools, not durable truth registries", () => {
+  assert.equal(exists("tools/scripts/run-deep-discovery.mjs"), true);
+  assert.equal(exists("tools/scripts/run-rendered-control-panel-proof.mjs"), true);
+  const discovery = read("tools/scripts/run-deep-discovery.mjs");
+  assert.match(discovery, /tmpdir\(\)/u);
+  assert.doesNotMatch(discovery, /closure-registry|root-status|project-status/u);
 });
