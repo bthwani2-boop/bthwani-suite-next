@@ -16,7 +16,13 @@ test("partner hub notification settings use the canonical controller and server 
   assert.match(hub, /notificationPreferenceState\.kind === "success"/);
   assert.match(panel, /notificationPreferences\.map\(\(preference\)/);
   assert.match(panel, /onSaveNotificationPreference\(preferenceInput\(preference/);
-  assert.match(controller, /await loadPreferences\(\);/);
+  assert.match(controller, /const loadPreferences = useCallback\(async \(\): Promise<boolean> =>/);
+  assert.match(controller, /setPreferenceState\(\{ kind: "success", preferences: data\.preferences \}\);\s*return true;/);
+  assert.match(controller, /setPreferenceState\(\{ kind: "error", message: resolveMessage\(err\) \}\);\s*return false;/);
+  assert.match(controller, /const result = await operation\(\);\s*if \(result === false\)/);
+  assert.match(controller, /return loadPreferences\(\);/);
+  assert.match(controller, /تم إرسال التغيير، لكن تعذر التحقق من الحقيقة المحفوظة/);
+  assert.doesNotMatch(controller, /await loadPreferences\(\);\s*\},\s*\), \[loadPreferences, runMutation\]\);/);
   assert.doesNotMatch(hub, /failClosedNotificationPreferences|useState<NotificationPreferenceState>/);
   assert.doesNotMatch(hub, /updateNotificationPreferences|import\("\.\.\/\.\.\/shared\/notifications"\)/);
   assert.doesNotMatch(panel, /\bNotificationPreferenceState\b|primaryNotificationRows|secondaryNotificationRows/);
