@@ -48,6 +48,23 @@ test("partner runtime owns persisted appearance and reconciles memory to durable
   assert.doesNotMatch(hub, /useAppPartnerAppearance|useState<BThwaniAppearanceMode>/);
 });
 
+test("partner self/readiness state is isolated across store, session, and unmount changes", async () => {
+  const controller = await read("services/dsh/frontend/shared/partner/use-partner-self-controller.tsx");
+  const hub = await read("services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx");
+
+  assert.match(controller, /const mountedRef = useRef\(true\)/);
+  assert.match(controller, /const statusRequestSeqRef = useRef\(0\)/);
+  assert.match(controller, /const readinessRequestSeqRef = useRef\(0\)/);
+  assert.match(controller, /const requestSeq = \+\+statusRequestSeqRef\.current/);
+  assert.match(controller, /const requestSeq = \+\+readinessRequestSeqRef\.current/);
+  assert.match(controller, /if \(!isAuth\) \{[\s\S]*setStatusState\(\{ kind: "idle" \}\)/);
+  assert.match(controller, /if \(!isAuth\) \{[\s\S]*setReadinessState\(\{ kind: "idle" \}\)/);
+  assert.match(controller, /requestSeq !== statusRequestSeqRef\.current/);
+  assert.match(controller, /requestSeq !== readinessRequestSeqRef\.current/);
+  assert.doesNotMatch(hub, /selfStatusState\.kind === "not_found"/);
+  assert.doesNotMatch(hub, /selfStatusState\.kind === "forbidden"/);
+});
+
 test("partner native wiring leaves inbound URL navigation to Expo Router", async () => {
   const source = await read("apps/app-partner/runtime/src/platform/dsh-capabilities.tsx");
 
