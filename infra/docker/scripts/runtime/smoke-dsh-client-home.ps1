@@ -32,6 +32,44 @@ function Get-LocalActorToken([string] $Username) {
   return $login.accessToken
 }
 
+function Get-GovernedStoreServicePoint([string] $StoreId) {
+  $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../../..")).Path
+  $composeFile = Join-Path $repoRoot "infra/docker/compose.runtime.yml"
+  $envFile = Join-Path $repoRoot "infra/docker/env/runtime.env.example"
+  $statement = @"
+WITH target_store AS (
+  SELECT latitude, longitude
+  FROM dsh_stores
+  WHERE id = '$StoreId'
+    AND latitude IS NOT NULL
+    AND longitude IS NOT NULL
+), effective_versions AS (
+  SELECT DISTINCT ON (service_area_code)
+         service_area_code, polygon, active, priority, effective_from, expires_at, version
+  FROM dsh_service_area_versions
+  WHERE effective_from <= NOW()
+    AND (expires_at IS NULL OR expires_at > NOW())
+  ORDER BY service_area_code, effective_from DESC, version DESC
+)
+SELECT v.service_area_code || '|' || s.latitude::text || '|' || s.longitude::text
+FROM target_store s
+JOIN effective_versions v
+  ON v.active = TRUE
+ AND ST_Contains(v.polygon, ST_SetSRID(ST_MakePoint(s.longitude, s.latitude), 4326))
+ORDER BY v.priority DESC, v.service_area_code ASC
+LIMIT 1;
+"@
+  $output = docker compose --env-file $envFile -f $composeFile exec -T postgres psql -X -v ON_ERROR_STOP=1 -U dsh_runtime -d dsh_runtime -qAt -c $statement
+  if ($LASTEXITCODE -ne 0) { throw "governed DSH service-point readback failed" }
+  $parts = (($output -join "`n").Trim()).Split("|", [StringSplitOptions]::None)
+  if ($parts.Count -ne 3 -or [string]::IsNullOrWhiteSpace($parts[0])) { throw "governed DSH service-point readback was empty or malformed" }
+  return [pscustomobject]@{
+    ServiceAreaCode = [string]$parts[0]
+    Latitude = [double]$parts[1]
+    Longitude = [double]$parts[2]
+  }
+}
+
 $operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
 $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
 
@@ -57,14 +95,20 @@ if ($WltEnabled) {
   $cartVersion = [int]$cartReadback.cart.version
   if ($cartVersion -lt 1) { throw "cart item did not return a positive canonical cart version" }
 
-  $clientStore = Invoke-RestMethod "http://localhost:18080/dsh/stores/store-test-grocery" -TimeoutSec 10
-  $serviceAreaCode = [string]$clientStore.store.serviceAreaCode
-  $storeLatitude = [double]$clientStore.store.latitude
-  $storeLongitude = [double]$clientStore.store.longitude
-  if ([string]::IsNullOrWhiteSpace($serviceAreaCode)) { throw "client checkout store readback did not return serviceAreaCode" }
+  # Store discovery deliberately withholds exact coordinates. Resolve the
+  # effective DSH geofence from the canonical store/geofence read model so the
+  # address writer receives the same service-area truth checkout will enforce.
+  $servicePoint = Get-GovernedStoreServicePoint "store-test-grocery"
+  $serviceAreaCode = $servicePoint.ServiceAreaCode
+  $storeLatitude = $servicePoint.Latitude
+  $storeLongitude = $servicePoint.Longitude
 
   $addressList = Invoke-RestMethod "http://localhost:18080/dsh/client/addresses" -Headers $clientReadHeaders -TimeoutSec 10
-  $deliveryAddress = @($addressList.addresses | Where-Object { $_.serviceAreaCode -eq $serviceAreaCode } | Select-Object -First 1)
+  $deliveryAddress = @($addressList.addresses | Where-Object {
+    $_.serviceAreaCode -eq $serviceAreaCode -and
+    [math]::Abs([double]$_.latitude - $storeLatitude) -lt 0.000001 -and
+    [math]::Abs([double]$_.longitude - $storeLongitude) -lt 0.000001
+  } | Select-Object -First 1)
   if ($deliveryAddress.Count -eq 0) {
     $addressHeaders = @{
       Authorization = "Bearer $clientToken"
