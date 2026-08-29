@@ -65,14 +65,16 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if err != nil || visible.ID != item.ID {
 		t.Fatalf("return decision must remain visible to captain: %+v err=%v", visible, err)
 	}
-	arrived, err := CaptainArriveReturnToStoreForOperatorContext(db, operatorContextID, assignmentID, captainID)
+	arrivalKey := "captain-return-arrive-key-" + suffix
+	arrivalCorrelation := "captain-return-arrive-correlation-" + suffix
+	arrived, err := CaptainArriveReturnToStoreForOperatorContext(db, operatorContextID, assignmentID, captainID, arrivalKey, arrivalCorrelation)
 	if err != nil {
 		t.Fatalf("captain arrive return: %v", err)
 	}
 	if arrived.ReturnArrivedAt == nil || arrived.ReturnedAt != nil {
 		t.Fatalf("captain arrival must not complete store receipt: %+v", arrived)
 	}
-	arrivedReplay, err := CaptainArriveReturnToStoreForOperatorContext(db, operatorContextID, assignmentID, captainID)
+	arrivedReplay, err := CaptainArriveReturnToStoreForOperatorContext(db, operatorContextID, assignmentID, captainID, arrivalKey, arrivalCorrelation)
 	if err != nil {
 		t.Fatalf("captain arrival replay: %v", err)
 	}
@@ -85,19 +87,24 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if orderStatus != "return_arrived_store" || deliveryStatus != "return_arrived_store" || assignmentStatus != "accepted" {
 		t.Fatalf("arrival handshake mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
 	}
-	returned, err := AcceptReturnToStoreByPartner(db, operatorContextID, orderID, "partner-return-receipt-test")
+	partnerReturnKey := "partner-return-accept-key-" + suffix
+	partnerReturnCorrelation := "partner-return-accept-correlation-" + suffix
+	returned, err := AcceptReturnToStoreByPartner(db, operatorContextID, orderID, "partner-return-receipt-test", partnerReturnKey, partnerReturnCorrelation)
 	if err != nil {
 		t.Fatalf("partner accept return: %v", err)
 	}
 	if returned.ReturnedAt == nil || returned.ReturnAcceptedByActorID == nil {
 		t.Fatalf("partner receipt was not recorded: %+v", returned)
 	}
-	returnedReplay, err := AcceptReturnToStoreByPartner(db, operatorContextID, orderID, "partner-return-receipt-retry")
+	returnedReplay, err := AcceptReturnToStoreByPartner(db, operatorContextID, orderID, "partner-return-receipt-test", partnerReturnKey, partnerReturnCorrelation)
 	if err != nil {
 		t.Fatalf("partner receipt replay: %v", err)
 	}
 	if returnedReplay.ID != returned.ID || returnedReplay.ReturnedAt == nil || !returnedReplay.ReturnedAt.Equal(*returned.ReturnedAt) || returnedReplay.ReturnAcceptedByActorID == nil || *returnedReplay.ReturnAcceptedByActorID != "partner-return-receipt-test" {
 		t.Fatalf("partner receipt replay did not preserve the original canonical receipt: original=%+v replay=%+v", returned, returnedReplay)
+	}
+	if _, err := CaptainArriveReturnToStoreForOperatorContext(db, operatorContextID, assignmentID, captainID, partnerReturnKey, partnerReturnCorrelation); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("reusing partner return key for captain arrival returned %v, want ErrIdempotencyConflict", err)
 	}
 	var arrivalEvents, receiptEvents int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_order_status_events WHERE order_id=$1::uuid AND from_status='returning_to_store' AND to_status='return_arrived_store'`, orderID).Scan(&arrivalEvents); err != nil {

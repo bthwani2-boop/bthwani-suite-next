@@ -220,7 +220,12 @@ func (s *protectedStoreServer) handleArriveReturnToStore(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	item, err := dispatch.CaptainArriveReturnToStoreForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID)
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
+	item, err := dispatch.CaptainArriveReturnToStoreForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID, idempotencyKey, correlationID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return

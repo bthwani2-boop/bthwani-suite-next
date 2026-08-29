@@ -7,19 +7,22 @@ const api = readFileSync(resolve(process.cwd(), "services/dsh/frontend/shared/di
 const captainScreen = readFileSync(resolve(process.cwd(), "services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"), "utf8");
 const partnerController = readFileSync(resolve(process.cwd(), "services/dsh/frontend/shared/dispatch/use-partner-return-to-store-controller.ts"), "utf8");
 
-test("return-to-store transport does not advertise an unconsumed idempotency authority", () => {
-  assert.match(api, /arriveCaptainReturnToStore\(assignmentId: string\)/);
-  assert.match(api, /acceptPartnerReturnToStore\(orderId: string\)/);
-  assert.doesNotMatch(api, /captain-return-arrive|partner-return-accept/);
+test("return-to-store transport consumes one explicit command identity", () => {
+  assert.match(api, /arriveCaptainReturnToStore\([\s\S]*?mutation: DshCaptainCommandContext/);
+  assert.match(api, /acceptPartnerReturnToStore\([\s\S]*?mutation: DshCaptainCommandContext/);
+  assert.match(api, /idempotencyKey: mutation\.idempotencyKey/);
+  assert.match(api, /correlationId: mutation\.correlationId/);
 });
 
 test("captain and partner return flows use canonical replay-safe transitions", () => {
   assert.match(captainScreen, /const identity = useIdentitySession\(\)/);
-  assert.match(captainScreen, /arriveCaptainReturnToStore\(assignmentId\)/);
-  assert.doesNotMatch(captainScreen, /returnCommandRef|captain-return-arrive/);
+  assert.match(captainScreen, /getOrCreateReturnToStoreCommandAttempt/);
+  assert.match(captainScreen, /clearReturnToStoreCommandAttempt/);
+  assert.match(captainScreen, /arriveCaptainReturnToStore\(assignmentId, attempt\.context\)/);
   assert.match(partnerController, /const identity = useIdentitySession\(\)/);
-  assert.match(partnerController, /acceptPartnerReturnToStore\(orderId\)/);
-  assert.doesNotMatch(partnerController, /commandRef|Date\.now|partner-return-accept/);
+  assert.match(partnerController, /getOrCreateReturnToStoreCommandAttempt/);
+  assert.match(partnerController, /clearReturnToStoreCommandAttempt/);
+  assert.match(partnerController, /acceptPartnerReturnToStore\(orderId, attempt\.context\)/);
 });
 
 console.log("return-to-store-command-identity-contract: PASS");

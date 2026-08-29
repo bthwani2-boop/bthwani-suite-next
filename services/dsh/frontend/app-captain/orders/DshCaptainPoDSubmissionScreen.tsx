@@ -20,6 +20,8 @@ import { DshOperationScreen } from '../DshOperationScreen';
 import {
   arriveCaptainReturnToStore,
   fetchCaptainDeliveryException,
+  getOrCreateReturnToStoreCommandAttempt,
+  clearReturnToStoreCommandAttempt,
   type DshDeliveryException,
   type DshDeliveryExceptionReasonCode,
 } from '../../shared/dispatch';
@@ -181,7 +183,10 @@ export function DshCaptainPoDSubmissionScreen({
     setArrivingReturn(true);
     setExceptionLoadError(null);
     try {
-      const item = await arriveCaptainReturnToStore(assignmentId);
+      const intent = { actorId, command: 'captain_arrive' as const, entityId: assignmentId };
+      const attempt = await getOrCreateReturnToStoreCommandAttempt(intent);
+      const item = await arriveCaptainReturnToStore(assignmentId, attempt.context);
+      await clearReturnToStoreCommandAttempt(intent, attempt.signature);
       setActiveException(item);
     } catch (error) {
       setExceptionLoadError(error instanceof Error ? error.message : 'تعذر تثبيت تسليم المرتجع للمتجر.');

@@ -684,19 +684,20 @@ func ResolveDeliveryExceptionReturnToStore(db *sql.DB, operatorContextID, id str
 	return GetDeliveryExceptionForContext(db, operatorContextID, id)
 }
 
-func CaptainArriveReturnToStoreForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string) (*DeliveryException, error) {
+func CaptainArriveReturnToStoreForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID, idempotencyKey, correlationID string) (*DeliveryException, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
 		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
-	return captainArriveReturnToStore(db, operatorContextID, assignmentID, captainID)
+	command, err := newReturnToStoreCommand(operatorContextID, captainID, "captain_arrive", "assignment:"+strings.TrimSpace(assignmentID), idempotencyKey, correlationID)
+	if err != nil {
+		return nil, err
+	}
+	return captainArriveReturnToStore(db, command, assignmentID, captainID)
 }
 
-func captainArriveReturnToStore(db *sql.DB, operatorContextID, assignmentID, captainID string) (*DeliveryException, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
-	}
+func captainArriveReturnToStore(db *sql.DB, command returnToStoreCommand, assignmentID, captainID string) (*DeliveryException, error) {
+	operatorContextID := command.OperatorContextID
 	assignmentID = strings.TrimSpace(assignmentID)
 	captainID = strings.TrimSpace(captainID)
 	if assignmentID == "" || captainID == "" {
@@ -707,6 +708,18 @@ func captainArriveReturnToStore(db *sql.DB, operatorContextID, assignmentID, cap
 		return nil, err
 	}
 	defer tx.Rollback()
+	if exceptionID, found, err := beginReturnToStoreCommand(tx, command); err != nil {
+		return nil, err
+	} else if found {
+		item, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, exceptionID)
+		if err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return item, nil
+	}
 
 	var assignmentStatus AssignmentStatus
 	var deliveryStatus DeliveryStatus
@@ -744,6 +757,12 @@ func captainArriveReturnToStore(db *sql.DB, operatorContextID, assignmentID, cap
 		if orderStatus != "return_arrived_store" || deliveryStatus != DeliveryReturnArrivedStore {
 			return nil, fmt.Errorf("%w: return arrival state drift", ErrConflict)
 		}
+		if err := recordReturnToStoreCommand(tx, command, item.ID); err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
 		return item, nil
 	}
 	if assignmentStatus != AssignmentAccepted || deliveryStatus != DeliveryReturningStore || orderStatus != "returning_to_store" {
@@ -759,6 +778,9 @@ func captainArriveReturnToStore(db *sql.DB, operatorContextID, assignmentID, cap
 		return nil, err
 	}
 	if _, err := tx.Exec(`UPDATE dsh_delivery_exceptions SET return_arrived_at=NOW(), version=version+1, updated_at=NOW() WHERE id=$1::uuid AND return_arrived_at IS NULL`, item.ID); err != nil {
+		return nil, err
+	}
+	if err := recordReturnToStoreCommand(tx, command, item.ID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -786,18 +808,34 @@ func GetPartnerReturnToStore(db *sql.DB, operatorContextID, orderID string) (*De
 	return item, err
 }
 
-func AcceptReturnToStoreByPartner(db *sql.DB, operatorContextID, orderID, actorID string) (*DeliveryException, error) {
+func AcceptReturnToStoreByPartner(db *sql.DB, operatorContextID, orderID, actorID, idempotencyKey, correlationID string) (*DeliveryException, error) {
 	orderID = strings.TrimSpace(orderID)
 	actorID = strings.TrimSpace(actorID)
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" || orderID == "" || actorID == "" {
 		return nil, fmt.Errorf("%w: order and partner actor are required", ErrInvalid)
 	}
+	command, err := newReturnToStoreCommand(operatorContextID, actorID, "partner_accept", "order:"+orderID, idempotencyKey, correlationID)
+	if err != nil {
+		return nil, err
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
+	if exceptionID, found, err := beginReturnToStoreCommand(tx, command); err != nil {
+		return nil, err
+	} else if found {
+		item, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, exceptionID)
+		if err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return item, nil
+	}
 
 	row := tx.QueryRow(`
                 SELECT `+deliveryExceptionColumns+`
@@ -814,6 +852,12 @@ func AcceptReturnToStoreByPartner(db *sql.DB, operatorContextID, orderID, actorI
 		return nil, err
 	}
 	if item.ReturnedAt != nil {
+		if err := recordReturnToStoreCommand(tx, command, item.ID); err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
 		return item, nil
 	}
 	if item.ReturnArrivedAt == nil {
@@ -852,6 +896,9 @@ func AcceptReturnToStoreByPartner(db *sql.DB, operatorContextID, orderID, actorI
 		return nil, err
 	}
 	if _, err := tx.Exec(`UPDATE dsh_delivery_exceptions SET returned_at=NOW(), return_accepted_by_actor_id=$1, version=version+1, updated_at=NOW() WHERE id=$2::uuid AND returned_at IS NULL`, actorID, item.ID); err != nil {
+		return nil, err
+	}
+	if err := recordReturnToStoreCommand(tx, command, item.ID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {

@@ -341,7 +341,12 @@ func (s *protectedStoreServer) handleAcceptPartnerReturnToStore(w http.ResponseW
 	if !ok {
 		return
 	}
-	item, err := dispatch.AcceptReturnToStoreByPartner(s.db, actor.OperatorContextID, order.ID, actor.ID)
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
+	item, err := dispatch.AcceptReturnToStoreByPartner(s.db, actor.OperatorContextID, order.ID, actor.ID, idempotencyKey, correlationID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return

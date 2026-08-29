@@ -347,11 +347,18 @@ export function resolveDeliveryExceptionCancelOrder(
   });
 }
 
-export async function arriveCaptainReturnToStore(assignmentId: string): Promise<DshDeliveryException> {
-  await request<{ exception: DshDeliveryException }>(
-    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/return-to-store/arrive`,
-    { method: "POST" },
-  );
+export async function arriveCaptainReturnToStore(
+  assignmentId: string,
+  mutation: DshCaptainCommandContext,
+): Promise<DshDeliveryException> {
+	await request<{ exception: DshDeliveryException }>(
+		`/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/return-to-store/arrive`,
+		{
+			method: "POST",
+			idempotencyKey: mutation.idempotencyKey,
+			correlationId: mutation.correlationId,
+		},
+	);
   return fetchCaptainDeliveryException(assignmentId);
 }
 
@@ -362,11 +369,18 @@ export async function fetchPartnerReturnToStore(orderId: string): Promise<DshDel
   return data.exception;
 }
 
-export async function acceptPartnerReturnToStore(orderId: string): Promise<DshDeliveryException> {
-  await request<{ exception: DshDeliveryException }>(
-    `/dsh/partner/orders/${encodeURIComponent(orderId)}/return-to-store/accept`,
-    { method: "POST" },
-  );
+export async function acceptPartnerReturnToStore(
+  orderId: string,
+  mutation: DshCaptainCommandContext,
+): Promise<DshDeliveryException> {
+	await request<{ exception: DshDeliveryException }>(
+		`/dsh/partner/orders/${encodeURIComponent(orderId)}/return-to-store/accept`,
+		{
+			method: "POST",
+			idempotencyKey: mutation.idempotencyKey,
+			correlationId: mutation.correlationId,
+		},
+	);
   return fetchPartnerReturnToStore(orderId);
 }
 

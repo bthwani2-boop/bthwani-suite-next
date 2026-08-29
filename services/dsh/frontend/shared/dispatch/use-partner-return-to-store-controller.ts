@@ -1,6 +1,7 @@
 import React from 'react';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { acceptPartnerReturnToStore, fetchPartnerReturnToStore } from './dispatch.api';
+import { clearReturnToStoreCommandAttempt, getOrCreateReturnToStoreCommandAttempt } from './return-to-store-command-attempt';
 import type { DshDeliveryException } from './dispatch.types';
 
 export type PartnerReturnToStoreState =
@@ -48,7 +49,10 @@ export function usePartnerReturnToStoreController(orderId: string) {
     }
     setState((current) => current.kind === 'ready' ? { ...current, accepting: true } : current);
     try {
-      const item = await acceptPartnerReturnToStore(orderId);
+      const intent = { actorId, command: 'partner_accept' as const, entityId: orderId };
+      const attempt = await getOrCreateReturnToStoreCommandAttempt(intent);
+      const item = await acceptPartnerReturnToStore(orderId, attempt.context);
+      await clearReturnToStoreCommandAttempt(intent, attempt.signature);
       setState({ kind: 'ready', item, accepting: false });
       return true;
     } catch (error) {

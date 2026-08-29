@@ -478,6 +478,13 @@
       "sha256": "ebd6eb36b5e34a05186a2bc5be869d755ccd115e4c0e10788dfc61ff016a4edd",
       "historicalPrefix": "1067",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 309,
+      "file": "dsh-1068_return_to_store_command_receipts.sql",
+      "sha256": "319773d1cde82be2b7606842e0166ca2d0438e8429dd74f788c97f93da512d7d",
+      "historicalPrefix": "1068",
+      "state": "ACTIVE"
     }
   ]
 }
