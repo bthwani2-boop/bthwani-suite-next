@@ -60,7 +60,7 @@ INSERT INTO dsh_service_area_geofences (
         '__contract_address_low',
         'Contract Address Low',
         ST_GeomFromText(
-            'POLYGON((44.10 15.30,44.30 15.30,44.30 15.50,44.10 15.50,44.10 15.30))',
+            'POLYGON((46.10 17.30,46.30 17.30,46.30 17.50,46.10 17.50,46.10 17.30))',
             4326
         ),
         TRUE,
@@ -74,7 +74,7 @@ INSERT INTO dsh_service_area_geofences (
         '__contract_address_high',
         'Contract Address High',
         ST_GeomFromText(
-            'POLYGON((44.10 15.30,44.30 15.30,44.30 15.50,44.10 15.50,44.10 15.30))',
+            'POLYGON((46.10 17.30,46.30 17.30,46.30 17.50,46.10 17.50,46.10 17.30))',
             4326
         ),
         TRUE,
@@ -136,8 +136,8 @@ INSERT INTO dsh_client_addresses (
     '+967771234567',
     'Governed PostGIS contract address',
     ' __CONTRACT_ADDRESS_HIGH ',
-    15.40,
-    44.20,
+    17.40,
+    46.20,
     '__contract_create_valid'
 );
 
@@ -178,8 +178,8 @@ BEGIN
             '+967771234568',
             'Lower priority overlapping service area',
             '__contract_address_low',
-            15.40,
-            44.20,
+            17.40,
+            46.20,
             '__contract_create_wrong_overlap'
         );
         RAISE EXCEPTION 'expected lower-priority overlap rejection';
@@ -214,8 +214,8 @@ BEGIN
             '+967771234569',
             'Outside governed service area',
             '__contract_address_high',
-            15.80,
-            44.80,
+            17.80,
+            46.80,
             '__contract_create_outside'
         );
         RAISE EXCEPTION 'expected outside-zone rejection';
