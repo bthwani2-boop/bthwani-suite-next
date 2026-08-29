@@ -299,6 +299,38 @@ test("client special-request saga commands survive restart through durable ident
   assert.match(contract, /description: Durable payment-session saga accepted/);
 });
 
+test("client special-request information responses replay through a canonical exchange", () => {
+  const controller = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/use-special-requests-controller.tsx",
+    ["respond-information", "getOrCreateClientSpecialRequestCommandAttempt", "fetchClientSpecialRequestInformation", "canonicalExchange"],
+  );
+  assert.match(controller, /respondClientSpecialRequestInformation\(request\.id,[\s\S]*attempt\.context\)/);
+  const api = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/special-requests.api.ts",
+    ["respondClientSpecialRequestInformation", "idempotencyKey: mutation.idempotencyKey", "correlationId: mutation.correlationId"],
+  );
+  assert.match(api, /input: DshRespondSpecialRequestInformation,[\s\S]*mutation: ClientSpecialRequestMutationContext/);
+  const contract = assertMarkers(
+    "services/dsh/contracts/paths/misc.paths.yaml",
+    ["/dsh/client/special-requests/{requestId}/information-response", "IdempotencyKey", "CorrelationId"],
+  );
+  const service = assertMarkers(
+    "services/dsh/backend/internal/specialrequests/information_exchange.go",
+    ["InformationResponseMutationContext", "dsh_special_request_information_response_receipts", "informationResponseFingerprint", "pg_advisory_xact_lock"],
+  );
+  assert.ok(service.includes("ErrInformationResponseIdempotencyConflict"));
+  const handler = assertMarkers(
+    "services/dsh/backend/internal/http/specialrequests_information.go",
+    ["specialRequestInformationMutationContext", "IDEMPOTENCY_CONFLICT", "X-Correlation-ID"],
+  );
+  assert.ok(handler.includes("Idempotency-Key"));
+  const migration = assertMarkers(
+    "services/dsh/database/migrations/dsh-1065_special_request_information_response_idempotency.sql",
+    ["dsh_special_request_information_response_receipts", "exchange_id", "PRIMARY KEY"],
+  );
+  assert.ok(migration.includes("request_fingerprint"));
+});
+
 test("client order delivery projections distinguish unavailable data from readback failure", () => {
   const controller = assertMarkers(
     "services/dsh/frontend/shared/orders/use-client-order-controller.ts",

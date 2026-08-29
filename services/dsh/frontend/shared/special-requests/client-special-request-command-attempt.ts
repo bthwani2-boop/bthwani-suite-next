@@ -8,13 +8,15 @@ import { secureRandomId } from "../_kernel/secure-random.ts";
 
 const OPERATION = "client-special-request-command";
 
-export type ClientSpecialRequestCommandAction = "cancel" | "approve-quote";
+export type ClientSpecialRequestCommandAction = "cancel" | "approve-quote" | "respond-information";
 
 export type ClientSpecialRequestCommandIntent = {
   readonly actorId: string;
   readonly requestId: string;
   readonly action: ClientSpecialRequestCommandAction;
   readonly expectedVersion: number | undefined;
+  readonly exchangeId?: string;
+  readonly response?: string;
 };
 
 export type StoredClientSpecialRequestCommandAttempt = DurableMutationAttemptEnvelope<{
@@ -31,10 +33,25 @@ function normalizeIntent(intent: ClientSpecialRequestCommandIntent) {
   const requestId = intent.requestId.trim();
   if (!actorId) throw new Error("client special-request command actor id is required");
   if (!requestId) throw new Error("client special-request command request id is required");
+  if (intent.action === "respond-information"
+    && (!Number.isInteger(intent.expectedVersion) || (intent.expectedVersion ?? 0) < 1)) {
+    throw new Error("client special-request information response expected version is required");
+  }
   if (intent.expectedVersion !== undefined && (!Number.isInteger(intent.expectedVersion) || intent.expectedVersion < 1)) {
     throw new Error("client special-request command expected version is required");
   }
-  return { actorId, requestId, action: intent.action, expectedVersion: intent.expectedVersion };
+  const exchangeId = intent.exchangeId?.trim() ?? "";
+  const response = intent.response?.trim() ?? "";
+  if (intent.action === "respond-information" && (!exchangeId || !response)) {
+    throw new Error("client special-request information response exchange and response are required");
+  }
+  return {
+    actorId,
+    requestId,
+    action: intent.action,
+    expectedVersion: intent.expectedVersion,
+    ...(intent.action === "respond-information" ? { exchangeId, response } : {}),
+  };
 }
 
 function identity(intent: ClientSpecialRequestCommandIntent) {
@@ -46,6 +63,8 @@ function identity(intent: ClientSpecialRequestCommandIntent) {
       requestId: normalized.requestId,
       action: normalized.action,
       expectedVersion: normalized.expectedVersion ?? null,
+      exchangeId: normalized.exchangeId ?? null,
+      response: normalized.response ?? null,
     }),
   };
 }

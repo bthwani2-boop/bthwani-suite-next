@@ -450,6 +450,13 @@
       "sha256": "b6efca91596314b7d422400304448edcef95d83b2365e37fe68e0bc76d9b1cd0",
       "historicalPrefix": "1063",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 305,
+      "file": "dsh-1065_special_request_information_response_idempotency.sql",
+      "sha256": "3ad55910a36aed9546b903d08482f92585491e80cbb4bea74cddbb6732708948",
+      "historicalPrefix": "1065",
+      "state": "ACTIVE"
     }
   ]
 }

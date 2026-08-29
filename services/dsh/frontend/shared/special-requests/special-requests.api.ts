@@ -71,10 +71,16 @@ export async function fetchClientSpecialRequestInformation(
 export async function respondClientSpecialRequestInformation(
   id: string,
   input: DshRespondSpecialRequestInformation,
+  mutation: ClientSpecialRequestMutationContext,
 ): Promise<DshSpecialRequestInformationMutationResponse> {
   return request<DshSpecialRequestInformationMutationResponse>(
     `/dsh/client/special-requests/${encodeURIComponent(id)}/information-response`,
-    { method: "POST", body: input },
+    {
+      method: "POST",
+      body: input,
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
 }
 

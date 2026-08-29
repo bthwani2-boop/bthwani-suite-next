@@ -275,14 +275,42 @@ export function useClientSpecialRequestsListController(
     request: DshSpecialRequestResponse,
     exchange: DshSpecialRequestInformationExchange,
     response: string,
-  ) => runMutation(
-    request,
-    () => respondClientSpecialRequestInformation(request.id, {
+  ) => {
+    if (!actorId) {
+      setLoadState("forbidden");
+      return Promise.resolve(false);
+    }
+    const intent = {
+      actorId,
+      requestId: request.id,
+      action: "respond-information" as const,
       expectedVersion: request.version,
       exchangeId: exchange.id,
       response,
-    }),
-  ), [runMutation]);
+    };
+    return runMutation(
+      request,
+      async () => {
+        const attempt = await getOrCreateClientSpecialRequestCommandAttempt(intent);
+        await respondClientSpecialRequestInformation(request.id, {
+          expectedVersion: request.version,
+          exchangeId: exchange.id,
+          response,
+        }, attempt.context);
+        const [readback, exchangeReadback] = await Promise.all([
+          fetchClientSpecialRequest(request.id),
+          fetchClientSpecialRequestInformation(request.id),
+        ]);
+        const canonicalExchange = exchangeReadback.informationExchange;
+        if (readback.status === "under_review"
+          && canonicalExchange?.id === exchange.id
+          && canonicalExchange.status === "responded"
+          && canonicalExchange.response === response.trim()) {
+          await clearClientSpecialRequestCommandAttempt(intent, attempt.signature);
+        }
+      },
+    );
+  }, [actorId, runMutation]);
 
   return {
     requests,

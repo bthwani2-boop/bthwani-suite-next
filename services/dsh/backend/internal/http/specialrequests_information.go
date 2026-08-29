@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/specialrequests"
 	"dsh-api/internal/store"
@@ -116,6 +117,10 @@ func (s *protectedStoreServer) handleRespondSpecialRequestInformation(w http.Res
 	if !ok {
 		return
 	}
+	mutation, ok := specialRequestInformationMutationContext(w, r)
+	if !ok {
+		return
+	}
 	var body respondSpecialRequestInformationBody
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -127,9 +132,13 @@ func (s *protectedStoreServer) handleRespondSpecialRequestInformation(w http.Res
 	requestID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
 	request, exchange, err := svc.RespondClientInformationInOperatorContext(
-		r.Context(), actor.OperatorContextID, requestID, actor.ID, body.ExchangeID, *body.ExpectedVersion, body.Response,
+		r.Context(), actor.OperatorContextID, requestID, actor.ID, body.ExchangeID, *body.ExpectedVersion, body.Response, mutation,
 	)
 	if err != nil {
+		if errors.Is(err, specialrequests.ErrInformationResponseIdempotencyConflict) {
+			store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different information response")
+			return
+		}
 		writeSpecialRequestError(w, err, "special request not found")
 		return
 	}
@@ -137,4 +146,21 @@ func (s *protectedStoreServer) handleRespondSpecialRequestInformation(w http.Res
 		"request":             marshalSpecialRequest(request),
 		"informationExchange": marshalSpecialRequestInformationExchange(exchange),
 	})
+}
+
+func specialRequestInformationMutationContext(w http.ResponseWriter, r *http.Request) (specialrequests.InformationResponseMutationContext, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
+		return specialrequests.InformationResponseMutationContext{}, false
+	}
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if len(correlationID) < 8 || len(correlationID) > 200 {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_REQUIRED", "X-Correlation-ID must contain between 8 and 200 characters")
+		return specialrequests.InformationResponseMutationContext{}, false
+	}
+	return specialrequests.InformationResponseMutationContext{
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+	}, true
 }
