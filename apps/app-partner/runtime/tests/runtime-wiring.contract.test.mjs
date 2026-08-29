@@ -23,7 +23,7 @@ test("partner app composes canonical identity, rating, catalog media, push, and 
   assert.match(source, /useDshMobilePushRegistration\(identity\.state\.kind, "app-partner", "bthwani-partner-next"\)/);
 });
 
-test("partner runtime owns persisted appearance and commits memory only after durable readback", async () => {
+test("partner runtime owns persisted appearance and reconciles memory to durable readback", async () => {
   const runtime = await read("apps/app-partner/runtime/src/index.ts");
   const appearance = await read("apps/app-partner/runtime/src/appearance.tsx");
   const hub = await read("services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx");
@@ -36,10 +36,12 @@ test("partner runtime owns persisted appearance and commits memory only after du
   assert.match(appearance, /async function persistAndReadBackAppearanceMode/);
   assert.match(appearance, /await writeStoredAppearanceMode\(mode\);/);
   assert.match(appearance, /const committedMode = await readStoredAppearanceMode\(\);/);
-  assert.match(appearance, /committedMode !== mode/);
+  assert.match(appearance, /if \(!isBThwaniAppearanceMode\(committedMode\)\)/);
+  assert.match(appearance, /matchedRequest: committedMode === mode/);
   assert.match(appearance, /const writeQueueRef = useRef<Promise<void>>\(Promise\.resolve\(\)\);/);
   assert.match(appearance, /writeQueueRef\.current = writeQueueRef\.current\.then\(async \(\) =>/);
-  assert.match(appearance, /const committedMode = await persistAndReadBackAppearanceMode\(nextMode\);[\s\S]*setModeState\(committedMode\);/);
+  assert.match(appearance, /const \{ committedMode, matchedRequest \} = await persistAndReadBackAppearanceMode\(nextMode\);[\s\S]*setModeState\(committedMode\);/);
+  assert.match(appearance, /matchedRequest[\s\S]*تم اعتماد القيمة المحفوظة الفعلية بعد التحقق/);
   assert.doesNotMatch(appearance, /setModeState\(nextMode\);[\s\S]*writeStoredAppearanceMode\(nextMode\)/);
   assert.match(appearance, /لم يتم اعتماد التغيير/);
   assert.match(appearance, /<BThwaniAppearanceProvider mode=\{mode\} syncThemeMode>/);
