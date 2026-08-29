@@ -56,6 +56,10 @@ function formatEvent(event: DshSupportTicketEvent): string {
   return `${labels[event.eventType]} · ${event.actorRole} · ${timestamp}`;
 }
 
+function isProvenListState(kind: string): boolean {
+  return kind === "success" || kind === "empty";
+}
+
 export function SupportDashboardScreen() {
   const session = useControlPanelSession();
   const actorId = session.state.kind === "authenticated" ? session.state.identity.subject : null;
@@ -74,7 +78,13 @@ export function SupportDashboardScreen() {
   const detailCtrl = useTicketDetailController(selectedTicketId ?? "", actorId, session.state.kind, "operator");
   const tickets = ticketCtrl.listState.kind === "success" ? ticketCtrl.listState.tickets : [];
   const incidents = incidentCtrl.listState.kind === "success" ? incidentCtrl.listState.incidents : [];
-  const metrics = useMemo(() => buildSupportKpiMetrics(tickets, incidents), [tickets, incidents]);
+  const ticketDataProven = isProvenListState(ticketCtrl.listState.kind);
+  const incidentDataProven = isProvenListState(incidentCtrl.listState.kind);
+  const supportMetricsProven = ticketDataProven && incidentDataProven;
+  const metrics = useMemo(
+    () => supportMetricsProven ? buildSupportKpiMetrics(tickets, incidents) : null,
+    [incidents, supportMetricsProven, tickets],
+  );
   const filteredTickets = useMemo(() => {
     const byFilter = filterTicketsByQueueFilter(tickets, queueFilter);
     return filterTicketsBySearch(byFilter, searchQuery).map(buildSupportTicketViewModel);
@@ -148,11 +158,21 @@ export function SupportDashboardScreen() {
       }
       stateView={isLoading ? <CpStateView kind="loading" title="جاري تحميل دعم DSH…" /> : undefined}
     >
-      <CpKpiStrip>
-        <CpKpiCard label="صفوف مقترحة" value={metrics.suggestedQueues} />
-        <CpKpiCard label="نزاعات" value={metrics.disputes} />
-        <CpKpiCard label="خطر الالتزام" value={metrics.complianceRisk} />
-      </CpKpiStrip>
+      {supportMetricsProven && metrics ? (
+        <CpKpiStrip>
+          <CpKpiCard label="صفوف مقترحة" value={metrics.suggestedQueues} />
+          <CpKpiCard label="نزاعات" value={metrics.disputes} />
+          <CpKpiCard label="خطر الالتزام" value={metrics.complianceRisk} />
+        </CpKpiStrip>
+      ) : (
+        <CpStatePanel
+          role={hasRuntimeError ? "alert" : "status"}
+          title={hasRuntimeError ? "تعذر إثبات مؤشرات الدعم" : "مؤشرات الدعم غير مثبتة بعد"}
+          description={hasRuntimeError
+            ? "فشل تحميل مصدر واحد أو أكثر من تذاكر الدعم والحوادث؛ لن تُعرض أرقام صفرية أو جزئية على أنها حقيقة تشغيلية."
+            : "تظهر المؤشرات فقط بعد إثبات مصدرَي التذاكر والحوادث من DSH Runtime."}
+        />
+      )}
 
       <CpFilterBar label="بحث وأدوات">
         <CpSearchInput
