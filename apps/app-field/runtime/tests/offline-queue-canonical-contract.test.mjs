@@ -10,18 +10,46 @@ const readRepositoryFile = (relativePath) => readFileSync(resolve(repositoryRoot
 const source = readRepositoryFile(
   "services/dsh/frontend/shared/field-readiness/field-offline-queue.ts",
 );
+const api = readRepositoryFile(
+  "services/dsh/frontend/shared/field-readiness/field-readiness.api.ts",
+);
 const barrel = readRepositoryFile(
   "services/dsh/frontend/shared/field-readiness/index.ts",
 );
 const sync = readRepositoryFile(
   "services/dsh/frontend/shared/field-readiness/use-field-offline-sync.ts",
 );
+const runtime = readRepositoryFile("apps/app-field/runtime/src/index.ts");
 
-test("field offline queue exposes only canonical scoped storage and recovery", () => {
-  assert.match(source, /const STORAGE_PREFIX = "bthwani\.field-offline-queue\.v3"/);
+test("field offline queue has one v4 authority with a one-way v3 migration", () => {
+  assert.match(source, /const STORAGE_PREFIX = "bthwani\.field-offline-queue\.v4"/);
+  assert.match(source, /const V3_STORAGE_PREFIX = "bthwani\.field-offline-queue\.v3"/);
+  assert.match(source, /migrateV3Artifacts/);
+  assert.match(source, /await writeQueueForScope\(scope, migrated\);\s*await storageAdapter\.removeItem\(v3StorageKey\(scope\)\);/s);
+  assert.match(source, /encodeStorageSegment/);
+  assert.doesNotMatch(source, /function stableHash/);
+});
+
+test("logout detaches field scope but cannot destroy unresolved operational work", () => {
+  assert.match(source, /export function detachFieldOfflineQueueScope/);
+  assert.match(source, /export async function discardFieldOfflineRecoveryState/);
+  assert.doesNotMatch(barrel, /clearFieldOfflineQueue/);
+  assert.doesNotMatch(runtime, /clearFieldOfflineQueue|discardFieldOfflineRecoveryState/);
+  assert.match(runtime, /detachFieldOfflineQueueScope\(\)/);
+});
+
+test("field mutation transport ids are separate from canonical business intent", () => {
+  assert.match(api, /intentFingerprint/);
+  assert.match(api, /secureRandomId\(\)/);
+  assert.doesNotMatch(api, /function stableHash/);
+  assert.match(api, /idempotencyKey: `field:\$\{normalizedOperation\}:\$\{secureRandomId\(\)\}`/);
+  assert.match(api, /correlationId: `field:\$\{normalizedOperation\}:corr:\$\{secureRandomId\(\)\}`/);
+  assert.match(source, /field offline correlation id must be distinct from the idempotency key/);
+});
+
+test("persisted recovery is surfaced after restart rather than counted only in-memory", () => {
   assert.match(source, /recovery-quarantine/);
   assert.match(source, /readFieldOfflineRecovery/);
-  assert.doesNotMatch(source, /LEGACY|legacyStorage|prepareFieldOfflineQueue|field-offline-queue:v1/);
-  assert.doesNotMatch(barrel, /FieldOfflineLegacy|configureFieldOfflineLegacyStorage|prepareFieldOfflineQueue|readLegacyQuarantine/);
-  assert.doesNotMatch(sync, /prepareFieldOfflineQueue|migration\.quarantined/);
+  assert.match(sync, /setQuarantinedCount\(\(await readFieldOfflineRecovery\(\)\)\.length\)/);
+  assert.doesNotMatch(sync, /setQuarantinedCount\(\(current\) => current \+ evacuated\)/);
 });
