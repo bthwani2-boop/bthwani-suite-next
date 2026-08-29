@@ -6,13 +6,18 @@ const root = new URL("../../../../", import.meta.url);
 const read = (relative) => readFile(new URL(relative, root), "utf8");
 
 test("captain readiness API exposes a DSH-owned start-work decision", async () => {
-  const api = await read("services/dsh/frontend/app-captain/captain-readiness.api.ts");
+  const [publicApi, dispatchApi, dispatchTypes] = await Promise.all([
+    read("services/dsh/frontend/app-captain/index.ts"),
+    read("services/dsh/frontend/shared/dispatch/dispatch.api.ts"),
+    read("services/dsh/frontend/shared/dispatch/dispatch.types.ts"),
+  ]);
 
-  assert.match(api, /export type CaptainOperationalReadiness/);
-  assert.match(api, /ready: boolean/);
-  assert.match(api, /missing: readonly string\[\]/);
-  assert.match(api, /fetchCaptainOperationalReadiness/);
-  assert.match(api, /\/dsh\/captain\/me\/readiness/);
-  assert.match(api, /Dependency outages reject the request/);
-  assert.doesNotMatch(api, /ELIGIBILITY_UNAVAILABLE|blockerReasons/);
+  assert.match(publicApi, /fetchOwnCaptainReadiness as fetchCaptainOperationalReadiness/);
+  assert.match(publicApi, /DshCaptainReadiness as CaptainOperationalReadiness/);
+  assert.match(dispatchApi, /export function fetchOwnCaptainReadiness/);
+  assert.match(dispatchApi, /\/dsh\/captain\/me\/readiness/);
+  assert.match(dispatchTypes, /export type DshCaptainReadiness/);
+  assert.match(dispatchTypes, /ready: boolean/);
+  assert.match(dispatchTypes, /missing: readonly string\[\]/);
+  assert.doesNotMatch(publicApi, /captain-readiness\.api/);
 });
