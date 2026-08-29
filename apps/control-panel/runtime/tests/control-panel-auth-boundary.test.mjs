@@ -10,7 +10,7 @@ const source = fs.readFileSync(
   "utf8",
 );
 const sectionBoundary = fs.readFileSync(
-  path.join(repoRoot, "services/dsh/frontend/shared/session/ControlPanelSectionAccessBoundary.tsx"),
+  path.join(repoRoot, "services/dsh/frontend/control-panel/ControlPanelSectionAccessBoundary.tsx"),
   "utf8",
 );
 const navigationSource = fs.readFileSync(
