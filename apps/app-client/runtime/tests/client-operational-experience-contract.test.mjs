@@ -77,6 +77,10 @@ test("client discovery exposes real search, cached images, and a persistent dono
       "openCategoryDestination",
       'category.destinationType === "special_request"',
       'category.destinationType === "catalog_domain"',
+      "discoveryRequestSequence",
+      "queryError",
+      "تعذر تحديث النتائج",
+      "إعادة المحاولة",
     ],
   );
   assert.equal(discovery.includes("Math.random("), false);
