@@ -30,7 +30,11 @@ import {
   resolveDeliveryExceptionReassignCaptain,
   resolveDeliveryExceptionRetrySameCaptain,
   resolveDeliveryExceptionReturnToStore,
+  clearOperatorDeliveryExceptionCommandAttempt,
+  getOrCreateOperatorDeliveryExceptionCommandAttempt,
+  type DshOperatorCommandContext,
   type DshDeliveryException,
+  type OperatorDeliveryExceptionCommandIntent,
 } from '../../shared/dispatch';
 import {
   FINANCIAL_CLOSURE_LABELS,
@@ -143,7 +147,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
   const [note, setNote] = React.useState('');
   const [actionState, setActionState] = React.useState<ActionState>({ kind: 'idle' });
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (): Promise<boolean> => {
     setState({ kind: 'loading' });
     try {
       const [readiness, open, acknowledged, resolved] = await Promise.all([
@@ -168,11 +172,13 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         delivery: [...open, ...acknowledged],
         returns,
       });
+      return true;
     } catch (error) {
       setState({
         kind: 'error',
         message: error instanceof Error ? error.message : 'تعذر تحميل الاستثناءات الحية من DSH.',
       });
+      return false;
     }
   }, []);
 
@@ -203,7 +209,8 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
 
   const runDeliveryAction = React.useCallback(async (
     item: DshDeliveryException,
-    action: () => Promise<unknown>,
+    intent: OperatorDeliveryExceptionCommandIntent,
+    action: (mutation: DshOperatorCommandContext) => Promise<unknown>,
     fallbackMessage: string,
   ) => {
     if (!canManageOperations) {
@@ -212,6 +219,14 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     }
     if (!actorId) {
       setActionState({ kind: 'error', id: item.id, message: 'جلسة العمليات غير جاهزة لتنفيذ القرار.' });
+      return;
+    }
+    if (item.status !== 'acknowledged') {
+      setActionState({
+        kind: 'error',
+        id: item.id,
+        message: 'اعتمد الاستثناء أولًا قبل تنفيذ قرار الحل.',
+      });
       return;
     }
     if (note.trim().length < 5) {
@@ -224,9 +239,17 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     }
     setActionState({ kind: 'submitting', id: item.id });
     try {
-      await action();
+      const attempt = await getOrCreateOperatorDeliveryExceptionCommandAttempt(intent);
+      try {
+        await action(attempt.context);
+      } catch {
+        await action(attempt.context);
+      }
+      if (!await load()) {
+        throw new Error('تم إرسال القرار لكن تعذر تأكيده من القراءة الحاكمة؛ بقيت المحاولة محفوظة لإعادة التشغيل الآمن.');
+      }
+      await clearOperatorDeliveryExceptionCommandAttempt(intent, attempt.fingerprint);
       setSelectedDeliveryId(null);
-      await load();
     } catch (error) {
       setActionState({
         kind: 'error',
@@ -247,9 +270,23 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     }
     setActionState({ kind: 'submitting', id: item.id });
     try {
-      await acknowledgeDeliveryException(item.id, item.version);
+      const intent: OperatorDeliveryExceptionCommandIntent = {
+        actorId,
+        exceptionId: item.id,
+        action: 'acknowledge',
+        expectedVersion: item.version,
+      };
+      const attempt = await getOrCreateOperatorDeliveryExceptionCommandAttempt(intent);
+      try {
+        await acknowledgeDeliveryException(item.id, item.version, attempt.context);
+      } catch {
+        await acknowledgeDeliveryException(item.id, item.version, attempt.context);
+      }
+      if (!await load()) {
+        throw new Error('تم إرسال الاعتماد لكن تعذر تأكيده من القراءة الحاكمة؛ بقيت المحاولة محفوظة لإعادة التشغيل الآمن.');
+      }
+      await clearOperatorDeliveryExceptionCommandAttempt(intent, attempt.fingerprint);
       setSelectedDeliveryId(null);
-      await load();
     } catch (error) {
       setActionState({
         kind: 'error',
@@ -420,16 +457,24 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               اعتماد وبدء المراجعة
             </CpButton>
           ) : null}
-          {canManageOperations ? (
+          {canManageOperations && selectedDelivery.status === 'acknowledged' ? (
             <CpButton
               variant="primary"
               disabled={actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
                 selectedDelivery,
-                () => resolveDeliveryExceptionRetrySameCaptain(
+                {
+                  actorId: actorId ?? '',
+                  exceptionId: selectedDelivery.id,
+                  action: 'retry_same_captain',
+                  expectedVersion: selectedDelivery.version,
+                  note: note.trim(),
+                },
+                (mutation) => resolveDeliveryExceptionRetrySameCaptain(
                   selectedDelivery.id,
                   selectedDelivery.version,
                   note.trim(),
+                  mutation,
                 ),
                 'تعذر حل الاستثناء.',
               )}
@@ -439,17 +484,26 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                 : 'حل: إعادة المحاولة مع الكابتن نفسه'}
             </CpButton>
           ) : null}
-          {canManageOperations && canReassign(selectedDelivery) ? (
+          {canManageOperations && selectedDelivery.status === 'acknowledged' && canReassign(selectedDelivery) ? (
             <CpButton
               variant="secondary"
               disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
                 selectedDelivery,
-                () => resolveDeliveryExceptionReassignCaptain(
+                {
+                  actorId: actorId ?? '',
+                  exceptionId: selectedDelivery.id,
+                  action: 'reassign_captain',
+                  expectedVersion: selectedDelivery.version,
+                  newCaptainId: selectedReplacementCaptainId,
+                  note: note.trim(),
+                },
+                (mutation) => resolveDeliveryExceptionReassignCaptain(
                   selectedDelivery.id,
                   selectedDelivery.version,
                   selectedReplacementCaptainId,
                   note.trim(),
+                  mutation,
                 ),
                 'تعذر إعادة إسناد المهمة.',
               )}
@@ -457,16 +511,24 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               حل: إعادة الإسناد للكابتن البديل
             </CpButton>
           ) : null}
-          {canManageOperations && canReassign(selectedDelivery) ? (
+          {canManageOperations && selectedDelivery.status === 'acknowledged' && canReassign(selectedDelivery) ? (
             <CpButton
               variant="danger"
               disabled={actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
                 selectedDelivery,
-                () => resolveDeliveryExceptionCancelOrder(
+                {
+                  actorId: actorId ?? '',
+                  exceptionId: selectedDelivery.id,
+                  action: 'cancel_order',
+                  expectedVersion: selectedDelivery.version,
+                  note: note.trim(),
+                },
+                (mutation) => resolveDeliveryExceptionCancelOrder(
                   selectedDelivery.id,
                   selectedDelivery.version,
                   note.trim(),
+                  mutation,
                 ),
                 'تعذر إلغاء الطلب مباشرة.',
               )}
@@ -474,16 +536,24 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               حل: إلغاء الطلب قبل الاستلام
             </CpButton>
           ) : null}
-          {canManageOperations && canReturnToStore(selectedDelivery) ? (
+          {canManageOperations && selectedDelivery.status === 'acknowledged' && canReturnToStore(selectedDelivery) ? (
             <CpButton
               variant="secondary"
               disabled={actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
                 selectedDelivery,
-                () => resolveDeliveryExceptionReturnToStore(
+                {
+                  actorId: actorId ?? '',
+                  exceptionId: selectedDelivery.id,
+                  action: 'return_to_store',
+                  expectedVersion: selectedDelivery.version,
+                  note: note.trim(),
+                },
+                (mutation) => resolveDeliveryExceptionReturnToStore(
                   selectedDelivery.id,
                   selectedDelivery.version,
                   note.trim(),
+                  mutation,
                 ),
                 'تعذر بدء إرجاع الطلب.',
               )}

@@ -291,7 +291,21 @@ func AcknowledgeDeliveryException(db *sql.DB, operatorContextID, id string, expe
 		return nil, err
 	}
 	defer tx.Rollback()
+	if _, err := acknowledgeDeliveryExceptionTx(tx, operatorContextID, id, expectedVersion, actorID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetDeliveryExceptionForContext(db, operatorContextID, id)
+}
 
+func acknowledgeDeliveryExceptionTx(
+	tx *sql.Tx,
+	operatorContextID, id string,
+	expectedVersion int,
+	actorID string,
+) (*DeliveryException, error) {
 	current, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 	if err != nil {
 		return nil, err
@@ -317,10 +331,7 @@ func AcknowledgeDeliveryException(db *sql.DB, operatorContextID, id string, expe
 	if n, _ := res.RowsAffected(); n != 1 {
 		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return GetDeliveryExceptionForContext(db, operatorContextID, id)
+	return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 }
 
 func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, operatorContextID, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
@@ -332,15 +343,33 @@ func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, operatorContextID, id 
 	if len(note) > 1000 {
 		return nil, fmt.Errorf("%w: resolution note must not exceed 1000 characters", ErrInvalid)
 	}
-
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
+	if _, err := resolveDeliveryExceptionRetrySameCaptainTx(tx, operatorContextID, id, expectedVersion, note, actorID, false); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetDeliveryExceptionForContext(db, operatorContextID, id)
+}
+
+func resolveDeliveryExceptionRetrySameCaptainTx(
+	tx *sql.Tx,
+	operatorContextID, id string,
+	expectedVersion int,
+	note, actorID string,
+	requireAcknowledged bool,
+) (*DeliveryException, error) {
 	current, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 	if err != nil {
 		return nil, err
+	}
+	if requireAcknowledged && current.Status == DeliveryExceptionOpen {
+		return nil, fmt.Errorf("%w: acknowledge the exception before resolution", ErrConflict)
 	}
 	if current.Status == DeliveryExceptionResolved {
 		if current.ResolutionAction != nil && *current.ResolutionAction == "retry_same_captain" && current.ResolutionNote != nil && *current.ResolutionNote == note {
@@ -382,10 +411,7 @@ func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, operatorContextID, id 
 	if n, _ := res.RowsAffected(); n != 1 {
 		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return GetDeliveryExceptionForContext(db, operatorContextID, id)
+	return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 }
 
 func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, operatorContextID, id string, expectedVersion int, newCaptainID, note, actorID string) (*DeliveryException, error) {
@@ -399,15 +425,33 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, operatorContextID, id s
 	if len(note) > 1000 {
 		return nil, fmt.Errorf("%w: resolution note must not exceed 1000 characters", ErrInvalid)
 	}
-
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
+	if _, err := resolveDeliveryExceptionReassignCaptainTx(tx, operatorContextID, id, expectedVersion, newCaptainID, note, actorID, false); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetDeliveryExceptionForContext(db, operatorContextID, id)
+}
+
+func resolveDeliveryExceptionReassignCaptainTx(
+	tx *sql.Tx,
+	operatorContextID, id string,
+	expectedVersion int,
+	newCaptainID, note, actorID string,
+	requireAcknowledged bool,
+) (*DeliveryException, error) {
 	current, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 	if err != nil {
 		return nil, err
+	}
+	if requireAcknowledged && current.Status == DeliveryExceptionOpen {
+		return nil, fmt.Errorf("%w: acknowledge the exception before resolution", ErrConflict)
 	}
 	if current.Status == DeliveryExceptionResolved {
 		if current.ResolutionAction != nil && *current.ResolutionAction == "reassign_captain" &&
@@ -427,10 +471,7 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, operatorContextID, id s
 		if _, err := resolveSpecialRequestExceptionReassignCaptainTx(tx, current, expectedVersion, newCaptainID, note, actorID); err != nil {
 			return nil, err
 		}
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
-		return GetDeliveryExceptionForContext(db, operatorContextID, id)
+		return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 	}
 
 	var assignmentStatus AssignmentStatus
@@ -505,10 +546,7 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, operatorContextID, id s
 	if n, _ := res.RowsAffected(); n != 1 {
 		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return GetDeliveryExceptionForContext(db, operatorContextID, id)
+	return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 }
 
 // ResolveDeliveryExceptionCancelOrder resolves an open/acknowledged delivery
@@ -527,10 +565,15 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, operatorContextID, id s
 // exception resolved. A retry after a partial failure is safe - CancelOrder
 // replays by correlationId and the exception update is guarded by version.
 func ResolveDeliveryExceptionCancelOrder(db *sql.DB, operatorContextID, id string, expectedVersion int, note, actorID string) (*DeliveryException, error) {
+	return resolveDeliveryExceptionCancelOrderWithCorrelation(db, operatorContextID, id, expectedVersion, note, actorID, "delivery-exception-cancel:"+strings.TrimSpace(id))
+}
+
+func resolveDeliveryExceptionCancelOrderWithCorrelation(db *sql.DB, operatorContextID, id string, expectedVersion int, note, actorID, correlationID string) (*DeliveryException, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	note = strings.TrimSpace(note)
 	actorID = strings.TrimSpace(actorID)
-	if operatorContextID == "" || strings.TrimSpace(id) == "" || expectedVersion <= 0 || actorID == "" || len(note) < 5 {
+	correlationID = strings.TrimSpace(correlationID)
+	if operatorContextID == "" || strings.TrimSpace(id) == "" || expectedVersion <= 0 || actorID == "" || len(note) < 5 || len(correlationID) < 8 {
 		return nil, fmt.Errorf("%w: id, expectedVersion, actor, and cancellation note are required", ErrInvalid)
 	}
 	if len(note) > 1000 {
@@ -572,7 +615,7 @@ func ResolveDeliveryExceptionCancelOrder(db *sql.DB, operatorContextID, id strin
 		ActorRole:         "operator",
 		ReasonCode:        "operational_failure",
 		ReasonNote:        note,
-		CorrelationID:     "delivery-exception-cancel:" + id,
+		CorrelationID:     correlationID,
 	}); err != nil {
 		if errors.Is(err, orders.ErrConflict) {
 			return nil, fmt.Errorf("%w: order is no longer eligible for governed cancellation", ErrConflict)
@@ -622,9 +665,28 @@ func ResolveDeliveryExceptionReturnToStore(db *sql.DB, operatorContextID, id str
 		return nil, err
 	}
 	defer tx.Rollback()
+	if _, err := resolveDeliveryExceptionReturnToStoreTx(tx, operatorContextID, id, expectedVersion, note, actorID, false); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return GetDeliveryExceptionForContext(db, operatorContextID, id)
+}
+
+func resolveDeliveryExceptionReturnToStoreTx(
+	tx *sql.Tx,
+	operatorContextID, id string,
+	expectedVersion int,
+	note, actorID string,
+	requireAcknowledged bool,
+) (*DeliveryException, error) {
 	current, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 	if err != nil {
 		return nil, err
+	}
+	if requireAcknowledged && current.Status == DeliveryExceptionOpen {
+		return nil, fmt.Errorf("%w: acknowledge the exception before resolution", ErrConflict)
 	}
 	if current.Status == DeliveryExceptionResolved {
 		if current.ResolutionAction != nil && *current.ResolutionAction == "return_to_store" && current.ResolutionNote != nil && *current.ResolutionNote == note {
@@ -678,10 +740,7 @@ func ResolveDeliveryExceptionReturnToStore(db *sql.DB, operatorContextID, id str
 	if n, _ := res.RowsAffected(); n != 1 {
 		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return GetDeliveryExceptionForContext(db, operatorContextID, id)
+	return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
 }
 
 func CaptainArriveReturnToStoreForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID, idempotencyKey, correlationID string) (*DeliveryException, error) {

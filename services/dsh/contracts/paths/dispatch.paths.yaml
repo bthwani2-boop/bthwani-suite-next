@@ -409,6 +409,9 @@
     summary: Resolve an exception by allowing the same captain to retry from the preserved stage.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:

@@ -31,6 +31,7 @@ export type DshCaptainCommandContext = {
   readonly idempotencyKey: string;
   readonly correlationId: string;
 };
+export type DshOperatorCommandContext = DshCaptainCommandContext;
 export type DshCaptainAvailabilityMutationContext = DshCaptainCommandContext;
 
 export async function setOwnCaptainAvailability(
@@ -258,10 +259,19 @@ export async function fetchOperatorDeliveryExceptions(status: "open" | "acknowle
   return data.exceptions ?? [];
 }
 
-export async function acknowledgeDeliveryException(id: string, expectedVersion: number): Promise<DshDeliveryException> {
+export async function acknowledgeDeliveryException(
+  id: string,
+  expectedVersion: number,
+  mutation: DshOperatorCommandContext,
+): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
     `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/acknowledge`,
-    { method: "POST", body: { expectedVersion } },
+    {
+      method: "POST",
+      body: { expectedVersion },
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
   return data.exception;
 }
@@ -272,44 +282,32 @@ type DeliveryExceptionResolutionInput = {
   readonly newCaptainId?: string;
 };
 
-function requiresDeliveryExceptionAcknowledgement(error: unknown): boolean {
-  const typed = error as { status?: number; body?: { message?: string }; message?: string };
-  const message = typed.body?.message ?? typed.message ?? "";
-  return typed.status === 409 && message.includes("acknowledge the exception");
-}
-
 async function resolveAcknowledgedDeliveryException(
   id: string,
   expectedVersion: number,
   input: DeliveryExceptionResolutionInput,
+  mutation: DshOperatorCommandContext,
 ): Promise<DshDeliveryException> {
   const path = `/dsh/operator/delivery-exceptions/${encodeURIComponent(id)}/resolve`;
-  const execute = async (version: number) => {
-    const data = await request<{ exception: DshDeliveryException }>(path, {
-      method: "POST",
-      body: { expectedVersion: version, ...input },
-    });
-    return data.exception;
-  };
-
-  try {
-    return await execute(expectedVersion);
-  } catch (error) {
-    if (!requiresDeliveryExceptionAcknowledgement(error)) throw error;
-    const acknowledged = await acknowledgeDeliveryException(id, expectedVersion);
-    return execute(acknowledged.version);
-  }
+  const data = await request<{ exception: DshDeliveryException }>(path, {
+    method: "POST",
+    body: { expectedVersion, ...input },
+    idempotencyKey: mutation.idempotencyKey,
+    correlationId: mutation.correlationId,
+  });
+  return data.exception;
 }
 
 export function resolveDeliveryExceptionRetrySameCaptain(
   id: string,
   expectedVersion: number,
   note: string,
+  mutation: DshOperatorCommandContext,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "retry_same_captain",
     note,
-  });
+  }, mutation);
 }
 
 export function resolveDeliveryExceptionReassignCaptain(
@@ -317,34 +315,37 @@ export function resolveDeliveryExceptionReassignCaptain(
   expectedVersion: number,
   newCaptainId: string,
   note: string,
+  mutation: DshOperatorCommandContext,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "reassign_captain",
     newCaptainId,
     note,
-  });
+  }, mutation);
 }
 
 export function resolveDeliveryExceptionReturnToStore(
   id: string,
   expectedVersion: number,
   note: string,
+  mutation: DshOperatorCommandContext,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "return_to_store",
     note,
-  });
+  }, mutation);
 }
 
 export function resolveDeliveryExceptionCancelOrder(
   id: string,
   expectedVersion: number,
   note: string,
+  mutation: DshOperatorCommandContext,
 ): Promise<DshDeliveryException> {
   return resolveAcknowledgedDeliveryException(id, expectedVersion, {
     action: "cancel_order",
     note,
-  });
+  }, mutation);
 }
 
 export async function arriveCaptainReturnToStore(

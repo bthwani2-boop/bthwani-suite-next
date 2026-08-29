@@ -163,13 +163,21 @@ func (s *protectedStoreServer) handleAcknowledgeDeliveryException(w http.Respons
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireOperatorCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		ExpectedVersion int `json:"expectedVersion"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	item, err := dispatch.AcknowledgeDeliveryException(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, actor.ID)
+	item, err := dispatch.AcknowledgeDeliveryExceptionIdempotentForOperatorContext(
+		s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion,
+		actor.ID, idempotencyKey, correlationID,
+	)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -183,6 +191,11 @@ func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWri
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireOperatorCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		ExpectedVersion int    `json:"expectedVersion"`
 		Action          string `json:"action"`
@@ -196,13 +209,13 @@ func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWri
 	var err error
 	switch body.Action {
 	case "retry_same_captain":
-		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptainIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
 	case "reassign_captain":
-		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionReassignCaptainIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID, idempotencyKey, correlationID)
 	case "return_to_store":
-		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionReturnToStoreIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
 	case "cancel_order":
-		item, err = dispatch.ResolveDeliveryExceptionCancelOrder(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionCancelOrderIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
 	default:
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
 		return

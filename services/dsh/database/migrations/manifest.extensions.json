@@ -499,6 +499,13 @@
       "sha256": "03c0bd27328998d240ed2b3db6d0823fc1f3fe791b6898f0b79701e5fa35d3bc",
       "historicalPrefix": "1070",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 312,
+      "file": "dsh-1071_delivery_exception_operation_command_receipts.sql",
+      "sha256": "207e9bb49624b2bbabb577c7f7ca87f950e4ccbd1a564e6e554c0c27cb1c8143",
+      "historicalPrefix": "1071",
+      "state": "ACTIVE"
     }
   ]
 }
