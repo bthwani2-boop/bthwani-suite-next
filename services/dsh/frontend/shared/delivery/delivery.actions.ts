@@ -3,8 +3,6 @@
 // Navigation is intentionally absent: callers decide Router transitions only after proven outcomes.
 
 import React from 'react';
-import type { CompactOrderChatMessage, CaptainAppMode } from './captain.contract';
-import type { StoreCourierStage, ActiveOrderPhase } from './delivery.contract';
 import { useCaptainOrderRuntime, type CaptainDeliveryExceptionDraft } from './use-captain-order-runtime';
 import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
 import { fetchCaptainDeliveryProof } from '../delivery-proof/delivery-proof.api';
@@ -15,20 +13,14 @@ export type DeliveryActionsDeps = {
   activeAssignmentId: string;
   captainPodPhotoUri: string | undefined;
   captainPodMediaKey: string | undefined;
-  captainAppMode: CaptainAppMode;
   resetOrderState: () => void;
   refreshInbox: () => void | Promise<void>;
   inboxState: string;
   setInboxState: (s: any) => void;
-  setStoreCourierStage: (s: any) => void;
   setIsDeclineSheetVisible: (v: boolean) => void;
   setDeclineSheetState: (s: any) => void;
-  setIsPickupSheetVisible: (v: boolean) => void;
-  setPickupSheetState: (s: any) => void;
   setDeliveryActionState: (s: any) => void;
   setDeliveryActionMessage: (s: string | null) => void;
-  setActiveOrderPhase: (p: any) => void;
-  setActiveOrderMessages: React.Dispatch<React.SetStateAction<CompactOrderChatMessage[]>>;
   setCaptainPodState: (s: any) => void;
   setActiveOrderExpanded: (v: boolean) => void;
 };
@@ -37,19 +29,13 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
   const {
     captainRuntimeId,
     activeAssignmentId,
-    captainAppMode,
     resetOrderState,
     refreshInbox,
     setInboxState,
-    setStoreCourierStage,
     setIsDeclineSheetVisible,
     setDeclineSheetState,
-    setIsPickupSheetVisible,
-    setPickupSheetState,
     setDeliveryActionState,
     setDeliveryActionMessage,
-    setActiveOrderPhase,
-    setActiveOrderMessages,
     setCaptainPodState,
     setActiveOrderExpanded,
   } = deps;
@@ -93,7 +79,6 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
       setInboxState('offer-accepting');
       await captainOrderRuntime.acceptTask(assignmentId, captainRuntimeId);
       resetOrderState();
-      if (captainAppMode !== 'store_courier_mode') setStoreCourierStage('ready_for_pickup' as StoreCourierStage);
       await Promise.resolve(refreshInbox());
       setInboxState('offer-accepted');
       return true;
@@ -102,7 +87,7 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
       setInboxState('error');
       return false;
     }
-  }, [captainOrderRuntime, captainRuntimeId, captainAppMode, resetOrderState, refreshInbox, setStoreCourierStage, setInboxState]);
+  }, [captainOrderRuntime, captainRuntimeId, resetOrderState, refreshInbox, setInboxState]);
 
   const handleDeclineConfirm = React.useCallback(async (assignmentId: string, reason: string): Promise<boolean> => {
     if (!captainRuntimeId || !assignmentId || !reason.trim()) {
@@ -138,34 +123,16 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
 
   const confirmPickup = React.useCallback(async (): Promise<boolean> => {
     if (!captainRuntimeId || !activeAssignmentId) {
-      setPickupSheetState('error');
+      setDeliveryActionState('error');
+      setDeliveryActionMessage('لا توجد مهمة نشطة مرتبطة بالكابتن.');
       return false;
     }
-    try {
-      setPickupSheetState('loading');
-      const transitioned = await runDeliveryTransition(
-        () => captainOrderRuntime.confirmPickup(activeAssignmentId, captainRuntimeId),
-        'تم تثبيت الاستلام. المرحلة التالية هي الوصول إلى العميل.',
-      );
-      if (!transitioned) {
-        setPickupSheetState('error');
-        return false;
-      }
-      setPickupSheetState('success');
-      setIsPickupSheetVisible(false);
-      setPickupSheetState('ready');
-      setActiveOrderPhase('delivery' as ActiveOrderPhase);
-      setActiveOrderMessages((cur: CompactOrderChatMessage[]) => [
-        ...cur,
-        { id: `msg-${cur.length + 1}`, sender: 'النظام', text: 'تم تأكيد الاستلام. المرحلة التالية هي التسليم.', time: 'الآن', side: 'start' },
-      ]);
-      return true;
-    } catch (err) {
-      console.error('[captain:confirm-pickup]', err);
-      setPickupSheetState('error');
-      return false;
-    }
-  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, runDeliveryTransition, setPickupSheetState, setIsPickupSheetVisible, setActiveOrderPhase, setActiveOrderMessages]);
+    const transitioned = await runDeliveryTransition(
+      () => captainOrderRuntime.confirmPickup(activeAssignmentId, captainRuntimeId),
+      'تم تثبيت الاستلام. المرحلة التالية هي الوصول إلى العميل.',
+    );
+    return transitioned;
+  }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, runDeliveryTransition, setDeliveryActionMessage, setDeliveryActionState]);
 
   const confirmCustomerArrival = React.useCallback(async (): Promise<boolean> => {
     if (!captainRuntimeId || !activeAssignmentId) {
@@ -202,14 +169,11 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
       setCaptainPodState('success');
       setInboxState('delivered');
       setActiveOrderExpanded(false);
-      if (captainAppMode === 'store_courier_mode') {
-        setStoreCourierStage('delivered' as StoreCourierStage);
-      }
     } catch (err) {
       console.error('[captain:pod-readback]', err);
       setCaptainPodState('error');
     }
-  }, [activeAssignmentId, captainAppMode, captainRuntimeId, refreshInbox, setActiveOrderExpanded, setCaptainPodState, setInboxState, setStoreCourierStage]);
+  }, [activeAssignmentId, captainRuntimeId, refreshInbox, setActiveOrderExpanded, setCaptainPodState, setInboxState]);
 
   const reportPodFailure = React.useCallback(async (draft: CaptainDeliveryExceptionDraft) => {
     if (!captainRuntimeId || !activeAssignmentId) {

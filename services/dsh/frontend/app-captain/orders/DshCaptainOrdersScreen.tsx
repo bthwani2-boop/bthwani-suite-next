@@ -302,43 +302,6 @@ export function DshCaptainProofUploadScreen({
   );
 }
 
-export function CaptainPickupConfirmSheet({
-  visible,
-  orderTitle,
-  state = 'ready',
-  onConfirm,
-  onCancel,
-}: {
-  visible: boolean;
-  orderTitle: string;
-  state?: 'ready' | 'loading' | 'success' | 'error';
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  if (!visible) return null;
-  if (state === 'loading') return <StateView tone="info" loading title="جاري تأكيد الاستلام…" description="" />;
-  if (state === 'success') return <StateView tone="success" title="تم الاستلام" description="تم تحديث المهمة من DSH." actionLabel="موافق" onActionPress={onConfirm} />;
-  if (state === 'error') return <StateView tone="danger" title="فشل تأكيد الاستلام" description="حدّث المهمة ثم أعد المحاولة." actionLabel="إغلاق" onActionPress={onCancel} />;
-  return (
-    <SurfaceAny tone="raised" padding={4} gap={3} radiusToken="xl">
-      <Text role="bodyStrong">تأكيد الاستلام</Text>
-      <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>{orderTitle}</Text>
-      <Box gap={2}><Button label="تأكيد الاستلام" onPress={onConfirm} /><Button label="إلغاء" tone="ghost" onPress={onCancel} /></Box>
-    </SurfaceAny>
-  );
-}
-
-export function CaptainDeliveryConfirmSheet({ visible, orderTitle, onConfirm, onCancel }: { visible: boolean; orderTitle: string; onConfirm: () => void; onCancel: () => void }) {
-  if (!visible) return null;
-  return (
-    <SurfaceAny tone="raised" padding={4} gap={3} radiusToken="xl">
-      <Text role="bodyStrong">تأكيد التسليم</Text>
-      <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>{orderTitle}</Text>
-      <Box gap={2}><Button label="تأكيد التسليم" onPress={onConfirm} /><Button label="إلغاء" tone="ghost" onPress={onCancel} /></Box>
-    </SurfaceAny>
-  );
-}
-
 export function CaptainOrdersInboxScreen(props: Pick<DshCaptainOrdersScreenProps, 'state' | 'items' | 'onOpenOrder' | 'onOpenNextOrder' | 'onRetry'> = {}) {
   return <DshCaptainOrdersScreen {...props} section="inbox" />;
 }
@@ -346,19 +309,15 @@ export function CaptainOrdersInboxScreen(props: Pick<DshCaptainOrdersScreenProps
 export function CaptainOrderDetailScreen({
   summary,
   primaryAction,
-  onConfirmPickup,
-  onConfirmDelivery,
   onOpenNextOrder,
   onBackToInbox,
   onRetry,
 }: {
   summary?: DshCaptainOrderDetailSummary | undefined;
   primaryAction?: { readonly label: string; readonly onPress: () => void; readonly disabled?: boolean } | undefined;
-  onConfirmPickup?: () => void;
-  onConfirmDelivery?: () => void;
   onOpenNextOrder?: () => void;
   onBackToInbox?: (() => void) | undefined;
   onRetry?: (() => void) | undefined;
 }) {
-  return <OrderDetailSection summary={summary} primaryAction={primaryAction} onConfirmPickup={onConfirmPickup} onConfirmDelivery={onConfirmDelivery} onOpenNextOrder={onOpenNextOrder} onBackToInbox={onBackToInbox} onRetry={onRetry} />;
+  return <OrderDetailSection summary={summary} primaryAction={primaryAction} onOpenNextOrder={onOpenNextOrder} onBackToInbox={onBackToInbox} onRetry={onRetry} />;
 }

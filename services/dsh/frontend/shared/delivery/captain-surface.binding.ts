@@ -53,38 +53,29 @@ export function useDshCaptainSurfaceBinding(
     setActiveServiceType: profileModel.setActiveServiceType,
     setInboxState: lifecycle.setInboxState,
     setActiveOrderExpanded: orderModel.setActiveOrderExpanded,
-    setIsPickupSheetVisible: lifecycle.setIsPickupSheetVisible,
-    setIsDeliverySheetVisible: lifecycle.setIsDeliverySheetVisible,
     setCaptainAppMode: profileModel.setCaptainAppMode,
   });
 
   const resetOrderState = React.useCallback(() => {
     orderModel.setActiveOrderExpanded(false);
-    lifecycle.setActiveOrderPhase('pickup');
     chatModel.setActiveOrderDraft('');
     chatModel.setActiveOrderMessages([]);
     podUpload.resetPodFields();
-  }, [orderModel, lifecycle, chatModel, podUpload]);
+  }, [orderModel, chatModel, podUpload]);
 
   const deliveryActions = useCaptainDeliveryActions({
     captainRuntimeId,
     activeAssignmentId: operationalCommandAssignmentId,
     captainPodPhotoUri: podUpload.captainPodPhotoUri,
     captainPodMediaKey: podUpload.captainPodMediaKey,
-    captainAppMode: profileModel.captainAppMode,
     resetOrderState,
     refreshInbox: inboxModel.refresh,
     inboxState: lifecycle.inboxState,
     setInboxState: lifecycle.setInboxState,
-    setStoreCourierStage: lifecycle.setStoreCourierStage,
     setIsDeclineSheetVisible: lifecycle.setIsDeclineSheetVisible,
     setDeclineSheetState: lifecycle.setDeclineSheetState,
-    setIsPickupSheetVisible: lifecycle.setIsPickupSheetVisible,
-    setPickupSheetState: lifecycle.setPickupSheetState,
     setDeliveryActionState: lifecycle.setDeliveryActionState,
     setDeliveryActionMessage: lifecycle.setDeliveryActionMessage,
-    setActiveOrderPhase: lifecycle.setActiveOrderPhase,
-    setActiveOrderMessages: chatModel.setActiveOrderMessages,
     setCaptainPodState: podUpload.setCaptainPodState,
     setActiveOrderExpanded: orderModel.setActiveOrderExpanded,
   });

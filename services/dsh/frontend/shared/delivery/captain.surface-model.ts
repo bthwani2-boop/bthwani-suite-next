@@ -25,8 +25,6 @@ import type { useCaptainServiceModeModel } from './captain-service-mode.model';
 import type { useCaptainInboxModel } from './captain-inbox.model';
 
 export type {
-  ActiveOrderPhase,
-  StoreCourierStage,
   DshCaptainSurfaceState,
   DshCaptainSurfaceDerived,
 } from './captain.surface.types';
@@ -77,8 +75,6 @@ export function useDshCaptainSurfaceModel({
     if (activeAssignment) return;
 
     orderModel.clearActiveAssignment('ألغيت المهمة بسبب إلغاء الطلب أو إغلاقها من العمليات.');
-    lifecycle.setIsPickupSheetVisible(false);
-    lifecycle.setIsDeliverySheetVisible(false);
     lifecycle.setIsDeclineSheetVisible(false);
     podUpload.resetPodFields();
   }, [activeAssignment, activeAssignmentId, inboxModel.fetchState, lifecycle, orderModel, podUpload]);
@@ -92,23 +88,18 @@ export function useDshCaptainSurfaceModel({
     activeDeliveryStatus: activeAssignment?.delivery.status ?? '',
     inboxItems: inboxModel.items,
     selectedSupportScreen,
-    isPickupSheetVisible: lifecycle.isPickupSheetVisible,
-    isDeliverySheetVisible: lifecycle.isDeliverySheetVisible,
     captainAvailabilityStatus: availabilityModel.captainAvailabilityStatus,
     gpsStatus: gpsModel.gpsStatus,
     activeOrderExpanded: orderModel.activeOrderExpanded,
-    activeOrderPhase: lifecycle.activeOrderPhase,
     captainAppMode: profileModel.captainAppMode,
     activeOrderDraft: chatModel.activeOrderDraft,
     activeOrderMessages: chatModel.activeOrderMessages,
-    storeCourierStage: lifecycle.storeCourierStage,
     captainPodState: podUpload.captainPodState,
     captainPodPhotoUri: podUpload.captainPodPhotoUri,
     captainPodMediaKey: podUpload.captainPodMediaKey,
     isDeclineSheetVisible: lifecycle.isDeclineSheetVisible,
     declineSheetState: lifecycle.declineSheetState,
     declineOrderId: lifecycle.declineOrderId,
-    pickupSheetState: lifecycle.pickupSheetState,
     deliveryActionState: lifecycle.deliveryActionState,
     deliveryActionMessage: lifecycle.deliveryActionMessage,
   };
@@ -126,15 +117,10 @@ export function useDshCaptainSurfaceModel({
     setActiveOrderExpanded: orderModel.setActiveOrderExpanded,
     setCaptainAvailabilityStatus: availabilityModel.setCaptainAvailabilityStatus,
     setGpsStatus: gpsModel.setGpsStatus,
-    setIsPickupSheetVisible: lifecycle.setIsPickupSheetVisible,
-    setPickupSheetState: lifecycle.setPickupSheetState,
     setDeliveryActionState: lifecycle.setDeliveryActionState,
     setDeliveryActionMessage: lifecycle.setDeliveryActionMessage,
-    setIsDeliverySheetVisible: lifecycle.setIsDeliverySheetVisible,
     setIsDeclineSheetVisible: lifecycle.setIsDeclineSheetVisible,
     setDeclineOrderId: lifecycle.setDeclineOrderId,
-    setStoreCourierStage: lifecycle.setStoreCourierStage,
-    setActiveOrderPhase: lifecycle.setActiveOrderPhase,
     setCaptainPodPhotoUri: podUpload.setCaptainPodPhotoUri,
     setCaptainPodMediaKey: podUpload.setCaptainPodMediaKey,
     setCaptainPodState: podUpload.setCaptainPodState,

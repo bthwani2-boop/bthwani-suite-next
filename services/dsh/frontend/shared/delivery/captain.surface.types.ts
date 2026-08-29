@@ -1,6 +1,5 @@
 import type { CaptainSupportRoute, CompactOrderChatMessage, CaptainAvailabilityStatus, CaptainGpsStatus, CaptainAppMode, CaptainServiceType, CaptainAvailabilityMeta } from './captain.contract';
 import type { DshCaptainRoute } from './captain.contract';
-import type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
 import type { DshDeliveryStatus } from '../dispatch';
 import type {
   DshCaptainDeliveryActionId,
@@ -8,7 +7,6 @@ import type {
   DshCaptainOrderDetailSummary,
 } from '../orders';
 import type { CaptainPodState } from '../media/pod/pod-upload-flow';
-export type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
 
 export type CaptainDeliveryActionId = DshCaptainDeliveryActionId;
 export type CaptainDeliveryAction = {
@@ -33,23 +31,18 @@ export type DshCaptainSurfaceState = {
   activeDeliveryStatus: DshDeliveryStatus | '';
   inboxItems: DshCaptainOrderBellItem[];
   selectedSupportScreen: CaptainSupportRoute;
-  isPickupSheetVisible: boolean;
-  isDeliverySheetVisible: boolean;
   captainAvailabilityStatus: CaptainAvailabilityStatus;
   gpsStatus: CaptainGpsStatus;
   activeOrderExpanded: boolean;
-  activeOrderPhase: ActiveOrderPhase;
   captainAppMode: CaptainAppMode;
   activeOrderDraft: string;
   activeOrderMessages: CompactOrderChatMessage[];
-  storeCourierStage: StoreCourierStage;
   captainPodState: CaptainPodState;
   captainPodPhotoUri: string | undefined;
   captainPodMediaKey: string | undefined;
   isDeclineSheetVisible: boolean;
   declineSheetState: 'ready' | 'loading' | 'success' | 'error';
   declineOrderId: string;
-  pickupSheetState: 'ready' | 'loading' | 'success' | 'error';
   deliveryActionState: 'idle' | 'loading' | 'success' | 'error';
   deliveryActionMessage: string | null;
 };
