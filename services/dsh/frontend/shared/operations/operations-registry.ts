@@ -1,4 +1,4 @@
-import { CONTROL_PANEL_SECTION_ROUTES } from '../control-panel-routes';
+import { CONTROL_PANEL_SECTION_ROUTES } from '../control-panel-routes.ts';
 import type {
   CanonicalOperationsGroupId,
   NonOperationsSectionRootId,

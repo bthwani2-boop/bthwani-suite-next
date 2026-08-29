@@ -138,6 +138,7 @@ const RAW_FETCH_PATTERN = /\bfetch\s*\(/g;
 const MOCK_RESOLVE_PATTERN = /\breturn\s+Promise\.resolve\s*\(\s*[\[{]/;
 const HARDCODED_URL_PATTERN = /https?:\/\/(?!localhost|127\.0\.0\.1|\.\.\.|example\.com)/;
 const REGISTERED_API_PATH_PATTERN = /\/(?:dsh|wlt|identity|providers)\//;
+const SHARED_API_TRANSPORT_PATTERN = /\b(?:fetch|globalThis\.fetch)\s*\(|\.request\s*\(/;
 
 const apiFiles = listCodeFiles().filter((file) => {
   if (file.endsWith("-registry.ts")) return false;
@@ -153,7 +154,11 @@ const apiFiles = listCodeFiles().filter((file) => {
   if (isSharedFile) {
     try {
       const content = fs.readFileSync(path.join(repoRoot, file), "utf8");
-      return content.includes("/dsh/") || content.includes("/wlt/") || content.includes("/identity/");
+      // Shared registries, route maps, and type-only modules can mention a
+      // service path without being API adapters. Only files that also expose
+      // an actual approved transport belong in the binding scan.
+      return REGISTERED_API_PATH_PATTERN.test(content)
+        && (DSH_HTTP_CLIENT_PATTERN.test(content) || SHARED_API_TRANSPORT_PATTERN.test(content));
     } catch {
       return false;
     }
