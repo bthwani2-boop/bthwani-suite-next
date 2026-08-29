@@ -90,6 +90,8 @@ export function DshCaptainPoDSubmissionScreen({
   const workItemLabel = workItemSource === 'special_request'
     ? `المهمة الخاصة ${workItemId}`
     : `الطلب ${workItemId || orderId}`;
+  const workItemNoun = workItemSource === 'special_request' ? 'المهمة الخاصة' : 'الطلب';
+  const usesCustomerPin = workItemSource !== 'special_request';
   const [pin, setPin] = React.useState('');
   const [evidenceKind, setEvidenceKind] = React.useState<CaptainDeliveryEvidenceKind>('photo');
   const [proofGuideVisible, setProofGuideVisible] = React.useState(false);
@@ -213,7 +215,7 @@ export function DshCaptainPoDSubmissionScreen({
   if (effectiveState === 'success') {
     return (
       <View style={styles.root}>
-        <StateView tone="success" title="تم قبول إثبات التسليم" description="ثبت DSH الإثبات وأكمل الطلب مرة واحدة، ثم أنشأ حدث الإكمال الدائم إلى WLT." actionLabel="العودة لصندوق الطلبات" onActionPress={onBack} />
+        <StateView tone="success" title="تم قبول إثبات التسليم" description={`ثبت DSH الإثبات وأكمل ${workItemNoun} مرة واحدة، ثم أنشأ حدث الإكمال الدائم إلى WLT.`} actionLabel="العودة لصندوق الطلبات" onActionPress={onBack} />
       </View>
     );
   }
@@ -221,7 +223,7 @@ export function DshCaptainPoDSubmissionScreen({
   if (effectiveState === 'pending_review') {
     return (
       <View style={styles.root}>
-        <StateView tone="warning" title="الإثبات قيد مراجعة العمليات" description="لم يُغلق الطلب بعد. ستظهر النتيجة هنا بعد قبول الإثبات أو رفضه، ويمكنك تحديث الحالة دون إعادة الإرسال." actionLabel="تحديث حالة الإثبات" onActionPress={() => void proofController.refresh().then(() => onConfirm())} />
+        <StateView tone="warning" title="الإثبات قيد مراجعة العمليات" description={`لم تُغلق ${workItemNoun} بعد. ستظهر النتيجة هنا بعد قبول الإثبات أو رفضه، ويمكنك تحديث الحالة دون إعادة الإرسال.`} actionLabel="تحديث حالة الإثبات" onActionPress={() => void proofController.refresh().then(() => onConfirm())} />
         {onBack ? <Button label="العودة إلى المهمة" tone="secondary" onPress={onBack} /> : null}
       </View>
     );
@@ -230,7 +232,7 @@ export function DshCaptainPoDSubmissionScreen({
   if (effectiveState === 'rejected') {
     return (
       <View style={styles.root}>
-        <StateView tone="danger" title="رُفض إثبات التسليم" description={proofController.proof?.reviewReason || 'الإثبات لا يطابق المتطلبات. التقط إثباتًا جديدًا أو استخدم PIN صالحًا.'} actionLabel="بدء محاولة جديدة" onActionPress={() => { proofController.resetRejected(); setPin(''); onCapturePhoto(); }} />
+        <StateView tone="danger" title="رُفض إثبات التسليم" description={proofController.proof?.reviewReason || (usesCustomerPin ? 'الإثبات لا يطابق المتطلبات. التقط إثباتًا جديدًا أو استخدم PIN صالحًا.' : 'الإثبات لا يطابق المتطلبات. التقط صورة أو توقيعًا جديدًا.')} actionLabel="بدء محاولة جديدة" onActionPress={() => { proofController.resetRejected(); setPin(''); onCapturePhoto(); }} />
         {onBack ? <Button label="العودة إلى المهمة" tone="secondary" onPress={onBack} /> : null}
       </View>
     );
@@ -257,7 +259,7 @@ export function DshCaptainPoDSubmissionScreen({
               <Badge label="إثبات مطلوب" tone="warning" />
               <Text role="caption" tone="muted">#{workItemId || orderId}</Text>
             </Box>
-            <Text role="bodySm" tone="muted">استخدم رمز العميل لقبول فوري، أو صورة/توقيع يراجعها المشغل، أو رمزًا مع وسائط كإثبات مركب.</Text>
+            <Text role="bodySm" tone="muted">{usesCustomerPin ? 'استخدم رمز العميل لقبول فوري، أو صورة/توقيع يراجعها المشغل، أو رمزًا مع وسائط كإثبات مركب.' : 'أرسل صورة أو توقيعًا ليراجعه المشغل قبل إكمال المهمة الخاصة.'}</Text>
           </Box>
 
           <Divider />
@@ -308,13 +310,13 @@ export function DshCaptainPoDSubmissionScreen({
               <View style={styles.placeholderWrapper}>
                 <Icon name="image-outline" size={40} tone="brand" />
                 <Text role="titleMd" style={{ color: theme.brandStrong ?? theme.text }}>تم حفظ {evidenceLabel}</Text>
-                <Text role="caption" tone="muted">سيُرسل الإثبات المركب إذا أدخلت PIN أيضًا.</Text>
+                <Text role="caption" tone="muted">{usesCustomerPin ? 'سيُرسل الإثبات المركب إذا أدخلت PIN أيضًا.' : 'ستُرسل الوسائط إلى مراجعة العمليات.'}</Text>
               </View>
             ) : (
               <View style={styles.placeholderWrapper}>
                 <Icon name="camera" size={48} tone="brand" />
                 <Text role="titleMd" style={{ color: theme.brandStrong ?? theme.text }}>التقاط {evidenceLabel}</Text>
-                <Text role="caption" tone="muted">الوسائط دون PIN تدخل مراجعة العمليات ولا تغلق الطلب تلقائيًا.</Text>
+                <Text role="caption" tone="muted">{usesCustomerPin ? 'الوسائط دون PIN تدخل مراجعة العمليات ولا تغلق الطلب تلقائيًا.' : 'الوسائط تدخل مراجعة العمليات ولا تغلق المهمة تلقائيًا.'}</Text>
               </View>
             )}
           </Pressable>
@@ -328,7 +330,7 @@ export function DshCaptainPoDSubmissionScreen({
             <Button label={proofGuideVisible ? 'إخفاء الشروط' : 'فتح الشروط'} tone="ghost" size="sm" fullWidth={false} onPress={() => setProofGuideVisible((current) => !current)} />
             {proofGuideVisible ? (
               <Box gap={1}>
-                <Text role="caption" tone="muted">• استخدم PIN الذي يعرضه العميل للطلب نفسه فقط.</Text>
+                {usesCustomerPin ? <Text role="caption" tone="muted">• استخدم PIN الذي يعرضه العميل للطلب نفسه فقط.</Text> : null}
                 <Text role="caption" tone="muted">• صنف الوسائط بصورتها الصحيحة: تسليم أو توقيع.</Text>
                 <Text role="caption" tone="muted">• لا تصوّر الوجوه أو بيانات حساسة دون ضرورة تشغيلية.</Text>
               </Box>

@@ -41,13 +41,13 @@ export const OrderDetailSection = React.memo(function OrderDetailSection({
 
 	return (
 		<DshOperationScreen
-			title="تفاصيل الطلب"
+			title={`تفاصيل ${summary?.workItemLabel ?? 'المهمة'}`}
 			subtitle="مهمة نشطة مع تواصل متكامل وجرس تنبيه ذكي مباشر داخل نفس شاشة الطلب."
 			content={
 				<Box gap={4} style={{ paddingHorizontal: spacing[1] }}>
 					<Box gap={3} style={{ paddingVertical: spacing[1] }}>
 						<Box gap={1} style={{ alignItems: 'flex-end' }}>
-							<Badge label="طلب الكابتن" tone="warning" />
+							<Badge label={summary?.workItemLabel === 'الطلب' ? 'طلب الكابتن' : summary?.workItemLabel ?? 'المهمة'} tone="warning" />
 							<Text role="titleLg" style={{ textAlign: 'right' }}>{summary?.orderId ?? ''}</Text>
 							<Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
 								{summary?.currentStageLabel ?? ''}

@@ -296,7 +296,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     if (route === "account-orders") {
       if (!activeSummary) return <MissingAssignment onGoToInbox={onGoToInbox} />;
       return <KeyValueList items={[
-        { label: "الطلب النشط", value: `#${activeOrderDisplayId}`, tone: "success" },
+        { label: `${activeSummary.workItemLabel} النشط`, value: `#${activeOrderDisplayId}`, tone: "success" },
         { label: "المرحلة الحالية", value: activeSummary.currentStageLabel, tone: "info" },
         { label: "الاستلام", value: activeSummary.pickupLabel },
         { label: "التسليم", value: activeSummary.dropoffLabel },

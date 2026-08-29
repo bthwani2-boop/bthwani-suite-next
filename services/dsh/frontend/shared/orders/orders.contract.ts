@@ -84,6 +84,7 @@ export type DshCaptainOrdersScreenState =
 
 export type DshCaptainOrderDetailSummary = {
   orderId: DshCaptainOrderId;
+  workItemLabel: string;
   pickupLabel: string;
   dropoffLabel: string;
   etaLabel: string;

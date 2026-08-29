@@ -46,6 +46,7 @@ export const OrderActionSection = React.memo(function OrderActionSection({
 	};
 
 	const copy = actionCopy[action];
+	const workItemLabel = summary?.workItemLabel ?? 'المهمة';
 
 	return (
 		<DshOperationScreen
@@ -54,7 +55,7 @@ export const OrderActionSection = React.memo(function OrderActionSection({
 			content={
 				<KeyValueList
 					items={[
-						{ label: 'الطلب', value: summary?.orderId ?? '', tone: 'brand' },
+						{ label: workItemLabel, value: summary?.orderId ?? '', tone: 'brand' },
 						{ label: 'الاستلام', value: summary?.pickupLabel ?? '' },
 						{ label: 'التسليم', value: summary?.dropoffLabel ?? '' },
 						{ label: 'المرحلة', value: summary?.currentStageLabel ?? '', tone: 'warning' },

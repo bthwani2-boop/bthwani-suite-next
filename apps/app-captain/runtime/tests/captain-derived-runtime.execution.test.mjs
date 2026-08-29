@@ -109,6 +109,7 @@ test("captain special-request assignment keeps its source identity through execu
   );
 
   assert.equal(summary.orderId, "special-42");
+  assert.equal(summary.workItemLabel, "عونك");
   assert.match(summary.pickupLabel, /عونك/);
   assert.equal(summary.nextActionLabel, "فتح إثبات التسليم");
 });
@@ -118,6 +119,7 @@ test("captain empty assignment is explicit and cannot invent an active order", (
     buildCaptainOrderSummaryPolicy(undefined, assignmentStatusLabels, deliveryStatusLabels),
     {
       orderId: "",
+      workItemLabel: "المهمة",
       pickupLabel: "",
       dropoffLabel: "",
       etaLabel: "",

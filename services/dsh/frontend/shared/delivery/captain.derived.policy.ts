@@ -21,6 +21,7 @@ export type CaptainHomeTickerPolicy = {
 
 const EMPTY_CAPTAIN_ORDER_SUMMARY: DshCaptainOrderDetailSummary = {
   orderId: '',
+  workItemLabel: 'المهمة',
   pickupLabel: '',
   dropoffLabel: '',
   etaLabel: '',
@@ -92,6 +93,7 @@ export function buildCaptainOrderSummaryPolicy(
       : 'المهمة الخاصة';
   return {
     orderId: workItemId,
+    workItemLabel: isSpecialRequest ? workItemLabel : 'الطلب',
     pickupLabel: isSpecialRequest
       ? `${workItemLabel} #${workItemId} — استلام من نقطة التنفيذ`
       : `طلب #${assignment.orderId} — استلام من المتجر`,
