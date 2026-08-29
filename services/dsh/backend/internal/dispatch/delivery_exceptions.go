@@ -74,6 +74,7 @@ type ReportDeliveryExceptionInput struct {
 	OperatorContextID string
 	ReasonCode        DeliveryExceptionReasonCode
 	Note              string
+	IdempotencyKey    string
 	CorrelationID     string
 	Latitude          *float64
 	Longitude         *float64
@@ -135,12 +136,16 @@ func exceptionRequiresProof(reason DeliveryExceptionReasonCode) bool {
 
 func validateDeliveryExceptionInput(input ReportDeliveryExceptionInput) error {
 	input.Note = strings.TrimSpace(input.Note)
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 	if !validDeliveryExceptionReasons[input.ReasonCode] {
 		return fmt.Errorf("%w: unsupported delivery exception reason", ErrInvalid)
 	}
-	if input.CorrelationID == "" || len(input.CorrelationID) > 200 {
-		return fmt.Errorf("%w: correlationId is required and must not exceed 200 characters", ErrInvalid)
+	if len(input.IdempotencyKey) < 8 || len(input.IdempotencyKey) > 200 {
+		return fmt.Errorf("%w: idempotency key must contain between 8 and 200 characters", ErrInvalid)
+	}
+	if len(input.CorrelationID) < 8 || len(input.CorrelationID) > 200 {
+		return fmt.Errorf("%w: correlationId must contain between 8 and 200 characters", ErrInvalid)
 	}
 	if len(input.Note) > 1000 {
 		return fmt.Errorf("%w: note must not exceed 1000 characters", ErrInvalid)
@@ -169,6 +174,7 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 		return nil, fmt.Errorf("%w: assignment and captain are required", ErrInvalid)
 	}
 	input.Note = strings.TrimSpace(input.Note)
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 	input.ProofMediaRef = strings.TrimSpace(input.ProofMediaRef)
 	if err := validateDeliveryExceptionInput(input); err != nil {
@@ -185,6 +191,9 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	defer tx.Rollback()
 
 	requestedOperatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, requestedOperatorContextID+"|delivery-exception|"+input.IdempotencyKey); err != nil {
+		return nil, err
+	}
 	current, err := lockAssignmentForOperatorContext(tx, requestedOperatorContextID, assignmentID, captainID)
 	if err != nil {
 		return nil, err
@@ -216,14 +225,19 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	// Idempotency is evaluated before current-state eligibility so a retried
 	// command returns its original result even after operations has moved the
 	// assignment or resolved the exception.
-	existing, err := getDeliveryExceptionByCorrelationTx(tx, operatorContextID, input.CorrelationID)
+	existing, err := getDeliveryExceptionByIdempotencyKeyTx(tx, operatorContextID, input.IdempotencyKey)
 	if err == nil {
-		if existing.AssignmentID != assignmentID || existing.CaptainID != captainID || existing.ReasonCode != input.ReasonCode {
-			return nil, fmt.Errorf("%w: correlationId already belongs to a different exception command", ErrConflict)
+		if err = validateDeliveryExceptionReplay(existing, assignmentID, captainID, input); err != nil {
+			return nil, err
 		}
 		return existing, nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	if _, err = getDeliveryExceptionByCorrelationTx(tx, operatorContextID, input.CorrelationID); err == nil {
+		return nil, fmt.Errorf("%w: correlationId already belongs to a different exception command", ErrIdempotencyConflict)
+	} else if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 
@@ -247,14 +261,14 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 
 	var id string
 	err = tx.QueryRow(`
-                INSERT INTO dsh_delivery_exceptions (
-                        operator_context_id, assignment_id, order_id, special_request_id, captain_id, reason_code, note,
-                        delivery_status_at_report, severity, correlation_id,
-                        reported_latitude, reported_longitude, proof_media_ref, policy_next_action
-                ) VALUES ($1,$2::uuid,NULLIF($3,'')::uuid,NULLIF($4,'')::uuid,$5,$6,$7,$8,$9,$10,$11,$12,NULLIF($13,''),$14)
-                RETURNING id::text`,
+		INSERT INTO dsh_delivery_exceptions (
+				operator_context_id, assignment_id, order_id, special_request_id, captain_id, reason_code, note,
+				delivery_status_at_report, severity, idempotency_key, correlation_id,
+				reported_latitude, reported_longitude, proof_media_ref, policy_next_action
+			) VALUES ($1,$2::uuid,NULLIF($3,'')::uuid,NULLIF($4,'')::uuid,$5,$6,$7,$8,$9,$10,$11,$12,$13,NULLIF($14,''),$15)
+			RETURNING id::text`,
 		operatorContextID, assignmentID, current.OrderID, current.SpecialRequestID, captainID, string(input.ReasonCode), input.Note,
-		string(current.Delivery.Status), string(severityForDeliveryException(input.ReasonCode)), input.CorrelationID,
+		string(current.Delivery.Status), string(severityForDeliveryException(input.ReasonCode)), input.IdempotencyKey, input.CorrelationID,
 		input.Latitude, input.Longitude, input.ProofMediaRef, policyNextAction,
 	).Scan(&id)
 	if err != nil {
@@ -986,4 +1000,32 @@ func scanDeliveryException(scan deliveryExceptionScanner) (*DeliveryException, e
 func getDeliveryExceptionByCorrelationTx(tx *sql.Tx, operatorContextID, correlationID string) (*DeliveryException, error) {
 	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.operator_context_id=$1 AND e.correlation_id=$2`, operatorContextID, correlationID)
 	return scanDeliveryException(row.Scan)
+}
+
+func getDeliveryExceptionByIdempotencyKeyTx(tx *sql.Tx, operatorContextID, idempotencyKey string) (*DeliveryException, error) {
+	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.operator_context_id=$1 AND e.idempotency_key=$2`, operatorContextID, idempotencyKey)
+	return scanDeliveryException(row.Scan)
+}
+
+func validateDeliveryExceptionReplay(
+	item *DeliveryException,
+	assignmentID string,
+	captainID string,
+	input ReportDeliveryExceptionInput,
+) error {
+	proofMediaRef := ""
+	if item.ProofMediaRef != nil {
+		proofMediaRef = *item.ProofMediaRef
+	}
+	if item.AssignmentID != assignmentID ||
+		item.CaptainID != captainID ||
+		item.ReasonCode != input.ReasonCode ||
+		item.Note != input.Note ||
+		item.CorrelationID != input.CorrelationID ||
+		!sameOptionalFloat64(item.ReportedLatitude, input.Latitude) ||
+		!sameOptionalFloat64(item.ReportedLongitude, input.Longitude) ||
+		proofMediaRef != input.ProofMediaRef {
+		return fmt.Errorf("%w: idempotency key already belongs to a different exception command", ErrIdempotencyConflict)
+	}
+	return nil
 }

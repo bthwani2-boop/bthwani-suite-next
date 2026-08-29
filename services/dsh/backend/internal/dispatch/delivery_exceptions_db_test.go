@@ -73,6 +73,7 @@ func TestDeliveryExceptionBlocksProofButAllowsLocationDBIntegration(t *testing.T
 		OperatorContextID: operatorContextID,
 		ReasonCode:        ExceptionCustomerUnreachable,
 		Note:              "اتصل الكابتن عدة مرات دون استجابة",
+		IdempotencyKey:    "delivery-exception-key-" + suffix,
 		CorrelationID:     correlationID,
 	})
 	if err != nil {
@@ -86,6 +87,7 @@ func TestDeliveryExceptionBlocksProofButAllowsLocationDBIntegration(t *testing.T
 		OperatorContextID: operatorContextID,
 		ReasonCode:        ExceptionCustomerUnreachable,
 		Note:              "اتصل الكابتن عدة مرات دون استجابة",
+		IdempotencyKey:    "delivery-exception-key-" + suffix,
 		CorrelationID:     correlationID,
 	})
 	if err != nil || replayed.ID != item.ID {
@@ -151,6 +153,7 @@ func TestDeliveryExceptionBlocksProofButAllowsLocationDBIntegration(t *testing.T
 		OperatorContextID: operatorContextID,
 		ReasonCode:        ExceptionCustomerUnreachable,
 		Note:              "اتصل الكابتن عدة مرات دون استجابة",
+		IdempotencyKey:    "delivery-exception-key-" + suffix,
 		CorrelationID:     correlationID,
 	})
 	if err != nil || replayedAfterResolution.ID != item.ID || replayedAfterResolution.Status != DeliveryExceptionResolved {

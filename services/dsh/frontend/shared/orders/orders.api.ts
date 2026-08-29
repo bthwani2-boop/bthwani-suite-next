@@ -1,6 +1,7 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { corrId, createDshHttpClient, type DshRequestOptions } from "../_kernel/dsh-http-request";
 import type { DshDeliveryException } from "../dispatch/dispatch.types";
+import type { DshCaptainCommandContext } from "../dispatch/dispatch.api";
 import type {
   DshOrder,
   DshOrderPreparation,
@@ -133,11 +134,17 @@ export async function confirmStoreCaptainHandoff(
 export async function reportPartnerStoreCaptainHandoffException(
   orderId: string,
   input: DshReportStoreCaptainHandoffExceptionInput,
+  mutation: DshCaptainCommandContext,
   token?: string,
 ): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/captain-handoff/exceptions`,
-    withOptionalToken({ method: "POST", body: input, idempotencyKey: input.correlationId }, token),
+    withOptionalToken({
+      method: "POST",
+      body: { ...input, correlationId: mutation.correlationId },
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    }, token),
   );
   return data.exception;
 }

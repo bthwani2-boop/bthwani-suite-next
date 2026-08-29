@@ -213,21 +213,33 @@ export async function updateDeliveryStatus(
 export async function reportDeliveryException(
   assignmentId: string,
   input: DshReportDeliveryExceptionInput,
+  mutation: DshCaptainCommandContext,
 ): Promise<DshDeliveryException> {
-  await request<{ exception: DshDeliveryException }>(
-    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/exceptions`,
-    { method: "POST", body: input, idempotencyKey: input.correlationId },
-  );
+	await request<{ exception: DshDeliveryException }>(
+		`/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/exceptions`,
+		{
+			method: "POST",
+			body: { ...input, correlationId: mutation.correlationId },
+			idempotencyKey: mutation.idempotencyKey,
+			correlationId: mutation.correlationId,
+		},
+	);
   return fetchCaptainDeliveryException(assignmentId);
 }
 
 export async function reportCaptainHandoffException(
   assignmentId: string,
   input: DshReportDeliveryExceptionInput,
+  mutation: DshCaptainCommandContext,
 ): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
-    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/handoff-exceptions`,
-    { method: "POST", body: input, idempotencyKey: input.correlationId },
+		`/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/handoff-exceptions`,
+		{
+			method: "POST",
+			body: { ...input, correlationId: mutation.correlationId },
+			idempotencyKey: mutation.idempotencyKey,
+			correlationId: mutation.correlationId,
+		},
   );
   return data.exception;
 }

@@ -25,12 +25,16 @@ func isStoreCaptainHandoffExceptionReason(reason DeliveryExceptionReasonCode) bo
 
 func validateStoreCaptainHandoffExceptionInput(input ReportDeliveryExceptionInput) error {
 	input.Note = strings.TrimSpace(input.Note)
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 	if !isStoreCaptainHandoffExceptionReason(input.ReasonCode) {
 		return fmt.Errorf("%w: unsupported store-captain handoff exception reason", ErrInvalid)
 	}
-	if input.CorrelationID == "" || len(input.CorrelationID) > 200 {
-		return fmt.Errorf("%w: correlationId is required and must not exceed 200 characters", ErrInvalid)
+	if len(input.IdempotencyKey) < 8 || len(input.IdempotencyKey) > 200 {
+		return fmt.Errorf("%w: idempotency key must contain between 8 and 200 characters", ErrInvalid)
+	}
+	if len(input.CorrelationID) < 8 || len(input.CorrelationID) > 200 {
+		return fmt.Errorf("%w: correlationId must contain between 8 and 200 characters", ErrInvalid)
 	}
 	if len(input.Note) < 5 || len(input.Note) > 1000 {
 		return fmt.Errorf("%w: handoff exception note must be between 5 and 1000 characters", ErrInvalid)
@@ -60,9 +64,10 @@ func validateHandoffExceptionPayload(
 ) error {
 	if item.ReasonCode != input.ReasonCode ||
 		item.Note != input.Note ||
+		item.CorrelationID != input.CorrelationID ||
 		!sameOptionalFloat64(item.ReportedLatitude, input.Latitude) ||
 		!sameOptionalFloat64(item.ReportedLongitude, input.Longitude) {
-		return fmt.Errorf("%w: correlationId already belongs to a different exception command payload", ErrConflict)
+		return fmt.Errorf("%w: idempotency key already belongs to a different exception command payload", ErrIdempotencyConflict)
 	}
 	return nil
 }
@@ -78,7 +83,7 @@ func validateExistingHandoffExceptionCommand(
 	input ReportDeliveryExceptionInput,
 ) (*DeliveryException, error) {
 	if recordedActorID != expectedActorID || recordedRole != string(expectedRole) {
-		return nil, fmt.Errorf("%w: correlationId already belongs to another reporter", ErrConflict)
+		return nil, fmt.Errorf("%w: idempotency key already belongs to another reporter", ErrIdempotencyConflict)
 	}
 	item, err := GetDeliveryExceptionForContext(db, operatorContextID, exceptionID)
 	if err != nil {
@@ -105,11 +110,11 @@ func findCaptainHandoffExceptionReplay(
                 JOIN dsh_assignments a ON a.id = e.assignment_id
                 WHERE e.assignment_id = $1::uuid
                   AND e.captain_id = $2
-                  AND e.correlation_id = $3
+                  AND e.idempotency_key = $3
                   AND e.operator_context_id = $4
                   AND a.operator_context_id = $4
                 ORDER BY e.reported_at DESC
-                LIMIT 1`, assignmentID, captainID, input.CorrelationID, operatorContextID).Scan(
+		LIMIT 1`, assignmentID, captainID, input.IdempotencyKey, operatorContextID).Scan(
 		&exceptionID,
 		&recordedActorID,
 		&recordedRole,
@@ -149,11 +154,11 @@ func findPartnerHandoffExceptionReplay(
                 JOIN dsh_orders o ON o.id = e.order_id
                 WHERE e.order_id = $1::uuid
                   AND o.store_id = $2
-                  AND e.correlation_id = $3
+                  AND e.idempotency_key = $3
                   AND e.operator_context_id = $4
                   AND o.operator_context_id = $4
                 ORDER BY e.reported_at DESC
-                LIMIT 1`, orderID, storeID, input.CorrelationID, operatorContextID).Scan(
+		LIMIT 1`, orderID, storeID, input.IdempotencyKey, operatorContextID).Scan(
 		&exceptionID,
 		&recordedActorID,
 		&recordedRole,
@@ -190,6 +195,7 @@ func ReportCaptainStoreCaptainHandoffException(
 	assignmentID = strings.TrimSpace(assignmentID)
 	captainID = strings.TrimSpace(captainID)
 	input.Note = strings.TrimSpace(input.Note)
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 	if assignmentID == "" || captainID == "" {
 		return nil, fmt.Errorf("%w: assignment and captain are required", ErrInvalid)
@@ -226,6 +232,7 @@ func ReportPartnerStoreCaptainHandoffException(
 	storeID = strings.TrimSpace(storeID)
 	actorID = strings.TrimSpace(actorID)
 	input.Note = strings.TrimSpace(input.Note)
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 	if orderID == "" || storeID == "" || actorID == "" {
 		return nil, fmt.Errorf("%w: order, store, and reporter are required", ErrInvalid)
@@ -282,6 +289,7 @@ func reportStoreCaptainHandoffException(
 	expectedCaptainID = strings.TrimSpace(expectedCaptainID)
 	reporterActorID = strings.TrimSpace(reporterActorID)
 	input.Note = strings.TrimSpace(input.Note)
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 	if assignmentID == "" || expectedCaptainID == "" || reporterActorID == "" {
 		return nil, fmt.Errorf("%w: assignment, captain, and reporter are required", ErrInvalid)
@@ -298,6 +306,9 @@ func reportStoreCaptainHandoffException(
 		return nil, err
 	}
 	defer tx.Rollback()
+	if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, input.OperatorContextID+"|delivery-exception|"+input.IdempotencyKey); err != nil {
+		return nil, err
+	}
 
 	var orderID, storeID, captainID, assignmentStatus, deliveryStatus, handoffStatus, operatorContextID string
 	err = tx.QueryRow(`
@@ -332,19 +343,9 @@ func reportStoreCaptainHandoffException(
 	if captainID != expectedCaptainID {
 		return nil, ErrNotFound
 	}
-	if assignmentStatus != string(AssignmentAccepted) || deliveryStatus != string(DeliveryArrivedStore) {
-		return nil, fmt.Errorf("%w: handoff exception requires an accepted captain at the store", ErrConflict)
-	}
-	if handoffStatus != "awaiting_partner" && handoffStatus != "partner_confirmed" {
-		return nil, fmt.Errorf("%w: handoff attempt is not open", ErrConflict)
-	}
-
-	existing, err := getDeliveryExceptionByCorrelationTx(tx, operatorContextID, input.CorrelationID)
+	existing, err := getDeliveryExceptionByIdempotencyKeyTx(tx, operatorContextID, input.IdempotencyKey)
 	if err == nil {
-		if existing.AssignmentID != assignmentID {
-			return nil, fmt.Errorf("%w: correlationId already belongs to a different exception command", ErrConflict)
-		}
-		if err = validateHandoffExceptionPayload(existing, input); err != nil {
+		if err = validateDeliveryExceptionReplay(existing, assignmentID, captainID, input); err != nil {
 			return nil, err
 		}
 		var recordedActorID, recordedRole string
@@ -361,6 +362,17 @@ func reportStoreCaptainHandoffException(
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
+	}
+	if _, err = getDeliveryExceptionByCorrelationTx(tx, operatorContextID, input.CorrelationID); err == nil {
+		return nil, fmt.Errorf("%w: correlationId already belongs to a different exception command", ErrIdempotencyConflict)
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	if assignmentStatus != string(AssignmentAccepted) || deliveryStatus != string(DeliveryArrivedStore) {
+		return nil, fmt.Errorf("%w: handoff exception requires an accepted captain at the store", ErrConflict)
+	}
+	if handoffStatus != "awaiting_partner" && handoffStatus != "partner_confirmed" {
+		return nil, fmt.Errorf("%w: handoff attempt is not open", ErrConflict)
 	}
 
 	var openID string
@@ -389,6 +401,7 @@ func reportStoreCaptainHandoffException(
                         note,
                         delivery_status_at_report,
                         severity,
+                        idempotency_key,
                         correlation_id,
                         reported_latitude,
                         reported_longitude
@@ -403,7 +416,8 @@ func reportStoreCaptainHandoffException(
                         'high',
                         $8,
                         $9,
-                        $10
+                        $10,
+                        $11
                 )
                 RETURNING id::text`,
 		operatorContextID,
@@ -413,6 +427,7 @@ func reportStoreCaptainHandoffException(
 		string(input.ReasonCode),
 		input.Note,
 		deliveryStatus,
+		input.IdempotencyKey,
 		input.CorrelationID,
 		input.Latitude,
 		input.Longitude,

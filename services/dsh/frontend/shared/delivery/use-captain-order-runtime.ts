@@ -8,7 +8,6 @@ import {
   reportDeliveryException,
   updateDeliveryStatus,
 } from '../dispatch/dispatch.api';
-import { corrId } from '../_kernel/dsh-http-request';
 import { useIdentitySession } from '@bthwani/core-identity';
 import {
   clearCaptainAssignmentCommandAttempt,
@@ -16,8 +15,14 @@ import {
 } from './captain-assignment-command-attempt';
 import {
   clearCaptainDeliveryStatusCommandAttempt,
+  captainDeliveryStatusCommandIntentFromAttempt,
+  findPendingCaptainDeliveryStatusCommandAttempt,
   getOrCreateCaptainDeliveryStatusCommandAttempt,
 } from './captain-delivery-status-command-attempt';
+import {
+  clearCaptainDeliveryExceptionCommandAttempt,
+  getOrCreateCaptainDeliveryExceptionCommandAttempt,
+} from './captain-delivery-exception-command-attempt';
 import {
   flushPendingForegroundDispatchLocations,
   syncForegroundDispatchLocation,
@@ -80,6 +85,36 @@ function isUncertainCaptainCommandError(error: unknown): boolean {
     || (candidate.kind === 'http' && typeof candidate.status === 'number' && candidate.status >= 500);
 }
 
+async function executeCaptainDeliveryStatusCommand(
+  intent: Parameters<typeof getOrCreateCaptainDeliveryStatusCommandAttempt>[0],
+  attempt: Awaited<ReturnType<typeof getOrCreateCaptainDeliveryStatusCommandAttempt>>,
+): Promise<Awaited<ReturnType<typeof updateDeliveryStatus>>> {
+  let coordinates = intent.latitude !== undefined && intent.longitude !== undefined
+    ? { latitude: intent.latitude, longitude: intent.longitude }
+    : undefined;
+  if (!coordinates && (intent.nextStatus === 'driver_arrived_store' || intent.nextStatus === 'arrived_customer')) {
+    const location = await readCaptainForegroundLocation();
+    coordinates = { latitude: location.latitude, longitude: location.longitude };
+  }
+  let result;
+  try {
+    result = await updateDeliveryStatus(intent.assignmentId, intent.nextStatus, {
+      expectedVersion: intent.expectedVersion,
+      mutation: attempt.context,
+      ...(coordinates ?? {}),
+    });
+  } catch (error) {
+    if (!isUncertainCaptainCommandError(error)) throw error;
+    result = await updateDeliveryStatus(intent.assignmentId, intent.nextStatus, {
+      expectedVersion: intent.expectedVersion,
+      mutation: attempt.context,
+      ...(coordinates ?? {}),
+    });
+  }
+  await clearCaptainDeliveryStatusCommandAttempt(intent, attempt.signature);
+  return result;
+}
+
 export async function readCaptainForegroundLocation(): Promise<DshCaptainCoordinates> {
   const location = getDshLocationAdapter();
   const permission = await location.requestForegroundPermissions();
@@ -97,16 +132,6 @@ export async function readCaptainForegroundLocation(): Promise<DshCaptainCoordin
 export function useCaptainOrderRuntime() {
   const identity = useIdentitySession();
   const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
-  const commandIds = React.useRef<Record<string, string>>({});
-  const commandFor = React.useCallback((key: string) => {
-    if (!actorId) throw new Error('جلسة الكابتن غير جاهزة لتنفيذ العملية.');
-    const scopedKey = `${actorId}:${key}`;
-    const existing = commandIds.current[scopedKey];
-    if (existing) return { key: scopedKey, id: existing };
-    const id = corrId(`captain-dispatch-${key}`);
-    commandIds.current[scopedKey] = id;
-    return { key: scopedKey, id };
-  }, [actorId]);
 
   const acceptTask = React.useCallback(
     async (assignmentId: string, _captainId: string) => {
@@ -163,6 +188,14 @@ export function useCaptainOrderRuntime() {
     ) => {
       const currentActorId = actorId;
       if (!currentActorId) throw new Error('جلسة الكابتن غير جاهزة لتنفيذ العملية.');
+      const pendingAttempt = await findPendingCaptainDeliveryStatusCommandAttempt(currentActorId, assignmentId);
+      if (pendingAttempt) {
+        const pendingIntent = captainDeliveryStatusCommandIntentFromAttempt(pendingAttempt);
+        const pendingResult = await executeCaptainDeliveryStatusCommand(pendingIntent, pendingAttempt);
+        if (pendingIntent.expectedStatus === expectedStatus && pendingIntent.nextStatus === nextStatus) {
+          return pendingResult;
+        }
+      }
       const assignments = await fetchCaptainDispatchAssignments();
       const assignment = assignments.find((item) => item.id === assignmentId);
       if (!assignment || !Number.isInteger(assignment.version) || assignment.version < 1) {
@@ -178,25 +211,10 @@ export function useCaptainOrderRuntime() {
         expectedStatus,
         nextStatus,
         expectedVersion: assignment.version,
+        ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
       };
       const attempt = await getOrCreateCaptainDeliveryStatusCommandAttempt(intent);
-      let result;
-      try {
-        result = await updateDeliveryStatus(assignmentId, nextStatus, {
-          expectedVersion: assignment.version,
-          mutation: attempt.context,
-          ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
-        });
-      } catch (error) {
-        if (!isUncertainCaptainCommandError(error)) throw error;
-        result = await updateDeliveryStatus(assignmentId, nextStatus, {
-          expectedVersion: assignment.version,
-          mutation: attempt.context,
-          ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
-        });
-      }
-      await clearCaptainDeliveryStatusCommandAttempt(intent, attempt.signature);
-      return result;
+      return executeCaptainDeliveryStatusCommand(intent, attempt);
     },
     [actorId],
   );
@@ -247,23 +265,38 @@ export function useCaptainOrderRuntime() {
 
   const failDelivery = React.useCallback(
     async (assignmentId: string, _captainId: string, draft: CaptainDeliveryExceptionDraft): Promise<DshDeliveryException> => {
+      const currentActorId = actorId;
+      if (!currentActorId) throw new Error('جلسة الكابتن غير جاهزة لتنفيذ العملية.');
       let coordinates: DshCaptainCoordinates | undefined;
       try {
         coordinates = await readCaptainForegroundLocation();
       } catch {
         // Location is valuable evidence but must not block safety or incident reporting.
       }
-      const command = commandFor(`exception:${assignmentId}:${draft.reasonCode}:${draft.note.trim()}`);
-      const result = await reportDeliveryException(assignmentId, {
+      const intent = {
+        actorId: currentActorId,
+        assignmentId,
         reasonCode: draft.reasonCode,
         note: draft.note.trim(),
-        correlationId: command.id,
+      };
+      const attempt = await getOrCreateCaptainDeliveryExceptionCommandAttempt(intent);
+      const input = {
+        reasonCode: draft.reasonCode,
+        note: draft.note.trim(),
+        correlationId: attempt.context.correlationId,
         ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
-      });
-      delete commandIds.current[command.key];
+      };
+      let result;
+      try {
+        result = await reportDeliveryException(assignmentId, input, attempt.context);
+      } catch (error) {
+        if (!isUncertainCaptainCommandError(error)) throw error;
+        result = await reportDeliveryException(assignmentId, input, attempt.context);
+      }
+      await clearCaptainDeliveryExceptionCommandAttempt(intent, attempt.signature);
       return result;
     },
-    [commandFor],
+    [actorId],
   );
 
   return React.useMemo(

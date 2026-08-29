@@ -24,15 +24,54 @@ function encode(value: string): string {
   return encodeURIComponent(value.trim());
 }
 
+function durableMutationAttemptPrefix(
+  operation: string,
+  scope: DurableMutationIdentityScope,
+): string {
+  if (!operation.trim() || !scope.actorId.trim() || !scope.installationId.trim() || !scope.entityId.trim()) {
+    throw new Error("durable mutation registry identity is incomplete");
+  }
+  return `@bthwani/mutation-attempt:v4/${encode(operation)}/${encode(scope.actorId)}/${encode(scope.installationId)}/${encode(scope.entityId)}/`;
+}
+
 export function durableMutationAttemptKey(
   operation: string,
   scope: DurableMutationIdentityScope,
   fingerprint: string,
 ): string {
-  if (!operation.trim() || !scope.actorId.trim() || !scope.installationId.trim() || !scope.entityId.trim() || !fingerprint.trim()) {
-    throw new Error("durable mutation registry identity is incomplete");
+  if (!fingerprint.trim()) throw new Error("durable mutation registry identity is incomplete");
+  return `${durableMutationAttemptPrefix(operation, scope)}${encode(fingerprint)}`;
+}
+
+export async function findDurableMutationAttempts<TAttempt extends DurableMutationAttemptEnvelope<unknown>>(
+  operation: string,
+  scope: DurableMutationIdentityScope,
+  parse: (value: unknown) => value is TAttempt,
+): Promise<readonly TAttempt[]> {
+  const prefix = durableMutationAttemptPrefix(operation, scope);
+  const keys = (await bthwaniDurableStorage.getAllKeys()).filter(
+    (key) => key.startsWith(prefix) && !key.includes(":quarantine:"),
+  );
+  const attempts: TAttempt[] = [];
+  for (const key of keys) {
+    const raw = await bthwaniDurableStorage.getItem(key);
+    if (raw === null) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (cause) {
+      throw new Error(`durable mutation registry entry is corrupt: ${key}`, { cause });
+    }
+    if (!parse(parsed)
+      || parsed.scope.actorId !== scope.actorId
+      || parsed.scope.installationId !== scope.installationId
+      || parsed.scope.entityId !== scope.entityId
+      || durableMutationAttemptKey(operation, scope, parsed.fingerprint) !== key) {
+      throw new Error(`durable mutation registry entry is invalid: ${key}`);
+    }
+    attempts.push(parsed);
   }
-  return `@bthwani/mutation-attempt:v4/${encode(operation)}/${encode(scope.actorId)}/${encode(scope.installationId)}/${encode(scope.entityId)}/${encode(fingerprint)}`;
+  return attempts;
 }
 
 export async function getOrCreateDurableMutationAttempt<TAttempt extends DurableMutationAttemptEnvelope<unknown>>(

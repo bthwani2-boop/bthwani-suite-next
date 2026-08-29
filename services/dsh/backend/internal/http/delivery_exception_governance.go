@@ -94,6 +94,11 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		ReasonCode    dispatch.DeliveryExceptionReasonCode `json:"reasonCode"`
 		Note          string                               `json:"note"`
@@ -105,6 +110,10 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	if body.CorrelationID != "" && strings.TrimSpace(body.CorrelationID) != correlationID {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_MISMATCH", "body correlationId must match X-Correlation-ID")
+		return
+	}
 	if err := validateDeliveryExceptionReportNote(body.Note); err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -113,7 +122,8 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 		OperatorContextID: actor.OperatorContextID,
 		ReasonCode:        body.ReasonCode,
 		Note:              strings.TrimSpace(body.Note),
-		CorrelationID:     operationalCorrelationID(r, body.CorrelationID),
+		IdempotencyKey:    idempotencyKey,
+		CorrelationID:     correlationID,
 		Latitude:          body.Latitude,
 		Longitude:         body.Longitude,
 		ProofMediaRef:     strings.TrimSpace(body.ProofMediaRef),

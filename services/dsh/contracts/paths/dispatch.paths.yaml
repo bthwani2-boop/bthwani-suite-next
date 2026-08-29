@@ -319,6 +319,9 @@
       foreground location pushes remain allowed for safety and response coordination.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -371,6 +374,9 @@
     summary: Acknowledge an open delivery exception for operations review.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -436,6 +442,9 @@
     description: Does not complete custody; the owning partner must accept the return.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     responses:
       "200":
         description: Captain arrival recorded; store receipt remains pending.
@@ -482,6 +491,9 @@
     summary: Confirm store custody of a returned order after captain arrival.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     responses:
       "200":
         description: Store receipt confirmed and return completed.

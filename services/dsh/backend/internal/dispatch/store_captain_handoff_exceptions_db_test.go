@@ -55,6 +55,7 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 		OperatorContextID: fixture.OperatorContextID,
 		ReasonCode:        ExceptionHandoffShortage,
 		Note:              "قطعة واحدة غير موجودة في الطرد عند المطابقة",
+		IdempotencyKey:    "partner-handoff-shortage-key:" + fixture.AssignmentID,
 		CorrelationID:     "partner-handoff-shortage:" + fixture.AssignmentID,
 	}
 	item, err := ReportPartnerStoreCaptainHandoffException(
@@ -96,8 +97,8 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 		fixture.StoreID,
 		"partner-handoff-actor",
 		driftedInput,
-	); !errors.Is(err, ErrConflict) {
-		t.Fatalf("partner payload drift error=%v want ErrConflict", err)
+	); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("partner payload drift error=%v want ErrIdempotencyConflict", err)
 	}
 
 	var reporterActorID, reporterRole string
@@ -167,6 +168,7 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 		OperatorContextID: fixture.OperatorContextID,
 		ReasonCode:        ExceptionHandoffMismatch,
 		Note:              "محتوى الطرد لا يطابق تفاصيل الطلب المعروضة",
+		IdempotencyKey:    "captain-handoff-mismatch-key:" + fixture.AssignmentID,
 		CorrelationID:     "captain-handoff-mismatch:" + fixture.AssignmentID,
 	}
 	item, err := ReportCaptainStoreCaptainHandoffException(
@@ -192,8 +194,8 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 		fixture.AssignmentID,
 		fixture.CaptainID,
 		driftedInput,
-	); !errors.Is(err, ErrConflict) {
-		t.Fatalf("captain payload drift error=%v want ErrConflict", err)
+	); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("captain payload drift error=%v want ErrIdempotencyConflict", err)
 	}
 
 	var reporterActorID, reporterRole string

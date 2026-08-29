@@ -18,6 +18,7 @@ func TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration(t *te
 			OperatorContextID: fixture.OperatorContextID,
 			ReasonCode:        ExceptionHandoffShortage,
 			Note:              "قطعة ناقصة وتم إيقاف تسليم العهدة",
+			IdempotencyKey:    "handoff-resolution-retry-key:" + fixture.AssignmentID,
 			CorrelationID:     "handoff-resolution-retry:" + fixture.AssignmentID,
 		},
 	)
@@ -77,6 +78,7 @@ func TestHandoffExceptionReassignmentSupersedesCustodyDBIntegration(t *testing.T
 			OperatorContextID: fixture.OperatorContextID,
 			ReasonCode:        ExceptionHandoffMismatch,
 			Note:              "بيانات الطرد لا تطابق الطلب ويجب تغيير الكابتن",
+			IdempotencyKey:    "handoff-resolution-reassign-key:" + fixture.AssignmentID,
 			CorrelationID:     "handoff-resolution-reassign:" + fixture.AssignmentID,
 		},
 	)

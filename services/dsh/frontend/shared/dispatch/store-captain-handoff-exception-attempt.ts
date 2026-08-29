@@ -4,7 +4,7 @@ import {
   getOrCreateDurableMutationAttempt,
   purgeExactDurableMutationAttempt,
 } from "../_kernel/durable-mutation-attempt-registry.ts";
-import { secureRandomId } from "../_kernel/secure-random.ts";
+import { secureCorrelationId, secureRandomId } from "../_kernel/secure-random.ts";
 import type { DshStoreCaptainHandoffExceptionReason } from "../orders/orders.types.ts";
 import type { StoreCaptainHandoffExceptionActor } from "./use-store-captain-handoff-exception.ts";
 
@@ -19,9 +19,11 @@ export type StoreCaptainHandoffExceptionAttemptIntent = {
 };
 
 export type StoredStoreCaptainHandoffExceptionAttempt = DurableMutationAttemptEnvelope<{
+  readonly idempotencyKey: string;
   readonly correlationId: string;
 }> & {
   readonly signature: string;
+  readonly idempotencyKey: string;
   readonly correlationId: string;
   readonly createdAtMs: number;
 };
@@ -62,6 +64,9 @@ function parseStoredAttempt(value: unknown): value is StoredStoreCaptainHandoffE
   return typeof parsed.signature === "string"
     && typeof parsed.fingerprint === "string"
     && parsed.signature === parsed.fingerprint
+    && typeof parsed.idempotencyKey === "string"
+    && typeof parsed.context?.idempotencyKey === "string"
+    && parsed.idempotencyKey === parsed.context.idempotencyKey
     && typeof parsed.correlationId === "string"
     && typeof parsed.context?.correlationId === "string"
     && parsed.correlationId === parsed.context.correlationId
@@ -83,14 +88,16 @@ export async function getOrCreateStoreCaptainHandoffExceptionAttempt(
     scope: scoped,
     fingerprint: signature,
     create: () => {
-      const correlationId = `${normalized.actor}:store-captain-handoff:${secureRandomId()}`;
+      const idempotencyKey = `${normalized.actor}:store-captain-handoff:${secureRandomId()}`;
+      const correlationId = secureCorrelationId("store-captain-handoff");
       return {
         signature,
         fingerprint: signature,
+        idempotencyKey,
         correlationId,
         createdAtMs: Date.now(),
         scope: scoped,
-        context: { correlationId },
+        context: { idempotencyKey, correlationId },
       };
     },
     parse: parseStoredAttempt,

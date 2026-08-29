@@ -152,8 +152,8 @@ export function useStoreCaptainHandoffException(
         correlationId: attempt.correlationId,
       };
       const item = actor === "partner"
-        ? await reportPartnerStoreCaptainHandoffException(command.entityId, input)
-        : await reportCaptainHandoffException(command.entityId, input);
+        ? await reportPartnerStoreCaptainHandoffException(command.entityId, input, attempt.context)
+        : await reportCaptainHandoffException(command.entityId, input, attempt.context);
       if (item.correlationId !== attempt.correlationId) {
         throw new Error("handoff exception canonical readback did not preserve the mutation identity");
       }

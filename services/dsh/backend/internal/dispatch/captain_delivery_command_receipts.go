@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -56,7 +57,8 @@ func newCaptainDeliveryStatusCommand(
 		actorID,
 		assignmentID,
 		string(status),
-	}, "|")
+		strconv.Itoa(expectedVersion),
+	}, "\x00")
 	digest := sha256.Sum256([]byte(fingerprintInput))
 	return captainDeliveryStatusCommand{
 		OperatorContextID: operatorContextID,
@@ -73,7 +75,7 @@ func newCaptainDeliveryStatusCommand(
 func beginCaptainDeliveryStatusCommand(tx *sql.Tx, command captainDeliveryStatusCommand) (bool, error) {
 	if _, err := tx.Exec(
 		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-		command.OperatorContextID+"|captain-delivery-status|"+command.ActorID+"|"+command.IdempotencyKey,
+		command.OperatorContextID+"|captain-delivery-status|"+command.IdempotencyKey,
 	); err != nil {
 		return false, err
 	}
@@ -123,6 +125,12 @@ func recordCaptainDeliveryStatusCommand(tx *sql.Tx, command captainDeliveryStatu
 	if rows == 1 {
 		return nil
 	}
-	_, err = beginCaptainDeliveryStatusCommand(tx, command)
-	return err
+	found, err := beginCaptainDeliveryStatusCommand(tx, command)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return fmt.Errorf("%w: command receipt disappeared during mutation", ErrConflict)
+	}
+	return nil
 }

@@ -49,6 +49,11 @@ func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWrit
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		ReasonCode    dispatch.DeliveryExceptionReasonCode `json:"reasonCode"`
 		Note          string                               `json:"note"`
@@ -60,11 +65,16 @@ func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWrit
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	if body.CorrelationID != "" && strings.TrimSpace(body.CorrelationID) != correlationID {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_MISMATCH", "body correlationId must match X-Correlation-ID")
+		return
+	}
 	item, err := dispatch.ReportDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID, dispatch.ReportDeliveryExceptionInput{
 		OperatorContextID: actor.OperatorContextID,
 		ReasonCode:        body.ReasonCode, Note: body.Note,
-		CorrelationID: operationalCorrelationID(r, body.CorrelationID),
-		Latitude:      body.Latitude, Longitude: body.Longitude,
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+		Latitude:       body.Latitude, Longitude: body.Longitude,
 		ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
 	})
 	if err != nil {
@@ -110,6 +120,8 @@ func writeDeliveryExceptionError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, dispatch.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "delivery exception not found")
+	case errors.Is(err, dispatch.ErrIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
 	case errors.Is(err, dispatch.ErrConflict):
 		store.SendError(w, http.StatusConflict, "DELIVERY_EXCEPTION_CONFLICT", err.Error())
 	case errors.Is(err, dispatch.ErrInvalid):

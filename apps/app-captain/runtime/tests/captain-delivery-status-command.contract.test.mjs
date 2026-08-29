@@ -16,9 +16,13 @@ test("captain delivery status is one durable DSH command with canonical readback
   const contract = read("services/dsh/contracts/paths/dispatch.paths.yaml");
 
   assert.match(attempt, /getOrCreateDurableMutationAttempt/);
+  assert.match(attempt, /findDurableMutationAttempts/);
+  assert.match(attempt, /findPendingCaptainDeliveryStatusCommandAttempt/);
   assert.match(attempt, /resolveMutationIdentityScope/);
   assert.match(attempt, /purgeExactDurableMutationAttempt/);
   assert.match(runtime, /getOrCreateCaptainDeliveryStatusCommandAttempt/);
+  assert.match(runtime, /findPendingCaptainDeliveryStatusCommandAttempt/);
+  assert.match(runtime, /captainDeliveryStatusCommandIntentFromAttempt/);
   assert.match(runtime, /clearCaptainDeliveryStatusCommandAttempt/);
   assert.match(runtime, /mutation: attempt\.context/);
   assert.match(api, /readonly mutation: DshCaptainCommandContext/);

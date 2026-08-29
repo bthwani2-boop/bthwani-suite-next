@@ -471,6 +471,13 @@
       "sha256": "72b0ed3743f69f36941851c7240bcb532bd4cc3dd01867930f59fc00a6d6bacd",
       "historicalPrefix": "1066",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 308,
+      "file": "dsh-1067_delivery_exception_command_identity.sql",
+      "sha256": "ebd6eb36b5e34a05186a2bc5be869d755ccd115e4c0e10788dfc61ff016a4edd",
+      "historicalPrefix": "1067",
+      "state": "ACTIVE"
     }
   ]
 }

@@ -52,6 +52,7 @@ func TestDeliveryExceptionCancelsOrderBeforePickupDBIntegration(t *testing.T) {
 		OperatorContextID: operatorContextID,
 		ReasonCode:        ExceptionVehicleBreakdown,
 		Note:              "تعطلت المركبة قبل استلام الطلب من المتجر",
+		IdempotencyKey:    "cancel-command-key-" + suffix,
 		CorrelationID:     "cancel-command-" + suffix,
 		ProofMediaRef:     "media://vehicle-breakdown/" + suffix,
 	})
@@ -135,6 +136,7 @@ func TestDeliveryExceptionRejectsDirectCancelAfterPickupDBIntegration(t *testing
 		OperatorContextID: operatorContextID,
 		ReasonCode:        ExceptionDamagedOrder,
 		Note:              "تضرر الطلب بعد الاستلام",
+		IdempotencyKey:    "cancel-blocked-key-" + suffix,
 		CorrelationID:     "cancel-blocked-" + suffix,
 		ProofMediaRef:     "media://damaged-order/" + suffix,
 	})
@@ -179,7 +181,7 @@ func TestDeliveryExceptionCancelRejectsStaleVersionDBIntegration(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
 	})
 
-	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{OperatorContextID: operatorContextID, ReasonCode: ExceptionOther, Note: "سبب آخر يستدعي المراجعة", CorrelationID: "cancel-stale-" + suffix})
+	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{OperatorContextID: operatorContextID, ReasonCode: ExceptionOther, Note: "سبب آخر يستدعي المراجعة", IdempotencyKey: "cancel-stale-key-" + suffix, CorrelationID: "cancel-stale-" + suffix})
 	if err != nil {
 		t.Fatal(err)
 	}

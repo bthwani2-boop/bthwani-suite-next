@@ -52,6 +52,7 @@ func TestDeliveryExceptionReassignsBeforePickupAtomicallyDBIntegration(t *testin
 		OperatorContextID: operatorContextID,
 		ReasonCode:        ExceptionVehicleBreakdown,
 		Note:              "تعطلت المركبة قبل استلام الطلب",
+		IdempotencyKey:    "reassign-command-key-" + suffix,
 		CorrelationID:     "reassign-command-" + suffix,
 		ProofMediaRef:     "media://vehicle-breakdown/" + suffix,
 	})
@@ -140,6 +141,7 @@ func TestDeliveryExceptionRejectsReassignmentAfterPickupDBIntegration(t *testing
 		OperatorContextID: operatorContextID,
 		ReasonCode:        ExceptionVehicleBreakdown,
 		Note:              "تعطل بعد استلام الطلب",
+		IdempotencyKey:    "blocked-reassign-key-" + suffix,
 		CorrelationID:     "blocked-reassign-" + suffix,
 		ProofMediaRef:     "media://vehicle-breakdown/" + suffix,
 	})
