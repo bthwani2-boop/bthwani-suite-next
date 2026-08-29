@@ -151,8 +151,6 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     onOpenSupportDirectory,
     onOpenWalletHub,
     onOpenBell,
-    onOpenOperationalFlow,
-    onOpenSupportScreen,
     onOpenStoreCourierSetup,
     onOpenCommercialModel,
     canonicalStoreId,
@@ -238,15 +236,12 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
       : [];
 
   const openOrderAlerts = React.useCallback(() => {
-    onOpenOperationalFlow?.("order-alerts");
     onOpenBell?.();
-  }, [onOpenBell, onOpenOperationalFlow]);
+  }, [onOpenBell]);
 
   const openOperationsDirectory = React.useCallback(() => {
-    onOpenOperationalFlow?.("order-issue-queue");
     onOpenSupportDirectory?.();
-    onOpenSupportScreen?.("order-issue-queue");
-  }, [onOpenOperationalFlow, onOpenSupportDirectory, onOpenSupportScreen]);
+  }, [onOpenSupportDirectory]);
 
   const openOrdersSearch = React.useCallback(() => {
     if (onOpenOrdersSearch) onOpenOrdersSearch();

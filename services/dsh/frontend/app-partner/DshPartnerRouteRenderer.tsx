@@ -264,8 +264,6 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
         onOpenSupportDirectory={() => openSupportDirectory({ source: "hub" })}
         onOpenWalletHub={() => openAccountHub("wallet")}
         onOpenBell={() => navigation.navigate({ kind: "bell" })}
-        onOpenOperationalFlow={(flowId) => openSupportFlow(flowId, "hub")}
-        onOpenSupportScreen={(screenId) => openSupportScreen(screenId, "hub")}
         onOpenStoreCourierSetup={() => navigation.navigate({ kind: "store-courier" })}
         onOpenTeamManagement={() => navigation.navigate({ kind: "team" })}
         onOpenCommercialModel={() => navigation.navigate({ kind: "commercial-model" })}
