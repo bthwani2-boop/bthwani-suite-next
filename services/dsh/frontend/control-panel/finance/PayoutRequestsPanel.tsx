@@ -18,6 +18,7 @@ import { CommissionGovernancePanel } from "./CommissionGovernancePanel";
 type PayoutRequestsPanelProps = {
   readonly requests: readonly FinancePayoutRequest[];
   readonly reload: () => Promise<void>;
+  readonly canManage: boolean;
 };
 
 type PayoutAction = {
@@ -87,7 +88,7 @@ function terminalOrHoldMessage(request: FinancePayoutRequest): string | null {
   }
 }
 
-export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelProps) {
+export function PayoutRequestsPanel({ requests, reload, canManage }: PayoutRequestsPanelProps) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -114,8 +115,8 @@ export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelPro
 
   return (
     <>
-      <GovernedSettlementPanel reload={reload} />
-      <CommissionGovernancePanel />
+      <GovernedSettlementPanel reload={reload} canManage={canManage} />
+      <CommissionGovernancePanel canManage={canManage} />
       <Card style={{ padding: "1.5rem" }}>
         <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>طلبات الصرف والتسويات الميدانية</Text>
         <Text role="body" tone="muted" style={{ marginBottom: "1rem" }}>
@@ -148,7 +149,7 @@ export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelPro
                       {request.providerStatus ? <Text role="caption" tone="muted">حالة المزود: {request.providerStatus}</Text> : null}
                       {message ? <Text role="caption" tone={request.status === "provider_result_unknown" ? "danger" : "muted"}>{message}</Text> : null}
                     </div>
-                    {actions.length > 0 ? (
+                    {actions.length > 0 && canManage ? (
                       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                         {actions.map((action) => {
                           const key = `${request.id}:${action.id}`;
@@ -165,7 +166,7 @@ export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelPro
                           );
                         })}
                       </div>
-                    ) : null}
+                    ) : actions.length > 0 ? <Text role="caption" tone="muted">قراءة فقط — تنفيذ طلب الصرف يتطلب finance.manage.</Text> : null}
                   </div>
                 </Card>
               );

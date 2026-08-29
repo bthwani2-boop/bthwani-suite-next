@@ -3,9 +3,11 @@
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, StateView, Text } from "@bthwani/ui-kit";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { CpBadge, CpButton, CpKpiCard, CpKpiStrip, CpTabs } from "@bthwani/control-panel/components";
 import { OverviewPageFrame } from "@bthwani/control-panel/shell";
 import { useFinanceController } from '@bthwani/dsh/wlt';
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
@@ -55,6 +57,9 @@ function describeFinanceBlockedReason(error: string | undefined): { readonly tit
 }
 
 export function FinanceDashboardScreen() {
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canManageFinance = hasServiceControlPanelPermission(identity, "dsh", "finance.manage");
   const router = useRouter();
   const searchParams = useSearchParams();
   const controller = useFinanceController({
@@ -118,7 +123,7 @@ export function FinanceDashboardScreen() {
     const activeSub = activeSubGroup || activeGroupMeta.subGroups?.[0]?.id;
 
     if (activeGroup === "refunds-disputes-holds" && activeSub === "refunds") {
-      return <RefundsCommandPanel />;
+      return <RefundsCommandPanel canManage={canManageFinance} />;
     }
 
     if (activeState === "loading") {
@@ -163,7 +168,7 @@ export function FinanceDashboardScreen() {
     }
     if (activeGroup === "settlements-payouts") {
       const requests = runtimeFinance?.state === "runtime" ? runtimeFinance.data.payoutRequests : [];
-      return <><PayoutRequestsPanel requests={requests} reload={reload} /><ReconciliationCasesPanel /></>;
+      return <><PayoutRequestsPanel requests={requests} reload={reload} canManage={canManageFinance} /><ReconciliationCasesPanel canManage={canManageFinance} /></>;
     }
     return (
       <Card style={{ padding: "2rem", alignItems: "center", justifyContent: "center" }}>

@@ -41,7 +41,7 @@ function refundLabel(status: string): string {
   }
 }
 
-export function RefundsCommandPanel() {
+export function RefundsCommandPanel({ canManage }: { readonly canManage: boolean }) {
   const [orderId, setOrderId] = useState("");
   const [paymentSessionId, setPaymentSessionId] = useState("");
   const [clientId, setClientId] = useState("");
@@ -78,6 +78,7 @@ export function RefundsCommandPanel() {
   }
 
   async function createRefund() {
+    if (!canManage) return;
     await createMutation.mutateAsync({
       paymentSessionId: paymentSessionId.trim(),
       orderId: orderId.trim(),
@@ -90,7 +91,7 @@ export function RefundsCommandPanel() {
   }
 
   async function decide(action: "approve" | "reject") {
-    if (!selected || !decisionReason.trim()) return;
+    if (!canManage || !selected || !decisionReason.trim()) return;
     if (action === "approve") {
       await approveMutation.mutateAsync({ refundId: selected.id, reason: decisionReason.trim() });
     } else {
@@ -101,13 +102,13 @@ export function RefundsCommandPanel() {
   }
 
   async function execute() {
-    if (!selected) return;
+    if (!canManage || !selected) return;
     await completeMutation.mutateAsync(selected.id);
     await search();
   }
 
   async function reconcile(resolutionAction: string) {
-    if (!selected || !evidenceNote.trim()) return;
+    if (!canManage || !selected || !evidenceNote.trim()) return;
     await reconcileMutation.mutateAsync({
       refundId: selected.id,
       resolutionAction,
@@ -129,23 +130,26 @@ export function RefundsCommandPanel() {
         <Text role="body" tone="muted">
           المبلغ صفر يعني استرداد كامل المبلغ المتبقي. لا يعتمد النجاح إلا بعد تأكيد WLT والمزود ودفتر الأستاذ.
         </Text>
+        {!canManage ? <Text role="body" tone="warning">قراءة فقط — تنفيذ الاسترداد يتطلب finance.manage.</Text> : null}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "0.7rem" }}>
           <CpTextInput aria-label="رقم الطلب" placeholder="رقم الطلب" value={orderId} onChange={setOrderId} />
-          <CpTextInput aria-label="جلسة الدفع" placeholder="معرّف جلسة الدفع" value={paymentSessionId} onChange={setPaymentSessionId} />
-          <CpTextInput aria-label="العميل" placeholder="معرّف العميل" value={clientId} onChange={setClientId} />
-          <CpTextInput aria-label="المبلغ" placeholder="المبلغ بالوحدة الصغرى" value={amountMinorUnits} onChange={setAmountMinorUnits} />
-          <CpTextInput aria-label="سبب الاسترداد" placeholder="سبب الاسترداد" value={reason} onChange={setReason} />
-          <CpTextInput aria-label="مرجع الأهلية" placeholder="مرجع أهلية DSH" value={eligibilityReference} onChange={setEligibilityReference} />
+          {canManage ? <>
+            <CpTextInput aria-label="جلسة الدفع" placeholder="معرّف جلسة الدفع" value={paymentSessionId} onChange={setPaymentSessionId} />
+            <CpTextInput aria-label="العميل" placeholder="معرّف العميل" value={clientId} onChange={setClientId} />
+            <CpTextInput aria-label="المبلغ" placeholder="المبلغ بالوحدة الصغرى" value={amountMinorUnits} onChange={setAmountMinorUnits} />
+            <CpTextInput aria-label="سبب الاسترداد" placeholder="سبب الاسترداد" value={reason} onChange={setReason} />
+            <CpTextInput aria-label="مرجع أهلية DSH" placeholder="مرجع أهلية DSH" value={eligibilityReference} onChange={setEligibilityReference} />
+          </> : null}
         </div>
         <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
           <CpButton variant="secondary" disabled={busy || !orderId.trim()} onClick={() => void search()}>تحميل الاستردادات</CpButton>
-          <CpButton
+          {canManage ? <CpButton
             variant="primary"
             disabled={busy || !paymentSessionId.trim() || !clientId.trim() || !reason.trim() || !eligibilityReference.trim()}
             onClick={() => void createRefund()}
           >
             إنشاء طلب استرداد
-          </CpButton>
+          </CpButton> : null}
         </div>
         {busy ? (
           <div role="status" aria-live="polite">
@@ -197,28 +201,29 @@ export function RefundsCommandPanel() {
                 <CpBadge tone={refundTone(selected)}>{refundLabel(selected.status)}</CpBadge>
               </div>
               <Text role="body" tone="muted">{selected.amountMinorUnits} {selected.currency} · {selected.reason ?? "بدون سبب ظاهر"}</Text>
-              <CpTextInput aria-label="سبب القرار" placeholder="سبب الاعتماد أو الرفض" value={decisionReason} onChange={setDecisionReason} />
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              {canManage ? <CpTextInput aria-label="سبب القرار" placeholder="سبب الاعتماد أو الرفض" value={decisionReason} onChange={setDecisionReason} /> : null}
+              {canManage ? <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 <CpButton variant="primary" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("approve")}>اعتماد مستقل</CpButton>
                 <CpButton variant="danger" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("reject")}>رفض</CpButton>
                 <CpButton variant="secondary" disabled={busy || selected.status !== "approved"} onClick={() => void execute()}>تنفيذ لدى المزود</CpButton>
-              </div>
+              </div> : <Text role="body" tone="muted">قراءة فقط — لا تملك هذه الجلسة finance.manage لتنفيذ قرار الاسترداد.</Text>}
               {selected.status === "provider_unknown" ? (
                 <div role="region" aria-label="مصالحة النتيجة غير المحسومة" style={{ display: "grid", gap: "0.6rem", paddingTop: "0.5rem" }}>
                   <Text role="titleSm">مصالحة النتيجة غير المحسومة</Text>
-                  <CpTextInput aria-label="مرجع المزود" placeholder="مرجع المزود عند تأكيد النجاح" value={providerReference} onChange={setProviderReference} />
+                  {canManage ? <CpTextInput aria-label="مرجع المزود" placeholder="مرجع المزود عند تأكيد النجاح" value={providerReference} onChange={setProviderReference} /> : null}
                   <textarea
                     aria-label="دليل المصالحة"
                     placeholder="ملخص الدليل الخارجي"
                     value={evidenceNote}
                     onChange={(event) => setEvidenceNote(event.target.value)}
+                    disabled={!canManage}
                     className="ui-resize-none"
                     style={{ minHeight: "5rem", borderRadius: "0.5rem", padding: "0.7rem", width: "100%" }}
                   />
-                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                  {canManage ? <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                     <CpButton variant="primary" disabled={busy || !providerReference.trim() || !evidenceNote.trim()} onClick={() => void reconcile("confirmed_success")}>تأكيد نجاح موثق</CpButton>
                     <CpButton variant="danger" disabled={busy || !evidenceNote.trim()} onClick={() => void reconcile("confirmed_failed")}>تأكيد فشل موثق</CpButton>
-                  </div>
+                  </div> : null}
                 </div>
               ) : null}
               <div role="region" aria-label="سجل تدقيق الاسترداد" style={{ display: "grid", gap: "0.35rem", paddingTop: "0.5rem" }}>

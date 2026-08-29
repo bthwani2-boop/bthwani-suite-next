@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { Card, StateView, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpTextInput } from "@bthwani/control-panel/components";
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import {
   formatWltMoney,
   presentWltPaymentSessionStatus,
@@ -28,6 +30,9 @@ function toBadgeTone(tone: "action" | "success" | "warning" | "danger" | "info")
 }
 
 export function PaymentSessionOperationsScreen() {
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canManageFinance = hasServiceControlPanelPermission(identity, "dsh", "finance.manage");
   const [paymentSessionId, setPaymentSessionId] = useState("");
   const [state, setState] = useState<ScreenState>("idle");
   const [timeline, setTimeline] = useState<WltPaymentSessionTimeline | null>(null);
@@ -56,7 +61,7 @@ export function PaymentSessionOperationsScreen() {
   };
 
   const refreshProvider = async () => {
-    if (!canSubmit || !timeline) return;
+    if (!canManageFinance || !canSubmit || !timeline) return;
     setState("refreshing");
     setError(null);
     const result = await refreshPaymentSessionProviderStatus(paymentSessionId.trim());
@@ -115,7 +120,7 @@ export function PaymentSessionOperationsScreen() {
               <Text role="body">ممنوع إعادة التفويض أو التحصيل. استخدم تحديث حالة المزود، ثم عالج حالة المطابقة المفتوحة بناءً على دليل مزود موثوق.</Text>
             </Card>
           ) : null}
-          <div style={{ marginTop: "1rem" }}>
+          {canManageFinance ? <div style={{ marginTop: "1rem" }}>
             <CpButton
               variant="secondary"
               onClick={refreshProvider}
@@ -123,7 +128,7 @@ export function PaymentSessionOperationsScreen() {
             >
               {state === "refreshing" ? "جارٍ الاستعلام من المزود..." : "تحديث حالة المزود"}
             </CpButton>
-          </div>
+          </div> : <Text role="body" tone="warning" style={{ marginTop: "1rem" }}>قراءة فقط — تحديث حالة المزود يتطلب finance.manage.</Text>}
         </Card>
 
         <Card style={{ padding: "1.25rem" }}>

@@ -86,7 +86,7 @@ function validatePolicy(policy: CommissionPolicyInput): string | null {
   return null;
 }
 
-export function CommissionGovernancePanel() {
+export function CommissionGovernancePanel({ canManage }: { readonly canManage: boolean }) {
   const identity = useIdentitySession();
   const operatorActorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const [commissions, setCommissions] = useState<readonly Commission[]>([]);
@@ -253,7 +253,7 @@ export function CommissionGovernancePanel() {
         </Card>
       ) : null}
 
-      <Card style={{ padding: "1rem", marginTop: "1rem" }}>
+      {canManage ? <Card style={{ padding: "1rem", marginTop: "1rem" }}>
         <Text role="body" style={{ fontWeight: "bold" }}>
           إصدار سياسة عمولة جديد
         </Text>
@@ -405,7 +405,7 @@ export function CommissionGovernancePanel() {
             {savingPolicy ? "جارٍ حفظ إصدار السياسة…" : "حفظ إصدار السياسة"}
           </CpButton>
         </div>
-      </Card>
+      </Card> : <Text role="body" tone="warning" style={{ marginTop: "1rem" }}>قراءة فقط — حوكمة العمولات تتطلب finance.manage لتنفيذ أي تغيير.</Text>}
 
       <div
         style={{
@@ -476,7 +476,7 @@ export function CommissionGovernancePanel() {
                     </Text>
                   ) : null}
                 </div>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                {canManage ? <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {commission.status === "pending" ? (
                     <CpButton variant="primary" disabled={disabled} onClick={() => void run(commission, "confirm")}>
                       تأكيد
@@ -502,7 +502,7 @@ export function CommissionGovernancePanel() {
                       تعديل
                     </CpButton>
                   ) : null}
-                </div>
+                </div> : null}
               </div>
             </Card>
           );

@@ -11,6 +11,7 @@ import {
 
 type GovernedSettlementPanelProps = {
   readonly reload: () => Promise<void>;
+  readonly canManage: boolean;
 };
 
 function todayIso(): string {
@@ -28,7 +29,7 @@ function resultMessage(result: SettlementActionResult): string {
   return `${result.code}: ${result.message}`;
 }
 
-export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps) {
+export function GovernedSettlementPanel({ reload, canManage }: GovernedSettlementPanelProps) {
   const [partnerId, setPartnerId] = useState("");
   const [feeBasisPoints, setFeeBasisPoints] = useState("0");
   const [currency, setCurrency] = useState("YER");
@@ -138,8 +139,9 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
       <Text role="body" tone="muted" style={{ marginBottom: "1rem" }}>
         لا تُقبل مبالغ gross أو fee أو net من الواجهة. DSH يجمع أوامر الشريك بحالة delivered، وWLT يطبق إصدار السياسة الفعّال والاستردادات المكتملة ويحجز orderId ضد التسوية المكررة.
       </Text>
+      {!canManage ? <Text role="body" tone="warning">قراءة فقط — سياسات التسوية وإنشاؤها تتطلب finance.manage.</Text> : null}
 
-      <div
+      {canManage ? <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
@@ -212,16 +214,16 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
           value={periodEnd}
           onChange={setPeriodEnd}
         />
-      </div>
+      </div> : null}
 
-      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "1rem" }}>
+      {canManage ? <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "1rem" }}>
         <CpButton variant="secondary" disabled={!policyValid || busy !== null} onClick={savePolicy}>
           {busy === "policy" ? "جارٍ حفظ السياسة…" : "حفظ إصدار سياسة التسوية في WLT"}
         </CpButton>
         <CpButton variant="primary" disabled={!settlementValid || busy !== null} onClick={createSettlement}>
           {busy === "settlement" ? "جارٍ احتساب التسوية…" : "إنشاء التسوية من delivered orders"}
         </CpButton>
-      </div>
+      </div> : null}
 
       {policyReadyForPartner === partnerId.trim() ? (
         <Text role="caption" tone="success" style={{ marginTop: "0.75rem" }}>
