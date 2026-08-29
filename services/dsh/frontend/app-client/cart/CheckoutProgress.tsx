@@ -58,7 +58,9 @@ export function CheckoutProgress({
       <Text role="bodyStrong" style={styles.sectionTitle}>لم يكتمل تأكيد الطلب</Text>
       <Text role="caption" style={styles.errorText}>{message}</Text>
       {state.kind === "order_error" && onRetryOrder ? <Button label="إعادة المحاولة الآمنة" tone="secondary" onPress={onRetryOrder} /> : null}
-      {onReset ? <Button label="العودة إلى مراجعة السلة" tone="secondary" onPress={onReset} /> : null}
+      {onReset && !(state.kind === "order_error" && state.intent)
+        ? <Button label="العودة إلى مراجعة السلة" tone="secondary" onPress={onReset} />
+        : null}
     </Surface>
   );
 }

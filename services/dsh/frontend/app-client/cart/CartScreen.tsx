@@ -106,6 +106,7 @@ export function CartScreen({
     || checkoutState?.kind === "confirming"
     || checkoutState?.kind === "reconciliation_pending"
     || checkoutState?.kind === "creating_order"
+    || checkoutState?.kind === "order_error"
     || checkoutState?.kind === "checkout_action_error";
   const validationByItemId = useMemo(
     () => new Map((cart?.validation?.items ?? []).map((item) => [item.itemId, item])),
