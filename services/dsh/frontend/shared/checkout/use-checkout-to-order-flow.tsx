@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   clearCheckoutAttempt,
@@ -28,6 +28,7 @@ export type CheckoutToOrderFlowState =
   | { readonly kind: "error"; readonly message: string }
   | { readonly kind: "creating_order"; readonly intent: DshCheckoutIntent }
   | { readonly kind: "order_error"; readonly message: string }
+  | { readonly kind: "checkout_action_error"; readonly intent: DshCheckoutIntent; readonly message: string }
   | {
       readonly kind: "order_ready";
       readonly intent: DshCheckoutIntent;
@@ -36,17 +37,27 @@ export type CheckoutToOrderFlowState =
       readonly correlationId: string;
     };
 
+function activeIntent(state: CheckoutToOrderFlowState): DshCheckoutIntent | null {
+  if (state.kind === "confirming" || state.kind === "reconciliation_pending" || state.kind === "checkout_action_error") {
+    return state.intent;
+  }
+  return null;
+}
+
 export function useCheckoutToOrderFlow() {
   const identity = useIdentitySession();
   const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : "";
   const [state, setState] = useState<CheckoutToOrderFlowState>({ kind: "idle" });
+  const operationLock = useRef(false);
   const { submit: submitOrder } = useCreateOrderTruthController();
 
   const start = useCallback(async (input: DshCreateIntentInput) => {
+    if (operationLock.current) return;
     if (!actorId) {
       setState({ kind: "order_error", message: "جلسة العميل غير جاهزة لتثبيت هوية الدفع." });
       return;
     }
+    operationLock.current = true;
     setState({ kind: "loading" });
     try {
       const attempt = await getOrCreateCheckoutAttempt(actorId, input);
@@ -86,6 +97,8 @@ export function useCheckoutToOrderFlow() {
         message = err.body;
       }
       setState({ kind: "order_error", message });
+    } finally {
+      operationLock.current = false;
     }
   }, [actorId, submitOrder]);
 
@@ -94,22 +107,50 @@ export function useCheckoutToOrderFlow() {
   }, []);
 
   const cancel = useCallback(async (intentId: string) => {
+    const current = state;
+    const currentIntent = activeIntent(current);
+    if (
+      operationLock.current
+      || !currentIntent
+      || currentIntent.id !== intentId
+    ) return;
+    operationLock.current = true;
     try {
       await cancelCheckoutIntent(intentId);
+      setState({ kind: "idle" });
     } catch {
-      // Best effort cancel; the next readback remains canonical.
+      setState({
+        kind: "checkout_action_error",
+        intent: currentIntent,
+        message: "تعذر إلغاء جلسة الدفع. بقيت الجلسة محفوظة؛ حدّث حالتها أو أعد محاولة الإلغاء قبل بدء عملية جديدة.",
+      });
+    } finally {
+      operationLock.current = false;
     }
-    setState({ kind: "idle" });
-  }, []);
+  }, [state]);
 
   const refresh = useCallback(async (intentId: string) => {
+    const current = state;
+    const currentIntent = activeIntent(current);
+    if (
+      operationLock.current
+      || !currentIntent
+      || currentIntent.id !== intentId
+    ) return;
+    operationLock.current = true;
     try {
       const intent = await fetchCheckoutIntent(intentId);
       setState({ kind: "confirming", intent });
     } catch {
-      setState({ kind: "error", message: "تعذر تحديث حالة الطلب." });
+      setState({
+        kind: "checkout_action_error",
+        intent: currentIntent,
+        message: "تعذر تحديث حالة جلسة الدفع. بقيت الجلسة محفوظة؛ أعد المحاولة قبل بدء عملية جديدة.",
+      });
+    } finally {
+      operationLock.current = false;
     }
-  }, []);
+  }, [state]);
 
   const retryOrder = useCallback(() => {
     setState({ kind: "idle" });

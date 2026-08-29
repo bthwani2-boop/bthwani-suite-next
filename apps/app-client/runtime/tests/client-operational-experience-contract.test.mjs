@@ -330,6 +330,23 @@ test("checkout carries the confirmed cart version into the canonical DSH OCC con
   );
 });
 
+test("checkout keeps an unresolved payment intent visible and blocks duplicate submission", () => {
+  const flow = assertMarkers(
+    "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+    ["operationLock", "checkout_action_error", "بقيت الجلسة محفوظة", "currentIntent.id !== intentId"],
+  );
+  assert.doesNotMatch(flow, /catch \{\s*\/\/ Best effort cancel/);
+  const cart = assertMarkers(
+    "services/dsh/frontend/app-client/cart/CartScreen.tsx",
+    ["const checkoutLocked", "checkoutLocked || !cartReady", "disabled={!canProceed}"],
+  );
+  assert.match(cart, /actionPending \|\| checkoutLocked/);
+  assertMarkers(
+    "services/dsh/frontend/app-client/cart/CheckoutProgress.tsx",
+    ["جلسة الدفع ما تزال محفوظة", "إعادة محاولة الإلغاء", "state.intent.id"],
+  );
+});
+
 test("privacy-safe order sharing uses temporary Expo files and no sensitive references", () => {
   const platform = assertMarkers(
     "apps/app-client/runtime/src/platform/client-platform-actions.ts",

@@ -102,6 +102,11 @@ export function CartScreen({
   const requiresDeliveryAddress = activeFulfillmentMode !== "pickup";
   const actionPending = controller.action === "submitting";
   const cartReady = cart?.validation?.ready !== false;
+  const checkoutLocked = checkoutState?.kind === "loading"
+    || checkoutState?.kind === "confirming"
+    || checkoutState?.kind === "reconciliation_pending"
+    || checkoutState?.kind === "creating_order"
+    || checkoutState?.kind === "checkout_action_error";
   const validationByItemId = useMemo(
     () => new Map((cart?.validation?.items ?? []).map((item) => [item.itemId, item])),
     [cart?.validation?.items],
@@ -132,7 +137,7 @@ export function CartScreen({
   ]);
 
   const canProceed = useMemo(() => {
-    if (!cart || actionPending || !cartReady) return false;
+    if (!cart || actionPending || checkoutLocked || !cartReady) return false;
     if (!requiresDeliveryAddress) return true;
     if (!selectedAddress) return false;
     return (
@@ -143,13 +148,14 @@ export function CartScreen({
     actionPending,
     cart,
     cartReady,
+    checkoutLocked,
     requiresDeliveryAddress,
     selectedAddress,
     serviceabilityController.serviceability.kind,
   ]);
 
   const proceed = () => {
-    if (!cart || !onProceedToCheckout) return;
+    if (!cart || !onProceedToCheckout || checkoutLocked || !canProceed) return;
     if (onResetCheckout) onResetCheckout();
     setValidationMessageText(null);
     if (!cartReady) {
@@ -268,6 +274,7 @@ export function CartScreen({
               label="تغيير الخيار"
               tone="secondary"
               size="sm"
+              disabled={checkoutLocked}
               onPress={toggleFulfillmentMode}
             />
           </View>
@@ -284,7 +291,7 @@ export function CartScreen({
         <CartItemsSection
           cart={controller.state.cart}
           validationByItemId={validationByItemId}
-          actionPending={actionPending}
+          actionPending={actionPending || checkoutLocked}
           actionError={controller.action === "error" ? (controller.actionError ?? "تعذر تنفيذ تعديل السلة. أعد المحاولة.") : null}
           onUpdateQuantity={(masterProductId, productName, quantity, priceReference, options, itemNote) => {
             void controller.updateItemQuantity(masterProductId, productName, quantity, priceReference, options, itemNote);
@@ -444,7 +451,7 @@ export function CartScreen({
           }
           tone="brand"
           loading={checkoutState?.kind === "loading" || checkoutState?.kind === "confirming" || checkoutState?.kind === "creating_order"}
-          disabled={!cart || cart.items.length === 0}
+          disabled={!canProceed}
           onPress={proceed}
         />
       </ScrollScreen>

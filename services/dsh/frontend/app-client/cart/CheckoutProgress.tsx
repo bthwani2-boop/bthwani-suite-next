@@ -32,6 +32,18 @@ export function CheckoutProgress({
       </Surface>
     );
   }
+  if (state.kind === "checkout_action_error") {
+    return (
+      <Surface tone="danger" style={styles.checkoutProgress}>
+        <Text role="bodyStrong" style={styles.sectionTitle}>جلسة الدفع ما تزال محفوظة</Text>
+        <Text role="caption" style={styles.errorText}>{state.message}</Text>
+        <View style={styles.progressActions}>
+          <Button label="تحديث الحالة" tone="secondary" onPress={() => onRefresh?.(state.intent.id)} />
+          <Button label="إعادة محاولة الإلغاء" tone="secondary" onPress={() => onCancel?.(state.intent.id)} />
+        </View>
+      </Surface>
+    );
+  }
   const wltUnreachableMessage =
     "خدمة الدفع غير متاحة حاليًا. لم يُنشأ طلب.";
   const message = state.kind === "blocked_payment_unavailable"
