@@ -13,15 +13,15 @@ export type ControlPanelTopBarProps = {
   readonly actions?: ReactNode;
   readonly userMenu?: ReactNode;
   readonly dir?: "ltr" | "rtl";
-  /** Real backend health signal. Omit to hide the status indicator entirely
-   * rather than defaulting to a fake "active" claim. */
+  /** Real DSH backend health signal. Omit to hide the status indicator entirely
+   * rather than defaulting to a fake active/capability-wide claim. */
   readonly serviceStatus?: ControlPanelServiceStatus;
 };
 
 const SERVICE_STATUS_META: Record<ControlPanelServiceStatus, { readonly color: string; readonly label: string }> = {
-  checking: { color: colorRoles.textMuted, label: "جارٍ التحقق" },
-  healthy: { color: colorRoles.success, label: "متصل" },
-  unhealthy: { color: colorRoles.danger, label: "غير متصل" },
+  checking: { color: colorRoles.textMuted, label: "جارٍ فحص DSH" },
+  healthy: { color: colorRoles.success, label: "DSH متصل" },
+  unhealthy: { color: colorRoles.danger, label: "DSH غير متصل" },
 };
 
 export function ControlPanelTopBar({
@@ -78,7 +78,7 @@ export function ControlPanelTopBar({
         </>
       )}
 
-      {/* Real backend health indicator — hidden entirely if no status was supplied */}
+      {/* Real DSH backend health indicator — hidden entirely if no status was supplied */}
       {serviceStatus != null && (
         <div style={styles.statusWrapper}>
           <span
@@ -178,57 +178,57 @@ const styles = WebStyleSheet.create({
   serviceLabel: {
     flexShrink: 0,
     fontSize: "0.8rem",
-    fontWeight: 500,
     color: "var(--cp-text-secondary)",
-    background: alpha(colorRoles.textSecondary, 0.07),
-    padding: "0.2rem 0.6rem",
-    borderRadius: "999px",
-    border: `1px solid ${alpha(colorRoles.textSecondary, 0.15)}`,
   },
   statusWrapper: {
     display: "flex",
     alignItems: "center",
-    gap: "0.35rem",
+    gap: "0.375rem",
     flexShrink: 0,
+    paddingInlineStart: "0.25rem",
   },
   statusIndicatorBase: {
-    width: "6px",
-    height: "6px",
+    width: "0.45rem",
+    height: "0.45rem",
     borderRadius: "50%",
-    display: "inline-block",
+    flexShrink: 0,
   },
   statusText: {
     fontSize: "0.72rem",
     color: "var(--cp-text-muted)",
-    fontWeight: 500,
+    whiteSpace: "nowrap",
   },
   searchWrapper: {
     flex: 1,
     minWidth: 0,
   },
   actionsWrapper: {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
     flexShrink: 0,
   },
   notificationsWrapper: {
+    display: "flex",
+    alignItems: "center",
     flexShrink: 0,
   },
   userMenuWrapper: {
+    display: "flex",
+    alignItems: "center",
     flexShrink: 0,
   },
   avatarDefault: {
-    flexShrink: 0,
-    width: "2.25rem",
-    height: "2.25rem",
+    width: "2rem",
+    height: "2rem",
     borderRadius: "50%",
     background: "var(--cp-grad-blue)",
+    color: colorRoles.textInverse,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "0.75rem",
     fontWeight: 700,
-    color: colorRoles.textInverse,
-    cursor: "pointer",
-    boxShadow: `0 0 0 2px ${alpha(colorRoles.textSecondary, 0.2)}`,
-    letterSpacing: "0.02em",
+    fontSize: "0.8rem",
+    flexShrink: 0,
   },
 });
