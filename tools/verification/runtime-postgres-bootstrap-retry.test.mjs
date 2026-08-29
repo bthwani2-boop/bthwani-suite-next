@@ -114,6 +114,9 @@ test("partner onboarding closes the canonical store publication journey", () => 
   assert.doesNotMatch(dshClientHomeSmoke, /\$state\.masterProductId/);
   assert.match(dshClientHomeSmoke, /"Idempotency-Key" = "smoke-checkout-cart-\$checkoutAttempt"/);
   assert.match(dshClientHomeSmoke, /\$checkoutHeaders\["Idempotency-Key"\] = "smoke-checkout-intent-\$checkoutAttempt"/);
+  assert.match(dshClientHomeSmoke, /expectedCartVersion = \$cartVersion/);
+  assert.match(dshClientHomeSmoke, /deliveryAddressId = \$deliveryAddressId/);
+  assert.match(dshClientHomeSmoke, /dsh\/client\/addresses/);
   assert.match(dshClientHomeSmoke, /-Headers \$checkoutHeaders/);
   assert.match(dshPartnerOnboardingSmoke, /catalogState\.masterProductId/);
   assert.match(dshPartnerOnboardingSmoke, /status = "ready"[\s\S]*deliveryModes = @\("delivery", "pickup"\)/);
