@@ -14,9 +14,10 @@ import type { DshServiceArea } from "../../../shared/client-map/client-map.types
 
 type Props = {
   readonly serviceAreaCode: string;
+  readonly canManage: boolean;
 };
 
-export function StoreServiceAreaPanel({ serviceAreaCode }: Props) {
+export function StoreServiceAreaPanel({ serviceAreaCode, canManage }: Props) {
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "ready"; area: DshServiceArea; draftPolygon: readonly (readonly [number, number])[] }
@@ -36,28 +37,7 @@ export function StoreServiceAreaPanel({ serviceAreaCode }: Props) {
       })
       .catch((err: unknown) => {
         if (!active) return;
-        if (err instanceof Error && err.message.includes("404")) {
-          // New service area? Actually the store has a serviceAreaCode, so it should exist,
-          // but if it doesn't, we start empty.
-          setState({
-            kind: "ready",
-            area: {
-              serviceAreaCode,
-              displayName: serviceAreaCode,
-              polygon: [],
-              pointCount: 0,
-              bounds: { minLongitude: 0, minLatitude: 0, maxLongitude: 0, maxLatitude: 0 },
-              active: true,
-              priority: 100,
-              version: 0,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-            draftPolygon: [],
-          });
-        } else {
-          setState({ kind: "error", message: err instanceof Error ? err.message : String(err) });
-        }
+        setState({ kind: "error", message: err instanceof Error ? err.message : String(err) });
       });
     return () => {
       active = false;
@@ -65,7 +45,7 @@ export function StoreServiceAreaPanel({ serviceAreaCode }: Props) {
   }, [serviceAreaCode]);
 
   const handleMapClick = (coord: { latitude: number; longitude: number }) => {
-    if (state.kind !== "ready") return;
+    if (!canManage || state.kind !== "ready") return;
     setState({
       ...state,
       draftPolygon: [...state.draftPolygon, [coord.longitude, coord.latitude]],
@@ -73,17 +53,17 @@ export function StoreServiceAreaPanel({ serviceAreaCode }: Props) {
   };
 
   const handleClearDraft = () => {
-    if (state.kind !== "ready") return;
+    if (!canManage || state.kind !== "ready") return;
     setState({ ...state, draftPolygon: [] });
   };
 
   const handleRevert = () => {
-    if (state.kind !== "ready") return;
+    if (!canManage || state.kind !== "ready") return;
     setState({ ...state, draftPolygon: state.area.polygon });
   };
 
   const handleSave = async () => {
-    if (state.kind !== "ready") return;
+    if (!canManage || state.kind !== "ready") return;
     if (state.draftPolygon.length > 0 && state.draftPolygon.length < 3) {
       setErrorMsg("يجب أن يحتوي المضلع على 3 نقاط على الأقل.");
       return;
@@ -140,7 +120,7 @@ export function StoreServiceAreaPanel({ serviceAreaCode }: Props) {
       <CpDescriptionRow label="المضلع الحالي">
         <GoogleMapsWebCanvas
           height={400}
-          onMapClick={handleMapClick}
+          {...(canManage ? { onMapClick: handleMapClick } : {})}
           polygons={[
             {
               id: "draft",
@@ -156,21 +136,29 @@ export function StoreServiceAreaPanel({ serviceAreaCode }: Props) {
             }] : []),
           ]}
         />
-        <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-          <CpButton onClick={() => void handleSave()} disabled={saving || !isDirty}>
-            {saving ? "جاري الحفظ..." : "حفظ المسودة"}
-          </CpButton>
-          <CpButton onClick={handleClearDraft} disabled={draftPolygon.length === 0} variant="secondary">
-            مسح النقاط
-          </CpButton>
-          <CpButton onClick={handleRevert} disabled={!isDirty} variant="secondary">
-            إلغاء التعديلات
-          </CpButton>
-        </div>
-        <p style={{ marginTop: 8, fontSize: 12, color: "var(--cp-text-muted)" }}>
-          انقر على الخريطة لإضافة نقاط المضلع. تأكد من إغلاق المضلع (سيتم إغلاقه تلقائياً عند الحفظ).
-          {draftPolygon.length > 0 && ` عدد النقاط: ${draftPolygon.length}`}
-        </p>
+        {canManage ? (
+          <>
+            <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+              <CpButton onClick={() => void handleSave()} disabled={saving || !isDirty}>
+                {saving ? "جاري الحفظ..." : "حفظ المسودة"}
+              </CpButton>
+              <CpButton onClick={handleClearDraft} disabled={draftPolygon.length === 0} variant="secondary">
+                مسح النقاط
+              </CpButton>
+              <CpButton onClick={handleRevert} disabled={!isDirty} variant="secondary">
+                إلغاء التعديلات
+              </CpButton>
+            </div>
+            <p style={{ marginTop: 8, fontSize: 12, color: "var(--cp-text-muted)" }}>
+              انقر على الخريطة لإضافة نقاط المضلع. تأكد من إغلاق المضلع (سيتم إغلاقه تلقائياً عند الحفظ).
+              {draftPolygon.length > 0 && ` عدد النقاط: ${draftPolygon.length}`}
+            </p>
+          </>
+        ) : (
+          <p style={{ marginTop: 8, fontSize: 12, color: "var(--cp-text-muted)" }}>
+            قراءة فقط — تعديل حدود المنطقة يتطلب dsh.service_zones.manage.
+          </p>
+        )}
       </CpDescriptionRow>
     </div>
   );

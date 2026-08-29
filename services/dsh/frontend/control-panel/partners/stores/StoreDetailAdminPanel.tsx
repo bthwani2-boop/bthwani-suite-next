@@ -8,7 +8,9 @@ import {
   CpDetailPanel,
   CpExternalLink,
   CpInlineCode,
+  CpMutedInline,
 } from "@bthwani/control-panel/components";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   formatDeliveryModes,
   type DshStoreAdminDetailState,
@@ -16,6 +18,7 @@ import {
   type DshStoreAuditState,
 } from "../../../shared/store";
 import { uploadAndLinkAsset } from "../../../shared/catalog";
+import { hasServiceControlPanelPermission } from "../../../shared/session/control-panel-permissions";
 import { StoreServiceAreaPanel } from "./StoreServiceAreaPanel";
 
 type Props = {
@@ -138,6 +141,12 @@ function StoreAuditRows({ state }: { readonly state: DshStoreAuditState }) {
 }
 
 export function StoreDetailAdminPanel({ state, diagnosticsState, auditState, onClose }: Props) {
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canManageMedia = hasServiceControlPanelPermission(identity, "dsh", "catalog.media.manage");
+  const canReadServiceAreas = hasServiceControlPanelPermission(identity, "dsh", "dsh.service_zones.read");
+  const canManageServiceAreas = hasServiceControlPanelPermission(identity, "dsh", "dsh.service_zones.manage");
+
   return (
     <CpDetailPanel title="تفاصيل المتجر" onClose={onClose}>
       {state.kind === "loading" && (
@@ -254,9 +263,24 @@ export function StoreDetailAdminPanel({ state, diagnosticsState, auditState, onC
           <CpDescriptionRow label="آخر تحديث">
             {new Date(state.detail.updatedAt).toLocaleString("ar")}
           </CpDescriptionRow>
-          <StoreImageUploadForm storeId={state.detail.id} />
+          {canManageMedia ? (
+            <StoreImageUploadForm storeId={state.detail.id} />
+          ) : (
+            <CpDescriptionRow label="وسائط المتجر">
+              <CpMutedInline tight>قراءة فقط — رفع وربط الوسائط يتطلب catalog.media.manage.</CpMutedInline>
+            </CpDescriptionRow>
+          )}
           {state.detail.serviceAreaCode && (
-            <StoreServiceAreaPanel serviceAreaCode={state.detail.serviceAreaCode} />
+            canReadServiceAreas ? (
+              <StoreServiceAreaPanel
+                serviceAreaCode={state.detail.serviceAreaCode}
+                canManage={canManageServiceAreas}
+              />
+            ) : (
+              <CpDescriptionRow label="منطقة الخدمة">
+                <CpMutedInline tight>التفاصيل التشغيلية محجوبة — تتطلب dsh.service_zones.read.</CpMutedInline>
+              </CpDescriptionRow>
+            )
           )}
         </CpDescriptionList>
       )}
