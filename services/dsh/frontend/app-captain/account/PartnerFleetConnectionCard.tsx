@@ -1,9 +1,12 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { Box, Button, Card, Text, TextField, spacing } from "@bthwani/ui-kit";
 import {
+  clearCaptainPartnerFleetCommandAttempt,
   connectCaptainToPartnerFleet,
   disconnectCaptainPartnerFleetMembership,
+  getOrCreateCaptainPartnerFleetCommandAttempt,
   listCaptainPartnerFleetMemberships,
   type DshCaptainFleetMembership,
 } from "../../shared/partner";
@@ -18,7 +21,20 @@ function resolveErrorMessage(error: unknown): string {
     : "خطأ غير متوقع";
 }
 
+function isUncertainCommandError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { readonly kind?: unknown; readonly status?: unknown };
+  return candidate.kind === "network"
+    || (typeof candidate.status === "number"
+      && (candidate.status === 408 || candidate.status === 429 || candidate.status >= 500));
+}
+
 export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
+  const identity = useIdentitySession();
+  const captainActorId = identity.state.kind === "authenticated"
+    && identity.state.identity.roles.includes("captain")
+    ? identity.state.identity.subject.trim()
+    : "";
   const [connectionCode, setConnectionCode] = React.useState("");
   const [memberships, setMemberships] = React.useState<readonly DshCaptainFleetMembership[]>([]);
   const [feedback, setFeedback] = React.useState<string | null>(null);
@@ -56,34 +72,63 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
     setLoading(true);
     setFeedback(null);
     try {
-      const response = await connectCaptainToPartnerFleet(normalizedCode);
+      if (!captainActorId) {
+        setFeedback("جلسة الكابتن غير جاهزة لربط موصل المتجر.");
+        return;
+      }
+      const intent = { actorId: captainActorId, command: "connect" as const, code: normalizedCode };
+      const attempt = await getOrCreateCaptainPartnerFleetCommandAttempt(intent);
+      let response;
+      try {
+        response = await connectCaptainToPartnerFleet(normalizedCode, attempt.context);
+      } catch (error) {
+        if (!isUncertainCommandError(error)) throw error;
+        response = await connectCaptainToPartnerFleet(normalizedCode, attempt.context);
+      }
       setConnectionCode("");
       const refreshed = await loadMemberships();
-      if (refreshed) {
-        setFeedback(`تم ربط الحساب بمتجر ${response.membership.storeName} كموصل متجر.`);
-      }
+      if (!refreshed) return;
+      await clearCaptainPartnerFleetCommandAttempt(intent, attempt.fingerprint);
+      setFeedback(`تم ربط الحساب بمتجر ${response.membership.storeName} كموصل متجر.`);
     } catch (error) {
       setFeedback(`فشل ربط موصل المتجر: ${resolveErrorMessage(error)}`);
     } finally {
       setLoading(false);
     }
-  }, [connectionCode, loadMemberships]);
+  }, [captainActorId, connectionCode, loadMemberships]);
 
   const handleDisconnect = React.useCallback(async (membership: DshCaptainFleetMembership) => {
     setDisconnectingMembershipId(membership.teamMemberId);
     setFeedback(null);
     try {
-      await disconnectCaptainPartnerFleetMembership(membership);
-      const refreshed = await loadMemberships();
-      if (refreshed) {
-        setFeedback(`تم فك عضوية موصل متجر ${membership.storeName}.`);
+      if (!captainActorId) {
+        setFeedback("جلسة الكابتن غير جاهزة لفك عضوية موصل المتجر.");
+        return;
       }
+      const intent = {
+        actorId: captainActorId,
+        command: "disconnect" as const,
+        teamMemberId: membership.teamMemberId,
+        storeId: membership.storeId,
+        expectedVersion: membership.version,
+      };
+      const attempt = await getOrCreateCaptainPartnerFleetCommandAttempt(intent);
+      try {
+        await disconnectCaptainPartnerFleetMembership(membership, attempt.context);
+      } catch (error) {
+        if (!isUncertainCommandError(error)) throw error;
+        await disconnectCaptainPartnerFleetMembership(membership, attempt.context);
+      }
+      const refreshed = await loadMemberships();
+      if (!refreshed) return;
+      await clearCaptainPartnerFleetCommandAttempt(intent, attempt.fingerprint);
+      setFeedback(`تم فك عضوية موصل متجر ${membership.storeName}.`);
     } catch (error) {
       setFeedback(`فشل فك عضوية موصل المتجر: ${resolveErrorMessage(error)}`);
     } finally {
       setDisconnectingMembershipId(null);
     }
-  }, [loadMemberships]);
+  }, [captainActorId, loadMemberships]);
 
   return (
     <Box gap={3}>
