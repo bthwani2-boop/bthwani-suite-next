@@ -11,13 +11,3 @@ export type DshCaptainSurfaceProps = {
   readonly onOpenService?: (serviceId: string) => void;
   readonly walletBalanceLabel?: string;
 };
-
-export type {
-  DshCaptainState,
-  DshCaptainStateGroup,
-  DshCaptainStateMeta,
-} from "../shared/delivery";
-
-export type {
-  DshCaptainProfileSnapshot,
-} from "./dsh-captain-binding.contracts";

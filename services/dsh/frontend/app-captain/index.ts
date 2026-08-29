@@ -11,10 +11,6 @@ export { DshCaptainSurface } from "./DshCaptainSurface";
 export type {
   DshCaptainRoute,
   DshCaptainSurfaceProps,
-  DshCaptainState,
-  DshCaptainStateGroup,
-  DshCaptainStateMeta,
-  DshCaptainProfileSnapshot,
 } from "./dsh-captain.types";
 
 export {

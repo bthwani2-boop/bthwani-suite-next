@@ -216,11 +216,8 @@ type DshCaptainFinanceSnapshot = {
   settlementLabel: string;
 };
 
-export type DshCaptainProfileSnapshot = {
-  displayName: string;
-  tierLabel: string;
-  readinessLabel: string;
-};
+export type DshCaptainFinanceScreenState = 'ready' | 'loading' | 'empty' | 'error';
+export type DshCaptainFinanceSection = 'earnings' | 'settlement';
 
 type DshCaptainOperationsSnapshot = {
   availabilityLabel: string;
