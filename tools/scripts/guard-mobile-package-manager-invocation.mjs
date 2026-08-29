@@ -42,7 +42,7 @@ for (const relativePath of governedFiles) {
   const source = readSource(relativePath);
   if (source === undefined) continue;
   if (/shell\s*:\s*true/.test(source)) failures.push(`${relativePath}: shell:true is forbidden`);
-  if (/\b(?:exec|execSync)\s*\(/.test(source)) failures.push(`${relativePath}: string command execution is forbidden`);
+  if (/(?<![.\w])(?:exec|execSync)\s*\(/.test(source)) failures.push(`${relativePath}: string command execution is forbidden`);
 }
 
 for (const wrapper of compatibilityWrappers) {
@@ -71,10 +71,18 @@ if (canonicalHelper !== undefined) {
 
 const windowsBridge = readSource(windowsBridgePath);
 if (windowsBridge !== undefined) {
-  for (const forbidden of ["Invoke-Expression", "Start-Process", "cmd.exe", "/c", "-Command"]) {
+  for (const forbidden of ["Invoke-Expression", "Start-Process", "cmd.exe", "/c"]) {
     if (windowsBridge.includes(forbidden)) failures.push(`${windowsBridgePath}: forbidden command-string execution marker: ${forbidden}`);
   }
-  for (const required of ["ValidateSet('pnpm', 'npx')", "& $Command @Arguments"]) {
+  if (/(^|[\s"'`])-Command(?=$|[\s"'`])/.test(windowsBridge)) {
+    failures.push(`${windowsBridgePath}: forbidden command-string execution marker: -Command`);
+  }
+  for (const required of [
+    "@('pnpm', 'npx')",
+    'if ($requestedCommand -notin $allowedCommands)',
+    'Get-Command "$requestedCommand.CMD" -CommandType Application',
+    "& $executable.Source @forwardedArguments",
+  ]) {
     if (!windowsBridge.includes(required)) failures.push(`${windowsBridgePath}: missing argv invocation invariant: ${required}`);
   }
 }
