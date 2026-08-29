@@ -116,8 +116,8 @@ export async function acceptDispatchAssignment(
 export async function declineDispatchAssignment(
   assignmentId: string,
   reason: string,
-  reasonCode = "captain_declined",
   mutation: DshCaptainCommandContext,
+  reasonCode = "captain_declined",
 ): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/decline`,

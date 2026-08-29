@@ -69,6 +69,13 @@ function governedAccuracy(value: number | null | undefined): number {
   return value;
 }
 
+function isUncertainCaptainCommandError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as { kind?: unknown; status?: unknown };
+  return candidate.kind === 'network'
+    || (candidate.kind === 'http' && typeof candidate.status === 'number' && candidate.status >= 500);
+}
+
 export async function readCaptainForegroundLocation(): Promise<DshCaptainCoordinates> {
   const location = getDshLocationAdapter();
   const permission = await location.requestForegroundPermissions();
@@ -106,7 +113,8 @@ export function useCaptainOrderRuntime() {
       let result;
       try {
         result = await acceptDispatchAssignment(assignmentId, attempt.context);
-      } catch {
+      } catch (error) {
+        if (!isUncertainCaptainCommandError(error)) throw error;
         result = await acceptDispatchAssignment(assignmentId, attempt.context);
       }
       await clearCaptainAssignmentCommandAttempt(intent, attempt.signature);
@@ -130,9 +138,10 @@ export function useCaptainOrderRuntime() {
       const attempt = await getOrCreateCaptainAssignmentCommandAttempt(intent);
       let result;
       try {
-        result = await declineDispatchAssignment(assignmentId, normalizedReason, 'captain_declined', attempt.context);
-      } catch {
-        result = await declineDispatchAssignment(assignmentId, normalizedReason, 'captain_declined', attempt.context);
+        result = await declineDispatchAssignment(assignmentId, normalizedReason, attempt.context, 'captain_declined');
+      } catch (error) {
+        if (!isUncertainCaptainCommandError(error)) throw error;
+        result = await declineDispatchAssignment(assignmentId, normalizedReason, attempt.context, 'captain_declined');
       }
       await clearCaptainAssignmentCommandAttempt(intent, attempt.signature);
       return result;

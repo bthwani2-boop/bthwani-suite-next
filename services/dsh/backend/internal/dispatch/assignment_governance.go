@@ -723,7 +723,7 @@ func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmen
 		"declined", reasonCode, reason, captainID, "captain", nil); err != nil {
 		return nil, err
 	}
-	if err = checkoutfinanceoutbox.EnqueueCodReservationReleaseForOrderTx(tx, current.OrderID, "declined: "+reasonCode, current.OrderID); err != nil {
+	if err = checkoutfinanceoutbox.EnqueueCodReservationReleaseForOrderTx(tx, current.OrderID, "declined: "+reasonCode, command.CorrelationID); err != nil {
 		return nil, err
 	}
 	if err = recordCaptainAssignmentCommand(tx, command); err != nil {

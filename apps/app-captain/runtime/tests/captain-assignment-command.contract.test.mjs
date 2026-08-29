@@ -19,8 +19,9 @@ test("captain accept and decline commands preserve identity across retries", () 
   assert.match(attempt, /purgeExactDurableMutationAttempt/);
   assert.match(runtime, /getOrCreateCaptainAssignmentCommandAttempt/);
   assert.match(runtime, /clearCaptainAssignmentCommandAttempt/);
+  assert.match(runtime, /isUncertainCaptainCommandError/);
   assert.match(runtime, /acceptDispatchAssignment\(assignmentId, attempt\.context\)/);
-  assert.match(runtime, /declineDispatchAssignment\(assignmentId, normalizedReason, 'captain_declined', attempt\.context\)/);
+  assert.match(runtime, /declineDispatchAssignment\(assignmentId, normalizedReason, attempt\.context, 'captain_declined'\)/);
   assert.match(api, /idempotencyKey: mutation\.idempotencyKey/);
   assert.match(api, /correlationId: mutation\.correlationId/);
   assert.match(backend, /dsh_captain_assignment_command_receipts/);
