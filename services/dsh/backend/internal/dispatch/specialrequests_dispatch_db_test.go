@@ -441,7 +441,7 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 // request's status (it stays in_progress throughout, per dispatch.go's
 // updateDeliveryProgress comment). It also registers the two governed media
 // references used by the completion subtests for this captain.
-func driveDeliveryToArrivedCustomer(t *testing.T, db *sql.DB, operatorContextID, assignmentID, captainID, specialRequestID string) {
+func driveDeliveryToArrivedCustomer(t *testing.T, db *sql.DB, operatorContextID, assignmentID, captainID, specialRequestID string) (proofMediaRef, outboxGuardMediaRef string) {
 	t.Helper()
 	if _, err := AcceptAssignment(db, operatorContextID, assignmentID, captainID); err != nil {
 		t.Fatalf("AcceptAssignment failed: %v", err)
@@ -451,8 +451,11 @@ func driveDeliveryToArrivedCustomer(t *testing.T, db *sql.DB, operatorContextID,
 			t.Fatalf("UpdateDeliveryStatus(%s) failed: %v", status, err)
 		}
 	}
-	seedCaptainDeliveryProofMedia(t, db, captainID, "sr-pod-ref", "", "", specialRequestID)
-	seedCaptainDeliveryProofMedia(t, db, captainID, "sr-pod-outbox-guard", "", "", specialRequestID)
+	proofMediaRef = "sr-pod-ref-" + specialRequestID
+	outboxGuardMediaRef = "sr-pod-outbox-guard-" + specialRequestID
+	seedCaptainDeliveryProofMedia(t, db, captainID, proofMediaRef, "", "", "", specialRequestID)
+	seedCaptainDeliveryProofMedia(t, db, captainID, outboxGuardMediaRef, "", "", "", specialRequestID)
+	return proofMediaRef, outboxGuardMediaRef
 }
 
 func TestSpecialRequestDeliveryProofDBIntegration(t *testing.T) {
@@ -467,12 +470,12 @@ func TestSpecialRequestDeliveryProofDBIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
 		}
-		driveDeliveryToArrivedCustomer(t, db, testSpecialRequestOperatorContextID, assignment.ID, captainID, id)
+		proofMediaRef, _ := driveDeliveryToArrivedCustomer(t, db, testSpecialRequestOperatorContextID, assignment.ID, captainID, id)
 
 		proof, err := SubmitDeliveryProof(db, assignment.ID, captainID, SubmitDeliveryProofInput{
 			OperatorContextID: testSpecialRequestOperatorContextID,
 			Method:            DeliveryProofPhoto,
-			PhotoMediaRef:     "sr-pod-ref",
+			PhotoMediaRef:     proofMediaRef,
 			IdempotencyKey:    "special-request-proof-1",
 		})
 		if err != nil {
@@ -516,7 +519,7 @@ func TestSpecialRequestDeliveryProofDBIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
 		}
-		driveDeliveryToArrivedCustomer(t, db, testSpecialRequestOperatorContextID, assignment.ID, captainID, id)
+		_, outboxGuardMediaRef := driveDeliveryToArrivedCustomer(t, db, testSpecialRequestOperatorContextID, assignment.ID, captainID, id)
 
 		var before int
 		if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_wlt_outbox_events WHERE captain_id = $1`, captainID).Scan(&before); err != nil {
@@ -526,7 +529,7 @@ func TestSpecialRequestDeliveryProofDBIntegration(t *testing.T) {
 		proof, err := SubmitDeliveryProof(db, assignment.ID, captainID, SubmitDeliveryProofInput{
 			OperatorContextID: testSpecialRequestOperatorContextID,
 			Method:            DeliveryProofPhoto,
-			PhotoMediaRef:     "sr-pod-outbox-guard",
+			PhotoMediaRef:     outboxGuardMediaRef,
 			IdempotencyKey:    "special-request-proof-outbox",
 		})
 		if err != nil {

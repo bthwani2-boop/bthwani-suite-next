@@ -864,6 +864,9 @@ func enqueueWltDeliveryCompletion(tx *sql.Tx, operatorContextID, orderID, captai
 	if strings.TrimSpace(ctx.PartnerID) == "" || strings.TrimSpace(ctx.CheckoutIntentID) == "" {
 		return fmt.Errorf("delivery completion requires partner and checkout intent references")
 	}
+	if !strings.EqualFold(strings.TrimSpace(ctx.PaymentMethod), "cod") {
+		return nil
+	}
 	return wltoutbox.EnqueueDeliveryCompleted(
 		tx,
 		orderID,

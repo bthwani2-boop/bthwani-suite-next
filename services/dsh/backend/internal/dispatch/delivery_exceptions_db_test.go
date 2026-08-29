@@ -136,11 +136,12 @@ func TestDeliveryExceptionBlocksProofButAllowsLocationDBIntegration(t *testing.T
 		t.Fatalf("unexpected resolved state: %+v", resolved)
 	}
 
-	seedCaptainDeliveryProofMedia(t, db, captainID, "retry-proof", partnerID, storeID)
+	mediaRef := "retry-proof-" + orderID
+	seedCaptainDeliveryProofMedia(t, db, captainID, mediaRef, partnerID, storeID, orderID)
 	if _, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
 		OperatorContextID: operatorContextID,
 		Method:            DeliveryProofPhoto,
-		PhotoMediaRef:     "retry-proof",
+		PhotoMediaRef:     mediaRef,
 		IdempotencyKey:    "retry-proof-" + suffix,
 	}); err != nil {
 		t.Fatalf("proof must reopen after operations resolution: %v", err)

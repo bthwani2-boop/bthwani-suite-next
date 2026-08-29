@@ -127,12 +127,13 @@ func TestSubmitDeliveryProofEnqueuesWltOutboxEventForCodOrderDBIntegration(t *te
 	db := openRequiredDB(t)
 	assignmentID, captainID, orderID, checkoutIntentID, partnerID, operatorContextID := seedArrivedCustomerFixture(t, db, "cod")
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
-	seedCaptainDeliveryProofMedia(t, db, captainID, "ref-123", partnerID, "")
+	mediaRef := "ref-123-" + orderID
+	seedCaptainDeliveryProofMedia(t, db, captainID, mediaRef, partnerID, "", orderID)
 
 	proof, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
 		OperatorContextID: operatorContextID,
 		Method:            DeliveryProofPhoto,
-		PhotoMediaRef:     "ref-123",
+		PhotoMediaRef:     mediaRef,
 		IdempotencyKey:    "cod-photo-proof-" + orderID,
 	})
 	if err != nil {
@@ -228,12 +229,13 @@ func TestSubmitDeliveryProofDoesNotEnqueueOutboxForNonCodOrderDBIntegration(t *t
 	db := openRequiredDB(t)
 	assignmentID, captainID, orderID, _, partnerID, operatorContextID := seedArrivedCustomerFixture(t, db, "wallet")
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
-	seedCaptainDeliveryProofMedia(t, db, captainID, "ref-456", partnerID, "")
+	mediaRef := "ref-456-" + orderID
+	seedCaptainDeliveryProofMedia(t, db, captainID, mediaRef, partnerID, "", orderID)
 
 	proof, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
 		OperatorContextID: operatorContextID,
 		Method:            DeliveryProofPhoto,
-		PhotoMediaRef:     "ref-456",
+		PhotoMediaRef:     mediaRef,
 		IdempotencyKey:    "wallet-photo-proof-" + orderID,
 	})
 	if err != nil {
