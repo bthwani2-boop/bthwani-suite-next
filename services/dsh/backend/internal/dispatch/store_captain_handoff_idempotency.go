@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"dsh-api/internal/orders"
 )
 
 func ensureNoActiveStoreCaptainHandoffException(db *sql.DB, assignmentID string) error {
@@ -24,24 +26,10 @@ func ensureNoActiveStoreCaptainHandoffException(db *sql.DB, assignmentID string)
 	return nil
 }
 
-// UpdateDeliveryStatusGovernedIdempotentForOperatorContext preserves the
-// governed delivery transition rules while making an exact replay of an
-// already-applied status return the current server truth instead of a false
-// state conflict.
-func UpdateDeliveryStatusGovernedIdempotentForOperatorContext(
-	db *sql.DB,
-	operatorContextID string,
-	assignmentID string,
-	captainID string,
-	status DeliveryStatus,
-) (*Assignment, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
-	}
-	return updateDeliveryStatusGovernedIdempotent(db, operatorContextID, assignmentID, captainID, status, 0)
-}
-
+// UpdateDeliveryStatusGovernedIdempotentVersionedForOperatorContext is the
+// single Captain delivery-status mutation entry point. The receipt is created
+// in the same transaction as the assignment/order transition, so a retry is
+// resolved by command identity before any current-state eligibility check.
 func UpdateDeliveryStatusGovernedIdempotentVersionedForOperatorContext(
 	db *sql.DB,
 	operatorContextID string,
@@ -49,72 +37,61 @@ func UpdateDeliveryStatusGovernedIdempotentVersionedForOperatorContext(
 	captainID string,
 	status DeliveryStatus,
 	expectedVersion int,
+	idempotencyKey string,
+	correlationID string,
 ) (*Assignment, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
-	}
-	if expectedVersion < 1 {
-		return nil, fmt.Errorf("%w: assignment version is required", ErrInvalid)
-	}
-	return updateDeliveryStatusGovernedIdempotent(db, operatorContextID, assignmentID, captainID, status, expectedVersion)
-}
-
-func updateDeliveryStatusGovernedIdempotent(
-	db *sql.DB,
-	operatorContextID string,
-	assignmentID string,
-	captainID string,
-	status DeliveryStatus,
-	expectedVersion int,
-) (*Assignment, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
-	}
-	switch status {
-	case DeliveryArrivedStore, DeliveryPickedUp, DeliveryArrivedCustomer:
-	default:
-		return nil, fmt.Errorf("%w: unsupported delivery status", ErrInvalid)
-	}
-
-	current, err := GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
+	command, err := newCaptainDeliveryStatusCommand(
+		operatorContextID,
+		captainID,
+		assignmentID,
+		status,
+		expectedVersion,
+		idempotencyKey,
+		correlationID,
+	)
 	if err != nil {
 		return nil, err
 	}
-	if status == DeliveryPickedUp && current.Delivery.Status != DeliveryPickedUp {
-		if err = ensureNoActiveStoreCaptainHandoffException(db, assignmentID); err != nil {
-			return nil, err
-		}
+	switch status {
+	case DeliveryArrivedStore:
+		return updateDeliveryProgressWithStoreHandoffVersioned(
+			db,
+			command.OperatorContextID,
+			command.AssignmentID,
+			command.ActorID,
+			[]DeliveryStatus{DeliveryDriverAssigned},
+			status,
+			orders.StatusArrivedStore,
+			expectedVersion,
+			command,
+		)
+	case DeliveryPickedUp:
+		return updateDeliveryProgressWithStoreHandoffVersioned(
+			db,
+			command.OperatorContextID,
+			command.AssignmentID,
+			command.ActorID,
+			[]DeliveryStatus{DeliveryArrivedStore},
+			status,
+			orders.StatusPickedUp,
+			expectedVersion,
+			command,
+		)
+	case DeliveryArrivedCustomer:
+		return updateDeliveryProgressVersionedForContext(
+			db,
+			command.OperatorContextID,
+			command.AssignmentID,
+			command.ActorID,
+			[]DeliveryStatus{DeliveryPickedUp},
+			status,
+			orders.StatusArrivedCustomer,
+			expectedVersion,
+			command,
+		)
+	default:
+		return nil, fmt.Errorf("%w: unsupported delivery status", ErrInvalid)
 	}
-	if current.Delivery.Status != status {
-		if expectedVersion > 0 {
-			return UpdateDeliveryStatusGovernedVersionedForOperatorContext(db, operatorContextID, assignmentID, captainID, status, expectedVersion)
-		}
-		return UpdateDeliveryStatusGovernedForOperatorContext(db, operatorContextID, assignmentID, captainID, status)
-	}
-
-	if status == DeliveryPickedUp {
-		var handoffStatus string
-		err = db.QueryRow(`
-                        SELECT status
-                        FROM dsh_store_captain_handoffs
-                        WHERE assignment_id = $1::uuid AND captain_id = $2`,
-			assignmentID,
-			captainID,
-		).Scan(&handoffStatus)
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrStoreHandoffRequired
-		}
-		if err != nil {
-			return nil, err
-		}
-		if handoffStatus != "completed" {
-			return nil, fmt.Errorf("%w: pickup status exists without completed store-captain custody", ErrConflict)
-		}
-	}
-
-	return current, nil
 }
 
 // ConfirmStoreCaptainHandoffIdempotentForOperatorContext returns the

@@ -19,9 +19,11 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 	if !ok {
 		return
 	}
-	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
 		return
 	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		Status          dispatch.DeliveryStatus `json:"status"`
 		Latitude        *float64                `json:"latitude,omitempty"`
@@ -85,6 +87,8 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 		actor.ID,
 		body.Status,
 		body.ExpectedVersion,
+		idempotencyKey,
+		correlationID,
 	)
 	if errors.Is(err, dispatch.ErrStoreHandoffRequired) {
 		store.SendError(

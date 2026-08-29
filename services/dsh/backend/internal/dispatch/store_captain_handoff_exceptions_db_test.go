@@ -44,12 +44,9 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
 
-	if _, err := UpdateDeliveryStatusGovernedIdempotentForOperatorContext(
-		db,
-		fixture.OperatorContextID,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryArrivedStore,
+	if _, err := testDeliveryStatusCommandCurrent(
+		db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID,
+		DeliveryArrivedStore, "exception-shortage-arrival",
 	); err != nil {
 		t.Fatalf("captain arrival failed: %v", err)
 	}
@@ -123,12 +120,9 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 	); !errors.Is(err, ErrConflict) {
 		t.Fatalf("partner confirmation with open exception error=%v want ErrConflict", err)
 	}
-	if _, err = UpdateDeliveryStatusGovernedIdempotentForOperatorContext(
-		db,
-		fixture.OperatorContextID,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryPickedUp,
+	if _, err = testDeliveryStatusCommandCurrent(
+		db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID,
+		DeliveryPickedUp, "exception-shortage-pickup",
 	); !errors.Is(err, ErrConflict) {
 		t.Fatalf("pickup with open exception error=%v want ErrConflict", err)
 	}
@@ -153,12 +147,9 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
 
-	if _, err := UpdateDeliveryStatusGovernedIdempotentForOperatorContext(
-		db,
-		fixture.OperatorContextID,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryArrivedStore,
+	if _, err := testDeliveryStatusCommandCurrent(
+		db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID,
+		DeliveryArrivedStore, "exception-mismatch-arrival",
 	); err != nil {
 		t.Fatalf("captain arrival failed: %v", err)
 	}
@@ -215,12 +206,9 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 	if reporterActorID != fixture.CaptainID || reporterRole != "captain" {
 		t.Fatalf("reporter actor=%q role=%q", reporterActorID, reporterRole)
 	}
-	if _, err = UpdateDeliveryStatusGovernedIdempotentForOperatorContext(
-		db,
-		fixture.OperatorContextID,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryPickedUp,
+	if _, err = testDeliveryStatusCommandCurrent(
+		db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID,
+		DeliveryPickedUp, "exception-mismatch-pickup",
 	); !errors.Is(err, ErrConflict) {
 		t.Fatalf("pickup after partner confirmation with open exception error=%v want ErrConflict", err)
 	}

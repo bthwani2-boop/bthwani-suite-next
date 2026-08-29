@@ -236,6 +236,8 @@ func (s *protectedStoreServer) writeDispatchResult(w http.ResponseWriter, status
 		store.SendJSON(w, status, map[string]any{"assignment": marshalDispatchAssignment(*assignment)})
 	case errors.Is(err, dispatch.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "dispatch assignment not found")
+	case errors.Is(err, dispatch.ErrIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used for a different delivery status command")
 	case errors.Is(err, dispatch.ErrConflict):
 		store.SendError(w, http.StatusConflict, "CONFLICT", "dispatch transition is not allowed")
 	case errors.Is(err, dispatch.ErrInvalid):

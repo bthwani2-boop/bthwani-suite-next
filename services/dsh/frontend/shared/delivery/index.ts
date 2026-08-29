@@ -23,6 +23,7 @@ export * from './captain-service-mode.model';
 export * from './captain-availability.model';
 export * from './captain-availability-attempt';
 export * from './captain-assignment-command-attempt';
+export * from './captain-delivery-status-command-attempt';
 export * from './captain-gps.model';
 export * from './captain-profile.model';
 export * from './captain.derived';

@@ -66,7 +66,16 @@ func TestGetClientTrackingRequiresOrderAndClientID(t *testing.T) {
 }
 
 func TestUpdateDeliveryStatusRejectsUnsupportedStatus(t *testing.T) {
-	_, err := UpdateDeliveryStatus(nil, "OperatorContext-validation", "assignment-1", "captain-1", DeliveryStatus("bogus_status"))
+	_, err := UpdateDeliveryStatusGovernedIdempotentVersionedForOperatorContext(
+		nil,
+		"OperatorContext-validation",
+		"assignment-1",
+		"captain-1",
+		DeliveryStatus("bogus_status"),
+		1,
+		"invalid-delivery-status-key",
+		"invalid-delivery-status-correlation",
+	)
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid for unsupported delivery status, got %v", err)
 	}

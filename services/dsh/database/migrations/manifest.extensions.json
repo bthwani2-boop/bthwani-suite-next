@@ -464,6 +464,13 @@
       "sha256": "ef81531426f9293f9fa4fbafe388f554618f61dfb107b7be11c49fe94556d26e",
       "historicalPrefix": "1064",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 307,
+      "file": "dsh-1066_captain_delivery_status_command_receipts.sql",
+      "sha256": "72b0ed3743f69f36941851c7240bcb532bd4cc3dd01867930f59fc00a6d6bacd",
+      "historicalPrefix": "1066",
+      "state": "ACTIVE"
     }
   ]
 }

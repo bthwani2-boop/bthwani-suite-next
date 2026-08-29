@@ -447,7 +447,7 @@ func driveDeliveryToArrivedCustomer(t *testing.T, db *sql.DB, operatorContextID,
 		t.Fatalf("AcceptAssignment failed: %v", err)
 	}
 	for _, status := range []DeliveryStatus{DeliveryArrivedStore, DeliveryPickedUp, DeliveryArrivedCustomer} {
-		if _, err := UpdateDeliveryStatus(db, operatorContextID, assignmentID, captainID, status); err != nil {
+		if _, err := testDeliveryStatusCommandCurrent(db, operatorContextID, assignmentID, captainID, status, "special-request-"+string(status)); err != nil {
 			t.Fatalf("UpdateDeliveryStatus(%s) failed: %v", status, err)
 		}
 	}

@@ -184,7 +184,7 @@ export type DshDeliveryStatusUpdateOptions = {
   readonly expectedVersion: number;
   readonly latitude?: number;
   readonly longitude?: number;
-  readonly idempotencyKey?: string;
+  readonly mutation: DshCaptainCommandContext;
 };
 
 export async function updateDeliveryStatus(
@@ -203,7 +203,8 @@ export async function updateDeliveryStatus(
         ...(options.longitude !== undefined ? { longitude: options.longitude } : {}),
       },
       expectedVersion: options.expectedVersion,
-      idempotencyKey: options.idempotencyKey ?? corrId("captain-delivery-status"),
+      idempotencyKey: options.mutation.idempotencyKey,
+      correlationId: options.mutation.correlationId,
     },
   );
   return data.assignment;

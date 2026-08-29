@@ -15,6 +15,10 @@ import {
   getOrCreateCaptainAssignmentCommandAttempt,
 } from './captain-assignment-command-attempt';
 import {
+  clearCaptainDeliveryStatusCommandAttempt,
+  getOrCreateCaptainDeliveryStatusCommandAttempt,
+} from './captain-delivery-status-command-attempt';
+import {
   flushPendingForegroundDispatchLocations,
   syncForegroundDispatchLocation,
   type DshDispatchLocationSyncResult,
@@ -157,6 +161,8 @@ export function useCaptainOrderRuntime() {
       nextStatus: DshDeliveryStatus,
       requiresArrivalLocation: boolean,
     ) => {
+      const currentActorId = actorId;
+      if (!currentActorId) throw new Error('جلسة الكابتن غير جاهزة لتنفيذ العملية.');
       const assignments = await fetchCaptainDispatchAssignments();
       const assignment = assignments.find((item) => item.id === assignmentId);
       if (!assignment || !Number.isInteger(assignment.version) || assignment.version < 1) {
@@ -166,16 +172,33 @@ export function useCaptainOrderRuntime() {
         throw new Error('تغيرت مرحلة المهمة. حدّث المهمة قبل تنفيذ الإجراء التالي.');
       }
       const coordinates = requiresArrivalLocation ? await readCaptainForegroundLocation() : undefined;
-      const command = commandFor(`${nextStatus}:${assignmentId}:${assignment.version}`);
-      const result = await updateDeliveryStatus(assignmentId, nextStatus, {
+      const intent = {
+        actorId: currentActorId,
+        assignmentId,
+        expectedStatus,
+        nextStatus,
         expectedVersion: assignment.version,
-        idempotencyKey: command.id,
-        ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
-      });
-      delete commandIds.current[command.key];
+      };
+      const attempt = await getOrCreateCaptainDeliveryStatusCommandAttempt(intent);
+      let result;
+      try {
+        result = await updateDeliveryStatus(assignmentId, nextStatus, {
+          expectedVersion: assignment.version,
+          mutation: attempt.context,
+          ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
+        });
+      } catch (error) {
+        if (!isUncertainCaptainCommandError(error)) throw error;
+        result = await updateDeliveryStatus(assignmentId, nextStatus, {
+          expectedVersion: assignment.version,
+          mutation: attempt.context,
+          ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
+        });
+      }
+      await clearCaptainDeliveryStatusCommandAttempt(intent, attempt.signature);
       return result;
     },
-    [commandFor],
+    [actorId],
   );
 
   const confirmStoreArrival = React.useCallback(

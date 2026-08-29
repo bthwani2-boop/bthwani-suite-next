@@ -329,19 +329,6 @@ func DeclineAssignment(db *sql.DB, operatorContextID, assignmentID, captainID, r
 	return updateAssignmentStatus(db, operatorContextID, assignmentID, captainID, AssignmentDeclined, DeliveryAssigned, orders.StatusReadyForPickup, reason)
 }
 
-func UpdateDeliveryStatus(db *sql.DB, operatorContextID, assignmentID, captainID string, status DeliveryStatus) (*Assignment, error) {
-	switch status {
-	case DeliveryArrivedStore:
-		return updateDeliveryProgress(db, operatorContextID, assignmentID, captainID, []DeliveryStatus{DeliveryDriverAssigned}, status, orders.StatusArrivedStore)
-	case DeliveryPickedUp:
-		return updateDeliveryProgress(db, operatorContextID, assignmentID, captainID, []DeliveryStatus{DeliveryArrivedStore}, status, orders.StatusPickedUp)
-	case DeliveryArrivedCustomer:
-		return updateDeliveryProgress(db, operatorContextID, assignmentID, captainID, []DeliveryStatus{DeliveryPickedUp}, status, orders.StatusArrivedCustomer)
-	default:
-		return nil, fmt.Errorf("%w: unsupported delivery status", ErrInvalid)
-	}
-}
-
 func PushLocationForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string, input PushLocationInput) (*Assignment, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
@@ -491,15 +478,17 @@ func updateAssignmentStatus(db *sql.DB, operatorContextID, assignmentID, captain
 	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }
 
-func updateDeliveryProgress(db *sql.DB, operatorContextID, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus) (*Assignment, error) {
-	return updateDeliveryProgressVersionedForContext(db, operatorContextID, assignmentID, captainID, allowed, next, orderStatus, 0)
-}
-
-func updateDeliveryProgressVersioned(db *sql.DB, operatorContextID, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus, expectedVersion int) (*Assignment, error) {
-	return updateDeliveryProgressVersionedForContext(db, operatorContextID, assignmentID, captainID, allowed, next, orderStatus, expectedVersion)
-}
-
-func updateDeliveryProgressVersionedForContext(db *sql.DB, operatorContextID, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus, expectedVersion int) (*Assignment, error) {
+func updateDeliveryProgressVersionedForContext(
+	db *sql.DB,
+	operatorContextID string,
+	assignmentID string,
+	captainID string,
+	allowed []DeliveryStatus,
+	next DeliveryStatus,
+	orderStatus orders.OrderStatus,
+	expectedVersion int,
+	command captainDeliveryStatusCommand,
+) (*Assignment, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
 		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
@@ -509,6 +498,16 @@ func updateDeliveryProgressVersionedForContext(db *sql.DB, operatorContextID, as
 		return nil, err
 	}
 	defer tx.Rollback()
+	replayed, err := beginCaptainDeliveryStatusCommand(tx, command)
+	if err != nil {
+		return nil, err
+	}
+	if replayed {
+		if err = tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
+	}
 	current, err := lockAssignmentForOperatorContext(tx, operatorContextID, assignmentID, captainID)
 	if err != nil {
 		return nil, err
@@ -551,6 +550,9 @@ func updateDeliveryProgressVersionedForContext(db *sql.DB, operatorContextID, as
                 UPDATE dsh_deliveries SET status=$1, updated_at=NOW()
                 WHERE assignment_id=$2::uuid AND captain_id=$3`, string(next), assignmentID, captainID)
 	if err != nil {
+		return nil, err
+	}
+	if err = recordCaptainDeliveryStatusCommand(tx, command); err != nil {
 		return nil, err
 	}
 	if err = tx.Commit(); err != nil {

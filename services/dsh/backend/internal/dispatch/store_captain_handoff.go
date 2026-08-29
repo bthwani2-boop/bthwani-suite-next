@@ -140,63 +140,6 @@ func completeStoreCaptainHandoff(tx *sql.Tx, assignmentID, captainID string) err
 	return nil
 }
 
-func UpdateDeliveryStatusGovernedForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string, status DeliveryStatus) (*Assignment, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
-	}
-	return updateDeliveryStatusGovernedForOperatorContext(db, operatorContextID, assignmentID, captainID, status, 0)
-}
-
-func UpdateDeliveryStatusGovernedVersionedForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string, status DeliveryStatus, expectedVersion int) (*Assignment, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
-	}
-	if expectedVersion < 1 {
-		return nil, fmt.Errorf("%w: assignment version is required", ErrInvalid)
-	}
-	return updateDeliveryStatusGovernedForOperatorContext(db, operatorContextID, assignmentID, captainID, status, expectedVersion)
-}
-
-func updateDeliveryStatusGovernedForOperatorContext(db *sql.DB, operatorContextID, assignmentID, captainID string, status DeliveryStatus, expectedVersion int) (*Assignment, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
-	}
-	if expectedVersion < 0 {
-		return nil, fmt.Errorf("%w: invalid assignment version", ErrInvalid)
-	}
-	switch status {
-	case DeliveryArrivedStore:
-		return updateDeliveryProgressWithStoreHandoffVersioned(
-			db,
-			operatorContextID,
-			assignmentID,
-			captainID,
-			[]DeliveryStatus{DeliveryDriverAssigned},
-			status,
-			orders.StatusArrivedStore,
-			expectedVersion,
-		)
-	case DeliveryPickedUp:
-		return updateDeliveryProgressWithStoreHandoffVersioned(
-			db,
-			operatorContextID,
-			assignmentID,
-			captainID,
-			[]DeliveryStatus{DeliveryArrivedStore},
-			status,
-			orders.StatusPickedUp,
-			expectedVersion,
-		)
-	case DeliveryArrivedCustomer:
-		return updateDeliveryProgressVersionedForContext(db, operatorContextID, assignmentID, captainID, []DeliveryStatus{DeliveryPickedUp}, status, orders.StatusArrivedCustomer, expectedVersion)
-	default:
-		return nil, fmt.Errorf("%w: unsupported delivery status", ErrInvalid)
-	}
-}
-
 func updateDeliveryProgressWithStoreHandoffVersioned(
 	db *sql.DB,
 	operatorContextID string,
@@ -206,6 +149,7 @@ func updateDeliveryProgressWithStoreHandoffVersioned(
 	next DeliveryStatus,
 	orderStatus orders.OrderStatus,
 	expectedVersion int,
+	command captainDeliveryStatusCommand,
 ) (*Assignment, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
@@ -216,6 +160,16 @@ func updateDeliveryProgressWithStoreHandoffVersioned(
 		return nil, err
 	}
 	defer tx.Rollback()
+	replayed, err := beginCaptainDeliveryStatusCommand(tx, command)
+	if err != nil {
+		return nil, err
+	}
+	if replayed {
+		if err = tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
+	}
 
 	current, err := lockAssignmentForOperatorContext(tx, operatorContextID, assignmentID, captainID)
 	if err != nil {
@@ -291,6 +245,9 @@ func updateDeliveryProgressWithStoreHandoffVersioned(
 		if err = completeStoreCaptainHandoff(tx, assignmentID, captainID); err != nil {
 			return nil, err
 		}
+	}
+	if err = recordCaptainDeliveryStatusCommand(tx, command); err != nil {
+		return nil, err
 	}
 
 	if err = tx.Commit(); err != nil {
