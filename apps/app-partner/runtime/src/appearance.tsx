@@ -39,15 +39,23 @@ async function writeStoredAppearanceMode(mode: BThwaniAppearanceMode): Promise<v
   await SecureStore.setItemAsync(storageKey, mode);
 }
 
+type AppearancePersistenceResult = {
+  readonly committedMode: BThwaniAppearanceMode;
+  readonly matchedRequest: boolean;
+};
+
 async function persistAndReadBackAppearanceMode(
   mode: BThwaniAppearanceMode,
-): Promise<BThwaniAppearanceMode> {
+): Promise<AppearancePersistenceResult> {
   await writeStoredAppearanceMode(mode);
   const committedMode = await readStoredAppearanceMode();
-  if (!isBThwaniAppearanceMode(committedMode) || committedMode !== mode) {
-    throw new Error("Appearance persistence readback did not match the requested mode.");
+  if (!isBThwaniAppearanceMode(committedMode)) {
+    throw new Error("Appearance persistence readback was unavailable or invalid.");
   }
-  return committedMode;
+  return {
+    committedMode,
+    matchedRequest: committedMode === mode,
+  };
 }
 
 export function PartnerAppearanceProvider({ children }: { readonly children: React.ReactNode }) {
@@ -80,10 +88,14 @@ export function PartnerAppearanceProvider({ children }: { readonly children: Rea
     setError(null);
     writeQueueRef.current = writeQueueRef.current.then(async () => {
       try {
-        const committedMode = await persistAndReadBackAppearanceMode(nextMode);
+        const { committedMode, matchedRequest } = await persistAndReadBackAppearanceMode(nextMode);
         if (!mountedRef.current) return;
         setModeState(committedMode);
-        setError(null);
+        setError(
+          matchedRequest
+            ? null
+            : "تغيرت قيمة المظهر أثناء الحفظ؛ تم اعتماد القيمة المحفوظة الفعلية بعد التحقق.",
+        );
       } catch {
         if (!mountedRef.current) return;
         setError("تعذر حفظ تفضيل المظهر والتحقق منه؛ لم يتم اعتماد التغيير.");
