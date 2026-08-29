@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { CpKpiCard, CpKpiStrip, CpMutedInline, CpPageHeader, CpTabs } from "@bthwani/control-panel/components";
+import {
+  CpKpiCard,
+  CpKpiStrip,
+  CpMutedInline,
+  CpPageHeader,
+  CpRetryButton,
+  CpStatePanel,
+  CpTabs,
+} from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import {
   MARKETING_MAIN_TABS,
@@ -43,14 +51,24 @@ export function MarketingDashboardScreen() {
         />
       }
     >
-      <CpKpiStrip>
-        <CpKpiCard label="متاجر نشطة" value={metrics.activeStoresRatio} />
-        <CpKpiCard label="طلبات مكتملة" value={metrics.deliveredOrders.toLocaleString("ar")} />
-        <CpKpiCard label="تذاكر مفتوحة" value={metrics.openTickets.toLocaleString("ar")} />
-        <CpKpiCard label="تصعيدات مفتوحة" value={metrics.openEscalations.toLocaleString("ar")} />
-      </CpKpiStrip>
+      {metrics.isBackedByApi ? (
+        <CpKpiStrip>
+          <CpKpiCard label="متاجر نشطة" value={metrics.activeStoresRatio} />
+          <CpKpiCard label="طلبات مكتملة" value={metrics.deliveredOrders.toLocaleString("ar")} />
+          <CpKpiCard label="تذاكر مفتوحة" value={metrics.openTickets.toLocaleString("ar")} />
+          <CpKpiCard label="تصعيدات مفتوحة" value={metrics.openEscalations.toLocaleString("ar")} />
+        </CpKpiStrip>
+      ) : (
+        <CpStatePanel
+          role="alert"
+          title="تعذر إثبات مؤشرات التسويق"
+          description={metrics.disclosureReason ?? "تعذر تحميل مؤشرات DSH؛ لن تُعرض أرقام صفرية بديلة كأنها حقيقة تشغيلية."}
+        >
+          <CpRetryButton onClick={() => void reloadMetrics()}>إعادة المحاولة</CpRetryButton>
+        </CpStatePanel>
+      )}
 
-      {mainTab === "visibility-gates" ? <VisibilityGatesSection metrics={metrics} reloadMetrics={reloadMetrics} deliverySignals={deliverySignals} /> : null}
+      {mainTab === "visibility-gates" ? <VisibilityGatesSection deliverySignals={deliverySignals} /> : null}
       {mainTab === "store-publication" ? <StorePublicationCommandPanel /> : null}
       {mainTab === "banners-carousel" ? <MarketingHomeDiscoveryPanel kind="banners" /> : null}
       {mainTab === "homepage-promos" ? <MarketingHomeDiscoveryPanel kind="promos" /> : null}
