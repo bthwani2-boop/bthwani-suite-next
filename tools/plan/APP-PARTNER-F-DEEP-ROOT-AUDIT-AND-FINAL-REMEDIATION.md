@@ -1,18 +1,18 @@
-# APP-PARTNER — Live Deep Root Audit & Final Remediation Ledger
+# APP-PARTNER — Deep Root Audit, Root Graph & Final Remediation Ledger
 
 - **Repository:** `bthwani2-boop/bthwani-suite-next`
 - **Branch:** `f`
 - **Target anchor:** `app-partner` / تطبيق الشريك
-- **Live audit HEAD:** `6b768065d914d439fb64a7ce665f67f90393a442`
-- **Live audit tree:** `c93fe5c711c3c75b43b5bd828d149f08b1d3b107`
+- **Audit source HEAD:** `c5948f14ccd7615019de7efe336e1d2884a94bda`
+- **Audit source tree:** `9a4ccd983de7661f6b6c3ec529689228de973cba`
 - **Audit date:** `2026-08-29`
 - **Orchestrator revision:** `20`
-- **Canonical PR:** `#334` (`f` -> `master`) — live identity must be re-pinned before every closure claim
+- **Canonical PR at audit source:** `#334` (`f` -> `master`), `OPEN`, `DRAFT`
 - **ACTIVE_WORKSET:** `NOT_DECLARED`
 - **Collision Gate:** `NOT_PROVEN`
 - **CLOSED:** **NO**
 
-> This file supersedes the historical baseline/status ledger that previously started from `36e63b0...`. It is a task-local diagnosis/execution aid only. `PLAN != AUTHORITY`, `GREEN != CLOSED`, and this file must never become Product/System truth, runtime truth, or a shadow closure authority.
+> This file is a task-local diagnosis/execution ledger only. `PLAN != AUTHORITY`, `GREEN != CLOSED`, and historical text/PR bodies/old checks never override live code, contracts, data, runtime or exact-candidate repository evidence. Every execution loop MUST re-pin branch/PR/HEAD before mutation. This refresh supersedes the stale ledger that still described `6b768065...` and roots already changed by `c5948f14...`.
 
 ---
 
@@ -22,439 +22,542 @@ Exclusive entrypoint:
 
 `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
 
-Observed package law on the live branch:
+Current package law:
 
-`ONE PROJECT FRAME -> ONE CANONICAL TRUTH PER MATERIAL CONCEPT -> HIGHEST PROVEN EXECUTABLE ROOT FIRST -> ACTUAL SOURCE-OF-DEFECT -> FULL AFFECTED-CONE MIGRATION/CUTOVER/CLEANUP -> EXACT-CANDIDATE EVIDENCE -> ZERO PARALLEL/SHADOW AUTHORITY -> ZERO KNOWN MATERIAL RESIDUE.`
+`ONE PROJECT FRAME -> ONE CANONICAL TRUTH PER MATERIAL CONCEPT -> HIGHEST PROVEN EXECUTABLE ROOT FIRST -> ACTUAL SOURCE-OF-DEFECT -> COMPLETE AFFECTED-CONE MIGRATION/CUTOVER/CLEANUP -> EXACT-CANDIDATE EVIDENCE -> ZERO PARALLEL/SHADOW AUTHORITY -> ZERO KNOWN MATERIAL RESIDUE.`
 
-Execution loop:
+Normal loop:
 
-`PIN LIVE HEAD -> AUDIT -> ROOT GRAPH -> RANK -> SOURCE-OF-FIX -> MUTATE -> MIGRATE/CUT OVER -> DELETE/CLEAN -> VERIFY -> RE-AUDIT -> RE-RANK -> REPEAT -> EXACT FINAL CANDIDATE -> CLOSURE GATES.`
+`PIN LIVE HEAD/PR -> INGEST CONCURRENT DELTA -> AUDIT/DIAGNOSE -> ROOT GRAPH -> RANK -> SOURCE-OF-FIX -> MUTATE -> MIGRATE/CUT OVER -> RECONCILE -> DELETE/CLEAN -> VERIFY -> NEGATIVE-SPACE -> RE-AUDIT -> RE-RANK -> REPEAT -> EXACT FINAL CANDIDATE -> CLOSURE GATES.`
 
-No Patch / Workaround / Fallback / Half-Migration is acceptable.
+Forbidden:
+
+- Patch / Workaround / Fallback / Half-Migration.
+- A second writer/read model that can redefine canonical truth.
+- “Success” based on HTTP/mutation response when persisted canonical readback is required.
+- Keeping obsolete compatibility routes/types/controllers “for later”.
+- Treating this plan, capability maps, tests or CI green as semantic closure authority.
 
 ---
 
 # 1. SELECTED CLOSURE OBJECTIVE
 
-**Close the complete material cone of `app-partner` by eliminating every proven authority split, contract/runtime divergence, stale-context write/read path and legacy compatibility writer exposed through the Partner product journeys; converge Identity/store scope, DSH catalog/store/orders/support/team/notifications/commercial truth, Control Panel/Field/Client/Captain handoffs, WLT finance, runtime/router, Product/UX/A11y/RTL and exact-candidate evidence onto their actual canonical owners; migrate every affected writer/reader/consumer, delete superseded paths and semantic lies, and loop until no material root or residue remains.**
+**Close the complete material cone of `app-partner` root-correctly by converging Partner identity/store scope, Central Catalog contracts and normalized commercial truth, catalog mutations/readback/replay semantics, partner lifecycle/store publication, orders/support/team/notifications/analytics, runtime/router/Product/UX/A11y/RTL and the materially shared Control Panel/Field/Client/Captain/WLT handoffs onto one canonical owner/write path per concept; migrate every affected reader/writer/consumer, delete every superseded contract/path/state/type/writer and loop on the latest HEAD until one Exact Final Candidate has zero known material root, gap, shadow truth or residue.**
 
-`app-partner` is an Audit/Execution Anchor only, never an independent source of truth.
+`app-partner` is an Audit/Execution Anchor, never an independent system authority.
 
 ---
 
-# 2. Live Material Cone
+# 2. Audit corrections caused by `c5948f14...`
+
+The commit `c5948f14ccd7615019de7efe336e1d2884a94bda` materially changed the Partner Catalog and surface binding. The previous ledger is therefore invalid where it still claimed the following roots were open:
+
+1. **Team `scopeId -> storeId` conflation:** implementation cutover is now observed. `useDshPartnerSurfaceModel()` passes `selectedStoreScope.storeId` through `verifiedStoreId` to the Team model/controller. Keep exact negative verification where `scopeId != storeId`; do not re-implement the old fix.
+2. **Store role-context not gating operational mount:** implementation gate is now observed. Store-context loading is folded into `isLoadingScopes`, failures flow through `scopesError`, and `DshPartnerSurface` fail-closes before operational rendering. Keep revoked/denied/stale exact verification; do not retain the old root as PROVEN OPEN.
+3. **Missing canonical Inventory/Price reads and `/prices/schedule` shadow route:** substantially treated. Shared Catalog now has Inventory GET/PUT and Price GET/POST on `/prices`; Inventory and Price modals perform canonical readback.
+4. **Legacy Partner Product Overrides / Price Schedule UI ownership:** superseded surfaces were removed/replaced by canonical controls.
+5. **ProductMedia/Reels/ProductEdit stale-store issues from the previous audit:** the specific old forms were materially strengthened with scoped guards. Remaining mutation-verification gaps are reclassified below rather than preserving stale findings.
+
+The old Notifications, multi-command Hub navigation, Hub-local appearance and stale Hub store-status roots also remain **implementation-cutover-observed**, not current implementation roots. They stay in exact-candidate/negative-space verification.
+
+---
+
+# 3. Live Material Cone
 
 ```text
 apps/app-partner/runtime/**
-  -> IdentitySessionGate(partner + app-partner)
-  -> app-level appearance/runtime/router
+  -> IdentitySessionGate(role=partner, surface=app-partner)
+  -> app-level persisted appearance + mobile providers + router
   -> services/dsh/frontend/app-partner/**
-     -> store scope / partner self / readiness
-     -> Hub / settings / notifications
-     -> catalog / assortment / inventory / pricing / proposals / media / reels
-     -> orders / preparation / issue / handoff / conversation
+     -> selected/validated store scope
+     -> partner self / activation / readiness
+     -> Hub / settings / notifications / analytics / commercial
+     -> store profile / settings / coverage / courier configuration
+     -> Catalog:
+        taxonomy -> master products -> assortment metadata
+        -> normalized Inventory
+        -> normalized Price schedules
+        -> pause/resume
+        -> product proposals
+        -> media/assets
+        -> reels/marketing review
+     -> orders / acceptance / preparation / issues / conversation / dispatch handoff
      -> support
-     -> team / permissions
-     -> analytics / commercial / marketing
+     -> team / store permissions
      -> WLT finance bridge
   -> services/dsh/frontend/shared/partner/**
   -> services/dsh/frontend/shared/catalog/**
-  -> shared notifications / support / operations / store clients
-  -> services/dsh/contracts/** / OpenAPI / generated bindings
+  -> shared notifications/support/order/operations clients
+  -> services/dsh/contracts/**
+     -> contracts/dsh.openapi.yaml
+     -> paths/catalog.paths.yaml
+     -> dsh.catalog.openapi.yaml
+     -> dsh.catalog-proposal-readback.openapi.yaml
+     -> contract-registry.ts
   -> services/dsh/backend/internal/http/**
-  -> services/dsh/backend/internal/centralcatalog/** + store/order/support domains
-  -> PostgreSQL normalized truth / migrations / read models
+  -> services/dsh/backend/internal/centralcatalog/**
+  -> other materially implicated DSH order/store/support domains
+  -> PostgreSQL normalized catalog/order/store truth
   -> Identity actor/session/store-access authority
-  -> Control Panel operator lifecycle/governance writers
-  -> Field readiness writers when materially shared
-  -> Client storefront/catalog consumers when publication/commercial truth changes
-  -> Captain/dispatch consumers when order/handoff truth changes
+  -> Control Panel operator/governance writers
+  -> Field readiness/catalog proposal writers where same truth is shared
+  -> Client storefront/catalog projection when publication/commercial truth changes
+  -> Captain/dispatch consumer when partner order handoff truth changes
   -> WLT financial authority through governed server-side bridge
 ```
 
-Unrelated applications/services remain out of scope unless they consume/write the same material truth.
+No unrelated surface/service enters the execution cone without a shared authority, persisted truth, contract, transition or material handoff.
 
 ---
 
-# 3. Canonical authority map
+# 4. Canonical authority map
 
-| Concept | Canonical owner / writer | Non-authoritative consumers/projections |
+| Material concept | Canonical owner/write authority | Derived/non-authoritative consumers |
 |---|---|---|
-| identity/session/partner access | Identity + governed DSH auth/store access | app runtime / screens |
-| selected operational store | shared Partner scope model resolving `scopeId` -> `storeId` | surface/routes |
-| partner lifecycle/readiness | DSH backend + operator/field governed writers | Partner Hub/onboarding |
-| store settings/coverage | DSH backend/contracts | Partner UI / Client projection |
-| assortment metadata | Central Catalog assortment metadata writer | Partner/Field/Operator UI |
-| price | `dsh_store_assortment_prices` normalized writer | `dsh_store_assortments.unit_price/currency` compatibility projection only |
-| inventory | `dsh_store_assortment_inventory` normalized writer | `available/stock_status` compatibility projection only |
-| client commercial catalog | runtime projection derived from normalized price+inventory | app-client/storefront |
-| notifications | shared notifications controller + DSH API | Hub settings |
-| appearance | app runtime persisted preference -> UI-kit provider | Hub editor |
-| orders | DSH order state machine | Partner workboard, Client/Captain consumers |
-| support | DSH support backend/shared controller | Partner support UI |
-| team | DSH team/store permission authority | Partner team UI |
-| finance | WLT | DSH/WLT bridge + Partner UI |
+| Actor/session/partner access | Identity + governed DSH authorization/store-access boundary | runtime/screens |
+| Operational store | Partner scopes resolving `scopeId` to canonical `storeId`, then validated store-role context | surface/router |
+| Partner lifecycle/readiness | DSH lifecycle truth + governed operator/field writers | Partner Hub/onboarding |
+| Store settings/coverage/publication | DSH store contracts/backend | Partner + Client projections |
+| Taxonomy/master products | Central Catalog | Partner read-only taxonomy/product presentation |
+| Assortment metadata | `UpsertStoreAssortmentWithRuntimeTruth`/atomic facade for metadata + creation bootstrap | Partner/Field/Operator UI |
+| Inventory | `dsh_store_assortment_inventory` + `UpsertAssortmentInventoryWithRuntimeTruthAtomic` | legacy `available/stock_status` compatibility projection |
+| Price schedules | `dsh_store_assortment_prices` + canonical price creator/list authority | legacy `unit_price/currency` compatibility projection |
+| Client commercial catalog | `GetPurchasableClientCatalog` / normalized runtime truth | app-client/storefront |
+| Temporary assortment pause | Central Catalog pause state + readback API | Partner/Field/Operator controls |
+| Product proposals | `dsh_product_proposals` + governed transition/readback | Partner/Field/Control Panel |
+| Notifications | shared notifications controller + DSH API | Hub/settings presentation |
+| Appearance | app runtime persisted preference -> UI-kit provider | Hub editor |
+| Orders | DSH order state machine | Partner workboard + Client/Captain consumers |
+| Support | DSH support backend/shared controller | Partner support UI |
+| Team/store membership | DSH store/team permission authority | Partner team UI |
+| Finance | WLT | governed DSH/WLT bridge + Partner UI |
 
 ---
 
-# 4. Root Graph — live root ranking
+# 5. ROOT GRAPH — current highest roots
 
-## R0 — CRITICAL — PROVEN — Partner Catalog commercial truth is only half-migrated end-to-end
+## R0 — CRITICAL — PROVEN — Central Catalog contract authority/coverage is internally inconsistent
 
-### Proven canonical backend truth
+### Evidence
 
-`centralcatalog.UpsertStoreAssortmentAtomic` is explicitly a compatibility/OCC entry point that delegates to `UpsertStoreAssortmentWithRuntimeTruth`, the sole runtime-truth writer.
+`services/dsh/contracts/paths/catalog.paths.yaml` is the path-item source composed by the main DSH OpenAPI and currently defines canonical Partner Inventory and Price resources, including:
 
-The runtime-truth layer explicitly states:
+- `GET/PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory`
+- `GET/POST /dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices`
 
-- normalized `dsh_store_assortment_inventory` is inventory truth;
-- normalized `dsh_store_assortment_prices` is price truth;
-- `dsh_store_assortments.unit_price/currency/available/stock_status` are compatibility projections only;
-- metadata edits must not overwrite normalized commercial truth;
-- dedicated Inventory and Price endpoints own subsequent commercial changes;
-- client/storefront projection derives commercial truth from normalized rows.
+The live backend implements the same resources and reads/writes normalized inventory/price truth.
 
-Backend Partner routes already expose:
+At the same time `services/dsh/contracts/dsh.catalog.openapi.yaml` is registered as an **active executable Central Catalog contract fragment**, declares that it mirrors runtime, and claims adapter ownership for `frontend/shared/catalog/central-catalog.api.ts`, but currently contains no Inventory/Price paths.
 
-- `GET .../assortment/{masterProductId}/inventory`
-- `PUT .../assortment/{masterProductId}/inventory`
-- `GET .../assortment/{masterProductId}/prices`
-- `POST .../assortment/{masterProductId}/prices`
+`contract-registry.ts` simultaneously registers:
 
-### Proven half-migration / authority divergence
+- `dsh-main` as the primary generated contract;
+- `dsh-catalog` as an active standalone manual-typed-adapter contract owning the Central Catalog adapter;
+- `dsh-catalog-proposal-readback` as another active fragment which currently has `paths: {}` solely to avoid duplicate-operation ownership after its former paths moved into `dsh.catalog.openapi.yaml`.
 
-1. `services/dsh/contracts/paths/partner.paths.yaml` does not yet describe the live Inventory/Pricing read/write resource set.
-2. `services/dsh/frontend/shared/catalog/central-catalog.api.ts`:
-   - has no canonical Inventory GET;
-   - has no Price list/read;
-   - still writes Price via the shadow path `/prices/schedule` instead of canonical `/prices`.
-3. `InventoryConfigurationModal.tsx`:
-   - starts from local/manual values;
-   - exposes a manually supplied version instead of hydrating canonical inventory version;
-   - writes without guaranteed current OCC version;
-   - treats mutation response as state with no exact canonical GET readback.
-4. `PriceScheduleModal.tsx`:
-   - has no canonical current schedules read;
-   - writes then treats mutation response as success;
-   - has no exact post-write readback.
-5. `PartnerCatalogManagementScreen.tsx` still exposes **Edit Price** and **Toggle Availability** through `upsertPartnerStoreAssortmentOCC` — a metadata compatibility path whose backend intentionally ignores commercial payload changes after normalized truth exists.
-6. Its verification compares the returned/projected `saved` result to the next assortment read, not the user-entered requested commercial value. Therefore the UI can report a successful save while the requested price/availability was intentionally not changed by the backend.
-7. `ProductOverridesScreen.tsx` still presents legacy `unitPrice`, `available`, `stockStatus` as editable local overrides even though those fields are no longer authoritative commercial writers after normalized truth exists.
-8. `ProductEditScreen.tsx` tells users to edit prices/availability through the legacy overrides surface, reinforcing a superseded Product/UX contract.
+This is a contract/governance split: active artifacts claim overlapping parent/adapter/runtime responsibilities while their operation coverage is not congruent.
 
 ### Actual Source-of-Fix
 
-Central Catalog normalized commercial model + canonical Partner OpenAPI resource contract + shared catalog client + all Partner commercial editors/consumers.
+`services/dsh/contracts` ownership topology + `contract-registry.ts` + composition/scope-binding guards. **Not** a screen-level copy of missing paths.
 
-### Required complete treatment
+### Required root treatment
 
-- Make OpenAPI match the live normalized Inventory/Price resource contract.
-- Generate/verify all bindings and remove route drift.
-- Add shared canonical Inventory GET and Price list GET.
-- Cut Price writes from `/prices/schedule` to `/prices`; delete all `/prices/schedule` Partner residues.
-- Inventory editor becomes `GET -> exact version -> PUT(expectedVersion) -> GET -> exact reconcile`.
-- Price editor becomes `GET/list -> POST -> GET/list -> exact created row/value/version/effective-time reconcile`.
-- Remove user-editable commercial controls from metadata compatibility writers for existing assortments.
-- Keep assortment metadata writer only for true metadata: note/custom image/publication and creation bootstrap where contract explicitly requires it.
-- Route price changes exclusively through canonical pricing controls and inventory/availability exclusively through canonical Inventory controls.
-- Remove stale Product copy instructing users to use legacy override price/availability paths.
-- Prove downstream Client/storefront uses normalized runtime truth only.
-- Delete superseded semantic fields/actions/routes from Partner UI where they imply commercial write authority.
+1. Define one canonical semantic owner for Central Catalog path operations.
+2. Make child/fragment contracts genuinely subordinate/derived/verification-only; they must not independently redefine or incompletely mirror the same runtime surface.
+3. Reconcile `dsh.catalog.openapi.yaml` scope/role with `catalog.paths.yaml` and the parent DSH contract.
+4. Remove or reclassify `dsh.catalog-proposal-readback.openapi.yaml` if an active empty executable fragment has no independent path authority.
+5. Reconcile adapter ownership in `contract-registry.ts` so `central-catalog.api.ts` has one governed contract owner.
+6. Remove duplicated/stale path definitions instead of maintaining two manually synchronized copies.
+7. Run `contracts:redocly`, `guard:contract-registry-drift`, `guard:contract-scope-binding`, `guard:api-binding`, `guard:backend-api-binding`, `guard:openapi-bundle-provenance` and generated-client provenance where applicable.
 
-### Forbidden
+### Closure condition
 
-No screen-level mirroring of price/inventory, no second local version store, no compatibility-write fallback, no keeping `/prices/schedule` as alias, no success based solely on mutation response.
+`ONE OPERATION -> ONE CANONICAL CONTRACT OWNER -> one runtime binding -> one governed adapter/binding relationship`, with zero active empty/stale/parallel contract authority.
 
 ---
 
-## R1 — HIGH — PROVEN — Team path conflates `scopeId` with `storeId`
+## R1 — HIGH — PROVEN — Partner Catalog mutation closure semantics remain fragmented
 
-`DshPartnerOperationalScope` explicitly contains both `scopeId` and `storeId`.
+Strong current paths now exist:
 
-`useDshPartnerSurfaceModel()` passes `selectedStoreScopeId` into Team controller. The controller renames/treats that value as `activeStoreId` and sends it directly to `fetchPartnerStoreTeam`, invite and member-action APIs.
+- Main Catalog scoped mutations: mutation -> canonical `loadData()` -> explicit readback verify.
+- Inventory: canonical GET -> exact OCC version -> PUT -> GET -> field/version reconciliation.
+- Price: canonical list GET -> POST -> list GET -> exact created row/value/time reconciliation.
 
-### Root cause
+But sibling Partner Catalog writers still use weaker semantics:
 
-Operational scope identity and store aggregate identity are distinct concepts but are collapsed at the surface/shared-controller boundary.
+### R1.1 Product pause/resume
 
-### Required treatment
+`ProductControlsScreen.tsx`:
 
-- Change Team controller contract to receive canonical `storeId` explicitly.
-- Pass `selectedStoreScope.storeId`, never `scopeId`.
-- Remove `selectedStoreScopeId` naming/aliases from Team data API boundary.
-- Add contract tests where `scopeId != storeId` and prove all reads/writes target the real store.
-- Re-audit every Partner feature for the same `scopeId`/`storeId` conflation.
+- loads product/assortment/pause state without the same mounted/request-sequence/resource-scope discipline used by stronger Catalog screens;
+- `pause`/`resume` directly trusts mutation-returned assortment/pause and calls success callback;
+- canonical pause read authority already exists (`fetchPartnerAssortmentPauses` / backend `ListAssortmentPauseStates`).
 
----
+**Treatment:** scope every load/mutation by actor/session + storeId + productId + sequence/mounted epoch; mutation success requires exact canonical pause+assortment readback for the same resource/version/state.
 
-## R2 — HIGH — PROVEN — Store role-context verification is not an operational mount gate
+### R1.2 Product proposal creation
 
-`useStoreScopeModel()` validates the selected store through `fetchStoreRoleContext(storeId)` and can produce permission-denied/service-unavailable/error states. However `DshPartnerSurface` gates operational mounting primarily on `selectedStoreScope`; once a scope is selected, the surface can continue into operational consumers even while store-context validation is loading/failed.
+`ProductEditScreen.tsx` has stale-store guarding now, but after `createPartnerProductProposal()` it still treats the mutation response as final success.
 
-### Required treatment
+A dedicated governed readback adapter already exists: `product-proposal-readback.api.ts -> fetchPartnerProductProposals(storeId, ...)`.
 
-- Model store selection and store-context authorization/readiness as one explicit state machine.
-- `selected scope != operationally authorized store` until role-context succeeds with `actorRole=partner` and matching store.
-- Gate all store-scoped operational routes/readers/writers on the validated context.
-- Clear/reconcile stale context immediately on scope change/failure.
-- Add zero/one/multiple scopes + denied/revoked/service-unavailable/stale-response tests.
+**Treatment:** POST -> canonical proposal-list/detail readback -> prove same proposal ID/store/status/version/material fields -> only then success/onSaved. Preserve store/session scope across the whole operation.
 
-No client-side gate replaces backend authorization; this fixes the frontend fail-closed contract while backend remains sovereign.
+### R1.3 Media/assets
 
----
+`ProductMediaScreen` now rejects stale store/product loads, but upload/unlink completion delegates to a reload that can fail internally without proving the exact asset appeared/disappeared.
 
-## R3 — HIGH — PROVEN — Catalog scope isolation is inconsistent across sub-surfaces
+**Treatment:** after mutation, read the canonical asset/link set and prove the exact asset identity/link state; failure to prove remains failure/unknown outcome, not success.
 
-The main catalog screen has actor/store request sequencing, but several child surfaces do not:
+### R1.4 Reels
 
-- `ProductMediaScreen`: a response for old `storeId/productId` can set assets/state after props change; upload/unlink completion can also invoke stale readback.
-- `PartnerReelsManagementSection`: old-store fetch/upload completion can set list/form state under a newly selected store.
-- `ProductEditScreen`: `handleCreateProposal` uses `storeId` but omits it from the callback dependency list, permitting stale-store submission after prop change.
+`PartnerReelsManagementSection` now scopes requests better, but submit clears local form and then calls a loader whose failure is handled internally; it does not prove that the submitted reel appears in canonical review/list truth.
 
-### Required treatment
+**Treatment:** durable/scoped submit -> canonical list/readback -> exact reel identity/status reconciliation -> only then clear success state. No local submitted-reel truth.
 
-Introduce one consistent scoped-operation pattern across Partner Catalog:
+### R1.5 Inventory/Price operation-scope hardening
 
-`actor/session + storeId + productId/resourceId + request sequence + mounted state + mutation serialization + canonical readback`.
+The new modals have exact value readback, but the complete operation must remain bound to the store/product scope captured at mutation start. A retargeted mounted component must not commit a result from an older store/product.
 
-Do not create per-screen shadow domain truth; factor a shared scoped async primitive/controller only if it removes repeated race logic without becoming a competing domain owner.
+**Treatment:** explicit operation scope key/epoch + mutation serialization + reject stale completion before state commit/onSaved.
+
+### Root rule
+
+Do not solve this by inventing a second Catalog state owner. Reuse/factor a small scoped-async/reconciliation primitive only if it remains subordinate to existing domain APIs and removes repeated race/error semantics.
 
 ---
 
-## R4 — MEDIUM/HIGH — PROVEN — Product/UX contract still describes superseded commercial ownership
+## R2 — HIGH — PROOF REQUIRED BEFORE TREATMENT — replay/idempotency for create-style Catalog commands
 
-Current screens/copy label legacy metadata controls as immediate controls for "السعر، التوفر، المخزون" even though normalized endpoints own those concepts. This creates an executable semantic lie: users are instructed toward a path that cannot be the canonical writer.
+Potentially non-idempotent Partner operations include:
 
-Treatment is part of R0 cutover, not cosmetic cleanup.
+- Price schedule `POST` creating a normalized row.
+- Product proposal `POST` creating a new proposal.
+- Reel upload/submit creation path.
+- Media upload intent/link creation where retry can duplicate durable entities.
+
+A client-side busy flag is **not** replay safety. Before closure, prove for each operation:
+
+`request identity / idempotency key / unique semantic key / transaction behavior / retry after unknown outcome / duplicate response semantics / canonical readback`.
+
+If durable replay identity is missing, fix it at the API/backend Source-of-Fix and propagate through contract/client; do not debounce or suppress retries in UI as a workaround.
+
+Status: `ROOT_PROOF_REQUIRED` — not yet allowed to be silently marked N/A.
 
 ---
 
-# 5. Reclassified historical roots
+## R3 — MEDIUM/HIGH — CLEANUP ROOT — compatibility/dead authorities must be deleted or explicitly subordinated
 
-The previous plan incorrectly left these as pending. Live code shows their old root form has already been treated; they remain exact-candidate verification items, not current implementation roots:
+### Known cleanup candidates
 
-| Historical root | Live classification |
+1. Historical `centralcatalog.UpsertStoreAssortment` still exists and directly writes legacy commercial columns. Current governed HTTP mutation uses `UpsertStoreAssortmentAtomic`, which routes to normalized runtime truth. Before closure, perform exact-branch negative-space proof of callers; if no required caller remains, **delete the obsolete writer**, not merely stop calling it.
+2. `dsh_store_assortments.unit_price/currency/available/stock_status` may remain only as transactionally maintained compatibility projections while any proven consumer still requires them. Every reader must be classified. Unused projection writes/reads become deletion/migration work.
+3. Active empty/stale contract fragments/registry entries discovered under R0 cannot remain as semantic placeholders after ownership converges.
+4. Deleted Partner routes/screens (`overrides`, old PriceSchedule UI, old stale Hub interfaces) must have zero imports/navigation aliases/deep-link residues.
+5. No `/prices/schedule` Partner route residue may remain.
+
+`KNOWN OBSOLETE + prerequisites satisfied -> DELETE_REQUIRED`.
+
+---
+
+## R4 — VERIFY, NOT REIMPLEMENT — historical roots whose implementation cutover is observed
+
+| Historical root | Current classification at audit source |
 |---|---|
-| notification Hub-local preference truth | `IMPLEMENTATION_CUTOVER_OBSERVED / EXACT_HEAD_PROOF_OPEN` — Hub consumes shared controller; controller requires readback and rejects stale requests |
-| multi-command Hub navigation | `IMPLEMENTATION_CUTOVER_OBSERVED / REVERIFY_NEGATIVE_SPACE` |
-| Hub-local appearance | `IMPLEMENTATION_CUTOVER_OBSERVED / EXACT_HEAD_PROOF_OPEN` — runtime persisted provider with durable readback |
-| stale Hub storeOpen/listingEnabled inputs | `IMPLEMENTATION_CLEANUP_OBSERVED / REVERIFY_NEGATIVE_SPACE` |
-| Partner self/readiness stale response | `REVERIFY CURRENT HEAD` |
-| Orders mutation/readback/idempotency fixes | `REVERIFY CURRENT HEAD` |
-| Support durable attempt/readback fixes | `REVERIFY CURRENT HEAD` |
-| Team readback sequencing | `PARTIALLY STRONG BUT INVALIDATED BY R1 SCOPE/STORE IDENTITY BUG` |
-| Commercial summary stale-store fix | `REVERIFY CURRENT HEAD` |
+| Hub-local notification preference truth | `IMPLEMENTATION_CUTOVER_OBSERVED / EXACT_CANDIDATE_PROOF_OPEN` |
+| Notification mutation without readback | `IMPLEMENTATION_TREATED / FAILURE+SESSION TESTS REQUIRED` |
+| One Hub press -> multiple navigation commands | `IMPLEMENTATION_CUTOVER_OBSERVED / NEGATIVE_SPACE_REQUIRED` |
+| Hub-local appearance state | `IMPLEMENTATION_CUTOVER_OBSERVED / COLD-START+FAILURE TEST REQUIRED` |
+| stale Hub `storeOpen/listingEnabled` contract | `IMPLEMENTATION_CLEANUP_OBSERVED / NEGATIVE_SPACE_REQUIRED` |
+| Partner self/readiness stale responses | `IMPLEMENTATION_TREATED / REVERIFY` |
+| Store runtime stale responses | `IMPLEMENTATION_TREATED / REVERIFY` |
+| Orders readback/idempotency client semantics | `IMPLEMENTATION_TREATED / EXACT JOURNEY REVERIFY` |
+| Support durable attempt/readback | `IMPLEMENTATION_TREATED / EXACT JOURNEY REVERIFY` |
+| Team `scopeId/storeId` conflation | `IMPLEMENTATION_CUTOVER_OBSERVED IN c5948f14 / EXACT TEST REQUIRED` |
+| Store role-context mount gate | `IMPLEMENTATION_GATE_OBSERVED IN c5948f14 / NEGATIVE TEST REQUIRED` |
+| Commercial-summary stale store | `IMPLEMENTATION_TREATED / REVERIFY` |
 
-Historical commits/tests are context only; no old evidence closes the current SHA.
+Do not resurrect old code simply because the historical ledger listed it as pending.
 
 ---
 
-# 6. Journey ledger — full target-app cone
+# 6. Full journey / capability ledger
 
-| ID | Journey / capability | Current live disposition | Closure requirement |
+| ID | Journey/capability | Live disposition | Exact closure requirement |
 |---|---|---|---|
-| J1 | Identity/session/store scope | **OPEN — R1/R2** | correct scopeId->storeId mapping; validated partner store context gates operational surface; revoked/denied/stale fail closed |
-| J2 | Activation/readiness/operator/field | `RE-AUDIT/VERIFY` | one lifecycle truth; operator/field write -> Partner exact readback; no local readiness state machine |
-| J3 | Store settings/coverage/publication/serviceability | `RE-AUDIT/VERIFY` | Partner/operator/client projection reconcile; stale store responses rejected |
-| J4 | Catalog/inventory/pricing/media/reels/proposals | **CRITICAL OPEN — R0/R3/R4** | normalized commercial authority + contract/client/UI cutover + scope isolation + downstream client proof |
-| J5 | Orders/preparation/issues/dispatch | `RE-AUDIT/VERIFY` | legal state machine, OCC/idempotency, readback, handoff to Captain/Client where material |
-| J6 | Support/conversation/escalation | `RE-AUDIT/VERIFY` | durable attempts until canonical evidence; session/store isolation; deterministic route |
-| J7 | Team/permissions | **OPEN — R1** | store aggregate identity correct; permission negative tests and exact readback |
-| J8 | Analytics/commercial/marketing | `RE-AUDIT/VERIFY` | governed data only; no stale-store/hardcoded KPI truth; reels marketing review consistent |
-| J9 | WLT finance | `RE-AUDIT/VERIFY` | WLT remains sole financial authority; no Partner ledger/balance truth |
-| Q1 | Product/UX/Design/A11y/RTL | **OPEN — R0/R4 + full audit** | UI semantics match real authorities; all states accessible; shared RTL/theme tokens only |
+| J1 | Identity/session/store scope | `IMPLEMENTATION_GATE_OBSERVED / VERIFY` | zero/one/multiple scopes; `scopeId != storeId`; role-context success/denied/revoked/unavailable; stale response; logout/store switch fail closed |
+| J2 | Activation/readiness/operator/field | `VERIFY_COMPLETELY` | one lifecycle truth; operator/field write -> Partner exact readback; no local readiness machine |
+| J3 | Store settings/coverage/publication/serviceability | `VERIFY_COMPLETELY` | canonical Partner readback + downstream Client visibility/serviceability reconciliation; stale-store protection |
+| J4 | Catalog/taxonomy/assortment/inventory/pricing/pause/proposals/media/reels | **`OPEN — R0/R1/R2/R3`** | one contract owner, normalized commercial authority, scoped exact readback, replay safety, cleanup, downstream Client proof |
+| J5 | Orders/acceptance/preparation/issues/dispatch | `VERIFY_COMPLETELY` | legal transitions, OCC/idempotency, readback, unknown-outcome recovery, Partner->Captain/Client handoff where material |
+| J6 | Support/conversation/escalation | `VERIFY_COMPLETELY` | durable attempt identity until exact ticket/message evidence; session isolation; deterministic route |
+| J7 | Team/permissions | `IMPLEMENTATION_CUTOVER_OBSERVED / VERIFY` | real `storeId`, actor/store authorization, invite/member mutation readback, denied/revoked negative cases |
+| J8 | Analytics/commercial/marketing | `VERIFY_COMPLETELY` | governed real data only; no hardcoded KPI/stale store truth; Reels marketing state reconciles |
+| J9 | WLT finance | `VERIFY_COMPLETELY` | WLT remains sole balance/settlement authority; DSH/Partner never becomes ledger truth |
+| Q1 | Product/UX/Design/A11y/RTL | `OPEN UNTIL FULL JOURNEY PROOF` | UI semantics match real writers; async states accessible; RTL/logical layout; appearance/direction from shared providers |
+
+No row can remain `UNKNOWN_MATERIAL` at closure.
 
 ---
 
-# 7. Product / UX / Accessibility / RTL gates
+# 7. Cross-surface material dispositions
 
-- No UI control may claim to mutate a concept if the invoked canonical writer cannot mutate that concept.
-- Success means exact canonical post-write reconciliation, not HTTP success or returned mutation object.
-- Loading/error/conflict/offline/revoked/forbidden/not-found states are first-class.
-- Store switch must invalidate every in-flight store/product operation.
-- Every destructive or irreversible action requires governed confirmation/reason semantics where applicable.
-- Accessibility: interactive controls expose role/name/selected/disabled/busy/error state; async failures are announced, not merely colored.
-- RTL: logical start/end only; no new left/right assumptions; canonical IDs never localize.
-- Appearance/direction remain owned by runtime/UI-kit providers.
-
----
-
-# 8. Execution closure units — highest root first
-
-## CU-1 — Catalog Commercial Authority Convergence — **SELECTED FIRST**
-
-1. Re-pin HEAD + PR + current file SHAs.
-2. Update Partner OpenAPI for canonical Inventory/Prices GET/PUT/POST resources.
-3. Update shared catalog API; delete `/prices/schedule` shadow path.
-4. Inventory modal canonical hydrate/OCC/readback; remove manual version authority.
-5. Price modal canonical list/readback.
-6. Remove price/availability edit semantics from existing-assortment metadata writers in:
-   - `PartnerCatalogManagementScreen`
-   - `ProductOverridesScreen`
-   - ProductEdit explanatory copy/navigation.
-7. Keep/add explicit canonical actions that open Inventory/Pricing controls instead of compatibility writes.
-8. Reconcile downstream Client/storefront runtime projection.
-9. Negative-space search and delete all superseded paths/labels/functions.
-10. Contract/frontend/backend tests and exact readback tests.
-11. Re-audit CU-1 to fixed point before next root.
-
-## CU-2 — Store/Scope Identity and Authorization Gate
-
-- Fix Team `scopeId`/`storeId` conflation.
-- Make validated partner store context an explicit operational gate.
-- Audit all Partner consumers for same ID conflation.
-- Negative auth/store-switch/revocation tests.
-
-## CU-3 — Catalog Scoped Async Isolation
-
-- Media/Reels/Product proposal requests/mutations bound to current actor/store/product scope.
-- Exact post-mutation readback.
-- No stale response can write after context change/unmount.
-
-## CU-4+ — Re-rank after each closure checkpoint
-
-Re-audit J2/J3/J5/J6/J8/J9 and select the next highest proven root. Do not predeclare them closed.
+| Surface/service | Why material | Required disposition |
+|---|---|---|
+| Control Panel | operator lifecycle/catalog/governance writer | verify changes reconcile into Partner truth; no competing catalog contract/writer |
+| app-field | readiness + proposal/catalog writer for same partner truth | verify proposal/readiness boundaries where changed; otherwise `VERIFIED_UNCHANGED` |
+| app-client | storefront is downstream consumer of Partner publication/normalized price/inventory | must prove `GetPurchasableClientCatalog`/storefront reads normalized truth and respects publication/serviceability |
+| app-captain | downstream only for Partner order ready/handoff/dispatch | verify when J5 changes handoff truth; otherwise `N/A_PROVEN` |
+| Identity | actor/session/store-access authority | verify Partner cannot manufacture/store-scope access locally |
+| WLT | financial authority | verify bridge only; no local balance/settlement ledger |
 
 ---
 
-# 9. Migration / cleanup / deletion matrix
+# 8. Product / UX / Design / Accessibility / RTL closure law
 
-| Superseded / dangerous construct | Required disposition |
-|---|---|
-| Partner `/prices/schedule` route | `DELETE_REQUIRED` after canonical `/prices` client cutover |
-| manual Inventory version field/state as authority | `DELETE_REQUIRED` |
-| Inventory/Price mutation-response-as-truth | `DELETE_REQUIRED` |
-| existing-assortment price edits via `upsertPartnerStoreAssortmentOCC` | `DELETE_REQUIRED` |
-| existing-assortment availability/stock edits via metadata writer | `DELETE_REQUIRED` |
-| ProductOverrides commercial writer controls | migrate to canonical Inventory/Pricing or delete |
-| Product copy directing price/stock changes to overrides | `DELETE_REQUIRED/REWRITE_TO_CANONICAL_FLOW` |
-| Team controller `selectedStoreScopeId` interpreted as store ID | `DELETE_REQUIRED` contract shape |
-| unscoped Media/Reels async loaders | migrate to scoped sequencing |
-| stale historical R1-R4 pending statuses in this plan | deleted by this replacement |
-
-No cleanup is deferred.
+1. A UI control may claim success only after its canonical persisted/read model truth is proven where the operation contract requires reconciliation.
+2. Loading/error/offline/forbidden/not-found/conflict/revoked/unknown-outcome are first-class states; no static successful default.
+3. Store/product switch invalidates every in-flight read/write belonging to the old resource scope.
+4. A mutation whose outcome is unknown must preserve/reuse its durable attempt identity where replay semantics require it.
+5. Commercial controls must map exactly to normalized Price/Inventory authority; metadata controls must not imply commercial ownership.
+6. Destructive/reject/retire/withdraw operations require governed reason/confirmation semantics where the domain requires them.
+7. Accessible role/name/state/busy/disabled/error must be programmatically exposed; failures cannot be color-only.
+8. Shared UI-kit owns tokens/theme/direction; Partner runtime owns only persisted app preference. No per-screen appearance/direction authority.
+9. RTL uses logical start/end; local language never changes canonical IDs or backend state.
+10. Money/order/product identifiers remain semantically correct in RTL and locale formatting.
 
 ---
 
-# 10. Negative-space audit before closure
+# 9. Execution Closure Units — strict root order
 
-Search exact final candidate for at least:
+## CU-1 — Central Catalog Contract Authority Convergence — **HIGHEST / EXECUTE FIRST**
+
+1. Re-pin current HEAD/PR and inspect any delta since audit source.
+2. Inventory every active Catalog contract/fragment/registry entry and every operation it claims.
+3. Select exactly one canonical semantic owner for Catalog path operations; make fragments subordinate/derived/verification-only rather than independent mirrors.
+4. Reconcile/remove the active empty proposal-readback fragment if it has no unique contract responsibility.
+5. Reconcile `dsh.catalog.openapi.yaml`, `catalog.paths.yaml`, `dsh.openapi.yaml` and `contract-registry.ts` so adapter/runtime ownership is non-overlapping and complete.
+6. Delete stale duplicate operation definitions/metadata.
+7. Run contract composition/lint/registry/scope/API/backend/provenance gates.
+8. Negative-space search for duplicate Catalog operationIds/paths/adapter owners.
+9. Commit as one causally coherent contract-authority checkpoint.
+
+**CU-1 CLOSED only when contract ownership is singular and complete, not merely when YAML files lint.**
+
+## CU-2 — Partner Catalog Scoped Mutation + Exact Reconciliation
+
+After CU-1 is re-pinned:
+
+1. `ProductControlsScreen`: scope loads/writes; pause/resume -> canonical pause+assortment readback -> exact version/state proof.
+2. `ProductEditScreen`: proposal creation -> governed proposal readback -> exact ID/store/status/version proof.
+3. `ProductMediaScreen`: upload/unlink -> exact asset/link readback proof; no swallowed verification failure.
+4. `PartnerReelsManagementSection`: submit -> canonical list/readback -> exact submitted reel/status proof before success/form reset.
+5. Inventory/Price modals: capture operation scope key and reject stale completion after store/product retarget.
+6. Centralize only generic scoped-operation mechanics if it eliminates duplication; keep domain truth in canonical APIs.
+7. Add behavioral tests for stale request, readback failure, write failure, unmount, store/product switch and concurrent press.
+8. Delete superseded local success/state mechanisms.
+
+## CU-3 — Create-command Replay/Idempotency Closure
+
+For Price/Proposal/Reel/Media create paths:
+
+1. Trace exact HTTP handler -> domain mutation -> DB constraints/transaction -> response/readback.
+2. Classify each operation `INHERENTLY_IDEMPOTENT | IDEMPOTENCY_KEY_REQUIRED | UNIQUE_SEMANTIC_KEY | COMPENSATED | UNSAFE`.
+3. Add durable request identity at backend/contract Source-of-Fix where required.
+4. Propagate to shared client; persist/reuse attempt identity until canonical outcome is known.
+5. Prove retry after timeout/connection drop cannot produce a second business effect.
+6. Test same-key/same-payload replay, same-key/different-payload conflict, concurrent duplicate command, post-commit response loss and readback recovery.
+
+## CU-4 — Compatibility/Legacy Deletion
+
+1. Prove callers/readers of historical `UpsertStoreAssortment` and legacy commercial projection fields.
+2. Delete obsolete direct commercial writer if no canonical caller requires it.
+3. Migrate/delete remaining legacy projection readers where feasible; retain only explicitly subordinate compatibility projection needed by proven consumer.
+4. Delete old Partner screen/route/deep-link aliases and `/prices/schedule` residue.
+5. Delete stale/empty contract artifacts made unnecessary by CU-1.
+6. Search repository negative space after deletion.
+
+## CU-5 — Remaining Partner Journeys + Cross-Surface Handoffs
+
+Re-audit and treat newly proven roots in this order:
+
+`Identity/store scope -> activation/readiness -> store publication/serviceability -> orders/dispatch -> support -> team -> analytics/commercial/marketing -> WLT`.
+
+Only materially shared Client/Field/Captain/Control Panel nodes join the mutation cone.
+
+## CU-6 — Exact Final Candidate / Fixed Point
+
+1. Pin one final SHA after all code/contract/cleanup checkpoints.
+2. Run all invalidated targeted tests plus repository closure set.
+3. Run runtime/E2E journeys and cross-surface readback on the same candidate.
+4. Negative-space/adversarial audit.
+5. Re-read reviews/checks/statuses bound to the exact PR head.
+6. Deep re-audit entire Partner material cone.
+7. If any material new root/residue appears -> reopen ranking and continue; no cosmetic CLOSED.
+
+---
+
+# 10. Mandatory verification matrix
+
+## Partner runtime/frontend
+
+- `apps/app-partner/runtime`: typecheck, lint, app tests, runtime contract tests, build/export as applicable.
+- Hub authority/navigation/store tests.
+- Team test where `scopeId != storeId`.
+- Store-scope tests: zero/one/multiple + role-context denied/revoked/service failure + stale response.
+- Catalog tests: contract route authority, Inventory exact OCC/readback, Price exact readback, pause/resume readback, proposal readback, media/reels exact reconciliation, stale store/product switching.
+- Orders/support runtime and authority tests.
+- Appearance persistence/readback/cold-start/failure behavior.
+- Notifications mutation/readback/session invalidation.
+
+## Contracts/API
+
+- `contracts:redocly`
+- OpenAPI compose/materialize for DSH.
+- `guard:contract-registry-drift`
+- `guard:contract-scope-binding`
+- `guard:api-binding`
+- `guard:backend-api-binding`
+- `guard:generated-client-provenance`
+- `guard:openapi-bundle-provenance`
+- frontend feature/runtime binding guards.
+
+## Backend/data
+
+- affected Go build/tests.
+- Central Catalog Postgres tests for normalized Inventory/Price runtime truth and client projection.
+- pause/proposal/media/reel readback + replay tests.
+- authorization negative cases for wrong partner/store/product/resource.
+- OCC/conflict/concurrency/idempotency/unknown-outcome recovery.
+- DB contract/migration guards if persistence/schema changes.
+
+## Repository/runtime
+
+- `guard:source-integrity`
+- `guard:fullstack-boundary`
+- `guard:aggregate-ownership`
+- `guard:runtime-config`
+- `guard:no-broken-imports`
+- applicable security/dependency/container guards selected by live CI context.
+- `ci:check` during iteration as appropriate.
+- `ci:close` / Final Closure only against the exact final candidate and current PR identity.
+
+## Runtime/E2E required evidence
+
+- valid Partner role/surface required; invalid/revoked fails closed.
+- correct store chosen for zero/one/multiple scopes.
+- lifecycle/readiness reconciles with Control Panel/Field writer truth.
+- store publication/settings/coverage/serviceability reconcile into Client visibility.
+- Catalog metadata, normalized price, normalized inventory, pause, proposal, media and reel operations reconcile after write.
+- retry/unknown-outcome does not duplicate create effects.
+- Client storefront receives normalized commercial truth only.
+- illegal order transitions rejected; legal Partner preparation/ready/handoff visible to materially affected Captain/Client consumers.
+- Support ticket/message attempts remain durable until canonical readback.
+- WLT remains financial authority.
+- no material unrelated regression inside the affected cone.
+
+---
+
+# 11. Mandatory negative-space / deletion search
+
+Before closure search current exact candidate for, at minimum:
 
 - `/prices/schedule`
-- `editPrice` paths that call assortment metadata writer for existing items
-- availability/stock toggles that call assortment metadata writer
-- manual Inventory `version` input/state
-- Price/Inventory success based only on mutation response
-- `selectedStoreScopeId` passed where a `storeId` is required
-- `scopeId` renamed to `activeStoreId`
-- unsequenced store/product async updates in Partner Catalog
-- `failClosedNotificationPreferences`
-- Hub-local notification preference state/direct mutation
-- `useAppPartnerAppearance`
-- duplicate appearance storage
-- old multi-callback Hub navigation aliases
-- stale Hub `storeOpen`/`listingEnabled` inputs
+- deleted old price schedule / product override screens/routes/imports
+- editable legacy `unitPrice/available/stockStatus` controls pretending to be canonical commercial writers
+- direct callers of historical `UpsertStoreAssortment`
+- legacy commercial projection reads outside explicitly classified compatibility consumers
+- duplicate Catalog operationIds/path owners across active contracts
+- empty active contract fragments with no unique responsibility
+- multiple adapter-owner registrations for the same Central Catalog boundary
+- Hub-local notification preference state/direct notification mutation
+- `useAppPartnerAppearance` or duplicate Partner appearance storage
+- multi-command Hub navigation aliases
+- stale `storeOpen/listingEnabled` Hub prop authority
 - guessed/default store IDs
-- raw screen-level DSH HTTP bypasses where shared clients own the capability
-- local financial ledger/balance truth
+- Team APIs receiving `scopeId` in place of store aggregate ID
+- raw screen-level HTTP bypassing governed shared clients
+- local financial balance/settlement truth
 - duplicate activation/readiness state machines
-- legacy commercial columns treated as live price/inventory authority
+- fallback routes masking missing required canonical routes
+- mutation-success messages emitted before required canonical readback.
 
-Each residue: `CANONICAL | SUBORDINATE_PROJECTION | MIGRATE | DELETE_REQUIRED | N/A_PROVEN`.
-
----
-
-# 11. Verification matrix
-
-## Targeted per closure unit
-
-- app-partner runtime typecheck/lint/tests
-- DSH frontend relevant tests
-- exact store/scope mapping contract tests
-- catalog scoped async race tests
-- Inventory initial GET / OCC conflict / PUT / exact GET readback
-- Price list / create / exact list readback
-- metadata writer cannot change normalized commercial truth
-- Partner UI contains no commercial compatibility writer for existing assortment
-- client projection uses normalized price/inventory only
-- authorization/cross-store negative tests
-
-## Contract/backend/data when touched
-
-- OpenAPI compose/generate/verify
-- contract registry drift
-- generated-client provenance
-- contract scope/API/backend/frontend binding guards
-- Go affected package tests
-- PostgreSQL normalized truth/OCC/concurrency tests
-- migration/data reconciliation checks if schema/backfill changes are exposed
-
-## Repository closure
-
-Applicable guards including source-integrity, fullstack-boundary, aggregate-ownership, runtime-config, broken-imports, contract/migration/generated-client/API/frontend binding, then `ci:check` and exact-candidate `ci:close` according to current repository contract.
+Every hit is classified `CANONICAL | DERIVED_ONLY | MIGRATE | DELETE_REQUIRED | N/A_PROVEN`. `UNCLASSIFIED = 0` at closure.
 
 ---
 
-# 12. Exact Final Candidate Closure Gates
+# 12. Closure Gates
 
-`CLOSED` requires all simultaneously on one exact SHA:
+`CLOSED` is forbidden until all are true simultaneously on one exact SHA:
 
-1. Scope
-2. Root
-3. Authority
-4. Migration
-5. Cleanup/Deletion
-6. Contract
-7. Data
-8. Security/Auth/Store isolation
-9. Journeys/Handoffs
-10. Product/UX/A11y/RTL
-11. Quality/tests/build/CI
-12. Negative Space
-13. Governance Reconciliation
-14. Collision
-15. Fixed Point
-
-`ACTIVE_WORKSET=NOT_DECLARED` means Gate 14 cannot currently be claimed solely from GitHub visibility.
+1. **Scope:** complete Partner Material Cone disposition; `UNKNOWN_MATERIAL=0`.
+2. **Root:** zero known higher executable root.
+3. **Authority:** one canonical owner/writer per concept; no shadow/parallel contract or state authority.
+4. **Migration:** every affected writer/reader/consumer/handoff cut over.
+5. **Cleanup:** every superseded path/type/writer/contract/file deleted or `N/A_PROVEN`.
+6. **Contract:** parent/fragments/registry/adapter/runtime are consistent.
+7. **Data:** normalized truth, OCC, reconciliation and migrations proven where applicable.
+8. **Security:** actor/role/store/resource authorization fails closed.
+9. **Journey:** complete Partner journeys and material cross-surface handoffs pass.
+10. **Product/UX/A11y/RTL:** semantics/states/accessibility/RTL/appearance correct.
+11. **Quality:** applicable typecheck/lint/test/build/guards/CI green on exact candidate.
+12. **Negative-Space:** no known stale/duplicate/orphan/dead material residue.
+13. **Governance Reconciliation:** registry/capability/governance records reflect implementation truth and do not substitute for it.
+14. **Collision:** all material concurrent delta reconciled; `ACTIVE_WORKSET` collision status proven.
+15. **Fixed Point:** final deep adversarial re-audit discovers no new material root/gap.
 
 ---
 
-# 13. Live executable ledger
+# 13. Executable ledger — current state
 
-| ID | Status | Completion condition |
-|---|---|---|
-| P0 | `PINNED @ 6b768065...` | re-pin before every material mutation/checkpoint |
-| CU-1 / R0 | **OPEN / HIGHEST** | one normalized commercial truth from DB -> Backend -> OpenAPI -> client -> UI -> Client projection; all compatibility UI writers removed |
-| CU-2 / R1 | **OPEN / PROVEN** | Team uses storeId, never scopeId; all same-concept consumers audited |
-| CU-2 / R2 | **OPEN / PROVEN** | validated store role-context is required before operational mount |
-| CU-3 / R3 | **OPEN / PROVEN** | Media/Reels/Product proposal stale-context races closed |
-| R4 | **OPEN / PART OF CU-1** | Product copy/actions match canonical commercial authority |
-| Historical notifications | `IMPLEMENTATION OBSERVED / VERIFY` | exact-head behavior + negative space |
-| Historical appearance | `IMPLEMENTATION OBSERVED / VERIFY` | exact-head persistence/remount/failure proof |
-| Historical navigation | `IMPLEMENTATION OBSERVED / VERIFY` | exact-one-route + negative space |
-| J2/J3/J5/J6/J8/J9 | `RE-AUDIT/VERIFY` | no material root after current higher roots close |
-| V1 | `BLOCKED` | exact final SHA all applicable evidence green |
-| F1 | `BLOCKED` | final adversarial re-audit discovers no new material root |
-| CLOSE | **FORBIDDEN** | all 15 gates true simultaneously |
+| ID | Root / closure unit | Status at audit source | Completion condition |
+|---|---|---|---|
+| P0 | Re-pin HEAD/PR/ACTIVE_WORKSET before each write | `REQUIRED EVERY LOOP` | live delta reconciled; no blind overwrite |
+| R0 / CU-1 | Catalog contract authority convergence | **`CRITICAL OPEN / PROVEN`** | one canonical Catalog contract owner; active fragments/registry non-overlapping and complete |
+| R1 / CU-2 | Catalog scoped mutation + exact readback | **`HIGH OPEN / PROVEN`** | pause/proposal/media/reels/inventory/price all fail closed on stale/readback failure |
+| R2 / CU-3 | Create-command replay/idempotency | **`PROOF REQUIRED`** | every create-style command has proven retry/unknown-outcome semantics; root-treated where missing |
+| R3 / CU-4 | legacy writer/contract/route cleanup | **`OPEN CLEANUP`** | zero obsolete writer/path/contract/screen residue |
+| J1 | Identity/session/store scope | `IMPLEMENTATION GATE OBSERVED / VERIFY` | exact positive+negative+stale cases pass |
+| J2 | activation/readiness/operator/field | `VERIFY / REDIAGNOSE` | one lifecycle truth across writers/readback |
+| J3 | store publication/settings/serviceability | `VERIFY / REDIAGNOSE` | Partner/operator/client truth reconciles |
+| J4 | Catalog complete journey | **`BLOCKED BY R0-R3`** | all Catalog authorities/writers/readers/replay/cleanup/downstream proof complete |
+| J5 | orders/preparation/issues/dispatch | `VERIFY / REDIAGNOSE` | legal state machine + idempotency + readback + handoff |
+| J6 | support/conversation/escalation | `VERIFY / REDIAGNOSE` | durable attempts + exact readback/session isolation |
+| J7 | team/permissions | `IMPLEMENTATION CUTOVER OBSERVED / VERIFY` | real storeId + auth/readback negative proof |
+| J8 | analytics/commercial/marketing | `VERIFY / REDIAGNOSE` | governed real data; no stale/hardcoded truth |
+| J9 | WLT finance | `VERIFY / REDIAGNOSE` | WLT sole financial authority end-to-end |
+| Q1 | Product/UX/Design/A11y/RTL | `VERIFY / REDIAGNOSE` | all material states/interactions satisfy closure law |
+| C1 | full cleanup/deletion/negative space | `BLOCKED BY ACTIVE ROOTS` | zero known superseded material residue |
+| V1 | exact candidate verification | `NOT YET CANDIDATE` | all applicable checks/journeys bound to one SHA |
+| F1 | fixed-point re-audit | `BLOCKED BY V1` | zero new material finding/root |
+| CLOSE | objective closed | **`FORBIDDEN NOW`** | all Closure Gates true simultaneously |
 
 ---
 
-# 14. Current verdict
+# 14. Current conclusion
 
-The prior plan understated the live risk because it kept historical Partner Hub defects as pending while missing a newer, deeper Catalog authority split.
+`c5948f14...` is a material improvement, but it is **not** a Fixed Point and must not be treated as final closure. The earlier plan overstated roots that have since been fixed and understated deeper ownership/reconciliation defects.
 
-The highest current proven problem is **not** “missing a GET in two modals.” It is an incomplete commercial-model cutover: the backend has already made normalized Inventory/Prices authoritative, but OpenAPI, shared client, and several Partner UX/write surfaces still behave as if compatibility assortment fields were live commercial writers. In parallel, Team currently conflates scope identity with store identity, and multiple Catalog sub-surfaces are not scope-safe under store/product changes.
+The current highest proven root is **Central Catalog contract authority/coverage divergence**, followed by **fragmented Partner Catalog scoped mutation/readback semantics**. Create-style replay/idempotency remains a mandatory proof branch, and compatibility/dead authorities require deletion rather than indefinite coexistence.
 
-Therefore:
+Historical Partner notification/navigation/appearance/team/store-context defects are no longer valid reasons to reapply old fixes; they are exact-candidate verification/negative-space obligations.
 
-- **ROOT REMEDIATION: OPEN**
-- **MULTIPLE/SHADOW SEMANTICS: PROVEN**
-- **HALF-MIGRATION: PROVEN**
-- **J4 CATALOG: CRITICAL OPEN**
-- **J1/J7 STORE-SCOPE/TEAM: OPEN**
-- **PRODUCT/UX CONTRACT: OPEN**
-- **EXACT FINAL CANDIDATE: NOT PROVEN**
-- **FIXED POINT: NOT REACHED**
-- **CLOSED: NO**
+**Current state:**
 
-The next execution step is CU-1 immediately; this file is not a substitute for that implementation.
+`ROOT REMEDIATION = OPEN`
+
+`CATALOG CONTRACT AUTHORITY = OPEN`
+
+`CATALOG MUTATION RECONCILIATION = OPEN`
+
+`REPLAY/IDEMPOTENCY = PROOF REQUIRED`
+
+`CLEANUP/DELETION = OPEN`
+
+`EXACT FINAL CANDIDATE = NOT REACHED`
+
+`FIXED POINT = NOT REACHED`
+
+`CLOSED = NO`
