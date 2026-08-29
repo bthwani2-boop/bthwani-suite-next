@@ -177,6 +177,16 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const [storeRuntime, setStoreRuntime] = React.useState<StoreRuntimeState>({
     kind: "idle",
   });
+  const mountedRef = React.useRef(true);
+  const storeRuntimeRequestSeqRef = React.useRef(0);
+
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      storeRuntimeRequestSeqRef.current += 1;
+    };
+  }, []);
 
   const resolvedSurfaceState = state ?? (canonicalStoreId ? "ready" : "error");
   const activeSection = section ?? internalSection;
@@ -187,13 +197,22 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   );
 
   const loadStoreRuntime = React.useCallback(async () => {
-    if (!canonicalStoreId || identity.state.kind !== "authenticated") return;
+    const requestSeq = ++storeRuntimeRequestSeqRef.current;
+    if (!canonicalStoreId || identity.state.kind !== "authenticated") {
+      if (mountedRef.current) {
+        setStoreRuntime({ kind: "idle" });
+        setSelectedModeId("");
+      }
+      return false;
+    }
     setStoreRuntime({ kind: "loading" });
+    setSelectedModeId("");
     try {
       const [rawSettings, coverageZones] = await Promise.all([
         fetchPartnerStoreSettings(canonicalStoreId),
         fetchPartnerStoreCoverageZones(canonicalStoreId),
       ]);
+      if (!mountedRef.current || requestSeq !== storeRuntimeRequestSeqRef.current) return false;
       const settings = parseStoreSettings(rawSettings);
       const serviceModes = mapServiceModes(settings.deliveryModes);
       setStoreRuntime({
@@ -204,7 +223,9 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
       });
       const firstEnabled = serviceModes.find((mode) => mode.enabled);
       setSelectedModeId(firstEnabled?.id ?? "");
+      return true;
     } catch (error) {
+      if (!mountedRef.current || requestSeq !== storeRuntimeRequestSeqRef.current) return false;
       setStoreRuntime({
         kind: "error",
         message:
@@ -213,6 +234,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             : "تعذر تحميل إعدادات المتجر ومناطق التغطية.",
       });
       setSelectedModeId("");
+      return false;
     }
   }, [canonicalStoreId, identity.state.kind]);
 
