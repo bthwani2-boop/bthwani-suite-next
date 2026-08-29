@@ -109,7 +109,7 @@ export function FieldAgentCreateView(props: {
         </CpStatePanel>
       ) : (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <CpButton variant="primary" disabled={!canSubmit} onClick={() => void handleSubmit}>
+          <CpButton variant="primary" disabled={!canSubmit} onClick={handleSubmit}>
             {isSubmitting ? "جارٍ الإنشاء…" : "إنشاء مقدم الخدمة الميداني"}
           </CpButton>
         </div>
