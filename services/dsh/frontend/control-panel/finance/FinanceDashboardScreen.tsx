@@ -8,10 +8,13 @@ import { CpBadge, CpButton, CpKpiCard, CpKpiStrip, CpTabs } from "@bthwani/contr
 import { OverviewPageFrame } from "@bthwani/control-panel/shell";
 import { useFinanceController } from '@bthwani/dsh/wlt';
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
+import { CommissionGovernancePanel } from "./CommissionGovernancePanel";
+import { GovernedSettlementPanel } from "./GovernedSettlementPanel";
+import { LedgerInspectorScreen } from "./LedgerInspectorScreen";
+import { PaymentSessionOperationsScreen } from "./PaymentSessionOperationsScreen";
 import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
-import { LedgerInspectorScreen } from "./LedgerInspectorScreen";
 import { RepresentativeWalletLookup } from "./RepresentativeWalletLookup";
 import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from '@bthwani/dsh/wlt';
 
@@ -49,11 +52,23 @@ const FINANCE_BLOCK_REASON_COPY: Record<string, { readonly title: string; readon
 };
 
 function describeFinanceBlockedReason(error: string | undefined): { readonly title: string; readonly description: string } {
-  if (!error) return { title: "WLT runtime غير متاح", description: "تعذر تحديد سبب دقيق للانقطاع." };
+  if (!error) return { title: "Finance Hub runtime غير متاح", description: "تعذر تحديد سبب دقيق للانقطاع." };
   for (const code of Object.keys(FINANCE_BLOCK_REASON_COPY)) {
     if (error.includes(code)) return FINANCE_BLOCK_REASON_COPY[code]!;
   }
-  return { title: "WLT runtime غير متاح", description: `تعذر الاتصال بخدمات الاستعلام المالي الحية (${error}).` };
+  return { title: "Finance Hub runtime غير متاح", description: `تعذر الاتصال بخدمة ملخص Finance Hub (${error}).` };
+}
+
+function FinanceCapabilityGap({ label }: { readonly label: string }) {
+  return (
+    <Card style={{ padding: "2rem", display: "flex", flexDirection: "column", gap: "0.75rem", alignItems: "flex-start" }}>
+      <CpBadge tone="danger">قدرة تشغيلية غير مكتملة</CpBadge>
+      <Text role="titleMd">{label}</Text>
+      <Text role="body" tone="muted">
+        لا يوجد Owner تشغيلي محكوم ومثبت لهذا التبويب في العقد الحالي. لن يتم ربطه ببيانات بديلة أو شاشة مشابهة أو أرقام مصطنعة؛ يلزم إكمال عقد WLT/DSH الحقيقي وربط القراءة والإجراء والـreadback قبل اعتباره متاحًا.
+      </Text>
+    </Card>
+  );
 }
 
 export function FinanceDashboardScreen() {
@@ -83,10 +98,10 @@ export function FinanceDashboardScreen() {
   } = controller;
 
   const runtimeSourceLabel = useMemo(() => {
-    if (activeState === "loading") return "قناة DSH↔WLT: جارٍ التحميل";
-    if (!runtimeFinance) return "قناة DSH↔WLT: غير متصلة";
-    if (runtimeFinance.state === "runtime") return `قناة DSH↔WLT عبر: ${runtimeFinance.data.runtimeApiUrl}`;
-    return `قناة DSH↔WLT محجوبة (${describeFinanceBlockedReason(runtimeFinance.error).title}) عبر: ${runtimeFinance.runtimeApiUrl}`;
+    if (activeState === "loading") return "ملخص Finance Hub: جارٍ التحميل";
+    if (!runtimeFinance) return "ملخص Finance Hub: غير متصل";
+    if (runtimeFinance.state === "runtime") return `ملخص Finance Hub عبر: ${runtimeFinance.data.runtimeApiUrl}`;
+    return `ملخص Finance Hub محجوب (${describeFinanceBlockedReason(runtimeFinance.error).title}) عبر: ${runtimeFinance.runtimeApiUrl}`;
   }, [activeState, runtimeFinance]);
 
   const renderFinancialCenterPosition = (center: WltFinancialCenter) => (
@@ -125,12 +140,53 @@ export function FinanceDashboardScreen() {
     if (activeGroup === "refunds-disputes-holds" && activeSub === "refunds") {
       return <RefundsCommandPanel canManage={canManageFinance} />;
     }
+    if (activeGroup === "payments-wallets" && activeSub === "payments") {
+      return <PaymentSessionOperationsScreen />;
+    }
+    if (activeGroup === "payments-wallets" && activeSub === "client-wallets") {
+      return <RepresentativeWalletLookup actorType="client" lockActorType />;
+    }
+    if (activeGroup === "payments-wallets" && activeSub === "partner-wallets") {
+      return <RepresentativeWalletLookup actorType="partner" lockActorType />;
+    }
+    if (activeGroup === "payments-wallets" && activeSub === "captain-wallets") {
+      return <RepresentativeWalletLookup actorType="captain" lockActorType />;
+    }
+    if (activeGroup === "settlements-payouts" && activeSub === "partners") {
+      const requests = runtimeFinance?.state === "runtime" ? runtimeFinance.data.payoutRequests : [];
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <GovernedSettlementPanel reload={reload} canManage={canManageFinance} />
+          {runtimeFinance?.state === "runtime" ? (
+            <PayoutRequestsPanel requests={requests} reload={reload} canManage={canManageFinance} beneficiaryActorType="partner" />
+          ) : null}
+        </div>
+      );
+    }
+    if (activeGroup === "settlements-payouts" && activeSub === "captains") {
+      const requests = runtimeFinance?.state === "runtime" ? runtimeFinance.data.payoutRequests : [];
+      return runtimeFinance?.state === "runtime"
+        ? <PayoutRequestsPanel requests={requests} reload={reload} canManage={canManageFinance} beneficiaryActorType="captain" />
+        : <FinanceCapabilityGap label="طلبات صرف الكباتن — تعذر إثبات Finance Hub" />;
+    }
+    if (activeGroup === "settlements-payouts" && activeSub === "field") {
+      const requests = runtimeFinance?.state === "runtime" ? runtimeFinance.data.payoutRequests : [];
+      return runtimeFinance?.state === "runtime"
+        ? <PayoutRequestsPanel requests={requests} reload={reload} canManage={canManageFinance} beneficiaryActorType="field" />
+        : <FinanceCapabilityGap label="طلبات صرف الميدانيين — تعذر إثبات Finance Hub" />;
+    }
+    if (activeGroup === "commissions-fees-promo" && activeSub === "commissions") {
+      return <CommissionGovernancePanel canManage={canManageFinance} />;
+    }
+    if (activeGroup === "reconciliation-risk" && activeSub === "reconciliation") {
+      return <ReconciliationCasesPanel canManage={canManageFinance} />;
+    }
 
     if (activeState === "loading") {
-      return <Card style={{ padding: "3rem", alignItems: "center", justifyContent: "center" }}><Text role="body">جاري تحميل البيانات المالية...</Text></Card>;
+      return <Card style={{ padding: "3rem", alignItems: "center", justifyContent: "center" }}><Text role="body">جاري تحميل ملخص Finance Hub...</Text></Card>;
     }
     if (activeState === "error") {
-      return <StateView title="تعذر تحميل البيانات المالية" description="فشل الاتصال بالخادم المالي." actionLabel="إعادة المحاولة" onActionPress={reload} />;
+      return <StateView title="تعذر تحميل ملخص Finance Hub" description="فشل الاتصال بخدمة الملخص المالي." actionLabel="إعادة المحاولة" onActionPress={reload} />;
     }
     if (activeState === "offline" || activeState === "empty") {
       const blockedReason = describeFinanceBlockedReason(runtimeFinance?.state === "blocked" ? runtimeFinance.error : undefined);
@@ -154,30 +210,15 @@ export function FinanceDashboardScreen() {
         </Card>
       );
     }
-    if (activeGroup === "ledger-order-finance") {
-      if (activeSub === "ledger") return <LedgerInspectorScreen />;
+    if (activeGroup === "ledger-order-finance" && activeSub === "ledger") {
+      return <LedgerInspectorScreen />;
     }
-    if (activeGroup === "reconciliation-risk") {
-    }
-    if (activeGroup === "payments-wallets") {
-      return (
-        <Card style={{ padding: "1rem" }}>
-          <RepresentativeWalletLookup />
-        </Card>
-      );
-    }
-    if (activeGroup === "settlements-payouts") {
-      const requests = runtimeFinance?.state === "runtime" ? runtimeFinance.data.payoutRequests : [];
-      return <><PayoutRequestsPanel requests={requests} reload={reload} canManage={canManageFinance} /><ReconciliationCasesPanel canManage={canManageFinance} /></>;
-    }
-    return (
-      <Card style={{ padding: "2rem", alignItems: "center", justifyContent: "center" }}>
-        <Text role="body" tone="muted">تبويب {activeSubGroupMeta?.label || activeSubGroup} غير متاح حالياً.</Text>
-      </Card>
-    );
+
+    return <FinanceCapabilityGap label={activeSubGroupMeta?.label || activeSubGroup || activeGroupMeta.label} />;
   };
 
-  const hasBlockingVariances = (financeHubView.center?.blockingVariances.length ?? 0) > 0;
+  const financeHubProven = activeState === "ready" && runtimeFinance?.state === "runtime";
+  const hasBlockingVariances = financeHubProven && (financeHubView.center?.blockingVariances.length ?? 0) > 0;
   const readinessTone = hasBlockingVariances ? "danger" : financeHubView.pendingCount > 0 ? "warning" : "success";
   const readinessLabel = hasBlockingVariances
     ? "محجوب / يوجد مخاطر (Blocked / Risk)"
@@ -192,15 +233,15 @@ export function FinanceDashboardScreen() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <Text role="titleMd">غرفة القيادة المالية</Text>
-              <CpBadge tone={runtimeFinance?.state === "runtime" ? "success" : "danger"}>
-                {runtimeFinance?.state === "runtime" ? "WLT runtime" : "WLT runtime غير متاح"}
+              <CpBadge tone={financeHubProven ? "success" : "danger"}>
+                {financeHubProven ? "Finance Hub runtime مثبت" : "Finance Hub runtime غير مثبت"}
               </CpBadge>
             </div>
             <Text role="body" tone="muted" style={{ fontSize: "12px", marginTop: "0.25rem" }}>
               العملة: <strong>ر.ي (ريال يمني)</strong> · {runtimeSourceLabel}
             </Text>
           </div>
-          <CpButton variant="secondary" onClick={reload}>تحديث فوري</CpButton>
+          <CpButton variant="secondary" onClick={reload}>تحديث ملخص Finance Hub</CpButton>
         </div>
       }
       toolbar={
@@ -223,20 +264,26 @@ export function FinanceDashboardScreen() {
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <CpKpiStrip>
-          <CpKpiCard label="صافي المركز المالي" value={financeHubView.center?.netPositionLabel ?? "—"} />
-          <CpKpiCard label="مبالغ معلقة" value={`${financeHubView.pendingCount.toLocaleString("ar-YE")} ذمة`} />
-          <CpKpiCard label="فوارق مطابقة" value={`${(financeHubView.center?.blockingVariances.length ?? 0).toLocaleString("ar-YE")} فوارق`} />
-          <CpKpiCard label="مخاطر مفتوحة" value={`${financeHubView.openRisksCount.toLocaleString("ar-YE")} مخاطر`} />
-        </CpKpiStrip>
+        {financeHubProven ? (
+          <CpKpiStrip>
+            <CpKpiCard label="صافي المركز المالي" value={financeHubView.center?.netPositionLabel ?? "—"} />
+            <CpKpiCard label="مبالغ معلقة" value={`${financeHubView.pendingCount.toLocaleString("ar-YE")} ذمة`} />
+            <CpKpiCard label="فوارق مطابقة" value={`${(financeHubView.center?.blockingVariances.length ?? 0).toLocaleString("ar-YE")} فوارق`} />
+            <CpKpiCard label="مخاطر مفتوحة" value={`${financeHubView.openRisksCount.toLocaleString("ar-YE")} مخاطر`} />
+          </CpKpiStrip>
+        ) : (
+          <Card style={{ padding: "1rem" }}>
+            <Text role="body" tone="muted">لن تُعرض مؤشرات Finance Hub حتى تُثبت القراءة الحية من WLT؛ لا تُحوّل حالة الانقطاع إلى أصفار تشغيلية.</Text>
+          </Card>
+        )}
 
-        {activeState === "ready" ? (
+        {financeHubProven ? (
           <Card style={{ padding: "1rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
               <CpBadge tone={readinessTone}>{readinessLabel}</CpBadge>
               <div>
                 <Text role="body" style={{ fontWeight: "bold" }}>حالة الجاهزية التشغيلية</Text>
-                <Text role="caption" tone="muted">الجهد المالي للمنصة</Text>
+                <Text role="caption" tone="muted">ملخص Finance Hub المملوك لـ WLT</Text>
               </div>
             </div>
             <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", justifyContent: "space-between" }}>
