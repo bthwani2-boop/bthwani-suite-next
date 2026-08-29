@@ -12,7 +12,10 @@ import {
   wireNetInfoOnlineManager,
 } from "@bthwani/data-runtime";
 import { wireBatteryAwareQueue } from "@bthwani/data-runtime/power-policy";
-import { clearFieldOfflineQueue, configureFieldOfflineQueueStorage } from "@bthwani/dsh/app-field";
+import {
+  configureFieldOfflineQueueStorage,
+  detachFieldOfflineQueueScope,
+} from "@bthwani/dsh/app-field";
 import { initSentry } from "./observability/sentry";
 
 if (Platform.OS !== "web") {
@@ -34,10 +37,12 @@ export function MobileRuntimeProviders({ children }: { readonly children: React.
     const detachNetwork = wireNetInfoOnlineManager(queryClient);
     const detachPower = wireBatteryAwareQueue();
     const detachSession = registerIdentityBeforeSessionEndHook(async () => {
-      await Promise.all([
-        clearBthwaniQueryClient(queryClient, queryPersistenceKey),
-        clearFieldOfflineQueue(),
-      ]);
+      // Offline field work is durable operational evidence, not session cache.
+      // Detach the actor scope before identity teardown, but preserve the queue,
+      // unknown results, corrupt archive, and terminal quarantine for the same
+      // actor/install scope to reconcile after the next authenticated session.
+      detachFieldOfflineQueueScope();
+      await clearBthwaniQueryClient(queryClient, queryPersistenceKey);
     });
     return () => {
       detachNetwork();
