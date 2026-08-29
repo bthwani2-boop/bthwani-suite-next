@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
 )
 
 type governedFieldPartnerUpdateRequest struct {
@@ -186,7 +185,7 @@ func HandleGovernedFieldSubmitPartner(db *sql.DB) http.HandlerFunc {
 
 func HandleGovernedFieldCreateVisit(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		actorID, _ := actorFromContext(r)
+		actorID, actorSurface := actorFromContext(r)
 		partnerID := partnerIDFromPath(r)
 		if !requireFieldOwnsPartner(w, db, r, partnerID, actorID) {
 			return
@@ -198,9 +197,24 @@ func HandleGovernedFieldCreateVisit(db *sql.DB) http.HandlerFunc {
 		}
 		input.PartnerID = partnerID
 		input.FieldActorID = actorID
-		visit, err := CreateFieldVisitGoverned(db, input)
+		input.FieldActorSurface = actorSurface
+		input.IdempotencyKey = strings.TrimSpace(idempotencyKey(r))
+		input.CorrelationID = strings.TrimSpace(correlationID(r))
+		if input.IdempotencyKey == "" {
+			sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required")
+			return
+		}
+		visit, err := CreateFieldVisitIdempotent(r.Context(), db, input)
 		if errors.Is(err, ErrStoreIDRequired) {
 			sendError(w, http.StatusUnprocessableEntity, "STORE_ID_REQUIRED", "field visit requires an explicit storeId")
+			return
+		}
+		if errors.Is(err, ErrPartnerMutationIdempotencyRequired) {
+			sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", err.Error())
+			return
+		}
+		if errors.Is(err, ErrIdempotencyConflict) {
+			sendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", err.Error())
 			return
 		}
 		if errors.Is(err, ErrInvalid) || errors.Is(err, ErrReadinessGate) {

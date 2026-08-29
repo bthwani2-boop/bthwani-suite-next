@@ -619,6 +619,11 @@
         in: path
         required: true
         schema: { type: string }
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: { type: string, minLength: 8, maxLength: 200 }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -681,6 +686,11 @@
         in: path
         required: true
         schema: { type: string }
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: { type: string, minLength: 8, maxLength: 200 }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -745,6 +755,11 @@
         in: path
         required: true
         schema: { type: string }
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: { type: string, minLength: 8, maxLength: 200 }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:

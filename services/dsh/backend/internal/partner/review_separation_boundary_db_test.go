@@ -31,6 +31,7 @@ func createJ021Partner(t *testing.T, createdByActorID string) Partner {
 	if err != nil {
 		t.Fatal(err)
 	}
+	registerPartnerFixtureCleanup(t, db, p.ID, partnerStoreID(t, db, p.ID))
 	return p
 }
 
@@ -100,7 +101,7 @@ func TestEvidenceUploaderCannotReviewOwnDocumentDBIntegration(t *testing.T) {
 	uploader := "field-j021-document-uploader"
 	p := createJ021Partner(t, uploader)
 	seedPartnerDocumentMedia(t, db, p.ID, uploader, "media-j021-self-review")
-	doc, err := UploadDocument(db, p.ID, UploadDocumentInput{
+	doc, err := uploadDocumentForTest(t, db, p.ID, UploadDocumentInput{
 		DocumentType:      "commercial_register",
 		MediaRef:          "media-j021-self-review",
 		Notes:             "review separation evidence",

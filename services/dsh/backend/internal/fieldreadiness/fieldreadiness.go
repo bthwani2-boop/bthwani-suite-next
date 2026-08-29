@@ -4,15 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/lib/pq"
-
-	"dsh-api/internal/fieldcommissionoutbox"
 	"dsh-api/internal/store"
 )
 
@@ -175,26 +171,6 @@ type CreateVisitInput struct {
 	StoreLongitude *float64
 }
 
-// validateStartLocation checks GPS evidence before a visit can be started.
-func validateStartLocation(loc *LocationEvidence) error {
-	if loc == nil {
-		return ErrLocationRequired
-	}
-	if loc.IsMocked {
-		return ErrLocationMocked
-	}
-	if loc.AccuracyMeters > MinStartAccuracyMeters {
-		return ErrLocationAccuracy
-	}
-	if time.Since(loc.CapturedAt) > MaxLocationAgeSeconds*time.Second {
-		return ErrLocationStale
-	}
-	if loc.Latitude == 0 && loc.Longitude == 0 {
-		return ErrLocationRequired
-	}
-	return nil
-}
-
 // haversineMeters returns the distance in meters between two lat/lon points.
 func haversineMeters(lat1, lon1, lat2, lon2 float64) float64 {
 	const earthR = 6371000.0
@@ -234,70 +210,6 @@ type UpdateEscalationInput struct {
 	Status         EscalationStatus
 	ResolvedBy     string
 	ResolutionNote string
-}
-
-func CreateVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, input CreateVisitInput) (Visit, error) {
-	if input.StoreID == "" || input.FieldAgentID == "" {
-		return Visit{}, ErrInvalid
-	}
-	if err := validateStartLocation(input.StartLocation); err != nil {
-		return Visit{}, err
-	}
-	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
-		return Visit{}, err
-	}
-	vt := input.VisitType
-	if vt == "" {
-		vt = VisitTypeOnboarding
-	}
-
-	loc := input.StartLocation
-	radius := DefaultGeofenceRadiusMeters
-
-	// Compute geofence status if store coordinates are known.
-	var distM *float64
-	var geoStatus *string
-	if input.StoreLatitude != nil && input.StoreLongitude != nil {
-		d := haversineMeters(loc.Latitude, loc.Longitude, *input.StoreLatitude, *input.StoreLongitude)
-		distM = &d
-		s := geofenceStatus(d, radius)
-		geoStatus = &s
-	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return Visit{}, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-	row := tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_field_visits
-			(store_id, field_agent_id, visit_type,
-			 start_latitude, start_longitude, start_accuracy_meters, start_captured_at,
-			 start_provider, start_device_reference, start_is_mocked,
-			 store_latitude, store_longitude, geofence_radius_meters,
-			 start_distance_from_store_meters, start_geofence_status)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-		RETURNING `+visitSelectCols,
-		input.StoreID, input.FieldAgentID, vt,
-		loc.Latitude, loc.Longitude, loc.AccuracyMeters, loc.CapturedAt,
-		loc.Provider, loc.DeviceReference, loc.IsMocked,
-		input.StoreLatitude, input.StoreLongitude, radius,
-		distM, geoStatus,
-	)
-	v, err := scanVisit(row)
-	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-			return Visit{}, ErrConflict
-		}
-		return Visit{}, err
-	}
-	if err := snapshotChecklistPolicyTx(ctx, tx, v.ID, v.StoreID); err != nil {
-		return Visit{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Visit{}, err
-	}
-	return v, nil
 }
 
 // visitSelectCols is the canonical SELECT column list for dsh_field_visits.
@@ -397,192 +309,6 @@ type CompleteVisitInput struct {
 	CompletionLocation *LocationEvidence // required
 }
 
-// CompleteVisit marks a visit complete inside a transaction after verifying
-// ownership, that every required readiness check has passed, no blocking
-// escalation is open, and that the completion GPS location is valid.
-func CompleteVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string, input CompleteVisitInput) (Visit, error) {
-	if err := validateStartLocation(input.CompletionLocation); err != nil {
-		return Visit{}, err
-	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return Visit{}, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-
-	row := tx.QueryRowContext(ctx, `SELECT `+visitSelectCols+` FROM dsh_field_visits WHERE id = $1 FOR UPDATE`, visitID)
-	v, err := scanVisit(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Visit{}, ErrNotFound
-	}
-	if err != nil {
-		return Visit{}, err
-	}
-
-	if v.FieldAgentID != actor.ID && actor.Role != "operator" {
-		return Visit{}, ErrForbidden
-	}
-	allowed, err := store.ActorCanAccessStore(ctx, db, actor, v.StoreID)
-	if err != nil {
-		return Visit{}, err
-	}
-	if !allowed {
-		return Visit{}, ErrForbidden
-	}
-
-	if v.Status != VisitInProgress {
-		if v.Status == VisitComplete {
-			return Visit{}, ErrVisitAlreadyComplete
-		}
-		return Visit{}, ErrInvalid
-	}
-
-	// Validate geofence at completion.
-	loc := input.CompletionLocation
-	radius := v.GeofenceRadiusMeters
-	if radius <= 0 {
-		radius = DefaultGeofenceRadiusMeters
-	}
-	var completionDist *float64
-	var completionGeo *string
-	if v.StoreLatitude != nil && v.StoreLongitude != nil {
-		d := haversineMeters(loc.Latitude, loc.Longitude, *v.StoreLatitude, *v.StoreLongitude)
-		completionDist = &d
-		s := geofenceStatus(d, radius)
-		completionGeo = &s
-		if s == "outside" {
-			return Visit{}, ErrGeofenceViolation
-		}
-	}
-
-	checkRows, err := tx.QueryContext(ctx, `
-		SELECT requirement.check_type, requirement.evidence_required,
-		       COALESCE(checks.status,''), COALESCE(checks.evidence_url,''),
-		       EXISTS (SELECT 1 FROM dsh_media_refs refs WHERE refs.media_ref = checks.evidence_url)
-		FROM dsh_visit_checklist_requirements requirement
-		LEFT JOIN dsh_readiness_checks checks
-		  ON checks.visit_id = requirement.visit_id AND checks.check_type = requirement.check_type
-		WHERE requirement.visit_id = $1 AND requirement.required = TRUE`, visitID)
-	if err != nil {
-		return Visit{}, err
-	}
-	requiredCount := 0
-	for checkRows.Next() {
-		var ct, st, ev string
-		var evidenceRequired bool
-		var evidenceExists bool
-		if err := checkRows.Scan(&ct, &evidenceRequired, &st, &ev, &evidenceExists); err != nil {
-			checkRows.Close()
-			return Visit{}, err
-		}
-		requiredCount++
-		if st != string(CheckPassed) {
-			return Visit{}, ErrChecklistIncomplete
-		}
-		if evidenceRequired && (strings.TrimSpace(ev) == "" || !evidenceExists) {
-			return Visit{}, ErrEvidenceRequired
-		}
-	}
-	if err := checkRows.Err(); err != nil {
-		checkRows.Close()
-		return Visit{}, err
-	}
-	checkRows.Close()
-	if requiredCount == 0 {
-		return Visit{}, ErrChecklistPolicyMissing
-	}
-
-	var openCount int
-	if err := tx.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM dsh_readiness_escalations
-		WHERE visit_id = $1 AND status IN ('open','acknowledged')`, visitID).Scan(&openCount); err != nil {
-		return Visit{}, err
-	}
-	if openCount > 0 {
-		return Visit{}, ErrOpenEscalation
-	}
-
-	row = tx.QueryRowContext(ctx, `
-		UPDATE dsh_field_visits
-		SET status = 'complete', completed_at = NOW(), updated_at = NOW(),
-		    completion_latitude = $2, completion_longitude = $3,
-		    completion_accuracy_meters = $4, completion_captured_at = $5,
-		    completion_provider = $6, completion_is_mocked = $7,
-		    completion_distance_from_store_meters = $8,
-		    completion_geofence_status = $9
-		WHERE id = $1
-		RETURNING `+visitSelectCols,
-		visitID,
-		loc.Latitude, loc.Longitude, loc.AccuracyMeters, loc.CapturedAt,
-		loc.Provider, loc.IsMocked,
-		completionDist, completionGeo,
-	)
-	updated, err := scanVisit(row)
-	if err != nil {
-		return Visit{}, err
-	}
-
-	// Enqueue commission eligibility event in the same transaction.
-	// This guarantees the event is durable even if WLT is unreachable.
-	if err := fieldcommissionoutbox.Enqueue(tx, fieldcommissionoutbox.EnqueueInput{
-		FieldActorID: updated.FieldAgentID,
-		VisitID:      updated.ID,
-		StoreID:      updated.StoreID,
-	}); err != nil {
-		return Visit{}, fmt.Errorf("enqueue field commission outbox: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return Visit{}, err
-	}
-	return updated, nil
-}
-
-func UpsertReadinessCheck(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string, input UpdateCheckInput) (ReadinessCheck, error) {
-	v, err := GetOwnedVisit(ctx, db, actor, visitID)
-	if err != nil {
-		return ReadinessCheck{}, err
-	}
-	if v.Status == VisitComplete {
-		return ReadinessCheck{}, ErrVisitAlreadyComplete
-	}
-	exists, err := checklistItemExists(ctx, db, visitID, input.CheckType)
-	if err != nil {
-		return ReadinessCheck{}, err
-	}
-	if !exists {
-		return ReadinessCheck{}, fmt.Errorf("%w: check type is not part of the visit policy", ErrInvalid)
-	}
-	if input.Status == CheckPassed {
-		if err := validateCheckEvidence(ctx, db, actor, input.EvidenceURL); err != nil {
-			return ReadinessCheck{}, err
-		}
-	}
-	row := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_readiness_checks (visit_id, store_id, check_type, status, evidence_url, notes, verified_by)
-		SELECT $1, store_id, $2, $3, $4, $5, field_agent_id
-		FROM dsh_field_visits WHERE id = $1
-		ON CONFLICT (visit_id, check_type) DO UPDATE
-		  SET status = EXCLUDED.status, evidence_url = EXCLUDED.evidence_url,
-		      notes = EXCLUDED.notes, updated_at = NOW()
-		RETURNING id, visit_id, store_id, check_type, status, COALESCE(evidence_url,''), COALESCE(notes,''), verified_by, created_at, updated_at`,
-		visitID, input.CheckType, input.Status, input.EvidenceURL, input.Notes,
-	)
-	var c ReadinessCheck
-	err = row.Scan(&c.ID, &c.VisitID, &c.StoreID, &c.CheckType, &c.Status, &c.EvidenceURL, &c.Notes, &c.VerifiedBy, &c.CreatedAt, &c.UpdatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ReadinessCheck{}, ErrNotFound
-	}
-	if err != nil {
-		return ReadinessCheck{}, err
-	}
-	if err := hydrateChecklistMetadata(ctx, db, &c); err != nil {
-		return ReadinessCheck{}, err
-	}
-	return c, nil
-}
-
 func ListVisitChecks(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string) ([]ReadinessCheck, error) {
 	if _, err := GetOwnedVisit(ctx, db, actor, visitID); err != nil {
 		return nil, err
@@ -612,43 +338,6 @@ func ListVisitChecks(ctx context.Context, db *sql.DB, actor store.StoreActor, vi
 		list = append(list, c)
 	}
 	return list, rows.Err()
-}
-
-func CreateEscalation(ctx context.Context, db *sql.DB, actor store.StoreActor, input CreateEscalationInput) (Escalation, error) {
-	if input.StoreID == "" || input.RaisedBy == "" || input.Description == "" {
-		return Escalation{}, ErrInvalid
-	}
-	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
-		return Escalation{}, err
-	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return Escalation{}, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-
-	var visitIDSQL sql.NullString
-	if input.VisitID != "" {
-		visitIDSQL = sql.NullString{String: input.VisitID, Valid: true}
-		if err := lockGovernedEscalationVisitTx(ctx, tx, actor, input); err != nil {
-			return Escalation{}, err
-		}
-	}
-	row := tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_readiness_escalations (visit_id, store_id, raised_by, severity, category, description)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, COALESCE(visit_id::text,''), store_id, raised_by, severity, category, description,
-		          status, COALESCE(resolved_by,''), resolved_at, COALESCE(resolution_note,''), created_at, updated_at`,
-		visitIDSQL, input.StoreID, input.RaisedBy, input.Severity, input.Category, input.Description,
-	)
-	escalation, err := scanEscalation(row)
-	if err != nil {
-		return Escalation{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Escalation{}, err
-	}
-	return escalation, nil
 }
 
 func ListOperatorEscalations(ctx context.Context, db *sql.DB, operatorContextID, statusFilter string, limit int) ([]Escalation, error) {
@@ -715,77 +404,6 @@ func scanAgentEscalationRow(rows *sql.Rows) (Escalation, error) {
 	err := rows.Scan(&e.ID, &e.VisitID, &e.StoreID, &e.RaisedBy, &e.Severity, &e.Category, &e.Description,
 		&e.Status, &e.ResolvedBy, &e.ResolvedAt, &e.ResolutionNote, &e.CreatedAt, &e.UpdatedAt, &e.IsStale)
 	return e, err
-}
-
-func UpdateEscalation(ctx context.Context, db *sql.DB, escalationID string, input UpdateEscalationInput) (Escalation, error) {
-	row := db.QueryRowContext(ctx, `
-		UPDATE dsh_readiness_escalations
-		SET status = $2, resolved_by = $3, resolution_note = $4,
-		    resolved_at = CASE WHEN $2 = 'resolved' THEN NOW() ELSE resolved_at END,
-		    updated_at = NOW()
-		WHERE id = $1
-		RETURNING id, COALESCE(visit_id::text,''), store_id, raised_by, severity, category, description,
-		          status, COALESCE(resolved_by,''), resolved_at, COALESCE(resolution_note,''), created_at, updated_at`,
-		escalationID, input.Status, input.ResolvedBy, input.ResolutionNote,
-	)
-	e, err := scanEscalation(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Escalation{}, ErrNotFound
-	}
-	return e, err
-}
-
-func GetStoreOnboardingStatus(ctx context.Context, db *sql.DB, storeID string) (map[string]any, error) {
-	var totalVisits, completedVisits, openEscalations int
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_field_visits WHERE store_id = $1`, storeID).Scan(&totalVisits); err != nil {
-		return nil, err
-	}
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_field_visits WHERE store_id = $1 AND status = 'complete'`, storeID).Scan(&completedVisits); err != nil {
-		return nil, err
-	}
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_readiness_escalations WHERE store_id = $1 AND status IN ('open','acknowledged')`, storeID).Scan(&openEscalations); err != nil {
-		return nil, err
-	}
-	onboardingComplete := completedVisits > 0 && openEscalations == 0
-	return map[string]any{
-		"storeId":            storeID,
-		"totalVisits":        totalVisits,
-		"completedVisits":    completedVisits,
-		"openEscalations":    openEscalations,
-		"onboardingComplete": onboardingComplete,
-		"status":             resolveOnboardingStatus(completedVisits, openEscalations),
-	}, nil
-}
-
-func validateCheckEvidence(ctx context.Context, db *sql.DB, actor store.StoreActor, mediaRef string) error {
-	ref := strings.TrimSpace(mediaRef)
-	if ref == "" {
-		return ErrEvidenceRequired
-	}
-	if actor.Role == "operator" {
-		var exists bool
-		if err := db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM dsh_media_refs WHERE media_ref = $1)`, ref).Scan(&exists); err != nil {
-			return err
-		}
-		if !exists {
-			return ErrEvidenceRequired
-		}
-		return nil
-	}
-	var exists bool
-	if err := db.QueryRowContext(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM dsh_media_refs
-			WHERE media_ref = $1
-			  AND owner_actor_id = $2
-			  AND owner_actor_role = $3
-		)`, ref, actor.ID, actor.Role).Scan(&exists); err != nil {
-		return err
-	}
-	if !exists {
-		return ErrEvidenceRequired
-	}
-	return nil
 }
 
 func resolveOnboardingStatus(completed, openEscalations int) string {

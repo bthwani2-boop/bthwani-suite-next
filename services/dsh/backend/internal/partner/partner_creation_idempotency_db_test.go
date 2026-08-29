@@ -40,6 +40,7 @@ func TestPartnerCreationUnknownResultRetryReplaysOriginalAuthorityDBIntegration(
 	if replayed {
 		t.Fatal("first partner creation was incorrectly classified as a replay")
 	}
+	registerPartnerFixtureCleanup(t, db, first.ID, partnerStoreID(t, db, first.ID))
 
 	second, replayed, err := CreatePartnerForOperatorContextIdempotent(
 		context.Background(),

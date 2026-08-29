@@ -2,6 +2,7 @@ package fieldreadiness
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -40,22 +41,22 @@ func TestCreateVisitRequiresStoreAndAgent(t *testing.T) {
 	}
 	actor := store.StoreActor{ID: "agent-1", Role: "field"}
 	for _, input := range cases {
-		_, err := CreateVisit(context.Background(), nil, actor, input)
-		if err != ErrInvalid {
+		_, err := createTestVisit(t, context.Background(), nil, actor, input)
+		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("expected ErrInvalid for input %+v, got %v", input, err)
 		}
 	}
 }
 
 func TestCreateVisitRequiresGPS(t *testing.T) {
-	actor := store.StoreActor{ID: "agent-1", Role: "field"}
+	actor := store.StoreActor{ID: "a", Role: "field"}
 	// nil location
-	_, err := CreateVisit(context.Background(), nil, actor, CreateVisitInput{StoreID: "s", FieldAgentID: "a"})
+	_, err := createTestVisit(t, context.Background(), nil, actor, CreateVisitInput{StoreID: "s", FieldAgentID: "a"})
 	if err != ErrLocationRequired {
 		t.Fatalf("expected ErrLocationRequired for nil GPS, got %v", err)
 	}
 	// mocked location
-	_, err = CreateVisit(context.Background(), nil, actor, CreateVisitInput{
+	_, err = createTestVisit(t, context.Background(), nil, actor, CreateVisitInput{
 		StoreID: "s", FieldAgentID: "a",
 		StartLocation: &LocationEvidence{Latitude: 15.3, Longitude: 44.1, AccuracyMeters: 5, CapturedAt: time.Now(), IsMocked: true},
 	})
@@ -63,7 +64,7 @@ func TestCreateVisitRequiresGPS(t *testing.T) {
 		t.Fatalf("expected ErrLocationMocked, got %v", err)
 	}
 	// poor accuracy
-	_, err = CreateVisit(context.Background(), nil, actor, CreateVisitInput{
+	_, err = createTestVisit(t, context.Background(), nil, actor, CreateVisitInput{
 		StoreID: "s", FieldAgentID: "a",
 		StartLocation: &LocationEvidence{Latitude: 15.3, Longitude: 44.1, AccuracyMeters: 200, CapturedAt: time.Now()},
 	})
@@ -80,8 +81,8 @@ func TestCreateEscalationRequiresStoreRaisedByAndDescription(t *testing.T) {
 	}
 	actor := store.StoreActor{ID: "agent-1", Role: "field"}
 	for _, input := range cases {
-		_, err := CreateEscalation(context.Background(), nil, actor, input)
-		if err != ErrInvalid {
+		_, err := createTestEscalation(t, context.Background(), nil, actor, input)
+		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("expected ErrInvalid for input %+v, got %v", input, err)
 		}
 	}

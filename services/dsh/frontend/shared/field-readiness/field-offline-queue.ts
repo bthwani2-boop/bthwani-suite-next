@@ -12,12 +12,12 @@
 
 import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
 import { secureRandomId } from "../_kernel/secure-random.ts";
+import {
+  buildFieldIntentFingerprint,
+  type FieldMutationOperation,
+} from "./field-intent-identity.ts";
 
-export type FieldOfflineOperationType =
-  | "create_visit"
-  | "complete_visit"
-  | "upsert_readiness_check"
-  | "create_escalation";
+export type FieldOfflineOperationType = Exclude<FieldMutationOperation, "update_escalation">;
 
 export type FieldOfflineOperationStatus =
   | "pending"
@@ -37,7 +37,9 @@ export type FieldOfflineQueueStorageAdapter = {
   readonly removeItem: (key: string) => Promise<void>;
 };
 
-export type FieldOfflineQuarantineReason = "TERMINAL_SYNC_FAILURE";
+export type FieldOfflineQuarantineReason =
+  | "TERMINAL_SYNC_FAILURE"
+  | "LEGACY_INTENT_AMBIGUOUS";
 
 export type FieldOfflineQuarantineRecord = {
   readonly sourceKey: string;
@@ -63,13 +65,17 @@ export type FieldOfflineOperation<P = unknown> = {
   readonly lastError?: string;
 };
 
-type FieldOfflineOperationV3<P = unknown> = Omit<FieldOfflineOperation<P>, "intentFingerprint">;
+type FieldOfflineOperationV3<P = unknown> = Omit<FieldOfflineOperation<P>, "intentFingerprint" | "operationId"> & {
+  readonly operationId?: string;
+};
 
 const STORAGE_PREFIX = "bthwani.field-offline-queue.v4";
 const V3_STORAGE_PREFIX = "bthwani.field-offline-queue.v3";
 const MAX_ATTEMPTS = 10;
 const MAX_QUEUE_OPERATIONS = 100;
-const MAX_SERIALIZED_CHARACTERS = 48_000;
+// The identity fingerprint is compact, but the queue intentionally retains
+// the original request payload for deterministic replay and reconciliation.
+const MAX_SERIALIZED_CHARACTERS = 96_000;
 
 let storageAdapter: FieldOfflineQueueStorageAdapter = {
   getItem: (key) => bthwaniDurableStorage.getItem(key),
@@ -214,13 +220,9 @@ function isQuarantineRecord(value: unknown): value is FieldOfflineQuarantineReco
   if (!value || typeof value !== "object") return false;
   const record = value as Partial<FieldOfflineQuarantineRecord>;
   return typeof record.sourceKey === "string"
-    && record.reason === "TERMINAL_SYNC_FAILURE"
+    && (record.reason === "TERMINAL_SYNC_FAILURE" || record.reason === "LEGACY_INTENT_AMBIGUOUS")
     && typeof record.capturedAt === "string"
     && typeof record.raw === "string";
-}
-
-function fallbackIntentFingerprint(operationType: FieldOfflineOperationType, payload: unknown): string {
-  return JSON.stringify(["field-offline-v3-migrated", operationType, payload]);
 }
 
 export class FieldOfflineQueueCorruptError extends Error {
@@ -270,21 +272,75 @@ async function migrateV3Artifacts(scope: FieldOfflineQueueScope): Promise<void> 
     }
   }
 
-  const currentQueue = await storageAdapter.getItem(storageKey(scope));
-  if (currentQueue) return;
-
   const v3Raw = await storageAdapter.getItem(v3StorageKey(scope));
   if (!v3Raw) return;
   try {
     const parsed: unknown = JSON.parse(v3Raw);
-    if (!Array.isArray(parsed) || !parsed.every((entry) => hasCommonOperationShape(entry, scope))) {
+    if (!Array.isArray(parsed)) {
       throw new Error("stored v3 queue does not match the scoped field offline operation schema");
     }
-    const migrated: FieldOfflineOperation[] = (parsed as FieldOfflineOperationV3[]).map((operation) => ({
-      ...operation,
-      intentFingerprint: fallbackIntentFingerprint(operation.operationType, operation.payload),
-    }));
-    await writeQueueForScope(scope, migrated);
+
+    const currentRaw = await storageAdapter.getItem(storageKey(scope));
+    let current: FieldOfflineOperation[] = [];
+    if (currentRaw) {
+      const currentParsed: unknown = JSON.parse(currentRaw);
+      if (!Array.isArray(currentParsed) || !currentParsed.every((entry) => isOperation(entry, scope))) {
+        throw new Error("stored v4 queue does not match the scoped field offline operation schema");
+      }
+      current = currentParsed;
+    }
+
+    const capturedAt = new Date().toISOString();
+    const quarantined: FieldOfflineQuarantineRecord[] = [];
+    const migrated: FieldOfflineOperation[] = [];
+    for (const entry of parsed) {
+      const raw = JSON.stringify(entry) ?? String(entry);
+      if (!hasCommonOperationShape(entry, scope)) {
+        quarantined.push({
+          sourceKey: v3StorageKey(scope),
+          reason: "LEGACY_INTENT_AMBIGUOUS",
+          capturedAt,
+          raw,
+        });
+        continue;
+      }
+      const operation = entry as FieldOfflineOperationV3;
+      try {
+        const intentFingerprint = buildFieldIntentFingerprint(operation.operationType, operation.payload);
+        if (current.some((candidate) => candidate.operationType === operation.operationType
+          && candidate.intentFingerprint === intentFingerprint)) {
+          continue;
+        }
+        migrated.push({
+          ...operation,
+          operationId: `field-op:v5:${operation.operationType}:${secureRandomId()}`,
+          correlationId: operation.correlationId === operation.idempotencyKey
+            ? `field:${operation.operationType}:corr:${secureRandomId()}`
+            : operation.correlationId,
+          intentFingerprint,
+        });
+      } catch {
+        quarantined.push({
+          sourceKey: v3StorageKey(scope),
+          reason: "LEGACY_INTENT_AMBIGUOUS",
+          capturedAt,
+          raw,
+        });
+      }
+    }
+
+    if (migrated.length > 0 || !currentRaw) await writeQueueForScope(scope, [...current, ...migrated]);
+    if (quarantined.length > 0) {
+      const recoveryRaw = await storageAdapter.getItem(recoveryQuarantineStorageKey(scope));
+      const recovery = recoveryRaw ? JSON.parse(recoveryRaw) : [];
+      if (!Array.isArray(recovery) || !recovery.every(isQuarantineRecord)) {
+        throw new Error("stored field offline recovery quarantine does not match its schema");
+      }
+      await storageAdapter.setItem(
+        recoveryQuarantineStorageKey(scope),
+        JSON.stringify([...recovery, ...quarantined]),
+      );
+    }
     await storageAdapter.removeItem(v3StorageKey(scope));
   } catch (error) {
     await storageAdapter.setItem(corruptStorageKey(scope), v3Raw);
@@ -368,11 +424,15 @@ export async function enqueueFieldOperation<P>(
   idempotencyKey: string,
   correlationId?: string,
   intentFingerprint?: string,
+  operationId?: string,
 ): Promise<FieldOfflineOperation<P>> {
   const scope = requireScope();
   const normalizedKey = requireNonEmpty(idempotencyKey, "field offline operation idempotency key");
-  const normalizedFingerprint = intentFingerprint?.trim()
-    || JSON.stringify(["field-offline-intent", operationType, payload]);
+  const canonicalFingerprint = buildFieldIntentFingerprint(operationType, payload);
+  const normalizedFingerprint = intentFingerprint?.trim() || canonicalFingerprint;
+  if (normalizedFingerprint !== canonicalFingerprint) {
+    throw new Error("field offline operation identity does not match the canonical business intent");
+  }
   const normalizedCorrelation = correlationId?.trim()
     || `field:${operationType}:corr:${secureRandomId()}`;
   if (normalizedCorrelation === normalizedKey) {
@@ -388,7 +448,7 @@ export async function enqueueFieldOperation<P>(
 
   const now = new Date().toISOString();
   const operation: FieldOfflineOperation<P> = {
-    operationId: `field-op:v4:${operationType}:${encodeURIComponent(normalizedKey)}`,
+    operationId: operationId?.trim() || `field-op:v5:${operationType}:${secureRandomId()}`,
     operationType,
     actorId: scope.actorId,
     installationId: scope.installationId,

@@ -486,16 +486,6 @@ func FieldOwnsPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID
 	return nil
 }
 
-func LinkPartnerStoreForOperatorContext(db *sql.DB, operatorContextID, partnerID, storeID, actorID string) ([]PartnerLinkedStore, error) {
-	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
-		return nil, err
-	}
-	if err := EnsureOperatorContextStore(db, operatorContextID, storeID); err != nil {
-		return nil, err
-	}
-	return LinkPartnerStore(db, partnerID, storeID, actorID)
-}
-
 func ListDocumentsForOperatorContext(db *sql.DB, operatorContextID, partnerID string) ([]Document, error) {
 	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
 		return nil, err
@@ -503,18 +493,18 @@ func ListDocumentsForOperatorContext(db *sql.DB, operatorContextID, partnerID st
 	return ListDocuments(db, partnerID)
 }
 
-func UploadDocumentForOperatorContext(db *sql.DB, operatorContextID, partnerID string, input UploadDocumentInput) (Document, error) {
+func UploadDocumentForOperatorContext(ctx context.Context, db *sql.DB, operatorContextID, partnerID string, input UploadDocumentInput) (Document, error) {
 	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
 		return Document{}, err
 	}
-	return UploadDocument(db, partnerID, input)
+	return UploadDocumentIdempotent(ctx, db, partnerID, input)
 }
 
-func ReviewDocumentForOperatorContext(db *sql.DB, operatorContextID, partnerID, documentID string, input ReviewDocumentInput) (Document, DocumentReview, error) {
+func ReviewDocumentForOperatorContext(ctx context.Context, db *sql.DB, operatorContextID, partnerID, documentID string, input ReviewDocumentInput) (Document, DocumentReview, error) {
 	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
 		return Document{}, DocumentReview{}, err
 	}
-	return ReviewDocument(db, partnerID, documentID, input)
+	return ReviewDocumentIdempotent(ctx, db, partnerID, documentID, input)
 }
 
 func ListFieldVisitsForOperatorContext(db *sql.DB, operatorContextID, partnerID string) ([]FieldVisit, error) {
@@ -536,11 +526,4 @@ func ListActivationEventsForOperatorContext(db *sql.DB, operatorContextID, partn
 		return nil, err
 	}
 	return ListActivationEvents(db, partnerID)
-}
-
-func TransitionStatusForOperatorContext(db *sql.DB, operatorContextID, partnerID string, input TransitionInput, expectedVersion int) (Partner, ActivationEvent, error) {
-	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
-		return Partner{}, ActivationEvent{}, err
-	}
-	return TransitionStatus(db, partnerID, input, expectedVersion)
 }

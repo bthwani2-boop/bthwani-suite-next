@@ -513,6 +513,20 @@
       "sha256": "b0236a865cd8bdde791135f209de03dd14d66d84bc7f6ce021ebce921d8fb421",
       "historicalPrefix": "1072",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 314,
+      "file": "dsh-1073_partner_onboarding_mutation_idempotency.sql",
+      "sha256": "ef765d1e9a57766115a5590a2aa01268fd57a8bbd1e78fe83e18e207b0ab56e5",
+      "historicalPrefix": "1073",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 315,
+      "file": "dsh-1074_partner_document_review_idempotency.sql",
+      "sha256": "da36bd537d0b9e21eb06db8a1716680d9e937aff484ccbd32b2180304adb7a76",
+      "historicalPrefix": "1074",
+      "state": "ACTIVE"
     }
   ]
 }

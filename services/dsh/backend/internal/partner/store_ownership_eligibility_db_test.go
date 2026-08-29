@@ -31,6 +31,7 @@ func TestGovernedStoreTransferRejectsClosedPartnerStatesDBIntegration(t *testing
 		if err != nil {
 			t.Fatal(err)
 		}
+		registerPartnerFixtureCleanup(t, db, p.ID, partnerStoreID(t, db, p.ID))
 		return p
 	}
 

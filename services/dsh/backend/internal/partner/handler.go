@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"dsh-api/internal/auth"
 )
@@ -142,11 +143,24 @@ func HandleReviewDocument(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		input.ReviewedByActorID = actorID
-		input.CorrelationID = correlationID(r)
+		input.CorrelationID = strings.TrimSpace(correlationID(r))
+		input.IdempotencyKey = strings.TrimSpace(idempotencyKey(r))
+		if input.IdempotencyKey == "" {
+			sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required")
+			return
+		}
 
-		doc, rev, err := ReviewDocumentForOperatorContext(db, operatorContextID, partnerIDFromPath(r), documentIDFromPath(r), input)
+		doc, rev, err := ReviewDocumentForOperatorContext(r.Context(), db, operatorContextID, partnerIDFromPath(r), documentIDFromPath(r), input)
 		if errors.Is(err, ErrNotFound) {
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "document not found")
+			return
+		}
+		if errors.Is(err, ErrPartnerMutationIdempotencyRequired) {
+			sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", err.Error())
+			return
+		}
+		if errors.Is(err, ErrIdempotencyConflict) {
+			sendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", err.Error())
 			return
 		}
 		if errors.Is(err, ErrInvalid) {
@@ -245,17 +259,32 @@ func uploadDocumentHandler(db *sql.DB) http.HandlerFunc {
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
 		}
-		actorID, _ := actorFromContext(r)
+		actorID, actorSurface := actorFromContext(r)
 		var input UploadDocumentInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
 			return
 		}
 		input.UploadedByActorID = actorID
+		input.UploadedBySurface = actorSurface
+		input.IdempotencyKey = strings.TrimSpace(idempotencyKey(r))
+		input.CorrelationID = strings.TrimSpace(correlationID(r))
+		if input.IdempotencyKey == "" {
+			sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required")
+			return
+		}
 
-		doc, err := UploadDocumentForOperatorContext(db, operatorContextID, partnerIDFromPath(r), input)
+		doc, err := UploadDocumentForOperatorContext(r.Context(), db, operatorContextID, partnerIDFromPath(r), input)
 		if errors.Is(err, ErrInvalid) {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+			return
+		}
+		if errors.Is(err, ErrPartnerMutationIdempotencyRequired) {
+			sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", err.Error())
+			return
+		}
+		if errors.Is(err, ErrIdempotencyConflict) {
+			sendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", err.Error())
 			return
 		}
 		if errors.Is(err, ErrNotFound) {

@@ -1,6 +1,7 @@
 package partner
 
 import (
+	"context"
 	"testing"
 
 	"dsh-api/internal/store"
@@ -371,7 +372,7 @@ func TestPartnerReadinessForActivationStatus(t *testing.T) {
 
 func TestCreateFieldVisitRejectsPartialCoordinates(t *testing.T) {
 	lat := 15.3694
-	_, err := CreateFieldVisit(nil, CreateFieldVisitInput{
+	_, err := CreateFieldVisitIdempotent(context.Background(), nil, CreateFieldVisitInput{
 		PartnerID:        "prt_001",
 		FieldActorID:     "field_001",
 		LocationLatitude: &lat,
@@ -381,7 +382,7 @@ func TestCreateFieldVisitRejectsPartialCoordinates(t *testing.T) {
 	}
 
 	lon := 44.191
-	_, err = CreateFieldVisit(nil, CreateFieldVisitInput{
+	_, err = CreateFieldVisitIdempotent(context.Background(), nil, CreateFieldVisitInput{
 		PartnerID:         "prt_001",
 		FieldActorID:      "field_001",
 		LocationLongitude: &lon,

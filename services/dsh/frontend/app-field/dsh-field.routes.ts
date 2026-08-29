@@ -1,20 +1,24 @@
 // app-field — canonical Expo Router route contract.
 // Domain state and server truth remain outside this navigation contract.
 
-export type DshFieldRoute =
-  | 'stores'
-  | 'onboarding'
-  | 'partner-progress'
-  | 'visit'
-  | 'verification'
-  | 'checklist'
-  | 'account'
-  | 'profile'
-  | 'profile-completion'
-  | 'finance'
-  | 'escalation'
-  | 'work-queue'
-  | 'products-upload';
+/** The only route kinds that may cross the app-field navigation boundary. */
+export const DSH_FIELD_ROUTE_KINDS = [
+  'stores',
+  'onboarding',
+  'partner-progress',
+  'visit',
+  'verification',
+  'checklist',
+  'account',
+  'profile',
+  'profile-completion',
+  'finance',
+  'escalation',
+  'work-queue',
+  'products-upload',
+] as const;
+
+export type DshFieldRoute = (typeof DSH_FIELD_ROUTE_KINDS)[number];
 
 export type DshFieldRouteState =
   | { kind: 'stores' }

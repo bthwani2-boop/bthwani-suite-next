@@ -50,8 +50,10 @@ export function DshFieldSurface({ route, navigation, installationId }: DshFieldS
               input: Parameters<typeof createFieldVisit>[1];
             };
             await createFieldVisit(payload.storeId, payload.input, {
+              operationId: operation.operationId,
               correlationId: operation.correlationId,
               idempotencyKey: operation.idempotencyKey,
+              intentFingerprint: operation.intentFingerprint,
             });
           },
           complete_visit: async (operation) => {
@@ -60,8 +62,10 @@ export function DshFieldSurface({ route, navigation, installationId }: DshFieldS
               input: Parameters<typeof completeFieldVisit>[1];
             };
             await completeFieldVisit(payload.visitId, payload.input, {
+              operationId: operation.operationId,
               correlationId: operation.correlationId,
               idempotencyKey: operation.idempotencyKey,
+              intentFingerprint: operation.intentFingerprint,
             });
           },
           upsert_readiness_check: async (operation) => {
@@ -70,8 +74,10 @@ export function DshFieldSurface({ route, navigation, installationId }: DshFieldS
               input: Parameters<typeof upsertReadinessCheck>[1];
             };
             await upsertReadinessCheck(payload.visitId, payload.input, {
+              operationId: operation.operationId,
               correlationId: operation.correlationId,
               idempotencyKey: operation.idempotencyKey,
+              intentFingerprint: operation.intentFingerprint,
             });
           },
           create_escalation: async (operation) => {
@@ -80,8 +86,10 @@ export function DshFieldSurface({ route, navigation, installationId }: DshFieldS
               input: Parameters<typeof createReadinessEscalation>[1];
             };
             await createReadinessEscalation(payload.storeId, payload.input, {
+              operationId: operation.operationId,
               correlationId: operation.correlationId,
               idempotencyKey: operation.idempotencyKey,
+              intentFingerprint: operation.intentFingerprint,
             });
           },
         }

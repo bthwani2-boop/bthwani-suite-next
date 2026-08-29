@@ -16,7 +16,7 @@ func TestOperatorRoleCannotBypassFieldVisitOwnership(t *testing.T) {
 	operatorID := uniqueID("operator-reader")
 	seedFieldStore(t, db, storeID, fieldID)
 
-	visit, err := CreateVisit(ctx, db, testFieldActor(t, fieldID), CreateVisitInput{
+	visit, err := createTestVisit(t, ctx, db, testFieldActor(t, fieldID), CreateVisitInput{
 		StoreID:       storeID,
 		FieldAgentID:  fieldID,
 		StartLocation: testValidLocation(),

@@ -13,6 +13,9 @@ const source = readRepositoryFile(
 const api = readRepositoryFile(
   "services/dsh/frontend/shared/field-readiness/field-readiness.api.ts",
 );
+const identity = readRepositoryFile(
+  "services/dsh/frontend/shared/field-readiness/field-intent-identity.ts",
+);
 const barrel = readRepositoryFile(
   "services/dsh/frontend/shared/field-readiness/index.ts",
 );
@@ -25,7 +28,8 @@ test("field offline queue has one v4 authority with a one-way v3 migration", () 
   assert.match(source, /const STORAGE_PREFIX = "bthwani\.field-offline-queue\.v4"/);
   assert.match(source, /const V3_STORAGE_PREFIX = "bthwani\.field-offline-queue\.v3"/);
   assert.match(source, /migrateV3Artifacts/);
-  assert.match(source, /await writeQueueForScope\(scope, migrated\);\s*await storageAdapter\.removeItem\(v3StorageKey\(scope\)\);/s);
+  assert.match(source, /buildFieldIntentFingerprint\(operation\.operationType, operation\.payload\)/);
+  assert.match(source, /await storageAdapter\.removeItem\(v3StorageKey\(scope\)\)/);
   assert.match(source, /encodeStorageSegment/);
   assert.doesNotMatch(source, /function stableHash/);
 });
@@ -40,10 +44,10 @@ test("logout detaches field scope but cannot destroy unresolved operational work
 
 test("field mutation transport ids are separate from canonical business intent", () => {
   assert.match(api, /intentFingerprint/);
-  assert.match(api, /secureRandomId\(\)/);
+  assert.match(identity, /secureRandomId\(\)/);
   assert.doesNotMatch(api, /function stableHash/);
-  assert.match(api, /idempotencyKey: `field:\$\{normalizedOperation\}:\$\{secureRandomId\(\)\}`/);
-  assert.match(api, /correlationId: `field:\$\{normalizedOperation\}:corr:\$\{secureRandomId\(\)\}`/);
+  assert.match(identity, /idempotencyKey: `field-intent:v\$\{FIELD_INTENT_SCHEMA_VERSION\}:\$\{operationId\}`/);
+  assert.match(identity, /correlationId: `field:\$\{operationType\}:corr:\$\{secureRandomId\(\)\}`/);
   assert.match(source, /field offline correlation id must be distinct from the idempotency key/);
 });
 

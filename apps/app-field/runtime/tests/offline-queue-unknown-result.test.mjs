@@ -64,7 +64,7 @@ test("unknown result is isolated from another actor and installation", async () 
   configureFieldOfflineQueueScope(SCOPE);
   const operation = await enqueueFieldOperation(
     "create_visit",
-    { storeId: "store-isolated" },
+    { storeId: "store-isolated", input: {} },
     "idem-isolated-1",
   );
   await markOperationUnknown(operation.operationId, "connection lost after dispatch");

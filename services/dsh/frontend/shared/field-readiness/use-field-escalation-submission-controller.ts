@@ -35,8 +35,8 @@ export function useFieldEscalationSubmissionController() {
   ): Promise<boolean> => {
     setActionState(escalationActionSubmittingState());
     const context = buildFieldMutationContext(
-      "create-escalation",
-      [storeId, input.visitId ?? "", input.severity, input.category, input.description],
+      "create_escalation",
+      { storeId, input },
     );
 
     try {
@@ -51,6 +51,8 @@ export function useFieldEscalationSubmissionController() {
             { storeId, input },
             context.idempotencyKey,
             context.correlationId,
+            context.intentFingerprint,
+            context.operationId,
           );
           setActionState(
             escalationActionQueuedState(

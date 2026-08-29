@@ -4,6 +4,9 @@ import test from "node:test";
 const queue = await import(
   "../../../../services/dsh/frontend/shared/field-readiness/field-offline-queue.ts"
 );
+const { buildFieldIntentFingerprint } = await import(
+  "../../../../services/dsh/frontend/shared/field-readiness/field-intent-identity.ts"
+);
 
 const {
   configureFieldOfflineQueueStorage,
@@ -41,10 +44,9 @@ test("logout-style scope detachment preserves unresolved work for the same actor
 
   const captured = await enqueueFieldOperation(
     "create_visit",
-    { storeId: "store-session", input: { visitType: "onboarding" } },
+    { storeId: "store-session", input: { visitType: "onboarding", startLocation: {} } },
     "idem-session-1",
     "corr-session-1",
-    "intent-session-1",
   );
   assert.equal((await getAllOperations()).length, 1);
 
@@ -58,7 +60,10 @@ test("logout-style scope detachment preserves unresolved work for the same actor
   const restored = await getAllOperations();
   assert.equal(restored.length, 1);
   assert.equal(restored[0].operationId, captured.operationId);
-  assert.equal(restored[0].intentFingerprint, "intent-session-1");
+  assert.equal(
+    restored[0].intentFingerprint,
+    buildFieldIntentFingerprint("create_visit", { storeId: "store-session", input: { visitType: "onboarding", startLocation: {} } }),
+  );
 
   await discardFieldOfflineRecoveryState();
   assert.equal((await getAllOperations()).length, 0, "destruction only occurs through the explicit maintenance action");
@@ -87,7 +92,7 @@ test("v3 queue data is cut over to v4 before the old key is deleted", async () =
   const migrated = await getAllOperations();
   assert.equal(migrated.length, 1);
   assert.equal(migrated[0].idempotencyKey, "idem-v3");
-  assert.match(migrated[0].intentFingerprint, /field-offline-v3-migrated/);
+  assert.match(migrated[0].intentFingerprint, /^field-intent:v1:/);
   assert.equal(storage.store.has(v3Key), false, "the v3 live key is removed only after v4 persistence succeeds");
 
   const v4Keys = [...storage.store.keys()].filter((key) => key.startsWith("bthwani.field-offline-queue.v4."));
@@ -104,18 +109,16 @@ test("intent identity deduplicates repeated capture while transport ids stay sep
     { visitId: "visit-1", input: {} },
     "idem-first",
     "corr-first",
-    "intent-complete-visit-1",
   );
   const second = await enqueueFieldOperation(
     "complete_visit",
     { visitId: "visit-1", input: {} },
     "idem-second",
     "corr-second",
-    "intent-complete-visit-1",
   );
 
   assert.equal(first.operationId, second.operationId, "the same business intent is captured once");
   assert.equal((await getAllOperations()).length, 1);
   assert.notEqual(first.idempotencyKey, first.correlationId);
-  assert.match(first.operationId, /^field-op:v4:complete_visit:/);
+  assert.match(first.operationId, /^field-op:v5:complete_visit:/);
 });

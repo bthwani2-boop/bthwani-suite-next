@@ -36,9 +36,8 @@ func TestPartnerOperatorContextIsolationDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("same legal identity must be valid in another OperatorContext: %v", err)
 	}
-	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM dsh_partners WHERE id IN ($1, $2)`, partnerA.ID, partnerB.ID)
-	})
+	registerPartnerFixtureCleanup(t, db, partnerA.ID, partnerStoreID(t, db, partnerA.ID))
+	registerPartnerFixtureCleanup(t, db, partnerB.ID, partnerStoreID(t, db, partnerB.ID))
 
 	listA, totalA, err := ListPartnersForOperatorContext(db, OperatorContextA, PartnerListQuery{Limit: 100})
 	if err != nil {
@@ -65,7 +64,14 @@ func TestPartnerOperatorContextIsolationDB(t *testing.T) {
 		t.Fatalf("OperatorContext ownership did not propagate: partner=%q store=%q", partnerOperatorContext, storeOperatorContext)
 	}
 
-	if _, err := LinkPartnerStoreForOperatorContext(db, OperatorContextA, partnerA.ID, storeB, "operator-a"); !errors.Is(err, ErrNotFound) {
+	if _, err := LinkPartnerStoreForOperatorContextGoverned(
+		db,
+		OperatorContextA,
+		partnerA.ID,
+		"operator-a",
+		"operator-context-isolation-link",
+		GovernedStoreLinkInput{StoreID: storeB},
+	); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("cross-OperatorContext store link must be not found, got %v", err)
 	}
 }

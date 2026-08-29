@@ -8,7 +8,7 @@ export type {
   DshFieldNavigation,
   DshFieldSurfaceProps,
 } from './dsh-field.routes';
-export { dshFieldRouteToPath } from './dsh-field.routes';
+export { DSH_FIELD_ROUTE_KINDS, dshFieldRouteToPath } from './dsh-field.routes';
 
 export { DshFieldProfileCompletionScreen } from './account/DshFieldProfileCompletionScreen';
 export { IdentitySessionGate } from '../shared/session/IdentitySessionGate';
@@ -19,7 +19,7 @@ export {
 } from '../shared/workforce';
 export {
   configureFieldOfflineQueueStorage,
-  clearFieldOfflineQueue,
+  detachFieldOfflineQueueScope,
 } from '../shared/field-readiness';
 export {
   fetchFieldOperationalReadiness,

@@ -39,8 +39,8 @@ export type FieldOnboardingController = {
   updateVisitNotes: (notes: string) => void;
   updateLocation: (lat: number, lon: number) => void;
   addEvidenceRef: (ref: string) => void;
-  /** Validates identity + owner fields and creates the partner draft if it doesn't exist yet. Returns the partner id (existing or newly created), or false if blocked. */
-  ensureDraftCreated: (placeholder?: boolean, assignmentId?: string) => Promise<string | false>;
+  /** Validates the captured identity + owner fields and creates the partner draft if it doesn't exist yet. Returns the partner id (existing or newly created), or false if blocked. */
+  ensureDraftCreated: (assignmentId?: string) => Promise<string | false>;
   /**
    * Links an already uploaded media reference to the partner document record.
    * partnerIdOverride closes the first-upload race where React state still holds
@@ -139,22 +139,16 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     }));
   }, []);
 
-  const ensureDraftCreated = useCallback(async (placeholder = false, assignmentId?: string): Promise<string | false> => {
+  const ensureDraftCreated = useCallback(async (assignmentId?: string): Promise<string | false> => {
     if (state.partnerId) return state.partnerId;
 
     const form = { ...state.form };
-    if (placeholder) {
-      if (!form.legalNameAr?.trim()) form.legalNameAr = "متجر افتراضي";
-      if (!form.primaryPhone?.trim()) form.primaryPhone = "+967770000000";
-      if (!form.legalIdentityNumber?.trim()) form.legalIdentityNumber = "temp-" + Date.now();
-    } else {
-      const errors = { ...validateIdentityStep(form), ...validateOwnerStep(form) };
-      if (Object.keys(errors).length > 0) {
-        setValidationErrors(errors);
-        return false;
-      }
-      setValidationErrors({});
+    const errors = { ...validateIdentityStep(form), ...validateOwnerStep(form) };
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return false;
     }
+    setValidationErrors({});
 
     try {
       const createMutation = createPartnerMutationContext("field-create-draft", "new-draft");

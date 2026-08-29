@@ -270,7 +270,7 @@ export function DshFieldOnboardingScreen({
 
       let ownerPartnerId = state.partnerId;
       if (!ownerPartnerId) {
-        const created = await controller.ensureDraftCreated(false, assignmentPrefill?.id);
+        const created = await controller.ensureDraftCreated(assignmentPrefill?.id);
         if (!created) {
           setActiveGroup('basics_profile');
           return;
@@ -300,7 +300,7 @@ export function DshFieldOnboardingScreen({
 
   const openCatalogSetup = React.useCallback(async () => {
     if (!onOpenProducts) return;
-    const durablePartnerId = state.partnerId ?? await controller.ensureDraftCreated(false, assignmentPrefill?.id);
+    const durablePartnerId = state.partnerId ?? await controller.ensureDraftCreated(assignmentPrefill?.id);
     if (!durablePartnerId) {
       setActiveGroup('basics_profile');
       return;
@@ -353,7 +353,7 @@ export function DshFieldOnboardingScreen({
       } else if (state.partnerId) {
         void controller.save();
       } else {
-        void controller.ensureDraftCreated(false, assignmentPrefill?.id);
+        void controller.ensureDraftCreated(assignmentPrefill?.id);
       }
       return;
     }
@@ -442,7 +442,7 @@ export function DshFieldOnboardingScreen({
   }
 
   const goToNext = async () => {
-    const created = await controller.ensureDraftCreated(false, assignmentPrefill?.id);
+    const created = await controller.ensureDraftCreated(assignmentPrefill?.id);
     if (!created) {
       setActiveGroup('basics_profile');
       return;
