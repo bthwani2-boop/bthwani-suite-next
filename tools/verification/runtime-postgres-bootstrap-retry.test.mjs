@@ -26,6 +26,10 @@ const dshRuntimeDispatcher = await readFile(
   new URL("../../infra/docker/scripts/runtime-dispatch.ps1", import.meta.url),
   "utf8",
 );
+const dshClientHomeSmoke = await readFile(
+  new URL("../../infra/docker/scripts/runtime/smoke-dsh-client-home.ps1", import.meta.url),
+  "utf8",
+);
 
 test("runtime retries only the transient PostgreSQL bootstrap restart", () => {
   assert.match(phaseScript, /function Test-TransientPostgresBootstrapRestart/);
@@ -104,6 +108,10 @@ test("partner onboarding closes the canonical store publication journey", () => 
   assert.match(dshRuntimeDispatcher, /\[switch\]\$SeedWlt[\s\S]*if \(\$SeedWlt\) \{ \$seedProfiles \+= "wlt" \}[\s\S]*EngineAction "seed" -EngineProfiles \(\$seedProfiles -join ","\)/);
   assert.match(dshRuntimeDispatcher, /\$profileList -contains "wlt" -or \$SeedWlt[\s\S]*clientParameters\.WltEnabled/);
   assert.match(phaseScript, /\$runtimeParameters\.SeedWlt = \$true/);
+  assert.match(dshClientHomeSmoke, /\$checkoutAttempt = \[guid\]::NewGuid\(\)\.ToString\(\)/);
+  assert.match(dshClientHomeSmoke, /"Idempotency-Key" = "smoke-checkout-cart-\$checkoutAttempt"/);
+  assert.match(dshClientHomeSmoke, /\$checkoutHeaders\["Idempotency-Key"\] = "smoke-checkout-intent-\$checkoutAttempt"/);
+  assert.match(dshClientHomeSmoke, /-Headers \$checkoutHeaders/);
   assert.match(dshPartnerOnboardingSmoke, /catalogState\.masterProductId/);
   assert.match(dshPartnerOnboardingSmoke, /status = "ready"[\s\S]*deliveryModes = @\("delivery", "pickup"\)/);
   assert.match(dshPartnerOnboardingSmoke, /role = "store_logo"/);

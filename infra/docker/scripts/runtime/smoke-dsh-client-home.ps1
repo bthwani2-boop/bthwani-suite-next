@@ -37,9 +37,11 @@ $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
 
 if ($WltEnabled) {
   $clientToken = Get-LocalActorToken (Get-LocalUsername "client")
+  $checkoutAttempt = [guid]::NewGuid().ToString()
   $clientHeaders = @{
     Authorization = "Bearer $clientToken"
-    "X-Correlation-ID" = "smoke-checkout-$([guid]::NewGuid())"
+    "X-Correlation-ID" = "smoke-checkout-cart-$checkoutAttempt"
+    "Idempotency-Key" = "smoke-checkout-cart-$checkoutAttempt"
   }
   $cartBody = @{
     storeId = "store-test-grocery"
@@ -49,6 +51,12 @@ if ($WltEnabled) {
   } | ConvertTo-Json
   $cartItem = Invoke-RestMethod "http://localhost:18080/dsh/client/cart/items" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $cartBody -TimeoutSec 10
   if ([string]::IsNullOrWhiteSpace($cartItem.cartId)) { throw "cart item did not return cartId" }
+  $checkoutHeaders = @{}
+  foreach ($key in $clientHeaders.Keys) {
+    $checkoutHeaders[$key] = $clientHeaders[$key]
+  }
+  $checkoutHeaders["X-Correlation-ID"] = "smoke-checkout-intent-$checkoutAttempt"
+  $checkoutHeaders["Idempotency-Key"] = "smoke-checkout-intent-$checkoutAttempt"
   $checkoutBody = @{
     cartId = $cartItem.cartId
     storeId = "store-test-grocery"
@@ -57,7 +65,7 @@ if ($WltEnabled) {
     deliveryAddress = "runtime smoke checkout address"
     note = "runtime Checkout & WLT Handoff smoke"
   } | ConvertTo-Json
-  $checkout = Invoke-RestMethod "http://localhost:18080/dsh/client/checkout-intents" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $checkoutBody -TimeoutSec 10
+  $checkout = Invoke-RestMethod "http://localhost:18080/dsh/client/checkout-intents" -Method Post -Headers $checkoutHeaders -ContentType "application/json" -Body $checkoutBody -TimeoutSec 10
   Write-Host "  /dsh/client/checkout-intents: $($checkout.intent.id) / WLT=$($checkout.intent.wltPaymentSessionId)"
   if ([string]::IsNullOrWhiteSpace($checkout.intent.wltPaymentSessionId)) { throw "checkout intent missing WLT payment session reference" }
   $operatorCheckout = Invoke-RestMethod "http://localhost:18080/dsh/operator/checkout-intents" -Headers $operatorHeaders -TimeoutSec 10
