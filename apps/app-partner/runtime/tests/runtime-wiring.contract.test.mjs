@@ -23,7 +23,7 @@ test("partner app composes canonical identity, rating, catalog media, push, and 
   assert.match(source, /useDshMobilePushRegistration\(identity\.state\.kind, "app-partner", "bthwani-partner-next"\)/);
 });
 
-test("partner runtime owns persisted appearance and feeds the canonical UI provider", async () => {
+test("partner runtime owns persisted appearance and commits memory only after durable readback", async () => {
   const runtime = await read("apps/app-partner/runtime/src/index.ts");
   const appearance = await read("apps/app-partner/runtime/src/appearance.tsx");
   const hub = await read("services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx");
@@ -33,8 +33,15 @@ test("partner runtime owns persisted appearance and feeds the canonical UI provi
   assert.match(appearance, /SecureStore\.getItemAsync/);
   assert.match(appearance, /SecureStore\.setItemAsync/);
   assert.match(appearance, /window\.localStorage/);
-  assert.match(appearance, /isBThwaniAppearanceMode\(storedMode\)/);
-  assert.match(appearance, /setHydrated\(true\)/);
+  assert.match(appearance, /async function persistAndReadBackAppearanceMode/);
+  assert.match(appearance, /await writeStoredAppearanceMode\(mode\);/);
+  assert.match(appearance, /const committedMode = await readStoredAppearanceMode\(\);/);
+  assert.match(appearance, /committedMode !== mode/);
+  assert.match(appearance, /const writeQueueRef = useRef<Promise<void>>\(Promise\.resolve\(\)\);/);
+  assert.match(appearance, /writeQueueRef\.current = writeQueueRef\.current\.then\(async \(\) =>/);
+  assert.match(appearance, /const committedMode = await persistAndReadBackAppearanceMode\(nextMode\);[\s\S]*setModeState\(committedMode\);/);
+  assert.doesNotMatch(appearance, /setModeState\(nextMode\);[\s\S]*writeStoredAppearanceMode\(nextMode\)/);
+  assert.match(appearance, /لم يتم اعتماد التغيير/);
   assert.match(appearance, /<BThwaniAppearanceProvider mode=\{mode\} syncThemeMode>/);
   assert.doesNotMatch(hub, /useAppPartnerAppearance|useState<BThwaniAppearanceMode>/);
 });
