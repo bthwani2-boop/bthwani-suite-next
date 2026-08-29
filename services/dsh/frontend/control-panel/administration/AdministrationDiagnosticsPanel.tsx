@@ -11,8 +11,12 @@ import {
 } from "@bthwani/control-panel/components";
 import { useAdministrationDiagnosticsController } from "../../shared/administration";
 
-export function AdministrationDiagnosticsPanel() {
-  const diagnostics = useAdministrationDiagnosticsController("authenticated");
+export function AdministrationDiagnosticsPanel({ enabled = true }: { readonly enabled?: boolean }) {
+  const diagnostics = useAdministrationDiagnosticsController("authenticated", enabled);
+
+  if (!enabled) {
+    return null;
+  }
 
   if (diagnostics.state.kind === "loading" || diagnostics.state.kind === "idle") {
     return <CpStateView kind="loading" title="جارٍ تحميل تشخيص الإدارة…" />;
