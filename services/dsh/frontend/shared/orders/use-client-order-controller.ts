@@ -35,7 +35,9 @@ export type ClientOrderState =
       readonly pendingCustomerDecisionCount: number;
       readonly assignment: DshDispatchAssignment | null;
       readonly liveTracking: DshLiveTrackingProjection | null;
+      readonly liveTrackingReadbackMessage: string | null;
       readonly partnerDeliveryTask: DshPartnerDeliveryTask | null;
+      readonly partnerDeliveryReadbackMessage: string | null;
     };
 
 function orderErrorMessage(error: unknown): string {
@@ -73,7 +75,9 @@ export function useClientOrderController(orderId: string) {
       ]);
       let assignment: DshDispatchAssignment | null = null;
       let liveTracking: DshLiveTrackingProjection | null = null;
+      let liveTrackingReadbackMessage: string | null = null;
       let partnerDeliveryTask: DshPartnerDeliveryTask | null = null;
+      let partnerDeliveryReadbackMessage: string | null = null;
       if (order.fulfillmentMode === 'partner_delivery') {
         try {
           const response = await fetchClientPartnerDeliveryTask(orderId);
@@ -83,6 +87,9 @@ export function useClientOrderController(orderId: string) {
           if (classified.kind === 'forbidden') {
             setState({ kind: 'error', message: 'لا تملك صلاحية عرض توصيل الشريك لهذا الطلب.' });
             return;
+          }
+          if (classified.kind !== 'not_found') {
+            partnerDeliveryReadbackMessage = classified.message ?? 'تعذر تحديث حالة توصيل الشريك من DSH.';
           }
         }
       } else if (order.fulfillmentMode === 'bthwani_delivery') {
@@ -100,6 +107,9 @@ export function useClientOrderController(orderId: string) {
             if (classified.kind === 'offline') {
               assignment = null;
               liveTracking = null;
+              liveTrackingReadbackMessage = 'تعذر تحديث التتبع الحي بسبب انقطاع الاتصال. أعد المحاولة لقراءة الحالة من DSH.';
+            } else {
+              liveTrackingReadbackMessage = classified.message ?? 'تعذر تحديث التتبع الحي من DSH.';
             }
           }
         }
@@ -113,7 +123,9 @@ export function useClientOrderController(orderId: string) {
         pendingCustomerDecisionCount: issueList.pendingCustomerDecisionCount,
         assignment,
         liveTracking,
+        liveTrackingReadbackMessage,
         partnerDeliveryTask,
+        partnerDeliveryReadbackMessage,
       });
     } catch (error) {
       setState({ kind: 'error', message: orderErrorMessage(error) });

@@ -220,6 +220,24 @@ test("client order preparation never fabricates an operational readback", () => 
   assert.doesNotMatch(controller, /fetchOrderPreparationIssues\(orderId\)\.catch/);
 });
 
+test("client order delivery projections distinguish unavailable data from readback failure", () => {
+  const controller = assertMarkers(
+    "services/dsh/frontend/shared/orders/use-client-order-controller.ts",
+    ["liveTrackingReadbackMessage", "partnerDeliveryReadbackMessage", "classified.kind !== 'not_found'"],
+  );
+  assert.match(controller, /تعذر تحديث التتبع الحي/);
+  assert.match(controller, /تعذر تحديث حالة توصيل الشريك/);
+  const tracking = assertMarkers(
+    "services/dsh/frontend/app-client/orders/ClientLiveTrackingCard.tsx",
+    ["readbackMessage", "إعادة قراءة التتبع", "tone={readbackMessage ? \"danger\" : \"muted\"}"],
+  );
+  assert.ok(tracking.includes("onRetry"));
+  assertMarkers(
+    "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
+    ["partnerDeliveryReadbackMessage", "تعذر تحديث توصيل الشريك", "readbackMessage={liveTrackingReadbackMessage}"],
+  );
+});
+
 test("client notification action routes are canonical and fail closed", () => {
   const navigation = assertMarkers(
     "services/dsh/frontend/app-client/client-navigation.ts",
