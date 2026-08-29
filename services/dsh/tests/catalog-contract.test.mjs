@@ -9,7 +9,6 @@ test("catalog UI roots delegate runtime logic to shared", () => {
   for (const file of [
     "frontend/app-client/store/StoreDetailScreen.tsx",
     "frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx",
-    "frontend/control-panel/catalogs/CatalogApprovalScreen.tsx",
   ]) {
     const source = fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /\bfetch\s*\(/);

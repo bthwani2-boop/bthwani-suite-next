@@ -6,7 +6,6 @@ export * from "./client-catalog.types";
 export * from "./client-catalog.api";
 export * from "./catalog.states";
 export * from "./catalog.view-model";
-export * from "./use-catalog-approval-controller";
 export * from "./central-catalog.types";
 export * from "./central-catalog.api";
 export * from "./central-catalog-occ.api";
