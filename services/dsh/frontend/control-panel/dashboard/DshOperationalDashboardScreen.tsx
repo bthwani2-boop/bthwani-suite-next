@@ -5,8 +5,10 @@ import { Box, spacing } from "@bthwani/ui-kit";
 import { WebControlPanelKpiStrip, WebCompactSurfaceHeader } from "@bthwani/ui-kit/web";
 import { CpMutedInline, CpRetryButton, CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
 import { OverviewPageFrame } from "@bthwani/control-panel/shell";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { useOperatorAnalyticsDashboardController, buildPlatformKpisViewModel } from "../../shared/analytics";
 import { usePartnerAdminController } from "../../shared/partner";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { DispatchTrackingAlertsPanel } from "./DispatchTrackingAlertsPanel";
 import { IdentityRuntimeHealthPanel } from "./IdentityRuntimeHealthPanel";
 // surfaceInfoCard is a shared, token-driven layout primitive (CSS custom
@@ -21,8 +23,12 @@ function toneForOpenCount(count: number): KpiTone {
 }
 
 export function DshOperationalDashboardScreen() {
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canReadPartners = hasServiceControlPanelPermission(identity, "dsh", "partners.read");
+  const canReadOperations = hasServiceControlPanelPermission(identity, "dsh", "operations.read");
   const { platformState, reload } = useOperatorAnalyticsDashboardController("authenticated", "today");
-  const partnerAdmin = usePartnerAdminController("authenticated");
+  const partnerAdmin = usePartnerAdminController(canReadPartners ? "authenticated" : "restricted");
 
   const pendingPartnerCount = useMemo(() => {
     if (partnerAdmin.listState.kind !== "success") return null;
@@ -97,7 +103,16 @@ export function DshOperationalDashboardScreen() {
           </div>
         </div>
 
-        <DispatchTrackingAlertsPanel />
+        {canReadOperations ? (
+          <DispatchTrackingAlertsPanel />
+        ) : (
+          <CpStatePanel
+            role="status"
+            title="تتبع العمليات محجوب حسب الصلاحية"
+            description="تتطلب خريطة التتبع والتنبيهات التشغيلية صلاحية operations.read؛ لم يُطلب مصدر Dispatch عند غيابها."
+            code="DSH_OPERATIONS_READ_REQUIRED"
+          />
+        )}
 
         {kpis.totalOrders === 0 ? <CpMutedInline>لا توجد طلبات مسجلة اليوم بعد.</CpMutedInline> : null}
       </Box>
