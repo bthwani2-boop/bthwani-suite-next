@@ -47,7 +47,7 @@ function deadlineLabel(value: string): string {
   return deadline.toLocaleString('ar-YE');
 }
 
-export function DispatchOperationsPanel() {
+export function DispatchOperationsPanel({ canManageOperations }: { readonly canManageOperations: boolean }) {
   const controller = useDispatchOperations();
   const { state } = controller;
   const [reason, setReason] = React.useState('');
@@ -101,9 +101,11 @@ export function DispatchOperationsPanel() {
             الإلغاء وإعادة الإسناد ينفذان داخل معاملة واحدة مع read-after-write وسجل قرار دائم.
           </CpMutedInline>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-            <CpButton variant="secondary" disabled={busy} onClick={() => void controller.expire()}>
-              {state.mutationKind === 'expiring' ? 'جاري إنهاء المتأخر…' : 'إنهاء العروض المتأخرة'}
-            </CpButton>
+            {canManageOperations ? (
+              <CpButton variant="secondary" disabled={busy} onClick={() => void controller.expire()}>
+                {state.mutationKind === 'expiring' ? 'جاري إنهاء المتأخر…' : 'إنهاء العروض المتأخرة'}
+              </CpButton>
+            ) : <span>قراءة فقط — إدارة الإسنادات تتطلب صلاحية operations.manage.</span>}
             <CpButton variant="ghost" disabled={busy} onClick={() => void controller.reload({ preserveSelection: true })}>
               تحديث
             </CpButton>
@@ -148,7 +150,7 @@ export function DispatchOperationsPanel() {
               />
               <CpButton
                 variant="danger"
-                disabled={busy || reason.trim().length < 3}
+                disabled={!canManageOperations || busy || reason.trim().length < 3}
                 onClick={() => void controller.cancel(selected.id, reason)}
               >
                 {state.mutationKind === 'cancelling' ? 'جاري الإلغاء…' : 'إلغاء الإسناد'}
@@ -169,7 +171,7 @@ export function DispatchOperationsPanel() {
                     <CpButton
                       key={candidate.captainId}
                       variant={replacementCaptainId === candidate.captainId ? 'brand' : 'secondary'}
-                      disabled={busy}
+                      disabled={!canManageOperations || busy}
                       onClick={() => setReplacementCaptainId(candidate.captainId)}
                     >
                       {`${candidate.captainId} — السعة ${candidate.remainingCapacity}/${candidate.maxActiveAssignments}`}
@@ -178,7 +180,7 @@ export function DispatchOperationsPanel() {
                 </div>
               )}
               <CpButton
-                disabled={busy || !replacementCaptainId || reason.trim().length < 3}
+                disabled={!canManageOperations || busy || !replacementCaptainId || reason.trim().length < 3}
                 onClick={() => void controller.reassign(selected, replacementCaptainId, reason)}
               >
                 {state.mutationKind === 'reassigning' ? 'جاري إعادة الإسناد…' : 'إعادة الإسناد بأمان'}

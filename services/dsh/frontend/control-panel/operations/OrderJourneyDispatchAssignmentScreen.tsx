@@ -17,6 +17,7 @@ import {
 import { useDispatchCaptainOptions } from '../../shared/operations/use-dispatch-captain-options';
 import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 import { DispatchOperationsPanel } from './DispatchOperationsPanel';
+import { useOperationsCapabilities } from '../../shared/operations';
 
 export type OrderJourneyDispatchAssignmentScreenProps = {
   hubHref: string;
@@ -34,6 +35,7 @@ export function OrderJourneyDispatchAssignmentScreen({
   focusParams,
 }: OrderJourneyDispatchAssignmentScreenProps) {
   const workboard = useOperatorOrderWorkboard();
+  const { canManageOperations } = useOperationsCapabilities();
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(focusParams?.orderId ?? null);
   const [selectedCaptainId, setSelectedCaptainId] = React.useState('');
   const [mutationState, setMutationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -64,6 +66,11 @@ export function OrderJourneyDispatchAssignmentScreen({
   }, [selectedOrderId]);
 
   async function handleAssign() {
+    if (!canManageOperations) {
+      setMutationState('error');
+      setMutationMessage('هذه الجلسة للقراءة فقط ولا تملك صلاحية operations.manage.');
+      return;
+    }
     if (!selectedOrder || !selectedOption || !idempotencyKey) return;
     setMutationState('loading');
     setMutationMessage('');
@@ -203,15 +210,19 @@ export function OrderJourneyDispatchAssignmentScreen({
                   key={`${candidate.serviceAreaCode}:${candidate.captainId}`}
                   label={`${captainName} — ${vehicle} — السعة ${candidate.remainingCapacity}/${candidate.maxActiveAssignments}`}
                   tone={selectedCaptainId === candidate.captainId ? 'brand' : 'secondary'}
+                  disabled={!canManageOperations}
                   onPress={() => setSelectedCaptainId(candidate.captainId)}
                 />
               );
             })}
             <Button
               label={mutationState === 'loading' ? 'جاري إنشاء عرض الإسناد…' : 'تأكيد الإسناد'}
-              disabled={!selectedOrder || !selectedOption || !idempotencyKey || mutationState === 'loading'}
+              disabled={!canManageOperations || !selectedOrder || !selectedOption || !idempotencyKey || mutationState === 'loading'}
               onPress={() => void handleAssign()}
             />
+            {!canManageOperations ? (
+              <Text role="caption" tone="muted">قراءة فقط — إنشاء عروض الإسناد يتطلب صلاحية operations.manage.</Text>
+            ) : null}
             {mutationMessage ? (
               <Text role="bodySm" tone={mutationState === 'error' ? 'danger' : 'success'}>
                 {mutationMessage}
@@ -221,7 +232,7 @@ export function OrderJourneyDispatchAssignmentScreen({
         </Box>
       </div>
 
-      <DispatchOperationsPanel />
+      <DispatchOperationsPanel canManageOperations={canManageOperations} />
     </Box>
   );
 }

@@ -40,6 +40,7 @@ import {
 } from '../../shared/orders';
 import { listCaptains, type Captain } from '../../shared/workforce';
 import { buildOperationsHref } from './operations.registry';
+import { useOperationsCapabilities } from '../../shared/operations';
 
 export type ExceptionsEscalationsScreenProps = {
   readonly hubHref: string;
@@ -127,6 +128,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
   const router = useRouter();
   const identity = useIdentitySession();
   const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
+  const { canManageOperations } = useOperationsCapabilities();
   const [state, setState] = React.useState<WorkspaceState>({ kind: 'loading' });
   const [captains, setCaptains] = React.useState<readonly Captain[]>([]);
   const [captainsState, setCaptainsState] = React.useState<'loading' | 'ready' | 'error'>('loading');
@@ -204,6 +206,10 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     action: () => Promise<unknown>,
     fallbackMessage: string,
   ) => {
+    if (!canManageOperations) {
+      setActionState({ kind: 'error', id: item.id, message: 'هذه الجلسة للقراءة فقط ولا تملك صلاحية operations.manage.' });
+      return;
+    }
     if (!actorId) {
       setActionState({ kind: 'error', id: item.id, message: 'جلسة العمليات غير جاهزة لتنفيذ القرار.' });
       return;
@@ -228,9 +234,13 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         message: error instanceof Error ? error.message : fallbackMessage,
       });
     }
-  }, [load, note]);
+  }, [actorId, canManageOperations, load, note]);
 
   const acknowledge = React.useCallback(async (item: DshDeliveryException) => {
+    if (!canManageOperations) {
+      setActionState({ kind: 'error', id: item.id, message: 'هذه الجلسة للقراءة فقط ولا تملك صلاحية operations.manage.' });
+      return;
+    }
     if (!actorId) {
       setActionState({ kind: 'error', id: item.id, message: 'جلسة العمليات غير جاهزة لاعتماد الاستثناء.' });
       return;
@@ -247,9 +257,13 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         message: error instanceof Error ? error.message : 'تعذر اعتماد الاستثناء.',
       });
     }
-  }, [actorId, load]);
+  }, [actorId, canManageOperations, load]);
 
   const cancelReturnedOrder = React.useCallback(async (item: DshDeliveryException) => {
+    if (!canManageOperations) {
+      setActionState({ kind: 'error', id: item.id, message: 'هذه الجلسة للقراءة فقط ولا تملك صلاحية operations.manage.' });
+      return;
+    }
     if (!item.returnedAt) {
       setActionState({ kind: 'error', id: item.id, message: 'لا يمكن الإلغاء المالي قبل استلام المتجر للمرتجع.' });
       return;
@@ -281,12 +295,16 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         message: error instanceof Error ? error.message : 'تعذر تنفيذ الإلغاء المالي الحاكم.',
       });
     }
-  }, [actorId, load, note]);
+  }, [actorId, canManageOperations, load, note]);
 
   const resolveReadiness = React.useCallback(async (
     item: DshReadinessEscalation,
     status: 'acknowledged' | 'resolved',
   ) => {
+    if (!canManageOperations) {
+      setActionState({ kind: 'error', id: item.id, message: 'هذه الجلسة للقراءة فقط ولا تملك صلاحية operations.manage.' });
+      return;
+    }
     if (status === 'resolved' && note.trim().length < 5) {
       setActionState({ kind: 'error', id: item.id, message: 'اكتب نتيجة حل واضحة من خمسة أحرف على الأقل.' });
       return;
@@ -306,7 +324,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         message: error instanceof Error ? error.message : 'تعذر حفظ التصعيد.',
       });
     }
-  }, [load, note]);
+  }, [canManageOperations, load, note]);
 
   if (state.kind === 'loading') {
     return (
@@ -359,18 +377,22 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
             ? 'إعادة المحاولة ترفع حظر العهدة بعد التحقق. إعادة الإسناد تبطل محاولة العهدة الحالية فورًا وتفتح محاولة جديدة للكابتن البديل عند وصوله.'
             : 'إعادة المحاولة ترفع الحظر فقط. إعادة الإسناد متاحة قبل الاستلام وتلغي الإسناد القديم ذريًا.'}
         </Text>
-        <div>
-          <Text role="label">قرار العمليات</Text>
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="سجل سبب القرار وخطوات التحقق"
-            rows={4}
-            dir="rtl"
-            className="ui-resize-none"
-          />
-        </div>
-        {canReassign(selectedDelivery) ? (
+        {canManageOperations ? (
+          <div>
+            <Text role="label">قرار العمليات</Text>
+            <textarea
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="سجل سبب القرار وخطوات التحقق"
+              rows={4}
+              dir="rtl"
+              className="ui-resize-none"
+            />
+          </div>
+        ) : (
+          <Text role="caption" tone="muted">قراءة فقط — تنفيذ قرارات الاستثناء يتطلب صلاحية operations.manage.</Text>
+        )}
+        {canManageOperations && canReassign(selectedDelivery) ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <Text role="label">الكابتن البديل المؤهل</Text>
             <CpSelect
@@ -389,7 +411,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
           <Text role="caption" tone="danger">{actionState.message}</Text>
         ) : null}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {selectedDelivery.status === 'open' ? (
+          {canManageOperations && selectedDelivery.status === 'open' ? (
             <CpButton
               variant="secondary"
               disabled={actionState.kind === 'submitting'}
@@ -398,24 +420,26 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               اعتماد وبدء المراجعة
             </CpButton>
           ) : null}
-          <CpButton
-            variant="primary"
-            disabled={actionState.kind === 'submitting'}
-            onClick={() => void runDeliveryAction(
-              selectedDelivery,
-              () => resolveDeliveryExceptionRetrySameCaptain(
-                selectedDelivery.id,
-                selectedDelivery.version,
-                note.trim(),
-              ),
-              'تعذر حل الاستثناء.',
-            )}
-          >
-            {isHandoffException(selectedDelivery)
-              ? 'حل: السماح باستكمال العهدة مع الكابتن نفسه'
-              : 'حل: إعادة المحاولة مع الكابتن نفسه'}
-          </CpButton>
-          {canReassign(selectedDelivery) ? (
+          {canManageOperations ? (
+            <CpButton
+              variant="primary"
+              disabled={actionState.kind === 'submitting'}
+              onClick={() => void runDeliveryAction(
+                selectedDelivery,
+                () => resolveDeliveryExceptionRetrySameCaptain(
+                  selectedDelivery.id,
+                  selectedDelivery.version,
+                  note.trim(),
+                ),
+                'تعذر حل الاستثناء.',
+              )}
+            >
+              {isHandoffException(selectedDelivery)
+                ? 'حل: السماح باستكمال العهدة مع الكابتن نفسه'
+                : 'حل: إعادة المحاولة مع الكابتن نفسه'}
+            </CpButton>
+          ) : null}
+          {canManageOperations && canReassign(selectedDelivery) ? (
             <CpButton
               variant="secondary"
               disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'}
@@ -433,7 +457,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               حل: إعادة الإسناد للكابتن البديل
             </CpButton>
           ) : null}
-          {canReassign(selectedDelivery) ? (
+          {canManageOperations && canReassign(selectedDelivery) ? (
             <CpButton
               variant="danger"
               disabled={actionState.kind === 'submitting'}
@@ -450,7 +474,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               حل: إلغاء الطلب قبل الاستلام
             </CpButton>
           ) : null}
-          {canReturnToStore(selectedDelivery) ? (
+          {canManageOperations && canReturnToStore(selectedDelivery) ? (
             <CpButton
               variant="secondary"
               disabled={actionState.kind === 'submitting'}
@@ -496,27 +520,33 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
             <Text role="bodySm" tone="muted">
               لن ينشئ DSH استردادًا مباشرًا. ينشئ أمر الإلغاء سجلًا وOutbox واحدًا، ثم يقرر WLT تحرير الجلسة أو طلب الاسترداد.
             </Text>
-            <div>
-              <Text role="label">سبب الإلغاء بعد فحص المرتجع</Text>
-              <textarea
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="سجل حالة المرتجع وسبب عدم إعادة التنفيذ"
-                rows={4}
-                dir="rtl"
-                className="ui-resize-none"
-              />
-            </div>
+            {canManageOperations ? (
+              <div>
+                <Text role="label">سبب الإلغاء بعد فحص المرتجع</Text>
+                <textarea
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  placeholder="سجل حالة المرتجع وسبب عدم إعادة التنفيذ"
+                  rows={4}
+                  dir="rtl"
+                  className="ui-resize-none"
+                />
+              </div>
+            ) : (
+              <Text role="caption" tone="muted">قراءة فقط — بدء الإغلاق المالي يتطلب صلاحية operations.manage.</Text>
+            )}
             {actionState.kind === 'error' && actionState.id === selectedReturn.id ? (
               <Text role="caption" tone="danger">{actionState.message}</Text>
             ) : null}
-            <CpButton
-              variant="danger"
-              disabled={actionState.kind === 'submitting' || note.trim().length < 5}
-              onClick={() => void cancelReturnedOrder(selectedReturn)}
-            >
-              إلغاء الطلب وبدء الإغلاق المالي
-            </CpButton>
+            {canManageOperations ? (
+              <CpButton
+                variant="danger"
+                disabled={actionState.kind === 'submitting' || note.trim().length < 5}
+                onClick={() => void cancelReturnedOrder(selectedReturn)}
+              >
+                إلغاء الطلب وبدء الإغلاق المالي
+              </CpButton>
+            ) : null}
           </>
         )}
       </div>
@@ -524,29 +554,35 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
   ) : selectedReadiness ? (
     <CpDetailPanel title={`إجراء على تصعيد الجاهزية ${selectedReadiness.id}`} onClose={() => setSelectedReadinessId(null)}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div>
-          <Text role="label">ملاحظات المراجعة أو الحل</Text>
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="اكتب نتيجة تشغيلية قابلة للتدقيق"
-            rows={4}
-            dir="rtl"
-            className="ui-resize-none"
-          />
-        </div>
+        {canManageOperations ? (
+          <div>
+            <Text role="label">ملاحظات المراجعة أو الحل</Text>
+            <textarea
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="اكتب نتيجة تشغيلية قابلة للتدقيق"
+              rows={4}
+              dir="rtl"
+              className="ui-resize-none"
+            />
+          </div>
+        ) : (
+          <Text role="caption" tone="muted">قراءة فقط — حل تصعيد الجاهزية يتطلب صلاحية operations.manage.</Text>
+        )}
         {actionState.kind === 'error' && actionState.id === selectedReadiness.id ? (
           <Text role="caption" tone="danger">{actionState.message}</Text>
         ) : null}
         <div style={{ display: 'flex', gap: 8 }}>
-          {selectedReadiness.status === 'open' ? (
+          {canManageOperations && selectedReadiness.status === 'open' ? (
             <CpButton variant="secondary" onClick={() => void resolveReadiness(selectedReadiness, 'acknowledged')}>
               تأكيد الاستلام
             </CpButton>
           ) : null}
-          <CpButton variant="primary" onClick={() => void resolveReadiness(selectedReadiness, 'resolved')}>
-            حل وإغلاق
-          </CpButton>
+          {canManageOperations ? (
+            <CpButton variant="primary" onClick={() => void resolveReadiness(selectedReadiness, 'resolved')}>
+              حل وإغلاق
+            </CpButton>
+          ) : null}
         </div>
       </div>
     </CpDetailPanel>
@@ -561,6 +597,9 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
           <CpMutedInline tight>
             طابور حقيقي من DSH. استثناءات العهدة توقف تأكيد المتجر والتقاط الكابتن حتى قرار العمليات.
           </CpMutedInline>
+          {!canManageOperations ? (
+            <CpMutedInline tight>وضع القراءة فقط: لا تظهر أفعال التعديل أو الإغلاق لهذه الجلسة.</CpMutedInline>
+          ) : null}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
             <CpButton variant="secondary" onClick={() => { void load(); void loadCaptains(); }}>تحديث</CpButton>
             <CpButton variant="ghost" onClick={() => router.push(hubHref)}>العودة لمركز العمليات</CpButton>

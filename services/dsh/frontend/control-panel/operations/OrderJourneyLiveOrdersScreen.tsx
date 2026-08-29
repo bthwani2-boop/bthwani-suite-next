@@ -24,6 +24,7 @@ import { OrderJourneyOperatorIntervention } from './OrderJourneyOperatorInterven
 import { OrderPreparationAlertsPanel } from './OrderPreparationAlertsPanel';
 import { PartnerDeliverySLAAlertsPanel } from './PartnerDeliverySLAAlertsPanel';
 import { PickupSLAAlertsPanel } from './PickupSLAAlertsPanel';
+import { useOperationsCapabilities } from '../../shared/operations';
 
 export type OrderJourneyLiveOrdersScreenProps = {
   hubHref: string;
@@ -71,6 +72,14 @@ export function OrderJourneyLiveOrdersScreen({
 }: OrderJourneyLiveOrdersScreenProps) {
   const router = useRouter();
   const workboard = useOperatorOrderWorkboard();
+  const {
+    canManageOperations,
+    canReadPartnerDelivery,
+    canManagePartnerDelivery,
+    canReadPickup,
+    canManagePickup,
+    canOverrideIncident,
+  } = useOperationsCapabilities();
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(
     focusParams?.orderId ?? null,
   );
@@ -132,9 +141,22 @@ export function OrderJourneyLiveOrdersScreen({
         { id: 'financial-failures', label: 'تعثر مالي', value: String(financialFailures), tone: financialFailures > 0 ? 'danger' : 'success' },
       ]} />
 
-      <OrderPreparationAlertsPanel onOpenOrder={setSelectedOrderId} />
-      <PartnerDeliverySLAAlertsPanel onOpenOrder={setSelectedOrderId} />
-      <PickupSLAAlertsPanel onOpenOrder={setSelectedOrderId} />
+      <OrderPreparationAlertsPanel
+        onOpenOrder={setSelectedOrderId}
+        canManageOperations={canManageOperations}
+      />
+      {canReadPartnerDelivery ? (
+        <PartnerDeliverySLAAlertsPanel
+          onOpenOrder={setSelectedOrderId}
+          canManage={canManagePartnerDelivery}
+        />
+      ) : null}
+      {canReadPickup ? (
+        <PickupSLAAlertsPanel
+          onOpenOrder={setSelectedOrderId}
+          canManage={canManagePickup}
+        />
+      ) : null}
 
       <div className={styles.surfaceSplitGrid}>
         <WebControlPanelQueue title="الطلبات المباشرة" meta={`${visible.length} من ${workboard.state.total}`}>
@@ -189,7 +211,12 @@ export function OrderJourneyLiveOrdersScreen({
           ) : null}
 
           {selected ? (
-            <OrderJourneyOperatorIntervention order={selected} onChanged={workboard.refresh} />
+            <OrderJourneyOperatorIntervention
+              order={selected}
+              onChanged={workboard.refresh}
+              canManageOperations={canManageOperations}
+              canOverrideIncident={canOverrideIncident}
+            />
           ) : (
             <StateView stateId="empty" title="اختر طلبًا" description="اختر صفًا لعرض التجهيز والتدخلات المحكومة والنتيجة المالية." />
           )}

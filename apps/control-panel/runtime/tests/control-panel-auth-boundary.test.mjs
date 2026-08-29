@@ -29,6 +29,34 @@ const workforceOperationalCoreSource = fs.readFileSync(
   path.join(repoRoot, "services/dsh/frontend/control-panel/hr/ProviderOperationalCorePanel.tsx"),
   "utf8",
 );
+const operationsPermissionSource = fs.readFileSync(
+  path.join(repoRoot, "services/dsh/frontend/shared/operations/use-operations-permission.ts"),
+  "utf8",
+);
+const liveOrdersSource = fs.readFileSync(
+  path.join(repoRoot, "services/dsh/frontend/control-panel/operations/OrderJourneyLiveOrdersScreen.tsx"),
+  "utf8",
+);
+const exceptionsSource = fs.readFileSync(
+  path.join(repoRoot, "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"),
+  "utf8",
+);
+const dispatchSource = fs.readFileSync(
+  path.join(repoRoot, "services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx"),
+  "utf8",
+);
+const specialOpsSource = fs.readFileSync(
+  path.join(repoRoot, "services/dsh/frontend/shared/special-requests/OperatorSpecialRequestsWorkbench.tsx"),
+  "utf8",
+);
+const partnerStoresSource = fs.readFileSync(
+  path.join(repoRoot, "services/dsh/frontend/control-panel/operations/PartnerStoresScreen.tsx"),
+  "utf8",
+);
+const checkoutSource = fs.readFileSync(
+  path.join(repoRoot, "services/dsh/frontend/control-panel/operations/CheckoutActivityScreen.tsx"),
+  "utf8",
+);
 const routes = await import(
   pathToFileURL(path.join(repoRoot, "services/dsh/frontend/shared/control-panel-routes.ts")).href,
 );
@@ -89,4 +117,33 @@ test("workforce HR mutation surfaces bind to canonical Workforce permissions", (
   assert.match(workforceOperationalCoreSource, /canUpdate: boolean/);
   assert.match(workforceOperationalCoreSource, /if \(!canUpdate\) return/);
   assert.match(workforceOperationalCoreSource, /<fieldset disabled=\{!canUpdate\}/);
+});
+
+test("operations mutation surfaces fail closed against the exact DSH action contract", () => {
+  for (const action of [
+    "dsh.service_zones.read",
+    "dsh.fulfillment_sla.read",
+    "dsh.dispatch_capacity.read",
+    "operations.read",
+    "operations.manage",
+    "partner_delivery.read",
+    "partner_delivery.manage",
+    "pickup.read",
+    "pickup.manage",
+    "incident.override",
+    "operations.special_requests.read",
+    "operations.special_requests.transition",
+    "operations.special_requests.dispatch",
+  ]) assert.match(operationsPermissionSource, new RegExp(action.replaceAll(".", "\\.")));
+  assert.match(operationsPermissionSource, /return actions\.every/);
+  assert.match(liveOrdersSource, /canReadPartnerDelivery/);
+  assert.match(liveOrdersSource, /canReadPickup/);
+  assert.match(liveOrdersSource, /canManageOperations/);
+  assert.match(exceptionsSource, /canManageOperations/);
+  assert.match(dispatchSource, /canManageOperations/);
+  assert.match(specialOpsSource, /canTransitionSpecialRequests/);
+  assert.match(specialOpsSource, /canDispatchSpecialRequests/);
+  assert.match(partnerStoresSource, /hasServiceControlPanelPermission/);
+  assert.match(partnerStoresSource, /partners\.manage/);
+  assert.match(checkoutSource, /canManageOperations/);
 });

@@ -11,6 +11,7 @@ import {
   TextField,
 } from '@bthwani/ui-kit';
 import { CpTabs } from '@bthwani/control-panel/components';
+import { useOperationsCapabilities } from '../../shared/operations';
 import {
   useOperatorDeliveryProofReviewController,
   type DshDeliveryProof,
@@ -52,11 +53,12 @@ function sourceLabel(proof: DshDeliveryProof): string {
 
 export function DeliveryProofReviewScreen({ hubHref }: DeliveryProofReviewScreenProps) {
   const controller = useOperatorDeliveryProofReviewController('pending_review');
+  const { canManageOperations } = useOperationsCapabilities();
   const [selectedProofId, setSelectedProofId] = React.useState<string | null>(null);
   const [reason, setReason] = React.useState('');
 
   const selectedProof = controller.proofs.find((proof) => proof.id === selectedProofId) ?? null;
-  const reviewDisabled = reason.trim().length < 5 || controller.reviewingProofId !== null;
+  const reviewDisabled = !canManageOperations || reason.trim().length < 5 || controller.reviewingProofId !== null;
 
   const runReview = React.useCallback(async (action: 'accept' | 'reject') => {
     if (!selectedProof || reason.trim().length < 5) return;
@@ -184,7 +186,7 @@ export function DeliveryProofReviewScreen({ hubHref }: DeliveryProofReviewScreen
                         setReason('');
                       }}
                     />
-                    {selected ? (
+                    {selected && canManageOperations ? (
                       <Box gap={2}>
                         <TextField
                           label="سبب القرار التشغيلي"
@@ -209,6 +211,8 @@ export function DeliveryProofReviewScreen({ hubHref }: DeliveryProofReviewScreen
                           />
                         </Box>
                       </Box>
+                    ) : selected ? (
+                      <Text role="caption" tone="muted">قراءة فقط — قبول أو رفض الإثبات يتطلب صلاحية operations.manage.</Text>
                     ) : null}
                   </Box>
                 ) : null}

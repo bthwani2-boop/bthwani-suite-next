@@ -10,6 +10,7 @@ import {
   WebControlPanelRecommendation,
 } from '@bthwani/ui-kit/web';
 import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { buildOperationsHref } from './operations.registry';
 import { useStoreAdminController, type DshStoreAdminTableRow } from '../../shared/store';
 import styles from '../shared/control-panel-surface.module.css';
@@ -56,6 +57,8 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
   const urlStoreId = focusParams?.orderId ?? searchParams.get('orderId') ?? null;
   const { state: identity } = useIdentitySession();
   const controller = useStoreAdminController(identity.kind);
+  const canManage = identity.kind === 'authenticated'
+    && hasServiceControlPanelPermission(identity.identity, 'dsh', 'partners.manage');
 
   const rows = React.useMemo(
     () => controller.visibleRows.map(mapAdminRowToCpRow),
@@ -81,6 +84,7 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
 
   const updateLifecycle = React.useCallback(
     (value: 'published' | 'paused', reason: string) => {
+      if (!canManage) return;
       if (!controller.selectedStoreId || !activeDetail) return;
       void controller.govern(controller.selectedStoreId, {
         expectedVersion: activeDetail.version,
@@ -89,7 +93,7 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
         reason,
       });
     },
-    [activeDetail, controller],
+    [activeDetail, canManage, controller],
   );
 
   if (identity.kind !== 'authenticated') {
@@ -118,7 +122,8 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
     <Box gap={3}>
       <div className={styles.surfaceSectionHeader}>
         <h2 className={styles.surfaceSectionTitle}>المتاجر والشركاء</h2>
-        <Text role="caption" tone="success">مصدر حي — DSH Runtime</Text>
+          <Text role="caption" tone="success">مصدر حي — DSH Runtime</Text>
+          {!canManage ? <Text role="caption" tone="muted">قراءة فقط — حوكمة دورة حياة المتجر تتطلب صلاحية partners.manage.</Text> : null}
       </div>
 
       <WebControlPanelKpiStrip
@@ -212,14 +217,14 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
                   {activeStore.status === 'موقوف مؤقتًا' ? (
                     <Button
                       label={isSubmitting ? 'جاري الاستئناف...' : 'استئناف استقبال الطلبات'}
-                      disabled={isSubmitting || !activeDetail}
+                      disabled={!canManage || isSubmitting || !activeDetail}
                       onPress={() => updateLifecycle('published', 'استئناف استقبال الطلبات من لوحة العمليات')}
                     />
                   ) : (
                     <Button
                       label={isSubmitting ? 'جاري الإيقاف...' : 'إيقاف استقبال الطلبات مؤقتًا'}
                       tone="danger"
-                      disabled={isSubmitting || !activeDetail}
+                      disabled={!canManage || isSubmitting || !activeDetail}
                       onPress={() => updateLifecycle('paused', 'إيقاف مؤقت لاستقبال الطلبات من لوحة العمليات')}
                     />
                   )}
