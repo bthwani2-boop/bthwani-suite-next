@@ -338,7 +338,7 @@ test("checkout keeps an unresolved payment intent visible and blocks duplicate s
   assert.doesNotMatch(flow, /catch \{\s*\/\/ Best effort cancel/);
   const cart = assertMarkers(
     "services/dsh/frontend/app-client/cart/CartScreen.tsx",
-    ["const checkoutLocked", "checkoutLocked || !cartReady", "disabled={!canProceed}"],
+    ["const checkoutLocked", "checkoutLocked || !cartReady", "serviceabilityController.serviceability.kind === \"serviceable\"", "disabled={!canProceed}"],
   );
   assert.match(cart, /actionPending \|\| checkoutLocked/);
   assertMarkers(

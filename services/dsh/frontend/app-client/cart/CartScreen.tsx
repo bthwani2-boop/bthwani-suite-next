@@ -140,10 +140,7 @@ export function CartScreen({
     if (!cart || actionPending || checkoutLocked || !cartReady) return false;
     if (!requiresDeliveryAddress) return true;
     if (!selectedAddress) return false;
-    return (
-      serviceabilityController.serviceability.kind !== "blocked" &&
-      serviceabilityController.serviceability.kind !== "error"
-    );
+    return serviceabilityController.serviceability.kind === "serviceable";
   }, [
     actionPending,
     cart,
