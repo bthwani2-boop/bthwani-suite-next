@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { useCaptainOrderRuntime, type CaptainDeliveryExceptionDraft } from './use-captain-order-runtime';
-import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
+import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle.policy';
 import { fetchCaptainDeliveryProof } from '../delivery-proof/delivery-proof.api';
 import { classifyDispatchError } from '../dispatch/dispatch.api';
 

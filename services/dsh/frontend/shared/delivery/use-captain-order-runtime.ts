@@ -1,5 +1,5 @@
 import React from 'react';
-import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
+import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle.policy';
 import { getDshLocationAdapter } from '../mobile-capabilities';
 import {
   acceptDispatchAssignment,
