@@ -26,7 +26,6 @@ import { DshEntryScreen } from "./account/DshCaptainEntryScreen";
 import {
   CaptainOrderDetailScreen,
   CaptainOrdersInboxScreen,
-  CaptainPickupConfirmSheet,
 } from "./orders/DshCaptainOrdersScreen";
 import { DshCaptainPoDSubmissionScreen } from "./orders/DshCaptainPoDSubmissionScreen";
 import { WltCaptainFinanceScreen } from "./finance/WltCaptainFinanceScreen";
@@ -62,12 +61,9 @@ export type DshCaptainRouteRendererProps = {
   readonly isStoreCourierMode: boolean;
   readonly isCaptainAvailable: boolean;
   readonly selectedSupportScreen: CaptainSupportRoute;
-  readonly isPickupSheetVisible: boolean;
-  readonly isDeliverySheetVisible: boolean;
   readonly isDeclineSheetVisible: boolean;
   readonly declineOrderId: string;
   readonly declineSheetState: "ready" | "loading" | "success" | "error";
-  readonly pickupSheetState: "ready" | "loading" | "success" | "error";
   readonly deliveryActionState: "idle" | "loading" | "success" | "error";
   readonly deliveryActionMessage: string | null;
   readonly captainPodState: PodScreenState;
@@ -93,6 +89,7 @@ export type DshCaptainRouteRendererProps = {
   readonly onConfirmStoreArrival: () => Promise<boolean>;
   readonly onConfirmPickup: () => Promise<boolean>;
   readonly onConfirmCustomerArrival: () => Promise<boolean>;
+  readonly onOpenPod: () => void;
   readonly onConfirmPodSubmission: () => void;
   readonly onReportPodFailure: (draft: CaptainDeliveryExceptionDraft) => Promise<DshDeliveryException | undefined>;
   readonly onCapturePhoto: () => void;
@@ -100,8 +97,6 @@ export type DshCaptainRouteRendererProps = {
   readonly onBack: () => void;
   readonly onGoToInbox: () => void;
   readonly onGoToAccount: () => void;
-  readonly onClosePickupSheet: () => void;
-  readonly onCloseDeliverySheet: () => void;
   readonly onCloseDeclineSheet: () => void;
   readonly onConfirmDecline: (orderId: string, reason: string) => void;
   readonly onAcceptTask: (orderId: string) => void;
@@ -159,11 +154,9 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     isStoreCourierMode,
     isCaptainAvailable,
     selectedSupportScreen,
-    isPickupSheetVisible,
     isDeclineSheetVisible,
     declineOrderId,
     declineSheetState,
-    pickupSheetState,
     deliveryActionState,
     deliveryActionMessage,
     captainPodState,
@@ -183,6 +176,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     onConfirmStoreArrival,
     onConfirmPickup,
     onConfirmCustomerArrival,
+    onOpenPod,
     onConfirmPodSubmission,
     onReportPodFailure,
     onCapturePhoto,
@@ -190,7 +184,6 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     onBack,
     onGoToInbox,
     onGoToAccount,
-    onClosePickupSheet,
     onCloseDeclineSheet,
     onConfirmDecline,
     onAcceptTask,
@@ -242,6 +235,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
                   if (activeDeliveryAction.id === 'arrive_store') void onConfirmStoreArrival();
                   else if (activeDeliveryAction.id === 'pickup') void onConfirmPickup();
                   else if (activeDeliveryAction.id === 'arrive_customer') void onConfirmCustomerArrival();
+                  else if (activeDeliveryAction.id === 'open_pod') onOpenPod();
                 },
               } : undefined}
               onOpenNextOrder={onGoToInbox}
@@ -249,13 +243,12 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
             />
             {deliveryActionMessage ? (
               <StateView
-                title={deliveryActionState === 'success' ? activeDeliveryAction.label : 'تعذر تثبيت المرحلة'}
+                title={deliveryActionState === 'success' ? 'تم تثبيت المرحلة' : 'تعذر تثبيت المرحلة'}
                 description={deliveryActionMessage}
                 tone={deliveryActionState === 'success' ? 'success' : 'danger'}
               />
             ) : null}
           </Box>
-          <CaptainPickupConfirmSheet visible={isPickupSheetVisible} orderTitle={activeSummary.orderId} state={pickupSheetState} onConfirm={onConfirmPickup} onCancel={onClosePickupSheet} />
           <OfferDeclineSheet visible={isDeclineSheetVisible} offerId={declineOrderId} state={declineSheetState} onConfirmDecline={onConfirmDecline} onClose={onCloseDeclineSheet} />
         </>
       );
