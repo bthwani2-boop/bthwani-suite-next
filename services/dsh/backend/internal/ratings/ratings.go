@@ -2,7 +2,10 @@ package ratings
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,10 +13,11 @@ import (
 )
 
 var (
-	ErrInvalid          = errors.New("invalid rating")
-	ErrNotEligible      = errors.New("rating is not eligible")
-	ErrNotFound         = errors.New("rating source not found")
-	ErrEditWindowPassed = errors.New("rating edit window has passed")
+	ErrInvalid             = errors.New("invalid rating")
+	ErrNotEligible         = errors.New("rating is not eligible")
+	ErrNotFound            = errors.New("rating source not found")
+	ErrIdempotencyConflict = errors.New("rating idempotency conflict")
+	ErrEditWindowPassed    = errors.New("rating edit window has passed")
 )
 
 type PartnerFieldPrompt struct {
@@ -75,6 +79,16 @@ type OrderRatingInput struct {
 	OrderComment      string `json:"orderComment"`
 	CaptainDimensions string `json:"captainDimensions"`
 	OrderDimensions   string `json:"orderDimensions"`
+}
+
+type ClientOrderRatingsMutationContext struct {
+	IdempotencyKey string
+	CorrelationID  string
+}
+
+type ratingQueryer interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 }
 
 func PartnerFieldRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID, partnerActorID string) (PartnerFieldPrompt, error) {
@@ -151,6 +165,10 @@ func SubmitPartnerFieldRating(ctx context.Context, db *sql.DB, operatorContextID
 }
 
 func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID, clientActorID, orderID string) (ClientOrderPrompt, error) {
+	return clientOrderRatingPromptQuery(ctx, db, operatorContextID, clientActorID, orderID)
+}
+
+func clientOrderRatingPromptQuery(ctx context.Context, queryer ratingQueryer, operatorContextID, clientActorID, orderID string) (ClientOrderPrompt, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	clientActorID = strings.TrimSpace(clientActorID)
 	orderID = strings.TrimSpace(orderID)
@@ -159,7 +177,7 @@ func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID,
 	}
 	var prompt ClientOrderPrompt
 	var status string
-	err := db.QueryRowContext(ctx, `
+	err := queryer.QueryRowContext(ctx, `
 		SELECT o.id::text, o.order_number, o.status,
 		       COALESCE((
 		         SELECT d.captain_id FROM dsh_deliveries d
@@ -188,7 +206,7 @@ func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID,
 		return prompt, nil
 	}
 	prompt.Eligible = true
-	rows, err := db.QueryContext(ctx, `
+	rows, err := queryer.QueryContext(ctx, `
 		SELECT target_kind FROM dsh_provider_ratings
 		WHERE operator_context_id=$1 AND rater_actor_id=$2 AND source_kind='order_delivery'
 		  AND source_id=$3 AND status='active'`, operatorContextID, clientActorID, orderID)
@@ -215,23 +233,71 @@ func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID,
 	return prompt, nil
 }
 
-func SubmitClientOrderRatings(ctx context.Context, db *sql.DB, operatorContextID, clientActorID, orderID string, input OrderRatingInput, correlationID string) ([]Rating, error) {
+func SubmitClientOrderRatings(ctx context.Context, db *sql.DB, operatorContextID, clientActorID, orderID string, input OrderRatingInput, mutation ClientOrderRatingsMutationContext) ([]Rating, error) {
 	if input.CaptainScore < 1 || input.CaptainScore > 5 || input.OrderScore < 1 || input.OrderScore > 5 ||
 		len(strings.TrimSpace(input.CaptainComment)) > 1000 || len(strings.TrimSpace(input.OrderComment)) > 1000 {
 		return nil, ErrInvalid
 	}
-	prompt, err := ClientOrderRatingPrompt(ctx, db, operatorContextID, clientActorID, orderID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	clientActorID = strings.TrimSpace(clientActorID)
+	orderID = strings.TrimSpace(orderID)
+	mutation.IdempotencyKey = strings.TrimSpace(mutation.IdempotencyKey)
+	mutation.CorrelationID = strings.TrimSpace(mutation.CorrelationID)
+	if operatorContextID == "" || clientActorID == "" || orderID == "" ||
+		len(mutation.IdempotencyKey) < 16 || len(mutation.IdempotencyKey) > 200 ||
+		mutation.CorrelationID == "" || len(mutation.CorrelationID) > 200 {
+		return nil, ErrInvalid
+	}
+	fingerprint := clientOrderRatingsFingerprint(operatorContextID, clientActorID, orderID, input)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+		operatorContextID+"|"+clientActorID+"|client-order-ratings|key|"+mutation.IdempotencyKey); err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+		operatorContextID+"|"+clientActorID+"|client-order-ratings|order|"+orderID); err != nil {
+		return nil, err
+	}
+
+	var storedFingerprint, storedOrderID, captainRatingID, orderRatingID, storedCorrelationID string
+	err = tx.QueryRowContext(ctx, `
+		SELECT request_fingerprint, order_id::text, captain_rating_id::text, order_rating_id::text, correlation_id
+		FROM dsh_provider_rating_mutation_receipts
+		WHERE operator_context_id=$1 AND actor_id=$2 AND idempotency_key=$3
+		FOR UPDATE`, operatorContextID, clientActorID, mutation.IdempotencyKey).Scan(
+		&storedFingerprint, &storedOrderID, &captainRatingID, &orderRatingID, &storedCorrelationID)
+	if err == nil {
+		if storedFingerprint != fingerprint || storedOrderID != orderID || storedCorrelationID != mutation.CorrelationID {
+			return nil, ErrIdempotencyConflict
+		}
+		captain, readErr := getRatingByIDTx(ctx, tx, captainRatingID)
+		if readErr != nil {
+			return nil, readErr
+		}
+		order, readErr := getRatingByIDTx(ctx, tx, orderRatingID)
+		if readErr != nil {
+			return nil, readErr
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return []Rating{captain, order}, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+
+	prompt, err := clientOrderRatingPromptQuery(ctx, tx, operatorContextID, clientActorID, orderID)
 	if err != nil {
 		return nil, err
 	}
 	if !prompt.Eligible {
 		return nil, ErrNotEligible
 	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
 	if input.CaptainDimensions == "" {
 		input.CaptainDimensions = "{}"
 	}
@@ -242,7 +308,7 @@ func SubmitClientOrderRatings(ctx context.Context, db *sql.DB, operatorContextID
 		OperatorContextID: operatorContextID, RaterKind: "client", RaterActorID: clientActorID,
 		TargetKind: "captain", TargetActorID: prompt.CaptainActorID,
 		SourceKind: "order_delivery", SourceID: orderID,
-		Score: input.CaptainScore, Comment: input.CaptainComment, Dimensions: input.CaptainDimensions, CorrelationID: correlationID,
+		Score: input.CaptainScore, Comment: input.CaptainComment, Dimensions: input.CaptainDimensions, CorrelationID: mutation.CorrelationID,
 	})
 	if err != nil {
 		return nil, err
@@ -251,15 +317,49 @@ func SubmitClientOrderRatings(ctx context.Context, db *sql.DB, operatorContextID
 		OperatorContextID: operatorContextID, RaterKind: "client", RaterActorID: clientActorID,
 		TargetKind: "order", TargetActorID: "",
 		SourceKind: "order_delivery", SourceID: orderID,
-		Score: input.OrderScore, Comment: input.OrderComment, Dimensions: input.OrderDimensions, CorrelationID: correlationID,
+		Score: input.OrderScore, Comment: input.OrderComment, Dimensions: input.OrderDimensions, CorrelationID: mutation.CorrelationID,
 	})
 	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO dsh_provider_rating_mutation_receipts
+			(operator_context_id, actor_id, order_id, idempotency_key, request_fingerprint, correlation_id, captain_rating_id, order_rating_id)
+		VALUES ($1,$2,$3::uuid,$4,$5,$6,$7::uuid,$8::uuid)`,
+		operatorContextID, clientActorID, orderID, mutation.IdempotencyKey, fingerprint, mutation.CorrelationID, captain.ID, order.ID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 	return []Rating{captain, order}, nil
+}
+
+func clientOrderRatingsFingerprint(operatorContextID, clientActorID, orderID string, input OrderRatingInput) string {
+	payload := struct {
+		OperatorContextID string
+		ClientActorID     string
+		OrderID           string
+		Input             OrderRatingInput
+	}{operatorContextID, clientActorID, orderID, input}
+	encoded, _ := json.Marshal(payload)
+	digest := sha256.Sum256(encoded)
+	return hex.EncodeToString(digest[:])
+}
+
+func getRatingByIDTx(ctx context.Context, tx *sql.Tx, ratingID string) (Rating, error) {
+	var rating Rating
+	err := tx.QueryRowContext(ctx, `
+		SELECT id::text,operator_context_id,rater_kind,rater_actor_id,target_kind,target_actor_id,source_kind,source_id,
+		       score,comment,dimensions,moderation_status,fraud_signals,partner_response,dispute_reason,status,created_at,updated_at
+		FROM dsh_provider_ratings WHERE id=$1::uuid`, ratingID).Scan(
+		&rating.ID, &rating.OperatorContextID, &rating.RaterKind, &rating.RaterActorID, &rating.TargetKind, &rating.TargetActorID,
+		&rating.SourceKind, &rating.SourceID, &rating.Score, &rating.Comment, &rating.Dimensions, &rating.ModerationStatus,
+		&rating.FraudSignals, &rating.PartnerResponse, &rating.DisputeReason, &rating.Status, &rating.CreatedAt, &rating.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Rating{}, ErrNotFound
+	}
+	return rating, err
 }
 
 type ratingInput struct {

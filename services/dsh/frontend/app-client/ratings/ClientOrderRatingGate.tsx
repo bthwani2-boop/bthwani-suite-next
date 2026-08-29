@@ -1,11 +1,17 @@
 import React from "react";
 import { ActivityIndicator, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { Icon, Text, colorRoles, spacing } from "@bthwani/ui-kit";
 import {
+  fetchClientOrderRatingPrompt,
   fetchPendingClientOrderRatingPrompt,
   submitClientOrderRatings,
   type ClientOrderRatingPrompt,
 } from "../../shared/provider-ratings/provider-ratings.api";
+import {
+  clearClientOrderRatingAttempt,
+  getOrCreateClientOrderRatingAttempt,
+} from "../../shared/provider-ratings/client-order-rating-attempt";
 
 function StarSelector(props: { readonly label: string; readonly value: number; readonly onChange: (value: number) => void }) {
   return (
@@ -30,6 +36,8 @@ function StarSelector(props: { readonly label: string; readonly value: number; r
 }
 
 export function ClientOrderRatingGate({ children }: { readonly children: React.ReactNode }) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const [prompt, setPrompt] = React.useState<ClientOrderRatingPrompt | null>(null);
   const [captainScore, setCaptainScore] = React.useState(0);
   const [orderScore, setOrderScore] = React.useState(0);
@@ -38,29 +46,50 @@ export function ClientOrderRatingGate({ children }: { readonly children: React.R
   const [submitting, setSubmitting] = React.useState(false);
   const [dismissed, setDismissed] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [promptLoadError, setPromptLoadError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    void fetchPendingClientOrderRatingPrompt()
-      .then((next) => { if (!cancelled) setPrompt(next); })
-      .catch(() => { if (!cancelled) setPrompt(null); });
-    return () => { cancelled = true; };
-  }, []);
+  const loadPrompt = React.useCallback(async () => {
+    if (!actorId) {
+      setPrompt(null);
+      setPromptLoadError(null);
+      return;
+    }
+    try {
+      setPromptLoadError(null);
+      setPrompt(await fetchPendingClientOrderRatingPrompt());
+    } catch {
+      setPrompt(null);
+      setPromptLoadError("تعذر التحقق من التقييمات المعلقة حاليًا.");
+    }
+  }, [actorId]);
+
+  React.useEffect(() => { void loadPrompt(); }, [loadPrompt]);
 
   const visible = Boolean(prompt?.eligible && !prompt.completed && !dismissed);
   const canSubmit = captainScore > 0 && orderScore > 0 && !submitting;
 
   const submit = async () => {
     if (!prompt?.orderId || !canSubmit) return;
+    if (!actorId) {
+      setError("يجب تسجيل الدخول قبل حفظ التقييم.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
+    const input = {
+      captainScore,
+      orderScore,
+      captainComment: captainComment.trim(),
+      orderComment: orderComment.trim(),
+    };
     try {
-      await submitClientOrderRatings(prompt.orderId, {
-        captainScore,
-        orderScore,
-        captainComment: captainComment.trim(),
-        orderComment: orderComment.trim(),
-      });
+      const attempt = await getOrCreateClientOrderRatingAttempt(actorId, prompt.orderId, input);
+      await submitClientOrderRatings(prompt.orderId, input, attempt.context);
+      const readback = await fetchClientOrderRatingPrompt(prompt.orderId);
+      if (!readback.completed || !readback.captainRated || !readback.orderRated) {
+        throw new Error("client order rating canonical readback is incomplete");
+      }
+      await clearClientOrderRatingAttempt(actorId, prompt.orderId, attempt.signature);
       setPrompt((current) => current ? { ...current, completed: true, captainRated: true, orderRated: true } : current);
     } catch {
       setError("تعذر حفظ تقييم الطلب والكابتن. حاول مجددًا.");
@@ -72,6 +101,14 @@ export function ClientOrderRatingGate({ children }: { readonly children: React.R
   return (
     <>
       {children}
+      {promptLoadError ? (
+        <View style={styles.promptError} accessibilityLiveRegion="polite">
+          <Text role="bodySm" tone="danger">{promptLoadError}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="إعادة التحقق من التقييمات" onPress={() => void loadPrompt()}>
+            <Text role="bodySm" tone="action">إعادة المحاولة</Text>
+          </Pressable>
+        </View>
+      ) : null}
       <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setDismissed(true)}>
         <View style={styles.overlay}>
           <View style={styles.card} accessibilityViewIsModal>
@@ -167,6 +204,19 @@ const styles = StyleSheet.create({
     backgroundColor: colorRoles.surfaceMuted,
   },
   error: { textAlign: "right" },
+  promptError: {
+    position: "absolute",
+    top: spacing[3],
+    left: spacing[3],
+    right: spacing[3],
+    zIndex: 2,
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: spacing[3],
+    borderRadius: 12,
+    backgroundColor: colorRoles.surfaceBase,
+  },
   primaryButton: {
     minHeight: 48,
     borderRadius: 12,

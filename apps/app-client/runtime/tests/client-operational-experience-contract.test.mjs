@@ -210,6 +210,33 @@ test("client order and support routes remain navigable and failure-safe", () => 
   );
 });
 
+test("client order ratings preserve one durable mutation through canonical readback", () => {
+  const attempt = assertMarkers(
+    "services/dsh/frontend/shared/provider-ratings/client-order-rating-attempt.ts",
+    ["client-order-ratings-submit", "resolveMutationIdentityScope", "getOrCreateDurableMutationAttempt", "purgeExactDurableMutationAttempt"],
+  );
+  assert.match(attempt, /entityId: `order:\$\{normalizedOrderId\}`/);
+  const gate = assertMarkers(
+    "services/dsh/frontend/app-client/ratings/ClientOrderRatingGate.tsx",
+    ["getOrCreateClientOrderRatingAttempt", "fetchClientOrderRatingPrompt", "clearClientOrderRatingAttempt", "promptLoadError", "إعادة التحقق من التقييمات"],
+  );
+  assert.match(gate, /submitClientOrderRatings\(prompt\.orderId, input, attempt\.context\)/);
+  const api = assertMarkers(
+    "services/dsh/frontend/shared/provider-ratings/provider-ratings.api.ts",
+    ["idempotencyKey: mutation.idempotencyKey", "canonical readback did not preserve the mutation identity"],
+  );
+  assert.match(api, /correlationId: mutation\.correlationId/);
+  const backend = assertMarkers(
+    "services/dsh/backend/internal/ratings/ratings.go",
+    ["dsh_provider_rating_mutation_receipts", "ErrIdempotencyConflict", "clientOrderRatingsFingerprint"],
+  );
+  assert.match(backend, /pg_advisory_xact_lock/);
+  assertMarkers(
+    "services/dsh/database/migrations/dsh-1060_provider_rating_mutation_idempotency.sql",
+    ["dsh_provider_rating_mutation_receipts", "uq_dsh_provider_rating_receipts_actor_key", "request_fingerprint"],
+  );
+});
+
 test("client order preparation never fabricates an operational readback", () => {
   const controller = assertMarkers(
     "services/dsh/frontend/shared/orders/use-client-order-controller.ts",
