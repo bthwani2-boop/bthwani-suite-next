@@ -69,6 +69,13 @@ export function usePartnerOrdersRuntime(route: string, storeId?: string) {
     }
   }, [route, storeId]);
 
+  const refresh = React.useCallback(async (): Promise<void> => {
+    const readbackVerified = await fetchOrders();
+    if (!readbackVerified) {
+      throw new Error('Partner order canonical readback was not verified for the current route and store.');
+    }
+  }, [fetchOrders]);
+
   React.useEffect(() => {
     void fetchOrders();
   }, [fetchOrders]);
@@ -76,6 +83,6 @@ export function usePartnerOrdersRuntime(route: string, storeId?: string) {
   return {
     orders,
     state,
-    refresh: fetchOrders,
+    refresh,
   } as const;
 }
