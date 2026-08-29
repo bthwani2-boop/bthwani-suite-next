@@ -59,8 +59,6 @@ export type DshPartnerHubSurfaceProps = {
   managerLabel?: string;
   todayHoursLabel?: string;
   activeZoneLabel?: string;
-  storeOpen?: boolean;
-  listingEnabled?: boolean;
   activeOrdersCount?: number;
   urgentOrdersCount?: number;
   pendingActionsCount?: number;

@@ -256,8 +256,6 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
         managerLabel={runtimePartnerProfile.managerLabel}
         todayHoursLabel={runtimePartnerProfile.todayHoursLabel}
         activeZoneLabel={runtimePartnerProfile.activeZoneLabel}
-        storeOpen={false}
-        listingEnabled={false}
         activeOrdersCount={deliveryOpsSummary.outForDelivery + deliveryOpsSummary.handoffReady}
         urgentOrdersCount={deliveryOpsSummary.delayedRisk}
         pendingActionsCount={deliveryOpsSummary.handoffReady}
