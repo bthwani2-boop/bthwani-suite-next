@@ -29,6 +29,8 @@ const isIdentityPath = (file) =>
   file.startsWith("core/identity/");
 const isSchemaRuntimePath = (file) =>
   /\/database\/(migrations|tests)\//u.test(file);
+const isMigrationPath = (file) => /\/database\/migrations\//u.test(file);
+const isWorkflowAuthorityPath = (file) => file.startsWith(".github/workflows/") || file.startsWith(".github/actions/");
 const isMigrationAuthorityPath = (file) =>
   file === "infra/docker/scripts/schema-migration-runner.ps1" ||
   file === "tools/scripts/invoke-service-migrations.ps1" ||
@@ -79,9 +81,8 @@ export function classifyFiles(inputFiles, options = {}) {
   // failure model is only falsifiable in a running system: authorization and
   // OperatorContext authority, idempotency/replay/concurrency, order journey
   // state machines, WLT wallet/commission/payout/refund truth, identity/RBAC, and
-  // schema/migration
-  // changes that runtime consumes. Plain infrastructural changes keep their
-  // existing runtime requirement.
+  // schema/migration changes that runtime consumes. Plain infrastructural changes
+  // keep their existing runtime requirement.
   const authorization = riskClass(isAuthorizationPath);
   const idempotency = riskClass(isIdempotencyPath);
   const orderJourney = riskClass(isOrderJourneyPath);
@@ -99,6 +100,20 @@ export function classifyFiles(inputFiles, options = {}) {
     schemaRuntime ? "schema_runtime" : "",
     infrastructure ? "infrastructure" : "",
   ].filter(Boolean);
+
+  // Human review is a changed-candidate risk decision, not a verification-mode
+  // side effect. Full-scope verification must therefore not manufacture a human
+  // approval requirement for unrelated bytes. Keep this policy centralized here
+  // so Final Closure consumes the same changed-file truth as every other caller.
+  const humanReviewRequired = hasPath(files, (file) =>
+    isAuthorizationPath(file) ||
+    isWltFinancialPath(file) ||
+    isIdentityPath(file) ||
+    isMigrationPath(file) ||
+    isMigrationAuthorityPath(file) ||
+    isWorkflowAuthorityPath(file) ||
+    /cancellation/iu.test(file),
+  );
 
   const diagnosticsRequired = contracts;
   const verificationRequired = node;
@@ -131,6 +146,7 @@ export function classifyFiles(inputFiles, options = {}) {
     node,
     migration_authority: migrationAuthority,
     risk_classes: riskClasses,
+    human_review_required: humanReviewRequired,
     verification_required: verificationRequired,
     backend_required: backendRequired,
     diagnostics_required: diagnosticsRequired,

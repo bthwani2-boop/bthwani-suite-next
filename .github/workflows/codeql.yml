@@ -33,6 +33,7 @@ jobs:
       go_matrix: ${{ steps.scope.outputs.go_matrix }}
       actions_required: ${{ steps.scope.outputs.actions_required }}
       skip_duplicate_push: ${{ steps.scope.outputs.skip_duplicate_push }}
+      full_scope: ${{ steps.scope.outputs.full_scope }}
     steps:
       - name: Checkout immutable candidate history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -51,6 +52,7 @@ jobs:
           EXPECTED_HEAD_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
           INPUT_PR_NUMBER: ${{ inputs.pr_number }}
           INPUT_BASE_SHA: ${{ inputs.base_sha }}
+          INPUT_FULL_SCOPE: ${{ inputs.full_scope }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -82,8 +84,11 @@ jobs:
           fi
           full=false
           skip_duplicate=false
-          if [[ "${EVENT_NAME}" == "schedule" || "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "workflow_call" || ( \
-          "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
+          if [[ "${INPUT_FULL_SCOPE}" == "true" ]]; then
+            full=true
+          elif [[ "${EVENT_NAME}" == "schedule" || \
+                  ( "${EVENT_NAME}" == "workflow_dispatch" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) || \
+                  ( "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
             full=true
           elif [[ "${EVENT_NAME}" == "push" ]]; then
             open_pr_count="$(gh api --method GET \
@@ -151,9 +156,11 @@ jobs:
             echo "go_matrix=${go_modules}"
             echo "actions_required=${actions}"
             echo "skip_duplicate_push=${skip_duplicate}"
+            echo "full_scope=${full}"
           } >> "${GITHUB_OUTPUT}"
           {
             echo "### CodeQL scope"
+            echo "- Full scope: ${full}"
             echo "- Languages: ${languages}"
             echo "- Go modules: ${go_modules:-[]}"
             echo "- Actions: ${actions}"
@@ -307,8 +314,9 @@ jobs:
     name: Upload trusted CodeQL SARIF
     needs: [scope, analyze-javascript-typescript, analyze-go, analyze-actions]
     if: >-
-      ${{ needs.scope.outputs.skip_duplicate_push != 'true' && needs.analyze-javascript-typescript.result ==
-      'success' && needs.analyze-go.result == 'success' && needs.analyze-actions.result == 'success' &&
+      ${{ needs.scope.outputs.skip_duplicate_push != 'true' && needs.scope.outputs.full_scope == 'true' &&
+      needs.analyze-javascript-typescript.result == 'success' && needs.analyze-go.result == 'success' &&
+      needs.analyze-actions.result == 'success' &&
       (github.event_name == 'workflow_call' ||
       (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) ||
       github.event_name == 'schedule' ||
@@ -332,8 +340,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]] || { echo \
-          "::error::CodeQL SARIF upload requires the default-branch workflow definition"; exit 1; }
+          [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]] || {
+            echo "::error::CodeQL SARIF upload requires the default-branch workflow definition"
+            exit 1
+          }
           [[ "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::CodeQL candidate SHA is invalid"; exit 1; }
           [[ "${CANDIDATE_REF}" == refs/* ]] || { echo "::error::CodeQL candidate ref is invalid"; exit 1; }
           if [[ -n "${PR_NUMBER:-}" ]]; then
@@ -442,6 +452,7 @@ jobs:
           UPLOAD_RESULT: ${{ needs.upload.result }}
           LANGUAGES: ${{ needs.scope.outputs.languages }}
           ACTIONS_REQUIRED: ${{ needs.scope.outputs.actions_required }}
+          FULL_SCOPE: ${{ needs.scope.outputs.full_scope }}
           SKIP_DUPLICATE_PUSH: ${{ needs.scope.outputs.skip_duplicate_push }}
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
@@ -469,10 +480,11 @@ jobs:
             exit 1
           fi
           trusted_upload_required=false
-          if [[ "${EVENT_NAME}" == "workflow_call" || \
+          if [[ "${FULL_SCOPE}" == "true" && ( \
+                "${EVENT_NAME}" == "workflow_call" || \
                 ( "${EVENT_NAME}" == "workflow_dispatch" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) || \
                 "${EVENT_NAME}" == "schedule" || \
-                ( "${EVENT_NAME}" == "push" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
+                ( "${EVENT_NAME}" == "push" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) ) ]]; then
             trusted_upload_required=true
           fi
           if [[ "${trusted_upload_required}" == "true" ]]; then
@@ -480,6 +492,6 @@ jobs:
             "::error title=CodeQL trusted upload failed::upload:${UPLOAD_RESULT}"; exit 1; }
           else
             [[ "${UPLOAD_RESULT}" == "skipped" ]] || { echo \
-            "::error::untrusted event unexpectedly ran the CodeQL write boundary"; exit 1; }
+            "::error::non-full or untrusted analysis unexpectedly ran the CodeQL write boundary"; exit 1; }
           fi
           echo "All applicable CodeQL analyses passed."

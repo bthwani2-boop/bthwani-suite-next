@@ -45,7 +45,9 @@ jobs:
           head_sha: ${{ env.CANDIDATE_SHA }}
           token: ${{ github.token }}
           repository: ${{ github.repository }}
-      - name: Verify patch whitespace
+      - name: Check patch whitespace
+        id: whitespace
+        continue-on-error: true
         shell: bash
         env:
           BASE_SHA: ${{ inputs.base_sha }}
@@ -62,10 +64,13 @@ jobs:
             nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
             nx-
       - name: Materialize contracts when affected
+        id: materialize
         if: ${{ inputs.contracts == 'true' }}
+        continue-on-error: true
         run: pnpm exec nx run contracts:materialize
-      - name: Verify affected or full Node graph
+      - name: Verify all applicable Node targets without first-failure masking
         id: node_graph
+        if: ${{ inputs.contracts != 'true' || steps.materialize.outcome == 'success' }}
         continue-on-error: true
         env:
           NX_BASE: ${{ inputs.base_sha }}
@@ -76,37 +81,43 @@ jobs:
           set +e
           log="${RUNNER_TEMP}/node-graph-verification.log"
           : >"${log}"
+          failures=()
           run_check() {
-            echo "===== $* =====" | tee -a "${log}"
+            local label="$1"
+            shift
+            echo "===== ${label}: $* =====" | tee -a "${log}"
             "$@" 2>&1 | tee -a "${log}"
-            return "${PIPESTATUS[0]}"
+            local code="${PIPESTATUS[0]}"
+            if (( code != 0 )); then
+              failures+=("${label}:${code}")
+            fi
           }
-          status=0
           if [[ "${FULL_SCOPE}" == "true" ]]; then
-            run_check pnpm exec nx run-many -t typecheck lint test build --all --outputStyle=stream || status=$?
+            for target in typecheck lint test build; do
+              run_check "${target}" pnpm exec nx run-many -t "${target}" --all --outputStyle=stream
+            done
           else
-            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test || status=$?
+            for target in typecheck lint test; do
+              run_check "${target}" node tools/scripts/run-affected-verification.mjs "${target}"
+            done
           fi
-          exit "${status}"
-      - name: Upload Node graph diagnostics
-        if: ${{ steps.node_graph.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: node-graph-verification-${{ github.run_id }}
-          path: ${{ runner.temp }}/node-graph-verification.log
-          if-no-files-found: error
-          retention-days: 7
-      - name: Enforce Node graph result
-        if: ${{ steps.node_graph.outcome == 'failure' }}
-        run: exit 1
+          if (( ${#failures[@]} )); then
+            echo "Node target failures collected: $(IFS=,; echo "${failures[*]}")" | tee -a "${log}"
+            exit 1
+          fi
+          echo "All applicable Node targets passed." | tee -a "${log}"
       - name: Verify CI control-plane tests
+        id: ci_control
         if: ${{ inputs.ci_control_plane == 'true' }}
+        continue-on-error: true
         run: |
           node --test tools/scripts/detect-ci-context.test.mjs
           node --test tools/scripts/ci-routing.test.mjs
           node --test tools/scripts/ci-runtime-bootstrap-policy.test.mjs
       - name: Verify Platform contract and generated client when affected
+        id: platform_contract
         if: ${{ inputs.platform == 'true' }}
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -115,7 +126,65 @@ jobs:
           node tools/guards/platform-change-sets-gate.mjs
           git diff --exit-code -- core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml core/platform-control/clients/generated/platform-control-api.ts
           test -z "$(git status --porcelain -- core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml core/platform-control/clients/generated/platform-control-api.ts)"
-
       - name: Verify dependency integrity when affected
+        id: dependency_integrity
         if: ${{ inputs.dependency_changed == 'true' }}
+        continue-on-error: true
         run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Upload Node graph diagnostics
+        if: ${{ always() && steps.node_graph.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-graph-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/node-graph-verification.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce complete Node verification collection
+        if: ${{ always() }}
+        shell: bash
+        env:
+          WHITESPACE: ${{ steps.whitespace.outcome }}
+          CONTRACTS_REQUIRED: ${{ inputs.contracts }}
+          MATERIALIZE: ${{ steps.materialize.outcome }}
+          NODE_GRAPH: ${{ steps.node_graph.outcome }}
+          CI_CONTROL_REQUIRED: ${{ inputs.ci_control_plane }}
+          CI_CONTROL: ${{ steps.ci_control.outcome }}
+          PLATFORM_REQUIRED: ${{ inputs.platform }}
+          PLATFORM_CONTRACT: ${{ steps.platform_contract.outcome }}
+          DEPENDENCY_REQUIRED: ${{ inputs.dependency_changed }}
+          DEPENDENCY_INTEGRITY: ${{ steps.dependency_integrity.outcome }}
+        run: |
+          set -euo pipefail
+          failures=()
+          [[ "${WHITESPACE}" == "success" ]] || failures+=("whitespace:${WHITESPACE}")
+          if [[ "${CONTRACTS_REQUIRED}" == "true" ]]; then
+            [[ "${MATERIALIZE}" == "success" ]] || failures+=("contract-materialization:${MATERIALIZE}")
+            if [[ "${MATERIALIZE}" == "success" ]]; then
+              [[ "${NODE_GRAPH}" == "success" ]] || failures+=("node-graph:${NODE_GRAPH}")
+            else
+              echo "Node graph BLOCKED_BY contract-materialization:${MATERIALIZE}"
+            fi
+          else
+            [[ "${MATERIALIZE}" == "skipped" ]] || failures+=("contract-materialization-unexpected:${MATERIALIZE}")
+            [[ "${NODE_GRAPH}" == "success" ]] || failures+=("node-graph:${NODE_GRAPH}")
+          fi
+          if [[ "${CI_CONTROL_REQUIRED}" == "true" ]]; then
+            [[ "${CI_CONTROL}" == "success" ]] || failures+=("ci-control:${CI_CONTROL}")
+          else
+            [[ "${CI_CONTROL}" == "skipped" ]] || failures+=("ci-control-unexpected:${CI_CONTROL}")
+          fi
+          if [[ "${PLATFORM_REQUIRED}" == "true" ]]; then
+            [[ "${PLATFORM_CONTRACT}" == "success" ]] || failures+=("platform-contract:${PLATFORM_CONTRACT}")
+          else
+            [[ "${PLATFORM_CONTRACT}" == "skipped" ]] || failures+=("platform-contract-unexpected:${PLATFORM_CONTRACT}")
+          fi
+          if [[ "${DEPENDENCY_REQUIRED}" == "true" ]]; then
+            [[ "${DEPENDENCY_INTEGRITY}" == "success" ]] || failures+=("dependency-integrity:${DEPENDENCY_INTEGRITY}")
+          else
+            [[ "${DEPENDENCY_INTEGRITY}" == "skipped" ]] || failures+=("dependency-integrity-unexpected:${DEPENDENCY_INTEGRITY}")
+          fi
+          if (( ${#failures[@]} )); then
+            echo "::error::Node verification failed after collecting all independently executable checks: $(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+          echo "Complete Node verification collection passed."

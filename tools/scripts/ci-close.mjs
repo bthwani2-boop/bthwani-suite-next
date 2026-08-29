@@ -34,8 +34,13 @@ function main() {
   const pr = prs[0];
   if (pr.isDraft) fail("final closure requires a non-draft PR");
   if (pr.headRefOid !== headSha) fail(`local HEAD ${headSha} is not live PR HEAD ${pr.headRefOid}`);
+
+  // Final Closure is privileged assurance. Dispatch its workflow definition
+  // from the protected default branch and pass the development candidate only
+  // as immutable data. This prevents a candidate branch from certifying itself
+  // by modifying the secret/write-capable closure workflow that evaluates it.
   const dispatch = run("gh", [
-    "workflow", "run", "final-closure.yml", "--repo", repository, "--ref", branch,
+    "workflow", "run", "final-closure.yml", "--repo", repository, "--ref", defaultBranch,
     "-f", `pr_number=${pr.number}`,
     "-f", `expected_head_sha=${headSha}`,
     "-f", `expected_base_sha=${pr.baseRefOid}`,
@@ -43,6 +48,7 @@ function main() {
   process.stdout.write(JSON.stringify({
     repository,
     workflow: "final-closure.yml",
+    workflowDefinitionRef: defaultBranch,
     branch,
     headSha,
     prNumber: pr.number,

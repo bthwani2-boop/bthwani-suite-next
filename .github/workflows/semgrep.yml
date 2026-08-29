@@ -5,6 +5,7 @@ on:
     inputs:
       head_sha: {type: string, required: true}
       base_sha: {type: string, required: true}
+      full_scope: {type: boolean, required: false, default: false}
 
 permissions:
   contents: read
@@ -16,10 +17,11 @@ concurrency:
 env:
   HEAD_SHA: ${{ inputs.head_sha }}
   BASE_SHA: ${{ inputs.base_sha }}
+  FULL_SCOPE: ${{ inputs.full_scope }}
 
 jobs:
   scan:
-    name: Semgrep exact diff
+    name: Semgrep exact candidate
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -51,7 +53,7 @@ jobs:
           python3 -m venv "${RUNNER_TEMP}/semgrep-1.172.0"
           "${RUNNER_TEMP}/semgrep-1.172.0/bin/python" -m pip install --disable-pip-version-check --no-input semgrep==1.172.0
           echo "${RUNNER_TEMP}/semgrep-1.172.0/bin" >> "${GITHUB_PATH}"
-      - name: Run Semgrep on the exact diff
+      - name: Run Semgrep with explicit affected or full scope
         id: semgrep
         continue-on-error: true
         shell: bash
@@ -59,12 +61,18 @@ jobs:
           set +e
           evidence="${RUNNER_TEMP}/semgrep-evidence"
           mkdir -p "${evidence}"
-          semgrep scan --config p/default --config p/security-audit --json --metrics=off \
-            --exclude=".github/workflows/**" --baseline-commit "${BASE_SHA}" . \
-            > "${evidence}/semgrep.json" 2> "${evidence}/stderr.log"
+          mode=diff
+          args=(scan --config p/default --config p/security-audit --json --metrics=off --exclude=".github/workflows/**")
+          if [[ "${FULL_SCOPE}" == "true" ]]; then
+            mode=full
+          else
+            args+=(--baseline-commit "${BASE_SHA}")
+          fi
+          semgrep "${args[@]}" . > "${evidence}/semgrep.json" 2> "${evidence}/stderr.log"
           status=$?
           set -e
           echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
+          echo "mode=${mode}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
       - name: Normalize every raw finding and engine condition
         id: policy
@@ -73,6 +81,7 @@ jobs:
         shell: bash
         env:
           SCAN_OUTCOME: ${{ steps.semgrep.outcome }}
+          MODE: ${{ steps.semgrep.outputs.mode }}
         run: |
           set -euo pipefail
           src="${RUNNER_TEMP}/semgrep-evidence/semgrep.json"
@@ -82,16 +91,17 @@ jobs:
             --input "${src}" \
             --output-dir "${RUNNER_TEMP}/semgrep-evidence" \
             --head-sha "${HEAD_SHA}" \
-            --mode diff \
+            --mode "${MODE}" \
             --base-sha "${BASE_SHA}"
           summary="${RUNNER_TEMP}/semgrep-evidence/summary.json"
           total="$(jq -r '.totalFindings' "${summary}")"
           unknown="$(jq -r '.unknownEngineErrors' "${summary}")"
           accounted="$(jq -r '.allRawFindingsAccounted' "${summary}")"
           {
-            echo "### Semgrep exact diff"
+            echo "### Semgrep exact candidate"
             echo "- Candidate: \`${HEAD_SHA}\`"
             echo "- Base: \`${BASE_SHA}\`"
+            echo "- Mode: \`${MODE}\`"
             echo "- Raw findings: \`${total}\`"
             echo "- Unknown engine errors: \`${unknown}\`"
             echo "- All raw engine conditions accounted: \`${accounted}\`"
