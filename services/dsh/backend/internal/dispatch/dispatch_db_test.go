@@ -33,7 +33,7 @@ func openRequiredDB(t *testing.T) *sql.DB {
 
 // seedArrivedCustomerFixture builds a store/cart/checkout-intent/order/
 // assignment/delivery chain sitting in the arrived_customer state, ready for
-// SubmitPoD, with the checkout intent's payment method controllable so both
+// canonical delivery proof review, with the checkout intent's payment method controllable so both
 // the COD and non-COD outbox-enqueue paths can be exercised.
 func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) (assignmentID, captainID, orderID, checkoutIntentID, partnerID, operatorContextID string) {
 	t.Helper()
@@ -123,18 +123,32 @@ func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) 
 	return assignmentID, captainID, orderID, checkoutIntentID, partnerID, operatorContextID
 }
 
-func TestSubmitPoDEnqueuesWltOutboxEventForCodOrderDBIntegration(t *testing.T) {
+func TestSubmitDeliveryProofEnqueuesWltOutboxEventForCodOrderDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	assignmentID, captainID, orderID, checkoutIntentID, partnerID, operatorContextID := seedArrivedCustomerFixture(t, db, "cod")
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
 	seedCaptainDeliveryProofMedia(t, db, captainID, "ref-123", partnerID, "")
 
-	assignment, err := SubmitPoD(db, operatorContextID, assignmentID, captainID, PoDInput{Method: "photo", Reference: "ref-123"})
+	proof, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
+		OperatorContextID: operatorContextID,
+		Method:            DeliveryProofPhoto,
+		PhotoMediaRef:     "ref-123",
+		IdempotencyKey:    "cod-photo-proof-" + orderID,
+	})
 	if err != nil {
-		t.Fatalf("SubmitPoD failed: %v", err)
+		t.Fatalf("SubmitDeliveryProof failed: %v", err)
 	}
-	if assignment.OrderID != orderID {
-		t.Fatalf("expected assignment order id %s, got %s", orderID, assignment.OrderID)
+	if proof.Status != DeliveryProofPendingReview || proof.OrderID != orderID {
+		t.Fatalf("unexpected submitted proof: %+v", proof)
+	}
+	if _, err := ReviewDeliveryProof(db, proof.ID, "operator-cod", ReviewDeliveryProofInput{
+		OperatorContextID: operatorContextID,
+		ExpectedVersion:   proof.Version,
+		Reason:            "تمت مراجعة إثبات التسليم",
+		Accept:            true,
+		IdempotencyKey:    "cod-photo-review-" + orderID,
+	}); err != nil {
+		t.Fatalf("ReviewDeliveryProof failed: %v", err)
 	}
 
 	var gotCaptainID, gotPartnerID, gotCheckoutIntentID, status string
@@ -210,14 +224,29 @@ func TestSubmitDeliveryProofOTPDoesNotUseChallengeAsMediaReferenceDBIntegration(
 	}
 }
 
-func TestSubmitPoDDoesNotEnqueueOutboxForNonCodOrderDBIntegration(t *testing.T) {
+func TestSubmitDeliveryProofDoesNotEnqueueOutboxForNonCodOrderDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	assignmentID, captainID, orderID, _, partnerID, operatorContextID := seedArrivedCustomerFixture(t, db, "wallet")
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
 	seedCaptainDeliveryProofMedia(t, db, captainID, "ref-456", partnerID, "")
 
-	if _, err := SubmitPoD(db, operatorContextID, assignmentID, captainID, PoDInput{Method: "photo", Reference: "ref-456"}); err != nil {
-		t.Fatalf("SubmitPoD failed: %v", err)
+	proof, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
+		OperatorContextID: operatorContextID,
+		Method:            DeliveryProofPhoto,
+		PhotoMediaRef:     "ref-456",
+		IdempotencyKey:    "wallet-photo-proof-" + orderID,
+	})
+	if err != nil {
+		t.Fatalf("SubmitDeliveryProof failed: %v", err)
+	}
+	if _, err := ReviewDeliveryProof(db, proof.ID, "operator-wallet", ReviewDeliveryProofInput{
+		OperatorContextID: operatorContextID,
+		ExpectedVersion:   proof.Version,
+		Reason:            "تمت مراجعة إثبات التسليم",
+		Accept:            true,
+		IdempotencyKey:    "wallet-photo-review-" + orderID,
+	}); err != nil {
+		t.Fatalf("ReviewDeliveryProof failed: %v", err)
 	}
 
 	var count int

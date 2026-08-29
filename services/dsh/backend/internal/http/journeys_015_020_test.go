@@ -21,7 +21,7 @@ func TestJourneys015Through020ExposeGovernedRoutes(t *testing.T) {
 		{journey: " partner proof", method: http.MethodPost, path: "/dsh/partner/orders/order-1/partner-delivery/proof", pattern: "POST /dsh/partner/orders/{orderId}/partner-delivery/proof"},
 		{journey: " captain location", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/location", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/location"},
 		{journey: " client tracking", method: http.MethodGet, path: "/dsh/client/orders/order-1/tracking", pattern: "GET /dsh/client/orders/{orderId}/tracking"},
-		{journey: " captain proof", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/pod", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/pod"},
+		{journey: " captain proof", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/delivery-proof", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof"},
 		{journey: " operator cancellation", method: http.MethodPost, path: "/dsh/operator/orders/order-1/cancellation", pattern: "POST /dsh/operator/orders/{orderId}/cancellation"},
 		{journey: " exception report", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/exceptions", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/exceptions"},
 		{journey: " return arrival", method: http.MethodPost, path: "/dsh/captain/dispatch/assignments/assignment-1/return-to-store/arrive", pattern: "POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive"},

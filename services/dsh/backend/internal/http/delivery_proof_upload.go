@@ -69,13 +69,6 @@ func (s *protectedStoreServer) removeDeliveryProofObject(r *http.Request, mediaR
 	}
 }
 
-// Compatibility endpoint for clients that still post to /pod. It delegates to
-// the governed delivery-proof command and can no longer mark an order delivered from
-// an arbitrary reference string.
-func (s *protectedStoreServer) handleSubmitDispatchPoDWithMedia(w http.ResponseWriter, r *http.Request) {
-	s.handleSubmitGovernedDeliveryProof(w, r)
-}
-
 func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.ResponseWriter, r *http.Request) {
 	if !isMultipartRequest(r) {
 		s.handlePartnerDeliveryProof(w, r)

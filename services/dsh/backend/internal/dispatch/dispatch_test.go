@@ -65,19 +65,6 @@ func TestGetClientTrackingRequiresOrderAndClientID(t *testing.T) {
 	}
 }
 
-func TestSubmitPoDRequiresMethodAndReference(t *testing.T) {
-	cases := []PoDInput{
-		{Reference: "ref-1"},
-		{Method: "photo"},
-	}
-	for _, input := range cases {
-		_, err := SubmitPoD(nil, "OperatorContext-validation", "assignment-1", "captain-1", input)
-		if !errors.Is(err, ErrInvalid) {
-			t.Fatalf("expected ErrInvalid for input %+v, got %v", input, err)
-		}
-	}
-}
-
 func TestUpdateDeliveryStatusRejectsUnsupportedStatus(t *testing.T) {
 	_, err := UpdateDeliveryStatus(nil, "OperatorContext-validation", "assignment-1", "captain-1", DeliveryStatus("bogus_status"))
 	if !errors.Is(err, ErrInvalid) {

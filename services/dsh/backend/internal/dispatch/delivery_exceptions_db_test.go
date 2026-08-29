@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testing.T) {
+func TestDeliveryExceptionBlocksProofButAllowsLocationDBIntegration(t *testing.T) {
 	db := openDispatchRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	operatorContextID := "OperatorContext-delivery-exception-" + suffix
@@ -92,7 +92,12 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 		t.Fatalf("expected idempotent replay of %s, got %+v err=%v", item.ID, replayed, err)
 	}
 
-	if _, err := SubmitPoD(db, operatorContextID, assignmentID, captainID, PoDInput{Method: "photo", Reference: "blocked-proof"}); !errors.Is(err, ErrConflict) {
+	if _, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
+		OperatorContextID: operatorContextID,
+		Method:            DeliveryProofPhoto,
+		PhotoMediaRef:     "blocked-proof",
+		IdempotencyKey:    "blocked-proof-" + suffix,
+	}); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected proof to be blocked by active exception, got %v", err)
 	}
 
@@ -132,7 +137,12 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 	}
 
 	seedCaptainDeliveryProofMedia(t, db, captainID, "retry-proof", partnerID, storeID)
-	if _, err := SubmitPoD(db, operatorContextID, assignmentID, captainID, PoDInput{Method: "photo", Reference: "retry-proof"}); err != nil {
+	if _, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
+		OperatorContextID: operatorContextID,
+		Method:            DeliveryProofPhoto,
+		PhotoMediaRef:     "retry-proof",
+		IdempotencyKey:    "retry-proof-" + suffix,
+	}); err != nil {
 		t.Fatalf("proof must reopen after operations resolution: %v", err)
 	}
 

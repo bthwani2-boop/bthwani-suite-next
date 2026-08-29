@@ -53,7 +53,7 @@ test("Dispatch and Captain Delivery routes are implemented and registered at run
   assert.match(contract, /createDshAssignment/);
   assert.match(contract, /listDshCaptainAssignments/);
   assert.match(contract, /updateDshDeliveryStatus/);
-  assert.match(contract, /submitDshPoD/);
+	assert.match(contract, /submitCaptainDeliveryProof/);
   assert.match(contract, /getDshClientOrderTracking/);
   assert.match(router, /dsh\/operator\/dispatch\/assignments/);
   assert.match(router, /dsh\/captain\/dispatch\/assignments/);

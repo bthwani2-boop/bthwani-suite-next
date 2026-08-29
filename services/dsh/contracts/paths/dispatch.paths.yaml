@@ -172,33 +172,6 @@
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
-/dsh/captain/dispatch/assignments/{assignmentId}/pod:
-  post:
-    operationId: submitDshPoD
-    summary: Captain submits proof of delivery and closes the DSH delivery lifecycle.
-    tags: [DshDispatch]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: assignmentId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSubmitPoDRequest" }
-    responses:
-      "200":
-        description: Proof of delivery submitted.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
-
 /dsh/captain/dispatch/assignments/{assignmentId}/location:
   post:
     operationId: pushDshCaptainLocation

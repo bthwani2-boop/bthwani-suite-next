@@ -14,8 +14,7 @@ import type {
   DshGovernedCreateAssignmentInput,
   DshPartnerDispatchReference,
   DshReassignAssignmentInput,
-  DshSubmitPoDInput,
-  DshReportDeliveryExceptionInput,
+	DshReportDeliveryExceptionInput,
 } from "./dispatch.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dispatch");
@@ -180,14 +179,6 @@ export async function updateDeliveryStatus(
       expectedVersion: options.expectedVersion,
       idempotencyKey: options.idempotencyKey ?? corrId("captain-delivery-status"),
     },
-  );
-  return data.assignment;
-}
-
-export async function submitPoD(assignmentId: string, input: DshSubmitPoDInput, idempotencyKey?: string): Promise<DshDispatchAssignment> {
-  const data = await request<{ assignment: DshDispatchAssignment }>(
-    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/pod`,
-    { method: "POST", body: input, idempotencyKey: idempotencyKey ?? corrId("captain-dispatch-pod") },
   );
   return data.assignment;
 }

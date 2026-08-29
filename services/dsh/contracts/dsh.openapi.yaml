@@ -258,8 +258,6 @@ paths:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1captain~1dispatch~1assignments~1{assignmentId}~1decline"
   /dsh/captain/dispatch/assignments/{assignmentId}/status:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1captain~1dispatch~1assignments~1{assignmentId}~1status"
-  /dsh/captain/dispatch/assignments/{assignmentId}/pod:
-    $ref: "./paths/dispatch.paths.yaml#/~1dsh~1captain~1dispatch~1assignments~1{assignmentId}~1pod"
   /dsh/captain/dispatch/assignments/{assignmentId}/location:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1captain~1dispatch~1assignments~1{assignmentId}~1location"
   /dsh/client/orders/{orderId}/tracking:
@@ -1379,8 +1377,6 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshDeclineAssignmentRequest"
     DshUpdateDeliveryStatusRequest:
       $ref: "./components/schemas/common.schemas.yaml#/DshUpdateDeliveryStatusRequest"
-    DshSubmitPoDRequest:
-      $ref: "./components/schemas/common.schemas.yaml#/DshSubmitPoDRequest"
     DshPushDispatchLocationRequest:
       $ref: "./components/schemas/dispatch.schemas.yaml#/DshPushDispatchLocationRequest"
     DshVisitType:

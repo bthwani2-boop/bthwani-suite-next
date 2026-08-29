@@ -365,19 +365,6 @@ DshUpdateDeliveryStatusRequest:
     latitude: { type: number, minimum: -90, maximum: 90 }
     longitude: { type: number, minimum: -180, maximum: 180 }
 
-DshSubmitPoDRequest:
-  type: object
-  required: [method, reference]
-  properties:
-    method:
-      type: string
-      enum: [photo, code, signature]
-    reference:
-      type: string
-      minLength: 2
-    note:
-      type: string
-
 DshVisitType:
   type: string
   enum: [onboarding, periodic, escalation_followup]

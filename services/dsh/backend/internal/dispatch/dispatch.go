@@ -9,7 +9,6 @@ import (
 
 	"dsh-api/internal/orders"
 	"dsh-api/internal/specialrequests"
-	"dsh-api/internal/wltoutbox"
 
 	"github.com/lib/pq"
 )
@@ -83,12 +82,6 @@ type CreateAssignmentInput struct {
 	OperatorContextID string
 	CaptainID         string
 	ActorID           string
-}
-
-type PoDInput struct {
-	Method    string
-	Reference string
-	Note      string
 }
 
 type PushLocationInput struct {
@@ -399,89 +392,6 @@ func pushLocation(db *sql.DB, operatorContextID, assignmentID, captainID string,
 		return nil, err
 	}
 	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
-}
-
-func SubmitPoD(db *sql.DB, operatorContextID, assignmentID, captainID string, input PoDInput) (*Assignment, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
-	}
-	if input.Method == "" || input.Reference == "" {
-		return nil, fmt.Errorf("%w: proof method and reference are required", ErrInvalid)
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	current, err := lockAssignmentForOperatorContext(tx, operatorContextID, assignmentID, captainID)
-	if err != nil {
-		return nil, err
-	}
-	if current.Status == AssignmentCancelled || current.Delivery.Status == DeliveryCancelled {
-		return nil, fmt.Errorf("%w: assignment was cancelled with the order", ErrConflict)
-	}
-	if err = ensureNoOpenDeliveryException(tx, assignmentID); err != nil {
-		return nil, err
-	}
-	if current.Delivery.Status != DeliveryArrivedCustomer {
-		return nil, fmt.Errorf("%w: proof requires arrived_customer state", ErrConflict)
-	}
-	if current.OrderID != "" {
-		if _, err = orders.TransitionDispatchOrder(tx, operatorContextID, current.OrderID, captainID, "captain",
-			[]orders.OrderStatus{orders.StatusArrivedCustomer}, orders.StatusDelivered, "proof of delivery submitted"); err != nil {
-			return nil, mapOrderError(err)
-		}
-	} else if current.SpecialRequestID != "" {
-		operatorContextID, contextErr := specialRequestOperatorContextID(tx, current.SpecialRequestID)
-		if contextErr != nil {
-			return nil, mapSpecialRequestError(contextErr)
-		}
-		if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, operatorContextID, current.SpecialRequestID,
-			[]specialrequests.RequestStatus{specialrequests.StatusInProgress}, specialrequests.StatusCompleted,
-			specialrequests.DispatchTransitionMetadata{ActorID: captainID, ActorRole: "captain", Action: "submit_proof", Reason: "proof of delivery submitted"}); err != nil {
-			return nil, mapSpecialRequestError(err)
-		}
-	}
-	_, err = tx.Exec(`
-                UPDATE dsh_deliveries
-                SET status = $1, pod_method = $2, pod_reference = $3, note = NULLIF($4, ''), updated_at = NOW()
-                WHERE assignment_id = $5::uuid AND captain_id = $6`,
-		string(DeliveryDelivered), input.Method, input.Reference, input.Note, assignmentID, captainID)
-	if err != nil {
-		return nil, err
-	}
-	_, err = tx.Exec(`
-                UPDATE dsh_assignments
-                SET status = $1, completed_at = NOW(), updated_at = NOW(),
-                    last_latitude = NULL, last_longitude = NULL, location_recorded_at = NULL
-                WHERE id = $2::uuid AND captain_id = $3`,
-		string(AssignmentCompleted), assignmentID, captainID)
-	if err != nil {
-		return nil, err
-	}
-	if err = enqueueWltDeliveryCompletedNotification(tx, operatorContextID, current.OrderID, captainID); err != nil {
-		return nil, err
-	}
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
-	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
-}
-
-func enqueueWltDeliveryCompletedNotification(tx *sql.Tx, operatorContextID, orderID, captainID string) error {
-	if orderID == "" {
-		return nil
-	}
-	deliveryCtx, err := orders.GetOrderDeliveryContextForOperatorContext(tx, operatorContextID, orderID)
-	if err != nil {
-		return fmt.Errorf("resolve delivery context for wlt outbox: %w", err)
-	}
-	if deliveryCtx.FulfillmentMode != "bthwani_delivery" || deliveryCtx.PaymentMethod != "cod" || deliveryCtx.PartnerID == "" {
-		return nil
-	}
-	return wltoutbox.Enqueue(tx, wltoutbox.EventTypeDeliveryCompleted, orderID, captainID, deliveryCtx.PartnerID, deliveryCtx.CheckoutIntentID)
 }
 
 func GetCaptainAssignment(db *sql.DB, assignmentID, captainID string) (*Assignment, error) {

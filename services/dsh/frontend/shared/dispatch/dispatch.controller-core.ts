@@ -2,8 +2,7 @@ import type {
   DshDeliveryStatus,
   DshDispatchAssignment,
   DshDispatchListState,
-  DshSubmitPoDInput,
-  DshTrackingState,
+	DshTrackingState,
 } from "./dispatch.types";
 import {
   dispatchEmptyState,
@@ -81,11 +80,4 @@ export function resolveDispatchActionError(
     pod: "تعذر رفع إثبات التسليم.",
   };
   return { kind: "error" as const, message: fallback[action] };
-}
-
-export function resolvePoDValidation(input: DshSubmitPoDInput) {
-  if (!input.reference.trim()) {
-    return { kind: "error" as const, message: "مرجع إثبات التسليم مطلوب." };
-  }
-  return null;
 }
