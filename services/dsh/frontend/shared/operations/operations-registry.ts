@@ -1,3 +1,4 @@
+import { CONTROL_PANEL_SECTION_ROUTES } from '../control-panel-routes';
 import type {
   CanonicalOperationsGroupId,
   NonOperationsSectionRootId,
@@ -78,19 +79,21 @@ export const OPERATIONS_CANONICAL_GROUP_IDS = OPERATIONS_CANONICAL_GROUPS.map(
   (group) => group.id,
 ) as readonly CanonicalOperationsGroupId[];
 
+type NonOperationsSectionRoute = (typeof CONTROL_PANEL_SECTION_ROUTES)[NonOperationsSectionRootId];
+
 export const NON_OPERATIONS_SECTION_SHORTCUTS: ReadonlyArray<{
   id: NonOperationsSectionRootId;
   label: string;
   description: string;
-  href: `/dsh/${NonOperationsSectionRootId}`;
+  href: NonOperationsSectionRoute;
 }> = [
-  { id: 'support', label: 'الدعم', description: 'التذاكر والمتابعة والتصعيد تبقى في قسم الدعم.', href: '/dsh/support' },
-  { id: 'finance', label: 'المالية', description: 'الحقائق المالية تبقى في قسم المالية.', href: '/dsh/finance' },
-  { id: 'catalogs', label: 'الكتالوجات', description: 'حوكمة الكتالوج تبقى في قسم الكتالوجات.', href: '/dsh/catalogs' },
-  { id: 'marketing', label: 'التسويق', description: 'التسويق والنمو يبقيان في قسم التسويق.', href: '/dsh/marketing' },
-  { id: 'partners', label: 'الشركاء', description: 'إدارة الشركاء تبقى في قسم الشركاء.', href: '/dsh/partners' },
-  { id: 'platform', label: 'المنصة', description: 'السياسات والمتغيرات تبقى في قسم المنصة.', href: '/dsh/platform' },
-  { id: 'administration', label: 'الإدارة', description: 'الأدوار وسلسلة الاعتماد تبقى في قسم الإدارة.', href: '/dsh/administration' },
+  { id: 'support', label: 'الدعم', description: 'التذاكر والمتابعة والتصعيد تبقى في قسم الدعم.', href: CONTROL_PANEL_SECTION_ROUTES.support },
+  { id: 'finance', label: 'المالية', description: 'الحقائق المالية تبقى في قسم المالية.', href: CONTROL_PANEL_SECTION_ROUTES.finance },
+  { id: 'catalogs', label: 'الكتالوجات', description: 'حوكمة الكتالوج تبقى في قسم الكتالوجات.', href: CONTROL_PANEL_SECTION_ROUTES.catalogs },
+  { id: 'marketing', label: 'التسويق', description: 'التسويق والنمو يبقيان في قسم التسويق.', href: CONTROL_PANEL_SECTION_ROUTES.marketing },
+  { id: 'partners', label: 'الشركاء', description: 'إدارة الشركاء تبقى في قسم الشركاء.', href: CONTROL_PANEL_SECTION_ROUTES.partners },
+  { id: 'platform', label: 'المنصة', description: 'السياسات والمتغيرات تبقى في قسم المنصة.', href: CONTROL_PANEL_SECTION_ROUTES.platform },
+  { id: 'administration', label: 'الإدارة', description: 'الأدوار وسلسلة الاعتماد تبقى في قسم الإدارة.', href: CONTROL_PANEL_SECTION_ROUTES.administration },
 ] as const;
 
 export function coerceOperationsPanel(panel?: string): OperationsPanelId | undefined {
