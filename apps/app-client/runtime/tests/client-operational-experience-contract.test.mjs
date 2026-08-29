@@ -358,9 +358,16 @@ test("client payment choices honor the provider capability boundary", () => {
       "disabled: !providerPaymentsEnabled || !hasPartialWallet",
       "الدفع من المحفظة غير مفعّل حاليًا لهذا التطبيق.",
       "الدفع المختلط غير مفعّل حاليًا لهذا التطبيق.",
+      "walletReadbackError",
+      "تعذر التحقق من رصيد المحفظة حاليًا.",
+      "label: \"إعادة التحقق\"",
     ],
   );
   assert.match(payment, /providerPaymentsEnabled/);
+  assertMarkers(
+    "services/dsh/frontend/app-client/cart/PaymentDecisionSection.tsx",
+    ["<View key={option.id} style={styles.optionContainer}>", "{option.action ? ("],
+  );
 });
 
 test("privacy-safe order sharing uses temporary Expo files and no sensitive references", () => {

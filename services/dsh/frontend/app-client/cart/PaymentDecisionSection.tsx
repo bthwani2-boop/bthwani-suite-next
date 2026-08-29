@@ -40,48 +40,47 @@ export function PaymentDecisionSection({
         {options.map((option) => {
           const isSelected = option.id === paymentMethod;
           return (
-            <Pressable
-              key={option.id}
-              accessibilityRole="radio"
-              accessibilityState={{
-                selected: isSelected,
-                disabled: option.disabled === true,
-              }}
-              disabled={option.disabled}
-              onPress={() => onSelectMethod(option.id)}
-              style={[
-                styles.paymentCard,
-                isSelected && styles.paymentCardActive,
-                option.disabled && styles.paymentCardDisabled,
-              ]}
-            >
-              <View style={styles.optionHeader}>
-                <View style={styles.optionIdentity}>
-                  <View
-                    style={[styles.radioDot, isSelected && styles.radioDotActive]}
-                  />
-                  <View style={styles.optionText}>
-                    <Text role="bodyStrong" style={styles.optionTitle}>
-                      {option.title}
-                    </Text>
+            <View key={option.id} style={styles.optionContainer}>
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{
+                  selected: isSelected,
+                  disabled: option.disabled === true,
+                }}
+                disabled={option.disabled}
+                onPress={() => onSelectMethod(option.id)}
+                style={[
+                  styles.paymentCard,
+                  isSelected && styles.paymentCardActive,
+                  option.disabled && styles.paymentCardDisabled,
+                ]}
+              >
+                <View style={styles.optionHeader}>
+                  <View style={styles.optionIdentity}>
+                    <View
+                      style={[styles.radioDot, isSelected && styles.radioDotActive]}
+                    />
+                    <View style={styles.optionText}>
+                      <Text role="bodyStrong" style={styles.optionTitle}>
+                        {option.title}
+                      </Text>
+                    </View>
                   </View>
+                  {option.statusLabel ? (
+                    <Badge
+                      label={option.statusLabel}
+                      tone={option.statusTone ?? "info"}
+                    />
+                  ) : null}
                 </View>
-                {option.statusLabel ? (
-                  <Badge
-                    label={option.statusLabel}
-                    tone={option.statusTone ?? "info"}
-                  />
+
+                {option.helperText ? (
+                  <Text role="caption" style={styles.helperText}>
+                    {option.helperText}
+                  </Text>
                 ) : null}
-              </View>
-
-              {option.helperText ? (
-                <Text role="caption" style={styles.helperText}>
-                  {option.helperText}
-                </Text>
-              ) : null}
-
-
-              {option.action && isSelected ? (
+              </Pressable>
+              {option.action ? (
                 <Button
                   label={option.action.label}
                   tone="secondary"
@@ -91,7 +90,7 @@ export function PaymentDecisionSection({
                   style={styles.actionButton}
                 />
               ) : null}
-            </Pressable>
+            </View>
           );
         })}
       </View>
@@ -127,6 +126,7 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
   options: { gap: 6 },
+  optionContainer: { gap: 4 },
   paymentCard: {
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
