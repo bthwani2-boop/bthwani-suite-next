@@ -14,17 +14,16 @@ const api = readFileSync(
 
 test("canonical captain runtime requires authenticated identity and reuses actor-scoped commands", () => {
   assert.match(runtime, /const identity = useIdentitySession\(\)/);
-  assert.match(runtime, /const scopedKey = `\$\{actorId\}:\$\{key\}`/);
-  assert.match(runtime, /acceptDispatchAssignment\(assignmentId, command\.id\)/);
-  assert.match(runtime, /declineDispatchAssignment\(assignmentId, reason, 'captain_declined', command\.id\)/);
-  assert.match(runtime, /correlationId: command\.id/);
+  assert.match(runtime, /getOrCreateCaptainAssignmentCommandAttempt/);
+  assert.match(runtime, /acceptDispatchAssignment\(assignmentId, attempt\.context\)/);
+  assert.match(runtime, /declineDispatchAssignment\(assignmentId, normalizedReason, attempt\.context, 'captain_declined'\)/);
+  assert.match(runtime, /clearCaptainAssignmentCommandAttempt\(intent, attempt\.signature\)/);
 });
 
 test("dispatch transport forwards explicit idempotency keys", () => {
-  assert.match(api, /idempotencyKey: idempotencyKey \?\? corrId\("captain-dispatch-accept"\)/);
-  assert.match(api, /idempotencyKey: idempotencyKey \?\? corrId\("captain-dispatch-decline"\)/);
-  assert.match(api, /idempotencyKey: idempotencyKey \?\? corrId\("captain-dispatch-pod"\)/);
-  assert.match(api, /body: input, idempotencyKey: input\.correlationId/);
+  assert.match(api, /idempotencyKey: mutation\.idempotencyKey/);
+  assert.match(api, /correlationId: mutation\.correlationId/);
+  assert.match(api, /updateDeliveryStatus\([\s\S]*mutation: DshCaptainCommandContext/);
 });
 
 console.log("captain-dispatch-command-identity-contract: PASS");

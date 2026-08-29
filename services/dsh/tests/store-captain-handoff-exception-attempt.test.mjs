@@ -64,9 +64,11 @@ test("handoff exception attempt reuses one secure correlation after runtime rese
   resetBthwaniInstallationIdForTests();
   const replay = await getOrCreateStoreCaptainHandoffExceptionAttempt(intent({ note: " sealed package is missing one item " }));
 
-  assert.equal(original.correlationId, "captain:store-captain-handoff:00000000-0000-4000-8000-000000000201");
+  assert.equal(original.idempotencyKey, "captain:store-captain-handoff:00000000-0000-4000-8000-000000000201");
+  assert.equal(original.correlationId, "store-captain-handoff-00000000-0000-4000-8000-000000000201");
   assert.equal(replay.correlationId, original.correlationId);
-  assert.equal(generated, 1);
+  assert.equal(replay.idempotencyKey, original.idempotencyKey);
+  assert.equal(generated, 2);
   assert.equal([...map.keys()].filter((key) => key.startsWith("@bthwani/mutation-attempt:v4/store-captain-handoff-exception-report/")).length, 1);
 });
 

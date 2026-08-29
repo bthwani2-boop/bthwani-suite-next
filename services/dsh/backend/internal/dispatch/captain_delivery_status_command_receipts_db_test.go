@@ -42,6 +42,18 @@ func TestCaptainDeliveryStatusCommandReplayAndCollisionDBIntegration(t *testing.
 	if first.Version != 2 || first.Delivery.Status != DeliveryArrivedStore {
 		t.Fatalf("arrival result=%+v want version=2 status=%s", first, DeliveryArrivedStore)
 	}
+	if _, err = UpdateDeliveryStatusGovernedIdempotentVersionedForOperatorContext(
+		db,
+		fixture.OperatorContextID,
+		fixture.AssignmentID,
+		fixture.CaptainID,
+		DeliveryArrivedStore,
+		99,
+		"captain-status-replay-key",
+		"captain-status-replay-correlation",
+	); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("status command version collision error=%v want ErrIdempotencyConflict", err)
+	}
 
 	if _, err = ConfirmStoreCaptainHandoffIdempotentForOperatorContext(
 		db,
