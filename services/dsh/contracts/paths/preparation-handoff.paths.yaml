@@ -157,6 +157,7 @@
         in: path
         required: true
         schema: { type: string, format: uuid }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
       - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
@@ -171,10 +172,16 @@
           application/json:
             schema:
               type: object
-              required: [issue]
+              required: [issue, mutation]
               properties:
                 issue:
                   $ref: "../dsh.openapi.yaml#/components/schemas/DshPreparationIssue"
+                mutation:
+                  type: object
+                  required: [idempotencyKey, correlationId]
+                  properties:
+                    idempotencyKey: { type: string, minLength: 16, maxLength: 200 }
+                    correlationId: { type: string, minLength: 1, maxLength: 200 }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }

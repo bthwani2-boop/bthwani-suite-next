@@ -14,6 +14,7 @@ import type {
   DshResolvePreparationIssueInput,
   DshReportStoreCaptainHandoffExceptionInput,
 } from "./orders.types";
+import type { StoredClientPreparationDecisionAttempt } from "./client-preparation-decision-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "order");
 
@@ -21,6 +22,11 @@ export type PartnerOrderMutationOptions = {
   readonly expectedVersion: number;
   readonly idempotencyKey?: string;
 };
+
+export type ClientPreparationDecisionMutation = Pick<
+  StoredClientPreparationDecisionAttempt,
+  "idempotencyKey" | "correlationId"
+>;
 
 function partnerMutationOptions(options: PartnerOrderMutationOptions): DshRequestOptions {
   return {
@@ -164,12 +170,26 @@ export async function decideOrderPreparationIssue(
   orderId: string,
   issueId: string,
   input: DshDecidePreparationIssueInput,
+  mutation: ClientPreparationDecisionMutation,
   token?: string,
 ): Promise<DshPreparationIssue> {
-  const data = await request<{ issue: DshPreparationIssue }>(
+  const data = await request<{
+    issue: DshPreparationIssue;
+    mutation: { readonly idempotencyKey: string; readonly correlationId: string };
+  }>(
     `/dsh/client/orders/${encodeURIComponent(orderId)}/preparation-issues/${encodeURIComponent(issueId)}/decision`,
-    withOptionalToken({ method: "POST", body: input }, token),
+    withOptionalToken({
+      method: "POST",
+      body: input,
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    }, token),
   );
+  if (data.issue.id !== issueId || data.issue.orderId !== orderId || data.issue.customerDecision !== input.decision
+    || data.mutation.idempotencyKey !== mutation.idempotencyKey
+    || data.mutation.correlationId !== mutation.correlationId) {
+    throw new Error("client preparation decision canonical readback did not preserve the mutation");
+  }
   return data.issue;
 }
 

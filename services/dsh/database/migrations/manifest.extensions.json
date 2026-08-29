@@ -422,6 +422,20 @@
       "sha256": "2b9dc112623486e77fe23371f1ece7f4f5ad57f4962ff55a17dbc8db9d893092",
       "historicalPrefix": "1059",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 301,
+      "file": "dsh-1060_provider_rating_mutation_idempotency.sql",
+      "sha256": "0b2e13012fc69f085c410bcfe74421bddbfbe5d3002cb94c36d63c313f5b8115",
+      "historicalPrefix": "1060",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 302,
+      "file": "dsh-1061_preparation_decision_idempotency.sql",
+      "sha256": "9861712fcedda80b8252cdfba53ce7cf9579542a5ad272353910ab8d23040598",
+      "historicalPrefix": "1061",
+      "state": "ACTIVE"
     }
   ]
 }

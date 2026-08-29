@@ -1,10 +1,13 @@
 import React from 'react';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { Badge, Box, Button, Divider, StateView, Surface, Text, TextField } from '@bthwani/ui-kit';
 import {
   PREPARATION_ISSUE_CUSTOMER_DECISION_LABELS,
   PREPARATION_ISSUE_KIND_LABELS,
   classifyOrderError,
   decideOrderPreparationIssue,
+  clearClientPreparationDecisionAttempt,
+  getOrCreateClientPreparationDecisionAttempt,
   type DshPreparationIssue,
 } from '../../shared/orders';
 
@@ -29,6 +32,8 @@ export function ClientPreparationDecisionPanel({
   readonly pendingCustomerDecisionCount: number;
   readonly onUpdated: () => void | Promise<void>;
 }) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
   const [activeIssueId, setActiveIssueId] = React.useState<string | null>(null);
   const [note, setNote] = React.useState('');
   const [state, setState] = React.useState<'ready' | 'submitting' | 'success' | 'error'>('ready');
@@ -40,16 +45,25 @@ export function ClientPreparationDecisionPanel({
     decision: 'approved' | 'rejected',
   ) => {
     if (state === 'submitting' || issue.customerDecision !== 'pending') return;
+    if (!actorId) {
+      setState('error');
+      setMessage('يجب تسجيل الدخول قبل حفظ قرار الاستبدال.');
+      return;
+    }
     setActiveIssueId(issue.id);
     setState('submitting');
     setMessage('');
     try {
-      await decideOrderPreparationIssue(orderId, issue.id, {
+      const input = {
         expectedVersion: issue.version,
         decision,
         ...(note.trim() ? { note: note.trim() } : {}),
-      });
+      };
+      const intent = { actorId, orderId, issueId: issue.id, input };
+      const attempt = await getOrCreateClientPreparationDecisionAttempt(intent);
+      await decideOrderPreparationIssue(orderId, issue.id, input, attempt.context);
       await onUpdated();
+      await clearClientPreparationDecisionAttempt(intent, attempt.signature);
       setNote('');
       setState('success');
       setMessage(decision === 'approved'
@@ -61,7 +75,7 @@ export function ClientPreparationDecisionPanel({
     } finally {
       setActiveIssueId(null);
     }
-  }, [note, onUpdated, orderId, state]);
+  }, [actorId, note, onUpdated, orderId, state]);
 
   if (openIssues.length === 0) {
     return (

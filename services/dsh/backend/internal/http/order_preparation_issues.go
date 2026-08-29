@@ -172,9 +172,14 @@ func (s *protectedStoreServer) handleDecidePreparationIssue(w http.ResponseWrite
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(idempotencyKey) < 16 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_IDEMPOTENCY_KEY", "Idempotency-Key must be 16 to 200 characters")
+		return
+	}
 	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
-	if correlationID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "X-Correlation-ID is required")
+	if correlationID == "" || len(correlationID) > 200 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_CORRELATION_ID", "X-Correlation-ID is required")
 		return
 	}
 	issue, err := orders.DecidePreparationIssue(s.db, orders.DecidePreparationIssueInput{
@@ -184,6 +189,7 @@ func (s *protectedStoreServer) handleDecidePreparationIssue(w http.ResponseWrite
 		ExpectedVersion: body.ExpectedVersion,
 		Decision:        body.Decision,
 		Note:            body.Note,
+		IdempotencyKey:  idempotencyKey,
 		CorrelationID:   correlationID,
 	})
 	if errors.Is(err, orders.ErrInvalid) {
@@ -194,6 +200,10 @@ func (s *protectedStoreServer) handleDecidePreparationIssue(w http.ResponseWrite
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "preparation issue not found")
 		return
 	}
+	if errors.Is(err, orders.ErrIdempotencyConflict) {
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", "Idempotency-Key was already used for another preparation decision")
+		return
+	}
 	if errors.Is(err, orders.ErrConflict) {
 		store.SendError(w, http.StatusConflict, "SUBSTITUTION_DECISION_CONFLICT", "substitution decision is no longer pending")
 		return
@@ -202,7 +212,14 @@ func (s *protectedStoreServer) handleDecidePreparationIssue(w http.ResponseWrite
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to record substitution decision")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"issue": issue})
+	w.Header().Set("X-Correlation-ID", correlationID)
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"issue": issue,
+		"mutation": map[string]string{
+			"idempotencyKey": idempotencyKey,
+			"correlationId":  correlationID,
+		},
+	})
 }
 
 func (s *protectedStoreServer) handleResolvePreparationIssue(w http.ResponseWriter, r *http.Request) {

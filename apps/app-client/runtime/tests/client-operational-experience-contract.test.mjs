@@ -247,6 +247,33 @@ test("client order preparation never fabricates an operational readback", () => 
   assert.doesNotMatch(controller, /fetchOrderPreparationIssues\(orderId\)\.catch/);
 });
 
+test("client preparation decisions keep one actor-scoped command until readback", () => {
+  const attempt = assertMarkers(
+    "services/dsh/frontend/shared/orders/client-preparation-decision-attempt.ts",
+    ["client-preparation-decision", "resolveMutationIdentityScope", "getOrCreateDurableMutationAttempt", "purgeExactDurableMutationAttempt"],
+  );
+  assert.match(attempt, /entityId: `order:\$\{normalized\.orderId\}:issue:\$\{normalized\.issueId\}`/);
+  const panel = assertMarkers(
+    "services/dsh/frontend/app-client/orders/ClientPreparationDecisionPanel.tsx",
+    ["useIdentitySession", "getOrCreateClientPreparationDecisionAttempt", "clearClientPreparationDecisionAttempt", "await onUpdated()"],
+  );
+  assert.match(panel, /decideOrderPreparationIssue\(orderId, issue\.id, input, attempt\.context\)/);
+  const api = assertMarkers(
+    "services/dsh/frontend/shared/orders/orders.api.ts",
+    ["idempotencyKey: mutation.idempotencyKey", "canonical readback did not preserve the mutation"],
+  );
+  assert.match(api, /decideOrderPreparationIssue\(/);
+  const backend = assertMarkers(
+    "services/dsh/backend/internal/orders/preparation_issues.go",
+    ["clientPreparationDecisionFingerprint", "idempotency_key", "request_fingerprint", "ErrIdempotencyConflict"],
+  );
+  assert.match(backend, /customer_decision/);
+  assertMarkers(
+    "services/dsh/database/migrations/dsh-1061_preparation_decision_idempotency.sql",
+    ["idempotency_key", "request_fingerprint", "uq_dsh_preparation_issue_events_idempotency"],
+  );
+});
+
 test("client order delivery projections distinguish unavailable data from readback failure", () => {
   const controller = assertMarkers(
     "services/dsh/frontend/shared/orders/use-client-order-controller.ts",
