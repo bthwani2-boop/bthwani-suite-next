@@ -7,9 +7,8 @@
 import {
   resolveDshOrderApiBaseUrl,
   createDshOrderLifecycleHttpClient,
-  type DshOrderRecord,
-  type DshListOrdersQuery,
-} from '../orders/dsh-order-lifecycle-client';
+} from '../orders/dsh-order-lifecycle.transport';
+import type { DshOrderRecord, DshListOrdersQuery } from '../orders/dsh-order-lifecycle.types';
 
 export const dshOperationalRuntimeAdapterMeta = {
   dataKind: 'RUNTIME_ADAPTER',

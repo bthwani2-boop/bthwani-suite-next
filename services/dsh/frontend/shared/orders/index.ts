@@ -11,6 +11,5 @@ export * from './use-client-order-controller';
 export * from './use-order-preparation-readback';
 export * from './use-operator-preparation-alerts';
 export * from './OrderPreparationReadbackCard';
-export * from './dsh-order-lifecycle-client';
 export * from './captain-order.model';
 export * from './orders.state-machine';
