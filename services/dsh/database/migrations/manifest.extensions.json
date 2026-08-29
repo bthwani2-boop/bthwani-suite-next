@@ -408,6 +408,13 @@
       "sha256": "bf2d5ff64b578bc4de22dd0368d4e05cc22cc5521fd7cc71d2d7ad947f538f04",
       "historicalPrefix": "1057",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 299,
+      "file": "dsh-1058_product_duplicate_candidate_identity.sql",
+      "sha256": "3450d0136a605cd2cfcb99e9f6dd1abbf3b5a74b8e6e014e0a318c4c7a02f396",
+      "historicalPrefix": "1058",
+      "state": "ACTIVE"
     }
   ]
 }
