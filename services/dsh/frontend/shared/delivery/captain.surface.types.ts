@@ -39,7 +39,6 @@ export type DshCaptainSurfaceState = {
   activeOrderMessages: CompactOrderChatMessage[];
   captainPodState: CaptainPodState;
   captainPodPhotoUri: string | undefined;
-  captainPodMediaKey: string | undefined;
   isDeclineSheetVisible: boolean;
   declineSheetState: 'ready' | 'loading' | 'success' | 'error';
   declineOrderId: string;

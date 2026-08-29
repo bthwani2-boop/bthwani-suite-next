@@ -11,11 +11,8 @@ import { classifyDispatchError } from '../dispatch/dispatch.api';
 export type DeliveryActionsDeps = {
   captainRuntimeId: string;
   activeAssignmentId: string;
-  captainPodPhotoUri: string | undefined;
-  captainPodMediaKey: string | undefined;
   resetOrderState: () => void;
   refreshInbox: () => void | Promise<void>;
-  inboxState: string;
   setInboxState: (s: any) => void;
   setIsDeclineSheetVisible: (v: boolean) => void;
   setDeclineSheetState: (s: any) => void;

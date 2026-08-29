@@ -66,11 +66,8 @@ export function useDshCaptainSurfaceBinding(
   const deliveryActions = useCaptainDeliveryActions({
     captainRuntimeId,
     activeAssignmentId: operationalCommandAssignmentId,
-    captainPodPhotoUri: podUpload.captainPodPhotoUri,
-    captainPodMediaKey: podUpload.captainPodMediaKey,
     resetOrderState,
     refreshInbox: inboxModel.refresh,
-    inboxState: lifecycle.inboxState,
     setInboxState: lifecycle.setInboxState,
     setIsDeclineSheetVisible: lifecycle.setIsDeclineSheetVisible,
     setDeclineSheetState: lifecycle.setDeclineSheetState,
