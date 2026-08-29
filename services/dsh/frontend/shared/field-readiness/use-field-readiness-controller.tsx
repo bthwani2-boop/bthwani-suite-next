@@ -57,6 +57,7 @@ async function enqueueIfOffline<P>(
     payload,
     context.idempotencyKey,
     context.correlationId,
+    context.intentFingerprint,
   );
 }
 
