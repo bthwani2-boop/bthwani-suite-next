@@ -31,7 +31,8 @@ export function buildCaptainBottomActiveId(
 }
 
 export function buildCaptainHomeTicker(
-  state: Pick<DshCaptainSurfaceState, 'captainAvailabilityStatus' | 'inboxState' | 'activeOrderId'>,
+  state: Pick<DshCaptainSurfaceState, 'captainAvailabilityStatus' | 'inboxState' | 'activeOrderId'>
+    & Partial<Pick<DshCaptainSurfaceState, 'activeWorkItemId'>>,
   activeSummary: DshCaptainOrderDetailSummary,
 ): DshCaptainSurfaceDerived['homeTicker'] {
   const availabilityMeta = getCaptainAvailabilityMeta(state.captainAvailabilityStatus);

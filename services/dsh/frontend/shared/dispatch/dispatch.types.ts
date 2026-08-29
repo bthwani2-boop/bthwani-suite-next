@@ -15,6 +15,7 @@ export type DshDispatchAssignment = components["schemas"]["DshDispatchAssignment
   supersedesAssignmentId?: string;
   version: number;
 };
+export type DshDispatchAssignmentSource = "order" | "special_request";
 export type DshAssignmentStatus = components["schemas"]["DshAssignmentStatus"];
 export type DshDeliveryStatus = components["schemas"]["DshDeliveryStatus"];
 export type DshDelivery = components["schemas"]["DshDelivery"];

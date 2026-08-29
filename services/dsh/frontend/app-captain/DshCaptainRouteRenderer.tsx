@@ -36,6 +36,7 @@ import { OfferDeclineSheet } from "./orders/OfferDeclineSheet";
 import { CaptainSupportScreenRouter } from "./account/CaptainSupportScreenRouter";
 import type { DshCaptainOrderBellItem, DshCaptainOrdersScreenState } from "../shared/orders";
 import type { DshDeliveryException } from "../shared/dispatch";
+import type { DshDispatchAssignmentSource } from "../shared/dispatch";
 import { ActorNotificationsPanel } from "../shared/notifications";
 import { ProviderRatingSummaryPanel } from "../shared/provider-ratings/ProviderRatingSummaryPanel";
 import { ProviderAvailabilityNoticesPanel } from "../shared/workforce/ProviderAvailabilityNoticesPanel";
@@ -50,6 +51,8 @@ export type DshCaptainRouteRendererProps = {
   readonly route: DshCaptainRoute;
   readonly activeAssignmentId: string;
   readonly activeOrderId: string;
+  readonly activeWorkItemId: string;
+  readonly activeWorkItemSource: DshDispatchAssignmentSource | '';
   readonly activeDeliveryStatus: import('../shared/dispatch').DshDeliveryStatus | '';
   readonly activeDeliveryAction: CaptainDeliveryAction;
   readonly activeOrderDisplayId: string;
@@ -143,6 +146,8 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     route,
     activeAssignmentId,
     activeOrderId,
+    activeWorkItemId,
+    activeWorkItemSource,
     activeOrderDisplayId,
     activeSummary,
     activeDeliveryStatus,
@@ -196,7 +201,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     onPushLocation,
   } = props;
 
-  const hasActiveAssignment = Boolean(activeAssignmentId && activeOrderId && activeSummary);
+  const hasActiveAssignment = Boolean(activeAssignmentId && activeWorkItemId && activeSummary);
   const captainEntryState = inboxState === "loading" ? "loading" : inboxState === "error" ? "error" : "ready";
 
   function renderFlow(): React.ReactNode {
@@ -267,7 +272,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
       if (!hasActiveAssignment || !captainPodRequired || activeDeliveryStatus !== 'arrived_customer') {
         return <StateView title="إثبات التسليم غير مطلوب" description="لم تعد المهمة الحية متطلب PoD صالحًا لهذا الكابتن." tone="warning" actionLabel="العودة إلى المهمة" onActionPress={onBack} />;
       }
-      return <DshCaptainPoDSubmissionScreen state={captainPodState} assignmentId={activeAssignmentId} orderId={activeOrderId} exceptionReportingEnabled onCapturePhoto={onCapturePhoto} onConfirm={onConfirmPodSubmission} onReportFailure={onReportPodFailure} onRetry={onRetryPod} onBack={captainPodState === "success" ? onGoToInbox : onBack} {...(captainPodPhotoUri ? { photoUri: captainPodPhotoUri } : {})} />;
+      return <DshCaptainPoDSubmissionScreen state={captainPodState} assignmentId={activeAssignmentId} orderId={activeOrderId} workItemId={activeWorkItemId} workItemSource={activeWorkItemSource} exceptionReportingEnabled onCapturePhoto={onCapturePhoto} onConfirm={onConfirmPodSubmission} onReportFailure={onReportPodFailure} onRetry={onRetryPod} onBack={captainPodState === "success" ? onGoToInbox : onBack} {...(captainPodPhotoUri ? { photoUri: captainPodPhotoUri } : {})} />;
     }
 
     if (route === "account-finance") {

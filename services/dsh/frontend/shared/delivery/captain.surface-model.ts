@@ -85,6 +85,12 @@ export function useDshCaptainSurfaceModel({
     inboxState: lifecycle.inboxState,
     activeAssignmentId,
     activeOrderId: activeAssignment?.orderId ?? '',
+    activeWorkItemId: activeAssignment?.orderId || activeAssignment?.specialRequestId || '',
+    activeWorkItemSource: activeAssignment?.specialRequestId && !activeAssignment.orderId
+      ? 'special_request'
+      : activeAssignment?.orderId
+        ? 'order'
+        : '',
     activeDeliveryStatus: activeAssignment?.delivery.status ?? '',
     inboxItems: inboxModel.items,
     selectedSupportScreen,

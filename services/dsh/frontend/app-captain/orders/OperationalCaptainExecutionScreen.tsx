@@ -6,6 +6,7 @@ import {
   useStoreCaptainHandoffException,
   type DshDeliveryExceptionReasonCode,
 } from '../../shared/dispatch';
+import type { DshDispatchAssignmentSource } from '../../shared/dispatch';
 import {
   OrderPreparationReadbackCard,
   STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS,
@@ -21,6 +22,8 @@ import { DshCaptainMapLayer } from './DshCaptainMapLayer';
 export type OperationalCaptainExecutionScreenProps = {
   readonly assignmentId: string;
   readonly orderId: string;
+  readonly workItemId: string;
+  readonly workItemSource: DshDispatchAssignmentSource | '';
   readonly captainId: string;
   readonly currentStageLabel: string;
   readonly activeDeliveryAction: CaptainDeliveryAction;
@@ -53,6 +56,8 @@ function isQueuedLocationResult(result: unknown): boolean {
 export function OperationalCaptainExecutionScreen({
   assignmentId,
   orderId,
+  workItemId,
+  workItemSource,
   captainId,
   currentStageLabel,
   activeDeliveryAction,
@@ -70,7 +75,10 @@ export function OperationalCaptainExecutionScreen({
   const [locationState, setLocationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [locationMessage, setLocationMessage] = React.useState<string | null>(null);
   const handoffException = useStoreCaptainHandoffException('captain', onRefresh);
-  const preparationReadback = useOrderPreparationReadback(orderId, { pollIntervalMs: 15_000 });
+  const preparationReadback = useOrderPreparationReadback(workItemSource === 'order' ? orderId : '');
+  const workItemLabel = workItemSource === 'special_request'
+    ? `المهمة الخاصة #${workItemId}`
+    : `الطلب #${workItemId || orderId}`;
   const handoffExceptionKind = handoffException.state.kind;
   const handoffReadback = handoffException.readback;
   const cancelHandoffException = handoffException.cancel;
@@ -156,7 +164,7 @@ export function OperationalCaptainExecutionScreen({
       <TopBar title="تنفيذ المهمة" onBack={onBack} />
       <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.content}>
         <DshCaptainMapLayer
-          orderLabel={`الطلب #${orderId}`}
+          orderLabel={workItemLabel}
           assignmentLabel={`الإسناد: ${assignmentId}`}
           currentStageLabel={currentStageLabel}
           gpsLabel={gpsLabel}
@@ -165,16 +173,24 @@ export function OperationalCaptainExecutionScreen({
         />
 
         <Surface tone="action" gap={3}>
-          <Text role="titleMd" style={styles.inverted}>{`الطلب #${orderId}`}</Text>
+          <Text role="titleMd" style={styles.inverted}>{workItemLabel}</Text>
           <Text role="bodySm" style={styles.inverted}>{currentStageLabel}</Text>
           <Text role="caption" style={styles.inverted}>{`الإسناد: ${assignmentId}`}</Text>
         </Surface>
 
-        <OrderPreparationReadbackCard
-          state={preparationReadback.state}
-          title="جاهزية الطلب لدى المتجر"
-          onRetry={preparationReadback.refresh}
-        />
+        {workItemSource === 'order' ? (
+          <OrderPreparationReadbackCard
+            state={preparationReadback.state}
+            title="جاهزية الطلب لدى المتجر"
+            onRetry={preparationReadback.refresh}
+          />
+        ) : (
+          <StateView
+            title="مهمة خاصة مرتبطة"
+            description="تُدار جاهزية هذه المهمة من حالة الإسناد الخاصة في DSH؛ لا تُستبدل بقراءة طلب تجاري غير موجود."
+            tone="info"
+          />
+        )}
 
         <Surface tone="raised" gap={3}>
           <View style={styles.row}>

@@ -266,7 +266,9 @@ function AuthenticatedCaptainSurface({
         <DshCaptainOrderJourneyRenderer
           route={state.route}
           activeAssignmentId={state.activeAssignmentId}
-          activeOrderId={state.activeOrderId}
+           activeOrderId={state.activeOrderId}
+           activeWorkItemId={state.activeWorkItemId}
+           activeWorkItemSource={state.activeWorkItemSource}
           activeDeliveryStatus={state.activeDeliveryStatus}
           activeDeliveryAction={derived.activeDeliveryAction}
           isActiveAssignmentOperational={isActiveAssignmentOperational}

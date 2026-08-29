@@ -83,10 +83,19 @@ export function buildCaptainOrderSummaryPolicy(
 
   const deliveryStatus = assignment.delivery.status;
   const action = resolveCaptainDeliveryAction(deliveryStatus);
+  const isSpecialRequest = Boolean(assignment.specialRequestId && !assignment.orderId);
+  const workItemId = assignment.orderId || assignment.specialRequestId || '';
+  const workItemLabel = assignment.requestType === 'SHEIN_ASSISTED_PURCHASE'
+    ? 'SHEIN'
+    : assignment.requestType === 'AWNAK_ERRAND'
+      ? 'عونك'
+      : 'المهمة الخاصة';
   return {
-    orderId: assignment.orderId,
-    pickupLabel: `طلب #${assignment.orderId} — استلام من المتجر`,
-    dropoffLabel: 'تسليم إلى العميل',
+    orderId: workItemId,
+    pickupLabel: isSpecialRequest
+      ? `${workItemLabel} #${workItemId} — استلام من نقطة التنفيذ`
+      : `طلب #${assignment.orderId} — استلام من المتجر`,
+    dropoffLabel: isSpecialRequest ? 'إكمال المهمة الخاصة مع العميل' : 'تسليم إلى العميل',
     etaLabel: assignmentStatusLabels[assignment.status] ?? assignment.status,
     currentStageLabel: deliveryStatusLabels[deliveryStatus] ?? deliveryStatus,
     nextActionLabel: action.label,
@@ -113,7 +122,8 @@ export function buildCaptainBottomActiveIdPolicy(
 }
 
 export function buildCaptainHomeTickerPolicy(
-  state: Pick<DshCaptainSurfaceState, 'captainAvailabilityStatus' | 'inboxState' | 'activeOrderId'>,
+  state: Pick<DshCaptainSurfaceState, 'captainAvailabilityStatus' | 'inboxState' | 'activeOrderId'>
+    & Partial<Pick<DshCaptainSurfaceState, 'activeWorkItemId'>>,
   availabilityMeta: Pick<CaptainAvailabilityMeta, 'label' | 'description'>,
   activeSummary: DshCaptainOrderDetailSummary,
 ): CaptainHomeTickerPolicy {
@@ -140,7 +150,11 @@ export function buildCaptainHomeTickerPolicy(
     return { statusLabel: 'مغلق', message: 'تم تسليم الطلب الأخير.', action: 'go-inbox', marquee: false };
   }
 
-  const activeOrderDisplayId = state.activeOrderId ? normalizeCaptainOrderId(state.activeOrderId) : '';
+  const activeOrderDisplayId = state.activeWorkItemId
+    ? normalizeCaptainOrderId(state.activeWorkItemId)
+    : state.activeOrderId
+      ? normalizeCaptainOrderId(state.activeOrderId)
+      : '';
   return {
     statusLabel: activeOrderDisplayId ? `#${activeOrderDisplayId}` : 'جاهز',
     message: `${activeSummary.currentStageLabel} · ${activeSummary.etaLabel}`,
@@ -153,7 +167,7 @@ export function buildCaptainPresentationPolicy(
   state: Pick<
     DshCaptainSurfaceState,
     'route' | 'captainAvailabilityStatus' | 'gpsStatus' | 'captainAppMode' | 'activeOrderId' | 'activeDeliveryStatus'
-  >,
+  > & Partial<Pick<DshCaptainSurfaceState, 'activeWorkItemId'>>,
   hasActiveAssignment: boolean,
 ) {
   const isStoreCourierMode = state.captainAppMode === 'store_courier_mode';
@@ -171,6 +185,10 @@ export function buildCaptainPresentationPolicy(
     captainPodRequired,
     showBottomNav,
     captainBottomActiveId: buildCaptainBottomActiveIdPolicy(state.route, isStoreCourierMode),
-    activeOrderDisplayId: state.activeOrderId ? normalizeCaptainOrderId(state.activeOrderId) : '',
+    activeOrderDisplayId: state.activeWorkItemId
+      ? normalizeCaptainOrderId(state.activeWorkItemId)
+      : state.activeOrderId
+        ? normalizeCaptainOrderId(state.activeOrderId)
+        : '',
   } as const;
 }

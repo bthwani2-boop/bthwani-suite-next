@@ -25,12 +25,15 @@ import {
 } from '../../shared/dispatch';
 import { useCaptainDeliveryProofController } from '../../shared/delivery-proof';
 import type { CaptainDeliveryEvidenceKind } from '../../shared/media/pod/delivery-proof-media.api';
+import type { DshDispatchAssignmentSource } from '../../shared/dispatch';
 import type { CaptainDeliveryExceptionDraft } from '../../shared/delivery/use-captain-order-runtime';
 
 export type DshCaptainPoDSubmissionScreenProps = {
   readonly state?: 'ready' | 'loading' | 'pending_review' | 'success' | 'error' | 'rejected';
   readonly assignmentId: string;
   readonly orderId: string;
+  readonly workItemId: string;
+  readonly workItemSource: DshDispatchAssignmentSource | '';
   readonly exceptionReportingEnabled: boolean;
   readonly onCapturePhoto: () => void;
   readonly onConfirm: () => void;
@@ -70,6 +73,8 @@ export function DshCaptainPoDSubmissionScreen({
   state = 'ready',
   assignmentId,
   orderId,
+  workItemId,
+  workItemSource,
   exceptionReportingEnabled,
   onCapturePhoto,
   onConfirm,
@@ -82,6 +87,9 @@ export function DshCaptainPoDSubmissionScreen({
   const identity = useIdentitySession();
   const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
   const proofController = useCaptainDeliveryProofController(assignmentId);
+  const workItemLabel = workItemSource === 'special_request'
+    ? `المهمة الخاصة ${workItemId}`
+    : `الطلب ${workItemId || orderId}`;
   const [pin, setPin] = React.useState('');
   const [evidenceKind, setEvidenceKind] = React.useState<CaptainDeliveryEvidenceKind>('photo');
   const [proofGuideVisible, setProofGuideVisible] = React.useState(false);
@@ -136,10 +144,14 @@ export function DshCaptainPoDSubmissionScreen({
     const normalizedPin = pin.replace(/\D/g, '').slice(0, 6);
     const proof = await proofController.submitCaptured(
       photoUri ? { uri: photoUri } : undefined,
-      { pin: normalizedPin, evidenceKind, capturedAt: new Date().toISOString() },
+      {
+        pin: workItemSource === 'special_request' ? '' : normalizedPin,
+        evidenceKind,
+        capturedAt: new Date().toISOString(),
+      },
     );
     if (proof) await Promise.resolve(onConfirm());
-  }, [evidenceKind, onConfirm, photoUri, pin, proofController.submitCaptured]);
+  }, [evidenceKind, onConfirm, photoUri, pin, proofController.submitCaptured, workItemSource]);
 
   const submitException = React.useCallback(async () => {
     if (reasonNote.trim().length < 5) return;
@@ -237,30 +249,38 @@ export function DshCaptainPoDSubmissionScreen({
   return (
     <DshOperationScreen
       title="إثبات التسليم"
-      subtitle={`الطلب ${orderId} · الإسناد ${assignmentId}`}
+      subtitle={`${workItemLabel} · الإسناد ${assignmentId}`}
       content={
         <Box gap={4} style={styles.contentPadding}>
           <Box gap={3}>
             <Box layoutDirection="row" justify="space-between" align="center">
               <Badge label="إثبات مطلوب" tone="warning" />
-              <Text role="caption" tone="muted">#{orderId}</Text>
+              <Text role="caption" tone="muted">#{workItemId || orderId}</Text>
             </Box>
             <Text role="bodySm" tone="muted">استخدم رمز العميل لقبول فوري، أو صورة/توقيع يراجعها المشغل، أو رمزًا مع وسائط كإثبات مركب.</Text>
           </Box>
 
           <Divider />
 
-          <Box gap={2}>
-            <TextField
-              label="رمز التسليم من العميل"
-              value={pin}
-              onChangeText={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="6 أرقام"
+          {workItemSource === 'special_request' ? (
+            <StateView
+              title="إثبات الوسائط مطلوب"
+              description="هذه مهمة خاصة ولا تستخدم PIN الطلب التجاري؛ أرسل صورة أو توقيعًا ليراجعه المشغل."
+              tone="info"
             />
-            <Text role="caption" tone={pin.length > 0 && !pinValid ? 'danger' : 'muted'}>
-              {pin.length > 0 && !pinValid ? 'أدخل الرمز كاملًا من 6 أرقام.' : 'لا يظهر الرمز للكابتن إلا عندما يقدمه العميل عند التسليم.'}
-            </Text>
-          </Box>
+          ) : (
+            <Box gap={2}>
+              <TextField
+                label="رمز التسليم من العميل"
+                value={pin}
+                onChangeText={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6 أرقام"
+              />
+              <Text role="caption" tone={pin.length > 0 && !pinValid ? 'danger' : 'muted'}>
+                {pin.length > 0 && !pinValid ? 'أدخل الرمز كاملًا من 6 أرقام.' : 'لا يظهر الرمز للكابتن إلا عندما يقدمه العميل عند التسليم.'}
+              </Text>
+            </Box>
+          )}
 
           <Divider />
 

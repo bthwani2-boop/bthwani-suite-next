@@ -1,6 +1,6 @@
 import type { CaptainSupportRoute, CompactOrderChatMessage, CaptainAvailabilityStatus, CaptainGpsStatus, CaptainAppMode, CaptainServiceType, CaptainAvailabilityMeta } from './captain.contract';
 import type { DshCaptainRoute } from './captain.contract';
-import type { DshDeliveryStatus } from '../dispatch';
+import type { DshDeliveryStatus, DshDispatchAssignmentSource } from '../dispatch';
 import type {
   DshCaptainDeliveryActionId,
   DshCaptainOrderBellItem,
@@ -28,6 +28,8 @@ export type DshCaptainSurfaceState = {
   inboxState: 'ready' | 'loading' | 'error' | 'empty' | 'delivered' | 'offer-accepting' | 'offer-accepted';
   activeAssignmentId: string;
   activeOrderId: string;
+  activeWorkItemId: string;
+  activeWorkItemSource: DshDispatchAssignmentSource | '';
   activeDeliveryStatus: DshDeliveryStatus | '';
   inboxItems: DshCaptainOrderBellItem[];
   selectedSupportScreen: CaptainSupportRoute;

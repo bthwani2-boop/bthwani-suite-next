@@ -37,6 +37,15 @@ function assignment(deliveryStatus = "assigned") {
   };
 }
 
+function specialRequestAssignment(deliveryStatus = "assigned") {
+  return {
+    specialRequestId: "special-42",
+    requestType: "AWNAK_ERRAND",
+    status: "accepted",
+    delivery: { status: deliveryStatus },
+  };
+}
+
 function state(overrides = {}) {
   return {
     route: "home",
@@ -90,6 +99,18 @@ test("captain active assignment exposes only the next legal DSH action", () => {
   assert.equal(afterCustomerArrival.nextActionLabel, "فتح إثبات التسليم");
   assert.match(afterPickup.currentStageLabel, /الاستلام/);
   assert.equal(afterPickup.etaLabel, "مقبولة");
+});
+
+test("captain special-request assignment keeps its source identity through execution", () => {
+  const summary = buildCaptainOrderSummaryPolicy(
+    specialRequestAssignment("arrived_customer"),
+    assignmentStatusLabels,
+    deliveryStatusLabels,
+  );
+
+  assert.equal(summary.orderId, "special-42");
+  assert.match(summary.pickupLabel, /عونك/);
+  assert.equal(summary.nextActionLabel, "فتح إثبات التسليم");
 });
 
 test("captain empty assignment is explicit and cannot invent an active order", () => {
