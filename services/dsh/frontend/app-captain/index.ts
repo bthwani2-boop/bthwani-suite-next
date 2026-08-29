@@ -44,7 +44,3 @@ export {
   WorkforceProfileProvider,
   useWorkforceProfile,
 } from "../shared/workforce";
-export {
-  fetchCaptainOperationalReadiness,
-  type CaptainOperationalReadiness,
-} from "./captain-readiness.api";
