@@ -131,3 +131,10 @@ test("partner onboarding closes the canonical store publication journey", () => 
   assert.match(dshPartnerOnboardingSmoke, /\/dsh\/stores\/\$smokeStoreId\/catalog"/);
   assert.doesNotMatch(dshPartnerOnboardingSmoke, /"lifecycle" "active"/);
 });
+
+test("DSH catalog smoke supplies the required proposal idempotency key", () => {
+  assert.match(
+    dshCatalogSmoke,
+    /"Idempotency-Key" = "smoke-catalog-proposal-/,
+  );
+});

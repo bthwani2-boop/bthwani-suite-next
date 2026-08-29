@@ -113,6 +113,7 @@ if ($publicStore.store.publicationDecision -ne "PUBLISHED") { throw "store publi
 $partnerToken = Get-LocalActorToken (Get-LocalUsername "partner")
 $partnerHeaders = @{
   Authorization = "Bearer $partnerToken"
+  "Idempotency-Key" = "smoke-catalog-proposal-$([guid]::NewGuid())"
   "X-Correlation-ID" = "smoke-catalog-$([guid]::NewGuid())"
 }
 $proposalBody = @{
