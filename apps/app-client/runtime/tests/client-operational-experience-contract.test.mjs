@@ -197,8 +197,28 @@ test("client order and support routes remain navigable and failure-safe", () => 
   );
   assertMarkers(
     "services/dsh/frontend/app-client/DshClientSurface.tsx",
-    ["openExternalUrl", "onOpenPickup={openPickupSession}", "onOpenOrderSupport={openOrderSupport}", "selectionHaptic"],
+    ["openExternalUrl", "onOpenPickup={openPickupSession}", "onOpenOrderSupport={openOrderSupport}", "selectionHaptic", "هذا الإجراء غير مدعوم", "case \"profile\":\n      content"],
   );
+});
+
+test("client notification action routes are canonical and fail closed", () => {
+  const navigation = assertMarkers(
+    "services/dsh/frontend/app-client/client-navigation.ts",
+    [
+      "function decodeSegment",
+      "decodeURIComponent(value)",
+      'parts.path === \"/orders/pickup\"',
+      'return queryFor(parts, []) ? { kind: \"orders\" } : null',
+      'parts.path === \"/cart\"',
+      'parts.path === \"/support\"',
+    ],
+  );
+  assert.doesNotMatch(navigation, /decodeURIComponent\([^)]*\)\s*\}/);
+  const backend = assertMarkers(
+    "services/dsh/backend/internal/operationaloutbox/notification_policy.go",
+    ["pickupOrderID(event)", 'return \"/orders/\" + url.PathEscape(orderID) + \"/pickup\"'],
+  );
+  assert.ok(backend.includes("pickup_order_ready"));
 });
 
 test("client commercial profile is reachable from My Space and has no inert privacy actions", () => {

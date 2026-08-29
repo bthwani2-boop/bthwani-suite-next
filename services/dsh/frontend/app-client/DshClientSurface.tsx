@@ -60,7 +60,15 @@ function routeTab(route: DshClientRoute): ClientTab {
     case "special-request-awnak": return "special";
     case "wallet": return "wallet";
     case "cart": return "cart";
-    default: return "profile";
+    case "profile":
+    case "profile-commercial":
+    case "profile-addresses":
+    case "profile-identity":
+    case "profile-benefits":
+    case "profile-preferences":
+    case "support":
+    case "support-ticket":
+    case "notifications": return "profile";
   }
 }
 
@@ -80,6 +88,7 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
   const [cartRetryToken, setCartRetryToken] = useState(0);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [notificationActionError, setNotificationActionError] = useState<string | null>(null);
   const specialRequestController = useSpecialRequestsController();
   const { state: ordersState } = useOrderTruthCollectionController("client");
 
@@ -120,7 +129,12 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
   }, [navigate]);
   const openNotificationActionUrl = useCallback((actionUrl: string) => {
     const target = dshClientRouteFromActionUrl(actionUrl);
-    if (target) navigation.navigate(target);
+    if (!target) {
+      setNotificationActionError("هذا الإجراء غير مدعوم في تطبيق العميل. افتح الإشعار من التطبيق أو حدّثه من جديد.");
+      return;
+    }
+    setNotificationActionError(null);
+    navigation.navigate(target);
   }, [navigation]);
   const openHomeMarketingAction = useCallback((actionType: string, actionTarget: string) => {
     const target = actionTarget.trim();
@@ -207,7 +221,6 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
       content = <SupportTicketScreen onBack={navigation.back} onOpenTicket={(ticketId) => navigate({ kind: "support-ticket", ticketId })} {...(route.orderId ? { orderId: route.orderId } : {})} />;
       break;
     case "profile":
-    default:
       content = <MySpaceScreen onOpenOrders={() => navigate({ kind: "orders" })} onOpenAddresses={() => navigate({ kind: "profile-addresses" })} onOpenIdentity={() => navigate({ kind: "profile-identity" })} onOpenBenefits={() => navigate({ kind: "profile-benefits" })} onOpenPreferences={() => navigate({ kind: "profile-preferences" })} onOpenProfile={() => navigate({ kind: "profile-commercial" })} onOpenSupport={() => navigate({ kind: "support" })} />;
       break;
   }
@@ -228,7 +241,18 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
           ]}
         />
       ) : null}
-      <View style={styles.content}>{content}</View>
+      <View style={styles.content}>
+        {notificationActionError ? (
+          <StateView
+            tone="warning"
+            title="تعذر فتح الإشعار"
+            description={notificationActionError}
+            actionLabel="إغلاق"
+            onActionPress={() => setNotificationActionError(null)}
+          />
+        ) : null}
+        {content}
+      </View>
       {showBottomNav ? (
         <BottomNavBar
           items={NAV_ITEMS}
