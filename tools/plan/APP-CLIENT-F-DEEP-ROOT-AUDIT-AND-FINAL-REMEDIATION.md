@@ -1,643 +1,888 @@
-# APP-CLIENT / branch `f` — Deep Root Audit & Final Root-Correct Remediation Ledger
+# APP-CLIENT / branch `f` — Root-Correct End-to-End Closure Ledger
 
 > **STATUS: OPEN — NOT CLOSED**
 >
-> This file is an execution/closure ledger and evidence index only. It is not a product, runtime, contract, data, design, or governance authority. Canonical truth remains in the actual source-of-fix paths identified below. Documentation records the fix; it must never substitute for the fix.
+> This file is an execution ledger, root graph, migration/cutover contract, deletion ledger, and verification index. It is **not** product/runtime/data/contract/design authority and it must never substitute for fixing the actual source-of-fix. `CLOSED` is forbidden until every material root below is either `CLOSED_WITH_EXACT_PROOF` or `N/A_PROVEN`, all migrations/cutovers/deletions are complete, negative space is clean, and exact-final-candidate closure gates pass.
 
-## 0. Execution identity
+---
+
+## 0. Execution identity and live baseline
 
 - **Repository:** `bthwani2-boop/bthwani-suite-next`
 - **Branch:** `f`
 - **Canonical trunk:** `master`
-- **Open PR at audit baseline:** Draft PR `#334`, `f -> master`
-- **Target app / audit-execution anchor:** تطبيق العميل (`app-client`)
+- **Target app / Audit-Execution Anchor:** `app-client`
 - **Governing entry point:** `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
-- **Observed orchestrator package revision:** `20`
-- **Audit baseline HEAD:** `36e63b046f4165bb7e8b968f7c270a550bb10c81`
-- **Audit baseline PR base SHA:** `1c41f0a5d6b94faecf2d01e8e38012ce9912a7bf`
-- **Date:** `2026-08-29` (Asia/Aden)
-- **ACTIVE_WORKSET:** not supplied by the caller. GitHub proves the branch/PR identity but cannot prove absence of direct concurrent sessions/worktrees. The explicitly requested unique audit-ledger write is allowed. Product/runtime mutation remains subject to the Orchestrator collision gate and must re-resolve the live HEAD and concurrent delta immediately before each mutation wave.
-- **Current closure state:** `OPEN / AUDIT_COMPLETE_FOR_INITIAL_ROOT_RANKING / PRODUCT_MUTATION_NOT_YET_AUTHORIZED_AS_PARALLEL_SAFE`
+- **Observed Orchestrator package revision:** `20`
+- **Re-audit live baseline:** `847ca44f18fd32eb54db0d422c29ebaec3e82f24`
+- **PR:** Draft PR `#334`, `f -> master`
+- **PR base at re-audit:** `1c41f0a5d6b94faecf2d01e8e38012ce9912a7bf`
+- **Previous client-ledger creation commit:** `391f5e8aaa15276c29e5ff6b6d4cc7ab5f3fe5f3`
+- **Delta since previous client-ledger creation:** `167` commits ahead at this re-audit baseline.
+- **Date:** `2026-08-29` (`Asia/Aden`)
+- **ACTIVE_WORKSET:** **NOT SUPPLIED**. GitHub can prove branch/PR state but cannot prove absence of direct concurrent sessions/worktrees. Therefore this unique ledger rewrite is authorized by the caller, while product/runtime/backend/data mutations must re-resolve the live HEAD, active concurrent work, collision set, and `PARALLEL_SAFE` status immediately before each mutation wave.
+- **Current state:** `RE-AUDITED / ROOT-RANKED / EXECUTION-CONTRACT-REBUILT / MATERIAL_MUTATION_PENDING_CONCURRENCY_GATE`.
+
+### 0.1 Why the previous ledger was invalidated
+
+The previous ledger was not merely incomplete; its baseline became materially stale. Since its creation, branch `f` changed the Client runtime, Cart, Client Profile, Navigation, DSH backend, contracts, tests, Control Panel handoffs, and multiple shared mutation/lifecycle components. Several old findings were genuinely fixed, while deeper roots remained or appeared at different layers. Keeping the old ranking would itself create stale diagnostic truth.
+
+This revision therefore **rebuilds the diagnosis from current source** rather than appending more findings to obsolete conclusions.
+
+---
 
 ## 1. Selected closure objective
 
-**SELECTED CLOSURE OBJECTIVE:** Close the Client app’s complete material customer-commerce cone root-correctly from Identity/session and mobile runtime through discovery/store truth, cart/checkout, order lifecycle/tracking/pickup/support, notifications/deep links, profile/addresses, subscriptions/benefits and WLT projections, eliminating every durability/identity loss path, cross-layer authority inversion, fail-open route/action contract, shadow mutation identity, stale/bypass path and unverified cross-surface handoff, while preserving canonical backend/data/WLT authority and proving Product/UX/Design/Accessibility/RTL behavior on the exact final candidate.
+**SELECTED CLOSURE OBJECTIVE:** Close the complete `app-client` material customer-commerce cone root-correctly from Identity/session and native runtime through discovery/store capability truth, Cart/serviceability/checkout, Order Truth and delivery/pickup projections, notifications/deep links, profile/addresses/consents, support, ratings, special requests, benefits/subscriptions and WLT projections; eliminate every non-atomic command boundary, duplicated semantic authority, shadow/default product truth, lifecycle decision fork, unresolved-intent causal break, stale/compatibility/bypass path and unproven UX/A11y/RTL state; migrate every writer/reader/consumer/handoff to one canonical owner; delete superseded paths after cutover; then re-diagnose until Fixed Point and prove the exact final candidate under the latest Orchestrator closure gates.
 
-## 2. Governing execution law
+---
 
-`app-client` is an **Audit/Execution Anchor**, not an independent authority. The only valid loop is:
+## 2. Governing laws
 
-`AUDIT -> INSPECT -> DIAGNOSE -> ANALYZE -> HIGHEST PROVEN EXECUTABLE ROOT -> CANONICAL TARGET -> ROOT-CORRECT EXECUTION -> MIGRATION/CUTOVER -> CLEANUP/DELETION -> VERIFY -> RE-AUDIT -> RE-RANK -> REPEAT -> FIXED POINT -> EXACT FINAL CANDIDATE`.
+The target app is an **anchor**, not an authority island. The only valid loop is:
 
-Forbidden throughout this scope:
+`AUDIT -> INSPECT -> DIAGNOSE -> ROOT GRAPH -> HIGHEST PROVEN EXECUTABLE ROOT -> ACTUAL SOURCE-OF-FIX -> ROOT-CORRECT EXECUTION -> MIGRATION -> RECONCILIATION -> CUTOVER -> CLEANUP/DELETION -> VERIFY -> RE-AUDIT -> RE-RANK -> REPEAT -> FIXED POINT -> EXACT FINAL CANDIDATE`.
 
-- Patch / workaround / fallback that hides a violated invariant.
-- Half migration or indefinite dual read/write.
-- Parallel/shadow truth.
-- UI-only treatment for data/auth/runtime/backend roots.
-- Treating local mobile state as canonical server truth.
-- Silent deletion of unresolved user business intent.
-- Reusing mutation identity across actors/installations/entities.
-- Shared DSH code importing upward from an app runtime implementation.
-- A valid-looking business fallback for an unknown route/action.
-- Marker-only tests being accepted as proof of mobile/runtime behavior.
-- Declaring `CLOSED` because screens render or tests are green while material roots, consumers, deletions, migration, negative-space, or exact-candidate evidence remain open.
+Hard prohibitions:
 
-## 3. Material cone and authority map
+- No Patch / Workaround / Fallback used to hide a violated invariant.
+- No Half Migration, indefinite dual read/write, shadow/parallel truth, or “keep both in sync” architecture.
+- No UI fix for backend/data/contract roots.
+- No documentation/test marker accepted as replacement for runtime proof.
+- No command result called committed unless canonical authority can prove it after crash/retry/response loss.
+- No unresolved predecessor may be bypassed by a causally dependent successor.
+- No frontend-owned business mapping when the backend/contract can provide the normalized semantic truth.
+- No local fabricated profile/state treated as server product truth.
+- No raw lifecycle status list duplicated across surfaces as independent business decision authority.
+- No dead/stale/compatibility path left “for later” inside the affected cone.
+- No `CLOSED` on a moving, unbound, draft, stale, or unverified candidate.
 
-| Material concept | Canonical authority / Source of Truth | Client responsibility |
+---
+
+## 3. Current Material Cone and authority map
+
+| Material concept | Canonical owner / source of truth | `app-client` role |
 |---|---|---|
-| Actor identity, role, surface, session | Identity | Authenticate as `client`, consume server-derived actor identity, protect credentials locally. |
-| Installation identity / durable mutation scope | `@bthwani/data-runtime` | Persist correctness-critical client intent with actor + installation + entity scoping. |
-| Native mobile capabilities | Runtime adapters configured through governed capability contracts | Configure Expo/native implementations; shared DSH code must not import app runtime internals. |
-| Store/catalog/discovery truth | DSH catalog/store/home-discovery backend + governed content/operator inputs | Search, filter, display, navigate; never own a second catalog/store master. |
-| Cart truth | DSH cart backend | Submit actor-scoped intents, preserve unresolved offline commands durably, reconcile to server truth. |
-| Serviceability/checkout | DSH governed serviceability + checkout OCC | Carry exact cart/address/version context; fail closed on conflict/policy unavailability. |
-| Order truth | DSH canonical order-truth lifecycle | Submit idempotent create intent and read back canonical order state. |
-| Delivery/dispatch/pickup/proof | DSH dispatch/pickup authorities | Read client projection, present valid client actions only, never mutate Captain/Partner/operator authority. |
-| Support/chat | DSH governed support/order collaboration | Submit customer intents through actor-scoped routes and present canonical readback. |
-| Notifications | DSH notification config/delivery truth + mobile notification runtime | Register endpoint, render actor notifications, route action URLs deterministically. |
-| Client profile/addresses/consents | DSH client profile/address authority + Identity where applicable | Edit only governed client-owned fields; use location as input, not master truth. |
-| Subscription/benefits | DSH marketing/subscription lifecycle + WLT payment truth | Persist mutation identity across ambiguous outcomes; recover, read back, and present states. |
-| Wallet/payment/refund ledger | WLT | Read governed client projection and submit only allowed intents; never calculate/persist parallel financial truth. |
-| Query/cache state | Data Runtime cache authority | Best-effort read cache only; cache loss must never equal business-intent loss. |
-| Design/visual/accessibility/RTL | UI Kit/design authority + product contracts | Compose semantic screens/states with RTL/a11y/safe-area/font-scaling proof. |
+| Actor identity, role, surface, session | Identity | Authenticate as `client`; consume server-derived identity; never mint actor authority locally. |
+| Installation identity / durable mutation scope | `@bthwani/data-runtime` | Persist correctness-critical attempt identity scoped by actor + installation + entity. |
+| Native mobile capabilities | App runtime implementation behind governed capability interfaces | Inject Expo/native implementations; DSH product code consumes interfaces only. |
+| Connectivity / process lifecycle | Data Runtime + native runtime | Drive retries/recovery; never infer durable correctness from browser-only primitives. |
+| Store/catalog/home discovery | DSH catalog/store/home-discovery authorities + governed operator inputs | Render canonical availability/capabilities; do not own a second business mapping. |
+| Cart aggregate | DSH Cart domain/database | Submit commands and represent canonical state; local queue is intent/recovery state only. |
+| Cart command identity/receipt | DSH transactional command boundary | Preserve stable retry identity and reconcile unknown results. |
+| Serviceability / fulfillment capability | DSH policy/cart serviceability authority | Consume normalized allowed modes and quotes. |
+| Checkout | DSH checkout/OCC | Carry exact cart/address/version context; fail closed on conflict/unavailable policy. |
+| Order Truth | DSH order lifecycle | Consume one canonical lifecycle projection; no local state machine fork. |
+| Partner preparation | Partner/DSH order authority | Read client projection only. |
+| Pickup | DSH pickup authority | Execute only client-owned pickup actions. |
+| Captain delivery/location/proof | DSH dispatch/proof authority | Read client tracking/proof projection only. |
+| Support/chat | DSH governed support/collaboration | Submit client commands and read canonical ticket/thread state. |
+| Notifications/push/deep links | DSH notification authority + native runtime | Register endpoint; route only contract-valid actions. |
+| Client profile/preferences/consents | DSH Client Profile authority + platform policy | Edit governed fields; server owns valid domain values/default projection. |
+| Client addresses | DSH Client Address authority | Capture governed location/address commands; no local address master. |
+| Benefits/subscriptions | DSH commercial facade + WLT commercial/payment authority | Preserve command identity/recovery; consume canonical financial/lifecycle state. |
+| Wallet/payment/refund | WLT | Read governed client projection / allowed commands only. |
+| Rating | DSH ratings authority | Submit actor/order-scoped rating command; no duplicate eligibility truth. |
+| Special requests | DSH special-request authority | Capture governed intent; consume operator/fulfillment lifecycle. |
+| Product/UX/Design/A11y/RTL | Product/design/UI Kit + explicit journey contracts | Render all states semantically; prove actual-device behavior. |
 
-Any implementation contradicting this table is a root violation, not a local feature exception.
+Any contradiction to this table is a root violation requiring treatment at the owner, not a feature-specific exception.
 
-## 4. Material cone inventory
+---
 
-### 4.1 Runtime / composition shell
-
-Primary runtime:
-
-- `apps/app-client/runtime/src/App.tsx`
-- `apps/app-client/runtime/src/index.ts`
-- `apps/app-client/runtime/src/navigation/ClientRouteScreen.tsx`
-- `apps/app-client/runtime/src/platform/dsh-capabilities.tsx`
-- `apps/app-client/runtime/src/platform/client-platform-actions.ts`
-- `apps/app-client/runtime/src/media/ClientRemoteImage.tsx`
-- `apps/app-client/runtime/app/**`
-- `apps/app-client/runtime/app.config.ts`
-- `apps/app-client/runtime/tests/**`
-
-The runtime is a composition/native-adapter shell. It configures Identity, SecureStore-backed session/device fingerprinting, query providers, native capabilities, push registration, Expo Router, maps/video/location/media and other device integrations. It must not become a second DSH product/domain owner.
-
-### 4.2 Client DSH surface
-
-Material client surface:
-
-- `services/dsh/frontend/app-client/DshClientSurface.tsx`
-- `services/dsh/frontend/app-client/client-navigation.ts`
-- `services/dsh/frontend/app-client/account/**`
-- `services/dsh/frontend/app-client/cart/**`
-- `services/dsh/frontend/app-client/checkout/**`
-- `services/dsh/frontend/app-client/finance/**`
-- `services/dsh/frontend/app-client/home-discovery/**`
-- `services/dsh/frontend/app-client/notifications/**`
-- `services/dsh/frontend/app-client/orders/**`
-- `services/dsh/frontend/app-client/ratings/**`
-- `services/dsh/frontend/app-client/shell/**`
-- `services/dsh/frontend/app-client/store/**`
-- `services/dsh/frontend/app-client/support/**`
-
-Observed route/capability areas include home, stores/store detail, cart, checkout, orders/order detail, pickup, chat, live tracking/proof, notifications, special requests (including SHEIN/Awnak), wallet, profile/commercial profile/addresses/identity/benefits/preferences, support and support tickets.
-
-### 4.3 Shared DSH client-consumed authorities
-
-Material shared modules include at minimum:
-
-- `frontend/shared/_kernel/**`
-- `frontend/shared/mobile-capabilities.ts`
-- `frontend/shared/cart/**`
-- `frontend/shared/checkout/**`
-- `frontend/shared/order-truth/**`
-- `frontend/shared/orders/**`
-- `frontend/shared/pickup/**`
-- `frontend/shared/dispatch/**` client projections
-- `frontend/shared/notifications/**`
-- `frontend/shared/home-discovery/**`
-- `frontend/shared/client-profile/**`
-- `frontend/shared/marketing/**`
-- `frontend/shared/special-requests/**`
-- `frontend/shared/shein/**`
-- `frontend/shared/awnak/**`
-- support/chat/media modules reached by client journeys.
-
-`shared` is not automatically canonical merely because of its name; ownership is resolved by semantic responsibility and actual writers/readers/consumers.
-
-### 4.4 Cross-service / backend / data / contract cone
-
-Material backend areas include the authenticated client boundaries and downstream lifecycle owners for:
-
-- auth/client surface enforcement;
-- cart and serviceability;
-- checkout and order creation;
-- order lifecycle/cancellation/returns;
-- pickup;
-- dispatch live tracking and delivery proof client projection;
-- notifications and notification configuration;
-- client profile/addresses/privacy boundaries;
-- home discovery/catalog/store availability;
-- special requests;
-- support/chat;
-- subscriptions/benefits;
-- WLT payment/refund/wallet projections.
-
-Material contracts and migrations include the corresponding `services/dsh/contracts/**`, `services/dsh/database/**`, Identity contracts/data where client session is affected, and WLT contracts/data where financial truth is consumed.
-
-### 4.5 Cross-surface consumers/handoffs
-
-The client cone materially touches other surfaces only at real handoffs:
-
-- **Partner:** order acceptance/preparation/partner-delivery projections consumed by client order truth.
-- **Captain:** dispatch/location/proof projections consumed by client tracking and proof screens.
-- **Control Panel:** operational order intervention, dispatch/proof review, notification configuration, catalog/home content governance, support and relevant policy/config writers.
-- **WLT:** payment/refund/wallet/benefit financial truth.
-
-No unrelated Partner/Captain/Field/Control-Panel functionality is in scope.
-
-## 5. Root graph
+## 4. Current Root Graph
 
 ```text
 Identity actor/session + app-client surface gate
         |
-        +--> Data Runtime installation identity / durable mutation scope
+        +--> Data Runtime: installation identity / durable storage / connectivity
         |
-        +--> app-client runtime native capability configuration
+        +--> app-client native platform provider
         |        |
-        |        +--> DSH mobile capability contracts
+        |        +--> DSH capability interfaces
         |
         v
-DshClientSurface / Expo route bridge
+Client navigation / DshClientSurface
         |
-        +--> Home discovery -> Store/catalog truth -> Store detail
+        +--> Home Discovery
+        |      +--> Store/catalog/content truth
+        |      +--> fulfillment capability projection
         |
-        +--> Cart controller -> governed HTTP -> authenticated client cart
-        |       |                                |
-        |       +--> offline mutation identity   +--> OCC/idempotency/data
-        |       +--> serviceability              |
-        |                                        v
-        +--> Checkout -> canonical checkout -> Order Truth create/readback
-        |                                        |
-        |                                        +--> Partner preparation
-        |                                        +--> Pickup
-        |                                        +--> Dispatch/Captain tracking/proof
-        |                                        +--> cancellations/returns
-        |                                        +--> WLT payment/refund
+        +--> Cart
+        |      +--> local durable command queue (non-authoritative)
+        |      +--> governed HTTP command identity
+        |      +--> DSH Cart aggregate + DB
+        |      +--> command receipt/reconciliation
+        |      +--> serviceability/OCC
         |
-        +--> Notifications -> in-app action / push deep link -> Client route contract
+        +--> Checkout
+        |      +--> canonical checkout snapshot
+        |      +--> Order Truth create + readback
         |
-        +--> Profile/addresses -> governed client-owned data/location inputs
+        +--> Order Truth lifecycle
+        |      +--> Partner preparation
+        |      +--> Pickup
+        |      +--> Captain dispatch/location/proof
+        |      +--> cancellation/return
+        |      +--> WLT payment/refund
         |
-        +--> Benefits/subscriptions -> durable mutation attempt -> DSH/WLT payment truth
+        +--> Notifications -> action contract -> route/deep link
         |
-        +--> Wallet -> WLT read/request projection
+        +--> Profile / Preferences / Consents
+        |      +--> platform locale/currency policy
         |
-        +--> Support/chat -> governed client collaboration
+        +--> Addresses / Location
+        |
+        +--> Benefits / Subscriptions -> DSH/WLT commercial truth
+        |
+        +--> Wallet -> WLT
+        |
+        +--> Support / Chat -> Control Panel operator readback
+        |
+        +--> Ratings / Special Requests
 ```
 
-The current highest proven root cluster is **fragmented correctness-critical mobile mutation lifecycle ownership**: some client mutations use the canonical durable actor/installation-scoped model, while Cart bypasses it entirely and subscription recovery state is destructively coupled to session termination.
+### Highest proven root
 
-## 6. Proven canonical boundaries to preserve
+The highest currently proven executable root is:
 
-### P-CAN-01 — Runtime Identity ownership is correctly separated
+> **R1 — Cart lacks one atomic canonical command boundary across effect + idempotency receipt, while the client queue can continue causal successors after an unresolved predecessor.**
 
-`apps/app-client/runtime/src/App.tsx` configures the Identity session and a stable installation/device fingerprint using secure mobile storage, then gates DSH client UI by `requiredRole="client"` / `requiredSurface="app-client"`. Client product code does not mint actor authority locally.
-
-**Preserve:** server-derived actor identity, SecureStore-backed credentials/fingerprint, and surface/role gating.
-
-### P-CAN-02 — A native capability injection boundary already exists
-
-`services/dsh/frontend/shared/mobile-capabilities.ts` defines configurable adapters/renderers for secure randomness, location, image/document pickers, maps, video, notifications and linking. `apps/app-client/runtime/src/platform/dsh-capabilities.tsx` supplies Expo/native implementations.
-
-**Preserve and extend rather than bypass:** runtime implements native capabilities; DSH consumes contracts.
-
-### P-CAN-03 — Order creation already demonstrates correct durable mutation identity + canonical readback
-
-`order-truth-create-attempt.ts` scopes an attempt by actor + durable installation + checkout intent and stores the idempotency/correlation identity through the durable mutation registry. `use-order-truth-controller.ts` does not accept the mutation response as final truth; it reads the created order back through the actor-scoped endpoint and clears the attempt only after a matching canonical readback.
-
-**Preserve and reuse this pattern for other correctness-critical client mutations.**
-
-### P-CAN-04 — Checkout carries explicit OCC/version truth
-
-The client checkout carries `expectedCartVersion`, the backend validates governed serviceability/current cart version, and order creation uses idempotency/correlation context. Do not weaken OCC to make an offline path easier.
-
-### P-CAN-05 — WLT ownership is separated at the client wallet boundary
-
-`WltClientWalletPanel` is a client projection over WLT-owned balance/ledger truth. It does not calculate a second balance or turn DSH client UI into a financial master.
-
-### P-CAN-06 — Push endpoint lifecycle is actor/session aware
-
-Mobile push registration is activated only for authenticated native sessions, deactivates the registered endpoint on session end/unmount, handles token rotation, and routes push taps through the mobile notification runtime.
-
-### P-CAN-07 — Existing UI contains useful accessibility/RTL primitives
-
-Examples include tab roles/selected state in the bottom navigation, RTL row direction, semantic UI-kit surfaces and explicit accessible order labels. These are positive boundaries to preserve; runtime/device verification is still required before closure.
-
-## 7. Root-ranked material findings
-
-### R1 — CRITICAL / PROVEN: correctness-critical client mutation durability is fragmented and Cart can lose, mis-scope or falsely acknowledge offline intent
-
-#### Evidence
-
-`services/dsh/frontend/shared/cart/cart-sync.queue.ts`:
-
-- persists the queue directly with global `localStorage` key `dsh_cart_sync_queue`;
-- creates `deviceId` from `localStorage` and `sessionId` from `sessionStorage`;
-- catches storage failures and returns an empty queue / `unknown-device` / `unknown-session`;
-- explicitly swallows queue write errors, stating that offline capabilities are simply lost;
-- has no actor id, installation id or entity scope in the queue identity.
-
-`use-cart-controller.tsx`:
-
-- actively uses this queue for add/remove/update/clear network failures;
-- attempts auto-sync through browser `window`/`navigator` online semantics rather than the existing mobile connectivity authority;
-- deletes any queued command that fails with an error other than network/version conflict, with no canonical readback or quarantine;
-- returns `true` for several offline-pending remove/update/clear operations even though the server has not committed them, while add returns `false`, creating inconsistent acceptance semantics;
-- exposes `clearOfflineQueue` without proving server resolution of each outstanding intent.
-
-`apps/app-client/runtime/tests/client-cart-runtime.execution.test.mjs` manually installs a fake `globalThis.localStorage`, so the test verifies a browser-like harness instead of the real React Native durability path. The test therefore masks the native-runtime failure mode.
-
-The repository already owns the correct contract in `@bthwani/data-runtime`:
-
-- `BthwaniDurableStore` is explicitly designated for `DURABLE_OFFLINE_COMMAND`, `UNKNOWN_REMOTE_OUTCOME`, mutation identity and recovery quarantine;
-- durable writes/removals fail closed;
-- `getBthwaniInstallationId()` survives restart and session lifecycle;
-- mutation scope is `actor + installation + entity` and rejects actor/installation/entity mismatch.
-
-The DSH cart backend derives `actor.ID` from the authenticated client session. An unscoped local queue replayed after an actor change therefore risks executing old local intent under the current authenticated actor unless the client fences it.
-
-#### Root
-
-Cart created a parallel mobile mutation-lifecycle subsystem outside the repository’s canonical durability and mutation-identity authorities. Authentication/session lifecycle, installation identity, offline command durability, connectivity and remote outcome reconciliation are not owned coherently.
-
-#### Canonical treatment
-
-1. Replace direct `localStorage`/`sessionStorage` Cart durability with the canonical `@bthwani/data-runtime` durable store.
-2. Scope every persisted Cart command by authenticated actor id + durable installation id + cart/store/entity identity.
-3. Reuse the canonical durable mutation-attempt registry/pattern where applicable; do not create another persistence abstraction.
-4. Replace Cart-specific `getDeviceId/getSessionId` shadow identity with canonical installation/mutation identity semantics required by the governed HTTP contract.
-5. Define explicit local operation states: `pending_local`, `submitted_unknown`, `committed`, `conflict`, `permanent_failure`, `quarantined`, `discarded_by_governed_decision`.
-6. A storage failure before a network mutation must fail closed; never send a correctness-critical mutation whose retry identity could not be persisted.
-7. Use the governed mobile connectivity adapter/NetInfo path; do not depend on browser online events in React Native.
-8. On ambiguous network outcome, reconcile by canonical server receipt/readback/idempotency evidence before replay/removal. If the backend lacks sufficient readback, extend the canonical server contract rather than guessing locally.
-9. Never delete a non-network error silently. Classify terminal/retryable/conflict/unknown and surface or quarantine it.
-10. Make UI return semantics distinguish “server committed” from “queued locally”. Do not return success for uncommitted server state.
-11. Remove or govern `clearOfflineQueue`; unresolved business intent may be purged only after proven resolution or an explicit, auditable discard decision.
-12. Add process-death, app-restart, network-loss-after-send, logout/re-login, actor-switch, storage-failure and duplicate-retry tests.
-
-#### Migration / cutover
-
-- Inventory existing persisted web Cart queue entries before changing the key/format.
-- Legacy queue entries have no actor/install scope and must **never** be rebound automatically to the currently logged-in actor. Fence/quarantine them as unattributed legacy intent or require explicit safe re-entry; do not replay them.
-- Native installations must be tested for the current effective behavior; do not assume an empty queue proves absence of user intent.
-- Cut over all Cart readers/writers/sync/retry paths atomically to the durable scoped model.
-
-#### DELETE_REQUIRED
-
-After cutover and proof, delete:
-
-- direct Cart `localStorage`/`sessionStorage` persistence;
-- Cart-local `getDeviceId()` / `getSessionId()` shadow identity;
-- silent storage-error swallowing that fabricates an empty queue;
-- generic-error queue deletion without terminal proof;
-- browser-only online-listener ownership from the mobile Cart controller;
-- any old queue format/key consumer once migration/quarantine is complete.
-
-#### Closure proof
-
-- Killing/restarting the app after local acceptance cannot lose an unresolved command.
-- Logout/token expiry cannot erase unresolved intent.
-- A different actor on the same installation cannot view/replay the previous actor’s commands.
-- Same actor after re-auth can recover/reconcile its own commands.
-- Storage failure prevents unsafe mutation submission.
-- Unknown remote outcome cannot cause duplicate mutation or false success.
-- Every terminal queue deletion has canonical evidence or explicit governed discard evidence.
+This root outranks Cart UI, retry messages, queue storage, or individual tests because it breaks correctness at the authority that owns the business effect.
 
 ---
 
-### R2 — CRITICAL/HIGH / PROVEN: subscription recovery identity is durable but is destructively erased on session termination
+## 5. Re-audit disposition of previous findings
 
-#### Evidence
+| Previous finding | Current disposition | Action |
+|---|---|---|
+| Cart used raw `localStorage/sessionStorage` and unscoped queue | **SUPERSEDED / FRONTEND STORAGE ROOT FIXED** | Do not resurrect. Current queue uses governed durable actor/installation-scoped infrastructure. Deeper backend/causal root remains as R1. |
+| DSH client surface imported upward from `apps/app-client/runtime` | **FIXED_PENDING_RUNTIME_PROOF** | Current `DshClientPlatformProvider` restores dependency direction. Preserve and prove; do not reintroduce upward imports. |
+| Client route switch silently fell back to Profile/MySpace | **FIXED_PENDING_NEGATIVE-SPACE_PROOF** | Current route handling is materially stronger/exhaustive. Preserve. |
+| Subscription durable attempts were destructively cleared on logout | **FIXED** | Current lifecycle no longer couples all durable recovery state to session termination. Preserve. |
+| Native durable store might not be wired on React Native | **DISPROVEN** | Native Data Runtime provider configures native durable/cache/connectivity authority. No mutation authorized for this suspicion. |
+| Client address update/delete retry identity regenerated | **DISPROVEN AS STATED** | Current API uses deterministic idempotency keys for these operations. Do not treat as open root absent new evidence. |
 
-`subscription-mutation-attempt.ts` correctly persists purchase/activate/renew/cancel attempts through `bthwaniDurableStorage`, namespaced by actor + installation + operation + subject.
-
-`subscription-lifecycle.api.ts` normally clears attempts only after a terminal/accepted lifecycle response and contains explicit recovery for the latest purchase attempt.
-
-However `use-subscription-lifecycle-controller.tsx` registers:
-
-`registerIdentityBeforeSessionEndHook(() => clearSubscriptionMutationAttempts(actorId))`
-
-which deletes every durable mutation attempt for that actor/install when the Identity session ends.
-
-#### Root
-
-Authentication-secret lifecycle and unresolved financial/business mutation lifecycle are coupled. Session termination is being treated as proof that durable subscription intent is safe to delete, which it is not.
-
-#### Canonical treatment
-
-1. Remove session-end bulk deletion of unresolved subscription mutation attempts.
-2. Session end may clear credentials/cache/push endpoint state, but not unresolved durable business intent.
-3. Preserve actor-scoped attempts across logout/token expiry/process death.
-4. On the same actor’s re-authentication, resume canonical recovery/readback.
-5. On a different actor, keep previous attempts inaccessible and non-executable.
-6. Clear only after terminal canonical response/readback, supersession proven by server truth, retention expiration under an explicit policy, or an auditable governed discard.
-7. Add tests for logout/token revocation after request transmission but before response, and for app restart before payment activation/readback.
-
-#### DELETE_REQUIRED
-
-Delete the session-end `clearSubscriptionMutationAttempts(actorId)` behavior as a generic lifecycle hook once recovery ownership is corrected. Retain targeted terminal cleanup only.
-
-#### Closure proof
-
-An unknown-result subscription purchase/renew/activate/cancel cannot lose its idempotency/correlation identity merely because the session ended.
+This ledger intentionally removes obsolete “red” findings instead of inflating scope with already-corrected defects.
 
 ---
 
-### R3 — HIGH / PROVEN: DSH shared/package code imports upward from the app runtime, creating inverted platform ownership and a conceptual dependency cycle
+## 6. Positive canonical boundaries that must be preserved
 
-#### Evidence
+### P-CAN-01 — Identity/runtime separation
 
-`@bthwani/app-client-runtime` depends on `@bthwani/dsh`.
+The client runtime composes Identity and app surface gating; product/domain code does not mint server actor authority. Preserve server-derived subject/role/surface truth.
 
-Yet DSH client code imports runtime implementation files directly:
+### P-CAN-02 — Platform capability dependency direction
 
-- `DshClientSurface.tsx` -> `apps/app-client/runtime/src/platform/client-platform-actions` for external URLs/haptics.
-- `orders/OrdersListScreen.tsx` -> the same runtime file for document sharing.
-- `home-discovery/HomeDiscoveryShell.tsx` -> runtime `ClientRemoteImage` and `createClientEphemeralId`.
+`services/dsh/frontend/app-client/client-platform-context.tsx` now defines the client-facing platform contract and the runtime injects native implementations. This is the correct direction. Extend this boundary if new native capability is needed; never import runtime implementation upward into DSH product code.
 
-The runtime already configures a governed `@bthwani/dsh/mobile-capabilities` boundary for native implementations. The current direct imports bypass that architecture.
+### P-CAN-03 — Data Runtime durable authority exists
 
-`client-operational-experience-contract.test.mjs` further institutionalizes the wrong dependency by asserting these runtime implementation markers from DSH client files.
+The repository has explicit correctness-critical durable storage, installation identity, mutation scope, and native connectivity owners. New client durable command systems must reuse them instead of creating feature-local storage authorities.
 
-#### Root
+### P-CAN-04 — Client Profile demonstrates correct transactional mutation receipt model
 
-Native/platform/media capability ownership is split between the reusable DSH package and its consuming app runtime. Tests freeze the bypass rather than enforce the intended dependency direction.
+Client Profile backend performs command serialization/receipt lookup, fingerprint checks, business change, event/receipt persistence and commit within one DB transaction. This is an in-repo executable precedent for Cart command hardening.
 
-#### Canonical treatment
+### P-CAN-05 — Order creation demonstrates durable attempt + canonical readback
 
-1. Establish the minimal correct owner for each missing capability: haptic selection, safe external URL open, secure ephemeral ids, sharing and remote image rendering/caching.
-2. Prefer the existing DSH mobile-capability injection boundary for DSH-specific native capabilities; use UI-kit only where the capability is truly generic visual infrastructure.
-3. Runtime files may implement/configure adapters; DSH product/surface code consumes only the canonical contract.
-4. Migrate every DSH consumer before deleting runtime imports.
-5. Replace marker tests that require `services/** -> apps/**` imports with negative dependency-boundary tests that forbid them.
-6. Add an architecture guard: `services/**` must not import from `apps/**` except an explicitly governed build-only case proven N/A here.
+Order Truth creation persists retry identity and validates canonical actor-scoped readback before clearing attempt state. Preserve this recovery model.
 
-#### DELETE_REQUIRED
+### P-CAN-06 — WLT subscription activation is transactionally governed
 
-After cutover delete all `services/dsh/** -> apps/app-client/runtime/**` imports and any client-runtime helper that becomes orphaned or moves to the canonical capability owner.
+WLT commercial activation uses transaction/locking and financial/business invariants. Do not weaken financial authority to accommodate client UI convenience.
 
-#### Closure proof
+### P-CAN-07 — Push and navigation hardening materially improved
 
-- `@bthwani/app-client-runtime -> @bthwani/dsh` remains one-way.
-- No DSH service source reaches upward into app runtime source.
-- Native behavior remains functional on Android/iOS through configured adapters.
-- Tests fail if the inverted dependency is reintroduced.
+Current client navigation/deep-link handling and native push registration are materially stronger than the old baseline. Preserve explicit malformed/unsupported handling and actor/session endpoint lifecycle.
 
 ---
 
-### R4 — HIGH / PROVEN: Client route/action contracts fail open into valid-looking but semantically wrong behavior
+# 7. Root-ranked current findings
 
-#### Evidence A — route renderer fallback
+## R1 — CRITICAL / PROVEN — Cart command effect and receipt are not one atomic canonical boundary; client causal replay is not fully fenced
 
-`client-navigation.ts` defines a discriminated `DshClientRoute` union and an exhaustive `dshClientRouteToPath` mapping.
+### Evidence
 
-But `DshClientSurface.tsx` contains business fallbacks:
+Current `services/dsh/backend/internal/http/cart.go` uses the same fundamental shape for Cart mutations:
 
-- `routeTab(...)` ends in `default -> "profile"`;
-- the primary route renderer ends with `case "profile": default:` and renders `MySpaceScreen`.
+1. query an existing idempotency replay/receipt;
+2. perform the business mutation;
+3. only **after successful mutation**, call `recordCartIdempotency(...)`;
+4. if receipt persistence fails, log the failure while the already-committed business mutation remains successful.
 
-A new/unhandled route can therefore become a plausible Profile screen instead of surfacing route-contract drift.
+The helper itself is conceptually post-hoc: it claims the idempotency key after a successful mutation.
 
-#### Evidence B — notification action dispatcher
+Therefore a crash, DB/receipt write failure, process termination, or response loss can create:
 
-`dshClientRouteFromActionUrl()` only decodes a subset: order/pickup/chat/orders, special requests and notifications.
+`business effect committed + no canonical replay receipt`.
 
-The full Client route contract also includes stores/store, wallet, cart, profile subroutes, support/support-ticket and others.
+A retry with the same client command identity can then re-enter command execution without a proven canonical terminal receipt.
 
-`ActorNotificationsPanel` normally supports a safe URL opener when no custom callback is supplied. `NotificationCenterScreen` supplies `onOpenActionUrl`, and `DshClientSurface` then routes only through the partial client decoder. Unknown/unhandled action URLs become a no-op rather than an explicit unsupported action or safe external navigation.
+Current client `use-cart-controller.tsx` is much stronger than the old implementation, but its queue can still continue processing later commands after some predecessor outcomes become `submitted_unknown` or certain `permanent_failure` states. For a single Cart aggregate, this can allow a causally later command to execute while the predecessor's canonical result is unresolved.
 
-`DshNotification.actionUrl` is a general string and platform notification configuration exposes a `deepLinkPattern`; the consumer must therefore define a deterministic accepted contract rather than silently ignoring drift.
+### Broken invariants
 
-#### Root
+- Effect + command receipt must be atomic.
+- Same actor/key/fingerprint must resolve to exactly one canonical result.
+- Same key with a different fingerprint must fail closed.
+- Unknown remote result must be reconciled before dependent successor execution.
+- A local queue is not allowed to invent command order independently of canonical aggregate state.
 
-There is no single fail-closed route/action decoding boundary shared by Expo routing, in-app notifications and DSH surface rendering. Business fallbacks hide contract drift.
+### Actual Source-of-Fix
 
-#### Canonical treatment
+Primary:
+- DSH Cart domain/transaction boundary and persistence.
+- DSH HTTP Cart command handlers only as transport adapters.
 
-1. Make every `DshClientRoute` consumer compile-time exhaustive; use `assertNever`/equivalent rather than valid-business defaults.
-2. Create one canonical route/action decoder policy for supported internal client destinations.
-3. Mechanically validate Expo Router files/parameter bridges against the client route contract.
-4. Route notification internal actions through that canonical decoder.
-5. Preserve explicitly allowed HTTPS/external actions through the governed safe opener; reject unsafe schemes.
-6. Unknown/malformed internal actions must produce an explicit diagnostic/unsupported state, never Profile/Home or silent no-op.
-7. Add positive tests for every route kind and negative tests for unknown, malformed and unsupported actions.
-8. Ensure marking a notification read and opening its action have explicit independent semantics; action failure must be observable if the user tapped expecting navigation.
+Secondary consumers:
+- `frontend/shared/cart/cart.api.ts`
+- `cart-sync.queue.ts`
+- `use-cart-controller.tsx`
+- checkout consumers relying on Cart version/state.
 
-#### DELETE_REQUIRED
+### Canonical target
 
-Delete Profile/default business fallbacks, duplicate action parsers that become superseded, and any silent no-op path used as compatibility behavior.
+Create one serialized Cart command boundary for `add/update/remove/clear` where, in the **same transaction**:
 
-#### Closure proof
+1. authenticated actor + target aggregate are resolved;
+2. actor/key command lock is acquired;
+3. existing receipt is read under the lock;
+4. request fingerprint is compared;
+5. if exact replay -> return stored canonical result;
+6. if same key/different fingerprint -> conflict;
+7. business mutation is executed with OCC/version invariants;
+8. canonical response/terminal receipt is persisted;
+9. transaction commits;
+10. only then may the transport return committed success.
 
-Adding a new route/action kind must fail compilation/tests until path conversion, Expo bridge, renderer and notification/deep-link handling are explicitly supplied or proven N/A.
+Use the Client Profile transactional receipt pattern as an in-repo architectural precedent; do not add a second generic idempotency framework if the existing durable command mechanisms can be generalized cleanly.
+
+### Migration / reconciliation
+
+- Inventory existing Cart receipt rows and schema semantics.
+- Determine whether post-hoc receipts can represent historical ambiguous effects.
+- Introduce forward deterministic migration for the canonical transactional receipt shape if required.
+- Reconcile any command states that cannot prove whether effect/receipt pairing is complete.
+- Do not fabricate historical receipts merely to satisfy a constraint.
+- Existing unresolved mobile queue items must be re-read against canonical Cart state before adopting the new terminal model.
+
+### Client cutover
+
+- Queue ordering becomes aggregate-causal, not “best effort continue”.
+- A predecessor in `submitted_unknown`, unresolved conflict, or non-discardable permanent failure fences successors that depend on the same Cart aggregate/version chain.
+- Reconciliation must classify `committed | conflict | retryable | terminal-rejected | quarantined` using canonical server evidence.
+- Purge only after canonical terminal resolution.
+- Cross-actor/install mismatch remains fail-closed.
+
+### DELETE_REQUIRED
+
+After successful cutover:
+
+- Delete post-hoc `recordCartIdempotency` behavior that can fail independently after effect commit.
+- Delete any duplicate pre-check/replay logic superseded by the transactional command owner.
+- Delete client queue branches whose only purpose was compensating for missing canonical command receipts.
+- Delete tests that encode the old non-atomic semantics.
+
+### Closure proof
+
+Mandatory failure-injection cases:
+
+- crash before command claim;
+- crash after claim before effect;
+- effect attempt fails;
+- effect succeeds but before receipt finalize;
+- before commit;
+- after commit before HTTP response;
+- response lost and exact retry;
+- same key + different fingerprint;
+- actor switch with old queued command;
+- process death/restart with unresolved predecessor;
+- queued A then B where A is unknown: B must not execute until A resolves;
+- OCC conflict and canonical Cart readback.
+
+`R1 CLOSED` only when no Cart writer bypasses the transactional command owner and negative-space search proves the old post-hoc receipt path is gone.
 
 ---
 
-### R5 — HIGH / PROVEN VERIFICATION ROOT: current tests encode implementation markers and browser shims that can certify the wrong architecture/runtime
+## R2 — HIGH / PROVEN — Client Profile exposes shadow default state and has no canonical enforced currency-preference domain
 
-#### Evidence
+### Evidence
 
-- `client-cart-runtime.execution.test.mjs` injects a fake `localStorage`, allowing a queue implementation that is not valid mobile durability to pass.
-- `client-operational-experience-contract.test.mjs` uses source-marker assertions and explicitly expects DSH code to use runtime platform helpers, preserving R3.
-- Multiple marker tests prove file strings/presence, not process-death/session-switch/unknown-outcome/native adapter behavior.
+Current `MyProfileScreen.tsx`, on profile `404`, creates an effective local `ClientProfile` with synthetic identity/state such as:
 
-Static contract tests remain useful, but they cannot be the final proof for the roots above.
+- local placeholder profile id;
+- local default locale;
+- local default currency preference (`SAR` on the audited code path);
+- version/default consent/preference values.
 
-#### Canonical treatment
+That means “profile not provisioned” is converted into a plausible local profile object rather than an explicit canonical server projection/state.
 
-1. Keep fast structural tests only for real invariants.
-2. Add behavioral unit tests over the canonical durable storage and mutation registry with failure injection.
-3. Add native/mobile runtime tests for process death/restart, connectivity transitions, actor switch and permission/capability failure.
-4. Add route/deep-link parity tests and negative unknown-route tests.
-5. Add dependency-direction guard tests.
-6. On exact candidate, run typecheck/lint/tests/runtime/export plus relevant backend/contracts/database and journey checks selected by live CI routing.
+Separately:
 
-#### Closure proof
+- `DshClientProfile.currencyPreference` is a free `string` in the shared frontend type;
+- current Client Profile handler/domain trims and persists currency preference without proving an allowlist/enum/platform currency policy;
+- no matching strongly typed `currencyPreference` contract authority was found in the DSH contract search performed during this audit;
+- WLT commercial truth reviewed in-cone is governed around `YER`, demonstrating that finance has stronger currency semantics than Client Profile currently enforces.
 
-A test suite cannot pass while reintroducing browser-only Cart durability, cross-actor queue replay, session-end attempt loss, `services -> apps` imports or route business fallbacks.
+### Broken invariants
 
-## 8. Current branch delta relevant to app-client
+- Defaults affecting product/commerce must be server/platform policy, not a screen-local fabricated profile.
+- Durable preference values must belong to a bounded governed domain.
+- Profile preference cannot become a second currency-policy authority beside WLT/commerce policy.
+- “not provisioned” must remain an explicit state until canonical authority defines the effective defaults.
 
-At the audit baseline, `f` is ahead of `master` and the open Draft PR contains material backend changes in areas consumed by the Client surface, including Identity/DSH auth boundaries, order lifecycle/cancellation/returns, dispatch/delivery proof/live tracking, pickup and related contracts/data. The app-client frontend itself is not the primary source of those branch deltas.
+### Actual Source-of-Fix
 
-Therefore **“no direct app-client diff” is not proof of “client unaffected.”** Final closure must verify the Client readers/actions against the live backend contracts and states on the exact candidate.
+- Product/platform currency/default policy owner.
+- DSH Client Profile contract/domain/database.
+- Client Profile read projection.
+- `MyProfileScreen` as consumer only.
 
-Required cross-surface compatibility proof includes at minimum:
+### Canonical target
 
-- client authentication/surface gate;
-- cart/serviceability/checkout OCC;
-- order collection/detail/create/cancel/return states;
-- pickup session;
-- dispatch live tracking/proof projection;
-- support/chat;
-- notification action targets;
-- payment/refund/wallet projections;
-- partner/captain/operator state changes visible to the client.
+- Define the supported/effective currency preference through one canonical contract/policy owner.
+- Prefer server-provided effective profile/default projection over UI synthesis.
+- Contract type is constrained (`enum`/governed reference), not arbitrary string.
+- Backend validates before persistence.
+- Database invariant/backfill is added if durable rows can contain unsupported values.
+- Client renders the server policy; it does not invent fallback commercial truth.
 
-## 9. Product / UX / Design / Accessibility / RTL audit ledger
+### Migration / reconciliation
 
-Code inspection shows meaningful existing support for Arabic, RTL and accessibility, but code inspection alone is not device proof. Closure requires all materially reachable client states to be exercised on the final candidate.
+- Inventory existing persisted profile currency/locale values.
+- Classify valid / unsupported / legacy / null.
+- Backfill only from proven platform policy.
+- Unsupported values require deterministic reconciliation, not silent coercion without audit evidence.
+- Define behavior for genuinely absent profile records: canonical empty/default projection or explicit `not_initialized` state.
 
-### 9.1 Required screen/journey matrix
+### DELETE_REQUIRED
 
-Verify at minimum:
+- Delete `local-profile` synthetic business truth.
+- Delete screen-local commercial currency default.
+- Delete free-string persistence path after contract cutover.
+- Delete any duplicate currency allowlists/defaults discovered during migration.
 
-- Home/discovery/search/filter/banner/promo/reels.
-- Stores list/detail/categories/product selection.
-- Cart: empty, loaded, offline pending, conflict, permission denied, generic error, serviceability blocked.
-- Checkout: address/serviceability, cart-version conflict, payment transitions, order creation/readback.
-- Orders: empty/list/detail, active states, pickup, partner delivery, bThwani delivery, live tracking, proof, terminal/refund states.
-- Notifications: empty/error/unread/read/action navigation/push tap/cold-start deep link.
-- Special requests: index, SHEIN, Awnak, validation, submit/readback states.
-- Profile: My Space, commercial profile, addresses/location, identity, benefits/subscriptions, preferences.
-- Wallet: loading/empty/error/ledger and governed actions if exposed.
-- Support: order-linked support, ticket detail/create/error/readback.
+### Closure proof
 
-### 9.2 State coverage required per material screen
+- unsupported currency cannot be persisted through any Client Profile writer;
+- missing profile receives one canonical server-defined state/default projection;
+- WLT/checkout/order formatting consumes compatible currency semantics;
+- existing data inventory is reconciled;
+- no raw currency default remains in app-client product code outside pure display formatting of canonical values.
 
-Where applicable prove:
+---
 
-`loading | empty | success | partial/stale | offline | forbidden | conflict | validation error | server error | retrying | submitting | unknown outcome | terminal success`.
+## R3 — HIGH / PROVEN — Store delivery mode -> fulfillment mode is duplicated semantic authority
 
-### 9.3 Accessibility/RTL/device proof
+### Evidence
 
-For Android and any supported iOS/web target, verify:
+Frontend `services/dsh/frontend/shared/store/store-discovery.formatters.ts` owns a decision table mapping store delivery modes to fulfillment modes and explicitly says it must stay in sync with the backend.
 
-- true RTL layout, logical start/end spacing, no double reversal;
-- Arabic/English mixed identifiers use safe bidi isolation;
-- font scaling and long Arabic copy do not truncate critical actions;
-- touch targets remain operable;
-- screen-reader labels/roles/states for navigation, cart actions, order actions, modals, maps and media;
-- keyboard/focus/modal behavior where a keyboard is used;
-- safe-area behavior and bottom-navigation overlap;
-- contrast and disabled/busy/error semantics;
-- location/camera/gallery/document/notification denied states;
-- process background/foreground and deep-link cold/warm starts.
+Backend Cart domain owns an equivalent mapping for the same business meaning.
 
-Any defect discovered here joins the same root-ranking loop; do not create a cosmetic patch list detached from its canonical owner.
+Two files independently declaring themselves authoritative for the same semantic conversion is a direct parallel-truth design. “Must stay in sync” is evidence of the defect, not a governance solution.
 
-## 10. Initial execution order / closure units
+### Broken invariants
 
-### Closure Unit 1 — Client durable mutation lifecycle convergence
+- One business concept -> one canonical decision owner.
+- Frontend display/filtering cannot independently reinterpret backend machine capability.
+- Adding a delivery mode must not require manually editing multiple truth tables.
 
-**Highest current root.** Treat R1 + R2 as one canonical durability/lifecycle wave where shared source-of-fix overlaps:
+### Actual Source-of-Fix
 
-- Data Runtime durable storage/mutation scope;
-- Cart queue/controller/API semantics;
-- subscription attempt lifecycle;
-- Identity session-end boundary;
-- connectivity/recovery/readback;
-- tests and legacy queue migration.
+DSH store/cart/serviceability contract projection.
 
-Do not begin with Cart screen cosmetics.
+### Canonical target
 
-### Closure Unit 2 — Native capability/dependency-direction cutover
+Backend/contract exposes normalized fulfillment capability directly per store/serviceability context. The frontend consumes the normalized machine value and may only format labels/presentation.
 
-Treat R3 end-to-end:
+### Migration / cutover
 
-- capability owner selection;
-- adapter contract extension where necessary;
-- consumer migration;
-- test migration;
-- deletion of all DSH -> app-runtime source imports;
-- dependency guard.
+- Extend/read the canonical store/discovery/serviceability contract with normalized fulfillment semantics if not already exposed in every required projection.
+- Migrate Home discovery, Store detail, Cart, Checkout and any other client reader.
+- Verify Partner/Control Panel writers still write only their own governed source fields, not client-derived normalized fields.
 
-### Closure Unit 3 — Client route/deep-link/notification fail-closed contract
+### DELETE_REQUIRED
 
-Treat R4 end-to-end:
+- Delete frontend business mapping table.
+- Delete “must stay in sync” comments/tests whose purpose is manual parity.
+- Delete any second equivalent mapping found through semantic search.
 
-- route union/renderer/tab mapping;
-- Expo file bridge;
-- notification center actions;
-- push action URLs;
-- safe external URL policy;
-- negative-space tests.
+### Closure proof
 
-### Closure Unit 4 — Exact-candidate cross-surface and UX closure
+A newly introduced delivery capability must propagate by canonical contract without requiring a client business-rule table change.
 
-After roots are cut over:
+---
 
-- re-audit all material Client journeys/readers against the current backend/data/contracts/WLT state;
-- execute Android/native UX/a11y/RTL/state-matrix proof;
-- run exact-candidate CI/security/quality/runtime/journey evidence;
-- delete all newly exposed stale/duplicate/bypass residue;
-- re-rank until fixed point.
+## R4 — HIGH / PROVEN — Order lifecycle/presentation logic is split across canonical shared policy and client-local raw-status decision tables
 
-## 11. Concurrency / mutation gate
+### Evidence
 
-The caller did not replace the `ACTIVE_WORKSET` placeholder with a real snapshot. Existing plan files on `f` prove other app audits have occurred, but they do not prove whether those sessions are currently mutating the branch.
+Shared Order Truth experience code owns terminal classification (`isTerminalOrderTruth`) and shared order lifecycle metadata exists in `orders.state-machine.ts`.
 
-Per the Orchestrator:
+Yet `DshClientSurface.tsx` independently determines the Home “active order” by another explicit status exclusion list.
 
-- read-only audit may continue;
-- this unique plan-file write is explicitly authorized by the human instruction;
-- **product mutation must re-resolve live HEAD + PR + foreign delta + known active work immediately before write**;
-- if overlap with active Field/Captain/other work is material, serialize or split only at a proven independent closure-unit boundary;
-- never claim `PARALLEL_SAFE` from absence of evidence.
+`OrderTrackingScreen.tsx` and adjacent client order screens also contain raw-status tables/branches for tone, journey labels/steps and client-visible lifecycle interpretation.
 
-This is a mutation-safety gate, not a reason to downgrade or forget the roots above.
+Not every presentation mapping is a defect; the defect is when a screen-local raw status list answers a **business question** already owned by shared lifecycle policy, such as terminal/active phase/action eligibility.
 
-## 12. Verification and closure gates
+### Broken invariants
 
-`CLOSED` is forbidden until all applicable gates pass on the exact final candidate:
+- One lifecycle state must have one machine semantic classification.
+- Polling, Home active-order visibility, Orders list, tracking progress, pickup/action eligibility and terminal behavior must consume compatible canonical selectors.
+- A newly added state must not silently become terminal in one consumer and active in another.
+
+### Actual Source-of-Fix
+
+Shared Order Truth/lifecycle projection and selectors, backed by backend lifecycle contract.
+
+### Canonical target
+
+Provide/consume canonical selectors for at least:
+
+- terminal vs active;
+- lifecycle phase/journey step;
+- client-visible status label key;
+- action eligibility;
+- owner/fulfillment implications;
+- polling eligibility.
+
+UI remains free to choose visual tone/layout, but not to recreate business-state semantics.
+
+### Migration / cutover
+
+Migrate:
+
+- Home active order;
+- Orders list;
+- Order Tracking;
+- Pickup entry;
+- client preparation decision panel;
+- delivery proof/tracking projections;
+- support actions whose availability depends on order state;
+- rating eligibility where status-dependent.
+
+### DELETE_REQUIRED
+
+- Delete duplicate terminal-state arrays/lists.
+- Delete raw lifecycle classification branches that duplicate canonical business semantics.
+- Keep purely visual mappings only when they consume canonical semantic categories, not raw domain statuses.
+
+### Closure proof
+
+Add a synthetic/new lifecycle state in contract tests: compilation/contract tests must force explicit canonical classification before any client surface can silently treat it as active/terminal/actionable.
+
+---
+
+## R5 — HIGH / PROVEN PRODUCT/CONSENT GAP — Marketing-consent withdrawal is knowingly incomplete
+
+### Evidence
+
+Current `MyProfileScreen.tsx` contains an explicit implementation compromise: the product behavior expects confirmation for withdrawal, but the current implementation immediately toggles instead of presenting the governed confirmation journey.
+
+This is not cosmetic. Consent withdrawal is a state-changing user decision with Product/UX/A11y semantics.
+
+### Broken invariants
+
+- destructive/sensitive choice must match its product contract;
+- cancel/no-confirm must produce zero mutation;
+- confirmation must be accessible and deterministic;
+- UI must not contain permanent “for now” behavior in a closure candidate.
+
+### Canonical target
+
+- Explicit confirmation surface with clear consequence text.
+- Mutation occurs only after affirmative confirmation.
+- Cancel/back dismisses without local/server mutation.
+- Busy/error/success states are explicit.
+- Focus enters confirmation, returns correctly on dismiss, supports screen reader and Android back behavior.
+
+### DELETE_REQUIRED
+
+- Delete the “for now” immediate-toggle compromise and stale comment.
+- Delete any duplicate alternative withdrawal action after cutover.
+
+### Closure proof
+
+Real interaction test plus accessibility/device proof, not source-marker presence.
+
+---
+
+## R6 — HIGH / PROVEN VERIFICATION GAP — Static marker contracts are being used for behavior they cannot prove
+
+### Evidence
+
+`apps/app-client/runtime/tests/client-operational-experience-contract.test.mjs` contains extensive source-string/regex marker assertions. These are useful structural guards, but they cannot prove:
+
+- mobile process death/restart;
+- native durable storage behavior;
+- offline -> reconnect causal replay;
+- command crash windows;
+- real push/deep-link navigation;
+- runtime permissions/location/media behavior;
+- modal focus/back semantics;
+- font scaling/touch targets/screen-reader order;
+- cross-service Cart -> Checkout -> Order -> Dispatch/WLT convergence.
+
+The previous ledger over-weighted marker tests as evidence. That is prohibited in this revision.
+
+### Canonical target
+
+Keep marker tests only for static boundaries they can actually prove. Add/use executable proof at the level of the invariant:
+
+- DB/integration tests for transactional command boundaries;
+- state-machine/contract tests for semantic single-owner rules;
+- native execution tests for storage/connectivity/restart;
+- journey tests against real runtime/backends for core client flows;
+- device/emulator accessibility and RTL proof for interaction states;
+- exact-candidate CI/security evidence.
+
+### DELETE_REQUIRED
+
+Delete or narrow marker tests that assert behavior beyond their epistemic capability after stronger executable tests replace them. Do not delete useful static architectural guards.
+
+---
+
+# 8. Cross-root canonical invariants
+
+The following must hold globally across the client cone after remediation:
+
+1. **One command identity owner:** correctness-critical mutation retry identity is durable, actor/installation/entity scoped and server-recognized.
+2. **One commit boundary:** committed means the business effect and canonical terminal command receipt are atomically durable.
+3. **One causal order per aggregate:** unresolved predecessor blocks dependent successors.
+4. **One lifecycle semantic owner:** screens consume selectors/projections; they do not rebuild the state machine.
+5. **One fulfillment semantic owner:** normalized capability comes from canonical backend/contract projection.
+6. **One profile/default policy owner:** missing profile and supported preference domains are server/platform-governed.
+7. **One financial truth:** WLT remains owner of wallet/payment/refund/commercial monetary truth.
+8. **One runtime dependency direction:** app runtime implements capabilities; domain/product code consumes interfaces.
+9. **No stale fallback truth:** fallback may represent unavailable/empty/error UI, never fabricate business truth.
+10. **No proof laundering:** docs/marker tests cannot convert untested runtime behavior into `CLOSED`.
+
+---
+
+# 9. Ordered Closure Units
+
+Execution must re-rank after every unit. Do not blindly complete lower units if a new higher root appears.
+
+## U1 — Cart transactional command + causal recovery closure
+
+**Priority:** P0 / first executable root.
+
+Scope:
+- DSH Cart command owner;
+- receipt schema/persistence;
+- Cart HTTP adapters;
+- client queue/reconciliation;
+- Cart/Checkout consumers;
+- DB/integration/restart proof.
+
+Exit:
+- R1 fully closed;
+- post-hoc receipt path deleted;
+- causal queue fenced;
+- crash/replay proofs green.
+
+## U2 — Client Profile/default/currency-domain closure
+
+Scope:
+- product/platform currency/default decision;
+- DSH contract/backend/data;
+- Client Profile shared types/API;
+- Profile screens;
+- WLT/commerce compatibility;
+- existing data reconciliation.
+
+Exit:
+- no synthetic local profile truth;
+- bounded currency semantics enforced end-to-end;
+- no unsupported persisted values remain.
+
+## U3 — Store delivery/fulfillment semantic authority convergence
+
+Scope:
+- store/discovery/serviceability contracts;
+- backend normalized projection;
+- all client consumers.
+
+Exit:
+- one mapping owner;
+- frontend table deleted;
+- negative-space search clean.
+
+## U4 — Order lifecycle/presentation authority convergence
+
+Scope:
+- Order Truth/shared lifecycle selectors;
+- Home/Orders/Tracking/Pickup/Proof/Support/Rating consumers.
+
+Exit:
+- business lifecycle decisions consume canonical selectors;
+- duplicate raw-state business tables deleted.
+
+## U5 — Consent + Product/UX/Design/A11y/RTL finishing
+
+Scope:
+- Profile consent confirmation root;
+- journey-wide finishing matrix below;
+- loading/empty/error/offline/conflict/partial/success/destructive states;
+- device proof.
+
+Exit:
+- no known “for now”, inert, dead, misleading or inaccessible path remains in material client cone.
+
+## U6 — Exact-candidate re-diagnosis and final closure
+
+- Repeat semantic audit across all root concepts.
+- Re-run negative-space searches.
+- Rebuild Material Cone from final code, not this ledger.
+- Prove all consumers/handoffs.
+- Run exact candidate CI/security/runtime/journey/device evidence.
+- Only latest Orchestrator gates can authorize `CLOSED`.
+
+---
+
+# 10. Migration / Cutover / Reconciliation Ledger
+
+| Item | Required action | Cutover condition | Old path deletion condition |
+|---|---|---|---|
+| Cart post-hoc receipts | Migrate to transactional command receipt/response owner | all Cart writers/readers use new boundary | DB + retry/crash proofs + no bypass writers |
+| Existing Cart queued intents | classify/reconcile against canonical Cart/receipt truth | each intent terminally classified | purge only terminally resolved records |
+| Profile absent/default state | replace synthetic local profile with canonical projection/state | all profile readers consume canonical response | remove `local-profile` fallback |
+| Profile currency values | inventory + validate/backfill by canonical policy | contract/backend/data/client agree | remove raw free-string/default authority |
+| Delivery-mode mapping | expose normalized fulfillment semantic from backend/contract | Home/Store/Cart/Checkout migrated | remove frontend decision table |
+| Order lifecycle selectors | centralize semantic projection | all material client consumers migrated | delete duplicate raw-status business tables |
+| Consent withdrawal | governed confirmation interaction | executable UX/A11y proof | delete immediate-toggle compromise |
+| Static behavior assertions | replace with correct proof level where needed | stronger executable evidence exists | narrow/delete misleading marker assertions |
+
+No item may be marked migrated merely because both old and new paths exist. Dual operation is transition state only and must have an explicit deletion gate.
+
+---
+
+# 11. DELETE_REQUIRED ledger
+
+The final candidate must not retain superseded structures merely because they are harmless at runtime.
+
+Mandatory deletion targets once replacements are proven:
+
+- Cart post-hoc receipt recording path and duplicate replay pre-checks superseded by atomic command owner.
+- Cart queue recovery branches made obsolete by canonical receipt semantics.
+- Synthetic Client Profile `local-profile` business object/default currency authority.
+- Free-string Client Profile currency persistence contract if replaced by bounded canonical domain.
+- Frontend store-delivery -> fulfillment business mapping and “keep in sync” mechanisms.
+- Duplicate Order terminal/active raw-status decision lists.
+- Other raw lifecycle business mappings superseded by canonical selectors.
+- “for now” marketing-consent withdrawal implementation/comment.
+- Marker-only behavior assertions that become redundant/misleading after executable proof is established.
+- Any compatibility wrapper, dead export, stale test fixture, duplicate helper, or orphan path exposed by those deletions.
+
+Deletion is part of completion, not optional cleanup.
+
+---
+
+# 12. Product / UX / Design / Accessibility / RTL journey matrix
+
+Every row must be verified across relevant `loading | empty | success | offline | partial | forbidden | conflict | error | destructive-confirmation | recovery` states.
+
+| Journey | Product/UX proof required | A11y/RTL/device proof |
+|---|---|---|
+| App bootstrap / session restore | no false logged-in/product success; deterministic auth recovery | focus after auth transitions; RTL shell; safe areas; font scale |
+| Home / discovery / search | governed content, no stale business fallback, deterministic destination routing | search labels, list semantics, RTL ordering, dynamic text |
+| Store detail | canonical capability/availability; no duplicate fulfillment interpretation | price/content reading order, touch targets, RTL rails/carousels |
+| Cart | clear pending/committed/conflict/unknown semantics; no fabricated success | mutation busy states announced; conflict actions accessible |
+| Checkout | OCC/version/serviceability errors understandable and recoverable | form labels/errors/focus; keyboard; RTL; font scale |
+| Orders list | canonical active/terminal meaning | status announced semantically, not color-only |
+| Order tracking | canonical phases, location/proof state, polling/offline clarity | screen-reader journey order; map alternatives; dynamic text |
+| Pickup | action only when eligible; terminal/error recovery | PIN/code labels, focus, touch target, RTL |
+| Order chat/support | send/retry/readback semantics; no lost message illusion | message order, input label, keyboard/focus |
+| Notifications | action route valid or explicit unsupported state; read mutations consistent | item role/state; deep-link focus destination |
+| Profile | canonical missing/default state; independent/atomic saves explicit | field labels/errors; focus after save; screen reader |
+| Consent | explicit confirmation/cancel semantics | modal focus trap/return, Android back, screen reader text |
+| Addresses/location | governed ownership/serviceability; permissions explicit | permission denial recovery, map alternative, RTL forms |
+| Benefits/subscriptions | payment/pending/recovery state reflects WLT truth | busy/error/status announcements; no color-only state |
+| Wallet | WLT-only truth; stale/error states explicit | currency/amount reading, ledger semantics |
+| Ratings | eligibility from canonical order state | star/control semantics, selected state, labels |
+| Special requests | durable submit/recovery and operator handoff | form labels, upload/document states, RTL |
+
+Mandatory device proof for closure must include at least the supported Android runtime in RTL Arabic, large font scale, keyboard/open-form behavior, offline/reconnect, process restart, and screen-reader traversal for destructive/financial/order-critical journeys.
+
+---
+
+# 13. Verification matrix
+
+## 13.1 Static/type/architecture
+
+- Typecheck affected workspaces.
+- Architecture/boundary guards.
+- No app-runtime upward imports from DSH domain/product code.
+- No duplicate fulfillment mapping.
+- No duplicate terminal/active business-state lists.
+- No unsupported profile currency free-string entry points.
+
+## 13.2 Backend/database
+
+- Cart command receipt transactional DB tests.
+- Concurrency/replay/fingerprint conflict tests.
+- OCC/version conflict tests.
+- migration idempotency/restart tests.
+- profile domain constraint/data reconciliation tests.
+- cross-service WLT compatibility where currency/payment truth is touched.
+
+## 13.3 Mobile durability/runtime
+
+- durable queue survives restart/process death;
+- actor switch cannot execute another actor's intent;
+- offline -> reconnect uses same command identity;
+- storage failure fails closed before network command;
+- unknown result reconciles before successor;
+- native connectivity drives recovery.
+
+## 13.4 Journey integration
+
+At minimum:
+
+`Discovery -> Store -> Cart -> Checkout -> Order Truth -> Partner preparation -> Dispatch/Pickup -> Delivery/Proof -> WLT/refund -> Support/Rating`
+
+Each cross-surface transition must prove writer -> persisted truth -> reader projection, not merely screen navigation.
+
+## 13.5 Push/deep link
+
+- cold start notification action;
+- warm app action;
+- malformed/unsupported action;
+- actor/session unavailable;
+- route parameter encoding/decoding;
+- final focus destination.
+
+## 13.6 Product/A11y/RTL
+
+- real interaction tests for consent/destructive actions;
+- Android RTL Arabic;
+- large text;
+- TalkBack/screen-reader traversal for critical journeys;
+- touch targets and accessible names/states;
+- no important status encoded only by color/icon.
+
+## 13.7 Security/privacy
+
+- actor-scoped Cart/Profile/Address/Support/Order reads and writes;
+- no cross-actor durable state replay;
+- no sensitive data in share/log/error surfaces;
+- deep-link allowlist/validation;
+- client cannot write WLT/operator/Partner/Captain authority.
+
+---
+
+# 14. Negative-space audit required after every execution loop
+
+Search semantically, not only by exact symbol name, for:
+
+- duplicate Cart writers or receipt tables;
+- post-hoc command receipts;
+- alternate idempotency stores;
+- raw `localStorage/sessionStorage` on correctness-critical client mutation paths;
+- duplicate currency defaults/allowlists;
+- raw delivery/fulfillment conversion tables;
+- raw order terminal/active arrays;
+- fallback profile objects;
+- business `default` route/action fallbacks;
+- stale compatibility exports;
+- dead feature-local wrappers;
+- `TODO/FIXME/for now/temporary/legacy/compat/fallback` in material client cone;
+- marker tests that claim runtime behavior;
+- operator/control-panel or cross-surface writer bypasses for concepts remediated here.
+
+Every hit is classified:
+
+`CANONICAL | REQUIRED_ADAPTER | TRANSITION_ONLY_WITH_DELETION_GATE | DEAD/STALE/DELETE_REQUIRED | OUT_OF_SCOPE_PROVEN`.
+
+Unknown is not equivalent to clean.
+
+---
+
+# 15. Re-diagnosis loop and root preemption
+
+After each Closure Unit:
+
+1. freeze the new live HEAD;
+2. rebuild affected Material Cone;
+3. compare actual changes with this root contract;
+4. scan new writers/readers/consumers/handoffs;
+5. re-run semantic duplicate search;
+6. re-rank remaining roots by severity + upstreamness + blast radius;
+7. if a higher root is exposed, preempt the next planned unit;
+8. reconcile/delete superseded structures;
+9. rerun proof at the invariant's actual layer;
+10. continue until two consecutive complete re-audits expose no new material root and all known roots are terminally classified.
+
+The ledger is updated to reflect reality after each loop. It must not force reality to match the original plan.
+
+---
+
+# 16. Exact Final Candidate closure gates
+
+`CLOSED` is prohibited unless all are true on one exact final HEAD:
+
+### Scope / authority
+- Full app-client Material Cone re-derived from final code.
+- Every material concept has one proven canonical owner.
+- Every writer/reader/consumer/handoff is accounted for.
+- No unresolved authority ambiguity.
 
 ### Root closure
+- R1-R6 are `CLOSED_WITH_EXACT_PROOF` or `N/A_PROVEN` after re-diagnosis.
+- No higher root remains known.
+- No symptom-only treatment remains.
 
-- R1–R5 are `FIXED_VERIFIED` or replaced by a higher proven root that is itself closed.
-- No unresolved `UNKNOWN MATERIAL` node remains in the Client cone.
-- No symptom-only or wrapper-only treatment remains.
+### Migration / cutover / cleanup
+- Migrations complete and restart-safe.
+- Existing data/intents reconciled.
+- All consumers cut over.
+- Old writers/paths disabled then deleted.
+- DELETE_REQUIRED ledger empty.
+- Negative-space audit clean.
 
-### Authority / migration / cleanup
+### Runtime/journey
+- Core Client journey proven end-to-end against canonical backend/services.
+- Offline/process-death/retry/deep-link/push proof complete.
+- Product/UX/A11y/RTL matrix complete for material critical states.
 
-- one owner per material concept;
-- all writers/readers/consumers migrated;
-- no unscoped Cart queue/shadow device-session identity;
-- no unresolved subscription attempt deletion on session end;
-- no `services/dsh/** -> apps/app-client/runtime/**` dependency;
-- no fail-open business route/action fallback;
-- no obsolete compatibility path, dead helper or stale test expectation;
-- all `DELETE_REQUIRED` work completed in the same root closure wave.
+### Candidate binding
+- Evidence is bound to the exact final SHA.
+- Required CI/security/quality checks are green for that SHA.
+- Required human review is bound to that SHA where governance requires it.
+- Any newer commit invalidates candidate proof until rerun.
 
-### Data / auth / security / finance
+### Fixed Point
+- Final deep re-audit finds no known material Root/Gap/Shadow/Parallel Truth/Dead Path/Unproven Handoff within the Client cone.
+- A second confirmation pass does not expose a new material root.
 
-- actor isolation and installation scoping proven;
-- no cross-actor replay/read;
-- idempotency/unknown-outcome behavior proven;
-- secrets/session cleanup remains correct without deleting business intent;
-- WLT remains the financial authority;
-- PII/location/address access remains actor-scoped.
+Only then may status change from `OPEN — NOT CLOSED` to `CLOSED`.
 
-### Runtime / Product / UX
+---
 
-- Android native runtime proof for storage/connectivity/deep links/push/location/media.
-- all material states/journeys verified including negative-space and failure states.
-- accessibility/RTL/device layout proof complete.
+# 17. Current execution handoff
 
-### Exact candidate
+## Highest next executable unit
 
-- live branch/PR/head SHA re-resolved immediately before final evidence;
-- required CI/runtime/journey/backend/contracts/database/security checks pass on that exact SHA;
-- any newer commit invalidates previous closure evidence and requires re-verification;
-- final adversarial/negative-space re-audit returns no material finding.
+`U1 — Cart transactional command + causal recovery closure`.
 
-## 13. Current status and next executable root
+## Required pre-mutation gate
 
-**STATUS: OPEN — NOT CLOSED.**
+Because `ACTIVE_WORKSET` was not supplied, before U1 changes any product/backend/data file the executing coordinator must:
 
-**Highest proven executable root:** `R1 — Client durable mutation lifecycle convergence`, clustered with the overlapping subscription session-lifecycle defect in `R2`.
+1. resolve latest `f` HEAD;
+2. enumerate known concurrent branches/worktrees/sessions supplied by the caller/environment;
+3. compare affected paths/concepts;
+4. prove one integration authority;
+5. classify the U1 write set `PARALLEL_SAFE` or serialize it;
+6. then mutate the actual source-of-fix.
 
-**Immediate source-of-fix direction:** canonical `@bthwani/data-runtime` durability/mutation-scope authority + DSH Cart/subscription lifecycle consumers, not app-client screen patches.
+This is not permission to stop at planning; it is the concurrency gate that must immediately precede execution.
 
-**Current blocker before product mutation:** resolve the live `ACTIVE_WORKSET`/collision state and re-pin the exact live `f` HEAD. Once that gate is satisfied, execute Closure Unit 1 immediately, verify, re-audit/re-rank, then continue until fixed point.
+## Current closure declaration
+
+**OPEN — NOT CLOSED.**
+
+The previous audit's stale findings have been removed/reclassified; the current root graph and closure units above are the authoritative execution ledger for this audit baseline only. The implementation itself remains the only source of product truth, and this ledger must be revalidated on every moved HEAD.
