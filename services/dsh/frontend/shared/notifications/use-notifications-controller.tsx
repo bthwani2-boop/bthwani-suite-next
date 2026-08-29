@@ -67,14 +67,43 @@ export function useNotificationsController(
   const [busyAction, setBusyAction] = useState<NotificationMutationAction>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const mutationBusyRef = useRef(false);
+  const mountedRef = useRef(true);
+  const sessionEpochRef = useRef(0);
+  const notificationsLoadSeqRef = useRef(0);
+  const preferencesLoadSeqRef = useRef(0);
 
-  const loadNotifications = useCallback(async () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      sessionEpochRef.current += 1;
+      notificationsLoadSeqRef.current += 1;
+      preferencesLoadSeqRef.current += 1;
+      mutationBusyRef.current = false;
+    };
+  }, []);
+
+  const loadNotifications = useCallback(async (): Promise<boolean> => {
+    const sessionEpoch = sessionEpochRef.current;
+    const loadSeq = ++notificationsLoadSeqRef.current;
     setState(notifLoading());
     try {
       const data = await fetchNotifications();
+      if (
+        !mountedRef.current
+        || sessionEpoch !== sessionEpochRef.current
+        || loadSeq !== notificationsLoadSeqRef.current
+      ) return false;
       setState(notifSuccess(data.notifications, data.unreadCount));
+      return true;
     } catch (err) {
+      if (
+        !mountedRef.current
+        || sessionEpoch !== sessionEpochRef.current
+        || loadSeq !== notificationsLoadSeqRef.current
+      ) return false;
       setState(notifError(resolveMessage(err)));
+      return false;
     }
   }, []);
 
@@ -83,12 +112,24 @@ export function useNotificationsController(
       setPreferenceState({ kind: "idle" });
       return true;
     }
+    const sessionEpoch = sessionEpochRef.current;
+    const loadSeq = ++preferencesLoadSeqRef.current;
     setPreferenceState({ kind: "loading" });
     try {
       const data = await fetchNotificationPreferences();
+      if (
+        !mountedRef.current
+        || sessionEpoch !== sessionEpochRef.current
+        || loadSeq !== preferencesLoadSeqRef.current
+      ) return false;
       setPreferenceState({ kind: "success", preferences: data.preferences });
       return true;
     } catch (err) {
+      if (
+        !mountedRef.current
+        || sessionEpoch !== sessionEpochRef.current
+        || loadSeq !== preferencesLoadSeqRef.current
+      ) return false;
       setPreferenceState({ kind: "error", message: resolveMessage(err) });
       return false;
     }
@@ -108,22 +149,27 @@ export function useNotificationsController(
     operation: () => Promise<boolean | void>,
   ): Promise<boolean> => {
     if (mutationBusyRef.current) return false;
+    const sessionEpoch = sessionEpochRef.current;
     mutationBusyRef.current = true;
     setBusyAction(action);
     setActionError(null);
     try {
       const result = await operation();
+      if (!mountedRef.current || sessionEpoch !== sessionEpochRef.current) return false;
       if (result === false) {
         setActionError("تم إرسال التغيير، لكن تعذر التحقق من الحقيقة المحفوظة. أعد المحاولة قبل الاعتماد على النتيجة.");
         return false;
       }
       return true;
     } catch (err) {
+      if (!mountedRef.current || sessionEpoch !== sessionEpochRef.current) return false;
       setActionError(resolveMessage(err));
       return false;
     } finally {
       mutationBusyRef.current = false;
-      setBusyAction(null);
+      if (mountedRef.current && sessionEpoch === sessionEpochRef.current) {
+        setBusyAction(null);
+      }
     }
   }, []);
 
@@ -131,7 +177,7 @@ export function useNotificationsController(
     "mark_read",
     async () => {
       await markNotificationRead(id);
-      await loadNotifications();
+      return loadNotifications();
     },
   ), [loadNotifications, runMutation]);
 
@@ -139,7 +185,7 @@ export function useNotificationsController(
     "mark_all_read",
     async () => {
       await markAllNotificationsRead();
-      await loadNotifications();
+      return loadNotifications();
     },
   ), [loadNotifications, runMutation]);
 
@@ -159,6 +205,9 @@ export function useNotificationsController(
   ), [loadPreferences, runMutation]);
 
   useEffect(() => {
+    sessionEpochRef.current += 1;
+    notificationsLoadSeqRef.current += 1;
+    preferencesLoadSeqRef.current += 1;
     if (authKind !== "authenticated") {
       mutationBusyRef.current = false;
       setState(notifIdle());
