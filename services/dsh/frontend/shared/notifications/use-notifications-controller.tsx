@@ -78,17 +78,19 @@ export function useNotificationsController(
     }
   }, []);
 
-  const loadPreferences = useCallback(async () => {
+  const loadPreferences = useCallback(async (): Promise<boolean> => {
     if (!shouldLoadPreferences) {
       setPreferenceState({ kind: "idle" });
-      return;
+      return true;
     }
     setPreferenceState({ kind: "loading" });
     try {
       const data = await fetchNotificationPreferences();
       setPreferenceState({ kind: "success", preferences: data.preferences });
+      return true;
     } catch (err) {
       setPreferenceState({ kind: "error", message: resolveMessage(err) });
+      return false;
     }
   }, [shouldLoadPreferences]);
 
@@ -103,14 +105,18 @@ export function useNotificationsController(
 
   const runMutation = useCallback(async (
     action: Exclude<NotificationMutationAction, null>,
-    operation: () => Promise<void>,
+    operation: () => Promise<boolean | void>,
   ): Promise<boolean> => {
     if (mutationBusyRef.current) return false;
     mutationBusyRef.current = true;
     setBusyAction(action);
     setActionError(null);
     try {
-      await operation();
+      const result = await operation();
+      if (result === false) {
+        setActionError("تم إرسال التغيير، لكن تعذر التحقق من الحقيقة المحفوظة. أعد المحاولة قبل الاعتماد على النتيجة.");
+        return false;
+      }
       return true;
     } catch (err) {
       setActionError(resolveMessage(err));
@@ -148,7 +154,7 @@ export function useNotificationsController(
       } else {
         await updateNotificationPreferences(input);
       }
-      await loadPreferences();
+      return loadPreferences();
     },
   ), [loadPreferences, runMutation]);
 
