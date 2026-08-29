@@ -20,6 +20,11 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireOperatorCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	if err := store.EnforceKillSwitch(r.Context(), s.decisionService, "dispatch_assignment", actor.ID); err != nil {
 		store.SendError(w, http.StatusForbidden, "KILL_SWITCH_ACTIVE", err.Error())
 		return
@@ -51,9 +56,9 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 		store.SendError(w, http.StatusConflict, financialEligibility.IneligibilityReason, "captain does not meet the WLT-backed dispatch balance requirement")
 		return
 	}
-	idempotencyKey := strings.TrimSpace(body.IdempotencyKey)
-	if idempotencyKey == "" {
-		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if bodyKey := strings.TrimSpace(body.IdempotencyKey); bodyKey != "" && bodyKey != idempotencyKey {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_MISMATCH", "request body idempotencyKey must match Idempotency-Key")
+		return
 	}
 	assignment, replayed, err := dispatch.CreateGovernedAssignment(s.db, dispatch.GovernedCreateAssignmentInput{
 		OrderID: body.OrderID, OperatorContextID: operatorContextID, CaptainID: body.CaptainID,
@@ -78,7 +83,7 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 }
 
 func (s *protectedStoreServer) handleListGovernedOperatorDispatchAssignments(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.ActorFromContext(r.Context())
+	_, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -88,10 +93,6 @@ func (s *protectedStoreServer) handleListGovernedOperatorDispatchAssignments(w h
 	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
-		return
-	}
-	if _, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, actor.ID, 100); err != nil {
-		writeGovernedDispatchError(w, err)
 		return
 	}
 	list, err := dispatch.ListOperatorAssignmentsInOperatorContext(s.db, operatorContextID, 200)
@@ -133,10 +134,6 @@ func (s *protectedStoreServer) handleListGovernedCaptainDispatchAssignments(w ht
 		return
 	}
 
-	if _, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, "dispatch-captain-inbox", 100); err != nil {
-		writeGovernedDispatchError(w, err)
-		return
-	}
 	list, err := dispatch.ListCaptainAssignmentsInOperatorContext(s.db, operatorContextID, actor.ID, 100)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
@@ -369,6 +366,11 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireOperatorCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		CaptainID              string `json:"captainId"`
 		ServiceAreaCode        string `json:"serviceAreaCode"`
@@ -395,9 +397,9 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 		store.SendError(w, http.StatusConflict, financialEligibility.IneligibilityReason, "captain does not meet the WLT-backed dispatch balance requirement")
 		return
 	}
-	idempotencyKey := strings.TrimSpace(body.IdempotencyKey)
-	if idempotencyKey == "" {
-		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if bodyKey := strings.TrimSpace(body.IdempotencyKey); bodyKey != "" && bodyKey != idempotencyKey {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_MISMATCH", "request body idempotencyKey must match Idempotency-Key")
+		return
 	}
 	assignmentID := r.PathValue("assignmentId")
 	assignment, err := dispatch.ReassignGovernedAssignment(s.db, dispatch.ReassignAssignmentInput{
@@ -423,6 +425,11 @@ func (s *protectedStoreServer) handleCancelGovernedDispatchAssignment(w http.Res
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireOperatorCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		ReasonCode string `json:"reasonCode"`
 		Reason     string `json:"reason"`
@@ -430,9 +437,14 @@ func (s *protectedStoreServer) handleCancelGovernedDispatchAssignment(w http.Res
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	if !ok {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return
+	}
 	assignmentID := r.PathValue("assignmentId")
-	if err := dispatch.CancelGovernedAssignmentForOperatorContext(
-		s.db, actor.OperatorContextID, assignmentID, actor.ID, body.ReasonCode, body.Reason,
+	if err := dispatch.CancelGovernedAssignmentIdempotentForOperatorContext(
+		s.db, operatorContextID, assignmentID, actor.ID, body.ReasonCode, body.Reason, idempotencyKey, correlationID,
 	); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -445,6 +457,11 @@ func (s *protectedStoreServer) handleExpireGovernedDispatchAssignments(w http.Re
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireOperatorCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		Limit int `json:"limit"`
 	}
@@ -456,7 +473,12 @@ func (s *protectedStoreServer) handleExpireGovernedDispatchAssignments(w http.Re
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
 	}
-	count, err := dispatch.ExpireOverdueAssignments(s.db, operatorContextID, actor.ID, body.Limit)
+	if body.Limit == 0 {
+		body.Limit = 100
+	}
+	count, err := dispatch.ExpireOverdueAssignmentsIdempotentForOperatorContext(
+		s.db, operatorContextID, actor.ID, body.Limit, idempotencyKey, correlationID,
+	)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return

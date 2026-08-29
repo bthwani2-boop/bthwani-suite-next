@@ -7,7 +7,6 @@ export * from "./CaptainFinancialEligibilityPanel";
 export * from "./StoreCaptainHandoffExceptionForm";
 export * from "./store-captain-handoff-exception-attempt";
 export * from "./return-to-store-command-attempt";
-export * from "./use-dispatch-controller";
 export * from "./use-captain-readiness-controller";
 export * from "./use-store-captain-handoff-exception";
 export * from "./operator-delivery-exception-command-attempt";

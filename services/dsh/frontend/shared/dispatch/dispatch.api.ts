@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshCaptainDispatchCandidate,
   DshCaptainDispatchProfileInput,
@@ -60,10 +60,20 @@ export function fetchOperatorCaptainReadiness(captainId: string): Promise<DshCap
 
 export async function createGovernedDispatchAssignment(
   input: DshGovernedCreateAssignmentInput,
+  mutation: DshOperatorCommandContext,
 ): Promise<{ readonly assignment: DshDispatchAssignment; readonly replayed: boolean }> {
+  const { idempotencyKey, ...body } = input;
+  if (idempotencyKey !== mutation.idempotencyKey) {
+    throw new Error("dispatch assignment idempotency key does not match its command context");
+  }
   const data = await request<{ assignment: DshDispatchAssignment; replayed?: boolean }>(
     "/dsh/operator/dispatch/assignments",
-    { method: "POST", body: input },
+    {
+      method: "POST",
+      body,
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
   return { assignment: data.assignment, replayed: data.replayed === true };
 }
@@ -135,10 +145,20 @@ export async function declineDispatchAssignment(
 export async function reassignDispatchAssignment(
   assignmentId: string,
   input: DshReassignAssignmentInput,
+  mutation: DshOperatorCommandContext,
 ): Promise<DshDispatchAssignment> {
+  const { idempotencyKey, ...body } = input;
+  if (idempotencyKey !== mutation.idempotencyKey) {
+    throw new Error("dispatch reassignment idempotency key does not match its command context");
+  }
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/operator/dispatch/assignments/${encodeURIComponent(assignmentId)}/reassign`,
-    { method: "POST", body: input },
+    {
+      method: "POST",
+      body,
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
   return data.assignment;
 }
@@ -147,21 +167,31 @@ export async function cancelDispatchAssignment(
   assignmentId: string,
   reasonCode: string,
   reason: string,
-  idempotencyKey?: string,
+  mutation: DshOperatorCommandContext,
 ): Promise<void> {
   await request<void>(
     `/dsh/operator/dispatch/assignments/${encodeURIComponent(assignmentId)}/cancel`,
-    { method: "POST", body: { reasonCode, reason }, idempotencyKey: idempotencyKey ?? corrId("operator-dispatch-cancel") },
+    {
+      method: "POST",
+      body: { reasonCode, reason },
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
 }
 
 export async function expireDispatchAssignments(
   limit = 100,
-  idempotencyKey?: string,
+  mutation: DshOperatorCommandContext,
 ): Promise<number> {
   const data = await request<{ expiredCount: number }>(
     "/dsh/operator/dispatch/assignments/expire",
-    { method: "POST", body: { limit }, idempotencyKey: idempotencyKey ?? corrId("operator-dispatch-expire") },
+    {
+      method: "POST",
+      body: { limit },
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
   return Math.max(0, Number(data.expiredCount ?? 0));
 }
@@ -438,6 +468,7 @@ export function getDshOrderLifecycleRuntimeClient() {
         readonly priority?: number;
         readonly distance_meters?: number;
       },
+      mutation: DshOperatorCommandContext,
     ) {
       return createGovernedDispatchAssignment({
         orderId,
@@ -446,7 +477,7 @@ export function getDshOrderLifecycleRuntimeClient() {
         idempotencyKey: input.idempotency_key,
         ...(input.priority === undefined ? {} : { priority: input.priority }),
         ...(input.distance_meters === undefined ? {} : { distanceMeters: input.distance_meters }),
-      }).then((result) => result.assignment);
+      }, mutation).then((result) => result.assignment);
     },
   };
 }

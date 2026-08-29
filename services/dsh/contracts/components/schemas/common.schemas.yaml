@@ -344,10 +344,16 @@ DshDelivery:
 
 DshCreateAssignmentRequest:
   type: object
-  required: [orderId, captainId]
+  additionalProperties: false
+  required: [orderId, captainId, serviceAreaCode]
   properties:
     orderId: { type: string }
     captainId: { type: string }
+    serviceAreaCode: { type: string, minLength: 1 }
+    priority: { type: integer, minimum: 0, maximum: 100, default: 0 }
+    distanceMeters: { type: integer, minimum: 0 }
+    offerReason: { type: string, maxLength: 500 }
+    responseTimeoutSeconds: { type: integer, minimum: 30, maximum: 600, default: 90 }
 
 DshDeclineAssignmentRequest:
   type: object

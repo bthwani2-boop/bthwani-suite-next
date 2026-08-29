@@ -11,6 +11,22 @@ const api = readFileSync(
   resolve(process.cwd(), "services/dsh/frontend/shared/dispatch/dispatch.api.ts"),
   "utf8",
 );
+const operations = readFileSync(
+  resolve(process.cwd(), "services/dsh/frontend/shared/operations/use-dispatch-operations.ts"),
+  "utf8",
+);
+const handler = readFileSync(
+  resolve(process.cwd(), "services/dsh/backend/internal/http/dispatch_governance_handlers.go"),
+  "utf8",
+);
+const governanceContract = readFileSync(
+  resolve(process.cwd(), "services/dsh/contracts/dsh.dispatch-governance.openapi.yaml"),
+  "utf8",
+);
+const dispatchContract = readFileSync(
+  resolve(process.cwd(), "services/dsh/contracts/paths/dispatch.paths.yaml"),
+  "utf8",
+);
 
 test("operator dispatch decisions require an authenticated actor and canonical state transitions", () => {
   assert.match(screen, /const identity = useIdentitySession\(\)/);
@@ -33,6 +49,32 @@ test("exception decisions remove shadow keys while returned-order cancellation s
   assert.doesNotMatch(api, /requiresDeliveryExceptionAcknowledgement/);
   assert.match(screen, /executeDurableOrderCancellation\(\{/);
   assert.match(screen, /ticketReference: `delivery-exception:\$\{item\.id\}`/);
+});
+
+test("operator assignment mutations use durable command identity and explicit writes", () => {
+  const operatorListStart = handler.indexOf("handleListGovernedOperatorDispatchAssignments");
+  const captainListStart = handler.indexOf("handleListGovernedCaptainDispatchAssignments");
+  const acceptStart = handler.indexOf("handleAcceptGovernedDispatchAssignment");
+  const operatorList = handler.slice(operatorListStart, captainListStart);
+  const captainList = handler.slice(captainListStart, acceptStart);
+  assert.match(operations, /getOrCreateOperatorDispatchCommandAttempt/);
+  assert.match(operations, /executeWithReplay/);
+  assert.match(operations, /clearOperatorDispatchCommandAttempt\(intent, attempt\.fingerprint\)/);
+  assert.match(operations, /const readback = await load/);
+  assert.doesNotMatch(operations, /commandIds|corrId\(|operator-dispatch-(cancel|expire)/);
+  assert.match(api, /cancelDispatchAssignment\(/);
+  assert.match(api, /expireDispatchAssignments\(/);
+  assert.match(api, /mutation: DshOperatorCommandContext/);
+  assert.match(api, /correlationId: mutation\.correlationId/);
+  assert.doesNotMatch(api, /idempotencyKey \?\?|corrId\("operator-dispatch/);
+  assert.match(handler, /requireOperatorCommandIdentity\(w, r\)/);
+  assert.match(handler, /CancelGovernedAssignmentIdempotentForOperatorContext/);
+  assert.match(handler, /ExpireOverdueAssignmentsIdempotentForOperatorContext/);
+  assert.doesNotMatch(operatorList, /ExpireOverdueAssignments/);
+  assert.doesNotMatch(captainList, /ExpireOverdueAssignments/);
+  assert.match(governanceContract, /name: Idempotency-Key/);
+  assert.match(governanceContract, /name: X-Correlation-ID/);
+  assert.match(dispatchContract, /operationId: createDshAssignment[\s\S]*IdempotencyKey[\s\S]*CorrelationId/);
 });
 
 console.log("operator-dispatch-command-identity-contract: PASS");

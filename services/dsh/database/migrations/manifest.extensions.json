@@ -506,6 +506,13 @@
       "sha256": "207e9bb49624b2bbabb577c7f7ca87f950e4ccbd1a564e6e554c0c27cb1c8143",
       "historicalPrefix": "1071",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 313,
+      "file": "dsh-1072_operator_dispatch_command_receipts.sql",
+      "sha256": "b0236a865cd8bdde791135f209de03dd14d66d84bc7f6ce021ebce921d8fb421",
+      "historicalPrefix": "1072",
+      "state": "ACTIVE"
     }
   ]
 }

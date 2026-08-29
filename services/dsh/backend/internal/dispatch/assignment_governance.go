@@ -739,6 +739,28 @@ func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmen
 }
 
 func ExpireOverdueAssignments(db *sql.DB, operatorContextID, actorID string, limit int) (int, error) {
+	return expireOverdueAssignments(db, operatorContextID, actorID, limit, nil)
+}
+
+func ExpireOverdueAssignmentsIdempotentForOperatorContext(
+	db *sql.DB,
+	operatorContextID, actorID string, limit int, idempotencyKey, correlationID string,
+) (int, error) {
+	command, err := newOperatorDispatchCommand(
+		operatorContextID, actorID, "expire_assignments", "", "", "", limit, idempotencyKey, correlationID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return expireOverdueAssignments(db, command.OperatorContextID, command.ActorID, command.Limit, &command)
+}
+
+func expireOverdueAssignments(
+	db *sql.DB,
+	operatorContextID, actorID string,
+	limit int,
+	command *operatorDispatchCommand,
+) (int, error) {
 	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
 	if err != nil {
 		return 0, err
@@ -755,6 +777,18 @@ func ExpireOverdueAssignments(db *sql.DB, operatorContextID, actorID string, lim
 		return 0, err
 	}
 	defer tx.Rollback()
+	if command != nil {
+		resultCount, replayed, err := beginOperatorDispatchCommand(tx, *command)
+		if err != nil {
+			return 0, err
+		}
+		if replayed {
+			if err := tx.Commit(); err != nil {
+				return 0, err
+			}
+			return resultCount, nil
+		}
+	}
 	rows, err := tx.Query(assignmentSelectSQL()+`
 		WHERE a.operator_context_id=$1 AND a.status='offered' AND a.response_deadline_at<=NOW()
 		ORDER BY a.response_deadline_at ASC LIMIT $2 FOR UPDATE OF a,d`, operatorContextID, limit)
@@ -768,6 +802,11 @@ func ExpireOverdueAssignments(db *sql.DB, operatorContextID, actorID string, lim
 	}
 	for i := range items {
 		if err = expireAssignmentTx(tx, operatorContextID, &items[i], "system", actorID, "OFFER_TIMEOUT", "captain did not respond before deadline"); err != nil {
+			return 0, err
+		}
+	}
+	if command != nil {
+		if err = recordOperatorDispatchCommand(tx, *command, len(items)); err != nil {
 			return 0, err
 		}
 	}
@@ -809,10 +848,27 @@ func CancelGovernedAssignmentForOperatorContext(db *sql.DB, operatorContextID, a
 	if operatorContextID == "" {
 		return fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
-	return cancelGovernedAssignment(db, operatorContextID, assignmentID, actorID, reasonCode, reason)
+	return cancelGovernedAssignment(db, operatorContextID, assignmentID, actorID, reasonCode, reason, nil)
 }
 
-func cancelGovernedAssignment(db *sql.DB, operatorContextID, assignmentID, actorID, reasonCode, reason string) error {
+func CancelGovernedAssignmentIdempotentForOperatorContext(
+	db *sql.DB,
+	operatorContextID, assignmentID, actorID, reasonCode, reason, idempotencyKey, correlationID string,
+) error {
+	command, err := newOperatorDispatchCommand(
+		operatorContextID, actorID, "cancel_assignment", assignmentID, reasonCode, reason, 0, idempotencyKey, correlationID,
+	)
+	if err != nil {
+		return err
+	}
+	return cancelGovernedAssignment(db, command.OperatorContextID, command.AssignmentID, command.ActorID, command.ReasonCode, command.Reason, &command)
+}
+
+func cancelGovernedAssignment(
+	db *sql.DB,
+	operatorContextID, assignmentID, actorID, reasonCode, reason string,
+	command *operatorDispatchCommand,
+) error {
 	assignmentID = strings.TrimSpace(assignmentID)
 	actorID = strings.TrimSpace(actorID)
 	reasonCode = strings.TrimSpace(reasonCode)
@@ -829,6 +885,15 @@ func cancelGovernedAssignment(db *sql.DB, operatorContextID, assignmentID, actor
 		return err
 	}
 	defer tx.Rollback()
+	if command != nil {
+		_, replayed, err := beginOperatorDispatchCommand(tx, *command)
+		if err != nil {
+			return err
+		}
+		if replayed {
+			return tx.Commit()
+		}
+	}
 	row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid AND a.operator_context_id=$2 FOR UPDATE OF a,d`, assignmentID, operatorContextID)
 	current, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -864,6 +929,11 @@ func cancelGovernedAssignment(db *sql.DB, operatorContextID, assignmentID, actor
 	}
 	if err = checkoutfinanceoutbox.EnqueueCodReservationReleaseForOrderTx(tx, current.OrderID, "cancelled: "+reasonCode, assignmentID); err != nil {
 		return err
+	}
+	if command != nil {
+		if err = recordOperatorDispatchCommand(tx, *command, 1); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }
