@@ -253,14 +253,16 @@ export function useCaptainOrderRuntime() {
   );
 
   const pushLocation = React.useCallback(
-    (push: DshCaptainLocationPush): Promise<DshDispatchLocationSyncResult> =>
-      syncForegroundDispatchLocation(push.assignmentId, {
+    (push: DshCaptainLocationPush): Promise<DshDispatchLocationSyncResult> => {
+      if (!actorId) return Promise.reject(new Error('جلسة الكابتن غير جاهزة لإرسال الموقع.'));
+      return syncForegroundDispatchLocation(actorId, push.assignmentId, {
         latitude: push.latitude,
         longitude: push.longitude,
         accuracyMeters: push.accuracyMeters,
         recordedAt: push.recordedAt,
-      }),
-    [],
+      });
+    },
+    [actorId],
   );
 
   const failDelivery = React.useCallback(
@@ -319,11 +321,13 @@ export function useCaptainActiveLocationPush({
   lifecycleStatus,
 }: DshCaptainActiveLocationPushConfig) {
   const captainOrderRuntime = useCaptainOrderRuntime();
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject.trim() : '';
 
   React.useEffect(() => {
     if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.locationPush) return undefined;
     if (!lifecycleStatus || !activeDeliveryStates.has(lifecycleStatus)) return undefined;
-    if (!activeAssignmentId || !captainId) return undefined;
+    if (!activeAssignmentId || !captainId || !actorId || actorId !== captainId) return undefined;
 
     let cancelled = false;
     let intervalId: ReturnType<typeof setInterval> | undefined;
@@ -345,7 +349,7 @@ export function useCaptainActiveLocationPush({
     const sampleOnce = async () => {
       if (cancelled) return;
       try {
-        await flushPendingForegroundDispatchLocations();
+        await flushPendingForegroundDispatchLocations(actorId);
         const position = await readCaptainForegroundLocation();
         if (!cancelled) postLocation(position);
       } catch (err) {
@@ -379,5 +383,5 @@ export function useCaptainActiveLocationPush({
       stopInterval();
       subscription.remove();
     };
-  }, [activeAssignmentId, captainId, captainOrderRuntime, lifecycleStatus]);
+  }, [activeAssignmentId, actorId, captainId, captainOrderRuntime, lifecycleStatus]);
 }
