@@ -586,7 +586,7 @@ test("notification mutations are contained and provide canonical readback", () =
       "Promise<boolean>",
       "setActionError(resolveMessage(err))",
       "await loadNotifications()",
-      "await loadPreferences()",
+      "return loadPreferences()",
     ],
   );
   assertMarkers(
