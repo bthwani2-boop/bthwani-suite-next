@@ -120,6 +120,7 @@ function channelLabel(channel: DshNotificationChannel): string {
 export function PartnerHubSettingsPanel({
   appearanceMode,
   appearanceHydrated,
+  appearanceError,
   setAppearanceMode,
   notificationPreferences,
   notificationPreferenceState,
@@ -138,6 +139,7 @@ export function PartnerHubSettingsPanel({
 }: {
   appearanceMode: BThwaniAppearanceMode;
   appearanceHydrated: boolean;
+  appearanceError?: string | null;
   setAppearanceMode: (mode: BThwaniAppearanceMode) => void;
   notificationPreferences: readonly DshNotificationPreference[];
   notificationPreferenceState: PartnerNotificationPreferenceStateKind;
@@ -261,6 +263,9 @@ export function PartnerHubSettingsPanel({
           </View>
         </View>
       </Box>
+      {appearanceError ? (
+        <StateView tone="warning" title="تعذر حفظ المظهر" description={appearanceError} />
+      ) : null}
 
       <Box padding={4} gap={3} background="surface">
         <Text role="titleSm">الإشعارات</Text>

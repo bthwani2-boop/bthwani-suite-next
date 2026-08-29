@@ -11,7 +11,7 @@ test("partner app composes canonical identity, rating, catalog media, push, and 
   assert.match(source, /requiredRole="partner"/);
   assert.match(source, /requiredSurface="app-partner"/);
   assert.match(source, /<PartnerFieldRatingGate>/);
-  assert.match(source, /<DshPartnerSurface route=\{route\} navigation=\{navigation\} \/>/);
+  assert.match(source, /<DshPartnerSurface route=\{route\} navigation=\{navigation\} appearance=\{appearance\} \/>/);
   assert.match(source, /configureCatalogMobileFilePicker\(pickCatalogFile\)/);
   assert.match(source, /DocumentPicker\.getDocumentAsync/);
   assert.match(source, /copyToCacheDirectory: true/);
@@ -21,6 +21,22 @@ test("partner app composes canonical identity, rating, catalog media, push, and 
   assert.match(source, /secureRandomId/);
   assert.doesNotMatch(source, /Crypto\.randomUUID/);
   assert.match(source, /useDshMobilePushRegistration\(identity\.state\.kind, "app-partner", "bthwani-partner-next"\)/);
+});
+
+test("partner runtime owns persisted appearance and feeds the canonical UI provider", async () => {
+  const runtime = await read("apps/app-partner/runtime/src/index.ts");
+  const appearance = await read("apps/app-partner/runtime/src/appearance.tsx");
+  const hub = await read("services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx");
+
+  assert.match(runtime, /PartnerAppearanceProvider/);
+  assert.match(appearance, /getBThwaniAppearanceStorageKey\("app-partner"\)/);
+  assert.match(appearance, /SecureStore\.getItemAsync/);
+  assert.match(appearance, /SecureStore\.setItemAsync/);
+  assert.match(appearance, /window\.localStorage/);
+  assert.match(appearance, /isBThwaniAppearanceMode\(storedMode\)/);
+  assert.match(appearance, /setHydrated\(true\)/);
+  assert.match(appearance, /<BThwaniAppearanceProvider mode=\{mode\} syncThemeMode>/);
+  assert.doesNotMatch(hub, /useAppPartnerAppearance|useState<BThwaniAppearanceMode>/);
 });
 
 test("partner native wiring leaves inbound URL navigation to Expo Router", async () => {

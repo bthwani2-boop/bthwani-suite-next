@@ -9,6 +9,14 @@ import type {
 } from '../shared/partner/partner.types';
 import type { DshPartnerNavigation, DshPartnerNavigationRoute } from './partner-navigation';
 import type { PartnerTeamMember } from './team/partner-team.types';
+import type { BThwaniAppearanceMode } from '@bthwani/ui-kit';
+
+export type DshPartnerAppearanceState = {
+  readonly hydrated: boolean;
+  readonly mode: BThwaniAppearanceMode;
+  readonly setMode: (mode: BThwaniAppearanceMode) => void;
+  readonly error: string | null;
+};
 
 export type {
   DshPartnerOperationalFlowId,
@@ -34,12 +42,14 @@ export {
 export type DshPartnerSurfaceProps = {
   readonly route: DshPartnerNavigationRoute;
   readonly navigation: DshPartnerNavigation;
+  readonly appearance: DshPartnerAppearanceState;
 };
 
 export type PartnerDshSurfaceState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled';
 export type DshPartnerSurfaceId = DshPartnerRoute | 'wallet-bridge' | 'detail';
 
 export type DshPartnerHubSurfaceProps = {
+  readonly appearance: DshPartnerAppearanceState;
   state?: PartnerDshSurfaceState;
   section?: PartnerHubSection;
   onSectionChange?: (section: PartnerHubSection) => void;

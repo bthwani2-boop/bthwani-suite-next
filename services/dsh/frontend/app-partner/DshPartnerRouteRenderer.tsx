@@ -2,6 +2,7 @@ import React from "react";
 import { StateView } from "@bthwani/ui-kit";
 import type {
   DshPartnerOperationalFlowId,
+  DshPartnerAppearanceState,
   DshPartnerSupportCommandContext,
   DshPartnerSupportRouteId,
   PartnerHubSection,
@@ -45,6 +46,7 @@ type PartnerSupportSource = NonNullable<DshPartnerSupportCommandContext["source"
 export type DshPartnerRouteRendererProps = {
   readonly route: DshPartnerNavigationRoute;
   readonly navigation: DshPartnerNavigation;
+  readonly appearance: DshPartnerAppearanceState;
   readonly partnerOrdersState:
     | "ready"
     | "loading"
@@ -148,6 +150,7 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
   const {
     route,
     navigation,
+    appearance,
     partnerOrdersState,
     partnerOrders,
     runtimePartnerProfile,
@@ -244,6 +247,7 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
   if (route.kind === "home") {
     return renderSurfaceShell(
       <DshPartnerHubSurface
+        appearance={appearance}
         section={route.section}
         onSectionChange={(section) => navigation.navigate({ kind: "home", section }, "replace")}
         storeName={runtimePartnerProfile.storeName}

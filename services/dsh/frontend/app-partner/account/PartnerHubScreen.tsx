@@ -32,7 +32,6 @@ import {
   fetchPartnerStoreSettings,
 } from "../../shared/partner";
 import type {
-  BThwaniAppearanceMode,
   PartnerCoverageZone,
   PartnerOperationalMode,
 } from "../../shared/partner/partner-hub.types";
@@ -55,11 +54,6 @@ import {
 import { OperationsPanel } from "./PartnerOperationsPanel";
 import { AnalyticsInsightsPanel } from "./PartnerAnalyticsInsightsPanel";
 import { PartnerHubSettingsPanel } from "./PartnerHubSettingsPanel";
-
-function useAppPartnerAppearance() {
-  const [mode, setMode] = React.useState<BThwaniAppearanceMode>("lightPremium");
-  return { hydrated: true, mode, setMode };
-}
 
 type PartnerStoreSettingsPayload = {
   readonly deliveryModes: readonly string[];
@@ -151,6 +145,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     onOpenSupportDirectory,
     onOpenWalletHub,
     onOpenBell,
+    appearance,
     onOpenStoreCourierSetup,
     onOpenCommercialModel,
     canonicalStoreId,
@@ -166,11 +161,6 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     readinessViewModel: selfReadinessViewModel,
     reload: reloadSelfStatus,
   } = usePartnerSelfController(identity.state.kind, canonicalStoreId);
-  const {
-    hydrated: appearanceHydrated,
-    mode: appearanceMode,
-    setMode: setAppearanceMode,
-  } = useAppPartnerAppearance();
   const {
     preferenceState: notificationPreferenceState,
     busyAction: notificationBusyAction,
@@ -507,9 +497,10 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           onBack={() => updateSection("hub")}
         >
           <PartnerHubSettingsPanel
-            appearanceMode={appearanceMode}
-            appearanceHydrated={appearanceHydrated}
-            setAppearanceMode={setAppearanceMode}
+            appearanceMode={appearance.mode}
+            appearanceHydrated={appearance.hydrated}
+            appearanceError={appearance.error}
+            setAppearanceMode={appearance.setMode}
             notificationPreferences={notificationPreferences}
             notificationPreferenceState={notificationPreferenceState.kind}
             notificationPreferenceError={notificationPreferenceState.kind === "error"

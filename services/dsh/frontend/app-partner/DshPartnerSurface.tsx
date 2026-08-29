@@ -34,7 +34,7 @@ export function DshPartnerSurface(props: DshPartnerSurfaceProps) {
   );
 }
 
-function DshPartnerSurfaceInner({ route, navigation }: DshPartnerSurfaceProps) {
+function DshPartnerSurfaceInner({ route, navigation, appearance }: DshPartnerSurfaceProps) {
   const insets = useSafeAreaInsets();
   const { dshClientId } = usePlatformVars();
   const {
@@ -232,6 +232,7 @@ function DshPartnerSurfaceInner({ route, navigation }: DshPartnerSurfaceProps) {
     <DshPartnerOrderJourneyRenderer
       route={route}
       navigation={navigation}
+      appearance={appearance}
       partnerOrdersState={partnerOrdersState}
       partnerOrders={partnerOrders}
       runtimePartnerProfile={runtimePartnerProfile}

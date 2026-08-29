@@ -26,6 +26,7 @@ import {
   useIdentitySession,
 } from "@bthwani/core-identity";
 import { getOrCreatePartnerDeviceFingerprint } from "./config/partner-device-fingerprint";
+import { usePartnerAppearance } from "./appearance";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -75,6 +76,7 @@ export type PartnerAppProps = {
 function AppContent({ route, navigation }: PartnerAppProps) {
   const insets = useSafeAreaInsets();
   const identity = useIdentitySession();
+  const appearance = usePartnerAppearance();
   useDshMobilePushRegistration(identity.state.kind, "app-partner", "bthwani-partner-next");
 
   return (
@@ -82,7 +84,7 @@ function AppContent({ route, navigation }: PartnerAppProps) {
       <View style={styles.screen}>
         <IdentitySessionGate requiredRole="partner" requiredSurface="app-partner">
           <PartnerFieldRatingGate>
-            <DshPartnerSurface route={route} navigation={navigation} />
+            <DshPartnerSurface route={route} navigation={navigation} appearance={appearance} />
           </PartnerFieldRatingGate>
         </IdentitySessionGate>
       </View>
