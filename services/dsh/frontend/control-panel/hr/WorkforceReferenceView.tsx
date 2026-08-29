@@ -15,7 +15,7 @@ import {
 import type { WorkforceCity, WorkforceShift } from "../../shared/workforce";
 import { corrId } from "../../shared/_kernel/dsh-http-request";
 
-export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
+export function WorkforceReferenceView(props: { readonly onBack: () => void; readonly canManage: boolean }) {
   const reference = useWorkforceReferenceData(true);
   const identity = useIdentitySession();
   const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
@@ -87,11 +87,12 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
                 <Text role="bodySm">{city.nameAr} ({city.code})</Text>
                 <div><CpBadge tone={city.active === false ? "danger" : "success"}>{city.active === false ? "معطلة" : "نشطة"}</CpBadge></div>
               </div>
-              <CpButton variant={(city.active ?? true) ? "ghost" : "secondary"} disabled={busy} onClick={() => void toggleCity(city)}>
+              {props.canManage ? <CpButton variant={(city.active ?? true) ? "ghost" : "secondary"} disabled={busy} onClick={() => void toggleCity(city)}>
                 {(city.active ?? true) ? "تعطيل" : "تفعيل"}
-              </CpButton>
+              </CpButton> : null}
             </div>
           ))}
+          {props.canManage ? <>
           <div>
             <Text role="bodySm">كود مدينة جديد</Text>
             <CpTextInput value={cityCode} onChange={setCityCode} placeholder="SAH" aria-label="كود مدينة جديد" />
@@ -114,6 +115,7 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
           >
             إضافة مدينة
           </CpButton>
+          </> : null}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -124,11 +126,12 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
                 <Text role="bodySm">{shift.nameAr} ({shift.code}){shift.startsAt ? ` ${shift.startsAt}–${shift.endsAt}` : ""}</Text>
                 <div><CpBadge tone={shift.active === false ? "danger" : "success"}>{shift.active === false ? "معطلة" : "نشطة"}</CpBadge></div>
               </div>
-              <CpButton variant={(shift.active ?? true) ? "ghost" : "secondary"} disabled={busy} onClick={() => void toggleShift(shift)}>
+              {props.canManage ? <CpButton variant={(shift.active ?? true) ? "ghost" : "secondary"} disabled={busy} onClick={() => void toggleShift(shift)}>
                 {(shift.active ?? true) ? "تعطيل" : "تفعيل"}
-              </CpButton>
+              </CpButton> : null}
             </div>
           ))}
+          {props.canManage ? <>
           <div>
             <Text role="bodySm">كود وردية جديد</Text>
             <CpTextInput value={shiftCode} onChange={setShiftCode} placeholder="night" aria-label="كود وردية جديد" />
@@ -166,6 +169,7 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void }) {
           >
             إضافة وردية
           </CpButton>
+          </> : null}
         </div>
       </div>
     </SettingsPageFrame>

@@ -4,9 +4,11 @@
 // density: standard (operational data). hero: forbidden. state: live (Workforce API).
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useIdentitySession } from "@bthwani/core-identity";
 import type { ProviderKind } from "../../shared/workforce";
-import { CpBadge, CpButton, CpPageHeader, CpTabs } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton, CpPageHeader, CpStatePanel, CpTabs } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
 import { ProviderListView } from "./ProviderListView";
 import { FieldAgentCreateView } from "./FieldAgentCreateView";
@@ -32,6 +34,13 @@ function providerKindLabel(kind: ProviderKind): string {
 function WorkforceHrScreenInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { state: identityState } = useIdentitySession();
+  const identity = identityState.kind === "authenticated" ? identityState.identity : null;
+  const canCreate = hasServiceControlPanelPermission(identity, "workforce", "provider:create");
+  const canUpdate = hasServiceControlPanelPermission(identity, "workforce", "provider:update");
+  const canSuspend = hasServiceControlPanelPermission(identity, "workforce", "provider:suspend");
+  const canReactivate = hasServiceControlPanelPermission(identity, "workforce", "provider:reactivate");
+  const canManageReference = hasServiceControlPanelPermission(identity, "workforce", "reference:manage");
 
   const view = searchParams.get("view") || "list";
   const rawKind = searchParams.get("kind");
@@ -47,6 +56,9 @@ function WorkforceHrScreenInner() {
   };
 
   if (view === "create") {
+    if (!canCreate) {
+      return <EditorPageFrame header={<CpPageHeader title="إضافة مقدم خدمة"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}><CpStatePanel role="alert" title="الإنشاء غير متاح" description="لا تملك جلسة لوحة التحكم صلاحية provider:create على Workforce." /></EditorPageFrame>;
+    }
     if (kind === "employee") {
       return (
         <EditorPageFrame header={<CpPageHeader title="إضافة موظف إداري"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}>
@@ -82,13 +94,13 @@ function WorkforceHrScreenInner() {
   }
 
   if (view === "detail") {
-    if (kind === "employee") return <EmployeeDetailView actorId={actorId} onBack={() => navigateTo("list", kind)} />;
-    if (kind === "captain") return <CaptainDetailView actorId={actorId} onBack={() => navigateTo("list", kind)} />;
-    return <FieldAgentDetailView actorId={actorId} onBack={() => navigateTo("list", kind)} />;
+    if (kind === "employee") return <EmployeeDetailView actorId={actorId} onBack={() => navigateTo("list", kind)} canUpdate={canUpdate} canSuspend={canSuspend} canReactivate={canReactivate} />;
+    if (kind === "captain") return <CaptainDetailView actorId={actorId} onBack={() => navigateTo("list", kind)} canUpdate={canUpdate} />;
+    return <FieldAgentDetailView actorId={actorId} onBack={() => navigateTo("list", kind)} canUpdate={canUpdate} />;
   }
 
   if (view === "reference") {
-    return <WorkforceReferenceView onBack={() => navigateTo("list", kind)} />;
+    return <WorkforceReferenceView onBack={() => navigateTo("list", kind)} canManage={canManageReference} />;
   }
 
   // view === "list"
@@ -96,7 +108,7 @@ function WorkforceHrScreenInner() {
     <EditorPageFrame
       header={
         <CpPageHeader title="مقدمي الخدمة">
-          <CpButton variant="primary" onClick={() => navigateTo("create", kind)}>إضافة {kind === "captain" ? "كابتن" : kind === "field" ? "ميداني" : "موظف"}</CpButton>
+          {canCreate ? <CpButton variant="primary" onClick={() => navigateTo("create", kind)}>إضافة {kind === "captain" ? "كابتن" : kind === "field" ? "ميداني" : "موظف"}</CpButton> : null}
         </CpPageHeader>
       }
     >
@@ -106,10 +118,10 @@ function WorkforceHrScreenInner() {
         <div style={{ marginTop: "16px" }}>
           <ProviderListView
             forcedKind={kind}
+            canCreate={canCreate}
             onCreate={() => navigateTo("create", kind)}
             onOpen={(actorIdVal, providerKindVal) => navigateTo("detail", providerKindVal, actorIdVal)}
             onReference={() => navigateTo("reference")}
-            onActivation={() => navigateTo("create", kind)}
           />
         </div>
       </div>

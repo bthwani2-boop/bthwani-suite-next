@@ -17,6 +17,18 @@ const navigationSource = fs.readFileSync(
   path.join(repoRoot, "services/dsh/frontend/control-panel/navigation.ts"),
   "utf8",
 );
+const workforceHrSource = fs.readFileSync(
+  path.join(repoRoot, "services/dsh/frontend/control-panel/hr/WorkforceHrScreen.tsx"),
+  "utf8",
+);
+const workforceReferenceSource = fs.readFileSync(
+  path.join(repoRoot, "services/dsh/frontend/control-panel/hr/WorkforceReferenceView.tsx"),
+  "utf8",
+);
+const workforceOperationalCoreSource = fs.readFileSync(
+  path.join(repoRoot, "services/dsh/frontend/control-panel/hr/ProviderOperationalCorePanel.tsx"),
+  "utf8",
+);
 const routes = await import(
   pathToFileURL(path.join(repoRoot, "services/dsh/frontend/shared/control-panel-routes.ts")).href,
 );
@@ -63,4 +75,18 @@ test("control-panel section navigation and deep links share one fail-closed read
   assert.match(sectionBoundary, /canReadDshNavItem\(state\.identity, item\)/);
   assert.match(sectionBoundary, /لا تملك جلسة لوحة التحكم صلاحية قراءة/);
   assert.match(sectionBoundary, /if \(state\.kind !== "authenticated"\) return null/);
+});
+
+test("workforce HR mutation surfaces bind to canonical Workforce permissions", () => {
+  assert.match(workforceHrSource, /provider:create/);
+  assert.match(workforceHrSource, /provider:update/);
+  assert.match(workforceHrSource, /provider:suspend/);
+  assert.match(workforceHrSource, /provider:reactivate/);
+  assert.match(workforceHrSource, /reference:manage/);
+  assert.match(workforceHrSource, /if \(!canCreate\)/);
+  assert.match(workforceReferenceSource, /canManage: boolean/);
+  assert.match(workforceReferenceSource, /props\.canManage \?/);
+  assert.match(workforceOperationalCoreSource, /canUpdate: boolean/);
+  assert.match(workforceOperationalCoreSource, /if \(!canUpdate\) return/);
+  assert.match(workforceOperationalCoreSource, /<fieldset disabled=\{!canUpdate\}/);
 });

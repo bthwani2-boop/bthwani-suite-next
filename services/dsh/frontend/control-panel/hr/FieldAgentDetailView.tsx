@@ -19,7 +19,7 @@ import { SupervisorPicker } from "./SupervisorPicker";
 import { ZonePicker } from "./ZonePicker";
 import { useIdentitySession } from "@bthwani/core-identity";
 
-export function FieldAgentDetailView(props: { readonly actorId: string; readonly onBack: () => void }) {
+export function FieldAgentDetailView(props: { readonly actorId: string; readonly onBack: () => void; readonly canUpdate: boolean }) {
   const controller = useFieldAgentDetailController(props.actorId);
   const agent = controller.state.kind === "ready" ? controller.state.agent : null;
   const profile = agent?.fieldProfile;
@@ -80,6 +80,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
   }
 
   const pickFile = (purpose: "photo" | "document") => {
+    if (!props.canUpdate) return;
     if (typeof document === "undefined") return;
     const input = document.createElement("input");
     input.type = "file";
@@ -112,7 +113,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
     input.click();
   };
 
-  const canSave = fullNameAr.trim().length > 0 && zoneId.length > 0 && !controller.actionBusy;
+  const canSave = props.canUpdate && fullNameAr.trim().length > 0 && zoneId.length > 0 && !controller.actionBusy;
 
   const saveProfile = async () => {
     if (!agent || !canSave) return;
@@ -136,6 +137,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        {!props.canUpdate ? <CpStatePanel role="status" title="هذا الملف للقراءة فقط" description="لا تملك جلسة لوحة التحكم صلاحية provider:update على Workforce." /> : null}
         <CpTabs
           value={activeTab}
           onChange={setActiveTab}
@@ -160,21 +162,21 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
                 <Text role="bodySm" style={{ marginBottom: "8px", display: "block" }}>الاسم بالعربية *</Text>
-                <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
+                <CpTextInput value={fullNameAr} onChange={setFullNameAr} disabled={!props.canUpdate} aria-label="الاسم بالعربية" />
               </div>
               <div>
                 <Text role="bodySm" style={{ marginBottom: "8px", display: "block" }}>الاسم بالإنجليزية</Text>
-                <CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" />
+                <CpTextInput value={fullNameEn} onChange={setFullNameEn} disabled={!props.canUpdate} aria-label="الاسم بالإنجليزية" />
               </div>
               <div>
                 <Text role="bodySm" style={{ marginBottom: "8px", display: "block" }}>تاريخ بداية الارتباط</Text>
-                <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
+                <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" disabled={!props.canUpdate} aria-label="تاريخ بداية الارتباط" />
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-              <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
-              <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} />
+              <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} disabled={!props.canUpdate} />
+              <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} disabled={!props.canUpdate} />
             </div>
             {controller.actionError ? <CpStatePanel role="alert" title="تعذر حفظ الملف" description={controller.actionError} /> : null}
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
@@ -199,7 +201,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
             <CpMutedInline>
               {agent.photoMediaRef ? "الصورة الشخصية مرفوعة." : "لا توجد صورة شخصية مرفوعة بعد."}
             </CpMutedInline>
-            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => void pickFile("photo")}>
+            <CpButton variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => void pickFile("photo")}>
               {uploadBusy ? "جارٍ الرفع…" : "رفع الصورة الشخصية"}
             </CpButton>
             <Text role="titleSm">المستندات المرتبطة</Text>
@@ -210,14 +212,14 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
                 ))}
               </div>
             ) : <CpMutedInline>لا توجد مستندات مرفوعة بعد.</CpMutedInline>}
-            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => void pickFile("document")}>
+            <CpButton variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => void pickFile("document")}>
               {uploadBusy ? "جارٍ الرفع…" : "رفع مستند قانوني"}
             </CpButton>
           </section>
         )}
         {activeTab === "ops" && (
           <>
-            <ProviderOperationalCorePanel actorId={agent.actorId} kind="field" />
+            <ProviderOperationalCorePanel actorId={agent.actorId} kind="field" canUpdate={props.canUpdate} />
             <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
           </>
         )}
