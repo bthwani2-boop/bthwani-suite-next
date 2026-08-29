@@ -8,6 +8,10 @@ const source = readFileSync(
   "services/dsh/frontend/shared/operations/operations-registry.ts",
   "utf8",
 );
+const hubSource = readFileSync(
+  "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx",
+  "utf8",
+);
 const types = readFileSync(
   "services/dsh/frontend/shared/operations/operations.types.ts",
   "utf8",
@@ -43,4 +47,12 @@ test("operations ownership shortcuts consume the canonical control-panel section
   assert.equal(sectionRoutes.CONTROL_PANEL_SECTION_ROUTES.finance, "/wlt/finance");
   assert.equal(financeShortcut.href, sectionRoutes.CONTROL_PANEL_SECTION_ROUTES.finance);
   assert.doesNotMatch(source, /href:\s*['"]\/dsh\/finance['"]/);
+});
+
+test("published operations subgroups mount their canonical dedicated workspaces", () => {
+  assert.match(hubSource, /assisted:\s*AssistedOrderDeskScreen/);
+  assert.match(hubSource, /rescue:\s*OrderRescueScreen/);
+  assert.match(hubSource, /audit:\s*AuditSupportSlaScreen/);
+  assert.match(hubSource, /proofs:\s*DeliveryProofReviewScreen/);
+  assert.match(hubSource, /zones:\s*AreaCapacityScreen/);
 });
