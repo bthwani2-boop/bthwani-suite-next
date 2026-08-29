@@ -39,11 +39,7 @@
         in: header
         required: true
         schema: { type: string }
-      - name: If-Match
-        in: header
-        required: true
-        schema: { type: string }
-        description: "Expected cart version."
+      - $ref: "../dsh.openapi.yaml#/components/parameters/ExpectedVersion"
     responses:
       "204": { description: Cart cleared. }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
@@ -60,10 +56,10 @@
         in: header
         required: true
         schema: { type: string }
-      - name: If-Match
+      - name: If-Match-Version
         in: header
         required: false
-        schema: { type: string }
+        schema: { type: integer, minimum: 1 }
         description: "Expected cart version (optional for first item)."
     requestBody:
       required: true
@@ -102,13 +98,31 @@
         in: header
         required: true
         schema: { type: string }
-      - name: If-Match
-        in: header
-        required: true
-        schema: { type: string }
-        description: "Expected cart version."
+      - $ref: "../dsh.openapi.yaml#/components/parameters/ExpectedVersion"
     responses:
       "204": { description: Item removed. }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/client/cart/mutations/{idempotencyKey}:
+  get:
+    operationId: getDshClientCartMutationReceipt
+    summary: Read the authenticated client's committed cart mutation receipt.
+    description: A missing receipt means the mutation was not committed and remains eligible for reconciliation with the same idempotency key.
+    tags: [DshCart]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: idempotencyKey
+        in: path
+        required: true
+        schema: { type: string, minLength: 8, maxLength: 200 }
+    responses:
+      "200":
+        description: Committed cart mutation receipt.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCartMutationReceiptResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 

@@ -78,6 +78,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("PATCH /dsh/client/me/profile/consents", protected.handleUpsertClientProfileConsents)
 	mux.HandleFunc("GET /dsh/administration/customers/{actorId}/profile", protected.handleAdminGetClientProfile)
 	mux.HandleFunc("GET /dsh/client/cart", protected.handleGetCart)
+	mux.HandleFunc("GET /dsh/client/cart/mutations/{idempotencyKey}", protected.handleGetCartMutationReceipt)
 	mux.HandleFunc("POST /dsh/client/cart/items", protected.handleUpsertCartItem)
 	mux.HandleFunc("DELETE /dsh/client/cart/items/{itemId}", protected.handleRemoveCartItem)
 	mux.HandleFunc("DELETE /dsh/client/cart", protected.handleClearCart)

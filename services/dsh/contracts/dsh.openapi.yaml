@@ -210,6 +210,8 @@ paths:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals~1{proposalId}"
   /dsh/client/cart:
     $ref: "./paths/cart-serviceability.paths.yaml#/~1dsh~1client~1cart"
+  /dsh/client/cart/mutations/{idempotencyKey}:
+    $ref: "./paths/cart-serviceability.paths.yaml#/~1dsh~1client~1cart~1mutations~1{idempotencyKey}"
   /dsh/client/cart/items:
     $ref: "./paths/cart-serviceability.paths.yaml#/~1dsh~1client~1cart~1items"
   /dsh/client/cart/items/{itemId}:
@@ -1301,6 +1303,10 @@ components:
       $ref: "./components/schemas/cart-serviceability.schemas.yaml#/DshUpsertCartItemRequest"
     DshUpsertCartItemResponse:
       $ref: "./components/schemas/cart-serviceability.schemas.yaml#/DshUpsertCartItemResponse"
+    DshCartMutationReceipt:
+      $ref: "./components/schemas/cart-serviceability.schemas.yaml#/DshCartMutationReceipt"
+    DshCartMutationReceiptResponse:
+      $ref: "./components/schemas/cart-serviceability.schemas.yaml#/DshCartMutationReceiptResponse"
     DshOperatorCartsResponse:
       $ref: "./components/schemas/cart-serviceability.schemas.yaml#/DshOperatorCartsResponse"
     CartServiceabilityRequest:

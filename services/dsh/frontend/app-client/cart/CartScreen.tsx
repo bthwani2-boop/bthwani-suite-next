@@ -452,12 +452,10 @@ export function CartScreen({
       {controller.action === "conflict" && (
         <CartConflictSheet
           onKeepServer={() => {
-            controller.clearOfflineQueue();
-            controller.retry();
+            void controller.discardOfflineQueue("customer chose the current server cart after a version conflict");
           }}
           onReviewOffline={() => {
-            controller.clearOfflineQueue();
-            controller.retry();
+            void controller.reviewConflict();
           }}
         />
       )}

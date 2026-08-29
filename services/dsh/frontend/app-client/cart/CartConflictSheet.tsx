@@ -35,7 +35,7 @@ export const CartConflictSheet: React.FC<CartConflictSheetProps> = ({
           onPress={onKeepServer}
         />
         <Button
-          label="المراجعة أولًا — سلة الخادم الحالية"
+          label="تحديث سلة الخادم وإبقاء تعديلي معلّقًا"
           tone="secondary"
           onPress={onReviewOffline}
         />

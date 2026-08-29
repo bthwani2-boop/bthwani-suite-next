@@ -20,12 +20,13 @@ import (
 )
 
 var (
-	ErrNotFound             = errors.New("cart not found")
-	ErrConflict             = errors.New("cart version conflict")
-	ErrInvalid              = errors.New("invalid cart input")
-	ErrStoreGone            = errors.New("store no longer active")
-	ErrOutOfArea            = errors.New("store outside serviceable area")
-	ErrFinancialUnavailable = errors.New("canonical financial quote is unavailable")
+	ErrNotFound                = errors.New("cart not found")
+	ErrConflict                = errors.New("cart version conflict")
+	ErrInvalid                 = errors.New("invalid cart input")
+	ErrMutationReceiptNotFound = errors.New("cart mutation receipt not found")
+	ErrStoreGone               = errors.New("store no longer active")
+	ErrOutOfArea               = errors.New("store outside serviceable area")
+	ErrFinancialUnavailable    = errors.New("canonical financial quote is unavailable")
 )
 
 type FulfillmentMode string
@@ -69,6 +70,44 @@ type Cart struct {
 	Version   int                  `json:"version"`
 	CreatedAt time.Time            `json:"createdAt"`
 	UpdatedAt time.Time            `json:"updatedAt"`
+}
+
+// MutationReceipt is durable server-side proof that a cart mutation was
+// committed for the authenticated client. The cart-owner join in
+// FindMutationReceipt is the authorization boundary; the idempotency table is
+// never queried by key alone.
+type MutationReceipt struct {
+	IdempotencyKey string
+	CartID         string
+	Version        int
+	CreatedAt      time.Time
+}
+
+func FindMutationReceipt(ctx context.Context, db *sql.DB, clientID, idempotencyKey string) (*MutationReceipt, error) {
+	if db == nil || strings.TrimSpace(clientID) == "" || strings.TrimSpace(idempotencyKey) == "" {
+		return nil, ErrMutationReceiptNotFound
+	}
+
+	receipt := &MutationReceipt{}
+	err := db.QueryRowContext(ctx, `
+		SELECT i.idempotency_key, i.cart_id, i.version, i.created_at
+		FROM dsh_cart_idempotency AS i
+		JOIN dsh_carts AS c ON c.id = i.cart_id
+		WHERE c.client_id = $1 AND i.idempotency_key = $2
+		LIMIT 1
+	`, clientID, idempotencyKey).Scan(
+		&receipt.IdempotencyKey,
+		&receipt.CartID,
+		&receipt.Version,
+		&receipt.CreatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrMutationReceiptNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return receipt, nil
 }
 
 // FetchDeliveryFeeMinorUnits resolves the active, mode-scoped delivery policy

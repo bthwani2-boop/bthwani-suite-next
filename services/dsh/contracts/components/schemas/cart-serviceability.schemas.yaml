@@ -155,6 +155,22 @@ DshUpsertCartItemResponse:
     item:
       $ref: "../../dsh.openapi.yaml#/components/schemas/DshCartItem"
 
+DshCartMutationReceipt:
+  type: object
+  required: [idempotencyKey, cartId, version, createdAt]
+  properties:
+    idempotencyKey: { type: string, minLength: 8, maxLength: 200 }
+    cartId: { type: string }
+    version: { type: integer, minimum: 0 }
+    createdAt: { type: string, format: date-time }
+
+DshCartMutationReceiptResponse:
+  type: object
+  required: [mutation]
+  properties:
+    mutation:
+      $ref: "#/DshCartMutationReceipt"
+
 DshOperatorCartsResponse:
   type: object
   required: [carts]

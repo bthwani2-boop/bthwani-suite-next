@@ -334,8 +334,11 @@ test("subscription mutations persist one governed attempt across retries and res
   assert.equal(lifecycle.includes("Date.now"), false);
   assertMarkers(
     "services/dsh/frontend/shared/marketing/use-subscription-lifecycle-controller.tsx",
-    ["registerIdentityBeforeSessionEndHook", "clearSubscriptionMutationAttempts", "recoverDshSubscriptionPurchase"],
+    ["recoverDshSubscriptionPurchase"],
   );
+  const controller = source("services/dsh/frontend/shared/marketing/use-subscription-lifecycle-controller.tsx");
+  assert.doesNotMatch(controller, /registerIdentityBeforeSessionEndHook/);
+  assert.doesNotMatch(controller, /clearSubscriptionMutationAttempts/);
   assertMarkers(
     "services/dsh/frontend/shared/marketing/subscription-mutation-attempt.ts",
     ["@bthwani/data-runtime", "bthwaniDurableStorage", "latestPurchaseKey", "PREFIX"],

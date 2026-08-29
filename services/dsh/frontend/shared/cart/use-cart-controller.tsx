@@ -1,20 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { subscribeBthwaniConnectivity } from "@bthwani/data-runtime/connectivity-adapter";
 import {
   checkServiceability,
   clearCart,
   fetchCart,
   fetchOperatorCarts,
+  getCartMutationReceipt,
   removeCartItem,
   upsertCartItem,
 } from "./cart.api";
 import {
-  clearCartSyncQueue,
-  generateIdempotencyKey,
+  discardCartSyncQueue,
+  enqueueCartSyncCommand,
   getCartSyncQueue,
-  getDeviceId,
-  getSessionId,
-  pushToCartSyncQueue,
+  quarantineLegacyCartSyncQueue,
   removeCartSyncCommand,
+  updateCartSyncCommand,
+  type CartMutationCommand,
+  type QueuedCartMutation,
 } from "./cart-sync.queue";
 import {
   resolveCartLoadError,
@@ -58,13 +62,114 @@ function mutationErrorMessage(error: unknown): string {
   return typed.message?.trim() || "رفض DSH عملية السلة أو تعذر إكمالها.";
 }
 
+function isNetworkError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "kind" in error
+    && (error as { readonly kind?: unknown }).kind === "network";
+}
+
+function isConflictError(error: unknown): boolean {
+  const typed = typeof error === "object" && error !== null
+    ? error as { readonly status?: number; readonly code?: string }
+    : {};
+  return typed.status === 412 || typed.code === "VERSION_CONFLICT";
+}
+
+function isIdempotentReplay(error: unknown): boolean {
+  return typeof error === "object" && error !== null
+    && (error as { readonly code?: unknown }).code === "IDEMPOTENT_REPLAY";
+}
+
+function sameStringList(left: readonly string[] | undefined, right: readonly string[]): boolean {
+  return JSON.stringify(left ?? []) === JSON.stringify(right);
+}
+
+function cartReflectsMutation(
+  cart: DshCart | null,
+  mutation: QueuedCartMutation,
+): boolean {
+  const command = mutation.command;
+  if (!cart) return command.kind === "remove" || command.kind === "clear";
+  switch (command.kind) {
+    case "add": {
+      const item = cart.items.find((candidate) => candidate.masterProductId === command.masterProductId);
+      return Boolean(
+        item
+          && item.quantity === command.quantity
+          && sameStringList(item.options, command.options)
+          && (item.note ?? "") === command.note,
+      );
+    }
+    case "remove":
+      return !cart.items.some((item) => item.id === command.itemId);
+    case "clear":
+      return cart.items.length === 0;
+  }
+}
+
+type CartMutationReconciliation = "committed" | "not_applied" | "unknown";
+
+async function reconcileCartMutation(
+  mutation: QueuedCartMutation,
+): Promise<CartMutationReconciliation> {
+  const receipt = await getCartMutationReceipt(mutation.context.idempotencyKey);
+  if (receipt) return "committed";
+  const storeId = mutation.command.kind === "add" || mutation.command.kind === "clear"
+    ? mutation.command.storeId
+    : undefined;
+  try {
+    const cart = await fetchCart(storeId);
+    return cartReflectsMutation(cart, mutation) ? "committed" : "not_applied";
+  } catch (error) {
+    if (isNetworkError(error)) return "unknown";
+    throw error;
+  }
+}
+
+async function executeCartMutation(mutation: QueuedCartMutation): Promise<void> {
+  switch (mutation.command.kind) {
+    case "add":
+      await upsertCartItem({
+        storeId: mutation.command.storeId,
+        masterProductId: mutation.command.masterProductId,
+        quantity: mutation.command.quantity,
+        options: mutation.command.options,
+        note: mutation.command.note,
+        ...(mutation.command.fulfillmentMode ? { fulfillmentMode: mutation.command.fulfillmentMode } : {}),
+        ...(mutation.expectedVersion !== undefined ? { expectedVersion: mutation.expectedVersion } : {}),
+        mutation: mutation.context,
+      });
+      return;
+    case "remove":
+      await removeCartItem(
+        mutation.command.cartId,
+        mutation.command.itemId,
+        mutation.expectedVersion ?? 1,
+        mutation.context,
+      );
+      return;
+    case "clear":
+      await clearCart(
+        mutation.command.cartId,
+        mutation.command.storeId,
+        mutation.expectedVersion,
+        mutation.context,
+      );
+      return;
+  }
+}
+
 export function useCartController(
   storeId: string | undefined,
   authKind = "unauthenticated",
 ) {
+  const identity = useIdentitySession();
+  const actorId = authKind === "authenticated" && identity.state.kind === "authenticated"
+    ? identity.state.identity.subject
+    : "";
   const [state, setState] = useState<DshCartState>(loadingState());
   const [action, setAction] = useState<DshCartActionState>("idle");
   const [actionError, setActionError] = useState<string | null>(null);
+  const syncing = useRef(false);
 
   const load = useCallback(async () => {
     if (!storeId) {
@@ -83,80 +188,183 @@ export function useCartController(
   }, [storeId]);
 
   useEffect(() => {
-    if (shouldLoadCart(authKind, storeId)) void load();
-  }, [authKind, load, storeId]);
+    if (shouldLoadCart(authKind, storeId) && actorId) void load();
+  }, [actorId, authKind, load, storeId]);
 
   const syncQueue = useCallback(async () => {
-    const queue = getCartSyncQueue();
-    if (queue.length === 0) return;
+    if (!actorId || syncing.current) return;
+    syncing.current = true;
+    try {
+      const queue = await getCartSyncQueue(actorId);
+      if (queue.length === 0) return;
 
-    setAction("submitting");
-    let hasConflict = false;
-    let anySuccess = false;
+      let committed = false;
+      let unresolved = false;
+      let conflict = false;
+      let permanentFailure = false;
 
-    for (const q of queue) {
-      try {
-        const deviceId = getDeviceId();
-        const sessionId = getSessionId();
-
-        if (q.command.kind === "add") {
-          await upsertCartItem({
-            storeId: q.command.storeId,
-            masterProductId: q.command.masterProductId,
-            quantity: q.command.quantity,
-            options: q.command.options,
-            note: q.command.note,
-            idempotencyKey: q.id,
-            deviceId,
-            sessionId,
-            ...(q.expectedVersion !== undefined ? { expectedVersion: q.expectedVersion } : {})
-          });
-        } else if (q.command.kind === "remove") {
-          await removeCartItem(q.command.cartId, q.command.itemId, q.id, q.expectedVersion ?? 0, deviceId, sessionId);
-        } else if (q.command.kind === "clear") {
-          await clearCart(q.id, q.command.cartId, q.command.storeId, q.expectedVersion, deviceId, sessionId);
+      for (const mutation of queue) {
+        if (mutation.status === "conflict" || mutation.status === "permanent_failure") {
+          unresolved = true;
+          if (mutation.status === "conflict") conflict = true;
+          else permanentFailure = true;
+          if (mutation.lastError) setActionError(mutation.lastError);
+          continue;
         }
 
-        removeCartSyncCommand(q.id);
-        anySuccess = true;
-      } catch (error) {
-        const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
-        if (typed.kind === "network") {
-          setAction("offline_pending");
-          return;
+        try {
+          // Every persisted command is reconciled before a send. This also
+          // protects the crash window between durable enqueue and network send.
+          const beforeSend = await reconcileCartMutation(mutation);
+          if (beforeSend === "committed") {
+            await removeCartSyncCommand(actorId, mutation.id);
+            committed = true;
+            continue;
+          }
+          if (beforeSend === "unknown") {
+            await updateCartSyncCommand(actorId, mutation.id, "submitted_unknown", "لا يمكن تحديد نتيجة تعديل السلة حاليًا.");
+            unresolved = true;
+            continue;
+          }
+
+          setAction("submitting");
+          await executeCartMutation(mutation);
+          const afterSend = await reconcileCartMutation(mutation);
+          if (afterSend === "committed") {
+            await removeCartSyncCommand(actorId, mutation.id);
+            committed = true;
+          } else {
+            await updateCartSyncCommand(actorId, mutation.id, "submitted_unknown", "تم إرسال تعديل السلة دون readback مؤكد؛ لن نعيد إرساله قبل التحقق.");
+            unresolved = true;
+          }
+        } catch (error) {
+          unresolved = true;
+          if (isIdempotentReplay(error)) {
+            await updateCartSyncCommand(actorId, mutation.id, "submitted_unknown", "تم العثور على replay للخادم؛ نحتفظ بالهوية حتى يثبت receipt/readback.");
+            continue;
+          }
+          if (isConflictError(error)) {
+            await updateCartSyncCommand(actorId, mutation.id, "conflict", mutationErrorMessage(error));
+            conflict = true;
+            break;
+          }
+          if (isNetworkError(error)) {
+            await updateCartSyncCommand(actorId, mutation.id, "submitted_unknown", mutationErrorMessage(error));
+            continue;
+          }
+          const message = mutationErrorMessage(error);
+          await updateCartSyncCommand(actorId, mutation.id, "permanent_failure", message);
+          setActionError(message);
+          permanentFailure = true;
         }
-        if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
-          hasConflict = true;
-          setAction("conflict");
-          setActionError("تضارب في نسخة السلة. يرجى مراجعة التغييرات أو مزامنتها مع الخادم.");
-          break; // Stop processing further queued items on conflict
-        }
-        // For other errors, we just discard the bad queued command
-        removeCartSyncCommand(q.id);
       }
-    }
 
-    if (anySuccess && !hasConflict) {
-      await load();
-      setAction("success");
+      if (committed) await load();
+      if (conflict) setAction("conflict");
+      else if (unresolved) {
+        setAction(permanentFailure ? "error" : "offline_pending");
+      } else {
+        setAction("success");
+      }
+    } catch (error) {
+      setAction("error");
+      setActionError(mutationErrorMessage(error));
+    } finally {
+      syncing.current = false;
     }
-  }, [load]);
+  }, [actorId, load]);
 
   useEffect(() => {
-    const handleOnline = () => { void syncQueue(); };
-    if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
-      window.addEventListener("online", handleOnline);
-    }
-    // Try to sync on mount if online
-    if (typeof navigator !== "undefined" && "onLine" in navigator && navigator.onLine) {
-      void syncQueue();
-    }
-    return () => {
-      if (typeof window !== "undefined" && typeof window.removeEventListener === "function") {
-        window.removeEventListener("online", handleOnline);
+    void quarantineLegacyCartSyncQueue().catch((error: unknown) => {
+      setAction("error");
+      setActionError(mutationErrorMessage(error));
+    });
+    return subscribeBthwaniConnectivity((networkState) => {
+      if (networkState.isConnected === true && networkState.isInternetReachable !== false) {
+        void syncQueue();
       }
-    };
+    });
   }, [syncQueue]);
+
+  const submitCartMutation = useCallback(async (
+    command: CartMutationCommand,
+    expectedVersion: number | undefined,
+  ): Promise<boolean> => {
+    if (!actorId) {
+      setAction("error");
+      setActionError("سجّل الدخول بحساب العميل لتنفيذ عملية السلة.");
+      return false;
+    }
+    setAction("submitting");
+    setActionError(null);
+
+    let mutation: QueuedCartMutation | undefined;
+    try {
+      // Persist identity and intent before the first network attempt. A
+      // durable-write failure therefore prevents an unsafe mutation send.
+      mutation = await enqueueCartSyncCommand({ actorId, expectedVersion, command });
+      const beforeSend = await reconcileCartMutation(mutation);
+      if (beforeSend === "committed") {
+        await removeCartSyncCommand(actorId, mutation.id);
+        await load();
+        setAction("success");
+        return true;
+      }
+      if (beforeSend === "unknown") {
+        await updateCartSyncCommand(actorId, mutation.id, "submitted_unknown", "لا يمكن تحديد نتيجة تعديل السلة حاليًا.");
+        setAction("offline_pending");
+        setActionError("حُفظ التعديل وننتظر التحقق من الخادم قبل إعادة إرساله.");
+        return false;
+      }
+
+      await executeCartMutation(mutation);
+      const afterSend = await reconcileCartMutation(mutation);
+      if (afterSend === "committed") {
+        await removeCartSyncCommand(actorId, mutation.id);
+        await load();
+        setAction("success");
+        return true;
+      }
+
+      await updateCartSyncCommand(actorId, mutation.id, "submitted_unknown", "تم إرسال تعديل السلة دون readback مؤكد؛ لن نعيد إرساله قبل التحقق.");
+      setAction("offline_pending");
+      setActionError("تم الإرسال دون تأكيد القراءة المعتمدة؛ لن نكرر التعديل تلقائيًا.");
+      return false;
+    } catch (error) {
+      if (mutation) {
+        if (isIdempotentReplay(error)) {
+          try {
+            if (await reconcileCartMutation(mutation) === "committed") {
+              await removeCartSyncCommand(actorId, mutation.id);
+              await load();
+              setAction("success");
+              return true;
+            }
+          } catch {
+            // Keep the command durably queued when the replay proof itself is
+            // unavailable; the next connectivity cycle retries reconciliation.
+          }
+          await updateCartSyncCommand(actorId, mutation.id, "submitted_unknown", "تم رفض الإرسال كـ replay؛ ننتظر receipt/readback قبل أي إعادة تنفيذ.").catch(() => undefined);
+          setAction("offline_pending");
+          setActionError("تم العثور على تنفيذ سابق دون readback مؤكد؛ لن نكرر العملية تلقائيًا.");
+          return false;
+        }
+        const status = isConflictError(error)
+          ? "conflict"
+          : isNetworkError(error) ? "submitted_unknown" : "permanent_failure";
+        await updateCartSyncCommand(actorId, mutation.id, status, mutationErrorMessage(error)).catch(() => undefined);
+      }
+      if (isConflictError(error)) {
+        setAction("conflict");
+      } else if (isNetworkError(error)) {
+        setAction("offline_pending");
+      } else {
+        setAction("error");
+      }
+      setActionError(mutationErrorMessage(error));
+      return false;
+    }
+  }, [actorId, load]);
 
   const addItem = useCallback(
     async (input: {
@@ -169,92 +377,24 @@ export function useCartController(
       fulfillmentMode?: DshFulfillmentMode;
     }): Promise<boolean> => {
       if (!storeId) return false;
-      setAction("submitting");
-      setActionError(null);
-      const idempotencyKey = generateIdempotencyKey();
       const expectedVersion = state.kind === "success" ? state.cart.version : undefined;
-      const deviceId = getDeviceId();
-      const sessionId = getSessionId();
-
-      try {
-        await upsertCartItem({
-          storeId,
-          idempotencyKey,
-          deviceId,
-          sessionId,
-          ...(expectedVersion !== undefined ? { expectedVersion } : {}),
-          ...input,
-        });
-        setAction("success");
-        // The mutation response is the authoritative acceptance boundary. A
-        // slow/failing readback must not keep the product sheet in a spinner
-        // after DSH has already committed the item. The cart route performs a
-        // fresh canonical read when opened; this read keeps the current view
-        // convergent without changing the mutation result.
-        void load();
-        return true;
-      } catch (error) {
-        const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
-        if (typed.kind === "network") {
-          pushToCartSyncQueue({
-            id: idempotencyKey,
-            expectedVersion,
-            createdAt: Date.now(),
-            command: { kind: "add", storeId, masterProductId: input.masterProductId, quantity: input.quantity, options: input.options ? [...input.options] : [], note: input.note ?? "" }
-          });
-          setAction("offline_pending");
-          setActionError("لم تُضف السلة بعد. لا يوجد اتصال؛ أعد المحاولة عند عودة الشبكة.");
-          return false;
-        }
-        if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
-          setAction("conflict");
-          setActionError(mutationErrorMessage(error));
-          return false;
-        }
-        setAction("error");
-        setActionError(mutationErrorMessage(error));
-        return false;
-      }
-    },
-    [storeId, load, state],
-  );
+      return submitCartMutation({
+        kind: "add",
+        storeId,
+        masterProductId: input.masterProductId,
+        quantity: input.quantity,
+        options: input.options ? [...input.options] : [],
+        note: input.note ?? "",
+        ...(input.fulfillmentMode ? { fulfillmentMode: input.fulfillmentMode } : {}),
+      }, expectedVersion);
+    }, [state, storeId, submitCartMutation]);
 
   const removeItem = useCallback(
     async (cartId: string, itemId: string): Promise<boolean> => {
-      setAction("submitting");
-      setActionError(null);
-      const idempotencyKey = generateIdempotencyKey();
-      const expectedVersion = state.kind === "success" ? state.cart.version : 0;
-      const deviceId = getDeviceId();
-      const sessionId = getSessionId();
-      try {
-        await removeCartItem(cartId, itemId, idempotencyKey, expectedVersion, deviceId, sessionId);
-        await load();
-        setAction("success");
-        return true;
-      } catch (error) {
-        const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
-        if (typed.kind === "network") {
-          pushToCartSyncQueue({
-            id: idempotencyKey,
-            expectedVersion,
-            createdAt: Date.now(),
-            command: { kind: "remove", cartId, itemId }
-          });
-          setAction("offline_pending");
-          return true;
-        }
-        if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
-          setAction("conflict");
-          setActionError(mutationErrorMessage(error));
-          return false;
-        }
-        setAction("error");
-        setActionError(mutationErrorMessage(error));
-        return false;
-      }
+      if (state.kind !== "success") return false;
+      return submitCartMutation({ kind: "remove", cartId, itemId }, state.cart.version);
     },
-    [load, state],
+    [state, submitCartMutation],
   );
 
   const updateItemQuantity = useCallback(
@@ -281,88 +421,36 @@ export function useCartController(
         if (item && cart) return removeItem(cart.id, item.id);
         return false;
       }
-
-      setAction("submitting");
-      setActionError(null);
-      const idempotencyKey = generateIdempotencyKey();
-      const expectedVersion = cart ? cart.version : undefined;
-      const deviceId = getDeviceId();
-      const sessionId = getSessionId();
-      try {
-        await upsertCartItem({
-          storeId,
-          masterProductId,
-          productName,
-          quantity,
-          ...(options ? { options: [...options] } : {}),
-          ...(note !== undefined ? { note } : {}),
-          idempotencyKey,
-          deviceId,
-          sessionId,
-          ...(expectedVersion !== undefined ? { expectedVersion } : {}),
-          ...(priceReference !== undefined ? { priceReference } : {}),
-        });
-        await load();
-        setAction("success");
-        return true;
-      } catch (error) {
-        const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
-        if (typed.kind === "network") {
-          pushToCartSyncQueue({
-            id: idempotencyKey,
-            expectedVersion,
-            createdAt: Date.now(),
-            command: { kind: "add", storeId, masterProductId, quantity, options: options ? [...options] : [], note: note ?? "" }
-          });
-          setAction("offline_pending");
-          return true;
-        }
-        if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
-          setAction("conflict");
-          setActionError(mutationErrorMessage(error));
-          return false;
-        }
-        setAction("error");
-        setActionError(mutationErrorMessage(error));
-        return false;
-      }
-    },
-    [storeId, state, load, removeItem],
-  );
+      return submitCartMutation({
+        kind: "add",
+        storeId,
+        masterProductId,
+        quantity,
+        options: options ? [...options] : [],
+        note: note ?? "",
+        ...(cart?.fulfillmentMode ? { fulfillmentMode: cart.fulfillmentMode } : {}),
+      }, cart?.version);
+    }, [removeItem, state, storeId, submitCartMutation]);
 
   const clear = useCallback(async (cart: DshCart): Promise<boolean> => {
-    setAction("submitting");
-    setActionError(null);
-    const idempotencyKey = generateIdempotencyKey();
-    const deviceId = getDeviceId();
-    const sessionId = getSessionId();
-    try {
-      await clearCart(idempotencyKey, cart.id, undefined, cart.version, deviceId, sessionId);
-      await load();
-      setAction("success");
-      return true;
-    } catch (error) {
-      const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
-      if (typed.kind === "network") {
-        pushToCartSyncQueue({
-          id: idempotencyKey,
-          expectedVersion: cart.version,
-          createdAt: Date.now(),
-          command: { kind: "clear", cartId: cart.id, storeId: cart.storeId }
-        });
-        setAction("offline_pending");
-        return true;
-      }
-      if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
-        setAction("conflict");
-        setActionError(mutationErrorMessage(error));
-        return false;
-      }
-      setAction("error");
-      setActionError(mutationErrorMessage(error));
-      return false;
-    }
+    return submitCartMutation({ kind: "clear", cartId: cart.id, storeId: cart.storeId }, cart.version);
+  }, [submitCartMutation]);
+
+  const reviewConflict = useCallback(async () => {
+    await load();
+    // Refresh the canonical cart without hiding the unresolved local command.
+    // The user must make an explicit keep-server decision before the durable
+    // queue can be discarded.
+    setAction("conflict");
   }, [load]);
+
+  const discardOfflineQueue = useCallback(async (reason: string) => {
+    if (!actorId) return;
+    await discardCartSyncQueue(actorId, reason);
+    await load();
+    setAction("idle");
+    setActionError(null);
+  }, [actorId, load]);
 
   return {
     state,
@@ -374,7 +462,8 @@ export function useCartController(
     removeItem,
     clear,
     syncQueue,
-    clearOfflineQueue: () => clearCartSyncQueue(),
+    reviewConflict,
+    discardOfflineQueue,
   };
 }
 

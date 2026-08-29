@@ -1,5 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import type { CartMutationContext } from "./cart-sync.queue";
 import type {
   DshCart,
   DshCartItem,
@@ -34,15 +35,11 @@ export async function upsertCartItem(input: {
   readonly options?: readonly string[];
   readonly note?: string;
   readonly expectedVersion?: number;
-  readonly idempotencyKey: string;
-  readonly deviceId: string;
-  readonly sessionId: string;
+  readonly mutation: CartMutationContext;
 }): Promise<{ cartId: string; item: DshCartItem }> {
   return request<{ cartId: string; item: DshCartItem }>("/dsh/client/cart/items", {
     method: "POST",
-    idempotencyKey: input.idempotencyKey,
-    deviceId: input.deviceId,
-    sessionId: input.sessionId,
+    ...input.mutation,
     ...(input.expectedVersion !== undefined ? { expectedVersion: input.expectedVersion } : {}),
     body: {
       storeId: input.storeId,
@@ -55,31 +52,61 @@ export async function upsertCartItem(input: {
   });
 }
 
-export async function removeCartItem(cartId: string, itemId: string, idempotencyKey: string, expectedVersion: number, deviceId: string, sessionId: string): Promise<void> {
+export async function removeCartItem(
+  cartId: string,
+  itemId: string,
+  expectedVersion: number,
+  mutation: CartMutationContext,
+): Promise<void> {
   await request(
     `/dsh/client/cart/items/${encodeURIComponent(itemId)}?cartId=${encodeURIComponent(cartId)}`,
     {
       method: "DELETE",
-      idempotencyKey,
+      ...mutation,
       expectedVersion,
-      deviceId,
-      sessionId,
     },
   );
 }
 
-export async function clearCart(idempotencyKey: string, cartId: string | undefined, storeId: string | undefined, expectedVersion: number | undefined, deviceId: string, sessionId: string): Promise<void> {
+export async function clearCart(
+  cartId: string | undefined,
+  storeId: string | undefined,
+  expectedVersion: number | undefined,
+  mutation: CartMutationContext,
+): Promise<void> {
   const params = new URLSearchParams();
   if (cartId) params.set("cartId", cartId);
   if (storeId) params.set("storeId", storeId);
 
   await request(`/dsh/client/cart?${params.toString()}`, {
     method: "DELETE",
-    idempotencyKey,
-    deviceId,
-    sessionId,
+    ...mutation,
     ...(expectedVersion !== undefined ? { expectedVersion } : {}),
   });
+}
+
+export type DshCartMutationReceipt = {
+  readonly idempotencyKey: string;
+  readonly cartId: string;
+  readonly version: number;
+  readonly createdAt: string;
+};
+
+export async function getCartMutationReceipt(
+  idempotencyKey: string,
+): Promise<DshCartMutationReceipt | null> {
+  try {
+    const response = await request<{ mutation: DshCartMutationReceipt }>(
+      `/dsh/client/cart/mutations/${encodeURIComponent(idempotencyKey)}`,
+    );
+    return response.mutation;
+  } catch (error) {
+    const typed = typeof error === "object" && error !== null
+      ? error as { readonly status?: number }
+      : {};
+    if (typed.status === 404) return null;
+    throw error;
+  }
 }
 
 export async function checkServiceability(

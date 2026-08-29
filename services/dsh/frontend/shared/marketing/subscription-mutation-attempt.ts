@@ -14,6 +14,15 @@ export type SubscriptionMutationContext = {
   readonly correlationId: string;
 };
 
+export class SubscriptionMutationAttemptConflictError extends Error {
+  readonly code = "SUBSCRIPTION_MUTATION_ATTEMPT_CONFLICT";
+
+  constructor(operation: SubscriptionMutationOperation, subject: string) {
+    super(`an unresolved ${operation} attempt already exists for ${subject}`);
+    this.name = "SubscriptionMutationAttemptConflictError";
+  }
+}
+
 type StoredAttempt = {
   readonly fingerprint: string;
   readonly context: SubscriptionMutationContext;
@@ -50,23 +59,28 @@ function latestPurchaseKey(scope: StoredAttempt["scope"]): string {
   return `${PREFIX}${encode(scope.actorId)}/${encode(scope.installationId)}/${LATEST_PURCHASE_SUFFIX}`;
 }
 
-function actorKeyPrefix(scope: { readonly actorId: string; readonly installationId: string }): string {
-  return `${PREFIX}${encode(scope.actorId)}/${encode(scope.installationId)}/`;
-}
-
 function parseStored(raw: string | null): StoredAttempt | null {
   if (!raw) return null;
   try {
     const value = JSON.parse(raw) as Partial<StoredAttempt>;
+    const validOperation = value.operation === "purchase"
+      || value.operation === "activate"
+      || value.operation === "renew"
+      || value.operation === "cancel";
+    const validPaymentMethod = value.paymentMethod === undefined
+      || value.paymentMethod === "official_wallet"
+      || value.paymentMethod === "wallet"
+      || value.paymentMethod === "mixed";
     if (
       typeof value.fingerprint === "string"
-      && typeof value.operation === "string"
+      && validOperation
       && typeof value.subject === "string"
       && typeof value.context?.idempotencyKey === "string"
       && typeof value.context?.correlationId === "string"
       && typeof value.scope?.actorId === "string"
       && typeof value.scope?.installationId === "string"
       && typeof value.scope?.entityId === "string"
+      && validPaymentMethod
     ) {
       return value as StoredAttempt;
     }
@@ -74,6 +88,33 @@ function parseStored(raw: string | null): StoredAttempt | null {
     return null;
   }
   return null;
+}
+
+async function quarantineInvalidAttempt(key: string, raw: string): Promise<never> {
+  await bthwaniDurableStorage.setItem(
+    `${key}:quarantine:${Date.now()}-${secureRandomId()}`,
+    raw,
+  );
+  await bthwaniDurableStorage.removeItem(key);
+  throw new Error(`subscription mutation attempt is corrupt and was preserved for recovery: ${key}`);
+}
+
+async function readStoredAttempt(
+  key: string,
+  expectedScope: { readonly actorId: string; readonly installationId: string; readonly entityId?: string },
+): Promise<StoredAttempt | null> {
+  const raw = await bthwaniDurableStorage.getItem(key);
+  if (!raw) return null;
+  const parsed = parseStored(raw);
+  if (
+    !parsed
+    || parsed.scope.actorId !== expectedScope.actorId
+    || parsed.scope.installationId !== expectedScope.installationId
+    || (expectedScope.entityId !== undefined && parsed.scope.entityId !== expectedScope.entityId)
+  ) {
+    return quarantineInvalidAttempt(key, raw);
+  }
+  return parsed;
 }
 
 function requireActorId(actorId: string): string {
@@ -90,7 +131,10 @@ async function resolveScope(actorId: string, entityId: string) {
 
 export async function getLatestSubscriptionPurchaseAttempt(actorId: string): Promise<StoredAttempt | null> {
   const scope = await resolveScope(actorId, "subscription-purchase-latest");
-  return parseStored(await bthwaniDurableStorage.getItem(latestPurchaseKey(scope)));
+  return readStoredAttempt(latestPurchaseKey(scope), {
+    actorId: scope.actorId,
+    installationId: scope.installationId,
+  });
 }
 
 export async function getOrCreateSubscriptionMutationAttempt(input: {
@@ -103,25 +147,10 @@ export async function getOrCreateSubscriptionMutationAttempt(input: {
   const entityId = `${input.operation}:${input.subject}`;
   const scope = await resolveScope(input.actorId, entityId);
   const key = storageKey(scope, input.operation, input.subject);
-  const existingRaw = await bthwaniDurableStorage.getItem(key);
-  if (existingRaw) {
-    const existing = parseStored(existingRaw);
-    if (existing?.fingerprint === input.fingerprint) {
-      if (existing.scope.actorId !== scope.actorId) {
-        throw new MutationIdentityScopeError(
-          "actor_mismatch",
-          `subscription attempt belongs to a different actor (${existing.scope.actorId}); refusing to reuse it for ${scope.actorId}`,
-        );
-      }
-      if (existing.scope.installationId !== scope.installationId) {
-        throw new MutationIdentityScopeError(
-          "installation_mismatch",
-          `subscription attempt belongs to a different installation (${existing.scope.installationId}); refusing to reuse it for ${scope.installationId}`,
-        );
-      }
-      if (existing.scope.entityId === entityId) return existing;
-      await bthwaniDurableStorage.removeItem(key);
-    }
+  const existing = await readStoredAttempt(key, scope);
+  if (existing) {
+    if (existing.fingerprint === input.fingerprint) return existing;
+    throw new SubscriptionMutationAttemptConflictError(input.operation, input.subject);
   }
 
   const part = nextPart();
@@ -151,19 +180,15 @@ export async function clearSubscriptionMutationAttempt(input: {
   const entityId = `${input.operation}:${input.subject}`;
   const scope = await resolveScope(input.actorId, entityId);
   const key = storageKey(scope, input.operation, input.subject);
-  const existing = parseStored(await bthwaniDurableStorage.getItem(key));
+  const existing = await readStoredAttempt(key, scope);
   if (!existing || existing.fingerprint !== input.fingerprint) return;
   await bthwaniDurableStorage.removeItem(key);
   if (input.operation === "purchase") {
     const latestKey = latestPurchaseKey(scope);
-    const latest = parseStored(await bthwaniDurableStorage.getItem(latestKey));
+    const latest = await readStoredAttempt(latestKey, {
+      actorId: scope.actorId,
+      installationId: scope.installationId,
+    });
     if (latest?.fingerprint === input.fingerprint) await bthwaniDurableStorage.removeItem(latestKey);
   }
-}
-
-export async function clearSubscriptionMutationAttempts(actorId: string): Promise<void> {
-  const scope = await resolveScope(actorId, "subscription-mutation-cleanup");
-  const prefix = actorKeyPrefix(scope);
-  const keys = (await bthwaniDurableStorage.getAllKeys()).filter((key) => key.startsWith(prefix));
-  for (const key of keys) await bthwaniDurableStorage.removeItem(key);
 }
