@@ -103,6 +103,25 @@ test("partner onboarding uses the governed owner and idempotent creation contrac
   assert.doesNotMatch(dshPartnerOnboardingSmoke, /\n\s*ownerName\s*=/);
 });
 
+test("partner onboarding propagates distinct idempotency keys to required mutations", () => {
+  assert.match(
+    dshPartnerOnboardingSmoke,
+    /\$visitHeaders\s*=\s*@\{[\s\S]*?\$visitHeaders\["Idempotency-Key"\][\s\S]*?-Headers \$visitHeaders/,
+  );
+  assert.match(
+    dshPartnerOnboardingSmoke,
+    /\$documentHeaders\s*=\s*@\{[\s\S]*?\$documentHeaders\["Idempotency-Key"\][\s\S]*?-Headers \$documentHeaders/,
+  );
+  assert.match(
+    dshPartnerOnboardingSmoke,
+    /\$submitHeaders\s*=\s*@\{[\s\S]*?\$submitHeaders\["Idempotency-Key"\][\s\S]*?-Headers \$submitHeaders/,
+  );
+  assert.match(
+    dshPartnerOnboardingSmoke,
+    /\$reviewHeaders\s*=\s*@\{[\s\S]*?\$reviewHeaders\["Idempotency-Key"\][\s\S]*?-Headers \$reviewHeaders/,
+  );
+});
+
 test("partner onboarding closes the canonical store publication journey", () => {
   assert.match(dshRuntimeDispatcher, /DSH partner onboarding smoke[\s\S]*StatePath = \$statePath/);
   assert.match(dshRuntimeDispatcher, /\[switch\]\$SeedWlt[\s\S]*if \(\$SeedWlt\) \{ \$seedProfiles \+= "wlt" \}[\s\S]*EngineAction "seed" -EngineProfiles \(\$seedProfiles -join ","\)/);
