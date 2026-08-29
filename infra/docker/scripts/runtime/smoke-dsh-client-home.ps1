@@ -51,6 +51,42 @@ if ($WltEnabled) {
   } | ConvertTo-Json
   $cartItem = Invoke-RestMethod "http://localhost:18080/dsh/client/cart/items" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $cartBody -TimeoutSec 10
   if ([string]::IsNullOrWhiteSpace($cartItem.cartId)) { throw "cart item did not return cartId" }
+  $clientReadHeaders = @{ Authorization = "Bearer $clientToken" }
+  $cartReadback = Invoke-RestMethod "http://localhost:18080/dsh/client/cart?storeId=store-test-grocery" -Headers $clientReadHeaders -TimeoutSec 10
+  if ($null -eq $cartReadback.cart -or $cartReadback.cart.id -ne $cartItem.cartId) { throw "client cart canonical readback did not match the committed cart mutation" }
+  $cartVersion = [int]$cartReadback.cart.version
+  if ($cartVersion -lt 1) { throw "cart item did not return a positive canonical cart version" }
+
+  $clientStore = Invoke-RestMethod "http://localhost:18080/dsh/stores/store-test-grocery" -TimeoutSec 10
+  $serviceAreaCode = [string]$clientStore.store.serviceAreaCode
+  $storeLatitude = [double]$clientStore.store.latitude
+  $storeLongitude = [double]$clientStore.store.longitude
+  if ([string]::IsNullOrWhiteSpace($serviceAreaCode)) { throw "client checkout store readback did not return serviceAreaCode" }
+
+  $addressList = Invoke-RestMethod "http://localhost:18080/dsh/client/addresses" -Headers $clientReadHeaders -TimeoutSec 10
+  $deliveryAddress = @($addressList.addresses | Where-Object { $_.serviceAreaCode -eq $serviceAreaCode } | Select-Object -First 1)
+  if ($deliveryAddress.Count -eq 0) {
+    $addressHeaders = @{
+      Authorization = "Bearer $clientToken"
+      "X-Correlation-ID" = "smoke-checkout-address-$checkoutAttempt"
+      "Idempotency-Key" = "smoke-checkout-address-$checkoutAttempt"
+    }
+    $addressBody = @{
+      label = "runtime-checkout"
+      recipientName = "Runtime Smoke Client"
+      phoneE164 = "+967711111111"
+      addressLine = "حدة، عنوان فحص checkout"
+      serviceAreaCode = $serviceAreaCode
+      latitude = $storeLatitude
+      longitude = $storeLongitude
+      makeDefault = $true
+    } | ConvertTo-Json
+    $createdAddress = Invoke-RestMethod "http://localhost:18080/dsh/client/addresses" -Method Post -Headers $addressHeaders -ContentType "application/json" -Body $addressBody -TimeoutSec 10
+    $deliveryAddress = @($createdAddress.address)
+  }
+  $deliveryAddressId = [string]$deliveryAddress[0].id
+  if ([string]::IsNullOrWhiteSpace($deliveryAddressId)) { throw "client checkout did not resolve a canonical delivery address" }
+
   $checkoutHeaders = @{}
   foreach ($key in $clientHeaders.Keys) {
     $checkoutHeaders[$key] = $clientHeaders[$key]
@@ -60,9 +96,10 @@ if ($WltEnabled) {
   $checkoutBody = @{
     cartId = $cartItem.cartId
     storeId = "store-test-grocery"
+    expectedCartVersion = $cartVersion
     fulfillmentMode = "bthwani_delivery"
     paymentMethod = "cod"
-    deliveryAddress = "runtime smoke checkout address"
+    deliveryAddressId = $deliveryAddressId
     note = "runtime Checkout & WLT Handoff smoke"
   } | ConvertTo-Json
   $checkout = Invoke-RestMethod "http://localhost:18080/dsh/client/checkout-intents" -Method Post -Headers $checkoutHeaders -ContentType "application/json" -Body $checkoutBody -TimeoutSec 10
