@@ -14,14 +14,6 @@ export type CaptainSupportRoute =
   | 'chat-read-ack'
   | 'chat-send';
 
-export type CompactOrderChatMessage = {
-  id: string;
-  sender: string;
-  text: string;
-  time: string;
-  side: 'start' | 'end';
-};
-
 export type CaptainAvailabilityMeta = {
   label: string;
   description: string;

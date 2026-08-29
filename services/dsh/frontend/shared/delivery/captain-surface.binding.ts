@@ -3,7 +3,6 @@ import { useDeliveryLifecycle } from './delivery.lifecycle';
 import { useCaptainDeliveryActions } from './delivery.actions';
 import { usePodUploadFlow } from '../media/pod/pod-upload-flow';
 import { useCaptainOrderModel } from '../orders/captain-order.model';
-import { useCaptainChatModel } from '../chat';
 import { useCaptainAvailabilityModel } from './captain-availability.model';
 import { useCaptainGpsModel } from './captain-gps.model';
 import { useCaptainProfileModel } from './captain-profile.model';
@@ -29,7 +28,6 @@ export function useDshCaptainSurfaceBinding(
   const lifecycle = useDeliveryLifecycle();
   const podUpload = usePodUploadFlow();
   const orderModel = useCaptainOrderModel();
-  const chatModel = useCaptainChatModel();
   const inboxModel = useCaptainInboxModel(captainRuntimeId);
 
   const operationalAssignmentId = inboxModel.operationalAssignment?.id || '';
@@ -58,10 +56,8 @@ export function useDshCaptainSurfaceBinding(
 
   const resetOrderState = React.useCallback(() => {
     orderModel.setActiveOrderExpanded(false);
-    chatModel.setActiveOrderDraft('');
-    chatModel.setActiveOrderMessages([]);
     podUpload.resetPodFields();
-  }, [orderModel, chatModel, podUpload]);
+  }, [orderModel, podUpload]);
 
   const deliveryActions = useCaptainDeliveryActions({
     captainRuntimeId,
@@ -92,7 +88,6 @@ export function useDshCaptainSurfaceBinding(
     lifecycle,
     podUpload,
     orderModel,
-    chatModel,
     serviceModeModel,
     deliveryActions,
     pushLocation,

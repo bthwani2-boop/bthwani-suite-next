@@ -20,7 +20,6 @@ import type { useDeliveryLifecycle } from './delivery.lifecycle';
 import type { useCaptainDeliveryActions } from './delivery.actions';
 import type { usePodUploadFlow } from '../media/pod/pod-upload-flow';
 import type { useCaptainOrderModel } from '../orders/captain-order.model';
-import type { useCaptainChatModel } from '../chat';
 import type { useCaptainServiceModeModel } from './captain-service-mode.model';
 import type { useCaptainInboxModel } from './captain-inbox.model';
 
@@ -40,7 +39,6 @@ export type DshCaptainSurfaceSharedProps = {
   lifecycle: ReturnType<typeof useDeliveryLifecycle>;
   podUpload: ReturnType<typeof usePodUploadFlow>;
   orderModel: ReturnType<typeof useCaptainOrderModel>;
-  chatModel: ReturnType<typeof useCaptainChatModel>;
   serviceModeModel: ReturnType<typeof useCaptainServiceModeModel>;
   deliveryActions: ReturnType<typeof useCaptainDeliveryActions>;
   pushLocation: ReturnType<typeof useCaptainOrderRuntime>['pushLocation'];
@@ -57,7 +55,6 @@ export function useDshCaptainSurfaceModel({
   lifecycle,
   podUpload,
   orderModel,
-  chatModel,
   serviceModeModel,
   deliveryActions,
   pushLocation,
@@ -98,8 +95,6 @@ export function useDshCaptainSurfaceModel({
     gpsStatus: gpsModel.gpsStatus,
     activeOrderExpanded: orderModel.activeOrderExpanded,
     captainAppMode: profileModel.captainAppMode,
-    activeOrderDraft: chatModel.activeOrderDraft,
-    activeOrderMessages: chatModel.activeOrderMessages,
     captainPodState: podUpload.captainPodState,
     captainPodPhotoUri: podUpload.captainPodPhotoUri,
     isDeclineSheetVisible: lifecycle.isDeclineSheetVisible,
@@ -128,8 +123,6 @@ export function useDshCaptainSurfaceModel({
     setDeclineOrderId: lifecycle.setDeclineOrderId,
     setCaptainPodPhotoUri: podUpload.setCaptainPodPhotoUri,
     setCaptainPodState: podUpload.setCaptainPodState,
-    sendQuickMessage: chatModel.sendQuickMessage,
-    setActiveOrderDraft: chatModel.setActiveOrderDraft,
     handleSelectServiceType: serviceModeModel.handleSelectServiceType,
     toggleStoreCourierMode: serviceModeModel.toggleStoreCourierMode,
     pushLocation,

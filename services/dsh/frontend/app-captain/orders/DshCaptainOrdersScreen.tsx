@@ -4,7 +4,6 @@ import { DshOperationScreen } from '../DshOperationScreen';
 import { OrderInboxSection } from './OrderInboxSection';
 import { OrderDetailSection } from './OrderDetailSection';
 import { CaptainOrderSupportConversationScreen } from './CaptainOrderSupportConversationScreen';
-import { OrderBellSection } from './OrderBellSection';
 import { OrderActionSection } from './OrderActionSection';
 import type {
   DshCaptainOrderAction,

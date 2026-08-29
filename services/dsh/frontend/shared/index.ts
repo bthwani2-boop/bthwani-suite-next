@@ -3,7 +3,6 @@ export * from './analytics';
 export * from './bell';
 export * as cart from './cart';
 export * from './catalog';
-export * from './chat';
 export * from './checkout';
 export * as clientProfile from './client-profile';
 

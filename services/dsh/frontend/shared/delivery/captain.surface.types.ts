@@ -1,4 +1,4 @@
-import type { CaptainSupportRoute, CompactOrderChatMessage, CaptainAvailabilityStatus, CaptainGpsStatus, CaptainAppMode, CaptainServiceType, CaptainAvailabilityMeta } from './captain.contract';
+import type { CaptainSupportRoute, CaptainAvailabilityStatus, CaptainGpsStatus, CaptainAppMode, CaptainServiceType, CaptainAvailabilityMeta } from './captain.contract';
 import type { DshCaptainRoute } from './captain.contract';
 import type { DshDeliveryStatus, DshDispatchAssignmentSource } from '../dispatch';
 import type {
@@ -37,8 +37,6 @@ export type DshCaptainSurfaceState = {
   gpsStatus: CaptainGpsStatus;
   activeOrderExpanded: boolean;
   captainAppMode: CaptainAppMode;
-  activeOrderDraft: string;
-  activeOrderMessages: CompactOrderChatMessage[];
   captainPodState: CaptainPodState;
   captainPodPhotoUri: string | undefined;
   isDeclineSheetVisible: boolean;
