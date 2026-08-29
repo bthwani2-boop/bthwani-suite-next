@@ -11,7 +11,7 @@ import (
 // ── Operator: domains (L1) ───────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListCatalogDomains(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyRead); !ok {
 		return
 	}
 	domains, err := centralcatalog.ListDomains(r.Context(), s.db)
@@ -41,7 +41,7 @@ func (s *protectedStoreServer) handleCreateCatalogDomain(w http.ResponseWriter, 
 // ── Operator: nodes (L2/L3/L4) ──────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListCatalogNodes(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyRead); !ok {
 		return
 	}
 	nodes, err := centralcatalog.ListNodes(r.Context(), s.db, r.URL.Query().Get("domainId"), r.URL.Query().Get("parentId"))
@@ -170,6 +170,11 @@ func (s *protectedStoreServer) handleListMasterProducts(w http.ResponseWriter, r
 	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
 	if !ok {
 		return
+	}
+	if actor.Role == "operator" {
+		if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductRead); !ok {
+			return
+		}
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))

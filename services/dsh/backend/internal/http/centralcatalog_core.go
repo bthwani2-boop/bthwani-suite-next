@@ -15,7 +15,9 @@ import (
 // from Identity's durable RBAC registry; role membership alone is never a
 // fallback authorization path.
 const (
+	CatalogPermissionTaxonomyRead            = "catalog.taxonomy.read"
 	CatalogPermissionTaxonomyManage          = "catalog.taxonomy.manage"
+	CatalogPermissionProductRead             = "catalog.product.read"
 	CatalogPermissionProductManage           = "catalog.product.manage"
 	CatalogPermissionProposalReview          = "catalog.proposal.review"
 	CatalogPermissionProposalMarketingReview = "catalog.proposal.marketing_review"

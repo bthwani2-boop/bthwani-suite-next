@@ -16,8 +16,14 @@ const (
 )
 
 func (s *protectedStoreServer) handleListCatalogAttributes(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
+	if !ok {
 		return
+	}
+	if actor.Role == "operator" {
+		if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeRead); !ok {
+			return
+		}
 	}
 	items, err := centralcatalog.ListCatalogAttributes(r.Context(), s.db)
 	if err != nil {
@@ -44,8 +50,14 @@ func (s *protectedStoreServer) handleCreateCatalogAttribute(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleListCatalogAttributeOptions(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
+	if !ok {
 		return
+	}
+	if actor.Role == "operator" {
+		if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeRead); !ok {
+			return
+		}
 	}
 	items, err := centralcatalog.ListCatalogAttributeOptions(r.Context(), s.db, r.PathValue("attributeId"))
 	if err != nil {
@@ -94,6 +106,11 @@ func (s *protectedStoreServer) handleListMasterProductAttributeValues(w http.Res
 	if !ok {
 		return
 	}
+	if actor.Role == "operator" {
+		if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeRead); !ok {
+			return
+		}
+	}
 	product, err := centralcatalog.GetMasterProduct(r.Context(), s.db, r.PathValue("productId"))
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
@@ -133,6 +150,11 @@ func (s *protectedStoreServer) handleListMasterProductRelationships(w http.Respo
 	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
 	if !ok {
 		return
+	}
+	if actor.Role == "operator" {
+		if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAttributeRead); !ok {
+			return
+		}
 	}
 	product, err := centralcatalog.GetMasterProduct(r.Context(), s.db, r.PathValue("productId"))
 	if err != nil {
