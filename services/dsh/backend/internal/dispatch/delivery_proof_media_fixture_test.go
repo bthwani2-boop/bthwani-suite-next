@@ -16,6 +16,7 @@ func seedCaptainDeliveryProofMedia(
 	mediaRef string,
 	partnerID string,
 	storeID string,
+	specialRequestID ...string,
 ) {
 	t.Helper()
 
@@ -32,13 +33,17 @@ func seedCaptainDeliveryProofMedia(
 	}
 
 	storageKey := "tests/delivery-proof/" + uuid.NewString()
+	specialRequestIDValue := ""
+	if len(specialRequestID) > 0 {
+		specialRequestIDValue = specialRequestID[0]
+	}
 	if _, err := db.Exec(`
 		INSERT INTO dsh_media_refs (
 			media_ref, storage_key, owner_actor_id, owner_actor_role,
-			partner_id, store_id, purpose, content_type, original_filename
+			partner_id, store_id, purpose, content_type, original_filename, special_request_id
 		)
-		VALUES ($1, $2, $3, 'captain', $4, NULLIF($5, ''), 'delivery_proof', 'image/jpeg', 'proof.jpg')`,
-		mediaRef, storageKey, captainID, partnerID, storeID); err != nil {
+		VALUES ($1, $2, $3, 'captain', $4, NULLIF($5, ''), 'delivery_proof', 'image/jpeg', 'proof.jpg', NULLIF($6, '')::uuid)`,
+		mediaRef, storageKey, captainID, partnerID, storeID, specialRequestIDValue); err != nil {
 		t.Fatalf("seed captain delivery-proof media: %v", err)
 	}
 

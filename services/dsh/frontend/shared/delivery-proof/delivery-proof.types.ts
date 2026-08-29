@@ -17,8 +17,9 @@ export type DshDeliveryPinResponse = {
 
 export type DshDeliveryProof = {
   readonly id: string;
-  readonly assignmentId: string;
-  readonly orderId: string;
+	readonly assignmentId: string;
+	readonly orderId: string;
+	readonly specialRequestId?: string | null;
   readonly captainId: string;
   readonly method: DshDeliveryProofMethod;
   readonly status: DshDeliveryProofStatus;

@@ -75,8 +75,11 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 		if evidenceKind == "signature" {
 			purpose = "delivery_signature"
 		}
-		var orderID string
-		if err := s.db.QueryRowContext(r.Context(), `SELECT order_id FROM dsh_assignments WHERE id = $1::uuid AND operator_context_id = $2`, assignmentID, actor.OperatorContextID).Scan(&orderID); err != nil {
+		var orderID, specialRequestID string
+		if err := s.db.QueryRowContext(r.Context(), `
+			SELECT COALESCE(order_id::text, ''), COALESCE(special_request_id::text, '')
+			FROM dsh_assignments
+			WHERE id = $1::uuid AND operator_context_id = $2`, assignmentID, actor.OperatorContextID).Scan(&orderID, &specialRequestID); err != nil {
 			s.removeDeliveryProofObject(r, "", uploaded.storageKey)
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "assignment not found")
 			return
@@ -84,9 +87,9 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 
 		if err := s.db.QueryRowContext(r.Context(), `
 			INSERT INTO dsh_media_refs
-				(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename, order_id)
-			VALUES ($1,$2,'captain',$3,$4,$5,$6::uuid)
-			RETURNING media_ref`, uploaded.storageKey, actor.ID, purpose, uploaded.contentType, uploaded.fileName, orderID).Scan(&uploadedMediaRef); err != nil {
+				(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename, order_id, special_request_id)
+			VALUES ($1,$2,'captain',$3,$4,$5,NULLIF($6,'')::uuid,NULLIF($7,'')::uuid)
+			RETURNING media_ref`, uploaded.storageKey, actor.ID, purpose, uploaded.contentType, uploaded.fileName, orderID, specialRequestID).Scan(&uploadedMediaRef); err != nil {
 			s.removeDeliveryProofObject(r, "", uploaded.storageKey)
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register delivery proof")
 			return
@@ -281,21 +284,22 @@ func (s *protectedStoreServer) handleReviewOperatorDeliveryProof(w http.Response
 
 func marshalDeliveryProof(proof *dispatch.DeliveryProof, includeSensitive bool) map[string]any {
 	out := map[string]any{
-		"id":           proof.ID,
-		"assignmentId": proof.AssignmentID,
-		"orderId":      proof.OrderID,
-		"captainId":    proof.CaptainID,
-		"method":       string(proof.Method),
-		"status":       string(proof.Status),
-		"hasPhoto":     proof.PhotoMediaRef != "",
-		"hasSignature": proof.SignatureMediaRef != "",
-		"capturedAt":   proof.CapturedAt,
-		"submittedAt":  proof.SubmittedAt,
-		"reviewedAt":   proof.ReviewedAt,
-		"reviewReason": proof.ReviewReason,
-		"acceptedAt":   proof.AcceptedAt,
-		"rejectedAt":   proof.RejectedAt,
-		"version":      proof.Version,
+		"id":               proof.ID,
+		"assignmentId":     proof.AssignmentID,
+		"orderId":          proof.OrderID,
+		"specialRequestId": proof.SpecialRequestID,
+		"captainId":        proof.CaptainID,
+		"method":           string(proof.Method),
+		"status":           string(proof.Status),
+		"hasPhoto":         proof.PhotoMediaRef != "",
+		"hasSignature":     proof.SignatureMediaRef != "",
+		"capturedAt":       proof.CapturedAt,
+		"submittedAt":      proof.SubmittedAt,
+		"reviewedAt":       proof.ReviewedAt,
+		"reviewReason":     proof.ReviewReason,
+		"acceptedAt":       proof.AcceptedAt,
+		"rejectedAt":       proof.RejectedAt,
+		"version":          proof.Version,
 	}
 	if includeSensitive {
 		out["photoMediaRef"] = proof.PhotoMediaRef

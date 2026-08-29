@@ -173,7 +173,6 @@ components:
       required:
       - id
       - assignmentId
-      - orderId
       - captainId
       - method
       - status
@@ -190,7 +189,14 @@ components:
           type: string
           format: uuid
         orderId:
-          type: string
+          type:
+          - string
+          - 'null'
+          format: uuid
+        specialRequestId:
+          type:
+          - string
+          - 'null'
           format: uuid
         captainId:
           type: string

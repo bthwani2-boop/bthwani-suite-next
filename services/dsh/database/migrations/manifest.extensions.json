@@ -415,6 +415,13 @@
       "sha256": "3450d0136a605cd2cfcb99e9f6dd1abbf3b5a74b8e6e014e0a318c4c7a02f396",
       "historicalPrefix": "1058",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 300,
+      "file": "dsh-1059_delivery_proof_special_request_source.sql",
+      "sha256": "2b9dc112623486e77fe23371f1ece7f4f5ad57f4962ff55a17dbc8db9d893092",
+      "historicalPrefix": "1059",
+      "state": "ACTIVE"
     }
   ]
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"dsh-api/internal/orders"
+	"dsh-api/internal/specialrequests"
 	"dsh-api/internal/wltoutbox"
 
 	"golang.org/x/crypto/bcrypt"
@@ -64,6 +65,7 @@ type DeliveryProof struct {
 	ID                      string
 	AssignmentID            string
 	OrderID                 string
+	SpecialRequestID        string
 	CaptainID               string
 	VerificationChallengeID string
 	Method                  DeliveryProofMethod
@@ -257,8 +259,11 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 		return replay, nil
 	}
 
-	if current.OrderID == "" {
-		return nil, fmt.Errorf("%w: delivery proof applies to customer orders only", ErrInvalid)
+	if (current.OrderID == "") == (current.SpecialRequestID == "") {
+		return nil, fmt.Errorf("%w: assignment must have exactly one delivery source", ErrInvalid)
+	}
+	if current.SpecialRequestID != "" && (input.Method == DeliveryProofOTP || input.Method == DeliveryProofComposite) {
+		return nil, fmt.Errorf("%w: PIN delivery proof is only available for customer orders", ErrInvalid)
 	}
 	if current.Status != AssignmentAccepted || current.Delivery.Status != DeliveryArrivedCustomer {
 		return nil, fmt.Errorf("%w: proof requires an accepted assignment at arrived_customer", ErrConflict)
@@ -271,7 +276,7 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	}
 	var allMediaClean = true
 	if input.PhotoMediaRef != "" {
-		clean, err := validateDeliveryProofMedia(tx, input.PhotoMediaRef, captainID, "delivery_proof", current.OrderID)
+		clean, err := validateDeliveryProofMedia(tx, input.PhotoMediaRef, captainID, "delivery_proof", current.OrderID, current.SpecialRequestID)
 		if err != nil {
 			return nil, err
 		}
@@ -280,7 +285,7 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 		}
 	}
 	if input.SignatureMediaRef != "" {
-		clean, err := validateDeliveryProofMedia(tx, input.SignatureMediaRef, captainID, "delivery_signature", current.OrderID)
+		clean, err := validateDeliveryProofMedia(tx, input.SignatureMediaRef, captainID, "delivery_signature", current.OrderID, current.SpecialRequestID)
 		if err != nil {
 			return nil, err
 		}
@@ -675,15 +680,17 @@ func ensureNoOpenDeliveryProof(tx *sql.Tx, assignmentID string) error {
 	return nil
 }
 
-func validateDeliveryProofMedia(tx *sql.Tx, mediaRef, captainID, purpose, orderID string) (bool, error) {
+func validateDeliveryProofMedia(tx *sql.Tx, mediaRef, captainID, purpose, orderID, specialRequestID string) (bool, error) {
 	var scanStatus string
 	if err := tx.QueryRow(`
                 SELECT scan_status FROM dsh_media_refs
                 WHERE media_ref=$1 AND owner_actor_id=$2 AND owner_actor_role='captain'
-                  AND purpose=$3 AND order_id=$4::uuid AND content_type LIKE 'image/%'
-        `, mediaRef, captainID, purpose, orderID).Scan(&scanStatus); err != nil {
+                  AND purpose=$3
+                  AND (order_id = NULLIF($4,'')::uuid OR special_request_id = NULLIF($5,'')::uuid)
+                  AND content_type LIKE 'image/%'
+        `, mediaRef, captainID, purpose, orderID, specialRequestID).Scan(&scanStatus); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return false, fmt.Errorf("%w: proof media is missing, unowned, cross-order bound, or has the wrong purpose", ErrInvalid)
+			return false, fmt.Errorf("%w: proof media is missing, unowned, cross-delivery bound, or has the wrong purpose", ErrInvalid)
 		}
 		return false, err
 	}
@@ -757,18 +764,18 @@ func insertDeliveryProof(
 	}
 	proof, _, err := scanDeliveryProofRow(tx.QueryRow(`
                 INSERT INTO dsh_delivery_proofs
-                        (assignment_id,order_id,captain_id,verification_challenge_id,method,status,
+                        (assignment_id,order_id,special_request_id,captain_id,verification_challenge_id,method,status,
                          photo_media_ref,signature_media_ref,recipient_relationship,recipient_name,captured_latitude,captured_longitude,captured_at,
                          accepted_at,idempotency_key,request_fingerprint)
-                VALUES ($1::uuid,$2::uuid,$3,NULLIF($4,'')::uuid,$5,$6,NULLIF($7,''),NULLIF($8,''),$9,NULLIF($10,''),$11,$12,$13,$14,$15,$16)
-                RETURNING id::text,assignment_id::text,order_id::text,captain_id,
+                VALUES ($1::uuid,NULLIF($2,'')::uuid,NULLIF($3,'')::uuid,$4,NULLIF($5,'')::uuid,$6,$7,NULLIF($8,''),NULLIF($9,''),$10,NULLIF($11,''),$12,$13,$14,$15,$16,$17)
+                RETURNING id::text,assignment_id::text,COALESCE(order_id::text,''),COALESCE(special_request_id::text,''),captain_id,
                         COALESCE(verification_challenge_id::text,''),method,status,
                         COALESCE(photo_media_ref,''),COALESCE(signature_media_ref,''),
                         recipient_relationship,COALESCE(recipient_name,''),
                         captured_latitude,captured_longitude,captured_at,submitted_at,reviewed_at,
                         COALESCE(reviewed_by_actor_id,''),COALESCE(review_reason,''),accepted_at,rejected_at,
                         idempotency_key,request_fingerprint,version,created_at,updated_at`,
-		current.ID, current.OrderID, current.CaptainID, challengeID, string(input.Method), string(status),
+		current.ID, current.OrderID, current.SpecialRequestID, current.CaptainID, challengeID, string(input.Method), string(status),
 		input.PhotoMediaRef, input.SignatureMediaRef, input.RecipientRelationship, input.RecipientName, input.CapturedLatitude, input.CapturedLongitude,
 		capturedAt, acceptedAt, input.IdempotencyKey, fingerprint,
 	))
@@ -776,12 +783,29 @@ func insertDeliveryProof(
 }
 
 func finalizeAcceptedDeliveryProof(tx *sql.Tx, operatorContextID string, current *Assignment, proof *DeliveryProof, captainID string) error {
-	if current.OrderID == "" {
-		return fmt.Errorf("%w: proof completion requires an order", ErrInvalid)
-	}
-	if _, err := orders.TransitionDispatchOrder(tx, operatorContextID, current.OrderID, captainID, "captain",
-		[]orders.OrderStatus{orders.StatusArrivedCustomer}, orders.StatusDelivered, "governed proof of delivery accepted"); err != nil {
-		return mapOrderError(err)
+	if current.OrderID != "" {
+		if _, err := orders.TransitionDispatchOrder(tx, operatorContextID, current.OrderID, captainID, "captain",
+			[]orders.OrderStatus{orders.StatusArrivedCustomer}, orders.StatusDelivered, "governed proof of delivery accepted"); err != nil {
+			return mapOrderError(err)
+		}
+	} else if current.SpecialRequestID != "" {
+		if err := specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(
+			tx,
+			operatorContextID,
+			current.SpecialRequestID,
+			[]specialrequests.RequestStatus{specialrequests.StatusInProgress},
+			specialrequests.StatusCompleted,
+			specialrequests.DispatchTransitionMetadata{
+				ActorID:   captainID,
+				ActorRole: "captain",
+				Action:    "submit_proof",
+				Reason:    "governed proof of delivery accepted",
+			},
+		); err != nil {
+			return mapSpecialRequestError(err)
+		}
+	} else {
+		return fmt.Errorf("%w: proof completion requires a delivery source", ErrInvalid)
 	}
 	proofReference := proof.PhotoMediaRef
 	if proofReference == "" {
@@ -826,6 +850,9 @@ func finalizeAcceptedDeliveryProof(tx *sql.Tx, operatorContextID string, current
 			return fmt.Errorf("%w: delivery PIN was already consumed", ErrConflict)
 		}
 	}
+	if current.OrderID == "" {
+		return nil
+	}
 	return enqueueWltDeliveryCompletion(tx, operatorContextID, current.OrderID, captainID)
 }
 
@@ -862,8 +889,8 @@ func getDeliveryProofByIdempotency(tx *sql.Tx, assignmentID, key, fingerprint st
 }
 
 func deliveryProofSelectSQL() string {
-	return `SELECT p.id::text,p.assignment_id::text,p.order_id::text,p.captain_id,
-                COALESCE(p.verification_challenge_id::text,''),p.method,p.status,
+	return `SELECT p.id::text,p.assignment_id::text,COALESCE(p.order_id::text,''),COALESCE(p.special_request_id::text,''),p.captain_id,
+				COALESCE(p.verification_challenge_id::text,''),p.method,p.status,
                 COALESCE(p.photo_media_ref,''),COALESCE(p.signature_media_ref,''),
                 p.recipient_relationship,COALESCE(p.recipient_name,''),
                 p.captured_latitude,p.captured_longitude,p.captured_at,p.submitted_at,p.reviewed_at,
@@ -882,7 +909,7 @@ func scanDeliveryProofRow(scanner deliveryProofScanner) (*DeliveryProof, string,
 	var lat, lng sql.NullFloat64
 	var reviewedAt, acceptedAt, rejectedAt sql.NullTime
 	err := scanner.Scan(
-		&proof.ID, &proof.AssignmentID, &proof.OrderID, &proof.CaptainID,
+		&proof.ID, &proof.AssignmentID, &proof.OrderID, &proof.SpecialRequestID, &proof.CaptainID,
 		&proof.VerificationChallengeID, &method, &status,
 		&proof.PhotoMediaRef, &proof.SignatureMediaRef,
 		&proof.RecipientRelationship, &proof.RecipientName,
