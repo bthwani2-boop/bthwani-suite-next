@@ -443,6 +443,13 @@
       "sha256": "302c855f20b8795444ace34834306e07c90bfd0dc595636f66f9c0ba23c36278",
       "historicalPrefix": "1062",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 304,
+      "file": "dsh-1063_client_profile_mutation_idempotency.sql",
+      "sha256": "b6efca91596314b7d422400304448edcef95d83b2365e37fe68e0bc76d9b1cd0",
+      "historicalPrefix": "1063",
+      "state": "ACTIVE"
     }
   ]
 }

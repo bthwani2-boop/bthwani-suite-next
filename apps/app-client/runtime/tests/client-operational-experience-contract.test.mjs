@@ -361,6 +361,43 @@ test("client commercial profile is reachable from My Space and has no inert priv
   assert.equal(profile.includes("طلب حذف الحساب"), false);
 });
 
+test("client profile mutations persist identity and reconcile partial saves", () => {
+  const attempt = assertMarkers(
+    "services/dsh/frontend/shared/client-profile/client-profile-mutation-attempt.ts",
+    ["client-profile-mutation", "resolveMutationIdentityScope", "getOrCreateDurableMutationAttempt", "purgeExactDurableMutationAttempt"],
+  );
+  assert.match(attempt, /entityId: `client-profile:\$\{normalized\.operation\}`/);
+  const screen = assertMarkers(
+    "services/dsh/frontend/app-client/account/MyProfileScreen.tsx",
+    ["getOrCreateClientProfileMutationAttempt", "clearClientProfileMutationAttempt", "fetchClientProfile", "saveError"],
+  );
+  assert.match(screen, /upsertClientProfilePreferences\(input, attempt\.context\)/);
+  assert.match(screen, /upsertClientProfileConsents\(input, attempt\.context\)/);
+  const api = assertMarkers(
+    "services/dsh/frontend/shared/client-profile/client-profile.api.ts",
+    ["idempotencyKey: mutation.idempotencyKey", "correlationId: mutation.correlationId"],
+  );
+  const handler = assertMarkers(
+    "services/dsh/backend/internal/http/clientprofile_handlers.go",
+    ["clientProfileMutationContext", "X-Correlation-ID", "IDEMPOTENCY_CONFLICT"],
+  );
+  assert.ok(handler.includes("Idempotency-Key"));
+  const backend = assertMarkers(
+    "services/dsh/backend/internal/clientprofile/clientprofile.go",
+    ["dsh_client_profile_mutation_receipts", "pg_advisory_xact_lock", "request_fingerprint"],
+  );
+  const migration = assertMarkers(
+    "services/dsh/database/migrations/dsh-1063_client_profile_mutation_idempotency.sql",
+    ["dsh_client_profile_mutation_receipts", "preferences", "consents"],
+  );
+  assert.ok(migration.includes("PRIMARY KEY (client_id, idempotency_key)"));
+  const contract = assertMarkers(
+    "services/dsh/contracts/dsh.runtime-extensions.openapi.yaml",
+    ["ClientIdempotencyKey", "ClientCorrelationId", "dsh_client_me_profile_preferences", "dsh_client_me_profile_consents"],
+  );
+  assert.ok(contract.includes("#/components/responses/Conflict"));
+});
+
 test("catalog verification wrapper initializes native exit state before a PowerShell child", () => {
   const runtime = assertMarkers(
     "infra/docker/scripts/runtime.ps1",

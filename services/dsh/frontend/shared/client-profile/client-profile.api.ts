@@ -5,6 +5,7 @@ import type {
   ClientProfilePreferencesInput,
   ClientProfileConsentsInput,
 } from "./client-profile.types";
+import type { ClientProfileMutationContext } from "./client-profile-mutation-attempt";
 
 // For client-facing operations, use standard client session.
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dsh-client-profile");
@@ -16,12 +17,13 @@ export async function fetchClientProfile(): Promise<ClientProfile> {
 
 export async function upsertClientProfilePreferences(
   input: ClientProfilePreferencesInput,
-  idempotencyKey?: string,
+  mutation: ClientProfileMutationContext,
 ): Promise<ClientProfile> {
   const resp = await request<{ profile: ClientProfile }>("/dsh/client/me/profile/preferences", {
     method: "PATCH",
     body: input,
-    ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+    idempotencyKey: mutation.idempotencyKey,
+    correlationId: mutation.correlationId,
     ...(input.expectedVersion !== undefined ? { expectedVersion: input.expectedVersion } : {}),
   });
   return resp.profile;
@@ -29,12 +31,13 @@ export async function upsertClientProfilePreferences(
 
 export async function upsertClientProfileConsents(
   input: ClientProfileConsentsInput,
-  idempotencyKey?: string,
+  mutation: ClientProfileMutationContext,
 ): Promise<ClientProfile> {
   const resp = await request<{ profile: ClientProfile }>("/dsh/client/me/profile/consents", {
     method: "PATCH",
     body: input,
-    ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+    idempotencyKey: mutation.idempotencyKey,
+    correlationId: mutation.correlationId,
     ...(input.expectedVersion !== undefined ? { expectedVersion: input.expectedVersion } : {}),
   });
   return resp.profile;

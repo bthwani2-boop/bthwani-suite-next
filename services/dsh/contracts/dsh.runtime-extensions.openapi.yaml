@@ -253,6 +253,9 @@ paths:
       tags:
       - client
       operationId: patch_dsh_client_me_profile_consents
+      parameters:
+      - $ref: '#/components/parameters/ClientIdempotencyKey'
+      - $ref: '#/components/parameters/ClientCorrelationId'
       responses:
         '200':
           description: Auto-generated
@@ -275,6 +278,8 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+        '409':
+          $ref: '#/components/responses/Conflict'
       security:
       - bearerAuth: []
   /dsh/client/me/profile/preferences:
@@ -282,6 +287,9 @@ paths:
       tags:
       - client
       operationId: patch_dsh_client_me_profile_preferences
+      parameters:
+      - $ref: '#/components/parameters/ClientIdempotencyKey'
+      - $ref: '#/components/parameters/ClientCorrelationId'
       responses:
         '200':
           description: Auto-generated
@@ -304,6 +312,8 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+        '409':
+          $ref: '#/components/responses/Conflict'
       security:
       - bearerAuth: []
   /dsh/client/checkout-intents/{intentId}/refresh:
@@ -951,6 +961,22 @@ components:
       schema:
         type: string
         minLength: 1
+        maxLength: 200
+    ClientIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
+    ClientCorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
         maxLength: 200
     ServiceAreaCode:
       name: serviceAreaCode
