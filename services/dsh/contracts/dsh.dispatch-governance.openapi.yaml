@@ -332,14 +332,19 @@ paths:
     get:
       tags:
       - captain
-      operationId: get_dsh_captain_dispatch_assignments__assignmentId__delivery_proof
+      operationId: getCaptainDeliveryProof
       responses:
         '200':
-          description: Auto-generated
+          description: Canonical Captain delivery-proof readback.
           content:
             application/json:
               schema:
                 type: object
+                required:
+                - proof
+                properties:
+                  proof:
+                    $ref: "./dsh.delivery-proof-completion.openapi.yaml#/components/schemas/DeliveryProof"
         '400':
           description: Bad request
           content:
@@ -361,13 +366,55 @@ paths:
       tags:
       - captain
       operationId: submitCaptainDeliveryProof
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./dsh.delivery-proof-completion.openapi.yaml#/components/schemas/SubmitDeliveryProofRequest"
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                evidenceKind:
+                  $ref: "./dsh.delivery-proof-completion.openapi.yaml#/components/schemas/DeliveryEvidenceKind"
+                method:
+                  $ref: "./dsh.delivery-proof-completion.openapi.yaml#/components/schemas/DeliveryProofMethod"
+                pin:
+                  type: string
+                  pattern: ^[0-9]{6}$
+                idempotencyKey:
+                  type: string
+                  minLength: 8
+                  maxLength: 160
+                capturedAt:
+                  type: string
+                  format: date-time
+                latitude:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                longitude:
+                  type: number
+                  minimum: -180
+                  maximum: 180
       responses:
         '200':
-          description: Auto-generated
+          description: Canonical Captain delivery-proof submission readback.
           content:
             application/json:
               schema:
                 type: object
+                required:
+                - proof
+                properties:
+                  proof:
+                    $ref: "./dsh.delivery-proof-completion.openapi.yaml#/components/schemas/DeliveryProof"
         '400':
           description: Bad request
           content:
