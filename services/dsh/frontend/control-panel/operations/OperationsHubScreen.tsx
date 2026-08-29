@@ -38,6 +38,12 @@ const PickupWorkbenchScreen = React.lazy(() =>
 const DeliveryProofReviewScreen = React.lazy(() =>
   import('./DeliveryProofReviewScreen').then((module) => ({ default: module.DeliveryProofReviewScreen })),
 );
+const AssistedOrderDeskScreen = React.lazy(() =>
+  import('./AssistedOrderDeskScreen').then((module) => ({ default: module.AssistedOrderDeskScreen })),
+);
+const OrderRescueScreen = React.lazy(() =>
+  import('./OrderRescueScreen').then((module) => ({ default: module.OrderRescueScreen })),
+);
 const DispatchAssignmentScreen = React.lazy(() =>
   import('./DispatchAssignmentScreen').then((module) => ({ default: module.DispatchAssignmentScreen })),
 );
@@ -52,6 +58,9 @@ const AreaCapacityScreen = React.lazy(() =>
 );
 const ExceptionsEscalationsScreen = React.lazy(() =>
   import('./ExceptionsEscalationsScreen').then((module) => ({ default: module.ExceptionsEscalationsScreen })),
+);
+const AuditSupportSlaScreen = React.lazy(() =>
+  import('./AuditSupportSlaScreen').then((module) => ({ default: module.AuditSupportSlaScreen })),
 );
 
 type ScreenProps = {
@@ -97,6 +106,8 @@ const SCREEN_RENDERERS: Readonly<Record<CanonicalOperationsGroupId, GroupScreenC
       partner_delivery: LiveOrdersScreen,
       pickup: PickupWorkbenchScreen,
       proofs: DeliveryProofReviewScreen,
+      assisted: AssistedOrderDeskScreen,
+      rescue: OrderRescueScreen,
     },
   },
   'dispatch-capacity': {
@@ -111,6 +122,7 @@ const SCREEN_RENDERERS: Readonly<Record<CanonicalOperationsGroupId, GroupScreenC
     default: ExceptionsEscalationsScreen,
     bySubGroup: {
       active: ExceptionsEscalationsScreen,
+      audit: AuditSupportSlaScreen,
       stores: PartnerStoresScreen,
     },
   },
