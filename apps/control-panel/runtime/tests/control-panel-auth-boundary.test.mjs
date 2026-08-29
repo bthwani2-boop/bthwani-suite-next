@@ -55,6 +55,10 @@ test("control-panel section navigation and deep links share one fail-closed read
     "administration.role.read",
     "provider:read",
   ]) assert.match(navigationSource, new RegExp(action.replaceAll(".", "\\.")));
+  const hrStart = navigationSource.indexOf('section: "hr"');
+  const hrBlock = navigationSource.slice(hrStart, navigationSource.indexOf("\n  },", hrStart));
+  assert.match(hrBlock, /service: "workforce", action: "provider:read"/);
+  assert.doesNotMatch(hrBlock, /service: "providers"|action: "employee:read"/);
   assert.match(sectionBoundary, /resolveDshNavigationItem\(pathname\)/);
   assert.match(sectionBoundary, /canReadDshNavItem\(state\.identity, item\)/);
   assert.match(sectionBoundary, /لا تملك جلسة لوحة التحكم صلاحية قراءة/);

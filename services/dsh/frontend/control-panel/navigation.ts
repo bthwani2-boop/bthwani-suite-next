@@ -101,11 +101,7 @@ export const DSH_NAV_ITEMS = [
     section: "hr",
     label: "الموارد البشرية",
     route: CONTROL_PANEL_SECTION_ROUTES.hr,
-    readRequirements: [
-      [{ service: "workforce", action: "provider:read" }],
-      [{ service: "providers", action: "provider:read" }],
-      [{ service: "workforce", action: "employee:read" }],
-    ],
+    readRequirements: [[{ service: "workforce", action: "provider:read" }]],
   },
 ] as const satisfies readonly DshNavItem[];
 

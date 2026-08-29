@@ -28,9 +28,10 @@ test("password login binds sessions to server-owned canonical surfaces", async (
 });
 
 test("quick developer login stays local-only and never bundles privileged secrets", async () => {
-  const [gate, sessionAdapter, broker, devData, runtime, reverse, ...apps] = await Promise.all([
+  const [gate, sessionAdapter, localHostPolicy, broker, devData, runtime, reverse, ...apps] = await Promise.all([
     read("services/dsh/frontend/shared/session/IdentitySessionGate.tsx"),
     read("services/dsh/frontend/shared/session/dev-session-broker.adapter.ts"),
+    read("services/dsh/frontend/shared/_kernel/dsh-api-base-url.ts"),
     read("tools/dev/local-dev-session-broker.mjs"),
     read("tools/mobile/mobile-dev-data.mjs"),
     read("tools/mobile/start-mobile-runtime.ps1"),
@@ -48,9 +49,11 @@ test("quick developer login stays local-only and never bundles privileged secret
   assert.match(gate, /requestDevelopmentSession/);
   assert.doesNotMatch(gate, /127\.0\.0\.1:18100/);
 
-  assert.match(sessionAdapter, /127\.0\.0\.1:18100/);
-  assert.match(sessionAdapter, /10\.0\.2\.2:18100/);
-  assert.match(sessionAdapter, /isDshDeviceLoopbackBridgeEnabled/);
+  assert.match(sessionAdapter, /resolveDshLocalRuntimeHost/);
+  assert.match(sessionAdapter, /:18100/);
+  assert.match(localHostPolicy, /127\.0\.0\.1/);
+  assert.match(localHostPolicy, /10\.0\.2\.2/);
+  assert.match(localHostPolicy, /isDshDeviceLoopbackBridgeEnabled/);
   assert.match(broker, /HOST = '127\.0\.0\.1'/);
   assert.match(broker, /LOCAL_DEV_SESSION_BROKER_FORBIDDEN_IN_PRODUCTION/);
   assert.match(broker, /MUST_BE_LOOPBACK_FOR_DEV_SESSION_BROKER/);
