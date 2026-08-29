@@ -485,6 +485,20 @@
       "sha256": "319773d1cde82be2b7606842e0166ca2d0438e8429dd74f788c97f93da512d7d",
       "historicalPrefix": "1068",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 310,
+      "file": "dsh-1069_store_captain_handoff_command_receipts.sql",
+      "sha256": "5eff254b7d3e0c5679207a4c0833fc6dbb97fae7bffba9ab8ba044ad112ada33",
+      "historicalPrefix": "1069",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 311,
+      "file": "dsh-1070_store_captain_handoff_order_fk.sql",
+      "sha256": "03c0bd27328998d240ed2b3db6d0823fc1f3fe791b6898f0b79701e5fa35d3bc",
+      "historicalPrefix": "1070",
+      "state": "ACTIVE"
     }
   ]
 }

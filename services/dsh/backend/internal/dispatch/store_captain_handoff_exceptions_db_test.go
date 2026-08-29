@@ -118,6 +118,8 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 		fixture.OrderID,
 		fixture.StoreID,
 		"partner-handoff-actor",
+		"handoff-confirm-key-open-exception",
+		"handoff-confirm-correlation-open-exception",
 	); !errors.Is(err, ErrConflict) {
 		t.Fatalf("partner confirmation with open exception error=%v want ErrConflict", err)
 	}
@@ -160,6 +162,8 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 		fixture.OrderID,
 		fixture.StoreID,
 		"partner-handoff-actor",
+		"handoff-confirm-key-mismatch",
+		"handoff-confirm-correlation-mismatch",
 	); err != nil {
 		t.Fatalf("partner confirmation failed: %v", err)
 	}

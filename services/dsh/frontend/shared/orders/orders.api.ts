@@ -121,12 +121,16 @@ export async function markOrderReady(orderId: string, options: PartnerOrderMutat
 
 export async function confirmStoreCaptainHandoff(
   orderId: string,
+  mutation: DshCaptainCommandContext,
   token?: string,
-  idempotencyKey?: string,
 ): Promise<DshStoreCaptainHandoff> {
   const data = await request<{ handoff: DshStoreCaptainHandoff }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/captain-handoff/confirm`,
-    withOptionalToken({ method: "POST", idempotencyKey: idempotencyKey ?? corrId("partner-handoff-confirm") }, token),
+    withOptionalToken({
+      method: "POST",
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    }, token),
   );
   return data.handoff;
 }

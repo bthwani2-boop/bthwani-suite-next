@@ -51,6 +51,8 @@ func TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration(t *te
 		fixture.OrderID,
 		fixture.StoreID,
 		"partner-resolution-actor",
+		"handoff-confirmation-key-resolution",
+		"handoff-confirmation-correlation-resolution",
 	); err != nil {
 		t.Fatalf("partner confirmation after resolution failed: %v", err)
 	}

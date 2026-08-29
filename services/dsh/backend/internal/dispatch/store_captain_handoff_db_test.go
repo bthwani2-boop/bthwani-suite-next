@@ -125,11 +125,11 @@ func TestOutboundStoreCaptainHandoffDBIntegration(t *testing.T) {
 		t.Fatalf("pickup before store confirmation error=%v want ErrStoreHandoffRequired", err)
 	}
 
-	if _, err = ConfirmStoreCaptainHandoffForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, "wrong-store", "partner-actor"); !errors.Is(err, ErrNotFound) {
+	if _, err = ConfirmStoreCaptainHandoffIdempotentForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, "wrong-store", "partner-actor", "handoff-confirm-wrong-store", "handoff-correlation-wrong-store"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("wrong-store confirmation error=%v want ErrNotFound", err)
 	}
 
-	confirmed, err := ConfirmStoreCaptainHandoffForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, fixture.StoreID, "partner-actor")
+	confirmed, err := ConfirmStoreCaptainHandoffIdempotentForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, fixture.StoreID, "partner-actor", "handoff-confirm-db", "handoff-correlation-db")
 	if err != nil {
 		t.Fatalf("partner confirmation failed: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestOutboundStoreCaptainHandoffDBIntegration(t *testing.T) {
 		t.Fatalf("confirmed handoff=%+v", confirmed)
 	}
 
-	replayed, err := ConfirmStoreCaptainHandoffForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, fixture.StoreID, "partner-actor")
+	replayed, err := ConfirmStoreCaptainHandoffIdempotentForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, fixture.StoreID, "partner-actor", "handoff-confirm-db", "handoff-correlation-db")
 	if err != nil {
 		t.Fatalf("idempotent partner confirmation failed: %v", err)
 	}

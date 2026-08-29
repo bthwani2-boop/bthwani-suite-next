@@ -116,6 +116,23 @@ func requireStoreCaptainHandoffConfirmed(tx *sql.Tx, assignmentID, captainID str
 	return nil
 }
 
+func ensureNoActiveStoreCaptainHandoffException(tx *sql.Tx, assignmentID string) error {
+	var exceptionOpen bool
+	if err := tx.QueryRow(`
+                SELECT EXISTS (
+                        SELECT 1
+                        FROM dsh_delivery_exceptions
+                        WHERE assignment_id = $1::uuid
+                          AND status IN ('open', 'acknowledged')
+                )`, assignmentID).Scan(&exceptionOpen); err != nil {
+		return err
+	}
+	if exceptionOpen {
+		return fmt.Errorf("%w: handoff exception requires operations resolution", ErrConflict)
+	}
+	return nil
+}
+
 func completeStoreCaptainHandoff(tx *sql.Tx, assignmentID, captainID string) error {
 	result, err := tx.Exec(`
                 UPDATE dsh_store_captain_handoffs
@@ -256,15 +273,8 @@ func updateDeliveryProgressWithStoreHandoffVersioned(
 	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }
 
-func ConfirmStoreCaptainHandoffForOperatorContext(db *sql.DB, operatorContextID, orderID, storeID, actorID string) (*StoreCaptainHandoff, error) {
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
-	}
-	return confirmStoreCaptainHandoff(db, operatorContextID, orderID, storeID, actorID)
-}
-
-func confirmStoreCaptainHandoff(db *sql.DB, operatorContextID, orderID, storeID, actorID string) (*StoreCaptainHandoff, error) {
+func confirmStoreCaptainHandoff(db *sql.DB, command storeCaptainHandoffConfirmationCommand, orderID, storeID, actorID string) (*StoreCaptainHandoff, error) {
+	operatorContextID := command.OperatorContextID
 	if orderID == "" || storeID == "" || actorID == "" {
 		return nil, fmt.Errorf("%w: order, store, and partner actor are required", ErrInvalid)
 	}
@@ -274,6 +284,23 @@ func confirmStoreCaptainHandoff(db *sql.DB, operatorContextID, orderID, storeID,
 		return nil, err
 	}
 	defer tx.Rollback()
+	if handoffID, found, err := beginStoreCaptainHandoffConfirmationCommand(tx, command); err != nil {
+		return nil, err
+	} else if found {
+		item, err := scanStoreCaptainHandoff(tx.QueryRow(
+			storeCaptainHandoffSelect+` WHERE id=$1::uuid AND order_id=$2::uuid`, handoffID, command.OrderID,
+		))
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrNotFound
+			}
+			return nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return item, nil
+	}
 
 	var assignmentID, captainID, assignmentStatus, deliveryStatus string
 	var resolvedStoreID, fulfillmentMode, orderStatus string
@@ -331,6 +358,24 @@ func confirmStoreCaptainHandoff(db *sql.DB, operatorContextID, orderID, storeID,
 	if err = ensureStoreCaptainHandoff(tx, current); err != nil {
 		return nil, err
 	}
+	currentHandoff, err := scanStoreCaptainHandoff(tx.QueryRow(
+		storeCaptainHandoffSelect+` WHERE assignment_id = $1::uuid`, assignmentID,
+	))
+	if err != nil {
+		return nil, err
+	}
+	if currentHandoff.Status == "partner_confirmed" || currentHandoff.Status == "completed" {
+		if err := recordStoreCaptainHandoffConfirmationCommand(tx, command, currentHandoff.ID); err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return currentHandoff, nil
+	}
+	if err = ensureNoActiveStoreCaptainHandoffException(tx, assignmentID); err != nil {
+		return nil, err
+	}
 
 	if _, err = tx.Exec(`
                 UPDATE dsh_store_captain_handoffs
@@ -363,6 +408,9 @@ func confirmStoreCaptainHandoff(db *sql.DB, operatorContextID, orderID, storeID,
 		storeCaptainHandoffSelect+` WHERE assignment_id = $1::uuid`, assignmentID,
 	))
 	if err != nil {
+		return nil, err
+	}
+	if err = recordStoreCaptainHandoffConfirmationCommand(tx, command, item.ID); err != nil {
 		return nil, err
 	}
 	if err = tx.Commit(); err != nil {

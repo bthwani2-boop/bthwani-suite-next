@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
-	"strings"
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
@@ -108,15 +107,19 @@ func (s *protectedStoreServer) handleConfirmPartnerStoreCaptainHandoff(w http.Re
 	if !ok {
 		return
 	}
-	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
 		return
 	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	item, err := dispatch.ConfirmStoreCaptainHandoffIdempotentForOperatorContext(
 		s.db,
 		actor.OperatorContextID,
 		r.PathValue("orderId"),
 		storeID,
 		actor.ID,
+		idempotencyKey,
+		correlationID,
 	)
 	if err != nil {
 		writeStoreCaptainHandoffError(w, err)
@@ -125,19 +128,12 @@ func (s *protectedStoreServer) handleConfirmPartnerStoreCaptainHandoff(w http.Re
 	store.SendJSON(w, http.StatusOK, map[string]any{"handoff": marshalStoreCaptainHandoff(item)})
 }
 
-func requireStoreCaptainHandoffIdempotencyKey(w http.ResponseWriter, r *http.Request) (string, bool) {
-	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if len(key) < 8 || len(key) > 200 {
-		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
-		return "", false
-	}
-	return key, true
-}
-
 func writeStoreCaptainHandoffError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, dispatch.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "active store-captain handoff was not found")
+	case errors.Is(err, dispatch.ErrIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
 	case errors.Is(err, dispatch.ErrConflict):
 		store.SendError(w, http.StatusConflict, "STORE_HANDOFF_CONFLICT", err.Error())
 	case errors.Is(err, dispatch.ErrInvalid):

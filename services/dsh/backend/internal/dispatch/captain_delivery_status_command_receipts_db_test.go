@@ -61,6 +61,8 @@ func TestCaptainDeliveryStatusCommandReplayAndCollisionDBIntegration(t *testing.
 		fixture.OrderID,
 		fixture.StoreID,
 		"partner-actor",
+		"handoff-confirmation-key-status",
+		"handoff-confirmation-correlation-status",
 	); err != nil {
 		t.Fatalf("partner confirmation failed: %v", err)
 	}

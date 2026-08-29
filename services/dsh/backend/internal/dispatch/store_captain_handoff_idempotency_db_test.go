@@ -31,7 +31,7 @@ func TestStoreCaptainHandoffStatusRejectsStaleAssignmentVersionDBIntegration(t *
 		t.Fatalf("arrival assignment version=%d want=2", arrived.Version)
 	}
 
-	if _, err = ConfirmStoreCaptainHandoffIdempotentForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, fixture.StoreID, "partner-actor"); err != nil {
+	if _, err = ConfirmStoreCaptainHandoffIdempotentForOperatorContext(db, fixture.OperatorContextID, fixture.OrderID, fixture.StoreID, "partner-actor", "handoff-confirm-key-stale", "handoff-confirm-correlation-stale"); err != nil {
 		t.Fatalf("partner confirmation failed: %v", err)
 	}
 	if _, err = UpdateDeliveryStatusGovernedIdempotentVersionedForOperatorContext(
@@ -74,6 +74,8 @@ func TestStoreCaptainHandoffConfirmationReplaysAfterPickupDBIntegration(t *testi
 		fixture.OrderID,
 		fixture.StoreID,
 		"partner-actor",
+		"handoff-confirm-key-replay",
+		"handoff-confirm-correlation-replay",
 	)
 	if err != nil {
 		t.Fatalf("partner confirmation failed: %v", err)
@@ -97,6 +99,8 @@ func TestStoreCaptainHandoffConfirmationReplaysAfterPickupDBIntegration(t *testi
 		fixture.OrderID,
 		fixture.StoreID,
 		"partner-actor",
+		"handoff-confirm-key-replay",
+		"handoff-confirm-correlation-replay",
 	)
 	if err != nil {
 		t.Fatalf("partner confirmation replay after pickup failed: %v", err)
@@ -109,6 +113,17 @@ func TestStoreCaptainHandoffConfirmationReplaysAfterPickupDBIntegration(t *testi
 	}
 	if confirmationReplay.Version != confirmed.Version+1 {
 		t.Fatalf("completed handoff version=%d want=%d", confirmationReplay.Version, confirmed.Version+1)
+	}
+	if _, err := ConfirmStoreCaptainHandoffIdempotentForOperatorContext(
+		db,
+		fixture.OperatorContextID,
+		fixture.OrderID,
+		"different-store",
+		"partner-actor",
+		"handoff-confirm-key-replay",
+		"handoff-confirm-correlation-replay",
+	); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("reusing handoff confirmation key for a different store returned %v, want ErrIdempotencyConflict", err)
 	}
 }
 

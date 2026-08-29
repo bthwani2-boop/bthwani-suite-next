@@ -8,6 +8,11 @@ import {
   type PartnerOrderMutationOptions,
 } from './orders.api';
 import { corrId } from '../_kernel/dsh-http-request';
+import { useIdentitySession } from '@bthwani/core-identity';
+import {
+  clearStoreCaptainHandoffConfirmationAttempt,
+  getOrCreateStoreCaptainHandoffConfirmationAttempt,
+} from './store-captain-handoff-confirmation-attempt';
 import {
   type PartnerOrderMutationCommand,
   resolvePartnerOrderMutation,
@@ -46,6 +51,8 @@ function resolveReadbackFailureMessage(error: unknown): string {
 
 /** Shared mutation/readback controller for partner order preparation and handoff. */
 export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void>) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
   const [state, setState] = React.useState<PartnerOrderCommandState>({ kind: 'idle' });
 
   const execute = React.useCallback(async (
@@ -67,7 +74,13 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
       if (command === 'accept') await acceptOrder(orderId, mutationOptions);
       else if (command === 'prepare') await markOrderPreparing(orderId, mutationOptions);
       else if (command === 'ready') await markOrderReady(orderId, mutationOptions);
-      else await confirmStoreCaptainHandoff(orderId);
+      else {
+        if (!actorId) throw new Error('جلسة الشريك غير جاهزة لتأكيد تسليم العهدة.');
+        const intent = { actorId, orderId };
+        const attempt = await getOrCreateStoreCaptainHandoffConfirmationAttempt(intent);
+        await confirmStoreCaptainHandoff(orderId, attempt.context);
+        await clearStoreCaptainHandoffConfirmationAttempt(intent, attempt.signature);
+      }
     } catch (error) {
       setState({ kind: 'error', command, orderId, message: resolveErrorMessage(error) });
       try {
@@ -96,7 +109,7 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
       return false;
     }
     return true;
-  }, [refreshOrders]);
+  }, [actorId, refreshOrders]);
 
   const reset = React.useCallback(() => setState({ kind: 'idle' }), []);
 
