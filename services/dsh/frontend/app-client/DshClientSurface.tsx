@@ -138,8 +138,20 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
   }, [navigation]);
   const openHomeMarketingAction = useCallback((actionType: string, actionTarget: string) => {
     const target = actionTarget.trim();
-    if (actionType === "store" && target) navigate({ kind: "store", storeId: target });
-    else if (actionType === "external") void openExternalUrl(target);
+    setNotificationActionError(null);
+    if (actionType === "store" && target) {
+      navigate({ kind: "store", storeId: target });
+      return;
+    }
+    if (actionType === "external" && target) {
+      void openExternalUrl(target)
+        .then((opened) => {
+          if (!opened) setNotificationActionError("تعذر فتح الرابط التسويقي الآمن. تحقق من الاتصال أو افتح العرض لاحقًا.");
+        })
+        .catch(() => setNotificationActionError("تعذر فتح الرابط التسويقي الآمن. تحقق من الاتصال أو افتح العرض لاحقًا."));
+      return;
+    }
+    setNotificationActionError("هذا الإجراء التسويقي غير مدعوم أو لا يملك وجهة صالحة.");
   }, [navigate, openExternalUrl]);
   const openSpecialRequestType = useCallback((requestType: DshHomeSpecialRequestTarget) => {
     navigate({ kind: requestType === "SHEIN_ASSISTED_PURCHASE" ? "special-request-shein" : "special-request-awnak" });

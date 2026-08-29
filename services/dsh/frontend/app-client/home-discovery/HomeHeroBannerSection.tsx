@@ -73,7 +73,7 @@ export function HomeHeroBannerSection({ banners, onBannerPress }: Props) {
       >
         {banners.map((banner) => {
           const actionLabel = bannerActionLabel(banner);
-          const interactive = actionLabel.length > 0 && onBannerPress != null;
+          const interactive = actionLabel.length > 0 && banner.actionTarget.trim().length > 0 && onBannerPress != null;
           return (
             <Pressable
               key={banner.id}

@@ -81,6 +81,7 @@ test("client discovery exposes real search, cached images, and a persistent dono
       "queryError",
       "تعذر تحديث النتائج",
       "إعادة المحاولة",
+      "onMarketingAction?.(\"unsupported\", target)",
     ],
   );
   assert.equal(discovery.includes("Math.random("), false);
@@ -120,6 +121,10 @@ test("client discovery exposes real search, cached images, and a persistent dono
   assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx",
     ["promo.actionTarget.trim().length > 0", "hasQuickActions", 'label="فيديو"', "isVideo"],
+  );
+  assertMarkers(
+    "services/dsh/frontend/app-client/home-discovery/HomeHeroBannerSection.tsx",
+    ["banner.actionTarget.trim().length > 0"],
   );
 });
 
@@ -201,7 +206,7 @@ test("client order and support routes remain navigable and failure-safe", () => 
   );
   assertMarkers(
     "services/dsh/frontend/app-client/DshClientSurface.tsx",
-    ["openExternalUrl", "onOpenPickup={openPickupSession}", "onOpenOrderSupport={openOrderSupport}", "selectionHaptic", "هذا الإجراء غير مدعوم", "case \"profile\":\n      content"],
+    ["openExternalUrl", "onOpenPickup={openPickupSession}", "onOpenOrderSupport={openOrderSupport}", "selectionHaptic", "هذا الإجراء غير مدعوم", "هذا الإجراء التسويقي غير مدعوم", "case \"profile\":\n      content"],
   );
 });
 

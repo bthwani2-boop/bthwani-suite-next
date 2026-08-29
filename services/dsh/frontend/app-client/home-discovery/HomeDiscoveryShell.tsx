@@ -186,6 +186,7 @@ export function HomeDiscoveryShell({
         ? state.data.categories.find((item) => item.id === target || item.destinationTarget === target)
         : undefined;
       if (category) openCategoryDestination(category);
+      else onMarketingAction?.("unsupported", target);
       return;
     }
     onMarketingAction?.(actionType, target);
