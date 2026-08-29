@@ -51,15 +51,33 @@ test("ci-check is the single manual and reusable controller", () => {
   }
 });
 
-test("ci-check exposes the one manual affected-verification entrypoint", () => {
+test("ci-check keeps write permission only on the status publisher job", () => {
   const workflow = read(".github/workflows/ci-check.yml");
-  assert.match(workflow, /name: BThwani CI/u);
-  assert.match(workflow, /full_scope: \{description: Run all owner checks, required: false, default: false, type: boolean\}/u);
+  const beforeJobs = workflow.slice(0, workflow.indexOf("jobs:"));
+  assert.doesNotMatch(beforeJobs, /statuses:\s*write/u);
+  assert.match(workflow, /result:[\s\S]*?permissions:[\s\S]*?statuses:\s*write/u);
   assert.match(workflow, /BThwani CI \/ PR result/u);
-  assert.match(workflow, /statuses: write/u);
   assert.match(workflow, /statuses\/\$\{HEAD_SHA\}/u);
   assert.match(workflow, /publish_status success/u);
-  assert.doesNotMatch(workflow, /workflow_run:|repository_dispatch|actions\/workflows\//u);
+});
+
+test("CI control-plane checks collect independent failures instead of blocking product verification", () => {
+  const workflow = read(".github/workflows/ci-check.yml");
+  assert.match(workflow, /controls:[\s\S]*?continue-on-error: true[\s\S]*?continue-on-error: true[\s\S]*?continue-on-error: true/u);
+  assert.match(workflow, /Enforce complete control-plane collection/u);
+  for (const job of ["diagnostics", "verification", "backends", "runtime"]) {
+    assert.match(workflow, new RegExp(`${job}:[\\s\\S]*?needs: \\[context\\]`, "u"), job);
+  }
+  assert.match(workflow, /needs: \[context, controls, diagnostics, verification, backends, runtime\]/u);
+});
+
+test("Node verification collects typecheck lint test and build before aggregate failure", () => {
+  const workflow = read(".github/workflows/ci-node-verification.yml");
+  assert.match(workflow, /without first-failure masking/u);
+  assert.match(workflow, /for target in typecheck lint test build/u);
+  assert.match(workflow, /failures=\(\)/u);
+  assert.match(workflow, /Enforce complete Node verification collection/u);
+  assert.match(workflow, /BLOCKED_BY contract-materialization/u);
 });
 
 test("CI and Sonar enforce the same repository-wide Sonar ownership contract", () => {
@@ -70,7 +88,7 @@ test("CI and Sonar enforce the same repository-wide Sonar ownership contract", (
   }
 });
 
-test("Sonar trusted analysis has one explicit master opt-in", () => {
+test("Sonar trusted analysis has one explicit trusted opt-in", () => {
   const sonar = read(".github/workflows/sonarqube.yml");
   const master = read(".github/workflows/master-sonar.yml");
   assert.match(sonar, /trusted_scan: \{type: boolean, required: false, default: false\}/u);
@@ -106,6 +124,15 @@ test("the affected router is based on the exact current Base-to-Head diff", () =
   assert.doesNotMatch(router, /previous|run.?history|semantic|financial|security_scan/u);
 });
 
+test("human review is one centralized changed-candidate risk decision", () => {
+  const router = read("tools/scripts/detect-ci-context.mjs");
+  const closure = read(".github/workflows/final-closure.yml");
+  assert.match(router, /human_review_required/u);
+  assert.match(closure, /human_review_required: \$\{\{ steps\.classification\.outputs\.human_review_required \}\}/u);
+  assert.match(closure, /HUMAN_REVIEW_REQUIRED/u);
+  assert.doesNotMatch(closure, /catastrophic domains|always require.*approval/iu);
+});
+
 test("backend changes cannot become green by skipping backend verification", () => {
   const workflow = read(".github/workflows/ci-check.yml");
   assert.match(workflow, /backend_required == 'true'/u);
@@ -113,17 +140,24 @@ test("backend changes cannot become green by skipping backend verification", () 
   assert.doesNotMatch(workflow, /run_assurance/u);
 });
 
-test("final closure is explicit only and runs Full CI before analyzers", () => {
+test("final closure resolves once then collects independent analyzers in parallel", () => {
   const workflow = read(".github/workflows/final-closure.yml");
   assert.match(workflow, /workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /pull_request:/u);
   assert.match(workflow, /name: Full CI preflight/u);
   assert.match(workflow, /full_scope: true/u);
-  assert.match(workflow, /needs: \[resolve, ci\]/u);
+  assert.match(workflow, /trusted_scan: true/u);
+  assert.match(workflow, /codeql\.yml[\s\S]*?full_scope: true/u);
+  assert.match(workflow, /semgrep\.yml[\s\S]*?full_scope: true/u);
   for (const worker of ["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml"]) {
     assert.match(workflow, new RegExp(`uses: \.\/.github/workflows/${worker.replace(".", "\\.")}`, "u"), worker);
-    assert.match(workflow, new RegExp(`needs: \\[resolve, ci\\]`, "u"), worker);
   }
+  for (const job of ["ci", "sonar", "codeql", "semgrep", "security"]) {
+    assert.match(workflow, new RegExp(`${job}:[\\s\\S]*?needs: \\[resolve\\]`, "u"), job);
+  }
+  assert.doesNotMatch(workflow, /needs: \[resolve, ci\]/u);
+  assert.match(workflow, /needs: \[resolve, ci, sonar, codeql, semgrep, security, dependency, lockfile, docker\]/u);
+  assert.match(workflow, /after complete evidence collection/u);
   assert.doesNotMatch(workflow, /open-code-review\.yml|SEMANTIC_RESULT/u);
   assert.match(workflow, /BThwani \/ Final Closure/u);
   assert.match(workflow, /target:head-moved/u);
@@ -131,11 +165,42 @@ test("final closure is explicit only and runs Full CI before analyzers", () => {
   assert.doesNotMatch(workflow, /workflow_run:|repository_dispatch|actions\/workflows\/|sleep|poll/u);
 });
 
-test("final closure derives all applicability from one exact Git diff", () => {
+test("Final Closure is a protected-definition privileged boundary with least privilege", () => {
+  const workflow = read(".github/workflows/final-closure.yml");
+  const beforeJobs = workflow.slice(0, workflow.indexOf("jobs:"));
+  assert.match(beforeJobs, /permissions:\s*\n\s*contents:\s*read/u);
+  assert.doesNotMatch(beforeJobs, /security-events:\s*write|statuses:\s*write/u);
+  assert.match(workflow, /GITHUB_REF_NAME.*DEFAULT_BRANCH/su);
+  assert.match(workflow, /codeql:[\s\S]*?security-events:\s*write/u);
+  assert.match(workflow, /final:[\s\S]*?statuses:\s*write/u);
+});
+
+test("final closure derives applicability from one exact Git diff and trusted router", () => {
   const workflow = read(".github/workflows/final-closure.yml");
   assert.match(workflow, /git diff --name-only/u);
   assert.match(workflow, /BASE_SHA.*HEAD_SHA/su);
+  assert.match(workflow, /TRUSTED_WORKFLOW_SHA/u);
+  assert.match(workflow, /contents\/tools\/scripts\/detect-ci-context\.mjs/u);
   assert.doesNotMatch(workflow, /pulls\/.*\/files\?per_page=100/u);
+});
+
+test("CodeQL and Semgrep expose explicit final full-scope contracts", () => {
+  const codeql = read(".github/workflows/codeql.yml");
+  const semgrep = read(".github/workflows/semgrep.yml");
+  assert.match(codeql, /full_scope: \{type: boolean, required: false, default: false\}/u);
+  assert.match(codeql, /INPUT_FULL_SCOPE/u);
+  assert.match(codeql, /if \[\[ "\$\{INPUT_FULL_SCOPE\}" == "true" \]\]; then\s+full=true/u);
+  assert.match(semgrep, /full_scope: \{type: boolean, required: false, default: false\}/u);
+  assert.match(semgrep, /if \[\[ "\$\{FULL_SCOPE\}" == "true" \]\]; then\s+mode=full/u);
+  assert.match(semgrep, /args\+=\(--baseline-commit "\$\{BASE_SHA\}"\)/u);
+});
+
+test("OpenCodeReview specialized rules match the live core authorities", () => {
+  const rules = read(".opencodereview/rule.json");
+  for (const path of ["core/identity/**/*", "core/workforce/**/*", "core/platform-control/**/*", "core/providers/**/*"]) {
+    assert.ok(rules.includes(`\"path\": \"${path}\"`), path);
+  }
+  assert.doesNotMatch(rules, /services\/(identity|workforce)\/\*\*\/*/u);
 });
 
 test("obsolete control-plane scripts are deleted", () => {
@@ -152,7 +217,7 @@ test("package exposes exactly the two remote user commands", () => {
   assert.equal(Object.hasOwn(scripts, "ci:local"), false);
 });
 
-test("ci commands resolve live identity before dispatch", () => {
+test("ci commands dispatch protected default-branch workflow definitions against exact candidate data", () => {
   for (const file of ["tools/scripts/ci-check.mjs", "tools/scripts/ci-close.mjs"]) {
     const command = read(file);
     assert.match(command, /git.*status.*--porcelain=v1/su);
@@ -161,6 +226,8 @@ test("ci commands resolve live identity before dispatch", () => {
     assert.match(command, /gh.*pr.*list/su);
     assert.match(command, /headRefOid/u);
     assert.match(command, /workflow.*run/su);
+    assert.match(command, /--ref.*defaultBranch/su);
+    assert.match(command, /workflowDefinitionRef: defaultBranch/u);
     assert.match(command, file.includes("ci-check") ? /ci-check\.yml/u : /final-closure\.yml/u);
     assert.doesNotMatch(command, /sleep|poll|previous/u);
   }
