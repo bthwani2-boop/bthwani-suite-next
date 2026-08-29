@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, Divider, KeyValueList, MobileScrollView, StateView, Surface, Text } from '@bthwani/ui-kit';
+import { Box, Divider, StateView } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
 import { OrderInboxSection } from './OrderInboxSection';
 import { OrderDetailSection } from './OrderDetailSection';
@@ -15,10 +15,6 @@ import type {
   DshCaptainOrderMode,
   DshCaptainOrdersScreenState,
 } from '../../shared/orders';
-import type { DshDispatchAssignment } from '../../shared/dispatch';
-
-const SurfaceAny = Surface as any;
-
 export type { DshCaptainOrderDetailSummary } from '../../shared/orders';
 
 export type DshCaptainOrdersScreenProps = {
@@ -195,63 +191,6 @@ export function DshCaptainOrderGetScreen({
       onSecondaryAction={onSecondaryAction}
     />
   );
-}
-
-export function DshCaptainOrderAcceptScreen({
-  assignment,
-  onBack,
-  onAccept,
-  onDecline,
-}: {
-  assignment?: DshDispatchAssignment;
-  onBack?: (() => void) | undefined;
-  onAccept?: (assignmentId: string) => void;
-  onDecline?: (assignmentId: string) => void;
-}) {
-  if (!assignment || assignment.status !== 'offered') {
-    return (
-      <StateView
-        title="لا يوجد عرض صالح"
-        description="افتح عرضًا حيًا من صندوق الكابتن. لا تعرض هذه الشاشة بيانات افتراضية."
-        tone="warning"
-        actionLabel={onBack ? 'العودة' : undefined}
-        onActionPress={onBack}
-      />
-    );
-  }
-  const distance = assignment.distanceMeters == null
-    ? 'غير محسوبة'
-    : assignment.distanceMeters < 1000
-      ? `${assignment.distanceMeters} متر`
-      : `${(assignment.distanceMeters / 1000).toFixed(1)} كم`;
-  return (
-    <DshOperationScreen
-      state="ready"
-      title="عرض توصيل جديد"
-      subtitle={`عرض للطلب #${assignment.orderId || assignment.specialRequestId}.`}
-      content={
-        <SurfaceAny tone="raised" padding={4} gap={3} radiusToken="xl">
-          <KeyValueList items={[
-            { label: 'منطقة الخدمة', value: assignment.serviceAreaCode || 'غير محددة' },
-            { label: 'المسافة', value: distance },
-            { label: 'الأولوية', value: String(assignment.priority ?? 0) },
-            { label: 'سبب العرض', value: assignment.offerReason || 'إسناد تشغيلي' },
-            { label: 'مهلة الرد', value: new Date(assignment.responseDeadlineAt).toLocaleString('ar-YE'), tone: 'warning' },
-          ]} />
-        </SurfaceAny>
-      }
-      primaryActionLabel="قبول العرض"
-      secondaryActionLabel="رفض العرض"
-      tertiaryActionLabel={onBack ? 'العودة' : undefined}
-      onPrimaryAction={() => onAccept?.(assignment.id)}
-      onSecondaryAction={() => onDecline?.(assignment.id)}
-      onTertiaryAction={onBack}
-    />
-  );
-}
-
-export function DshCaptainOrdersOffersListScreen({ items = [], onBack, onSecondaryAction, onOpenOrder }: { items?: DshCaptainOrderBellItem[]; onBack?: (() => void) | undefined; onSecondaryAction?: (() => void) | undefined; onOpenOrder?: (id: string) => void }) {
-  return <DshCaptainOrderOffersListScreen items={items} onBack={onBack} onSecondaryAction={onSecondaryAction} onOpenOrder={onOpenOrder} />;
 }
 
 export function CaptainOrdersInboxScreen(props: Pick<DshCaptainOrdersScreenProps, 'state' | 'items' | 'onOpenOrder' | 'onOpenNextOrder' | 'onRetry'> = {}) {
