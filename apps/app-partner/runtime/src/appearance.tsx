@@ -23,22 +23,31 @@ const PartnerAppearanceContext = createContext<PartnerAppearanceState | null>(nu
 async function readStoredAppearanceMode(): Promise<string | null> {
   if (Platform.OS === "web") {
     if (typeof window === "undefined") return null;
-    try {
-      return window.localStorage.getItem(storageKey);
-    } catch {
-      return null;
-    }
+    return window.localStorage.getItem(storageKey);
   }
   return SecureStore.getItemAsync(storageKey);
 }
 
 async function writeStoredAppearanceMode(mode: BThwaniAppearanceMode): Promise<void> {
   if (Platform.OS === "web") {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      throw new Error("Appearance persistence is unavailable before the web runtime is mounted.");
+    }
     window.localStorage.setItem(storageKey, mode);
     return;
   }
   await SecureStore.setItemAsync(storageKey, mode);
+}
+
+async function persistAndReadBackAppearanceMode(
+  mode: BThwaniAppearanceMode,
+): Promise<BThwaniAppearanceMode> {
+  await writeStoredAppearanceMode(mode);
+  const committedMode = await readStoredAppearanceMode();
+  if (!isBThwaniAppearanceMode(committedMode) || committedMode !== mode) {
+    throw new Error("Appearance persistence readback did not match the requested mode.");
+  }
+  return committedMode;
 }
 
 export function PartnerAppearanceProvider({ children }: { readonly children: React.ReactNode }) {
@@ -46,6 +55,7 @@ export function PartnerAppearanceProvider({ children }: { readonly children: Rea
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     mountedRef.current = true;
@@ -67,10 +77,17 @@ export function PartnerAppearanceProvider({ children }: { readonly children: Rea
   }, []);
 
   const setMode = useCallback((nextMode: BThwaniAppearanceMode) => {
-    setModeState(nextMode);
     setError(null);
-    void writeStoredAppearanceMode(nextMode).catch(() => {
-      if (mountedRef.current) setError("تعذر حفظ تفضيل المظهر.");
+    writeQueueRef.current = writeQueueRef.current.then(async () => {
+      try {
+        const committedMode = await persistAndReadBackAppearanceMode(nextMode);
+        if (!mountedRef.current) return;
+        setModeState(committedMode);
+        setError(null);
+      } catch {
+        if (!mountedRef.current) return;
+        setError("تعذر حفظ تفضيل المظهر والتحقق منه؛ لم يتم اعتماد التغيير.");
+      }
     });
   }, []);
 
