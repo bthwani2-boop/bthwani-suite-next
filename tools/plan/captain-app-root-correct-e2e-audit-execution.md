@@ -1,534 +1,277 @@
-# Captain App — Root-Correct End-to-End Audit & Execution Ledger
+# Captain App — Root-Correct End-to-End Live Execution Ledger
 
-> **STATUS: OPEN — NOT CLOSED**
+> **STATUS: OPEN — EXECUTION IN PROGRESS — NOT CLOSED**
 >
-> This file is an execution ledger and evidence index only. It is **not** a product/runtime authority and it is **not** closure proof. Canonical product truth remains in the actual source-of-fix paths identified below.
+> This file is an execution/evidence ledger only. It is **not** runtime/product authority and it must never substitute for the fix. Canonical truth remains in the actual code, contracts, data, runtime and service owners identified below.
 
-## 0. Execution identity
+## 0. Execution identity and governing law
 
 - **Repository:** `bthwani2-boop/bthwani-suite-next`
 - **Branch:** `f`
-- **Target app / audit anchor:** Captain app (`apps/app-captain` + its materially linked canonical cone)
+- **Target app / Audit Anchor:** `app-captain`
+- **Pinned re-audit HEAD:** `171234de25992f251a80b838700afc9478c6b2d5`
 - **Governing entry point:** `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
-- **Observed orchestrator package revision:** `20`
-- **Audit start HEAD:** `ef90675f04f39ae1cce12bc19f875a7e6b15d93c`
-- **Pre-write HEAD:** `ef90675f04f39ae1cce12bc19f875a7e6b15d93c`
-- **Date:** `2026-08-29` (Asia/Aden)
+- **Observed Orchestrator package revision:** `20`
+- **Date:** `2026-08-29` — Asia/Aden
 - **Closure state:** `OPEN`
-- **ACTIVE_WORKSET:** not supplied by the caller. No open pull request targeting `f` was found during this audit, and HEAD was stable across the audit window, but direct concurrent sessions/worktrees cannot be proven absent from GitHub alone. Therefore the explicitly requested audit-ledger write is permitted, while material product mutation remains subject to the Orchestrator concurrency/collision gate.
+- **ACTIVE_WORKSET:** not supplied. Branch `f` is moving from other direct sessions, therefore every product mutation must re-pin HEAD, detect collisions, and fail closed on overlapping material changes.
+
+### Governing execution law
+
+`AUDIT -> INSPECT -> DIAGNOSE -> ROOT GRAPH -> HIGHEST PROVEN EXECUTABLE ROOT -> ACTUAL SOURCE-OF-FIX -> MIGRATE/CUTOVER -> RECONCILE -> CLEAN/DELETE/FINISH -> VERIFY -> RE-AUDIT -> RE-RANK -> REPEAT -> EXACT FINAL CANDIDATE -> CLOSURE GATES`
+
+Forbidden: Patch, Workaround, Fallback-as-fix, Symptom Fix, Half Migration, Parallel/Shadow Truth, local duplicated authority, documentation-only closure, green-only closure, unrelated scope expansion.
 
 ## 1. Selected closure objective
 
-**SELECTED CLOSURE OBJECTIVE:** Close the Captain app’s complete material delivery/dispatch cone root-correctly from canonical DSH assignment and delivery state through Captain commands, UX states, location, pickup/customer-arrival, PoD, exceptions/returns, operator readback, client/partner projections and final verification, eliminating every unreachable transition, invalid action, shadow/local lifecycle truth and stale/bypass path without weakening the backend state machine.
+**SELECTED CLOSURE OBJECTIVE:** Eliminate every material Captain-app defect and parallel/shadow truth from the canonical DSH/Identity/Workforce/WLT-backed operational cone by making server-owned governed assignment/readiness/location/exception/PoD/return state the single executable truth, migrating every Captain/operator/client/partner consumer to that truth, deleting obsolete local rules and duplicate transports, and iterating through exact-candidate verification until no known material gap, stale path, unreachable legal transition, bypass, uncontracted wire field, duplicate owner, dead residue or unverified consumer remains.
 
-## 2. Anchor is not authority
+## 2. Re-audit reset — stale evidence is not current truth
 
-`apps/app-captain` is a runtime/composition shell, not the primary authority for Captain delivery behavior. The audited chain proves the material frontend authority is distributed through:
+The previous ledger was rebuilt from an older snapshot and is no longer a valid live diagnosis. The following previously reported findings were re-proven against current code and reclassified:
 
-- `apps/app-captain/runtime/*` — Expo/runtime shell and route composition.
-- `services/dsh/frontend/app-captain/*` — Captain-specific journey/rendering surface.
-- `services/dsh/frontend/shared/delivery/*` — Captain binding, inbox, lifecycle actions, location and runtime commands.
-- `services/dsh/frontend/shared/dispatch/*` — shared DSH dispatch API/contracts consumed by Captain, Control Panel, Client and Partner projections.
-- `services/dsh/frontend/shared/delivery-proof/*` and `shared/media/pod/*` — PoD submission/review/media path.
-- `services/dsh/backend/internal/dispatch/*` — canonical dispatch/delivery state machine, assignment governance, proof, exceptions, returns, availability/capacity and financial eligibility.
-- `services/dsh/database/migrations/*dispatch*`, `*delivery*`, `*captain*` — persisted state and integrity constraints.
-- `services/dsh/frontend/control-panel/operations/*` — operator assignment management, exceptions and proof review.
-- `services/dsh/frontend/app-client/*` — client delivery tracking/proof consumer.
-- `services/dsh/frontend/app-partner/*` — partner dispatch tracking/handoff consumer.
-- Identity/session, workforce/readiness, WLT completion/outbox, runtime transport/location permissions and media are in-cone where materially exercised by Captain journeys.
+| Historical finding | Current classification | Current evidence / action |
+|---|---|---|
+| Missing Captain `driver_assigned -> driver_arrived_store` command | **RESOLVED / STALE FINDING** | `use-captain-order-runtime.ts` now implements `confirmStoreArrival` with expected version, durable command identity and canonical status write. |
+| Missing Captain `picked_up -> arrived_customer` command | **RESOLVED / STALE FINDING** | `confirmCustomerArrival` now exists and writes canonical `arrived_customer`. |
+| Pickup jumped directly from `driver_assigned -> picked_up` | **RESOLVED / STALE FINDING** | Current runtime sequences arrival-at-store before pickup. |
+| Captain command identity disappeared on restart | **RESOLVED / RE-PROVEN** | Captain command attempts are durably persisted and reconciled by actor/installation/assignment/fingerprint. |
+| Local Captain readiness transport duplicated `/dsh/captain/me/readiness` | **RESOLVED + DELETE COMPLETED** | `services/dsh/frontend/app-captain/captain-readiness.api.ts` was deleted; the public Captain boundary now aliases canonical shared dispatch readiness instead of owning a second HTTP client/type. |
+| Duplicate `app-captain/dispatch` surface residue | **RESOLVED / NO LONGER PRESENT** | Current tree no longer contains the previously observed duplicate path. |
 
-No closure is valid if only `apps/app-captain` is changed.
+**Rule:** historical findings above MUST NOT be used to justify new mutations unless independently re-proven on the current candidate.
 
-## 3. Material cone inventory
+## 3. Current Material Cone
 
-### 3.1 Captain runtime/composition
+`app-captain` is only the anchor. Material ownership spans:
 
-Observed Captain runtime routes/surfaces include the operational areas for orders, map/execution, proof, support, account and notifications. The local runtime `src/features` is not the business authority; it is thin relative to the DSH shared feature layer.
+1. `apps/app-captain/runtime/*` — Expo shell, Identity session, Workforce gate, readiness gate, push registration, routes/device capabilities.
+2. `services/dsh/frontend/app-captain/*` — Captain screen/navigation/journey presentation.
+3. `services/dsh/frontend/shared/dispatch/*` — dispatch transport, generated types, availability, assignment commands, location, exceptions, return-to-store and operator consumers.
+4. `services/dsh/frontend/shared/delivery/*` — Captain runtime/binding/derived action policy and operational presentation.
+5. `services/dsh/frontend/shared/delivery-proof/*`, media/PoD paths — proof capture/upload/submission/readback.
+6. `services/dsh/frontend/shared/orders/*`, special requests and partner-fleet/store-courier paths where they materially drive Captain execution.
+7. `services/dsh/contracts/dsh.openapi.yaml`, `components/schemas/*`, `paths/*`, and modular dispatch/proof/exception contracts.
+8. `services/dsh/backend/internal/dispatch/*` — canonical assignment, delivery, allowed-actions, availability/capacity, financial eligibility, exceptions, returns, PoD and location state.
+9. `services/dsh/backend/internal/http/*` — authenticated route and wire serialization boundary.
+10. DSH persistence/migrations governing assignments, delivery, location, exceptions, PoD, COD and fleet membership.
+11. Material cross-surface consumers: Control Panel operations/HR, Client tracking, Partner dispatch/handoff, WLT completion/COD and Identity/Workforce readiness.
 
-### 3.2 Captain surface and journey layer
+No Captain-only local fix is sufficient where a higher contract/backend owner exists.
 
-Material files proven in the current branch include:
+## 4. Current Root Graph — ranked by highest proven source-of-defect
 
-- `services/dsh/frontend/app-captain/DshCaptainSurface.tsx`
-- `services/dsh/frontend/app-captain/useDshCaptainSurfaceModel.ts`
-- `services/dsh/frontend/app-captain/DshCaptainOrderJourneyRenderer.tsx`
-- `services/dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx`
-- `services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx`
-- `services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx`
-- `services/dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx`
-- `services/dsh/frontend/app-captain/orders/CaptainAssignmentOfferPanel.tsx`
-- `services/dsh/frontend/app-captain/orders/Order*Section.tsx`
-- `services/dsh/frontend/app-captain/orders/*Support*`
-- `services/dsh/frontend/app-captain/account/*`
-- `services/dsh/frontend/app-captain/finance/WltCaptainFinanceScreen.tsx`
-- `services/dsh/frontend/app-captain/captain-navigation.ts`
+### CR-1 — P0 — Generated governed assignment authority is structurally split
+
+**PROVEN ROOT.** The generated OpenAPI root exposes `DshDispatchAssignment`, while the richer `GovernedDispatchAssignment` lives in `dsh.dispatch-governance.openapi.yaml` with client generation disabled. `dispatch.types.ts` therefore manually intersects the generated base assignment with governance fields and weakens required fields such as `operatorContextId`, `serviceAreaCode`, `priority` to optional values.
+
+At runtime, governed Captain/operator handlers serialize additional fields including governance metadata plus `allowedActions` and staged `deliveryAddress`, but the generated canonical schema/path responses do not describe the full wire payload.
+
+Consequences:
+
+- generated client != actual governed wire model;
+- frontend owns a shadow repair type;
+- required server fields become optional in TypeScript;
+- operator/Captain endpoints are documented as base assignment responses although they return governed responses;
+- canonical `allowedActions` is dropped at the contract boundary;
+- frontend re-creates lifecycle legality locally from `delivery.status`;
+- `deliveryAddress` is an uncontracted wire field.
+
+**Actual source-of-fix:** DSH OpenAPI generated schema + path response ownership first, then generated client and every governed consumer.
+
+**Closure Unit CU-1:**
+
+1. Create/export one generated canonical governed assignment schema from the main generated OpenAPI component graph.
+2. Contract every field actually serialized by governed Captain/operator readback, including `allowedActions`; contract `deliveryAddress` only after its exact DTO/privacy shape is proven.
+3. Point Captain/operator governed endpoint responses to governed response/list schemas; retain Client tracking on its intended client-safe/base projection.
+4. Generate/materialize clients.
+5. Replace the manual `DshDispatchAssignment & { governance... }` shadow intersection with generated types.
+6. Give operator governed consumers the governed DTO explicitly; do not widen every client/partner consumer unnecessarily.
+7. Migrate Captain action/presentation logic to server-projected `allowedActions` fail-closed.
+8. Delete `delivery-status-flow.ts` and any equivalent local legality table only after all consumers have cut over.
+9. Reconcile privacy: partner must not receive Captain live coordinates; client tracking must remain within intended visibility; staged `deliveryAddress` must not leak pre-stage fields.
+10. Add contract/runtime negative tests proving generated schema and serialized payload cannot drift silently again.
+
+**Do not mark CU-1 closed** until generated materialization, TypeScript typecheck/tests, backend tests, affected runtime tests and negative-space searches all pass on one exact SHA.
+
+### CR-2 — P0/P1 — Captain GPS accuracy policy is client-only and bypassable
+
+**PROVEN ROOT.** Captain frontend rejects samples above 100m accuracy and sends `accuracyMeters`; the HTTP handler decodes `accuracyMeters` but discards it when constructing `dispatch.PushLocationInput`. The domain validates latitude/longitude only. Therefore a noncanonical client can submit low-quality location and bypass the operational policy used to justify arrival actions.
+
+**Actual source-of-fix:** server/domain location command contract, not a stronger frontend check.
+
+**Closure Unit CU-2:**
+
+1. Add `accuracyMeters` to canonical location request schema and backend domain input.
+2. Enforce one server-owned accuracy rule at the mutation boundary; frontend may present/preflight but may not own enforcement.
+3. Prove/define server-side timestamp freshness/future-skew semantics instead of trusting arbitrary `recordedAt`.
+4. Preserve foreground-only/no-history policy and terminal-state location purge.
+5. Verify arrival-at-store/customer and continuous location writes use the same canonical validated sample semantics.
+6. Add backend DB/unit/HTTP tests for poor accuracy, stale/future timestamp, invalid coordinate, wrong actor/context, terminal assignment and valid sample.
+7. Reconcile client tracking privacy and partner non-exposure after the change.
+
+### CR-3 — P1 — Delivery-exception contract mixes domains and lags runtime
+
+**PROVEN ROOT.** The canonical contract and runtime disagree in multiple directions:
+
+- resolve HTTP supports `cancel_order`, while `DshResolveDeliveryExceptionRequest.action` omits it;
+- backend `DeliveryException` readback includes `proofMediaRef` and `policyNextAction`, while generated response schema omits them;
+- one global reason enum includes `handoff_shortage` / `handoff_mismatch`, although generic delivery exception domain validation does not accept those reasons;
+- frontend compensates with custom unions/`Omit<>` overrides;
+- generated `orderId` is nullable for special-request exceptions, while frontend currently lies by forcing it to non-null `string`.
+
+**Actual source-of-fix:** endpoint-specific canonical schemas aligned to backend domain invariants.
+
+**Closure Unit CU-3:**
+
+1. Separate generic delivery-exception report reason type from store/captain handoff-exception reason type.
+2. Add `cancel_order` to canonical resolve request action.
+3. Contract `proofMediaRef` and `policyNextAction` with exact nullability/enums derived from runtime.
+4. Preserve nullable `orderId` and `specialRequestId`; update consumers to branch on source truth instead of asserting an order always exists.
+5. Cut all frontend exception types back to generated canonical types; delete manual enum/type repairs.
+6. Verify captain report, handoff report, operator acknowledge/resolve, return-to-store and special-request exception paths end-to-end.
+
+### CR-4 — P1 — Governed `deliveryAddress` is serialized but uncontracted and apparently unconsumed
+
+**PROVEN CONTRACT GAP / CONSUMER TRACE STILL OPEN.** Governed dispatch marshalling reads `delivery_address_snapshot`, removes sensitive address/contact/instruction fields in early stages, then emits `deliveryAddress`. No direct frontend consumer of `assignment.deliveryAddress` was found in the current search, while Captain presentation still contains generic pickup/dropoff labels.
+
+Two valid outcomes exist; one must be proven, not guessed:
+
+- if this is intended Captain operational truth, contract the exact staged DTO and consume it in the correct execution/map surface with privacy tests; or
+- if it has no legitimate consumer/purpose, delete the wire field and its query from governed marshalling.
+
+Leaving an undocumented orphan payload is forbidden.
+
+### CR-5 — P1 — Local lifecycle legality remains a shadow of canonical server `allowedActions`
+
+**PROVEN CHILD OF CR-1.** Backend already computes `AssignmentAllowedActions(...)`, but frontend uses `delivery-status-flow.ts` and `resolveCaptainDeliveryAction(deliveryStatus)` to infer next legal operations. Even if they match today, they are two rule authorities and can drift independently.
+
+**Treatment:** do not patch the local table. Close CR-1, consume canonical `allowedActions`, then delete the local legality source and prove no alternate action table remains.
+
+### CR-6 — P1 — Remaining Captain E2E cones require re-audit after higher-root cutovers
+
+These are material but must not pre-empt CR-1/CR-2/CR-3 unless a higher blocker is proven during execution:
+
+- PoD/media capture -> upload -> proof issuance/submission -> operator review -> delivery completion -> client proof visibility -> WLT completion/outbox;
+- exception -> acknowledge -> retry/reassign/return/cancel -> Captain return arrival -> partner return acceptance -> final terminal state;
+- special-request assignments where `orderId` is absent;
+- partner-fleet/store-courier mode and membership/revocation state;
+- Captain availability/readiness/financial eligibility/COD capacity boundaries;
+- support/chat/notification/deep-link routing;
+- offline/restart/replay behavior for every mutation, not only assignment status;
+- accessibility, RTL, focus/touch targets, loading/empty/error/offline/permission-denied/terminal states;
+- dead/stale/orphan route, type, registry, facade and compatibility residues.
+
+## 5. Current Source-of-Fix map
+
+| Concern | Canonical owner | Known shadow/residue to eliminate |
+|---|---|---|
+| Governed assignment wire DTO | Main DSH generated OpenAPI + backend governed marshaller | manual governance intersection in `dispatch.types.ts`; non-generated parallel DTO |
+| Legal Captain actions | backend `AssignmentAllowedActions` projection | `delivery-status-flow.ts` / status-derived legality table |
+| Assignment/delivery state mutation | backend dispatch domain | any UI/local state claiming persisted transition authority |
+| Captain readiness | canonical shared DSH readiness endpoint/controller | **duplicate app-local readiness transport deleted** |
+| Location validity | backend location mutation boundary | client-only 100m enforcement |
+| Generic delivery exception | backend delivery-exception domain + endpoint-specific OpenAPI | global mixed reason type + frontend repair unions |
+| Handoff exception | canonical handoff endpoint/domain | sharing generic report type without endpoint constraints |
+| PoD completion | backend proof domain/review lifecycle | local “delivery confirmed” semantics that are navigation only |
+| Finance/COD | WLT + governed DSH integration/outbox | any Captain-side balance/completion write |
+| Workforce/identity access | Identity + Workforce | app-local actor/profile truth |
+
+## 6. Completed mutations in this execution wave
+
+### DONE-1 — Delete duplicate Captain readiness transport
+
+Deleted:
+
 - `services/dsh/frontend/app-captain/captain-readiness.api.ts`
 
-`useDshCaptainSurfaceModel.ts` delegates directly to `shared/delivery/captain-surface.binding.ts`, proving that changing the surface model alone would be a symptom-level fix.
-
-### 3.3 Canonical Captain frontend binding/runtime
-
-Material files:
-
-- `services/dsh/frontend/shared/delivery/captain-surface.binding.ts`
-- `services/dsh/frontend/shared/delivery/delivery.actions.ts`
-- `services/dsh/frontend/shared/delivery/use-captain-order-runtime.ts`
-- `services/dsh/frontend/shared/delivery/captain-inbox.model.ts`
-- `services/dsh/frontend/shared/delivery/captain-inbox.mapper.ts`
-- `services/dsh/frontend/shared/delivery/captain-inbox.fulfillment.ts`
-- `services/dsh/frontend/shared/delivery/captain-availability.model.ts`
-- `services/dsh/frontend/shared/delivery/captain-gps.model.ts`
-- `services/dsh/frontend/shared/delivery/captain-profile.model.ts`
-- `services/dsh/frontend/shared/delivery/captain-service-mode.model.ts`
-- `services/dsh/frontend/shared/delivery/captain.contract.ts`
-- `services/dsh/frontend/shared/delivery/captain.state.ts`
-- `services/dsh/frontend/shared/delivery/captain.derived.ts`
-- `services/dsh/frontend/shared/delivery/captain.derived.policy.ts`
-
-### 3.4 Shared dispatch authority and cross-surface consumers
-
-`services/dsh/frontend/shared/dispatch/dispatch.api.ts` is a material cross-surface contract/transport node. It exposes Captain assignment, accept/decline, delivery status, location, PoD and exception paths, while also exposing operator dispatch, client tracking and partner tracking. Therefore a Captain lifecycle change must reconcile all projections rather than creating a Captain-only truth.
-
-Material cross-surface consumers include at minimum:
-
-- Control Panel: `services/dsh/frontend/control-panel/operations/DispatchOperationsPanel.tsx`
-- Control Panel: `operations/DeliveryProofReviewScreen.tsx`
-- Control Panel: `operations/ExceptionsEscalationsScreen.tsx`
-- Control Panel: `operations/OrderJourneyDispatchAssignmentScreen.tsx`
-- Control Panel: `operations/OrderJourneyLiveOrdersScreen.tsx`
-- Control Panel: `dashboard/DispatchTrackingAlertsPanel.tsx`
-- Control Panel HR/readiness: `hr/CaptainCreateView.tsx`, `hr/CaptainDetailView.tsx`, `hr/CaptainFleetMembershipsPanel.tsx`
-- Client delivery tracking/proof consumers under `services/dsh/frontend/app-client`
-- Partner dispatch/handoff tracking consumers under `services/dsh/frontend/app-partner`
-
-The Control Panel assignment screen is not a mock shell: its controller performs real cancellation/reassignment/readback and maintains a durable decision history. This must remain compatible with Captain lifecycle corrections.
-
-### 3.5 Backend canonical state machine
-
-Canonical backend source-of-fix:
-
-- `services/dsh/backend/internal/dispatch/dispatch.go`
-- `services/dsh/backend/internal/dispatch/delivery_proof.go`
-- `services/dsh/backend/internal/dispatch/delivery_exceptions.go`
-- `services/dsh/backend/internal/dispatch/assignment_governance.go`
-- `services/dsh/backend/internal/dispatch/captain_availability.go`
-- `services/dsh/backend/internal/dispatch/availability_capacity.go`
-- `services/dsh/backend/internal/dispatch/financial_eligibility.go`
-- `services/dsh/backend/internal/dispatch/store_captain_handoff.go`
-
-The backend lifecycle observed in `dispatch.go` is intentionally strict:
-
-```text
-Order ready_for_pickup
-  -> assignment offered + delivery assigned
-  -> Captain accepts
-  -> assignment accepted + delivery driver_assigned
-  -> driver_arrived_store
-  -> picked_up
-  -> arrived_customer
-  -> delivery proof / review
-  -> delivered (or exception/return lifecycle)
-```
-
-`UpdateDeliveryStatus` does **not** accept arbitrary jumps. It enforces:
-
-```text
-driver_assigned       -> driver_arrived_store
-driver_arrived_store -> picked_up
-picked_up             -> arrived_customer
-```
-
-`delivery_proof.go` requires an accepted assignment and delivery state `arrived_customer` before issuing/submitting delivery proof. This is a canonical safety/integrity rule and must not be weakened to accommodate frontend gaps.
-
-### 3.6 Persistence/integrity cone
-
-Material migrations already present include, among others:
-
-- `dsh-007_dispatch.sql`
-- `dsh-039_dispatch_captain_location.sql`
-- `dsh-079_dispatch_assignment_governance.sql`
-- `dsh-091_pickup_cancellation_state.sql`
-- `dsh-092_delivery_exception_lifecycle.sql`
-- `dsh-093_delivery_return_lifecycle.sql`
-- `dsh-095_store_captain_outbound_handoff.sql`
-- `dsh-096_delivery_proof_media_integrity.sql`
-- `dsh-097_dispatch_location_integrity.sql`
-- `dsh-099_captain_dispatch_financial_eligibility.sql`
-- `dsh-117_delivery_proof_completion.sql`
-- `dsh-118_delivery_proof_location_snapshot.sql`
-- `dsh-119_delivery_pin_hardening.sql`
-- `dsh-138_dispatch_capacity_wlt_decoupling.sql`
-- `dsh-139_delivery_proof_recipients.sql`
-- `dsh-140_delivery_media_governance.sql`
-- `dsh-141_delivery_exceptions_policy.sql`
-- `dsh-976_captain_fleet_memberships.sql`
-- `dsh-1010_dispatch_cod_reservation_release_outbox.sql`
-- `dsh-1030_captain_cod_legacy_write_fence.sql`
-- `dsh-1049_delivery_proof_review_idempotency.sql`
-- `dsh-1055_dispatch_assignment_context_integrity.sql`
-
-The existing schema/migration surface is evidence that lifecycle integrity is deliberate; a frontend bypass is not an acceptable treatment.
-
-## 4. Root graph
-
-```text
-Identity / Workforce / Captain readiness & fleet eligibility
-                 |
-                 v
-DSH Order ready_for_pickup
-                 |
-                 v
-Operator governed assignment writer
-(Control Panel / backend assignment governance)
-                 |
-                 v
-[dsh assignment + delivery persisted authority]
-                 |
-      +----------+------------------+
-      |                             |
-      v                             v
-Captain assignment API        Operator readback / decisions
-      |
-      v
-shared/dispatch/dispatch.api.ts
-      |
-      v
-captain-inbox.model.ts
-      |
-      v
-captain-surface.binding.ts
-      |
-      +--> use-captain-order-runtime.ts ----> canonical status writer
-      |                                         |
-      +--> delivery.actions.ts                   v
-      |                                    backend dispatch.go
-      +--> location / availability               |
-      |                                         v
-      +--> PoD controller ---------------> delivery_proof.go
-      |                                         |
-      v                                         v
-Captain journey/renderers                proof review / completion
-      |                                         |
-      v                                         +--> WLT completion/outbox
-apps/app-captain runtime shell                  |
-                                                +--> client tracking/proof projection
-                                                +--> partner tracking/handoff projection
-                                                +--> operator exceptions/returns/readback
-```
+Cutover:
 
-The highest currently proven executable root is **Captain lifecycle command/presentation parity with the existing canonical backend delivery state machine**. The backend state machine itself is not the defect demonstrated by this audit.
+- `services/dsh/frontend/app-captain/index.ts` preserves the public API by aliasing `fetchCaptainOperationalReadiness` and `CaptainOperationalReadiness` directly to the canonical shared dispatch implementation/type.
 
-## 5. Proven material findings — ranked
+Relevant commits in this execution wave:
 
-### R1 — P0 / BLOCKER — Captain delivery lifecycle is unreachable end-to-end
+- `505c0cfd545e4e70f53a59b534f25ef790df1e91` — delete duplicate readiness API.
+- `ad33ac5b7ec169237d0a49de29e3d2ef9a9e5c3b` — preserve public Captain boundary through canonical shared alias.
 
-**Evidence chain:**
+This item is **CLOSED**, subject to final exact-candidate regression verification with the whole Captain cone.
 
-1. After Captain accepts an offered assignment, backend canonical state becomes `driver_assigned`.
-2. Backend only permits `driver_assigned -> driver_arrived_store`.
-3. Captain `use-captain-order-runtime.ts` exposes `acceptTask`, `declineTask`, `confirmPickup`, `pushLocation`, and failure/exception behavior, but no command that writes `driver_arrived_store`.
-4. Captain `confirmPickup()` directly calls `updateDeliveryStatus(..., 'picked_up', ...)`.
-5. Backend only permits `picked_up` from `driver_arrived_store`.
-6. Therefore the normal post-accept Captain path attempts an invalid state jump and is rejected by canonical backend integrity.
+## 7. Mandatory execution order
 
-**Negative-space confirmation:** no Captain app/shared lifecycle action was found that owns the missing `driver_arrived_store` transition.
+1. **CU-1 — canonical governed assignment contract/generated-client cutover.**
+2. Re-audit/rank exposed failures; if no higher root appears, **CU-2 — server-owned location validation**.
+3. Re-audit/rank; then **CU-3 — endpoint-correct exception contracts**.
+4. Resolve **CR-4 deliveryAddress** by proven consumer purpose or delete it.
+5. Re-audit PoD/return/special-request/partner-fleet/finance/support/offline journeys against the new canonical DTOs/actions.
+6. Cleanup/delete every obsolete type, local rule, helper, compatibility path, dead facade, stale test fixture and registry residue exposed by migration.
+7. Exact-candidate verification and fixed-point re-audit.
 
-**Impact:** pickup cannot be completed through the normal Captain journey without an out-of-band writer or bypass. Any such external bypass would itself be Parallel/Shadow Truth and is forbidden.
+No lower surface polish may be used to hide a higher contract/server root.
 
-**Correct source-of-fix:** Captain shared lifecycle command/presenter/action model, preserving the backend transition contract.
+## 8. Verification and closure gates
 
-**Forbidden treatment:** loosen backend to allow `driver_assigned -> picked_up`.
+At minimum, the exact final candidate must prove all applicable gates on the same SHA:
 
-### R2 — P0 / BLOCKER — `arrived_customer` is also unreachable, making canonical PoD precondition unreachable
+### Contracts / generation
 
-**Evidence chain:**
+- canonical OpenAPI materialization/generation succeeds;
+- generated clients contain exactly one governed assignment authority;
+- path responses match actual Captain/operator/client/partner serializers;
+- no frontend manual `Omit`/intersection exists to repair known contract drift;
+- no uncontracted material runtime field remains.
 
-1. Backend only permits `picked_up -> arrived_customer`.
-2. `delivery_proof.go` requires delivery state `arrived_customer` before proof issue/submission.
-3. Captain runtime exposes no `arriveCustomer` / `arrived_customer` writer.
-4. Captain journey can open the PoD route for an accepted active assignment without proving `arrived_customer`.
-5. The PoD subsystem itself is real and implemented (`useCaptainDeliveryProofController`, media upload/submission, operator review), but the Captain journey cannot establish its canonical entry precondition.
+### Backend / persistence
 
-**Impact:** proof UI can be reachable while proof submission is backend-invalid; accepted proof/delivery completion is consequently unreachable from the normal Captain lifecycle.
+- DSH Go unit/integration/DB tests for dispatch, location, exceptions, returns and PoD pass;
+- optimistic concurrency/idempotency/replay remain correct;
+- wrong actor, wrong OperatorContext, stale version, invalid state and terminal-state negative paths fail closed;
+- location privacy/purge and address redaction are proven.
 
-**Correct source-of-fix:** same canonical lifecycle parity root as R1; do not duplicate proof logic.
+### Captain frontend/runtime
 
-### R3 — P0 / ROOT-DESIGN — Captain operational action model is not derived from canonical delivery state
+- typecheck and affected tests pass after generated cutover;
+- assignment offer/accept/decline/restart flows pass;
+- legal action availability is driven by canonical server projection;
+- store arrival -> pickup -> customer arrival -> PoD is reachable without bypass;
+- offline/retry/restart behavior preserves command identity and canonical readback;
+- permission-denied/location-disabled/poor-accuracy/error/empty/loading/terminal states are explicit;
+- navigation/deep links cannot reach illegal mutation state.
 
-`OperationalCaptainExecutionScreen.tsx` displays generic `تأكيد الاستلام` and `تأكيد التسليم`/`فتح إثبات التسليم` actions. Its material delivery status is not used to derive the exact next legal transition. In `DshCaptainOrderJourneyRenderer.tsx`, `activeDeliveryStatus` is used to enable the handoff-exception form at `driver_arrived_store`, but it does not produce a complete legal-action matrix.
+### Cross-surface reconciliation
 
-This creates a UI/action model that is structurally simpler than the backend state machine and is the reason R1/R2 can exist.
+- Control Panel assignment/decision/exception/proof flows remain correct;
+- Client tracking sees only intended assignment/location/proof truth;
+- Partner tracking/handoff/return paths remain privacy-correct;
+- WLT/COD completion and release outboxes remain exactly-once/idempotent;
+- Workforce/Identity readiness remains the access authority.
 
-**Required canonical behavior:** actions must be derived fail-closed from backend delivery status, e.g.:
+### Product/UX/A11y/RTL finishing
 
-```text
-driver_assigned       => Confirm arrival at store
-driver_arrived_store => Confirm pickup (subject to handoff readback)
-picked_up             => Confirm arrival at customer
-arrived_customer      => Open/submit PoD or report exception
-returning_to_store    => Confirm return arrival according to exception lifecycle
-terminal/review states=> no illegal forward action
-```
+- Arabic/RTL layout and semantic reading order are correct;
+- touch targets, roles/labels, disabled/loading states and error recovery are verified;
+- no misleading action label implies a persisted mutation that is only navigation/local state;
+- no placeholder/mock/fake production path is present in the material cone.
 
-The exact labels, permissions and UX may vary, but the transition authority may not.
+### Negative-space cleanup
 
-### R4 — P1 / INTEGRATION — local `confirmDelivery` semantics are not a delivery-state mutation
+Repository searches must prove absence of:
 
-`delivery.actions.ts` currently treats `confirmDelivery()` as local PoD readiness/navigation logic rather than a backend lifecycle transition. This is acceptable only if a prior canonical `arrived_customer` command has already succeeded. In the current graph it has not.
+- deleted readiness API/imports;
+- manual governed assignment shadow type after CU-1;
+- `delivery-status-flow.ts` or equivalent duplicate legality owner after cutover;
+- stale exception enum/type repairs after CU-3;
+- undocumented/orphan `deliveryAddress` payload after CR-4 resolution;
+- dead routes, duplicate registries, obsolete compatibility facades and superseded tests within the affected cone.
 
-**Treatment:** rename/reframe local semantics if needed after adding canonical arrival transition, so no API/action name implies a persisted state transition when it is only local navigation/readiness.
+## 9. CLOSED is forbidden until fixed point
 
-### R5 — P1 / GATING — PoD route access is assignment-gated but not sufficiently delivery-state-gated
+`CLOSED` may be written only when:
 
-`DshCaptainOrderJourneyRenderer.tsx` blocks map/pickup/PoD routes when there is no unique accepted operational assignment, which is good. However, PoD route access is not proven to require `arrived_customer` before rendering the submission surface.
+1. every current root above is `CLOSED` or `N/A_PROVEN`;
+2. every exposed child finding from the migrations is closed;
+3. all writers/readers/consumers/handoffs are reconciled;
+4. migrations/cutovers/deletions are complete — no half migration;
+5. one exact final SHA passes the required contract/backend/frontend/runtime/cross-surface gates;
+6. a fresh re-audit on that exact SHA finds **zero known material root/gap/residue/parallel truth** in the Captain material cone.
 
-**Treatment:** derive route/action eligibility from the canonical lifecycle projection. Do not rely on backend rejection as normal UX control flow.
-
-### R6 — P1 / CROSS-SURFACE RECONCILIATION — status correction must preserve operator/client/partner projections
-
-The shared dispatch API serves Captain, operator, client and partner consumers. The backend specifically treats partner tracking as a reference view and protects live Captain coordinates from partner serialization, while client tracking has delivery visibility. Any lifecycle correction must verify:
-
-- operator assignment/readback remains coherent;
-- operator PoD review remains coherent;
-- client tracking receives only intended state/location/proof changes;
-- partner tracking remains privacy-restricted and does not gain Captain live coordinates;
-- exception and return-to-store state remains visible to the correct surfaces;
-- WLT completion/outbox remains exactly-once after proof acceptance/completion.
-
-No defect is asserted here beyond the need for reconciliation; this is a mandatory blast-radius gate.
-
-### R7 — P1 / UX-A11Y-RTL VERIFICATION REQUIRED — state-specific UX must be completed with the lifecycle fix
-
-Current Captain UI contains Arabic/RTL-oriented layout and explicit loading/error/readback states in several areas, including operational GPS and handoff exception handling. Therefore this is not a claim that RTL/accessibility are globally absent.
-
-However, the missing lifecycle stages mean the product currently lacks the complete state-specific UX for at least:
-
-- approaching/arriving at store;
-- arrived at store / pickup eligibility;
-- en route to customer;
-- arrived at customer / proof eligibility;
-- conflict/version mismatch during transition;
-- offline/retry semantics for non-queueable state mutations;
-- disabled/blocked action explanation when a transition is not legal.
-
-Every new/changed action must preserve RTL, screen-reader semantics, disabled/busy state, error recovery, no accidental double-submit, and route consistency.
-
-## 6. Findings explicitly NOT claimed
-
-To prevent scope inflation and false positives:
-
-- PoD submission is **not** missing. `useCaptainDeliveryProofController` and media-assisted submission exist.
-- Operator proof review is **not** missing from the observed cone.
-- Operator assignment cancellation/reassignment/readback is **not** missing from the observed cone.
-- Backend strict transition validation is **not** classified as a defect; it is canonical integrity to preserve.
-- Existing Arabic/RTL work is **not** discarded; only missing lifecycle-specific UX must be added/reconciled.
-- No unrelated app/service is in scope unless a concrete writer/reader/consumer/handoff relationship to Captain is proven.
-
-## 7. Root-correct execution contract
-
-### Wave 0 — Collision/concurrency gate
-
-Before material product mutation:
-
-1. Re-read `f` HEAD.
-2. Reconcile declared `ACTIVE_WORKSET` if/when available.
-3. Detect overlapping changed paths/roots against any active session/worktree evidence available to the executor.
-4. Preserve one integration authority.
-5. If collision cannot be excluded for a root, do not race-write it; re-rank to another proven executable root or coordinate ownership.
-
-### Wave 1 — Canonical Captain lifecycle commands
-
-At `services/dsh/frontend/shared/delivery/use-captain-order-runtime.ts` and the shared dispatch contract boundary:
-
-- add explicit canonical command capability for `driver_arrived_store`;
-- retain pickup as `driver_arrived_store -> picked_up` only;
-- add explicit canonical command capability for `arrived_customer`;
-- use existing optimistic concurrency (`expectedVersion`) and idempotency/correlation conventions;
-- read-after-write/refresh using existing canonical patterns;
-- classify conflict/offline/error states without silently advancing local state;
-- do not add a second lifecycle store or local shadow status.
-
-Prefer a single state-aware transition primitive internally if it reduces duplication without hiding legality; expose domain-named actions to the Captain UI.
-
-### Wave 2 — Action/binding/presenter lifecycle parity
-
-Update the actual shared owner chain rather than patching the screen:
-
-- `delivery.actions.ts`
-- `captain-surface.binding.ts`
-- derived/presenter model and contracts that feed Captain renderers
-
-Required outcome:
-
-- next legal action is derived from authoritative delivery status;
-- illegal actions are absent/disabled fail-closed;
-- local phase/navigation cannot overrule persisted delivery state;
-- successful mutation refreshes canonical inbox/assignment projection;
-- conflict causes refresh/reconciliation, not local force-progress.
-
-### Wave 3 — Captain journey/UX state completion
-
-Reconcile:
-
-- `DshCaptainOrderJourneyRenderer.tsx`
-- `OperationalCaptainExecutionScreen.tsx`
-- route renderer/navigation
-- order panels/details/map/PoD entry
-
-Required UX sequence:
-
-```text
-accepted / driver_assigned
-  -> واضح: الوصول إلى المتجر
-  -> driver_arrived_store
-  -> عهدة/جاهزية + تأكيد الاستلام
-  -> picked_up
-  -> التوجه للعميل + تحديث الموقع
-  -> arrived_customer
-  -> إثبات التسليم أو الاستثناء
-  -> pending_review / accepted / rejected / return flow
-```
-
-Every stage must have loading/error/conflict/retry/blocked states as materially applicable. Avoid generic buttons that can express an illegal transition.
-
-### Wave 4 — PoD/exception/return reconciliation
-
-Do **not** reimplement PoD. Reconcile the existing chain:
-
-- `shared/delivery-proof/*`
-- `shared/media/pod/*`
-- `DshCaptainPoDSubmissionScreen.tsx`
-- backend `delivery_proof.go`
-- operator `DeliveryProofReviewScreen.tsx`
-- `delivery_exceptions.go`
-- return-to-store and store/captain handoff paths
-
-Prove:
-
-- PoD entry only after `arrived_customer`;
-- PIN/photo/signature/composite behavior remains governed;
-- pending review does not falsely mark delivery terminal;
-- accepted proof performs completion exactly once;
-- rejected proof permits a governed retry without duplicate completion;
-- exception freezes/redirects lifecycle correctly;
-- return-to-store remains a separate governed path rather than a normal-delivery shortcut.
-
-### Wave 5 — Cross-surface projections and privacy
-
-Verify exact consumers:
-
-- Control Panel dispatch operations/decision history;
-- Control Panel exception handling;
-- Control Panel delivery proof review;
-- Client order tracking and accepted proof visibility;
-- Partner dispatch tracking/handoff view;
-- WLT completion/outbox;
-- notifications/support where status transitions generate/read events.
-
-Explicit negative-space proof: partner-facing tracking must not receive Captain live GPS coordinates if backend contract prohibits them.
-
-### Wave 6 — Tests and runtime verification
-
-Minimum material verification matrix:
-
-| Journey / Gate | Required proof |
-|---|---|
-| Offer -> accept | assignment accepted + delivery `driver_assigned` |
-| Arrive store | `driver_assigned -> driver_arrived_store`, OCC/idempotency correct |
-| Pickup | only `driver_arrived_store -> picked_up` |
-| Arrive customer | only `picked_up -> arrived_customer` |
-| Premature pickup | rejected and UI cannot normally issue it |
-| Premature PoD | route/action blocked; backend remains fail-closed |
-| PoD PIN accepted | expected accepted/completion semantics |
-| PoD media pending review | delivery remains non-terminal until operator decision |
-| PoD rejection | governed retry, no duplicate completion |
-| Location | active-state push only, accuracy/privacy policy preserved |
-| Exception | forward delivery transition blocked/redirected per policy |
-| Return | return state machine and store receipt remain coherent |
-| Reassign/cancel | operator readback and Captain inbox reconcile without stale active task |
-| Client tracking | intended state/location projection only |
-| Partner tracking | intended reference projection, no forbidden live coordinates |
-| WLT completion | exactly-once durable completion/outbox behavior |
-| Auth/readiness | unauthenticated/ineligible Captain cannot operate |
-| RTL/A11y | stage actions/readbacks remain usable and correctly announced |
-
-Run the narrowest authoritative checks first, then affected/full candidate verification according to the repository’s canonical CI interface. Test success on stale SHA is not closure proof.
-
-### Wave 7 — Cleanup / deletion / negative space
-
-After canonical cutover, remove any path made obsolete by the corrected lifecycle model, including if discovered during execution:
-
-- direct or UI-generated `driver_assigned -> picked_up` shortcut assumptions;
-- local-only delivery-phase truth that can disagree with backend delivery status;
-- duplicated status labels/policies that contradict the canonical mapping;
-- stale route gating that allows PoD before `arrived_customer`;
-- compatibility bypasses/fallbacks added during development;
-- dead handlers/tests/docs that encode the old two-action lifecycle.
-
-Deletion is required only when a path is proven obsolete; do not delete active consumers merely to simplify the audit.
-
-## 8. Candidate closure gates
-
-`CLOSED` is forbidden until one exact final candidate proves all of the following:
-
-1. **Exact SHA identity:** all evidence belongs to the same final candidate SHA.
-2. **Canonical lifecycle parity:** Captain can perform every required legal transition with no illegal shortcut.
-3. **End-to-end continuity:** assignment -> pickup -> customer arrival -> PoD -> completion/exception is executable through real writers/readers.
-4. **No Parallel/Shadow Truth:** backend status remains the lifecycle authority; UI derives behavior from it.
-5. **Concurrency/collision safety:** active work ownership is reconciled for the mutated roots.
-6. **Cross-surface reconciliation:** operator/client/partner/WLT consumers pass their material contracts.
-7. **Data/integrity:** OCC/idempotency/invariants and migration constraints are preserved.
-8. **UX/Product:** every canonical stage has coherent action/readback/error/blocked behavior.
-9. **Accessibility/RTL:** materially affected controls and state messages are verified.
-10. **Runtime:** auth, readiness, location permissions/accuracy, network/offline behavior and media flows are verified where applicable.
-11. **Negative space:** no old bypass, stale route, dead duplicate or hidden fallback remains in the material cone.
-12. **CI/tests:** required authoritative checks pass on the exact candidate.
-13. **Re-audit fixed point:** re-running root discovery on the candidate produces no remaining known material executable root inside the Captain cone.
-
-## 9. Current gate result
-
-| Gate | Current result | Reason |
-|---|---|---|
-| Governing Orchestrator read | PASS | revision 20 read from branch `f` |
-| Branch identity | PASS | audit and pre-write HEAD both `ef90675f...` |
-| App-as-anchor / cone expansion | PASS | shell -> shared Captain -> dispatch backend/data -> cross-surface consumers traced |
-| Root Graph | PASS for current evidence | highest proven root identified |
-| Canonical lifecycle executable | **FAIL** | missing Captain `driver_arrived_store` and `arrived_customer` writers/actions |
-| PoD canonical entry reachable | **FAIL** | `arrived_customer` cannot be established through current Captain command graph |
-| UI legal-action parity | **FAIL** | generic pickup/delivery actions not fully derived from canonical delivery state |
-| ACTIVE_WORKSET collision proof | **UNPROVEN** | caller did not supply active workset; GitHub proves no open PR to `f`, not absence of direct sessions |
-| Exact final candidate tests | **NOT RUN / NOT PROVEN** | no corrected candidate exists yet |
-| Fixed point | **FAIL** | material P0 roots remain |
-| Closure | **OPEN** | closure gates not satisfied |
-
-## 10. Immediate execution rank
-
-1. **P0:** Establish canonical Captain `driver_arrived_store` transition capability with OCC/idempotency and readback.
-2. **P0:** Establish canonical Captain `arrived_customer` transition capability.
-3. **P0:** Replace generic operational action model with backend-status-derived legal action model across binding/presenter/journey UI.
-4. **P1:** Gate PoD route/action on canonical `arrived_customer` and reconcile existing proof controller/readback.
-5. **P1:** Reconcile exception/return path with the new action model.
-6. **P1:** Verify Control Panel, Client, Partner and WLT consumers/projections/privacy.
-7. **P1:** Complete affected UX/A11y/RTL/error/conflict states and tests.
-8. **P1:** Delete stale/bypass assumptions and prove negative space.
-9. **FINAL:** Build exact candidate, run authoritative verification, re-audit/re-rank until fixed point.
-
-## 11. Mutation rule for the next loop
-
-The next material code change must start at the proven source-of-fix, not at the symptom:
-
-```text
-shared Captain lifecycle command contract/runtime
-  -> shared actions/binding/presenter
-  -> Captain journey/renderers
-  -> existing PoD/exception consumers
-  -> cross-surface reconciliation
-  -> tests/runtime/CI
-  -> re-audit
-```
-
-Do not patch `OperationalCaptainExecutionScreen` alone. Do not weaken `dispatch.go`. Do not manufacture a second state machine in the app. Do not claim closure from a plan or from a subset of green tests.
-
----
-
-**CURRENT VERDICT: OPEN.** The deepest proven blocker is a structural Captain/frontend lifecycle parity gap against the existing canonical DSH delivery state machine. The correct treatment is a full root-correct lifecycle cutover through the shared Captain command/action/presentation chain, followed by cross-surface reconciliation, cleanup, exact-candidate verification and fixed-point re-audit.
+**CURRENT VERDICT: OPEN.** The current highest proven executable root is **CR-1: the split generated/non-generated governed assignment contract that drops canonical server legality/read-model fields and forces frontend shadow types/rules. Execution must continue from that source-of-fix before lower-layer finishing.**
