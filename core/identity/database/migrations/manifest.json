@@ -318,7 +318,7 @@
       "file": "identity-044_rbac_operator_context_ledger.sql",
       "sha256": "28d25c44d75d85a07650feccdd675c39fbf1654a12efb8bdb67529cb46770e36",
       "historicalPrefix": null,
-      "state": "ACTIVE"
+      "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 46,
