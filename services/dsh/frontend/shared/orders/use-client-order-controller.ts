@@ -50,21 +50,11 @@ function orderErrorMessage(error: unknown): string {
 
 /**
  * Shared client journey controller. The order itself is always read from the
- * The actor-scoped order-truth endpoint owns the canonical order view.
- * Preparation, issues, dispatch and live tracking remain separate read-only projections and cannot
- * override order truth.
+ * actor-scoped order-truth endpoint. Preparation, issues, dispatch and live
+ * tracking remain separate read-only projections and cannot override order
+ * truth. Required preparation projections fail the whole read instead of
+ * fabricating an empty/default operational state.
  */
-function fallbackOrderPreparation(orderId: string): DshOrderPreparation {
-  return {
-    orderId,
-    estimatedPreparationMinutes: 0,
-    preparationWarningMinutes: 0,
-    preparationDelayReason: "",
-    preparationEstimateRevisionCount: 0,
-    preparationSlaState: "not_started",
-    preparationRemainingSeconds: 0,
-  };
-}
 
 export function useClientOrderController(orderId: string) {
   const [state, setState] = React.useState<ClientOrderState>({ kind: 'loading' });
@@ -78,12 +68,8 @@ export function useClientOrderController(orderId: string) {
     try {
       const order = await fetchClientOrderTruthDetail(orderId);
       const [preparation, issueList] = await Promise.all([
-        fetchOrderPreparation(orderId).catch(() => fallbackOrderPreparation(orderId)),
-        fetchOrderPreparationIssues(orderId).catch(() => ({
-          issues: [] as readonly DshPreparationIssue[],
-          openCount: 0,
-          pendingCustomerDecisionCount: 0,
-        })),
+        fetchOrderPreparation(orderId),
+        fetchOrderPreparationIssues(orderId),
       ]);
       let assignment: DshDispatchAssignment | null = null;
       let liveTracking: DshLiveTrackingProjection | null = null;

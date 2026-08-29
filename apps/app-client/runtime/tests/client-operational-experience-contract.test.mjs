@@ -201,6 +201,16 @@ test("client order and support routes remain navigable and failure-safe", () => 
   );
 });
 
+test("client order preparation never fabricates an operational readback", () => {
+  const controller = assertMarkers(
+    "services/dsh/frontend/shared/orders/use-client-order-controller.ts",
+    ["fetchOrderPreparation(orderId)", "fetchOrderPreparationIssues(orderId)", "Required preparation projections fail the whole read"],
+  );
+  assert.doesNotMatch(controller, /fallbackOrderPreparation/);
+  assert.doesNotMatch(controller, /fetchOrderPreparation\(orderId\)\.catch/);
+  assert.doesNotMatch(controller, /fetchOrderPreparationIssues\(orderId\)\.catch/);
+});
+
 test("client notification action routes are canonical and fail closed", () => {
   const navigation = assertMarkers(
     "services/dsh/frontend/app-client/client-navigation.ts",
