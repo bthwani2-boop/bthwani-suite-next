@@ -23,6 +23,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useControlPanelSession } from "../session";
 import {
   useOperatorTicketController,
@@ -41,12 +42,6 @@ import {
   type SupportQueueFilterId,
   type DshSupportTicketEvent,
 } from "../../shared/support";
-import {
-  ClientProfileWorkspace,
-  CallReceptionWorkspace,
-  ComplianceRiskWorkspace,
-  MessagesWorkspace,
-} from "./SupportWorkspaces";
 
 function formatEvent(event: DshSupportTicketEvent): string {
   const labels: Record<DshSupportTicketEvent["eventType"], string> = {
@@ -64,6 +59,8 @@ function formatEvent(event: DshSupportTicketEvent): string {
 export function SupportDashboardScreen() {
   const session = useControlPanelSession();
   const actorId = session.state.kind === "authenticated" ? session.state.identity.subject : null;
+  const identity = session.state.kind === "authenticated" ? session.state.identity : null;
+  const canManageSupport = hasServiceControlPanelPermission(identity, "dsh", "support.manage");
   const ticketCtrl = useOperatorTicketController(actorId, session.state.kind);
   const incidentCtrl = useSupportIncidentController(actorId, session.state.kind);
   const [mainTab, setMainTab] = useState<SupportMainTabId>("queues");
@@ -91,7 +88,7 @@ export function SupportDashboardScreen() {
   const hasRuntimeError = ticketCtrl.listState.kind === "error" || incidentCtrl.listState.kind === "error";
 
   const sendReply = async () => {
-    if (!selectedTicketRaw || replyBody.trim().length < 1) return;
+    if (!canManageSupport || !selectedTicketRaw || replyBody.trim().length < 1) return;
     const sent = await detailCtrl.sendMessage({ body: replyBody.trim(), isInternal: internalReply });
     if (!sent) return;
     setReplyBody("");
@@ -106,7 +103,7 @@ export function SupportDashboardScreen() {
   };
 
   const resolveSelectedTicket = async () => {
-    if (!selectedTicketRaw) return;
+    if (!canManageSupport || !selectedTicketRaw) return;
     await ticketCtrl.operatorUpdateTicket(selectedTicketRaw.id, {
       expectedStatus: selectedTicketRaw.status,
       expectedVersion: selectedTicketRaw.version,
@@ -117,7 +114,7 @@ export function SupportDashboardScreen() {
   };
 
   const resolveSelectedIncident = async () => {
-    if (!selectedIncident) return;
+    if (!canManageSupport || !selectedIncident) return;
     await incidentCtrl.resolveIncident(selectedIncident.id, { status: "resolved", expectedVersion: selectedIncident.version });
   };
 
@@ -257,27 +254,29 @@ export function SupportDashboardScreen() {
                   </section>
 
                   <div style={{ marginTop: "1rem", display: "grid", gap: "0.5rem" }}>
-                    <CpTextInput value={replyBody} onChange={setReplyBody} placeholder="الرد على التذكرة…" aria-label="رد التذكرة" />
-                    <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                      <input type="checkbox" checked={internalReply} onChange={(event) => setInternalReply(event.target.checked)} />
-                      ملاحظة داخلية لا تظهر لصاحب التذكرة
-                    </label>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <CpButton
-                        disabled={replyBody.trim().length < 1 || detailCtrl.messageActionState.kind === "submitting"}
-                        onClick={() => void sendReply()}
-                        style={{ flex: 1 }}
-                      >
-                        إرسال الرد
-                      </CpButton>
-                      <CpButton
-                        disabled={selectedTicketRaw.status === "resolved" || selectedTicketRaw.status === "closed" || ticketCtrl.actionState.kind === "submitting"}
-                        onClick={() => void resolveSelectedTicket()}
-                        style={{ flex: 1 }}
-                      >
-                        حل التذكرة
-                      </CpButton>
-                    </div>
+                    {canManageSupport ? <>
+                      <CpTextInput value={replyBody} onChange={setReplyBody} placeholder="الرد على التذكرة…" aria-label="رد التذكرة" />
+                      <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                        <input type="checkbox" checked={internalReply} onChange={(event) => setInternalReply(event.target.checked)} />
+                        ملاحظة داخلية لا تظهر لصاحب التذكرة
+                      </label>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <CpButton
+                          disabled={replyBody.trim().length < 1 || detailCtrl.messageActionState.kind === "submitting"}
+                          onClick={() => void sendReply()}
+                          style={{ flex: 1 }}
+                        >
+                          إرسال الرد
+                        </CpButton>
+                        <CpButton
+                          disabled={selectedTicketRaw.status === "resolved" || selectedTicketRaw.status === "closed" || ticketCtrl.actionState.kind === "submitting"}
+                          onClick={() => void resolveSelectedTicket()}
+                          style={{ flex: 1 }}
+                        >
+                          حل التذكرة
+                        </CpButton>
+                      </div>
+                    </> : <CpMutedInline tight>قراءة فقط — الرد وتغيير حالة التذكرة يتطلبان support.manage.</CpMutedInline>}
                     {detailCtrl.messageActionState.kind === "error" ? <p role="alert">{detailCtrl.messageActionState.message}</p> : null}
                     {ticketCtrl.actionState.kind === "error" ? <p role="alert">{ticketCtrl.actionState.message}</p> : null}
                   </div>
@@ -311,9 +310,9 @@ export function SupportDashboardScreen() {
               {selectedIncident ? (
                 <CpDetailPanel title={selectedIncident.title} onClose={() => setSelectedIncidentId(undefined)}>
                   <p>{selectedIncident.description}</p>
-                  <CpButton disabled={selectedIncident.status === "resolved" || incidentCtrl.actionState.kind === "submitting"} onClick={() => void resolveSelectedIncident()}>
+                  {canManageSupport ? <CpButton disabled={selectedIncident.status === "resolved" || incidentCtrl.actionState.kind === "submitting"} onClick={() => void resolveSelectedIncident()}>
                     تعليم الحادث كمحلول
-                  </CpButton>
+                  </CpButton> : <CpMutedInline tight>قراءة فقط — تغيير حالة الحادث يتطلب support.manage.</CpMutedInline>}
                   {incidentCtrl.actionState.kind === "error" ? <p role="alert">{incidentCtrl.actionState.message}</p> : null}
                 </CpDetailPanel>
               ) : null}
@@ -321,11 +320,6 @@ export function SupportDashboardScreen() {
           ) : null}
         </>
       ) : null}
-
-      {mainTab === "client-profile" ? <ClientProfileWorkspace /> : null}
-      {mainTab === "call-reception" ? <CallReceptionWorkspace /> : null}
-      {mainTab === "compliance-risk" ? <ComplianceRiskWorkspace /> : null}
-      {mainTab === "messages" ? <MessagesWorkspace /> : null}
 
       <div
         dir="rtl"

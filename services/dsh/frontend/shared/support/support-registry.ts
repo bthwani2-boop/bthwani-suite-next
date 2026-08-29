@@ -17,11 +17,7 @@ import type {
 
 export type SupportMainTabId =
   | "queues"
-  | "client-profile"
-  | "call-reception"
-  | "escalation"
-  | "compliance-risk"
-  | "messages";
+  | "escalation";
 
 export type SupportMainTabMeta = {
   readonly id: SupportMainTabId;
@@ -30,11 +26,7 @@ export type SupportMainTabMeta = {
 
 export const SUPPORT_MAIN_TABS: readonly SupportMainTabMeta[] = [
   { id: "queues",           label: "صفوف الدعم والنزاعات" },
-  { id: "client-profile",   label: "ملف العميل الشامل"   },
-  { id: "call-reception",   label: "استقبال المكالمات"   },
   { id: "escalation",       label: "التصاعد"              },
-  { id: "compliance-risk",  label: "خطر الالتزام"         },
-  { id: "messages",         label: "الرسائل"              },
 ] as const;
 
 // ─── Queue Sub-filter Registry ────────────────────────────────────────────────
@@ -79,9 +71,9 @@ export function buildSupportKpiMetrics(
   const disputes = tickets.filter((t) => t.category === "payment_reference" || t.category === "order_issue");
   const highRisk = tickets.filter((t) => t.priority === "urgent" || t.priority === "high");
   return {
-    suggestedQueues: openTickets.length + incidents.filter((i) => i.status === "open").length || 17,
-    disputes: disputes.length || 9,
-    complianceRisk: highRisk.length || 3,
+    suggestedQueues: openTickets.length + incidents.filter((i) => i.status === "open").length,
+    disputes: disputes.length,
+    complianceRisk: highRisk.length,
   };
 }
 
