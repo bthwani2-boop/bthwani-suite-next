@@ -35,7 +35,6 @@ export type DshCaptainSurfaceState = {
   selectedSupportScreen: CaptainSupportRoute;
   captainAvailabilityStatus: CaptainAvailabilityStatus;
   gpsStatus: CaptainGpsStatus;
-  activeOrderExpanded: boolean;
   captainAppMode: CaptainAppMode;
   captainPodState: CaptainPodState;
   captainPodPhotoUri: string | undefined;

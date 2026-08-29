@@ -19,7 +19,6 @@ export type DeliveryActionsDeps = {
   setDeliveryActionState: (s: any) => void;
   setDeliveryActionMessage: (s: string | null) => void;
   setCaptainPodState: (s: any) => void;
-  setActiveOrderExpanded: (v: boolean) => void;
 };
 
 export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
@@ -34,7 +33,6 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     setDeliveryActionState,
     setDeliveryActionMessage,
     setCaptainPodState,
-    setActiveOrderExpanded,
   } = deps;
 
   const captainOrderRuntime = useCaptainOrderRuntime();
@@ -165,12 +163,11 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
       }
       setCaptainPodState('success');
       setInboxState('delivered');
-      setActiveOrderExpanded(false);
     } catch (err) {
       console.error('[captain:pod-readback]', err);
       setCaptainPodState('error');
     }
-  }, [activeAssignmentId, captainRuntimeId, refreshInbox, setActiveOrderExpanded, setCaptainPodState, setInboxState]);
+  }, [activeAssignmentId, captainRuntimeId, refreshInbox, setCaptainPodState, setInboxState]);
 
   const reportPodFailure = React.useCallback(async (draft: CaptainDeliveryExceptionDraft) => {
     if (!captainRuntimeId || !activeAssignmentId) {

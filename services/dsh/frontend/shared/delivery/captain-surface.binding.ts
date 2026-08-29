@@ -50,14 +50,12 @@ export function useDshCaptainSurfaceBinding(
   const serviceModeModel = useCaptainServiceModeModel({
     setActiveServiceType: profileModel.setActiveServiceType,
     setInboxState: lifecycle.setInboxState,
-    setActiveOrderExpanded: orderModel.setActiveOrderExpanded,
     setCaptainAppMode: profileModel.setCaptainAppMode,
   });
 
   const resetOrderState = React.useCallback(() => {
-    orderModel.setActiveOrderExpanded(false);
     podUpload.resetPodFields();
-  }, [orderModel, podUpload]);
+  }, [podUpload]);
 
   const deliveryActions = useCaptainDeliveryActions({
     captainRuntimeId,
@@ -70,7 +68,6 @@ export function useDshCaptainSurfaceBinding(
     setDeliveryActionState: lifecycle.setDeliveryActionState,
     setDeliveryActionMessage: lifecycle.setDeliveryActionMessage,
     setCaptainPodState: podUpload.setCaptainPodState,
-    setActiveOrderExpanded: orderModel.setActiveOrderExpanded,
   });
 
   const pushLocation = React.useCallback((push: DshCaptainLocationPush) => {
