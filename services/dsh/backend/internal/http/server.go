@@ -138,7 +138,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/location", protected.handlePushDispatchLocationGoverned)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/exceptions", protected.handleReportDeliveryException)
 	mux.HandleFunc("GET /dsh/captain/dispatch/assignments/{assignmentId}/exceptions", protected.handleGetCaptainDeliveryException)
-	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/contact-proxy", protected.handleCaptainContactProxy)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive", protected.handleArriveReturnToStore)
 	mux.HandleFunc("GET /dsh/operator/delivery-exceptions", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleListOperatorDeliveryExceptions))
 	mux.HandleFunc("POST /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleAcknowledgeDeliveryException))

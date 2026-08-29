@@ -786,8 +786,6 @@ paths:
     $ref: "./dsh.dispatch-governance.openapi.yaml#/paths/~1dsh~1operator~1dispatch~1capacity-policies~1{serviceAreaCode}"
   /dsh/operator/dispatch/captains/{captainId}/profile:
     $ref: "./dsh.dispatch-governance.openapi.yaml#/paths/~1dsh~1operator~1dispatch~1captains~1{captainId}~1profile"
-  /dsh/captain/dispatch/assignments/{assignmentId}/contact-proxy:
-    $ref: "./dsh.dispatch-governance.openapi.yaml#/paths/~1dsh~1captain~1dispatch~1assignments~1{assignmentId}~1contact-proxy"
   /dsh/captain/me/ratings/summary:
     $ref: "./dsh.incident-governance.openapi.yaml#/paths/~1dsh~1captain~1me~1ratings~1summary"
   /dsh/captain/partner-fleet/connect:
