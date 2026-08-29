@@ -7,7 +7,7 @@ import { useIdentitySession } from "@bthwani/core-identity";
 import {
   canReadDshNavItem,
   resolveDshNavigationItem,
-} from "../../control-panel/navigation";
+} from "./navigation";
 
 /**
  * Enforces the same section read contract used by the shell navigation.
