@@ -125,7 +125,11 @@ try {
   Invoke-DshSmokeScript -Name "DSH partner onboarding smoke" -ScriptPath $DshPartnerSmoke -Parameters $partnerParameters
 
   $clientParameters = @{ StatePath = $statePath }
-  if ($profileList -contains "wlt") { $clientParameters.WltEnabled = $true }
+  # invoke-runtime-phase removes wlt from the base runtime profile list so the
+  # authenticated WLT smoke can run as its own phase. Preserve that capability
+  # for the DSH checkout handoff slice when the phase explicitly requested
+  # governed WLT seeding.
+  if ($profileList -contains "wlt" -or $SeedWlt) { $clientParameters.WltEnabled = $true }
   if ($hasLocalSeedMedia) { $clientParameters.MediaEnabled = $true }
   Invoke-DshSmokeScript -Name "DSH client and home smoke" -ScriptPath $DshClientSmoke -Parameters $clientParameters
 } finally {

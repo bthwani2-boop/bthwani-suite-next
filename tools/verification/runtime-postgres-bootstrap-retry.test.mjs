@@ -66,7 +66,7 @@ test("runtime accepts a single non-WLT profile under StrictMode", () => {
 test("PowerShell-only runtime phases use the initialized exit-code boundary", () => {
   assert.match(
     phaseScript,
-    /\$catalogExitCode = Invoke-RuntimeBasePhase -ScriptPath \$CatalogReadbackScript -Parameters @\{\}/,
+    /\$catalogParameters = @\{\}[\s\S]*\$catalogExitCode = Invoke-RuntimeBasePhase -ScriptPath \$CatalogReadbackScript -Parameters \$catalogParameters/,
   );
   assert.match(
     phaseScript,
@@ -102,13 +102,15 @@ test("partner onboarding uses the governed owner and idempotent creation contrac
 test("partner onboarding closes the canonical store publication journey", () => {
   assert.match(dshRuntimeDispatcher, /DSH partner onboarding smoke[\s\S]*StatePath = \$statePath/);
   assert.match(dshRuntimeDispatcher, /\[switch\]\$SeedWlt[\s\S]*if \(\$SeedWlt\) \{ \$seedProfiles \+= "wlt" \}[\s\S]*EngineAction "seed" -EngineProfiles \(\$seedProfiles -join ","\)/);
+  assert.match(dshRuntimeDispatcher, /\$profileList -contains "wlt" -or \$SeedWlt[\s\S]*clientParameters\.WltEnabled/);
   assert.match(phaseScript, /\$runtimeParameters\.SeedWlt = \$true/);
   assert.match(dshPartnerOnboardingSmoke, /catalogState\.masterProductId/);
   assert.match(dshPartnerOnboardingSmoke, /status = "ready"[\s\S]*deliveryModes = @\("delivery", "pickup"\)/);
   assert.match(dshPartnerOnboardingSmoke, /role = "store_logo"/);
   assert.match(dshPartnerOnboardingSmoke, /role = "store_cover"/);
   assert.match(dshPartnerOnboardingSmoke, /isPrimary = \$true/);
-  assert.match(dshPartnerOnboardingSmoke, /publicationStatus = "client_visible"/);
+  assert.match(dshPartnerOnboardingSmoke, /\$expectedAssortmentPublicationStatus = if \(\$MediaEnabled\) \{ "client_visible" \} else \{ "approved" \}/);
+  assert.match(dshPartnerOnboardingSmoke, /publicationStatus = \$expectedAssortmentPublicationStatus/);
   assert.match(dshPartnerOnboardingSmoke, /decision = "publish"/);
   assert.match(dshPartnerOnboardingSmoke, /\/dsh\/operator\/marketing\/stores\/\$smokeStoreId\/publication/);
   assert.match(dshPartnerOnboardingSmoke, /\/dsh\/stores\/\$smokeStoreId"/);
