@@ -1,5 +1,6 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
+import { corrId } from "../../shared/_kernel/dsh-http-request";
 import { Dialog, Text, TextField, spacing, resolveRowDirection, useDirection } from "@bthwani/ui-kit";
 import {
   createPartnerStoreAssortmentPrice,
@@ -30,6 +31,15 @@ export function PriceConfigurationModal({
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const mountedRef = React.useRef(true);
+  const scopeKey = `${storeId}:${masterProductId}`;
+  const scopeKeyRef = React.useRef(scopeKey);
+  scopeKeyRef.current = scopeKey;
+  const mutationRef = React.useRef<{ readonly key: string; readonly fingerprint: string } | null>(null);
+
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
 
   React.useEffect(() => {
     if (!visible) return;
@@ -73,18 +83,27 @@ export function PriceConfigurationModal({
       if (input.amountMinor < 0 || input.prepTimeMax < input.prepTimeMin) {
         throw new Error("تحقق من السعر ووقت التحضير.");
       }
-      const created = await createPartnerStoreAssortmentPrice(storeId, masterProductId, input);
+      const operationScopeKey = scopeKey;
+      const fingerprint = JSON.stringify({ scope: operationScopeKey, input });
+      const previous = mutationRef.current;
+      const idempotencyKey = previous?.fingerprint === fingerprint
+        ? previous.key
+        : corrId("catalog-price-create");
+      mutationRef.current = { key: idempotencyKey, fingerprint };
+      const created = await createPartnerStoreAssortmentPrice(storeId, masterProductId, input, idempotencyKey);
       const readback = await fetchPartnerStoreAssortmentPrices(storeId, masterProductId);
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       const saved = readback.find((price) => price.id === created.id);
       if (!saved || !isExactPriceReadback(saved, input)) {
         throw new Error("لم تتطابق قراءة السعر اللاحقة مع الطلب؛ لم يُعتمد الحفظ.");
       }
       setPrices(readback);
+      mutationRef.current = null;
       onSave();
     } catch (err) {
       setError(err instanceof Error ? err.message : "حدث خطأ غير معروف");
     } finally {
-      setSaving(false);
+      if (mountedRef.current && scopeKey === scopeKeyRef.current) setSaving(false);
     }
   };
 

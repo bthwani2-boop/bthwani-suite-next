@@ -25,7 +25,15 @@ func (s *protectedStoreServer) handleCompleteAssetUploadSafe(w http.ResponseWrit
 }
 
 func (s *protectedStoreServer) handleDeleteCatalogAssetSafe(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
+	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
+	if !ok {
+		return
+	}
+	if actor.Role == "operator" {
+		if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
+			return
+		}
+	} else if !s.authorizeAssetAccess(w, r, actor, r.PathValue("assetId")) {
 		return
 	}
 	if err := centralcatalog.DeleteUnlinkedAsset(r.Context(), s.db, s.mediaClient(), r.PathValue("assetId")); err != nil {
@@ -167,11 +175,15 @@ func (s *protectedStoreServer) handleSubmitReelSafe(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
+	idempotencyKey, ok := requireCatalogCreateIdempotency(w, r)
+	if !ok {
+		return
+	}
 	var input centralcatalog.CreateReelSubmissionInput
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	reel, err := centralcatalog.CreateReelSubmission(r.Context(), s.db, actor.ID, actor.Role, input)
+	reel, err := centralcatalog.CreateReelSubmission(r.Context(), s.db, actor.ID, actor.Role, idempotencyKey, input)
 	if err != nil {
 		s.writeCatalogMutationError(w, err)
 		return

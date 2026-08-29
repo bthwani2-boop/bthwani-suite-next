@@ -55,8 +55,23 @@ export function ProductControlsScreen({
   const [inventoryVisible, setInventoryVisible] = React.useState(false);
   const [priceVisible, setPriceVisible] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const mountedRef = React.useRef(true);
+  const requestSeqRef = React.useRef(0);
+  const scopeKey = `${storeId}:${productId}`;
+  const scopeKeyRef = React.useRef(scopeKey);
+  scopeKeyRef.current = scopeKey;
+
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+    requestSeqRef.current += 1;
+  }, []);
 
   const loadData = React.useCallback(async () => {
+    const requestSeq = ++requestSeqRef.current;
+    const requestScopeKey = scopeKey;
+    const isCurrentRequest = () => mountedRef.current
+      && requestSeq === requestSeqRef.current
+      && requestScopeKey === scopeKeyRef.current;
     setScreenState('loading');
     setErrorMessage(null);
     try {
@@ -65,6 +80,7 @@ export function ProductControlsScreen({
         fetchPartnerStoreAssortment(storeId),
         fetchPartnerAssortmentPauses(storeId),
       ]);
+      if (!isCurrentRequest()) return;
       setMasterProduct(masterProducts.find((product) => product.id === productId) ?? null);
       setAssortment(assortments.find((item) => item.masterProductId === productId) ?? null);
       const pause = pauses.find((item) => item.masterProductId === productId) ?? null;
@@ -73,10 +89,11 @@ export function ProductControlsScreen({
       setPausedUntil(pause?.pausedUntil ?? '');
       setScreenState('form');
     } catch (err: any) {
+      if (!isCurrentRequest()) return;
       setErrorMessage(err.message ?? 'تعذر تحميل بيانات التحكم canonical للمنتج.');
       setScreenState('error');
     }
-  }, [storeId, productId]);
+  }, [scopeKey, storeId, productId]);
 
   React.useEffect(() => {
     void loadData();
@@ -87,6 +104,7 @@ export function ProductControlsScreen({
       setErrorMessage('حمّل التشكيلة واكتب سبباً واضحاً للإيقاف المؤقت.');
       return;
     }
+    const operationScopeKey = scopeKey;
     setPauseSaving(true);
     setErrorMessage(null);
     try {
@@ -95,35 +113,70 @@ export function ProductControlsScreen({
         pausedUntil: pausedUntil.trim() || null,
         expectedVersion: pauseState.version,
       });
-      setAssortment(result.assortment);
-      setPauseState(result.pause);
+      const [assortments, pauses] = await Promise.all([
+        fetchPartnerStoreAssortment(storeId),
+        fetchPartnerAssortmentPauses(storeId),
+      ]);
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
+      const readbackAssortment = assortments.find((item) => item.masterProductId === productId);
+      const readbackPause = pauses.find((item) => item.masterProductId === productId);
+      if (!readbackAssortment || !readbackPause
+        || readbackAssortment.id !== result.assortment.id
+        || readbackAssortment.version !== result.assortment.version
+        || readbackPause.version !== result.pause.version
+        || !readbackPause.paused
+        || readbackPause.reason !== result.pause.reason
+        || readbackPause.pausedUntil !== result.pause.pausedUntil) {
+        throw new Error('لم تتطابق قراءة الإيقاف اللاحقة مع الطلب؛ لم يُعتمد التغيير.');
+      }
+      setAssortment(readbackAssortment);
+      setPauseState(readbackPause);
       onSaved?.();
     } catch (err: any) {
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setErrorMessage(err.message ?? 'تعذر إيقاف المنتج مؤقتاً.');
       await loadData();
     } finally {
-      setPauseSaving(false);
+      if (mountedRef.current && operationScopeKey === scopeKeyRef.current) setPauseSaving(false);
     }
-  }, [loadData, onSaved, pauseReason, pauseState, pausedUntil, productId, storeId]);
+  }, [loadData, onSaved, pauseReason, pauseState, pausedUntil, productId, scopeKey, storeId]);
 
   const handleResume = React.useCallback(async () => {
     if (!pauseState) return;
+    const operationScopeKey = scopeKey;
     setPauseSaving(true);
     setErrorMessage(null);
     try {
       const result = await resumePartnerStoreAssortment(storeId, productId, pauseState.version);
-      setAssortment(result.assortment);
-      setPauseState(result.pause);
+      const [assortments, pauses] = await Promise.all([
+        fetchPartnerStoreAssortment(storeId),
+        fetchPartnerAssortmentPauses(storeId),
+      ]);
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
+      const readbackAssortment = assortments.find((item) => item.masterProductId === productId);
+      const readbackPause = pauses.find((item) => item.masterProductId === productId);
+      if (!readbackAssortment || !readbackPause
+        || readbackAssortment.id !== result.assortment.id
+        || readbackAssortment.version !== result.assortment.version
+        || readbackPause.version !== result.pause.version
+        || readbackPause.paused
+        || readbackPause.reason !== result.pause.reason
+        || readbackPause.pausedUntil !== result.pause.pausedUntil) {
+        throw new Error('لم تتطابق قراءة الاستئناف اللاحقة مع الطلب؛ لم يُعتمد التغيير.');
+      }
+      setAssortment(readbackAssortment);
+      setPauseState(readbackPause);
       setPauseReason('');
       setPausedUntil('');
       onSaved?.();
     } catch (err: any) {
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setErrorMessage(err.message ?? 'تعذر استئناف المنتج.');
       await loadData();
     } finally {
-      setPauseSaving(false);
+      if (mountedRef.current && operationScopeKey === scopeKeyRef.current) setPauseSaving(false);
     }
-  }, [loadData, onSaved, pauseState, productId, storeId]);
+  }, [loadData, onSaved, pauseState, productId, scopeKey, storeId]);
 
   if (screenState === 'loading') {
     return <StateView title="جارٍ تحميل أدوات الكتالوج canonical…" loading />;

@@ -21,7 +21,6 @@ x-bthwani-contracts:
   captainFinancialEligibility: ./dsh.captain-financial-eligibility.openapi.yaml
   catalog: ./dsh.catalog.openapi.yaml
   catalogGovernance: ./dsh.catalog-governance.openapi.yaml
-  catalogProposalReadback: ./dsh.catalog-proposal-readback.openapi.yaml
   checkout: ./dsh.checkout.openapi.yaml
   clientAddress: ./dsh.client-address.openapi.yaml
   clientAddressPrivacy: ./dsh.client-address-privacy.openapi.yaml

@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
+import { corrId } from "../../shared/_kernel/dsh-http-request";
 import {
   Badge,
   Button,
@@ -60,13 +61,14 @@ export function PartnerReelsManagementSection({ storeId }: Props) {
   const scopeKey = storeId;
   const scopeKeyRef = React.useRef(scopeKey);
   scopeKeyRef.current = scopeKey;
+  const submissionMutationRef = React.useRef<{ readonly key: string; readonly fingerprint: string } | null>(null);
 
   React.useEffect(() => () => {
     mountedRef.current = false;
     requestSeqRef.current += 1;
   }, []);
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (options?: { readonly throwOnFailure?: boolean }) => {
     const requestSeq = ++requestSeqRef.current;
     const requestScopeKey = scopeKey;
     const isCurrentRequest = () => mountedRef.current
@@ -78,9 +80,11 @@ export function PartnerReelsManagementSection({ storeId }: Props) {
       const nextItems = await fetchPartnerReels({ storeId, limit: 50, offset: 0 });
       if (!isCurrentRequest()) return;
       setItems(nextItems);
+      return nextItems;
     } catch (caught) {
       if (!isCurrentRequest()) return;
       setError(caught instanceof Error ? caught.message : "تعذر تحميل فيديوهات المتجر.");
+      if (options?.throwOnFailure) throw caught;
     } finally {
       if (isCurrentRequest()) setLoading(false);
     }
@@ -132,7 +136,21 @@ export function PartnerReelsManagementSection({ storeId }: Props) {
     setError(null);
     setProgress({ stage: "signing" });
     try {
-      await uploadAndSubmitReel({
+      const fingerprint = JSON.stringify({
+        storeId,
+        video: { name: video.name, type: video.type, size: video.size },
+        poster: poster ? { name: poster.name, type: poster.type, size: poster.size } : null,
+        titleAr: titleAr.trim(),
+        subtitleAr: subtitleAr.trim(),
+        highlightAr: highlightAr.trim(),
+        ctaLabelAr: ctaLabelAr.trim() || "فتح المتجر",
+      });
+      const previous = submissionMutationRef.current;
+      const idempotencyKey = previous?.fingerprint === fingerprint
+        ? previous.key
+        : corrId("catalog-reel-workflow");
+      submissionMutationRef.current = { key: idempotencyKey, fingerprint };
+      const submitted = await uploadAndSubmitReel({
         file: video,
         ...(poster ? { posterFile: poster } : {}),
         targetType: "store",
@@ -142,18 +160,23 @@ export function PartnerReelsManagementSection({ storeId }: Props) {
         subtitleAr: subtitleAr.trim(),
         highlightAr: highlightAr.trim(),
         ctaLabelAr: ctaLabelAr.trim() || "فتح المتجر",
+        idempotencyKey,
         onProgress: (nextProgress) => {
           if (mountedRef.current && operationScopeKey === scopeKeyRef.current) setProgress(nextProgress);
         },
       });
       if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
+      const readback = await load({ throwOnFailure: true });
+      if (!readback?.some((item) => item.id === submitted.id && item.status === "pending_review")) {
+        throw new Error("لم تثبت قراءة الريلز اللاحقة ظهور الفيديو في قائمة المراجعة؛ لم يُعتمد الإرسال.");
+      }
+      submissionMutationRef.current = null;
       setVideo(null);
       setPoster(null);
       setTitleAr("");
       setSubtitleAr("");
       setHighlightAr("");
       setCtaLabelAr("فتح المتجر");
-      await load();
     } catch (caught) {
       if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setError(caught instanceof Error ? caught.message : "تعذر إرسال الفيديو للمراجعة.");

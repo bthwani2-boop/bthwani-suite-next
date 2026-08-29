@@ -10,7 +10,6 @@ export * from "./central-catalog.types";
 export * from "./central-catalog.api";
 export * from "./central-catalog-occ.api";
 export * from "./partner-product-media.client";
-export * from "./product-proposal-readback.api";
 export * from "./catalog-governance.types";
 export * from "./catalog-governance.api";
 export * from "./catalog-mobile-file-picker";
@@ -79,7 +78,6 @@ export async function reviewCatalogAsset(
 
 export * from "./use-central-catalog-controller";
 export * from "./central-catalog-product-pipeline";
-export * from "./central-catalog.media";
 export * from "./central-catalog.permissions";
 export * from "./central-catalog.bulk";
 export * from "./product-proposal.adapter";

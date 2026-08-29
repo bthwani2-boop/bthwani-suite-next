@@ -1,6 +1,6 @@
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
 import type {
   GovernedPublicReel,
   GovernedReel,
@@ -12,10 +12,14 @@ const baseUrl = resolveDshApiBaseUrl();
 const { request } = createDshHttpClient(baseUrl, "reels-corr");
 const { request: publicRequest } = createDshPublicHttpClient(baseUrl);
 
-export async function submitGovernedReel(input: GovernedReelSubmissionInput): Promise<GovernedReel> {
+export async function submitGovernedReel(
+  input: GovernedReelSubmissionInput,
+  idempotencyKey = corrId("catalog-reel-create"),
+): Promise<GovernedReel> {
   const response = await request<{ readonly reel: GovernedReel }>("/dsh/partner/reels", {
     method: "POST",
     body: input,
+    idempotencyKey,
   });
   return response.reel;
 }

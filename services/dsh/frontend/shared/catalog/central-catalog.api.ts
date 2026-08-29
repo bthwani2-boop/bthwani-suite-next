@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
 import type {
   CentralCatalogDomain,
   CentralCatalogNode,
@@ -248,6 +248,43 @@ export async function fetchProductProposalsPage(query?: {
   return { items: resp.proposals, total: resp.total, limit: resp.limit, offset: resp.offset };
 }
 
+export type ProductProposalReadbackQuery = {
+  readonly status?: string;
+  readonly limit?: number;
+  readonly offset?: number;
+};
+
+function buildProductProposalReadbackQuery(query?: ProductProposalReadbackQuery, storeId?: string): string {
+  const params = new URLSearchParams();
+  if (storeId !== undefined) {
+    const normalizedStoreId = storeId.trim();
+    if (!normalizedStoreId) {
+      throw new Error("storeId is required for product proposal readback");
+    }
+    params.set("storeId", normalizedStoreId);
+  }
+  if (query?.status) params.set("status", query.status);
+  if (query?.limit !== undefined) params.set("limit", String(query.limit));
+  if (query?.offset !== undefined) params.set("offset", String(query.offset));
+  const value = params.toString();
+  return value ? `?${value}` : "";
+}
+
+async function fetchProductProposalReadbackPage(path: string): Promise<PagedResult<ProductProposal>> {
+  const response = await request<{
+    readonly proposals: readonly ProductProposal[];
+    readonly total: number;
+    readonly limit: number;
+    readonly offset: number;
+  }>(path);
+  return {
+    items: response.proposals,
+    total: response.total,
+    limit: response.limit,
+    offset: response.offset,
+  };
+}
+
 export async function transitionProductProposal(
   proposalId: string,
   input: {
@@ -346,10 +383,12 @@ export async function createPartnerStoreAssortmentPrice(
   storeId: string,
   masterProductId: string,
   input: StoreAssortmentPriceInput,
+  idempotencyKey = corrId("catalog-price-create"),
 ): Promise<StoreAssortmentPrice> {
   const resp = await request<{ price: StoreAssortmentPrice }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices`, {
     method: "POST",
     body: input,
+    idempotencyKey,
   });
   return resp.price;
 }
@@ -367,6 +406,15 @@ export async function fetchPartnerStoreAssortment(storeId: string): Promise<read
   return resp.assortment;
 }
 
+export function fetchPartnerProductProposals(
+  storeId: string,
+  query?: ProductProposalReadbackQuery,
+): Promise<PagedResult<ProductProposal>> {
+  return fetchProductProposalReadbackPage(
+    `/dsh/partner/catalog/product-proposals${buildProductProposalReadbackQuery(query, storeId)}`,
+  );
+}
+
 
 
 export async function createPartnerProductProposal(input: {
@@ -382,17 +430,19 @@ export async function createPartnerProductProposal(input: {
   readonly baseVersion?: number | undefined;
   readonly duplicateCandidates?: readonly string[] | undefined;
   readonly sourceSurface: "app-partner" | "control-panel" | "app-field";
+  readonly idempotencyKey?: string;
 }): Promise<ProductProposal> {
   const storeId = input.storeId.trim();
   if (!storeId) {
     throw new Error("storeId is required for partner product proposals");
   }
-  const { storeId: _storeId, ...requestBody } = input;
+  const { storeId: _storeId, idempotencyKey, ...requestBody } = input;
   const resp = await request<{ proposal: ProductProposal }>(
     `/dsh/partner/catalog/product-proposals?storeId=${encodeURIComponent(storeId)}`,
     {
       method: "POST",
       body: requestBody,
+      idempotencyKey: idempotencyKey ?? corrId("catalog-proposal-create"),
     },
   );
   return resp.proposal;
@@ -459,10 +509,11 @@ export async function createFieldProductProposal(partnerId: string, input: {
   readonly baseVersion?: number | undefined;
   readonly duplicateCandidates?: readonly string[] | undefined;
   readonly sourceSurface: "app-field";
-}): Promise<ProductProposal> {
+}, idempotencyKey = corrId("catalog-field-proposal-create")): Promise<ProductProposal> {
   const resp = await request<{ proposal: ProductProposal }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals`, {
     method: "POST",
     body: input,
+    idempotencyKey,
   });
   return resp.proposal;
 }
@@ -473,6 +524,15 @@ export async function withdrawFieldProductProposal(partnerId: string, proposalId
     body: { expectedVersion },
   });
   return resp.proposal;
+}
+
+export function fetchFieldProductProposals(
+  partnerId: string,
+  query?: ProductProposalReadbackQuery,
+): Promise<PagedResult<ProductProposal>> {
+  return fetchProductProposalReadbackPage(
+    `/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals${buildProductProposalReadbackQuery(query)}`,
+  );
 }
 
 // ─── Public Published Catalog ──────────────────────────────────────────────────
@@ -523,10 +583,11 @@ export async function createAssetUploadIntent(input: {
   readonly intendedEntityType?: string;
   readonly intendedEntityId?: string;
   readonly intendedRole?: string;
-}): Promise<AssetUploadIntent> {
+}, idempotencyKey = corrId("catalog-asset-intent-create")): Promise<AssetUploadIntent> {
   return request<AssetUploadIntent>("/dsh/operator/catalog/assets/upload-intents", {
     method: "POST",
     body: input,
+    idempotencyKey,
   });
 }
 
@@ -649,38 +710,3 @@ export async function deleteCatalogAsset(assetId: string): Promise<void> {
 }
 
 // ─── Reels APIs ───────────────────────────────────────────────────────────────
-
-import type { Reel, PublicReel, CreateReelSubmissionInput, ReviewReelInput } from "./central-catalog.types";
-
-export async function submitReel(input: CreateReelSubmissionInput): Promise<Reel> {
-  const resp = await request<{ reel: Reel}>("/dsh/partner/reels", {
-    method: "POST",
-    body: input,
-  });
-  return resp.reel;
-}
-
-export async function fetchReels(query?: { status?: string; limit?: number; offset?: number }): Promise<readonly Reel[]> {
-  const params = new URLSearchParams();
-  if (query?.status) params.set("status", query.status);
-  if (query?.limit !== undefined) params.set("limit", String(query.limit));
-  if (query?.offset !== undefined) params.set("offset", String(query.offset));
-  const qs = params.toString();
-  const path = qs ? `/dsh/operator/reels?${qs}` : "/dsh/operator/reels";
-  const resp = await request<{ reels: readonly Reel[] }>(path);
-  return resp.reels;
-}
-
-export async function reviewReel(reelId: string, input: ReviewReelInput): Promise<Reel> {
-  const resp = await request<{ reel: Reel }>(`/dsh/operator/reels/${encodeURIComponent(reelId)}/review`, {
-    method: "POST",
-    body: input,
-  });
-  return resp.reel;
-}
-
-export async function fetchPublicReels(limit?: number): Promise<readonly PublicReel[]> {
-  const qs = limit ? `?limit=${limit}` : "";
-  const resp = await publicRequest<{ reels: readonly PublicReel[] }>(`/dsh/public/reels${qs}`);
-  return resp.reels;
-}

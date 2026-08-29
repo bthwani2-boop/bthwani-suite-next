@@ -527,6 +527,13 @@
       "sha256": "da36bd537d0b9e21eb06db8a1716680d9e937aff484ccbd32b2180304adb7a76",
       "historicalPrefix": "1074",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 316,
+      "file": "dsh-1075_catalog_create_idempotency.sql",
+      "sha256": "15b56fa121906f36077b2e6270def886c07e35909b55bfd6877823b0e2e7c1e7",
+      "historicalPrefix": "1075",
+      "state": "ACTIVE"
     }
   ]
 }

@@ -17,7 +17,7 @@ import {
   type DshStorePublicationDiagnosticsState,
   type DshStoreAuditState,
 } from "../../../shared/store";
-import { uploadAndLinkAsset } from "../../../shared/catalog";
+import { toUploadFileSource, uploadAndLinkImage } from "../../../shared/catalog";
 import { hasServiceControlPanelPermission } from "../../../shared/session/control-panel-permissions";
 import { StoreServiceAreaPanel } from "./StoreServiceAreaPanel";
 
@@ -49,8 +49,8 @@ function StoreImageUploadForm({ storeId }: { readonly storeId: string }) {
     }
     setUploading(true);
     try {
-      await uploadAndLinkAsset({
-        file,
+      await uploadAndLinkImage({
+        file: toUploadFileSource(file),
         entityType: "stores",
         entityId: storeId,
         role,

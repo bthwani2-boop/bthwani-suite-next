@@ -430,6 +430,7 @@
     tags: [CentralCatalog]
     security: [{ bearerAuth: [] }]
     parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
       - name: assetId
         in: path
         required: true
@@ -822,6 +823,7 @@
     security: [{ bearerAuth: [] }]
     parameters:
       - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
       - name: masterProductId
         in: path
         required: true
@@ -978,6 +980,7 @@
     security: [{ bearerAuth: [] }]
     parameters:
       - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
       - name: masterProductId
         in: path
         required: true

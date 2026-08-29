@@ -29,6 +29,14 @@ export function InventoryConfigurationModal({
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const mountedRef = React.useRef(true);
+  const scopeKey = `${storeId}:${masterProductId}`;
+  const scopeKeyRef = React.useRef(scopeKey);
+  scopeKeyRef.current = scopeKey;
+
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
 
   React.useEffect(() => {
     if (!visible) return;
@@ -65,6 +73,7 @@ export function InventoryConfigurationModal({
     setSaving(true);
     setError(null);
     try {
+      const operationScopeKey = scopeKey;
       const parsedQuantity = parseInteger(quantity, "الكمية");
       const minOrderQuantity = parseInteger(minOrder, "الحد الأدنى");
       const maxOrderQuantity = parseInteger(maxOrder, "الحد الأقصى");
@@ -82,6 +91,7 @@ export function InventoryConfigurationModal({
       }
       await upsertPartnerStoreAssortmentInventory(storeId, masterProductId, input);
       const readback = await fetchPartnerStoreAssortmentInventory(storeId, masterProductId);
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       if (!isExactInventoryReadback(readback, input, inventory.version)) {
         throw new Error("لم تتطابق قراءة المخزون اللاحقة مع الطلب؛ لم يُعتمد الحفظ.");
       }
@@ -90,7 +100,7 @@ export function InventoryConfigurationModal({
     } catch (err) {
       setError(err instanceof Error ? err.message : "حدث خطأ غير معروف");
     } finally {
-      setSaving(false);
+      if (mountedRef.current && scopeKey === scopeKeyRef.current) setSaving(false);
     }
   };
 

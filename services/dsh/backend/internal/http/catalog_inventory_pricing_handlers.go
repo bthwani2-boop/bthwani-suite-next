@@ -147,6 +147,10 @@ func (s *protectedStoreServer) upsertAssortmentInventory(w http.ResponseWriter, 
 
 func (s *protectedStoreServer) createAssortmentPrice(w http.ResponseWriter, r *http.Request, actorID, storeID string) {
 	masterProductID := r.PathValue("masterProductId")
+	idempotencyKey, ok := requireCatalogCreateIdempotency(w, r)
+	if !ok {
+		return
+	}
 	var input centralcatalog.StoreAssortmentPriceInput
 	if !decodeProtectedJSON(w, r, &input) {
 		return
@@ -156,7 +160,7 @@ func (s *protectedStoreServer) createAssortmentPrice(w http.ResponseWriter, r *h
 		return
 	}
 
-	price, err := centralcatalog.CreateAssortmentPriceAtomic(r.Context(), s.db, storeID, masterProductID, actorID, input)
+	price, err := centralcatalog.CreateAssortmentPriceAtomic(r.Context(), s.db, storeID, masterProductID, actorID, idempotencyKey, input)
 	if err != nil {
 		s.writeCatalogMutationError(w, err)
 		return

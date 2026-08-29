@@ -38,7 +38,8 @@ import {
   auditProductQuality,
   parseAndValidateCSV,
   exportProductsToCSV,
-  uploadAndLinkAsset,
+  toUploadFileSource,
+  uploadAndLinkImage,
   cleanupOrphanCatalogAssets,
   type CatalogAsset,
 } from "../../shared/catalog";
@@ -401,8 +402,8 @@ export function CatalogDashboardScreen() {
     }
     setUploading(true);
     try {
-      await uploadAndLinkAsset({
-        file,
+      await uploadAndLinkImage({
+        file: toUploadFileSource(file),
         entityType: uploadEntityType,
         entityId: uploadEntityId.trim(),
         role: uploadRole.trim() || "gallery",

@@ -98,34 +98,37 @@ function DshPartnerSurfaceInner({ route, navigation, appearance }: DshPartnerSur
         </View>
       );
     }
-    if (!scopesError && scopes.length > 1) {
+
+    if (!selectedStoreScope) {
+      if (!scopesError && scopes.length > 1) {
+        return (
+          <View style={styles.shellContainer}>
+            <View style={styles.emptyStateContainer}>
+              <Icon name="storefront-outline" size={48} tone="brand" />
+              <Text role="bodyStrong" style={styles.emptyStateTitle}>اختر الفرع النشط</Text>
+              <Text role="body" style={styles.emptyStateDesc}>
+                لديك أكثر من فرع. يجب اختيار الفرع صراحةً قبل تنفيذ أي عملية تشغيلية.
+              </Text>
+              <Button label="اختيار الفرع" onPress={actions.openStoreScope} />
+            </View>
+            {storeScopeSheet}
+          </View>
+        );
+      }
       return (
         <View style={styles.shellContainer}>
           <View style={styles.emptyStateContainer}>
-            <Icon name="storefront-outline" size={48} tone="brand" />
-            <Text role="bodyStrong" style={styles.emptyStateTitle}>اختر الفرع النشط</Text>
-            <Text role="body" style={styles.emptyStateDesc}>
-              لديك أكثر من فرع. يجب اختيار الفرع صراحةً قبل تنفيذ أي عملية تشغيلية.
+            <Icon name="warning-outline" size={48} tone="muted" />
+            <Text role="bodyStrong" style={styles.emptyStateTitle}>
+              {scopesError ? 'حدث خطأ أثناء تحميل الفروع' : 'لا يوجد فروع مسجلة'}
             </Text>
-            <Button label="اختيار الفرع" onPress={actions.openStoreScope} />
+            <Text role="body" style={styles.emptyStateDesc}>
+              {scopesError ? 'يرجى المحاولة لاحقاً' : 'يرجى التواصل مع الدعم الفني لإضافة فروع لحسابك'}
+            </Text>
           </View>
-          {storeScopeSheet}
         </View>
       );
     }
-    return (
-      <View style={styles.shellContainer}>
-        <View style={styles.emptyStateContainer}>
-          <Icon name="warning-outline" size={48} tone="muted" />
-          <Text role="bodyStrong" style={styles.emptyStateTitle}>
-            {scopesError ? 'حدث خطأ أثناء تحميل الفروع' : 'لا يوجد فروع مسجلة'}
-          </Text>
-          <Text role="body" style={styles.emptyStateDesc}>
-            {scopesError ? 'يرجى المحاولة لاحقاً' : 'يرجى التواصل مع الدعم الفني لإضافة فروع لحسابك'}
-          </Text>
-        </View>
-      </View>
-    );
   }
 
   if (scopesError) {
