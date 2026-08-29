@@ -44,6 +44,12 @@ function methodLabel(proof: DshDeliveryProof): string {
   return 'صورة';
 }
 
+function sourceLabel(proof: DshDeliveryProof): string {
+  if (proof.orderId) return `الطلب ${proof.orderId}`;
+  if (proof.specialRequestId) return `الطلب الخاص ${proof.specialRequestId}`;
+  return 'مصدر الإثبات غير محدد';
+}
+
 export function DeliveryProofReviewScreen({ hubHref }: DeliveryProofReviewScreenProps) {
   const controller = useOperatorDeliveryProofReviewController('pending_review');
   const [selectedProofId, setSelectedProofId] = React.useState<string | null>(null);
@@ -143,7 +149,7 @@ export function DeliveryProofReviewScreen({ hubHref }: DeliveryProofReviewScreen
               <Card key={proof.id} gap={3}>
                 <Box layoutDirection="row" justify="space-between" align="center">
                   <Box gap={1}>
-                    <Text role="titleSm">الطلب {proof.orderId}</Text>
+                    <Text role="titleSm">{sourceLabel(proof)}</Text>
                     <Text role="caption" tone="muted">الإسناد {proof.assignmentId} · الكابتن {proof.captainId}</Text>
                   </Box>
                   <Badge label={STATUS_LABELS[proof.status]} tone={statusTone(proof.status)} />

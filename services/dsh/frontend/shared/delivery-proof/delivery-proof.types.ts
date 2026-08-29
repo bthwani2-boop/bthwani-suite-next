@@ -17,9 +17,9 @@ export type DshDeliveryPinResponse = {
 
 export type DshDeliveryProof = {
   readonly id: string;
-	readonly assignmentId: string;
-	readonly orderId: string;
-	readonly specialRequestId?: string | null;
+  readonly assignmentId: string;
+  readonly orderId: string | null;
+  readonly specialRequestId?: string | null;
   readonly captainId: string;
   readonly method: DshDeliveryProofMethod;
   readonly status: DshDeliveryProofStatus;
@@ -39,10 +39,12 @@ export type DshDeliveryProof = {
   readonly version: number;
 };
 
-export type DshClientDeliveryProof = Pick<
-  DshDeliveryProof,
-  "id" | "orderId" | "method" | "status" | "hasPhoto" | "hasSignature" | "capturedAt" | "acceptedAt"
->;
+export type DshClientDeliveryProof = Omit<
+  Pick<DshDeliveryProof, "id" | "orderId" | "method" | "status" | "hasPhoto" | "hasSignature" | "capturedAt" | "acceptedAt">,
+  "orderId"
+> & {
+  readonly orderId: string;
+};
 
 export type DshSubmitDeliveryProofInput = {
   readonly method: DshDeliveryProofMethod;

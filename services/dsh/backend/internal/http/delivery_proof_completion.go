@@ -286,8 +286,8 @@ func marshalDeliveryProof(proof *dispatch.DeliveryProof, includeSensitive bool) 
 	out := map[string]any{
 		"id":               proof.ID,
 		"assignmentId":     proof.AssignmentID,
-		"orderId":          proof.OrderID,
-		"specialRequestId": proof.SpecialRequestID,
+		"orderId":          nullableDeliveryProofID(proof.OrderID),
+		"specialRequestId": nullableDeliveryProofID(proof.SpecialRequestID),
 		"captainId":        proof.CaptainID,
 		"method":           string(proof.Method),
 		"status":           string(proof.Status),
@@ -311,6 +311,13 @@ func marshalDeliveryProof(proof *dispatch.DeliveryProof, includeSensitive bool) 
 		out["reviewedByActorId"] = proof.ReviewedByActorID
 	}
 	return out
+}
+
+func nullableDeliveryProofID(value string) any {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
 }
 
 func marshalClientDeliveryProof(proof *dispatch.DeliveryProof) map[string]any {
