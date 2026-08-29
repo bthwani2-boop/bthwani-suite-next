@@ -6,8 +6,6 @@ import { OrderDetailSection } from './OrderDetailSection';
 import { CaptainOrderSupportConversationScreen } from './CaptainOrderSupportConversationScreen';
 import { OrderBellSection } from './OrderBellSection';
 import { OrderActionSection } from './OrderActionSection';
-import { OrderProofSection } from './OrderProofSection';
-import { SimpleSupportScreen } from './SimpleSupportScreen';
 import type {
   DshCaptainOrderAction,
   DshCaptainOrderBellItem,
@@ -15,7 +13,6 @@ import type {
   DshCaptainOrderId,
   DshCaptainOrderMessage,
   DshCaptainOrderMode,
-  DshCaptainOrderProofStatus,
   DshCaptainOrdersScreenState,
 } from '../../shared/orders';
 import type { DshDispatchAssignment } from '../../shared/dispatch';
@@ -30,7 +27,6 @@ export type DshCaptainOrdersScreenProps = {
   items?: DshCaptainOrderBellItem[];
   summary?: DshCaptainOrderDetailSummary | undefined;
   messages?: DshCaptainOrderMessage[];
-  proofStatus?: DshCaptainOrderProofStatus;
   onOpenOrder?: ((orderId: DshCaptainOrderId) => void) | undefined;
   onOpenNextOrder?: ((orderId: DshCaptainOrderId) => void) | undefined;
   onBackToInbox?: (() => void) | undefined;
@@ -70,7 +66,6 @@ export function DshCaptainOrdersScreen({
   state = 'ready',
   items = [],
   summary,
-  proofStatus,
   onOpenOrder,
   onBackToInbox,
   onRetry,
@@ -94,9 +89,6 @@ export function DshCaptainOrdersScreen({
         onBack={onBackToInbox ?? (() => undefined)}
       />
     );
-  }
-  if (section === 'proof' && summary) {
-    return <OrderProofSection summary={summary} status={proofStatus} onBackToInbox={onBackToInbox} onActionPress={onActionPress} />;
   }
   return (
     <DshOperationScreen
@@ -258,48 +250,8 @@ export function DshCaptainOrderAcceptScreen({
   );
 }
 
-export function DshCaptainOrderPickupScreen({ onBack, onSecondaryAction }: { onBack?: (() => void) | undefined; onSecondaryAction?: () => void }) {
-  return <SimpleSupportScreen title="استلام الطلب" subtitle="أكد الاستلام بعد مطابقة الطلب الحي." heroTitle="في انتظار الاستلام" heroDescription="لا يبدأ هذا المسار قبل قبول الإسناد ووصول الكابتن للمتجر." primaryLabel="تأكيد الاستلام" secondaryLabel="فتح خريطة التوجيه" onBack={onBack} onSecondaryAction={onSecondaryAction} />;
-}
-
-export function DshCaptainOrderDeliverScreen({ onBack, onSecondaryAction }: { onBack?: (() => void) | undefined; onSecondaryAction?: () => void }) {
-  return <SimpleSupportScreen title="تسليم الطلب" subtitle="أكد التسليم عبر المسار المحكوم وإثباته." heroTitle="في انتظار التسليم" heroDescription="تعرض تفاصيل المهمة الحية فقط ولا تفترض قيمة COD محلية." primaryLabel="فتح إثبات التسليم" secondaryLabel="فتح خريطة التوجيه" onBack={onBack} onSecondaryAction={onSecondaryAction} />;
-}
-
-export function DshCaptainOrderDetailsScreen({ summary, onBack, onSecondaryAction }: { summary?: DshCaptainOrderDetailSummary | undefined; onBack?: (() => void) | undefined; onSecondaryAction?: () => void }) {
-  return <DshCaptainOrderGetScreen summary={summary} onBack={onBack} onSecondaryAction={onSecondaryAction} />;
-}
-
 export function DshCaptainOrdersOffersListScreen({ items = [], onBack, onSecondaryAction, onOpenOrder }: { items?: DshCaptainOrderBellItem[]; onBack?: (() => void) | undefined; onSecondaryAction?: (() => void) | undefined; onOpenOrder?: (id: string) => void }) {
   return <DshCaptainOrderOffersListScreen items={items} onBack={onBack} onSecondaryAction={onSecondaryAction} onOpenOrder={onOpenOrder} />;
-}
-
-export function DshCaptainProofUploadScreen({
-  orderId,
-  status,
-  onBack,
-  onSecondaryAction,
-  onActionPress,
-}: {
-  orderId?: string;
-  status?: DshCaptainOrderProofStatus;
-  onBack?: (() => void) | undefined;
-  onSecondaryAction?: (() => void) | undefined;
-  onActionPress?: ((action: DshCaptainOrderAction) => void) | undefined;
-}) {
-  if (!orderId) return <StateView title="لا توجد مهمة لإثباتها" description="افتح مهمة مقبولة أولًا." tone="warning" onActionPress={onBack} actionLabel={onBack ? 'العودة' : undefined} />;
-  return (
-    <DshOperationScreen
-      state="ready"
-      title="إثبات التسليم (PoD)"
-      subtitle={`أرفق إثباتًا واضحًا للطلب #${orderId}.`}
-      content={<OrderProofSection status={status} onActionPress={onActionPress} />}
-      primaryActionLabel={onBack ? 'العودة' : undefined}
-      secondaryActionLabel={onSecondaryAction ? 'تفاصيل المهمة' : undefined}
-      onPrimaryAction={onBack}
-      onSecondaryAction={onSecondaryAction}
-    />
-  );
 }
 
 export function CaptainOrdersInboxScreen(props: Pick<DshCaptainOrdersScreenProps, 'state' | 'items' | 'onOpenOrder' | 'onOpenNextOrder' | 'onRetry'> = {}) {

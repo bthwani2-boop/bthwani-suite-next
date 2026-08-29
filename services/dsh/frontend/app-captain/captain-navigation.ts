@@ -14,17 +14,6 @@ export type DshCaptainAccountSection = (typeof DSH_CAPTAIN_ACCOUNT_SECTIONS)[num
 export const DSH_CAPTAIN_SUPPORT_ROUTES = [
   "chat-read-ack",
   "chat-send",
-  "order-accept",
-  "order-deliver",
-  "order-details",
-  "order-get",
-  "order-pickup",
-  "orders-list",
-  "orders-offers-list",
-  "profile-get",
-  "proof-upload",
-  "tier-evaluate",
-  "tier-info",
 ] as const satisfies readonly CaptainSupportRoute[];
 
 export type DshCaptainNavigationRoute =
@@ -123,7 +112,7 @@ export function dshCaptainRouteAssignmentId(route: DshCaptainNavigationRoute): s
 }
 
 export function dshCaptainRouteSupportScreen(route: DshCaptainNavigationRoute): CaptainSupportRoute {
-  return route.kind === "support-screen" ? route.screenId : "orders-list";
+  return route.kind === "support-screen" ? route.screenId : "chat-read-ack";
 }
 
 export function parseDshCaptainAccountSection(value: string | undefined): DshCaptainAccountSection | undefined {

@@ -347,7 +347,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
 
     if (route === "support-screen" || route === "orderchat") {
       if (!dshClientId) return <StateView title="هوية الكابتن غير مربوطة" description="لا يمكن تنفيذ الدعم التشغيلي دون معرف DSH موثق." tone="warning" actionLabel="العودة إلى الدليل" onActionPress={onOpenSupportDirectory} />;
-      return <CaptainSupportScreenRouter selectedSupportScreen={selectedSupportScreen} onBack={onOpenSupportDirectory} onNavigate={onOpenSupportScreen} dshClientId={dshClientId} activeOrderId={activeOrderId} onAcceptTask={onAcceptTask} onDeclineTask={onDeclineTask} />;
+      return <CaptainSupportScreenRouter selectedSupportScreen={selectedSupportScreen} onBack={onOpenSupportDirectory} activeOrderId={activeOrderId} />;
     }
 
     return <StateView title="مسار كابتن غير معروف" description={`لم يُربط المسار ${route} بقدرة تشغيلية.`} tone="danger" actionLabel="فتح صندوق الطلبات" onActionPress={onGoToInbox} />;

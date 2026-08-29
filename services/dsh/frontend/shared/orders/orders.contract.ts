@@ -37,16 +37,7 @@ export type DshCaptainOrderMode =
   | 'inbox'
   | 'detail'
   | 'chat'
-  | 'bell'
-  | 'accept'
-  | 'offer-reject'
-  | 'pickup'
-  | 'deliver'
-  | 'proof'
-  | 'orders-list'
-  | 'orders-offers-list'
-  | 'order-get'
-  | 'order-details';
+  | 'bell';
 export type DshCaptainOrderStage = 'offer' | 'accepted' | 'pickup' | 'delivery' | 'proof' | 'closed';
 export type DshCaptainDeliveryActionId =
   | 'arrive_store'
@@ -77,13 +68,6 @@ export type DshCaptainOrderMessage = {
 };
 
 export type DshCaptainOrderAction =
-  | 'accept'
-  | 'order-offer-reject'
-  | 'pickup'
-  | 'deliver'
-  | 'proof-upload'
-  | 'back-to-inbox'
-  | 'next-order'
   | DshCaptainDeliveryActionId;
 
 export type DshCaptainOrderProofStatus = 'idle' | 'pending' | 'uploaded' | 'verified' | 'failed';
