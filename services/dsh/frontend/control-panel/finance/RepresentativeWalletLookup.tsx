@@ -38,6 +38,11 @@ type LookupState =
       readonly ledgerError: string | null;
     };
 
+type RepresentativeWalletLookupProps = {
+  readonly actorType?: RepresentativeWalletActorType;
+  readonly lockActorType?: boolean;
+};
+
 function amountLabel(value: number, currency: string): string {
   return formatWltMoney(value, currency);
 }
@@ -68,8 +73,8 @@ function ledgerDirectionLabel(entry: RepresentativeLedgerEntry): string {
   return entry.debitCredit === "credit" ? "دائن" : "مدين";
 }
 
-export function RepresentativeWalletLookup() {
-  const [actorType, setActorType] = useState<RepresentativeWalletActorType>("client");
+export function RepresentativeWalletLookup({ actorType: initialActorType = "client", lockActorType = false }: RepresentativeWalletLookupProps = {}) {
+  const [actorType, setActorType] = useState<RepresentativeWalletActorType>(initialActorType);
   const [actorId, setActorId] = useState("");
   const [state, setState] = useState<LookupState>({ kind: "idle" });
 
@@ -121,17 +126,19 @@ export function RepresentativeWalletLookup() {
           event.preventDefault();
           void lookup();
         }}
-        style={{ display: "grid", gridTemplateColumns: "minmax(150px, 0.35fr) minmax(220px, 1fr) auto", gap: "0.75rem", alignItems: "end" }}
+        style={{ display: "grid", gridTemplateColumns: lockActorType ? "minmax(220px, 1fr) auto" : "minmax(150px, 0.35fr) minmax(220px, 1fr) auto", gap: "0.75rem", alignItems: "end" }}
       >
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-          <Text role="caption" tone="muted">نوع الممثل</Text>
-          <CpSelect
-            aria-label="نوع الممثل"
-            value={actorType}
-            onChange={(value) => setActorType(value as RepresentativeWalletActorType)}
-            options={ACTOR_TYPE_OPTIONS}
-          />
-        </label>
+        {!lockActorType ? (
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+            <Text role="caption" tone="muted">نوع الممثل</Text>
+            <CpSelect
+              aria-label="نوع الممثل"
+              value={actorType}
+              onChange={(value) => setActorType(value as RepresentativeWalletActorType)}
+              options={ACTOR_TYPE_OPTIONS}
+            />
+          </label>
+        ) : null}
         <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
           <Text role="caption" tone="muted">معرف الممثل</Text>
           <CpTextInput
@@ -147,7 +154,7 @@ export function RepresentativeWalletLookup() {
       </form>
 
       {state.kind === "idle" ? (
-        <StateView tone="neutral" title="حدد نوع الممثل ومعرفه" description="لن يتم إرسال أي معرف من تطبيقات الممثلين؛ هذا الإدخال مخصص للمشغّل المخوّل فقط." />
+        <StateView tone="neutral" title="حدد معرف الممثل" description="لن يتم إرسال أي معرف من تطبيقات الممثلين؛ هذا الإدخال مخصص للمشغّل المخوّل فقط." />
       ) : state.kind === "loading" ? (
         <StateView loading title="جارٍ تحميل المحفظة والدفتر" />
       ) : state.kind === "error" ? (
@@ -218,9 +225,7 @@ export function RepresentativeWalletLookup() {
                           <Text role="body" tone={entry.debitCredit === "credit" ? "success" : "danger"}>{amountLabel(entry.amountMinorUnits, entry.currency)}</Text>
                         </CpTableCell>
                         <CpTableCell>{amountLabel(entry.balanceAfter, entry.currency)}</CpTableCell>
-                        <CpTableCell>
-                          <CpMutedInline tight>{entry.referenceId || entry.sourceId || entry.description}</CpMutedInline>
-                        </CpTableCell>
+                        <CpTableCell>{entry.referenceId || entry.orderId || "—"}</CpTableCell>
                       </tr>
                     ))}
                   </tbody>
@@ -230,8 +235,10 @@ export function RepresentativeWalletLookup() {
           </div>
         </div>
       )}
+
+      <CpMutedInline tight>
+        لا تُقبل مبالغ أو أرصدة من الواجهة، ولا تُنشئ هذه الشاشة ledger أو wallet موازيًا؛ القراءة فقط من owner المالي.
+      </CpMutedInline>
     </Card>
   );
 }
-
-export default RepresentativeWalletLookup;
