@@ -55,3 +55,21 @@ test("leadership form rejects an end date before the start date", () => {
   assert.match(panel, /تاريخ نهاية التكليف يجب أن يساوي تاريخ البداية أو يأتي بعده/);
   assert.match(panel, /نهاية التكليف \(اختيارية\)/);
 });
+
+test("sovereign platform leadership reads and creation are permission-gated at the consumer", () => {
+  const page = read("apps/control-panel/runtime/src/app/(shell)/dsh/platform/page.tsx");
+  const panel = read("services/dsh/frontend/control-panel/platform/SovereignLeadershipPanel.tsx");
+
+  assert.match(page, /hasServiceControlPanelPermission/);
+  assert.match(page, /leadership:read/);
+  assert.match(page, /leadership:create/);
+  assert.match(page, /leadershipVisible/);
+  assert.match(page, /canReadHealth/);
+  assert.match(panel, /const canRead = hasServiceControlPanelPermission/);
+  assert.match(panel, /const canCreate = hasServiceControlPanelPermission/);
+  assert.match(panel, /canRead \? listSovereignLeadership\(\)/);
+  assert.match(panel, /canRead \|\| canCreate \? getSovereignLeadershipReferenceData\(\)/);
+  assert.match(panel, /if \(!canRead && !canCreate\)/);
+  assert.match(panel, /\{canCreate \? <section/);
+  assert.match(panel, /\{canRead \? <section/);
+});
