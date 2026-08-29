@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const registry = await import("../frontend/shared/operations/operations-registry.ts");
+const sectionRoutes = await import("../frontend/shared/control-panel-routes.ts");
 const source = readFileSync(
   "services/dsh/frontend/shared/operations/operations-registry.ts",
   "utf8",
@@ -34,4 +35,12 @@ test("operations navigation has one canonical group authority", () => {
   assert.doesNotMatch(types, /LegacyOperationsWorkspaceId|LegacySectionRedirectId|AnyOperationsWorkspaceId|OperationsNormalizationResult/);
   assert.doesNotMatch(specialRequests, /sheinproxy|awnak-operations/);
   assert.doesNotMatch(partnerStores, /buildOperationsHref\(['"]partner-stores/);
+});
+
+test("operations ownership shortcuts consume the canonical control-panel section routes", () => {
+  const financeShortcut = registry.NON_OPERATIONS_SECTION_SHORTCUTS.find((item) => item.id === "finance");
+  assert.ok(financeShortcut, "finance ownership shortcut must exist");
+  assert.equal(sectionRoutes.CONTROL_PANEL_SECTION_ROUTES.finance, "/wlt/finance");
+  assert.equal(financeShortcut.href, sectionRoutes.CONTROL_PANEL_SECTION_ROUTES.finance);
+  assert.doesNotMatch(source, /href:\s*['"]\/dsh\/finance['"]/);
 });
