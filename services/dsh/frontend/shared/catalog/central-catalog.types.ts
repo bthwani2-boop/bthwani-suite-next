@@ -179,6 +179,7 @@ export interface StoreAssortment {
 }
 
 export interface StoreAssortmentInput {
+  /** Bootstrap-only commercial values; existing rows use the normalized resources below. */
   readonly unitPrice: number;
   readonly currency: string;
   readonly available: boolean;
@@ -186,6 +187,15 @@ export interface StoreAssortmentInput {
   readonly localNote: string;
   readonly customImageObjectKey: string | null;
   readonly publicationStatus: "draft" | "submitted" | "approved" | "client_visible" | "rejected" | "hidden";
+}
+
+export type StoreAssortmentCreateInput = StoreAssortmentInput;
+
+export interface StoreAssortmentMetadataUpdateInput {
+  readonly localNote: string;
+  readonly customImageObjectKey: string | null;
+  readonly publicationStatus: "draft" | "submitted" | "approved" | "client_visible" | "rejected" | "hidden";
+  readonly expectedVersion: number;
 }
 
 export interface StoreAssortmentInventoryInput {

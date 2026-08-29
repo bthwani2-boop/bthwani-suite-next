@@ -67,7 +67,7 @@ function DshPartnerSurfaceInner({ route, navigation, appearance }: DshPartnerSur
       || route.kind === 'product-edit'
       || route.kind === 'category-management'
       || route.kind === 'product-media'
-      || route.kind === 'product-overrides'
+      || route.kind === 'product-controls'
     ) return 'inventory';
     if (
       route.kind === 'support-directory'
@@ -88,7 +88,7 @@ function DshPartnerSurfaceInner({ route, navigation, appearance }: DshPartnerSur
     />
   );
 
-  if (!selectedStoreScope) {
+  if (isLoadingScopes || !selectedStoreScope) {
     if (isLoadingScopes) {
       return (
         <View style={styles.shellContainer}>
@@ -124,6 +124,20 @@ function DshPartnerSurfaceInner({ route, navigation, appearance }: DshPartnerSur
             {scopesError ? 'يرجى المحاولة لاحقاً' : 'يرجى التواصل مع الدعم الفني لإضافة فروع لحسابك'}
           </Text>
         </View>
+      </View>
+    );
+  }
+
+  if (scopesError) {
+    return (
+      <View style={styles.shellContainer}>
+        <View style={styles.emptyStateContainer}>
+          <Icon name="warning-outline" size={48} tone="danger" />
+          <Text role="bodyStrong" style={styles.emptyStateTitle}>تعذر التحقق من صلاحية المتجر</Text>
+          <Text role="body" style={styles.emptyStateDesc}>{scopesError}</Text>
+          <Button label="اختيار متجر آخر" onPress={actions.openStoreScope} />
+        </View>
+        {storeScopeSheet}
       </View>
     );
   }

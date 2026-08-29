@@ -88,7 +88,7 @@ test("partner route registry binds every critical operational surface", () => {
     "product-edit",
     "category-management",
     "product-media",
-    "product-overrides",
+    "product-controls",
     "team",
     "wallet-bridge",
     "commercial-model",

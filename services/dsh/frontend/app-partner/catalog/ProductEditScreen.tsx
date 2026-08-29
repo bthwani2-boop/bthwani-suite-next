@@ -32,6 +32,14 @@ export function ProductEditScreen({
   const { direction } = useDirection();
   const theme = useTheme() as any;
   const isEditMode = !!productId;
+  const mountedRef = React.useRef(true);
+  const scopeKey = `${storeId}:${productId ?? ''}`;
+  const scopeKeyRef = React.useRef(scopeKey);
+  scopeKeyRef.current = scopeKey;
+
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
 
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -53,21 +61,25 @@ export function ProductEditScreen({
   const [imageObjectKey, setImageObjectKey] = React.useState('');
 
   React.useEffect(() => {
+    const requestScopeKey = scopeKey;
     setLoading(true);
     fetchPartnerTaxonomy()
       .then((data) => {
+        if (!mountedRef.current || requestScopeKey !== scopeKeyRef.current) return;
         setTaxonomy(data);
         if (data.domains.length > 0) {
           setSelectedDomainId(data.domains[0]!.id);
         }
       })
       .catch((err) => {
+        if (!mountedRef.current || requestScopeKey !== scopeKeyRef.current) return;
         setErrorMessage(err.message ?? 'فشل تحميل بيانات التصنيفات.');
       })
       .finally(() => {
+        if (!mountedRef.current || requestScopeKey !== scopeKeyRef.current) return;
         setLoading(false);
       });
-  }, []);
+  }, [scopeKey]);
 
   const selectedDomain = React.useMemo(() => {
     return taxonomy?.domains.find((d) => d.id === selectedDomainId) ?? null;
@@ -98,6 +110,7 @@ export function ProductEditScreen({
   }, [selectedNode]);
 
   const handleCreateProposal = React.useCallback(async () => {
+    const operationScopeKey = scopeKey;
     if (!proposedNameAr.trim()) {
       setErrorMessage('الاسم العربي المقترح مطلوب.');
       return;
@@ -129,14 +142,16 @@ export function ProductEditScreen({
         imageObjectKey: imageObjectKey.trim() || null,
         sourceSurface: 'app-partner',
       });
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setSuccessMessage('تم إرسال اقتراح المنتج بنجاح إلى قائمة مراجعة الإدارة.');
       onSaved?.(proposal);
     } catch (err: any) {
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setErrorMessage(err.message ?? 'فشل إرسال اقتراح المنتج.');
     } finally {
-      setSaving(false);
+      if (mountedRef.current && operationScopeKey === scopeKeyRef.current) setSaving(false);
     }
-  }, [proposedNameAr, proposedNameEn, selectedDomainId, selectedNodeId, brand, barcode, imageObjectKey, isProposalDisallowed, proposalDisallowedReason, isBarcodeRequired, onSaved]);
+  }, [scopeKey, storeId, proposedNameAr, proposedNameEn, selectedDomainId, selectedNodeId, brand, barcode, imageObjectKey, isProposalDisallowed, proposalDisallowedReason, isBarcodeRequired, onSaved]);
 
   if (loading) {
     return <StateView title="جاري تحميل البيانات..." loading />;
@@ -188,10 +203,10 @@ export function ProductEditScreen({
               وفقاً لقرار سيادة الكتالوج المركزي، لا يحق للمتجر أو الشريك تعديل تفاصيل هوية المنتج (الاسم، الماركة، الباركود، التصنيفات) محلياً.
             </Text>
             <Text role="bodySm" tone="muted" align="start">
-              يمكنك تعديل الأسعار، التوفر، المخزون، والملاحظات المحلية للمنتج من صفحة التجاوزات المحلية المخصصة للفرع.
+              لإدارة السعر افتح أدوات الأسعار، ولإدارة التوفر والمخزون افتح إعدادات المخزون؛ بيانات العرض المحلية تدار من إدارة الكتالوج.
             </Text>
             {onBack && (
-              <Button label="العودة وإدارة التوافر" tone="secondary" onPress={onBack} />
+              <Button label="العودة إلى إدارة الكتالوج" tone="secondary" onPress={onBack} />
             )}
           </Surface>
         ) : (

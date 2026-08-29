@@ -25,7 +25,7 @@ import { PartnerCatalogManagementScreen } from "./catalog/PartnerCatalogManageme
 import { ProductEditScreen } from "./catalog/ProductEditScreen";
 import { CategoryManagementScreen } from "./catalog/CategoryManagementScreen";
 import { ProductMediaScreen } from "./catalog/ProductMediaScreen";
-import { ProductOverridesScreen } from "./catalog/ProductOverridesScreen";
+import { ProductControlsScreen } from "./catalog/ProductControlsScreen";
 import { hasDshPartnerBindingContract } from "./dsh-partner-binding.contracts";
 import {
   buildDshPartnerSupportDirectoryRoute,
@@ -89,7 +89,7 @@ const STORE_SCOPED_ROUTES = new Set<DshPartnerNavigationRoute["kind"]>([
   "product-edit",
   "category-management",
   "product-media",
-  "product-overrides",
+  "product-controls",
   "store-courier",
   "team",
 ]);
@@ -170,7 +170,7 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
   } = props;
 
   const scopedStoreId = selectedStoreScope.storeId;
-  const productId = route.kind === "product-edit" || route.kind === "product-media" || route.kind === "product-overrides"
+  const productId = route.kind === "product-edit" || route.kind === "product-media" || route.kind === "product-controls"
     ? route.productId
     : undefined;
   const activeOrderId = "orderId" in route ? route.orderId : undefined;
@@ -232,7 +232,7 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
     );
   }
 
-  if ((route.kind === "product-edit" || route.kind === "product-media" || route.kind === "product-overrides") && !productId?.trim()) {
+  if ((route.kind === "product-edit" || route.kind === "product-media" || route.kind === "product-controls") && !productId?.trim()) {
     return renderSurfaceShell(
       <StateView
         title="اختر منتجًا"
@@ -328,9 +328,9 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
     );
   }
 
-  if (route.kind === "product-overrides") {
+  if (route.kind === "product-controls") {
     return renderSurfaceShell(
-      <ProductOverridesScreen storeId={scopedStoreId} productId={route.productId} onBack={navigation.back} />,
+      <ProductControlsScreen storeId={scopedStoreId} productId={route.productId} onBack={navigation.back} />,
     );
   }
 

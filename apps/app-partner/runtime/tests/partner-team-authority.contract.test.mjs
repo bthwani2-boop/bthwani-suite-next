@@ -11,6 +11,8 @@ test("partner team state and mutations remain bound to the active store scope", 
   assert.match(controller, /const mountedRef = React\.useRef\(true\)/);
   assert.match(controller, /const requestSeqRef = React\.useRef\(0\)/);
   assert.match(controller, /const mutationBusyRef = React\.useRef\(false\)/);
+  assert.match(controller, /const activeStoreId = storeId\?\.trim\(\) \|\| ''/);
+  assert.doesNotMatch(controller, /selectedStoreScopeId|=== 'all'/);
   assert.match(controller, /const scopeKey = `\$\{route\}:\$\{activeStoreId\}`/);
   assert.match(controller, /scopeKeyRef\.current = scopeKey/);
   assert.match(controller, /const loadTeam = React\.useCallback\(async \(\): Promise<boolean> =>/);

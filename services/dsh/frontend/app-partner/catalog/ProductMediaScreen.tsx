@@ -149,15 +149,32 @@ export function ProductMediaScreen({
   const [assets, setAssets] = React.useState<readonly DshMediaAsset[]>([]);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = React.useState(0);
+  const mountedRef = React.useRef(true);
+  const requestSeqRef = React.useRef(0);
+  const scopeKey = `${storeId}:${productId}`;
+  const scopeKeyRef = React.useRef(scopeKey);
+  scopeKeyRef.current = scopeKey;
+
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+    requestSeqRef.current += 1;
+  }, []);
 
   const loadAssets = React.useCallback(async () => {
+    const requestSeq = ++requestSeqRef.current;
+    const requestScopeKey = scopeKey;
+    const isCurrentRequest = () => mountedRef.current
+      && requestSeq === requestSeqRef.current
+      && requestScopeKey === scopeKeyRef.current;
     setScreenState("loading");
     setErrorMessage(null);
     try {
       const items = await listPartnerProductMedia(storeId, productId);
+      if (!isCurrentRequest()) return;
       setAssets(items);
       setScreenState("idle");
     } catch (error) {
+      if (!isCurrentRequest()) return;
       if (isOfflineError(error)) {
         setScreenState("offline");
       } else {
@@ -165,13 +182,14 @@ export function ProductMediaScreen({
         setScreenState("error");
       }
     }
-  }, [productId, storeId]);
+  }, [productId, scopeKey, storeId]);
 
   React.useEffect(() => {
     void loadAssets();
   }, [loadAssets]);
 
   const handleUpload = React.useCallback(async () => {
+    const operationScopeKey = scopeKey;
     setScreenState("picking");
     setErrorMessage(null);
     try {
@@ -180,6 +198,7 @@ export function ProductMediaScreen({
         setScreenState("idle");
         return;
       }
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
 
       setScreenState("uploading");
       setUploadProgress(15);
@@ -192,9 +211,11 @@ export function ProductMediaScreen({
         fileSizeBytes: selected.fileSizeBytes,
         altAr: `صورة متجر للمنتج ${productId}`,
       });
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setUploadProgress(100);
       await loadAssets();
     } catch (error) {
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       if (isOfflineError(error)) {
         setScreenState("offline");
       } else if (isStorageUnavailableError(error)) {
@@ -204,19 +225,22 @@ export function ProductMediaScreen({
         setScreenState("error");
       }
     }
-  }, [loadAssets, productId, storeId]);
+  }, [loadAssets, productId, scopeKey, storeId]);
 
   const handleUnlink = React.useCallback(async (assetId: string) => {
+    const operationScopeKey = scopeKey;
     setScreenState("deleting");
     setErrorMessage(null);
     try {
       await unlinkPartnerProductMedia(storeId, productId, assetId);
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       await loadAssets();
     } catch (error) {
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setErrorMessage(error instanceof Error ? error.message : "تعذر إزالة صورة المتجر.");
       setScreenState("error");
     }
-  }, [loadAssets, productId, storeId]);
+  }, [loadAssets, productId, scopeKey, storeId]);
 
   const busy = screenState === "picking" || screenState === "uploading" || screenState === "deleting";
 
@@ -224,7 +248,7 @@ export function ProductMediaScreen({
     <View style={styles.screen}>
       <TopBar
         title="صورة المتجر للمنتج"
-        subtitle="Store assortment override"
+        subtitle="صورة خاصة بتشكيلة المتجر"
         {...(onBack ? { onBack } : {})}
       />
 

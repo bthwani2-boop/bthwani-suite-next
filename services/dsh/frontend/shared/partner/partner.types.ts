@@ -461,7 +461,7 @@ export type DshPartnerRoute =
   | 'product-edit'
   | 'category-management'
   | 'product-media'
-  | 'product-overrides'
+  | 'product-controls'
   | 'commercial-model'
   | 'team';
 

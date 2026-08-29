@@ -9,6 +9,8 @@ import type {
   MasterProduct,
   ProductProposal,
   StoreAssortment,
+  StoreAssortmentCreateInput,
+  StoreAssortmentMetadataUpdateInput,
 } from "./central-catalog.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "central-catalog-occ-corr");
@@ -81,10 +83,22 @@ export async function upsertOperatorStoreAssortmentOCC(
   return response.assortment;
 }
 
-export async function upsertPartnerStoreAssortmentOCC(
+export async function createPartnerStoreAssortment(
   storeId: string,
   masterProductId: string,
-  input: StoreAssortmentOCCInput,
+  input: StoreAssortmentCreateInput,
+): Promise<StoreAssortment> {
+  const response = await request<{ assortment: StoreAssortment }>(
+    `/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`,
+    { method: "PUT", body: input },
+  );
+  return response.assortment;
+}
+
+export async function updatePartnerStoreAssortmentMetadataOCC(
+  storeId: string,
+  masterProductId: string,
+  input: StoreAssortmentMetadataUpdateInput,
 ): Promise<StoreAssortment> {
   const response = await request<{ assortment: StoreAssortment }>(
     `/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`,

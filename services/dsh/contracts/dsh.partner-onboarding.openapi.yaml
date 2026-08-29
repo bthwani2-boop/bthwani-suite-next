@@ -616,46 +616,6 @@ paths:
           description: Forbidden
       security:
       - bearerAuth: []
-  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices/schedule:
-    parameters:
-    - name: storeId
-      in: path
-      required: true
-      schema:
-        type: string
-    - name: masterProductId
-      in: path
-      required: true
-      schema:
-        type: string
-    post:
-      tags:
-      - partner
-      operationId: post_dsh_partner_stores__storeId__assortment__masterProductId__prices_schedule
-      responses:
-        '200':
-          description: Auto-generated
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-      security:
-      - bearerAuth: []
   /dsh/partner/stores/{storeId}/assortment/{masterProductId}/retire:
     parameters:
     - name: storeId
@@ -672,46 +632,6 @@ paths:
       tags:
       - partner
       operationId: post_dsh_partner_stores__storeId__assortment__masterProductId__retire
-      responses:
-        '200':
-          description: Auto-generated
-          content:
-            application/json:
-              schema:
-                type: object
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-      security:
-      - bearerAuth: []
-  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory:
-    parameters:
-    - name: storeId
-      in: path
-      required: true
-      schema:
-        type: string
-    - name: masterProductId
-      in: path
-      required: true
-      schema:
-        type: string
-    put:
-      tags:
-      - partner
-      operationId: put_dsh_partner_stores__storeId__assortment__masterProductId__inventory
       responses:
         '200':
           description: Auto-generated

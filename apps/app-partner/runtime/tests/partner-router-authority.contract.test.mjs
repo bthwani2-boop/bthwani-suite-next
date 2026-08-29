@@ -19,6 +19,8 @@ test("partner route contract makes URL state the single navigation authority", a
   assert.doesNotMatch(navigation, /order-rejection/);
   assert.match(navigation, /case "product-media": return `\/catalog\/products\/\$\{segment\(route\.productId\)\}\/media`/);
   assert.match(surface, /useDshPartnerSurfaceModel\(route\.kind\)/);
+  assert.match(surface, /if \(isLoadingScopes \|\| !selectedStoreScope\)/);
+  assert.match(surface, /تعذر التحقق من صلاحية المتجر/);
   assert.doesNotMatch(`${navigation}\n${partnerApi}\n${surface}`, /dshPartnerLegacyRoute/);
   assert.doesNotMatch(surface, /setRoute|setActiveOrderId|routeHistoryRef|BackHandler/);
   assert.doesNotMatch(productMedia, /partnerId\?: string|route compatibility/i);
@@ -34,8 +36,8 @@ test("partner Expo Router tree covers primary and fail-closed parameterized jour
   const support = await read("apps/app-partner/runtime/app/support/[screenId].tsx");
   const productEdit = await read("apps/app-partner/runtime/app/catalog/products/[productId]/edit.tsx");
   const productMedia = await read("apps/app-partner/runtime/app/catalog/products/[productId]/media.tsx");
-  const productOverrides = await read("apps/app-partner/runtime/app/catalog/products/[productId]/overrides.tsx");
-  const combined = [orders, account, support, productEdit, productMedia, productOverrides].join("\n");
+  const productControls = await read("apps/app-partner/runtime/app/catalog/products/[productId]/controls.tsx");
+  const combined = [orders, account, support, productEdit, productMedia, productControls].join("\n");
 
   assert.match(combined, /useLocalSearchParams/);
   assert.doesNotMatch(combined, /kind: "order-rejection"/);
@@ -43,10 +45,10 @@ test("partner Expo Router tree covers primary and fail-closed parameterized jour
   assert.match(combined, /kind: "support-screen"/);
   assert.match(combined, /kind: "product-edit"/);
   assert.match(combined, /kind: "product-media"/);
-  assert.match(combined, /kind: "product-overrides"/);
+  assert.match(combined, /kind: 'product-controls'/);
   assert.match(account, /if \(!section\) return <Redirect href="\/account\/hub" \/>/);
   assert.match(support, /if \(!screenId\) return <Redirect href="\/support" \/>/);
   assert.match(productEdit, /if \(!productId\) return <Redirect href="\/catalog" \/>/);
   assert.match(productMedia, /if \(!productId\) return <Redirect href="\/catalog" \/>/);
-  assert.match(productOverrides, /if \(!productId\) return <Redirect href="\/catalog" \/>/);
+  assert.match(productControls, /if \(!productId\) return <Redirect href="\/catalog" \/>/);
 });

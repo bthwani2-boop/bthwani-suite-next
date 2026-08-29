@@ -182,6 +182,10 @@ paths:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1stores~1{storeId}~1assortment"
   /dsh/operator/stores/{storeId}/assortment/{masterProductId}:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1stores~1{storeId}~1assortment~1{masterProductId}"
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/inventory:
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1stores~1{storeId}~1assortment~1{masterProductId}~1inventory"
+  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/prices:
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1stores~1{storeId}~1assortment~1{masterProductId}~1prices"
   /dsh/partner/catalog/taxonomy:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1catalog~1taxonomy"
   /dsh/partner/catalog/master-products:
@@ -190,6 +194,10 @@ paths:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1assortment"
   /dsh/partner/stores/{storeId}/assortment/{masterProductId}:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1assortment~1{masterProductId}"
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory:
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1assortment~1{masterProductId}~1inventory"
+  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices:
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1assortment~1{masterProductId}~1prices"
   /dsh/partner/catalog/product-proposals:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1product-proposals"
   /dsh/partner/catalog/product-proposals/{proposalId}:
@@ -928,16 +936,12 @@ paths:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1operator~1orders~1{orderId}~1cancellation~1actions~1{actionId}~1execute"
   /dsh/operator/orders/{orderId}/return:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1operator~1orders~1{orderId}~1return"
-  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/prices/schedule:
-    $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1operator~1stores~1{storeId}~1assortment~1{masterProductId}~1prices~1schedule"
   /dsh/operator/stores/{storeId}/assortment/{masterProductId}/retire:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1operator~1stores~1{storeId}~1assortment~1{masterProductId}~1retire"
   /dsh/partner/orders/{orderId}/decision:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1partner~1orders~1{orderId}~1decision"
   /dsh/partner/orders/{orderId}/preparation-replacements:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1partner~1orders~1{orderId}~1preparation-replacements"
-  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/inventory:
-    $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1operator~1stores~1{storeId}~1assortment~1{masterProductId}~1inventory"
   /dsh/administration/customers/{actorId}/profile:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1administration~1customers~1{actorId}~1profile"
   /dsh/client/me/profile:
@@ -974,12 +978,8 @@ paths:
     $ref: "./dsh.partner-onboarding.openapi.yaml#/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals~1{proposalId}~1withdraw"
   /dsh/partner/stores:
     $ref: "./dsh.partner-onboarding.openapi.yaml#/paths/~1dsh~1partner~1stores"
-  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices/schedule:
-    $ref: "./dsh.partner-onboarding.openapi.yaml#/paths/~1dsh~1partner~1stores~1{storeId}~1assortment~1{masterProductId}~1prices~1schedule"
   /dsh/partner/stores/{storeId}/assortment/{masterProductId}/retire:
     $ref: "./dsh.partner-onboarding.openapi.yaml#/paths/~1dsh~1partner~1stores~1{storeId}~1assortment~1{masterProductId}~1retire"
-  /dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory:
-    $ref: "./dsh.partner-onboarding.openapi.yaml#/paths/~1dsh~1partner~1stores~1{storeId}~1assortment~1{masterProductId}~1inventory"
   /dsh/operator/admin/support-sessions:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1support-sessions"
   /dsh/operator/admin/support/snapshot:
@@ -1259,6 +1259,28 @@ components:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetLink"
     DshCatalogPolicySnapshot:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogPolicySnapshot"
+    DshStoreAssortment:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortment"
+    DshStoreAssortmentInventory:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentInventory"
+    DshStoreAssortmentPrice:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentPrice"
+    DshStoreAssortmentInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentInput"
+    DshStoreAssortmentMetadataUpdateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentMetadataUpdateInput"
+    DshStoreAssortmentInventoryInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentInventoryInput"
+    DshStoreAssortmentPriceInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentPriceInput"
+    DshStoreAssortmentResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentResponse"
+    DshStoreAssortmentInventoryResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentInventoryResponse"
+    DshStoreAssortmentPriceResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentPriceResponse"
+    DshStoreAssortmentPricesResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentPricesResponse"
     DshCatalogResponse:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogResponse"
     DshHealthResponse:

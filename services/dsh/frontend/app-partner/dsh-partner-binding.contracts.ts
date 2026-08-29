@@ -73,9 +73,9 @@ const DSH_PARTNER_BINDING_CONTRACT_DEFINITIONS = {
     bindingName: 'partner-product-media-binding',
     description: 'Governed product media upload, review, and catalog-link bridge.',
   },
-  'product-overrides': {
-    bindingName: 'partner-product-overrides-binding',
-    description: 'Store assortment overrides with OCC, publication, availability, and stock bridge.',
+  'product-controls': {
+    bindingName: 'partner-product-controls-binding',
+    description: 'Canonical store product inventory, pricing, metadata, and operational pause bridge.',
   },
   team: {
     bindingName: 'partner-team-binding',

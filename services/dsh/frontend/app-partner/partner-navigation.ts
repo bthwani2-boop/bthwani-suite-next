@@ -50,7 +50,7 @@ export type DshPartnerNavigationRoute =
   | { readonly kind: "product-edit"; readonly productId: string }
   | { readonly kind: "category-management" }
   | { readonly kind: "product-media"; readonly productId: string }
-  | { readonly kind: "product-overrides"; readonly productId: string }
+  | { readonly kind: "product-controls"; readonly productId: string }
   | { readonly kind: "commercial-model" }
   | { readonly kind: "team" };
 
@@ -115,7 +115,7 @@ export function dshPartnerRouteToPath(route: DshPartnerNavigationRoute): string 
     case "product-edit": return `/catalog/products/${segment(route.productId)}/edit`;
     case "category-management": return "/catalog/categories";
     case "product-media": return `/catalog/products/${segment(route.productId)}/media`;
-    case "product-overrides": return `/catalog/products/${segment(route.productId)}/overrides`;
+    case "product-controls": return `/catalog/products/${segment(route.productId)}/controls`;
     case "commercial-model": return "/commercial";
     case "team": return "/team";
   }

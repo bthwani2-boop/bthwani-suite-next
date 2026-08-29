@@ -9,10 +9,10 @@ export type PartnerTeamModelStatus = 'idle' | 'loading' | 'error' | 'ready';
 
 export function usePartnerTeamController({
   route,
-  selectedStoreScopeId,
+  storeId,
 }: {
   route: DshPartnerRoute;
-  selectedStoreScopeId: string;
+  storeId: string | null;
 }) {
   const [members, setMembers] = React.useState<readonly PartnerTeamMember[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -22,7 +22,7 @@ export function usePartnerTeamController({
   const requestSeqRef = React.useRef(0);
   const mutationBusyRef = React.useRef(false);
 
-  const activeStoreId = selectedStoreScopeId === 'all' ? '' : selectedStoreScopeId;
+  const activeStoreId = storeId?.trim() || '';
   const scopeKey = `${route}:${activeStoreId}`;
   const scopeKeyRef = React.useRef(scopeKey);
   scopeKeyRef.current = scopeKey;

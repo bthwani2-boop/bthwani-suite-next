@@ -731,9 +731,117 @@
         in: path
         required: true
         schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInput"
     responses:
-      "200": { description: Assortment row created/updated. }
+      "200":
+        description: Assortment row created/updated.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentResponse"
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/stores/{storeId}/assortment/{masterProductId}/inventory:
+  get:
+    operationId: getOperatorStoreAssortmentInventory
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Canonical normalized inventory resource.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInventoryResponse"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  put:
+    operationId: updateOperatorStoreAssortmentInventory
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInventoryInput"
+    responses:
+      "200":
+        description: Canonical normalized inventory resource after the update.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInventoryResponse"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/operator/stores/{storeId}/assortment/{masterProductId}/prices:
+  get:
+    operationId: listOperatorStoreAssortmentPrices
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Canonical normalized price resources ordered by effective time.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPricesResponse"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  post:
+    operationId: createOperatorStoreAssortmentPrice
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPriceInput"
+    responses:
+      "200":
+        description: Canonical normalized price resource after creation.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPriceResponse"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
 /dsh/partner/catalog/taxonomy:
   get:
@@ -777,9 +885,119 @@
         in: path
         required: true
         schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInput"
+              - $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentMetadataUpdateInput"
     responses:
-      "200": { description: Assortment row created/updated for the partner's own store. }
+      "200":
+        description: Assortment metadata created or updated for the partner's own store. Commercial updates for an existing row use normalized inventory and price resources.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentResponse"
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory:
+  get:
+    operationId: getPartnerStoreAssortmentInventory
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Canonical normalized inventory resource for the authenticated partner store.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInventoryResponse"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  put:
+    operationId: updatePartnerStoreAssortmentInventory
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInventoryInput"
+    responses:
+      "200":
+        description: Canonical normalized inventory resource after the update.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInventoryResponse"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices:
+  get:
+    operationId: listPartnerStoreAssortmentPrices
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Canonical normalized price resources for the authenticated partner store.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPricesResponse"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  post:
+    operationId: createPartnerStoreAssortmentPrice
+    tags: [CentralCatalog]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - name: masterProductId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPriceInput"
+    responses:
+      "200":
+        description: Canonical normalized price resource after creation.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPriceResponse"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
 /dsh/partner/catalog/product-proposals/{proposalId}:
   put:

@@ -23,6 +23,8 @@ Load only when the trigger matches:
 - `bthwani-screen-flow-binding` — route, screen, state, action, or controller binding.
 - `bthwani-security-secrets-privacy` — auth, authorization, sessions, secrets, PII, privacy, or isolation.
 - `bthwani-service-fullstack-journey` — capability crossing contract, backend, data, shared state, and surfaces.
+- `ponytail` — enforces minimal code, YAGNI, reuse, and anti-overengineering (Decision Ladder).
+- `ponytail-review` — review diffs exclusively for unnecessary complexity and bloat.
 
 ## Optional tools
 

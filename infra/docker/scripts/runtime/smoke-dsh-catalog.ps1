@@ -201,7 +201,7 @@ $priceBody = @{
   prepTimeMax = 30
   effectiveFrom = [DateTimeOffset]::UtcNow.AddMinutes(-1).ToString("o")
 } | ConvertTo-Json
-Invoke-RestMethod "$assortmentUrl/prices/schedule" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $priceBody -TimeoutSec 10 | Out-Null
+Invoke-RestMethod "$assortmentUrl/prices" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $priceBody -TimeoutSec 10 | Out-Null
 
 $inventoryBody = @{
   policyType = "quantity"

@@ -334,16 +334,32 @@ export async function upsertPartnerStoreAssortmentInventory(
   return resp.inventory;
 }
 
-export async function schedulePartnerStoreAssortmentPrice(
+export async function fetchPartnerStoreAssortmentInventory(
+  storeId: string,
+  masterProductId: string,
+): Promise<StoreAssortmentInventory> {
+  const resp = await request<{ inventory: StoreAssortmentInventory }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/inventory`);
+  return resp.inventory;
+}
+
+export async function createPartnerStoreAssortmentPrice(
   storeId: string,
   masterProductId: string,
   input: StoreAssortmentPriceInput,
 ): Promise<StoreAssortmentPrice> {
-  const resp = await request<{ priceSchedule: StoreAssortmentPrice }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices/schedule`, {
+  const resp = await request<{ price: StoreAssortmentPrice }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices`, {
     method: "POST",
     body: input,
   });
-  return resp.priceSchedule;
+  return resp.price;
+}
+
+export async function fetchPartnerStoreAssortmentPrices(
+  storeId: string,
+  masterProductId: string,
+): Promise<readonly StoreAssortmentPrice[]> {
+  const resp = await request<{ prices: readonly StoreAssortmentPrice[] }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices`);
+  return resp.prices;
 }
 
 export async function fetchPartnerStoreAssortment(storeId: string): Promise<readonly StoreAssortment[]> {
