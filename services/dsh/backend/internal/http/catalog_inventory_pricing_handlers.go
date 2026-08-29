@@ -16,6 +16,23 @@ func (s *protectedStoreServer) handleOperatorUpsertAssortmentInventory(w http.Re
 	s.upsertAssortmentInventory(w, r, actor.ID, "operator", r.PathValue("storeId"))
 }
 
+func (s *protectedStoreServer) handlePartnerGetAssortmentInventory(w http.ResponseWriter, r *http.Request) {
+	_, storeID, ok := s.partnerStore(w, r)
+	if !ok {
+		return
+	}
+	if storeID != r.PathValue("storeId") {
+		s.writeCatalogMutationError(w, centralcatalog.ErrForbidden)
+		return
+	}
+	inventory, err := centralcatalog.GetAssortmentInventoryRuntimeTruth(r.Context(), s.db, storeID, r.PathValue("masterProductId"))
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"inventory": inventory})
+}
+
 func (s *protectedStoreServer) handlePartnerUpsertAssortmentInventory(w http.ResponseWriter, r *http.Request) {
 	actor, storeID, ok := s.partnerStore(w, r)
 	if !ok {
@@ -34,6 +51,23 @@ func (s *protectedStoreServer) handleOperatorScheduleAssortmentPrice(w http.Resp
 		return
 	}
 	s.scheduleAssortmentPrice(w, r, actor.ID, "operator", r.PathValue("storeId"))
+}
+
+func (s *protectedStoreServer) handlePartnerListAssortmentPrices(w http.ResponseWriter, r *http.Request) {
+	_, storeID, ok := s.partnerStore(w, r)
+	if !ok {
+		return
+	}
+	if storeID != r.PathValue("storeId") {
+		s.writeCatalogMutationError(w, centralcatalog.ErrForbidden)
+		return
+	}
+	prices, err := centralcatalog.ListAssortmentPriceRuntimeTruth(r.Context(), s.db, storeID, r.PathValue("masterProductId"))
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"priceSchedules": prices})
 }
 
 func (s *protectedStoreServer) handlePartnerScheduleAssortmentPrice(w http.ResponseWriter, r *http.Request) {
