@@ -18,37 +18,69 @@ export function usePartnerTeamController({
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<PartnerTeamModelStatus>('idle');
+  const mountedRef = React.useRef(true);
+  const requestSeqRef = React.useRef(0);
+  const mutationBusyRef = React.useRef(false);
 
   const activeStoreId = selectedStoreScopeId === 'all' ? '' : selectedStoreScopeId;
+  const scopeKey = `${route}:${activeStoreId}`;
+  const scopeKeyRef = React.useRef(scopeKey);
+  scopeKeyRef.current = scopeKey;
 
-  const loadTeam = React.useCallback(async () => {
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestSeqRef.current += 1;
+      mutationBusyRef.current = false;
+    };
+  }, []);
+
+  const loadTeam = React.useCallback(async (): Promise<boolean> => {
+    const requestSeq = ++requestSeqRef.current;
+    const requestScopeKey = scopeKey;
     if (route !== 'team' || !activeStoreId) {
-      setMembers([]);
-      setLoading(false);
-      setStatus('idle');
-      return;
+      if (mountedRef.current && requestScopeKey === scopeKeyRef.current) {
+        setMembers([]);
+        setLoading(false);
+        setError(null);
+        setStatus('idle');
+      }
+      return false;
     }
     setLoading(true);
     setError(null);
     setStatus('loading');
     try {
       const result = await fetchPartnerStoreTeam(activeStoreId);
+      if (
+        !mountedRef.current
+        || requestSeq !== requestSeqRef.current
+        || requestScopeKey !== scopeKeyRef.current
+      ) return false;
       const nextMembers = result.members
         .map(toPartnerTeamMember)
         .filter((member): member is PartnerTeamMember => member !== null);
       setMembers(nextMembers);
+      setLoading(false);
       setStatus('ready');
+      return true;
     } catch (cause) {
+      if (
+        !mountedRef.current
+        || requestSeq !== requestSeqRef.current
+        || requestScopeKey !== scopeKeyRef.current
+      ) return false;
       setMembers([]);
       setError(cause instanceof Error ? cause.message : 'تعذر قراءة فريق المتجر من DSH.');
-      setStatus('error');
-    } finally {
       setLoading(false);
+      setStatus('error');
+      return false;
     }
-  }, [route, activeStoreId]);
+  }, [route, activeStoreId, scopeKey]);
 
   React.useEffect(() => {
-    loadTeam();
+    void loadTeam();
   }, [loadTeam]);
 
   const onInviteMember = React.useCallback(async (
@@ -58,23 +90,46 @@ export function usePartnerTeamController({
     if (!activeStoreId) {
       return { ok: false, error: 'لا يوجد فرع محدد لإرسال الدعوة.' };
     }
+    if (mutationBusyRef.current) {
+      return { ok: false, error: 'يوجد إجراء فريق قيد التنفيذ. انتظر اكتماله وإعادة القراءة.' };
+    }
+    const mutationScopeKey = scopeKey;
+    mutationBusyRef.current = true;
     try {
-      await invitePartnerStoreTeamMember(activeStoreId, identity, role, createPartnerMutationContext('team-invite', activeStoreId));
-      await loadTeam();
+      await invitePartnerStoreTeamMember(
+        activeStoreId,
+        identity,
+        role,
+        createPartnerMutationContext('team-invite', activeStoreId),
+      );
+      if (!mountedRef.current || mutationScopeKey !== scopeKeyRef.current) {
+        return { ok: false, error: 'تغير نطاق المتجر أثناء تنفيذ الدعوة؛ أعد فتح فريق المتجر الحالي للتحقق من النتيجة.' };
+      }
+      const readbackVerified = await loadTeam();
+      if (!readbackVerified) {
+        return { ok: false, error: 'تم إرسال الدعوة، لكن تعذر تأكيد فريق المتجر من DSH بعد التنفيذ.' };
+      }
       return { ok: true };
     } catch (cause) {
       return { ok: false, error: cause instanceof Error ? cause.message : 'تعذر إرسال الدعوة من DSH.' };
+    } finally {
+      mutationBusyRef.current = false;
     }
-  }, [activeStoreId, loadTeam]);
+  }, [activeStoreId, loadTeam, scopeKey]);
 
   const onMemberAction = React.useCallback(async (memberId: string, action: string): Promise<PartnerTeamMutationResult> => {
     if (!activeStoreId) {
       return { ok: false, error: 'لا يوجد فرع محدد لتنفيذ الإجراء.' };
     }
+    if (mutationBusyRef.current) {
+      return { ok: false, error: 'يوجد إجراء فريق قيد التنفيذ. انتظر اكتماله وإعادة القراءة.' };
+    }
     const member = members.find((candidate) => candidate.id === memberId);
     if (!member || member.version < 1) {
       return { ok: false, error: 'بيانات العضوية قديمة؛ أعد تحميل الفريق قبل التنفيذ.' };
     }
+    const mutationScopeKey = scopeKey;
+    mutationBusyRef.current = true;
     try {
       await executePartnerStoreTeamMemberAction(
         activeStoreId,
@@ -83,12 +138,20 @@ export function usePartnerTeamController({
         member.version,
         createPartnerMutationContext('team-action', memberId, member.version),
       );
-      await loadTeam();
+      if (!mountedRef.current || mutationScopeKey !== scopeKeyRef.current) {
+        return { ok: false, error: 'تغير نطاق المتجر أثناء تنفيذ الإجراء؛ أعد فتح فريق المتجر الحالي للتحقق من النتيجة.' };
+      }
+      const readbackVerified = await loadTeam();
+      if (!readbackVerified) {
+        return { ok: false, error: 'تم إرسال الإجراء، لكن تعذر تأكيد فريق المتجر من DSH بعد التنفيذ.' };
+      }
       return { ok: true };
     } catch (cause) {
       return { ok: false, error: cause instanceof Error ? cause.message : 'تعذر تنفيذ إجراء الفريق من DSH.' };
+    } finally {
+      mutationBusyRef.current = false;
     }
-  }, [activeStoreId, loadTeam, members]);
+  }, [activeStoreId, loadTeam, members, scopeKey]);
 
   return {
     teamMembers: members,
