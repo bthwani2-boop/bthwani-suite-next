@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { DSH_NAV_ITEMS } from "@bthwani/dsh/control-panel/navigation";
+import { DSH_NAV_ITEMS, resolveDshNavigationItem } from "@bthwani/dsh/control-panel/navigation";
 import {
   ControlPanelShell,
   ControlPanelNavigation,
@@ -11,14 +11,13 @@ import {
 } from "../../shell";
 import { ControlPanelSessionProvider } from "@bthwani/dsh/control-panel/session";
 import { ControlPanelAuthBoundary } from "@bthwani/dsh/control-panel/session";
+import { ControlPanelSectionAccessBoundary } from "@bthwani/dsh/control-panel/session";
 import { ControlPanelUserMenu } from "@bthwani/dsh/control-panel/session";
 import { ControlPanelNotificationsBell } from "@bthwani/dsh/control-panel/session";
 import { useControlPanelServiceHealth } from "@bthwani/dsh/control-panel/session";
 
 function resolveActiveSection(pathname: string | null): string | undefined {
-  if (!pathname) return undefined;
-  const sorted = [...DSH_NAV_ITEMS].sort((a, b) => b.route.length - a.route.length);
-  return sorted.find((item) => pathname.startsWith(item.route))?.section;
+  return resolveDshNavigationItem(pathname)?.section;
 }
 
 function DshShell({ children }: { readonly children: ReactNode }) {
@@ -63,7 +62,9 @@ export default function DshLayout({ children }: { readonly children: ReactNode }
         children
       ) : (
         <ControlPanelAuthBoundary>
-          <DshShell>{children}</DshShell>
+          <DshShell>
+            <ControlPanelSectionAccessBoundary>{children}</ControlPanelSectionAccessBoundary>
+          </DshShell>
         </ControlPanelAuthBoundary>
       )}
     </ControlPanelSessionProvider>
