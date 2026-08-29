@@ -19,8 +19,6 @@ export {
 } from './operations.registry';
 export { ControlPanelDshOperationsScreen, OperationsHubScreen } from './OperationsHubScreen';
 export type { ControlPanelDshOperationsScreenProps } from './OperationsHubScreen';
-export { ControlPanelDshSheinProxyScreen } from './ControlPanelDshSheinProxyScreen';
-export { AwnakScreen } from './AwnakScreen';
 export { CommandCenterScreen } from './CommandCenterScreen';
 export { CartActivityScreen } from './CartActivityScreen';
 export { CheckoutActivityScreen } from './CheckoutActivityScreen';
