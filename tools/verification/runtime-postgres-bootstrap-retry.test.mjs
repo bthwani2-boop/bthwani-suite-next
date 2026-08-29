@@ -138,3 +138,10 @@ test("DSH catalog smoke supplies the required proposal idempotency key", () => {
     /"Idempotency-Key" = "smoke-catalog-proposal-/,
   );
 });
+
+test("DSH catalog smoke supplies the required assortment price idempotency key", () => {
+  assert.match(
+    dshCatalogSmoke,
+    /\$priceHeaders\s*=\s*@\{[\s\S]*?"Idempotency-Key"\s*=\s*"smoke-catalog-price-/,
+  );
+});
