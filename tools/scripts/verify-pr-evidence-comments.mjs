@@ -51,7 +51,7 @@ if (matching.length !== 1) fail(`${marker} requires exactly one live attestation
 const comment = matching[0];
 const reviewerLogin = String(comment.user?.login ?? "").toLowerCase();
 if (!reviewerLogin) fail("attestation author login missing");
-if (candidateAuthors.has(reviewerLogin)) fail("candidate author/committer/PR creator cannot attest this evidence");
+if (candidateAuthors.has(reviewerLogin)) fail("candidate author cannot self-attest: candidate author/committer/PR creator cannot attest this evidence");
 if (!["OWNER", "MEMBER", "COLLABORATOR"].includes(String(comment.author_association ?? ""))) {
   fail(`comment author is not an authorized repository association: ${comment.author_association}`);
 }

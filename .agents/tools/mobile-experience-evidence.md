@@ -21,3 +21,5 @@ Rules:
 - an empty scenario list is rejected;
 - failure/retry/permission/lifecycle behavior must be included when material;
 - the attestation is evidence, not Product Truth or closure authority.
+
+Required attestation fields additionally include `capturedAt`, `evidenceSha256` (64-hex SHA-256), `reviewIdentity.kind=external-device-runner`, `reviewIdentity.login` matching the GitHub comment author, and `device.model`, `device.osVersion`, `device.appBuild`. The attester must not be the PR creator or any GitHub-linked candidate author/committer.

@@ -19,3 +19,5 @@ Rules:
 - empty scenario lists are rejected;
 - accessibility and RTL are explicit evidence dimensions for the Arabic control panel;
 - the attestation is evidence, not Product/System Truth or closure authority.
+
+Required attestation fields additionally include `capturedAt`, `evidenceSha256` (64-hex SHA-256), `reviewIdentity.kind=external-authorized-host-agent`, and `reviewIdentity.login` matching the GitHub comment author. The attester must not be the PR creator or any GitHub-linked candidate author/committer.
