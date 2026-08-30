@@ -1,0 +1,77 @@
+name: Assurance Control Plane Trial
+run-name: Assurance trial PR ${{ github.event.pull_request.number }} @ ${{ github.event.pull_request.head.sha }}
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/**"
+      - ".agents/**"
+      - "tools/scripts/**"
+      - "tools/guards/**"
+      - "tools/prompting/**"
+      - "package.json"
+
+# Diagnostic only. This workflow is candidate-owned and therefore must never
+# publish or satisfy the privileged BThwani CI / PR result or Final Closure
+# statuses. Trusted merge authority remains on the protected default branch.
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: assurance-control-plane-trial-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  self-qualification:
+    name: Candidate assurance self-qualification (non-authoritative)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Set up locked Node runtime
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24.17.0"
+          package-manager-cache: false
+
+      - name: Verify exact candidate identity
+        shell: bash
+        env:
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "${EXPECTED_HEAD_SHA}" ]]
+
+      - name: Run assurance regression and bootstrap structural proof
+        run: |
+          node --test \
+            tools/scripts/detect-ci-context.test.mjs \
+            tools/scripts/assurance-experience-binding.test.mjs \
+            tools/scripts/assurance-hardening.test.mjs \
+            tools/scripts/assurance-system.test.mjs
+          node tools/scripts/verify-assurance-bootstrap.mjs
+
+      - name: Verify candidate workflow source immutability policy
+        run: node tools/scripts/check-ci-source-immutability.mjs
+
+  remote-security:
+    name: Candidate remote analyzer trial (non-authoritative)
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/security-remote.yml
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      head_sha: ${{ github.event.pull_request.head.sha }}
+      base_sha: ${{ github.event.pull_request.base.sha }}
+      head_ref: ${{ github.event.pull_request.head.ref }}
+      base_ref: ${{ github.event.pull_request.base.ref }}
