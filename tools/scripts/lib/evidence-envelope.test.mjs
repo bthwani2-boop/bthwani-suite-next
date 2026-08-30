@@ -47,6 +47,21 @@ test("normalizes text analyzers into individual findings and root candidates", (
   assert.equal(envelope.accounting.allRawFindingsAccounted, true);
 });
 
+test("ignores ANSI-prefixed informational runner summaries while preserving findings", () => {
+  const envelope = buildEvidenceEnvelope({
+    toolId: "nx-typecheck",
+    candidate,
+    status: "PASS",
+    exitCode: 0,
+    rawText: "\u001b[2m wlt: \u001b[22mℹ fail 0\n\u001b[2m wlt: \u001b[22mℹ skipped 0\nsrc/a.ts:4:7: warning: Quote this [SC2086]\n",
+  });
+
+  assert.equal(envelope.findings.length, 1);
+  assert.equal(envelope.findings[0].ruleId, "SC2086");
+  assert.equal(envelope.accounting.rawFindingCount, 1);
+  assert.equal(envelope.accounting.unparsedMaterialOutput, 0);
+});
+
 test("adapts existing classified evidence into the universal envelope", () => {
   const envelope = buildEvidenceEnvelope({
     toolId: "codeql",

@@ -239,9 +239,10 @@ function findingsFromText(toolId, rawText) {
     /^(?<path>.+?):(?<line>\d+)\s+mutable action reference:\s*(?<message>.+)$/iu,
   ];
   lines.forEach((line, index) => {
-    const trimmed = line.trim();
+    const trimmed = line.trim().replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, "");
     if (!trimmed) return;
-    if (/\bDeprecationWarning\b/iu.test(trimmed)) return;
+    if (/\bDeprecationWarning\b|NO_COLOR.*FORCE_COLOR|trace-warnings/iu.test(trimmed)) return;
+    if (/(?:^|\s)ℹ\s+(?:fail|skipped|pass|tests?|suites?)\b/iu.test(trimmed)) return;
     for (const pattern of patterns) {
       const match = pattern.exec(trimmed);
       if (!match?.groups) continue;
@@ -256,7 +257,7 @@ function findingsFromText(toolId, rawText) {
       consumedLines.add(index);
       return;
     }
-    const madge = /^\s*\d+\)\s+(?<message>.+)$/u.exec(line);
+    const madge = /^\s*\d+\)\s+(?<message>.+)$/u.exec(trimmed);
     if (madge?.groups) {
       findings.push({ruleId: "CIRCULAR_DEPENDENCY", severity: "WARNING", message: madge.groups.message, category: "STRUCTURAL_INTEGRITY"});
       consumedLines.add(index);
@@ -266,11 +267,13 @@ function findingsFromText(toolId, rawText) {
 }
 
 function materialDiagnosticLines(lines, consumedLines) {
-  return lines.map((line, index) => ({line: line.trim(), index}))
+  return lines.map((line, index) => ({line: line.trim().replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, ""), index}))
     .filter(({line, index}) => line && !consumedLines.has(index)
       && !/^[ℹ✔✓]/u.test(line)
+      && !/(?:^|\s)ℹ\s+(?:fail|skipped|pass|tests?|suites?)\b/iu.test(line)
       && !/^\(Use .*--trace-deprecation/iu.test(line)
       && !/\bDeprecationWarning\b/iu.test(line)
+      && !/NO_COLOR.*FORCE_COLOR|trace-warnings/iu.test(line)
       && /(?:^|\b)(?:error|fail(?:ed|ure)?|warning|warn|missing|unresolved|skipped|blocked|incomplete|vulnerab)(?:\b|$)/iu.test(line)
       && !/^(?:exit_code|command|started):/iu.test(line));
 }
