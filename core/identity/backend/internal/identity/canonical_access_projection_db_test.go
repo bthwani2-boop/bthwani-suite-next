@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func cleanupCanonicalAccessProjectionTest(t *testing.T, db *sql.DB, actorID, roleName string) {
+func cleanupCanonicalAccessProjectionTest(t *testing.T, db *sql.DB, actorID, reviewerActorID, roleName string) {
 	t.Helper()
 	cleanup := func() {
 		_, _ = db.Exec(`
@@ -22,7 +22,7 @@ func cleanupCanonicalAccessProjectionTest(t *testing.T, db *sql.DB, actorID, rol
 			"canonical-access-projection:deactivate:"+actorID+":"+roleName,
 			"canonical-access-projection:revoke:"+actorID+":"+roleName,
 			"canonical-access-projection:reactivate:"+actorID+":"+roleName)
-		_, _ = db.Exec(`DELETE FROM identity_actors WHERE id = $1`, actorID)
+		_, _ = db.Exec(`DELETE FROM identity_actors WHERE id IN ($1, $2)`, actorID, reviewerActorID)
 		_, _ = db.Exec(`DELETE FROM identity_roles WHERE name = $1`, roleName)
 		_, _ = db.Exec(`
 			DELETE FROM identity_permission_vocabulary vocabulary
@@ -61,11 +61,12 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		suffix = suffix[len(suffix)-40:]
 	}
 	actorID := "agent2-access-" + suffix
+	reviewerActorID := "agent2-reviewer-" + suffix
 	roleName := "agent2_access_" + strings.ReplaceAll(suffix, "-", "_")
 	if len(roleName) > 79 {
 		roleName = roleName[:79]
 	}
-	cleanupCanonicalAccessProjectionTest(t, db, actorID, roleName)
+	cleanupCanonicalAccessProjectionTest(t, db, actorID, reviewerActorID, roleName)
 	operatorContextID := "local-dsh"
 
 	directPermissions := []Permission{{
@@ -75,10 +76,12 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		INSERT INTO identity_actors
 		    (id, username, password_hash, operator_context_id, phone_e164,
 		     roles, permissions, status, version, updated_at)
-		VALUES ($1, $2, '', 'local-dsh', NULL, ARRAY[]::text[], '[]'::jsonb, 'ACTIVE', 1, now())`,
-		actorID, actorID)
+		VALUES
+		    ($1, $2, '', 'local-dsh', NULL, ARRAY[]::text[], '[]'::jsonb, 'ACTIVE', 1, now()),
+		    ($3, $4, '', 'local-dsh', NULL, ARRAY[]::text[], '[]'::jsonb, 'ACTIVE', 1, now())`,
+		actorID, actorID, reviewerActorID, reviewerActorID)
 	if err != nil {
-		t.Fatalf("insert actor: %v", err)
+		t.Fatalf("insert test actors: %v", err)
 	}
 
 	var role RbacRole
@@ -134,7 +137,7 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		t.Fatalf("direct actor permission was lost before grant: %#v", before.Permissions)
 	}
 
-	if _, inserted, err := repository.Enforcer.GrantRoleWithIdempotency(context.Background(), operatorContextID, actorID, roleName, "reviewer-agent2", role.Version, "canonical-access-projection:grant:"+actorID+":"+roleName, "projection-test"); err != nil || !inserted {
+	if _, inserted, err := repository.Enforcer.GrantRoleWithIdempotency(context.Background(), operatorContextID, actorID, roleName, reviewerActorID, role.Version, "canonical-access-projection:grant:"+actorID+":"+roleName, "projection-test"); err != nil || !inserted {
 		t.Fatalf("grant role: inserted=%v err=%v", inserted, err)
 	}
 
@@ -213,7 +216,7 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		operatorContextID,
 		actorID,
 		roleName,
-		"reviewer-agent2",
+		reviewerActorID,
 		role.Version,
 		"canonical-access-projection:stale-revoke:"+actorID+":"+roleName,
 		"projection-test",
@@ -241,10 +244,10 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		t.Fatalf("inactive durable assignment remained effective: %#v", deactivated)
 	}
 
-	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), operatorContextID, actorID, roleName, "reviewer-agent2", deactivatedRole.Version, "canonical-access-projection:revoke:"+actorID+":"+roleName, "projection-test"); err != nil {
+	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), operatorContextID, actorID, roleName, reviewerActorID, deactivatedRole.Version, "canonical-access-projection:revoke:"+actorID+":"+roleName, "projection-test"); err != nil {
 		t.Fatalf("revoke inactive role: %v", err)
 	}
-	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), operatorContextID, actorID, roleName, "reviewer-agent2", deactivatedRole.Version, "canonical-access-projection:revoke:"+actorID+":"+roleName, "projection-test"); err != nil {
+	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), operatorContextID, actorID, roleName, reviewerActorID, deactivatedRole.Version, "canonical-access-projection:revoke:"+actorID+":"+roleName, "projection-test"); err != nil {
 		t.Fatalf("retry inactive role revoke: %v", err)
 	}
 	durableAssignments, err = repository.Enforcer.ListActorRoleAssignments(context.Background(), operatorContextID, actorID)
