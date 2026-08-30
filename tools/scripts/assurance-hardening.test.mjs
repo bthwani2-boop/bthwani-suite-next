@@ -32,6 +32,26 @@ test("CI control-plane authorities are loaded from trusted workflow SHA", () => 
   assert.match(read("tools/guards/_guard-utils.mjs"), /BTHWANI_TARGET_REPO/u);
 });
 
+test("Remote Security authority, wrappers, installer, and policy come from trusted workflow SHA", () => {
+  const f = read(".github/workflows/security-remote.yml");
+  assert.match(f, /Materialize trusted remote-analysis authority/u);
+  assert.match(f, /Materialize trusted analyzer authority and policy/u);
+  assert.match(f, /TRUSTED_WORKFLOW_SHA/u);
+  assert.match(f, /git archive "\$\{TRUSTED_WORKFLOW_SHA\}"/u);
+  assert.match(f, /TRUSTED_SECURITY_ROOT/u);
+  assert.match(f, /BTHWANI_TRUSTED_POLICY_ROOT/u);
+  assert.match(f, /TRUSTED_SECURITY_ROOT}\/tools\/scripts\/install-oss-toolchain-binaries\.sh/u);
+  assert.match(f, /TRUSTED_SECURITY_ROOT}\/tools\/guards\/remote-analysis-authority-gate\.mjs/u);
+  assert.match(f, /TRUSTED_SECURITY_ROOT}\/tools\/scripts\/run-osv-scanner\.mjs/u);
+  assert.match(f, /TRUSTED_SECURITY_ROOT}\/\.gitleaksignore/u);
+  assert.doesNotMatch(f, /run:\s*bash tools\/scripts\/install-oss-toolchain-binaries\.sh/u);
+  assert.doesNotMatch(f, /osv-scanner\) node tools\/scripts\/run-osv-scanner\.mjs/u);
+  assert.match(read("tools/scripts/run-pinact.mjs"), /BTHWANI_TARGET_REPO/u);
+  assert.match(read("tools/scripts/run-osv-scanner.mjs"), /BTHWANI_TRUSTED_POLICY_ROOT/u);
+  assert.match(read("tools/scripts/run-trivy.mjs"), /BTHWANI_TRUSTED_POLICY_ROOT/u);
+  assert.match(read("tools/scripts/run-shellcheck.mjs"), /--norc/u);
+});
+
 test("evidence attestation rejects candidate-linked reviewers and weak evidence identities", () => {
   const v = read("tools/scripts/verify-pr-evidence-comments.mjs");
   assert.match(v, /candidateAuthors/u);
