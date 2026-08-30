@@ -161,6 +161,21 @@ test("a failed binary gate becomes traceable evidence instead of an exit-only ve
   assert.equal(envelope.accounting.unparsedMaterialOutput, 0);
 });
 
+test("normalizes contract and compiler failure wording from text output", () => {
+  const envelope = buildEvidenceEnvelope({
+    toolId: "oasdiff",
+    candidate: {headSha: "a".repeat(40)},
+    status: "FAIL",
+    exitCode: 1,
+    rawText: "breaking change detected: GET /v1/orders was removed\n",
+    rawPath: "oasdiff.log",
+  });
+
+  assert.equal(envelope.findings.length, 1);
+  assert.match(envelope.findings[0].message, /breaking change detected/iu);
+  assert.equal(envelope.accounting.unparsedMaterialOutput, 0);
+});
+
 test("one Root Graph correlates findings and exposes unresolved Source-of-Fix work", () => {
   const first = buildEvidenceEnvelope({
     toolId: "shellcheck",

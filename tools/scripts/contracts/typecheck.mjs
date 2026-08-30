@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { normalizeOpenApiMetadata } from "./normalize-openapi-metadata.mjs";
 import { composeContext } from "../openapi-context-composer.mjs";
 import { resolvePackageManagerInvocation } from "../lib/package-manager-invocation.mjs";
+import { writeToolEvidence } from "../capture-tool-evidence.mjs";
 
 const contexts = ["identity", "workforce", "platform-control", "providers", "dsh", "wlt"];
 
@@ -42,24 +43,37 @@ function run(label, command, args, options = {}) {
     encoding: "utf8",
     shell: false,
     ...spawnOptions,
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
   const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}\n${result.error?.message ?? ""}`.trim();
+  const toolId = label.toLowerCase().replace(/[^a-z0-9_-]+/gu, "-").replace(/^-+|-+$/gu, "") || "contracts-tool";
+  const exitCode = result.error ? 1 : (result.status ?? 1);
+  const warningsRejected = rejectWarnings && /\bYou have\s+[1-9]\d*\s+warnings?\b/i.test(combined);
+  try {
+    writeToolEvidence({
+      toolId,
+      status: exitCode === 0 && !warningsRejected ? "PASS" : "FAIL",
+      exitCode: warningsRejected ? 1 : exitCode,
+      rawText: combined,
+      rawPath: [invocation.executable, ...invocation.args].join(" "),
+      claim: `${label} contract evidence`,
+      scope: "exact candidate contract",
+    });
+  } catch (error) {
+    process.stderr.write(`[${label}] evidence capture failed: ${error.message}\n`);
+  }
+
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
 
   if (result.status !== 0) {
-    if (result.stdout) process.stdout.write(result.stdout);
-    if (result.stderr) process.stderr.write(result.stderr);
     throw new Error(`${label}: ${firstActionableDiagnostic(combined)}`);
   }
 
-  if (rejectWarnings && /\bYou have\s+[1-9]\d*\s+warnings?\b/i.test(combined)) {
-    if (result.stdout) process.stdout.write(result.stdout);
-    if (result.stderr) process.stderr.write(result.stderr);
+  if (warningsRejected) {
     throw new Error(`${label}: warnings are forbidden`);
   }
-
-  if (spawnOptions.stdio !== "pipe") return;
-  if (result.stderr) process.stderr.write(result.stderr);
 }
 
 function materializeNormalizedContract(source, sourceLabel) {

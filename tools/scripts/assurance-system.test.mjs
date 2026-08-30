@@ -124,6 +124,8 @@ test("every shared tool entrypoint emits the universal evidence envelope", () =>
     "tools/scripts/run-actionlint.mjs",
     "tools/scripts/run-zizmor.mjs",
     "tools/scripts/run-pinact.mjs",
+    "tools/scripts/run-madge.mjs",
+    "tools/scripts/contracts/typecheck.mjs",
     "tools/scripts/run-osv-scanner.mjs",
     "tools/scripts/run-affected-verification.mjs",
     "tools/scripts/run-tsc-check.mjs",

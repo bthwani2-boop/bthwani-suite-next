@@ -2,6 +2,7 @@ import path from "node:path";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import madge from "madge";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDir, "../..");
@@ -46,6 +47,23 @@ try {
   ], madgeConfig);
   const circular = graph.circular();
   const skipped = graph.warnings().skipped;
+  const output = [
+    `Processed ${Object.keys(graph.obj()).length} files`,
+    ...circular.map((entry, index) => `${index + 1}) ${entry.join(" > ")}`),
+    skipped.length > 0 ? `Skipped ${skipped.length} files` : "",
+    ...skipped,
+    circular.length === 0 ? "No circular dependency found!" : "",
+  ].filter(Boolean).join("\n");
+
+  writeToolEvidence({
+    toolId: "madge",
+    status: circular.length === 0 && skipped.length === 0 ? "PASS" : "FAIL",
+    exitCode: circular.length === 0 && skipped.length === 0 ? 0 : 1,
+    rawText: output,
+    rawPath: "madge graph output",
+    claim: "Madge dependency graph evidence",
+    scope: "repository dependency graph",
+  });
 
   console.log(`Processed ${Object.keys(graph.obj()).length} files`);
   if (circular.length > 0) {
@@ -59,6 +77,19 @@ try {
 
   process.exitCode = circular.length === 0 && skipped.length === 0 ? 0 : 1;
 } catch (error) {
+  try {
+    writeToolEvidence({
+      toolId: "madge",
+      status: "FAIL",
+      exitCode: 1,
+      rawText: error.stack ?? error.message,
+      rawPath: "madge graph output",
+      claim: "Madge dependency graph evidence",
+      scope: "repository dependency graph",
+    });
+  } catch (captureError) {
+    console.error(`[MADGE EVIDENCE ERROR] ${captureError.message}`);
+  }
   console.error(error.stack ?? error.message);
   process.exitCode = 1;
 }

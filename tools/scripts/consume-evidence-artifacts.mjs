@@ -63,6 +63,12 @@ function isUniversalPayload(payload) {
   return normalized || nativeAnalyzer;
 }
 
+function isUploadMetadata(file, payload) {
+  const name = path.basename(file).toLowerCase();
+  return name === "artifact-metadata.json"
+    || (payload?.artifactId !== undefined && payload?.artifactName !== undefined && Object.keys(payload).length <= 3);
+}
+
 function descriptorEnvelope(file, descriptor, candidate) {
   const logFile = path.resolve(path.dirname(file), String(descriptor.log ?? `${descriptor.analyzer}.log`));
   const directory = path.resolve(path.dirname(file));
@@ -178,6 +184,15 @@ export function consumeEvidenceArtifacts({inputDir, outputDir, headSha, baseSha 
         continue;
       }
       if (envelopes.some((envelope) => envelope.tool.id === toolId && envelope.raw.path.includes(path.dirname(file)))) continue;
+      envelopes.push(universalEnvelope(file, payload, candidate, baseline));
+      consumed.add(file);
+      continue;
+    }
+    // Every remaining JSON artifact is still evidence.  Keep GitHub upload
+    // bookkeeping out of the tool graph, but never silently drop an unknown
+    // analyzer report merely because its schema is new to this consumer.
+    if (!isUploadMetadata(file, payload)) {
+      const baseline = normalizePath(path.relative(root, file)).split("/").includes("baseline");
       envelopes.push(universalEnvelope(file, payload, candidate, baseline));
       consumed.add(file);
     }

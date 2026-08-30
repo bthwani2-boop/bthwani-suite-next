@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { changedFiles, repoRoot, runTool } from "./_external-tool-runner.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const baseSha = String(process.env.BASE_SHA || "").trim();
 const candidateSha = String(process.env.CANDIDATE_SHA || "").trim();
@@ -24,6 +25,15 @@ const reportArgs = ["--format", "json", "--output", reportPath];
 if (baseSha && candidateSha) {
   const files = changedFiles(baseSha, candidateSha, ["."], () => true);
   if (!files.length) {
+    writeToolEvidence({
+      toolId: "trivy",
+      status: "PASS",
+      exitCode: 0,
+      rawText: "No changed files found for Trivy.",
+      rawPath: "trivy changed-file scope",
+      claim: "Trivy exact changed-file evidence",
+      scope: `base ${baseSha} to candidate ${candidateSha}`,
+    });
     console.log("No changed files found for Trivy.");
     process.exit(0);
   }

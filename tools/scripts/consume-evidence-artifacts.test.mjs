@@ -106,3 +106,22 @@ test("infers tool identity from native runner markers in completed job logs", ()
   assert.equal(result.envelopes[0].execution.status, "FAIL");
   assert.equal(result.summary.allToolEvidenceConsumed, true);
 });
+
+test("consumes an unknown JSON analyzer report instead of dropping it", () => {
+  const inputDir = temporaryDirectory();
+  const outputDir = temporaryDirectory();
+  fs.writeFileSync(path.join(inputDir, "custom-tool-report.json"), JSON.stringify({
+    tool: "custom-tool",
+    status: "FAIL",
+    breakingChanges: [{path: "contracts/api.yaml", line: 12, ruleId: "BREAKING_ENDPOINT", message: "endpoint removed"}],
+  }));
+
+  const result = consumeEvidenceArtifacts({inputDir, outputDir, headSha, baseSha});
+
+  assert.equal(result.envelopes.length, 1);
+  assert.equal(result.envelopes[0].tool.id, "custom-tool");
+  assert.equal(result.envelopes[0].findings[0].ruleId, "BREAKING_ENDPOINT");
+  assert.equal(result.summary.unparsedMaterialOutput, 0);
+  assert.equal(result.summary.unmappedMaterialFindings, 0);
+  assert.equal(result.closed, false, "material unknown findings must remain open in the Root Graph");
+});

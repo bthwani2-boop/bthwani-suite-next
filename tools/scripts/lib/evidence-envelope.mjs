@@ -229,9 +229,15 @@ function findingsFromStructured(toolId, payload) {
     payload.problems,
     payload.messages,
     payload.failures,
+    payload.diagnostics,
+    payload.warnings,
+    payload.breakingChanges,
   ];
   const collection = collections.find(Array.isArray);
   if (collection) return collection;
+  for (const key of ["finding", "issue", "violation", "diagnostic", "warning", "breakingChange", "failure"]) {
+    if (payload[key] && typeof payload[key] === "object") return [payload[key]];
+  }
   if (toolId === "actionlint" && (payload.filepath || payload.message)) return [payload];
   return [];
 }
@@ -283,7 +289,8 @@ function materialDiagnosticLines(lines, consumedLines) {
       && !/\bDeprecationWarning\b/iu.test(line)
       && !/NO_COLOR.*FORCE_COLOR|trace-warnings/iu.test(line)
       && !/node_modules[\\/].*assets[\\/].+\s+\(\d+(?:\.\d+)?\s*(?:B|KB|MB)\)$/iu.test(line)
-      && /(?:^|\b)(?:error|fail(?:ed|ure)?|warning|warn|missing|unresolved|skipped|blocked|incomplete|vulnerab)(?:\b|$)/iu.test(line)
+      && !/\bno\s+(?:breaking\s+changes?|violations?|issues?|errors?)\b/iu.test(line)
+      && /(?:^|\b)(?:error|fail(?:ed|ure)?|warning|warn|missing|unresolved|skipped|blocked|incomplete|vulnerab|breaking|violation|panic|undefined|cannot\s+use|invalid)(?:\b|$)/iu.test(line)
       && !/^(?:exit_code|command|started):/iu.test(line));
 }
 
