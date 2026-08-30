@@ -198,7 +198,7 @@ test("CodeQL and Semgrep expose explicit final full-scope contracts", () => {
   assert.match(codeql, /INPUT_FULL_SCOPE/u);
   assert.match(codeql, /if \[\[ "\$\{INPUT_FULL_SCOPE\}" == "true" \]\]; then\s+full=true/u);
   assert.match(semgrep, /full_scope: \{type: boolean, required: false, default: false\}/u);
-  assert.match(semgrep, /if \[\[ "\$\{FULL_SCOPE\}" == "true" \]\]; then\s+mode=full/u);
+  assert.match(semgrep, /if \[\[ "\$\{FULL_SCOPE\}" == "true" \]\]; then\s+mode="?full"?/u);
   assert.match(semgrep, /args\+=\(--baseline-commit "\$\{BASE_SHA\}"\)/u);
 });
 
