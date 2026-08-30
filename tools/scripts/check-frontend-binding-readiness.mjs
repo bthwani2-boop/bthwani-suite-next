@@ -38,11 +38,11 @@ function fail(message) {
 }
 
 function readContract() {
-  if (!fs.existsSync(contractPath)) fail(`missing ${path.relative(repoRoot, contractPath)}`);
   let contract;
   try {
     contract = JSON.parse(fs.readFileSync(contractPath, "utf8"));
   } catch (error) {
+    if (error?.code === "ENOENT") fail(`missing ${path.relative(repoRoot, contractPath)}`);
     fail(`invalid runtime readiness contract: ${error.message}`);
   }
   if (contract.schemaVersion !== 1) fail(`unsupported runtime readiness schemaVersion=${contract.schemaVersion}`);
@@ -70,6 +70,26 @@ const httpOkPortEnvByProfile = {
   "financial-simulators": "BTHWANI_WIREMOCK_FINANCIAL_PORT",
   "media-storage": "BTHWANI_MINIO_API_PORT",
 };
+
+/**
+ * Security boundary, not a second readiness registry: these are the only
+ * repository-controlled paths this GET-only preflight is permitted to request.
+ * A new readiness route must be deliberately classified as a non-mutating probe
+ * before candidate file data can influence an outbound request.
+ */
+function canonicalSafeReadinessPath(value) {
+  switch (value) {
+    case "/identity/readiness": return "/identity/readiness";
+    case "/workforce/readiness": return "/workforce/readiness";
+    case "/dsh/readiness": return "/dsh/readiness";
+    case "/wlt/readiness": return "/wlt/readiness";
+    case "/providers/readiness": return "/providers/readiness";
+    case "/platform/readiness": return "/platform/readiness";
+    case "/minio/health/ready": return "/minio/health/ready";
+    case "/__admin/mappings": return "/__admin/mappings";
+    default: return null;
+  }
+}
 
 function isLoopbackHostname(hostname) {
   const normalized = String(hostname ?? "").trim().toLowerCase();
@@ -121,7 +141,11 @@ function normalizeReadinessPath(profile, value) {
   ) {
     fail(`profile '${profile}' has an unsafe readiness path '${routePath}'`);
   }
-  return routePath;
+  const canonical = canonicalSafeReadinessPath(routePath);
+  if (!canonical) {
+    fail(`profile '${profile}' readiness path '${routePath}' is not classified as a safe GET probe`);
+  }
+  return canonical;
 }
 
 function joinBaseAndPath(baseUrl, routePath) {
