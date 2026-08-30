@@ -21,7 +21,7 @@
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {
-    "react": "19.2.3"
+    "react": "19.2.8"
   },
   "dependencies": {
     "@bthwani/control-panel": "workspace:*",
@@ -32,16 +32,16 @@
     "@bthwani/data-runtime": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "@bthwani/wlt": "workspace:*",
-    "@tanstack/react-query": "5.90.2",
-    "react-native": "0.86.2",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-svg": "15.15.4"
+    "@tanstack/react-query": "5.102.0",
+    "react-native": "0.87.0",
+    "react-native-safe-area-context": "~5.9.1",
+    "react-native-svg": "15.15.5"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
-    "@types/react": "19.2.17",
-    "next": "^16.2.11",
-    "react": "19.2.3",
+    "@types/react": "19.2.18",
+    "next": "^16.3.2",
+    "react": "19.2.8",
     "typescript": "6.0.2"
   },
   "exports": {
