@@ -33,7 +33,8 @@ const pr = JSON.parse(gh(["api", `/repos/${repository}/pulls/${prNumber}`]));
 if (pr.state !== "open") fail("PR is not open");
 if (pr.head?.sha !== candidateSha) fail("PR head moved");
 
-const comments = pagedArray(`/repos/${repository}/issues/${prNumber}/comments?per_page=100`);
+const comments = kind === "bootstrap" ? [] : pagedArray(`/repos/${repository}/issues/${prNumber}/comments?per_page=100`);
+const reviews = kind === "bootstrap" ? pagedArray(`/repos/${repository}/pulls/${prNumber}/reviews?per_page=100`) : [];
 const commits = pagedArray(`/repos/${repository}/pulls/${prNumber}/commits?per_page=100`);
 const candidateAuthors = new Set(
   commits.flatMap((c) => [c.author?.login, c.committer?.login]).filter(Boolean).map((x) => String(x).toLowerCase())
@@ -47,18 +48,23 @@ const markers = {
   bootstrap: "BTHWANI_ASSURANCE_BOOTSTRAP:v1",
 };
 const marker = markers[kind];
-const matching = comments.filter((c) => String(c.body ?? "").startsWith(`${marker}\n`));
+const attestations = kind === "bootstrap" ? reviews : comments;
+const matching = attestations.filter((c) => String(c.body ?? "").startsWith(`${marker}\n`));
 if (matching.length !== 1) fail(`${marker} requires exactly one live attestation, found ${matching.length}`);
 
-const comment = matching[0];
-const reviewerLogin = String(comment.user?.login ?? "").toLowerCase();
+const attestation = matching[0];
+const reviewerLogin = String(attestation.user?.login ?? "").toLowerCase();
 if (!reviewerLogin) fail("attestation author login missing");
 if (candidateAuthors.has(reviewerLogin)) fail("candidate author cannot self-attest: candidate author/committer/PR creator cannot attest this evidence");
-if (!["OWNER", "MEMBER", "COLLABORATOR"].includes(String(comment.author_association ?? ""))) {
-  fail(`comment author is not an authorized repository association: ${comment.author_association}`);
+if (!["OWNER", "MEMBER", "COLLABORATOR"].includes(String(attestation.author_association ?? ""))) {
+  fail(`attestation author is not an authorized repository association: ${attestation.author_association}`);
+}
+if (kind === "bootstrap") {
+  if (attestation.state !== "APPROVED") fail("bootstrap attestation must be an APPROVED PR review");
+  if (attestation.commit_id !== candidateSha) fail("bootstrap approval must be bound to the exact candidate SHA");
 }
 
-const lines = String(comment.body).split(/\r?\n/u);
+const lines = String(attestation.body).split(/\r?\n/u);
 if (lines.length !== 2 || lines[0] !== marker) fail("attestation must be exactly marker + one canonical JSON line");
 
 let payload;
@@ -115,7 +121,7 @@ if (kind === "mobile") {
 if (kind === "bootstrap") {
   if (payload.schema !== "BTHWANI_ASSURANCE_BOOTSTRAP" || payload.version !== 1) fail("bootstrap schema/version mismatch");
   if (payload.reviewIdentity?.kind !== "external-authorized-assurance-reviewer") fail("bootstrap reviewer identity kind mismatch");
-  if (nonEmpty(payload.reviewIdentity?.login).toLowerCase() !== reviewerLogin) fail("bootstrap reviewIdentity.login must match comment author");
+  if (nonEmpty(payload.reviewIdentity?.login).toLowerCase() !== reviewerLogin) fail("bootstrap reviewIdentity.login must match review author");
 
   const expectedAuthorityDiffSha256 = nonEmpty(expectedPrimary).toLowerCase();
   const expectedTrustedSha = nonEmpty(expectedSecondary).toLowerCase();
