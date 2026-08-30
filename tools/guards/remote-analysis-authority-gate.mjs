@@ -21,10 +21,12 @@ const mustNotMatch = (text, patterns, owner) => {
 
 const workflowDir = path.resolve(".github/workflows");
 const workflowFiles = fs.readdirSync(workflowDir).filter((file) => file.endsWith(".yml"));
-const allWorkflowText = workflowFiles.map((file) => read(path.join(workflowDir, file))).join("\n");
+const workflowEntries = workflowFiles.map((file) => ({ file, content: read(path.join(workflowDir, file)) }));
+const allWorkflowText = workflowEntries.map(({ content }) => content).join("\n");
 const ci = read(path.join(workflowDir, "ci-check.yml"));
 const closure = read(path.join(workflowDir, "final-closure.yml"));
 const semanticContext = read(path.join(workflowDir, "open-code-review.yml"));
+const prAssuranceTrigger = read(path.join(workflowDir, "pr-assurance-trigger.yml"));
 
 mustContain(ci, ["workflow_call:", "workflow_dispatch:", "Verify exact candidate and resolve affected scope", "git merge-base --is-ancestor"], "single CI controller");
 mustNotContain(ci, ["pull_request:", "push:", "schedule:", "run_assurance", "verification_tier", "runtime_profile", "previous_head_sha", "github.event.before"], "single CI controller");
@@ -59,7 +61,31 @@ mustNotContain(semanticContext, [
   "semanticReviewClaimedByThisWorkflow: true",
 ], "OpenCodeReview deterministic context worker");
 
-mustNotContain(allWorkflowText, ["workflow_run:", "repository_dispatch", "actions/workflows/"], "workflow control plane");
+mustNotContain(allWorkflowText, ["workflow_run:", "repository_dispatch"], "workflow control plane");
+
+const dispatchingWorkflows = workflowEntries
+  .filter(({ content }) => content.includes("/actions/workflows/"))
+  .map(({ file }) => file);
+if (dispatchingWorkflows.length !== 1 || dispatchingWorkflows[0] !== "pr-assurance-trigger.yml") {
+  fail(`trusted workflow dispatch authority must be exclusive to pr-assurance-trigger.yml; found=${dispatchingWorkflows.join(",") || "none"}`);
+}
+mustContain(prAssuranceTrigger, [
+  "pull_request_target:",
+  "actions: write",
+  "pull-requests: read",
+  "/actions/workflows/ci-check.yml/dispatches",
+  "/actions/workflows/final-closure.yml/dispatches",
+  "expected_head_sha",
+  "expected_base_sha",
+], "PR assurance trigger");
+mustNotContain(prAssuranceTrigger, [
+  "actions/checkout@",
+  "workflow_run:",
+  "repository_dispatch",
+  "\n  push:",
+  "\n  schedule:",
+], "PR assurance trigger");
+
 for (const file of ["codeql.yml", "semgrep.yml", "security-remote.yml", "sonarqube.yml", "dependency-review.yml", "lockfile-integrity.yml", "docker-runtime-hardening.yml"]) {
   const content = read(path.join(workflowDir, file));
   mustContain(content, ["workflow_call:"], file);
@@ -69,9 +95,9 @@ const sonar = read(path.join(workflowDir, "sonarqube.yml"));
 mustContain(sonar, ["SonarSource/sonarqube-scan-action@", "secrets.SONAR_TOKEN", "sonar.pullrequest.key", "sonar.scm.revision"], "SonarQube authority");
 mustNotContain(sonar, ["SONAR_HOST_URL", "localhost:9000", "vars.SONAR_PROJECT_KEY"], "SonarQube authority");
 const semgrep = read(path.join(workflowDir, "semgrep.yml"));
-mustContain(semgrep, ["classify-semgrep-evidence.mjs", "unknownEngineErrors", "Semgrep findings require diagnosis/disposition before closure"], "Semgrep authority");
+mustContain(semgrep, ["classify-semgrep-evidence.mjs", "unknownEngineErrors", "blockingFindings", "Semgrep blocking findings require treatment before closure"], "Semgrep authority");
 const security = read(path.join(workflowDir, "security-remote.yml"));
 mustContain(security, ["gitleaks detect", "run-osv-scanner.mjs", "run-trivy.mjs", "runs-on: ubuntu-24.04"], "security authority");
 mustContain(read(path.join(workflowDir, "codeql.yml")), ["github/codeql-action/init@", "github/codeql-action/analyze@"], "CodeQL authority");
 mustContain(read("sonar-project.properties"), ["sonar.organization=bthwani2-boop", "sonar.projectKey=bthwani2-boop_bthwani-suite-next"], "Sonar identity");
-console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Final Closure remains the closure controller; exact changed-file authority remains Git diff; OpenCodeReview is deterministic context only; analyzers remain reusable workers.");
+console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Final Closure remains the closure controller; the thin PR trigger is the sole trusted workflow dispatcher and never executes PR source; exact changed-file authority remains Git diff; analyzers remain reusable workers.");
