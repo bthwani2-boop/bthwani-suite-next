@@ -17,6 +17,7 @@ const protectedPathspecs = [
   ".agents/skills/bthwani-final-journey-closure-judge/SKILL.md",
   "tools/prompting/bthwani-orchestrator",
   "tools/guards/_guard-utils.mjs",
+  "tools/guards/docker-runtime-hardening-gate.mjs",
   "tools/guards/migration-manifest-drift-gate.mjs",
   "tools/guards/remote-analysis-authority-gate.mjs",
   "tools/guards/sonar-coverage-ownership-gate.mjs",
