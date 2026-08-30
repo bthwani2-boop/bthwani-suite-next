@@ -12,14 +12,24 @@ test("Final Closure cannot publish success before manifest upload", () => {
   assert.doesNotMatch(beforeUpload, /-f state=success -f context='BThwani \/ Final Closure'/u);
 });
 
-test("CI source-immutability meta-verifier is loaded from trusted workflow SHA", () => {
+test("CI control-plane authorities are loaded from trusted workflow SHA", () => {
   const f = read(".github/workflows/ci-check.yml");
-  assert.match(f, /Load trusted CI source-immutability verifier/u);
+  assert.match(f, /Load trusted CI control-plane authorities/u);
   assert.match(f, /TRUSTED_WORKFLOW_SHA/u);
-  assert.match(f, /BTHWANI_TARGET_REPO/u);
-  const v = read("tools/scripts/check-ci-source-immutability.mjs");
-  assert.match(v, /BTHWANI_TARGET_REPO/u);
-  assert.match(v, /targetRepoRoot/u);
+  assert.match(f, /fetch_trusted tools\/scripts\/check-ci-source-immutability\.mjs/u);
+  assert.match(f, /fetch_trusted tools\/guards\/migration-manifest-drift-gate\.mjs/u);
+  assert.match(f, /fetch_trusted tools\/guards\/sonar-coverage-ownership-gate\.mjs/u);
+  assert.match(f, /fetch_trusted tools\/verification\/ownership\.manifest\.json/u);
+  assert.match(f, /TRUSTED_MIGRATION_MANIFEST_GUARD/u);
+  assert.match(f, /TRUSTED_SONAR_OWNERSHIP_GUARD/u);
+  assert.doesNotMatch(f, /run:\s*node tools\/guards\/migration-manifest-drift-gate\.mjs/u);
+  assert.doesNotMatch(f, /node --test tools\/guards\/sonar-coverage-ownership-gate\.test\.mjs/u);
+
+  const verifier = read("tools/scripts/check-ci-source-immutability.mjs");
+  assert.match(verifier, /BTHWANI_TARGET_REPO/u);
+  assert.match(verifier, /targetRepoRoot/u);
+  assert.match(read("tools/guards/migration-manifest-drift-gate.mjs"), /BTHWANI_TARGET_REPO/u);
+  assert.match(read("tools/guards/_guard-utils.mjs"), /BTHWANI_TARGET_REPO/u);
 });
 
 test("evidence attestation rejects candidate-linked reviewers and weak evidence identities", () => {
