@@ -14,7 +14,12 @@ if ($env:GITHUB_ACTIONS -ne "true") {
   exit 1
 }
 
-$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../")).Path
+$ModuleRepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../")).Path
+$RepoRoot = if ($env:BTHWANI_TARGET_REPO) {
+  (Resolve-Path $env:BTHWANI_TARGET_REPO).Path
+} else {
+  $ModuleRepoRoot
+}
 $Fail = $false
 
 function Check-File([string]$RelPath, [string]$Label) {
