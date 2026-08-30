@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -11,6 +11,7 @@ const port = Number(portArg?.split("=")[1] ?? 13000);
 const baseURL = `http://127.0.0.1:${port}`;
 const evidenceDir = path.join(tmpdir(), "bthwani-rendered-web", new Date().toISOString().replaceAll(":", "-"));
 mkdirSync(evidenceDir, { recursive: true });
+const candidateSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 
 async function waitForServer(url, timeoutMs = 120000) {
   const started = Date.now();
@@ -39,27 +40,28 @@ function stopProcess(child) {
 async function main() {
   let server;
   let browser;
+  const serverChunks = [];
   const serverLog = path.join(evidenceDir, "control-panel-server.log");
   try {
-    server = spawn(
-      pnpm,
-      ["--dir", "apps/control-panel/runtime", "exec", "next", "dev", "--hostname", "127.0.0.1", "--port", String(port)],
-      {
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          NODE_ENV: "development",
-          NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY:
-            process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY ?? "AIza00000000000000000000000000000000000",
-          NO_COLOR: "1",
-        },
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true,
+    const serverArgs = ["--dir", "apps/control-panel/runtime", "exec", "next", "dev", "--hostname", "127.0.0.1", "--port", String(port)];
+    const usesWindowsCommandShim = process.platform === "win32";
+    const executable = usesWindowsCommandShim ? (process.env.ComSpec ?? "cmd.exe") : pnpm;
+    const executableArgs = usesWindowsCommandShim ? ["/d", "/s", "/c", pnpm, ...serverArgs] : serverArgs;
+    server = spawn(executable, executableArgs, {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        NODE_ENV: "development",
+        NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY:
+          process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY ?? "AIza00000000000000000000000000000000000",
+        NO_COLOR: "1",
       },
-    );
-    const chunks = [];
-    server.stdout.on("data", (chunk) => chunks.push(chunk));
-    server.stderr.on("data", (chunk) => chunks.push(chunk));
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+      shell: false,
+    });
+    server.stdout.on("data", (chunk) => serverChunks.push(chunk));
+    server.stderr.on("data", (chunk) => serverChunks.push(chunk));
 
     await waitForServer(`${baseURL}/dsh/login`);
     try {
@@ -112,6 +114,7 @@ async function main() {
 
     const manifest = {
       schemaVersion: 1,
+      candidateSha,
       status: violations.length === 0 ? "PASS" : "FAIL",
       claim: "rendered-control-panel-login-baseline",
       url: `${baseURL}/dsh/login`,
@@ -134,12 +137,7 @@ async function main() {
     if (server) {
       stopProcess(server);
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      const all = [];
-      if (server.stdout?.readable) {
-        let c;
-        while ((c = server.stdout.read()) !== null) all.push(c);
-      }
-      writeFileSync(serverLog, Buffer.concat(all).toString("utf8"));
+      writeFileSync(serverLog, Buffer.concat(serverChunks).toString("utf8"));
     }
   }
 }

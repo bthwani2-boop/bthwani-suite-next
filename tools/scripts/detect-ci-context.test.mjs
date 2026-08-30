@@ -167,3 +167,28 @@ test("router output has no legacy control-plane concepts", () => {
     assert.equal(Object.hasOwn(result, key), false, key);
   }
 });
+
+
+test("control-panel changes require rendered Web evidence without manufacturing mobile evidence", () => {
+  const result = classifyFiles(["apps/control-panel/runtime/src/app/dsh/orders/page.tsx"]);
+  assert.equal(result.rendered_web_required, true);
+  assert.equal(result.mobile_evidence_required, false);
+});
+
+test("mobile app changes require device evidence without manufacturing rendered Web evidence", () => {
+  const result = classifyFiles(["apps/app-client/runtime/src/App.tsx"]);
+  assert.equal(result.mobile_evidence_required, true);
+  assert.equal(result.rendered_web_required, false);
+});
+
+test("shared frontend experience changes conservatively require both Web and mobile evidence", () => {
+  const result = classifyFiles(["services/dsh/frontend/shared/orders/order-card.tsx"]);
+  assert.equal(result.rendered_web_required, true);
+  assert.equal(result.mobile_evidence_required, true);
+});
+
+test("fullScope requires both human-experience evidence dimensions", () => {
+  const result = classifyFiles([], { fullScope: true });
+  assert.equal(result.rendered_web_required, true);
+  assert.equal(result.mobile_evidence_required, true);
+});

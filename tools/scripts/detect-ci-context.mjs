@@ -31,6 +31,15 @@ const isSchemaRuntimePath = (file) =>
   /\/database\/(migrations|tests)\//u.test(file);
 const isMigrationPath = (file) => /\/database\/migrations\//u.test(file);
 const isWorkflowAuthorityPath = (file) => file.startsWith(".github/workflows/") || file.startsWith(".github/actions/");
+const isRenderedWebExperiencePath = (file) =>
+  file.startsWith("apps/control-panel/runtime/") ||
+  /^services\/[^/]+\/frontend\/control-panel\//u.test(file) ||
+  /^services\/[^/]+\/frontend\/shared\//u.test(file) ||
+  file.startsWith("shared/ui-kit/");
+const isMobileExperiencePath = (file) =>
+  /^apps\/app-(?:client|partner|captain|field)\/runtime\//u.test(file) ||
+  /^services\/[^/]+\/frontend\/shared\//u.test(file) ||
+  file.startsWith("shared/ui-kit/");
 const isMigrationAuthorityPath = (file) =>
   file === "infra/docker/scripts/schema-migration-runner.ps1" ||
   file === "tools/scripts/invoke-service-migrations.ps1" ||
@@ -79,6 +88,8 @@ export function classifyFiles(inputFiles, options = {}) {
     ]),
   );
   const dependencyChanged = fullScope || hasPath(files, isDependencyManifest);
+  const renderedWebRequired = fullScope || hasPath(files, isRenderedWebExperiencePath);
+  const mobileEvidenceRequired = fullScope || hasPath(files, isMobileExperiencePath);
 
   const dsh = moduleChanged(["services/dsh/backend/", "services/dsh/database/"]) || migrationAuthority;
   const wlt = moduleChanged(["services/wlt/backend/", "services/wlt/database/"]) || migrationAuthority;
@@ -143,6 +154,8 @@ export function classifyFiles(inputFiles, options = {}) {
     changed_count: files.length,
     full_scope: fullScope,
     dependency_changed: dependencyChanged,
+    rendered_web_required: renderedWebRequired,
+    mobile_evidence_required: mobileEvidenceRequired,
     infrastructure,
     ci_control_plane: ciControlPlane,
     frontend,
