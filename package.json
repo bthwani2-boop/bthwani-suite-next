@@ -209,6 +209,7 @@
     "dependency-cruiser": "17.4.3",
     "eslint": "9.39.1",
     "eslint-plugin-react-compiler": "19.1.0-rc.2",
+    "fast-check": "4.9.0",
     "jscpd": "5.0.10",
     "knip": "6.17.1",
     "madge": "8.0.0",
@@ -218,6 +219,7 @@
     "sherif": "1.11.1",
     "size-limit": "^11.1.6",
     "typescript": "6.0.2",
+    "typescript-eslint": "8.67.0",
     "yaml": "2.8.3"
   }
 }
