@@ -4,6 +4,7 @@ import { changedFiles, quoteRel, repoRoot, runFilesTool, walkFiles } from "./_ex
 
 const baseSha = String(process.env.BASE_SHA || "").trim();
 const candidateSha = String(process.env.CANDIDATE_SHA || "").trim();
+const trustedPolicyRoot = path.resolve(process.env.BTHWANI_TRUSTED_POLICY_ROOT || repoRoot);
 const yamlFile = (full, name) => {
   if (!name.endsWith(".yml") && !name.endsWith(".yaml")) return false;
   const relative = path.relative(repoRoot, full).replaceAll("\\", "/");
@@ -19,7 +20,8 @@ runFilesTool({
   files,
   noFilesMessage: "No generic YAML files found; GitHub Actions YAML is owned by actionlint/zizmor/pinact.",
   makeCommand: (items) => {
-    const config = fs.existsSync(path.join(repoRoot, ".yamllint.yml")) ? "-c .yamllint.yml " : "";
+    const trustedConfig = path.join(trustedPolicyRoot, ".yamllint.yml");
+    const config = fs.existsSync(trustedConfig) ? `-c ${JSON.stringify(trustedConfig)} ` : "";
     return "yamllint " + config + items.map(quoteRel).join(" ");
   },
 });
