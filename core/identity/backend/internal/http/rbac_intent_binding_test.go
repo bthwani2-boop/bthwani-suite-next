@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"identity-api/internal/identity"
 )
 
 func TestRbacRoleMutationsRequireCanonicalIntentBinding(t *testing.T) {
@@ -35,4 +37,36 @@ func TestRbacRoleMutationsRequireCanonicalIntentBinding(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRbacRoleMutationsForwardStructuredRequestToIdentityBoundary(t *testing.T) {
+	server := &server{repository: &identity.Repository{
+		Enforcer: identity.NewPermissionEnforcer(nil),
+	}}
+
+	t.Run("grant", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/internal/rbac/actors/actor-1/roles", strings.NewReader(`{"roleName":"operator","requestedByActorId":"reviewer-1","expectedRoleVersion":1}`))
+		req.SetPathValue("actorId", "actor-1")
+		req.Header.Set("Idempotency-Key", "intent-grant")
+		req.Header.Set("X-Canonical-Intent-ID", "intent-grant")
+
+		rec := httptest.NewRecorder()
+		server.internalRbacGrantRole(rec, req)
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
+			t.Fatalf("status/body = %d/%s; want operator-context rejection", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("revoke", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/internal/rbac/actors/actor-1/roles?roleName=operator&requestedByActorId=reviewer-1&expectedRoleVersion=1", nil)
+		req.SetPathValue("actorId", "actor-1")
+		req.Header.Set("Idempotency-Key", "intent-revoke")
+		req.Header.Set("X-Canonical-Intent-ID", "intent-revoke")
+
+		rec := httptest.NewRecorder()
+		server.internalRbacRevokeRole(rec, req)
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
+			t.Fatalf("status/body = %d/%s; want operator-context rejection", rec.Code, rec.Body.String())
+		}
+	})
 }
