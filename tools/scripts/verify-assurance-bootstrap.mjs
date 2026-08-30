@@ -17,6 +17,8 @@ const required = [
   ["tools/scripts/run-trivy.mjs", "BTHWANI_TRUSTED_POLICY_ROOT", "Trivy policy must be trusted"],
   ["tools/scripts/run-shellcheck.mjs", "--norc", "ShellCheck must not consume candidate rc policy"],
   ["tools/scripts/check-sonarqube-config.ps1", "BTHWANI_TARGET_REPO", "Trusted Sonar config verifier must evaluate candidate configuration"],
+  [".github/workflows/semgrep.yml", "Load trusted Semgrep evidence classifier", "Semgrep disposition authority must come from trusted workflow SHA"],
+  [".github/workflows/semgrep.yml", "TRUSTED_SEMGREP_CLASSIFIER", "Semgrep must execute the trusted evidence classifier"],
   [".github/workflows/final-closure.yml", "TRUSTED_WORKFLOW_SHA", "Final Closure classifier must be trusted"],
   [".github/workflows/final-closure.yml", "trusted_router", "Final Closure router must be trusted"],
   [".github/workflows/final-closure.yml", "verify-pr-evidence-comments.mjs", "Final Closure must load trusted evidence validator"],
@@ -56,6 +58,11 @@ for (const [pattern, reason] of [
   [/run:\s*node tools\/guards\/remote-analysis-authority-gate\.mjs/u, "candidate remote-analysis guard must not establish authority"],
 ]) {
   if (pattern.test(security)) failures.push(reason);
+}
+
+const semgrep = readFileSync(".github/workflows/semgrep.yml", "utf8");
+if (/node tools\/scripts\/classify-semgrep-evidence\.mjs/u.test(semgrep)) {
+  failures.push("candidate Semgrep classifier must not establish evidence disposition authority");
 }
 
 const final = readFileSync(".github/workflows/final-closure.yml", "utf8");
