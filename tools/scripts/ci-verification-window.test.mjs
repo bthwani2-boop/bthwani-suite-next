@@ -45,9 +45,10 @@ test("development control-plane verification is materiality routed", () => {
   assert.match(workflow, /check_result controls "\$\{CONTROLS_RESULT\}" "\$\{CONTROLS_REQUIRED\}"/u);
 });
 
-test("ci:check only requests an incremental frontier after exact successful parent evidence and trusted workflow support", () => {
+test("ci:check only requests an incremental frontier after exact successful PR parent evidence and trusted workflow support", () => {
   const command = read("tools/scripts/ci-check.mjs");
   assert.match(command, /trustedWorkflowSupportsVerificationBase/u);
+  assert.match(command, /if \(!pr\) return null;/u);
   assert.match(command, /commits\/\$\{sha\}\/status/u);
   assert.match(command, /BThwani CI \/ PR result/u);
   assert.match(command, /verify_from_sha=\$\{verifyFromSha\}/u);
