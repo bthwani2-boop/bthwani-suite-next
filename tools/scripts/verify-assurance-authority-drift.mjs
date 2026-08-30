@@ -6,6 +6,9 @@ const targetRepo = path.resolve(process.env.BTHWANI_TARGET_REPO || process.cwd()
 const trustedSha = String(process.env.BTHWANI_TRUSTED_SHA || "").trim();
 const candidateSha = String(process.env.BTHWANI_CANDIDATE_SHA || "HEAD").trim() || "HEAD";
 
+// These paths own how evidence is selected, executed, normalized, or judged.
+// Product source/tests are intentionally not frozen here; changing the judge is
+// different from changing the subject under test and requires assurance bootstrap.
 const protectedPathspecs = [
   ".github/workflows",
   ".github/actions",
@@ -16,17 +19,21 @@ const protectedPathspecs = [
   ".agents/skills/bthwani-evidence-gate-router/SKILL.md",
   ".agents/skills/bthwani-final-journey-closure-judge/SKILL.md",
   "tools/prompting/bthwani-orchestrator",
-  "tools/guards/_guard-utils.mjs",
-  "tools/guards/docker-runtime-hardening-gate.mjs",
-  "tools/guards/migration-manifest-drift-gate.mjs",
-  "tools/guards/remote-analysis-authority-gate.mjs",
-  "tools/guards/sonar-coverage-ownership-gate.mjs",
+  "tools/guards",
   "tools/scripts/check-ci-source-immutability.mjs",
   "tools/scripts/check-sonarqube-config.ps1",
   "tools/scripts/classify-semgrep-evidence.mjs",
   "tools/scripts/detect-ci-context.mjs",
   "tools/scripts/generate-sonar-node-coverage.mjs",
   "tools/scripts/install-oss-toolchain-binaries.sh",
+  "tools/scripts/invoke-database-upgrade-truth.ps1",
+  "tools/scripts/invoke-runtime-phase.ps1",
+  "tools/scripts/run-affected-verification.mjs",
+  "tools/scripts/run-guard-suite.mjs",
+  "tools/scripts/test-service-migration-runner.ps1",
+  "tools/scripts/verify-catalog.ps1",
+  "tools/scripts/finance/smoke-wlt-authenticated-runtime.ps1",
+  "tools/scripts/runtime",
   "tools/scripts/lib/osv-go-reachability.mjs",
   "tools/scripts/lib/package-manager-invocation.mjs",
   "tools/scripts/run-actionlint.mjs",
@@ -44,6 +51,8 @@ const protectedPathspecs = [
   "tools/mobile/lib/invoke-package-manager.ps1",
   "tools/mobile/lib/package-manager-invocation.mjs",
   "tools/verification/ownership.manifest.json",
+  "infra/docker/scripts/runtime-dispatch.ps1",
+  "infra/docker/scripts/runtime",
   "sonar-project.properties",
   ".gitleaksignore",
   ".hadolint.yaml",
