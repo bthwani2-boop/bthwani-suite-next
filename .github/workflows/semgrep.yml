@@ -61,10 +61,10 @@ jobs:
           set +e
           evidence="${RUNNER_TEMP}/semgrep-evidence"
           mkdir -p "${evidence}"
-          mode=diff
+          mode="diff"
           args=(scan --config p/default --config p/security-audit --json --metrics=off --exclude=".github/workflows/**")
           if [[ "${FULL_SCOPE}" == "true" ]]; then
-            mode=full
+            mode="full"
           else
             args+=(--baseline-commit "${BASE_SHA}")
           fi
