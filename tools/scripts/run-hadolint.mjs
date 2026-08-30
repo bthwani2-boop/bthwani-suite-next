@@ -12,9 +12,9 @@ runFilesTool({
   binary: "hadolint",
   files,
   noFilesMessage: "No Dockerfiles found.",
-  makeCommand: (items) => {
+  makeArgs: (items) => {
     const trustedConfig = path.join(trustedPolicyRoot, ".hadolint.yaml");
-    const config = fs.existsSync(trustedConfig) ? `--config ${JSON.stringify(trustedConfig)} ` : "";
-    return "hadolint " + config + items.map(quoteRel).join(" ");
+    const config = fs.existsSync(trustedConfig) ? ["--config", trustedConfig] : [];
+    return [...config, ...items.map(quoteRel)];
   }
 });

@@ -142,3 +142,22 @@ test("CodeQL full analysis can disposition only the exact changed cone for a PR"
   assert.equal(result.counts.inheritedFindings, 1);
   assert.equal(result.status, "FINDINGS_OPEN");
 });
+
+test("CodeQL correlates duplicates with a safe composite identity", () => {
+  const duplicate = {
+    ruleId: "js/example",
+    partialFingerprints: {primaryLocationLineHash: "same-flow"},
+    message: {text: "same flow"},
+    locations: [{physicalLocation: {artifactLocation: {uri: "src/example.ts"}, region: {startLine: 7}}}],
+  };
+  const sameFingerprintDifferentRule = {...duplicate, ruleId: "js/other"};
+  const result = classifyCodeqlEvidence({
+    documents: [{file: "javascript.sarif", document: documentFor([duplicate, duplicate, sameFingerprintDifferentRule])}],
+  });
+  assert.equal(result.rawFindingCount, 3);
+  assert.equal(result.duplicateFindingsCorrelated, 1);
+  assert.equal(result.counts.findings, 2);
+  assert.equal(result.counts.rawFindings, 3);
+  assert.equal(result.counts.duplicateFindingsCorrelated, 1);
+  assert.deepEqual(result.findings.map(({ruleId}) => ruleId), ["js/example", "js/other"]);
+});

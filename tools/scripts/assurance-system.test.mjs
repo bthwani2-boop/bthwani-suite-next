@@ -40,6 +40,8 @@ test("discovery is candidate-pinned and Windows shell-safe", () => {
   assert.match(d, /candidateWorktreeSha/u);
   assert.match(d, /candidate-stability/u);
   assert.match(d, /shell: false/u);
+  assert.match(d, /mkdtempSync/u);
+  assert.doesNotMatch(d, /lstatSync|readlinkSync/u);
   assert.doesNotMatch(d, /shell:\s*process\.platform/u);
   assert.match(d, /evidenceLifecycle/u);
   assert.match(d, /ROOT_MAPPING_REQUIRED/u);
@@ -47,9 +49,10 @@ test("discovery is candidate-pinned and Windows shell-safe", () => {
   assert.match(d, /closureClaim: false/u);
 });
 
-test("repository baseline is a separate exact-SHA health signal", () => {
+test("static repository baseline is a separate exact-SHA signal", () => {
   const workflow = read(".github/workflows/repository-baseline.yml");
-  assert.match(workflow, /BThwani \/ Repository Health/u);
+  assert.match(workflow, /BThwani \/ Static Repository Baseline/u);
+  assert.doesNotMatch(workflow, /BThwani \/ Repository Health/u);
   assert.match(workflow, /BASELINE_OPEN/u);
   assert.match(workflow, /statuses\/\$\{HEAD_SHA\}/u);
   assert.doesNotMatch(workflow, /BThwani \/ Change Closure/u);
@@ -88,6 +91,7 @@ test("rendered baseline is exact-candidate and trusted-verifier based", () => {
   assert.match(s, /candidateSha/u);
   assert.match(s, /shell: false/u);
   assert.match(s, /serverChunks/u);
+  assert.match(s, /mkdtempSync/u);
 });
 
 test("material rendered and mobile evidence are closure inputs", () => {

@@ -14,6 +14,7 @@ import {
   WorkforceAccessGate,
   WorkforceProfileProvider,
   fetchCaptainOperationalReadiness,
+  configureDshCaptainLocationStorage,
   useDshMobilePushRegistration,
   type CaptainOperationalReadiness,
   type DshCaptainNavigation,
@@ -25,7 +26,63 @@ import { Button, colorRoles } from "@bthwani/ui-kit";
 import { getOrCreateCaptainDeviceFingerprint } from "./config/captain-device-fingerprint";
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
 
+const NATIVE_LOCATION_KEY_PREFIX = "bthwani-captain-location-key-v1.";
+const NATIVE_LOCATION_INDEX_KEY = "bthwani-captain-location-index-v1";
+
+function encodeNativeLocationKey(value: string): string {
+  let encoded = "";
+  for (let index = 0; index < value.length; index += 1) {
+    encoded += value.charCodeAt(index).toString(16).padStart(4, "0");
+  }
+  return `${NATIVE_LOCATION_KEY_PREFIX}${encoded}`;
+}
+
+function configureNativeCaptainLocationStorage(): void {
+  let indexPromise: Promise<Set<string>> | null = null;
+  const readIndex = async (): Promise<Set<string>> => {
+    if (!indexPromise) {
+      indexPromise = SecureStore.getItemAsync(NATIVE_LOCATION_INDEX_KEY).then((raw) => {
+        if (!raw) return new Set<string>();
+        try {
+          const parsed: unknown = JSON.parse(raw);
+          return new Set(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : []);
+        } catch {
+          throw new Error("NATIVE_LOCATION_STORAGE_INDEX_CORRUPT");
+        }
+      });
+    }
+    return indexPromise;
+  };
+  const writeIndex = async (keys: Set<string>): Promise<void> => {
+    await SecureStore.setItemAsync(NATIVE_LOCATION_INDEX_KEY, JSON.stringify([...keys].sort()));
+  };
+  let mutation = Promise.resolve();
+  const withIndexMutation = <T,>(operation: () => Promise<T>): Promise<T> => {
+    const next = mutation.then(operation, operation);
+    mutation = next.then(() => undefined, () => undefined);
+    return next;
+  };
+
+  configureDshCaptainLocationStorage({
+    getItem: (key) => SecureStore.getItemAsync(encodeNativeLocationKey(key)),
+    setItem: (key, value) => withIndexMutation(async () => {
+      await SecureStore.setItemAsync(encodeNativeLocationKey(key), value);
+      const keys = await readIndex();
+      keys.add(key);
+      await writeIndex(keys);
+    }),
+    removeItem: (key) => withIndexMutation(async () => {
+      await SecureStore.deleteItemAsync(encodeNativeLocationKey(key));
+      const keys = await readIndex();
+      keys.delete(key);
+      await writeIndex(keys);
+    }),
+    getAllKeys: async () => [...await readIndex()],
+  });
+}
+
 if (Platform.OS !== "web") {
+  configureNativeCaptainLocationStorage();
   configureIdentitySessionStorage({
     getItem: async (key: string) => SecureStore.getItemAsync(key),
     setItem: async (key: string, value: string) => SecureStore.setItemAsync(key, value),

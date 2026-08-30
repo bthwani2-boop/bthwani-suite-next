@@ -27,6 +27,11 @@
  * different failure semantics.
  */
 
+import { createBrowserEncryptedDurableStorage } from "./browser-secure-storage.ts";
+import type { BthwaniDurableStore } from "./durable-store-contract.ts";
+
+export type { BthwaniDurableStore } from "./durable-store-contract.ts";
+
 export class BthwaniDurableWriteError extends Error {
   readonly code = "BTHWANI_DURABLE_WRITE_FAILED";
   readonly key: string;
@@ -58,26 +63,6 @@ export class BthwaniDurableRemoveError extends Error {
 export type BthwaniCacheStore = {
   readonly getItem: (key: string) => Promise<string | null>;
   readonly setItem: (key: string, value: string) => Promise<void>;
-  readonly removeItem: (key: string) => Promise<void>;
-  readonly getAllKeys: () => Promise<readonly string[]>;
-  readonly multiRemove: (keys: readonly string[]) => Promise<void>;
-};
-
-export type BthwaniDurableStore = {
-  readonly getItem: (key: string) => Promise<string | null>;
-  /**
-   * Persists the value. Returns only on a verified platform write.
-   * Throws BthwaniDurableWriteError on any platform rejection
-   * (quota exceeded, native module rejection, browser security
-   * exception, corrupted envelope) so the caller can fail closed
-   * instead of fabricating a success.
-   */
-  readonly setItem: (key: string, value: string) => Promise<void>;
-  /**
-   * Removes the value. Returns only on a verified platform delete.
-   * Throws BthwaniDurableRemoveError on any platform rejection so
-   * the caller cannot claim cleanup succeeded when it did not.
-   */
   readonly removeItem: (key: string) => Promise<void>;
   readonly getAllKeys: () => Promise<readonly string[]>;
   readonly multiRemove: (keys: readonly string[]) => Promise<void>;
@@ -128,67 +113,8 @@ function browserCacheStorage(): BthwaniCacheStore {
   };
 }
 
-function browserDurableStorage(): BthwaniDurableStore {
-  return {
-    getItem: async (key) => {
-      if (typeof window === "undefined") {
-        throw new Error("window is undefined");
-      }
-      try {
-        return window.localStorage.getItem(key);
-      } catch (cause) {
-        // A read failure is not equivalent to an absent mutation. Surface it
-        // so callers cannot reconstruct identity or a queue from false empty.
-        throw cause;
-      }
-    },
-    setItem: async (key, value) => {
-      if (typeof window === "undefined") {
-        throw new BthwaniDurableWriteError(key, new Error("window is undefined"));
-      }
-      try {
-        window.localStorage.setItem(key, value);
-      } catch (cause) {
-        throw new BthwaniDurableWriteError(key, cause);
-      }
-    },
-    removeItem: async (key) => {
-      if (typeof window === "undefined") {
-        throw new BthwaniDurableRemoveError(key, new Error("window is undefined"));
-      }
-      try {
-        window.localStorage.removeItem(key);
-      } catch (cause) {
-        throw new BthwaniDurableRemoveError(key, cause);
-      }
-    },
-    getAllKeys: async () => {
-      if (typeof window === "undefined") {
-        throw new Error("window is undefined");
-      }
-      try {
-        return Object.keys(window.localStorage);
-      } catch (cause) {
-        throw cause;
-      }
-    },
-    multiRemove: async (keys) => {
-      if (typeof window === "undefined") {
-        throw new BthwaniDurableRemoveError(keys.join(","), new Error("window is undefined"));
-      }
-      for (const key of keys) {
-        try {
-          window.localStorage.removeItem(key);
-        } catch (cause) {
-          throw new BthwaniDurableRemoveError(key, cause);
-        }
-      }
-    },
-  };
-}
-
 let activeCacheStorage: BthwaniCacheStore = browserCacheStorage();
-let activeDurableStorage: BthwaniDurableStore = browserDurableStorage();
+let activeDurableStorage: BthwaniDurableStore = createBrowserEncryptedDurableStorage();
 
 /** Installs the mobile cache owner (best-effort) for shared consumers. */
 export function configureBthwaniCacheStorage(adapter: BthwaniCacheStore): void {

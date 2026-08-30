@@ -19,9 +19,9 @@ runFilesTool({
   binary: "yamllint",
   files,
   noFilesMessage: "No generic YAML files found; GitHub Actions YAML is owned by actionlint/zizmor/pinact.",
-  makeCommand: (items) => {
+  makeArgs: (items) => {
     const trustedConfig = path.join(trustedPolicyRoot, ".yamllint.yml");
-    const config = fs.existsSync(trustedConfig) ? `-c ${JSON.stringify(trustedConfig)} ` : "";
-    return "yamllint " + config + items.map(quoteRel).join(" ");
+    const config = fs.existsSync(trustedConfig) ? ["-c", trustedConfig] : [];
+    return [...config, ...items.map(quoteRel)];
   },
 });

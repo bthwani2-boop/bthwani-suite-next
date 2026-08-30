@@ -35,16 +35,29 @@ $RuntimeContainerByProfile = @{
   platform  = "bthwani-platform-control-api-runtime"
 }
 
-function Get-CurrentSourceSha {
-  $sha = (& git -C $RepoRoot rev-parse HEAD 2>$null).Trim()
-  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sha)) {
-    throw "Unable to resolve current source commit SHA."
+function Get-CurrentCandidate {
+  $candidateJson = (& node --input-type=module -e 'process.chdir(process.argv[1]); const { captureCandidate } = await import("./tools/scripts/run-deep-discovery.mjs"); process.stdout.write(JSON.stringify(captureCandidate(process.argv[1])));' -- $RepoRoot 2>$null | Out-String).Trim()
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($candidateJson)) {
+    throw "Unable to resolve the exact current runtime candidate."
   }
-  return $sha
+  try {
+    $candidate = $candidateJson | ConvertFrom-Json
+  } catch {
+    throw "Unable to parse the exact current runtime candidate."
+  }
+  foreach ($property in @("headSha", "worktreeSha", "candidateIdentity")) {
+    if ([string]::IsNullOrWhiteSpace([string]$candidate.$property)) {
+      throw "Runtime candidate is missing '$property'."
+    }
+  }
+  return $candidate
 }
 
-$CurrentSourceSha = Get-CurrentSourceSha
-$PreparedRuntimeMarkerPath = Join-Path $LogRoot "bthwani-runtime-prepared-$CurrentSourceSha.json"
+$CurrentCandidate = Get-CurrentCandidate
+$CurrentSourceSha = [string]$CurrentCandidate.headSha
+$CurrentWorktreeSha = [string]$CurrentCandidate.worktreeSha
+$CurrentCandidateIdentity = [string]$CurrentCandidate.candidateIdentity
+$PreparedRuntimeMarkerPath = Join-Path $LogRoot "bthwani-runtime-prepared-$CurrentSourceSha-$CurrentWorktreeSha.json"
 
 function Import-CanonicalRuntimeEnvironment {
   if (-not (Test-Path -LiteralPath $script:RuntimeEnvFile -PathType Leaf)) {
@@ -110,6 +123,10 @@ function Write-PreparedRuntimeMarker {
   $marker = [ordered]@{
     schemaVersion = 1
     sourceSha = $CurrentSourceSha
+    worktreeSha = $CurrentWorktreeSha
+    candidateIdentity = $CurrentCandidateIdentity
+    candidateDirty = [bool]$CurrentCandidate.dirty
+    candidateStatusEntries = [int]$CurrentCandidate.statusEntries
     createdAt = [DateTimeOffset]::UtcNow.ToString("o")
     profiles = @($ProfilesToRecord)
     imageIds = $imageIds
@@ -131,7 +148,7 @@ function Read-PreparedRuntimeMarker {
 
 function Test-PreparedRuntimeCoverage {
   $marker = Read-PreparedRuntimeMarker
-  if ($null -eq $marker -or [string]$marker.sourceSha -ne $CurrentSourceSha) {
+  if ($null -eq $marker -or [string]$marker.candidateIdentity -ne $CurrentCandidateIdentity) {
     return $false
   }
 
@@ -160,10 +177,10 @@ function Test-PreparedRuntimeCoverage {
 function Assert-PreparedRuntimeMarker {
   $marker = Read-PreparedRuntimeMarker
   if ($null -eq $marker) {
-    throw "Prepared runtime marker is missing or invalid for $CurrentSourceSha. Run the scoped runtime:up or runtime:bootstrap-dev phase before smoke."
+    throw "Prepared runtime marker is missing or invalid for $CurrentCandidateIdentity. Run the scoped runtime:up or runtime:bootstrap-dev phase before smoke."
   }
-  if ([string]$marker.sourceSha -ne $CurrentSourceSha) {
-    throw "Prepared runtime source SHA mismatch: expected $CurrentSourceSha, got $($marker.sourceSha)"
+  if ([string]$marker.candidateIdentity -ne $CurrentCandidateIdentity) {
+    throw "Prepared runtime candidate mismatch: expected $CurrentCandidateIdentity, got $($marker.candidateIdentity)"
   }
 
   foreach ($profile in @($ProfileList | Where-Object { $RuntimeContainerByProfile.ContainsKey($_) })) {
@@ -181,7 +198,7 @@ function Assert-PreparedRuntimeMarker {
       throw "Prepared runtime image mismatch for ${profile}: marker=$($markerProperty.Value), running=$currentImageId"
     }
   }
-  Write-Host "Prepared runtime provenance: PASS sourceSha=$CurrentSourceSha"
+  Write-Host "Prepared runtime provenance: PASS candidate=$CurrentCandidateIdentity"
 }
 
 function Test-TransientPostgresBootstrapRestart {
@@ -253,7 +270,7 @@ try {
     }
   } elseif (-not [string]::IsNullOrWhiteSpace($runtimeProfiles)) {
     if ($Action -eq "up" -and -not $Force -and (Test-PreparedRuntimeCoverage)) {
-      "Prepared runtime reuse: PASS sourceSha=$CurrentSourceSha profiles=$Profiles" | Tee-Object -FilePath $LogPath | Out-Host
+      "Prepared runtime reuse: PASS candidate=$CurrentCandidateIdentity profiles=$Profiles" | Tee-Object -FilePath $LogPath | Out-Host
     } else {
       $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters
       if ($runtimeExitCode -ne 0 -and (Test-TransientPostgresBootstrapRestart)) {

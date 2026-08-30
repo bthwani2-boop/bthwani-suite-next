@@ -156,13 +156,13 @@ export function compareAssuranceBaseline({baselinePayload = null, candidatePaylo
   if (!invalidatedProofsPass) changeClosureReasons.push("invalidated proofs are not PASS");
   const changeClosurePass = changeVerificationPass && changeClosureReasons.length === 0;
 
-  const repositoryHealthReasons = [];
-  if (!evidenceComplete) repositoryHealthReasons.push("required health evidence did not complete");
-  if (candidateMaterialCount) repositoryHealthReasons.push(`material health findings: ${candidateMaterialCount}`);
-  if (unknownRequiredCoverage) repositoryHealthReasons.push(`unknown required coverage: ${unknownRequiredCoverage}`);
-  if (bypassUsed) repositoryHealthReasons.push("bypass used");
-  const repositoryHealthPass = repositoryHealthReasons.length === 0;
-  const repositoryClosurePass = changeClosurePass && repositoryHealthPass;
+  const staticRepositoryBaselineReasons = [];
+  if (!evidenceComplete) staticRepositoryBaselineReasons.push("required static baseline evidence did not complete");
+  if (candidateMaterialCount) staticRepositoryBaselineReasons.push(`material static baseline findings: ${candidateMaterialCount}`);
+  if (unknownRequiredCoverage) staticRepositoryBaselineReasons.push(`unknown required coverage: ${unknownRequiredCoverage}`);
+  if (bypassUsed) staticRepositoryBaselineReasons.push("bypass used");
+  const staticRepositoryBaselinePass = staticRepositoryBaselineReasons.length === 0;
+  const repositoryClosurePass = changeClosurePass && staticRepositoryBaselinePass;
 
   return {
     schema: BASELINE_SCHEMA,
@@ -190,10 +190,10 @@ export function compareAssuranceBaseline({baselinePayload = null, candidatePaylo
     findings: {new: added, fixed, unchanged, worsened},
     changeVerification: status(changeVerificationPass ? "PASS" : "OPEN", changeVerificationReasons),
     changeClosure: status(changeClosurePass ? "PASS" : "OPEN", changeClosureReasons),
-    repositoryHealth: status(repositoryHealthPass ? "HEALTHY" : (evidenceComplete ? "BASELINE_OPEN" : "BLOCKED"), repositoryHealthReasons),
+    staticRepositoryBaseline: status(staticRepositoryBaselinePass ? "HEALTHY" : (evidenceComplete ? "BASELINE_OPEN" : "BLOCKED"), staticRepositoryBaselineReasons),
     repositoryClosure: status(repositoryClosurePass ? "CLOSED" : "NOT_CLOSED", repositoryClosurePass ? [] : [
       ...changeClosureReasons,
-      ...repositoryHealthReasons,
+      ...staticRepositoryBaselineReasons,
       ...(bypassUsed ? ["bypass used; exact SHA is not closed"] : []),
     ]),
     policy: {

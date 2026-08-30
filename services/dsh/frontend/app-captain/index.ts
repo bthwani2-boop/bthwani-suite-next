@@ -40,6 +40,10 @@ export type { DshCaptainScreenRegistryItem } from "./dsh-captain.screen-registry
 export { IdentitySessionGate } from "../shared/session/IdentitySessionGate";
 export { useDshMobilePushRegistration } from "../shared/notifications/use-mobile-push-registration";
 export {
+  configureDshCaptainLocationStorage,
+} from "../shared/dispatch";
+export type { DshCaptainLocationStorageAdapter } from "../shared/dispatch";
+export {
   WorkforceAccessGate,
   WorkforceProfileProvider,
   useWorkforceProfile,

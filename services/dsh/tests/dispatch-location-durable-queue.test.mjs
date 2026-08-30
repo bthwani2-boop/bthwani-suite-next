@@ -8,6 +8,7 @@ const originalFetch = globalThis.fetch;
 
 function configureTestStorage() {
   const map = new Map([[INSTALLATION_KEY, "location-installation-0001"]]);
+  const locationMap = new Map();
   resetBthwaniInstallationIdForTests();
   configureBthwaniDurableStorage({
     getItem: async (key) => map.get(key) ?? null,
@@ -16,7 +17,7 @@ function configureTestStorage() {
     getAllKeys: async () => [...map.keys()],
     multiRemove: async (keys) => { for (const key of keys) map.delete(key); },
   });
-  return map;
+  return { locationMap };
 }
 
 afterEach(() => {
@@ -37,8 +38,15 @@ test("Captain foreground location survives runtime restart in the actor-scoped d
     flushPendingForegroundDispatchLocations,
     hasPendingForegroundDispatchLocation,
     syncForegroundDispatchLocation,
+    configureDshCaptainLocationStorage,
   } = await import("../dist/services/dsh/frontend/shared/dispatch/dispatch-location.api.js");
-  const map = configureTestStorage();
+  const { locationMap } = configureTestStorage();
+  configureDshCaptainLocationStorage({
+    getItem: async (key) => locationMap.get(key) ?? null,
+    setItem: async (key, value) => { locationMap.set(key, value); },
+    removeItem: async (key) => { locationMap.delete(key); },
+    getAllKeys: async () => [...locationMap.keys()],
+  });
   globalThis.fetch = async () => { throw new Error("offline"); };
   const actorId = "captain-location-1";
   const assignmentId = "assignment-location-1";
@@ -53,9 +61,9 @@ test("Captain foreground location survives runtime restart in the actor-scoped d
   assert.equal((await syncForegroundDispatchLocation(actorId, assignmentId, first)).kind, "queued");
   assert.equal((await syncForegroundDispatchLocation(actorId, assignmentId, second)).kind, "queued");
   assert.equal(await hasPendingForegroundDispatchLocation(actorId, assignmentId), true);
-  const storedKey = [...map.keys()].find((key) => key.startsWith("@bthwani/captain-foreground-location:v1/"));
+  const storedKey = [...locationMap.keys()].find((key) => key.startsWith("@bthwani/captain-foreground-location:v1/"));
   assert.ok(storedKey);
-  assert.equal(JSON.parse(map.get(storedKey)).sample.longitude, 44.21);
+  assert.equal(JSON.parse(locationMap.get(storedKey)).sample.longitude, 44.21);
 
   globalThis.fetch = async () => new Response(JSON.stringify({ assignment: { id: assignmentId } }), {
     status: 200,

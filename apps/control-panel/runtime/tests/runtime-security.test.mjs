@@ -263,6 +263,8 @@ test("control-panel uses owner-level platform bindings without external package 
   assert.match(dataRuntime, /NATIVE_STORAGE_UNAVAILABLE/);
   const storage = read("shared/data-runtime/src/storage-adapter.ts");
   assert.match(storage, /sessionStorage/);
+  assert.match(storage, /browser-secure-storage/);
+  assert.doesNotMatch(storage, /localStorage\.setItem/);
   assert.doesNotMatch(storage, /@react-native-async-storage\/async-storage/);
   const nativeProvider = read("shared/data-runtime/src/BthwaniQueryProvider.native.tsx");
   assert.match(nativeProvider, /native-data-adapters/);

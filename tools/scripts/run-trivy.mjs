@@ -16,7 +16,7 @@ for (const policyFile of [trivyConfig, trivyIgnore]) {
   }
 }
 
-const policyArgs = `--config ${JSON.stringify(trivyConfig)} --ignorefile ${JSON.stringify(trivyIgnore)}`;
+const policyArgs = ["--config", trivyConfig, "--ignorefile", trivyIgnore];
 
 if (baseSha && candidateSha) {
   const files = changedFiles(baseSha, candidateSha, ["."], () => true);
@@ -32,20 +32,19 @@ if (baseSha && candidateSha) {
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     fs.copyFileSync(file, destination);
   }
-  const target = JSON.stringify(staging);
   runTool({
     toolId: "trivy",
     binary: "trivy",
-    command: `trivy fs ${policyArgs} ${target}`,
-    diagnosticCommand: `trivy fs ${policyArgs} --format json --output ${JSON.stringify(path.join(staging, "trivy-report.json"))} ${target}`,
+    args: ["fs", ...policyArgs, staging],
+    diagnosticArgs: ["fs", ...policyArgs, "--format", "json", "--output", path.join(staging, "trivy-report.json"), staging],
     required: true,
   });
 } else {
   runTool({
     toolId: "trivy",
     binary: "trivy",
-    command: `trivy fs ${policyArgs} .`,
-    diagnosticCommand: `trivy fs ${policyArgs} --format json --output .diagnostics/security/trivy-report.json .`,
+    args: ["fs", ...policyArgs, "."],
+    diagnosticArgs: ["fs", ...policyArgs, "--format", "json", "--output", ".diagnostics/security/trivy-report.json", "."],
     required: true,
   });
 }

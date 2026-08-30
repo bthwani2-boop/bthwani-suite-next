@@ -93,10 +93,36 @@ function findingFingerprint({category, result, ruleId, uri, line, message}) {
     .digest("hex");
 }
 
+function findingIdentity(finding) {
+  return [
+    finding.category,
+    finding.ruleId,
+    finding.fingerprint,
+    normalizePath(finding.path),
+    finding.startLine,
+  ].join("\0");
+}
+
+function deduplicateFindings(rawFindings) {
+  const unique = [];
+  const identities = new Set();
+  let duplicateFindingsCorrelated = 0;
+  for (const finding of rawFindings) {
+    const identity = findingIdentity(finding);
+    if (identities.has(identity)) {
+      duplicateFindingsCorrelated += 1;
+      continue;
+    }
+    identities.add(identity);
+    unique.push(finding);
+  }
+  return {findings: unique, duplicateFindingsCorrelated};
+}
+
 export function classifyCodeqlEvidence({documents, headSha = "", baseSha = "", mode = "full", diffText = ""}) {
   const errors = [];
   const categories = [];
-  const findings = [];
+  const rawFindings = [];
   const diffRanges = parseDiffRanges(diffText);
 
   for (const {file, document} of documents) {
@@ -124,7 +150,7 @@ export function classifyCodeqlEvidence({documents, headSha = "", baseSha = "", m
         const message = String(result?.message?.text ?? "").trim();
         const rule = run?.tool?.driver?.rules?.find((candidate) => candidate?.id === result?.ruleId);
         const securitySeverity = Number(rule?.properties?.["security-severity"] ?? 0);
-        findings.push({
+        rawFindings.push({
           fingerprint: findingFingerprint({category, result, ruleId, uri, line, message}),
           category,
           ruleId,
@@ -141,6 +167,7 @@ export function classifyCodeqlEvidence({documents, headSha = "", baseSha = "", m
     }
   }
 
+  const {findings, duplicateFindingsCorrelated} = deduplicateFindings(rawFindings);
   const scopedFindings = findings.filter((finding) => finding.inChangedCone);
   const inheritedFindings = findings.filter((finding) => !finding.inChangedCone);
   const evidenceComplete = errors.length === 0;
@@ -154,6 +181,8 @@ export function classifyCodeqlEvidence({documents, headSha = "", baseSha = "", m
     status: errors.length ? "INCOMPLETE" : scopedFindings.some((finding) => finding.material) ? "FINDINGS_OPEN" : "PASS",
     mode,
     diffFiles: [...diffRanges.keys()].sort(),
+    rawFindingCount: rawFindings.length,
+    duplicateFindingsCorrelated,
     scopedFindings,
     inheritedFindings,
     executionStatus: documents.length > 0 ? "PASS" : "INCOMPLETE",
@@ -168,6 +197,8 @@ export function classifyCodeqlEvidence({documents, headSha = "", baseSha = "", m
       documents: documents.length,
       categories: new Set(categories).size,
       findings: findings.length,
+      rawFindings: rawFindings.length,
+      duplicateFindingsCorrelated,
       materialFindings: findings.filter((finding) => finding.material).length,
       scopedFindings: findings.filter((finding) => finding.inChangedCone).length,
       scopedMaterialFindings: findings.filter((finding) => finding.inChangedCone && finding.material).length,

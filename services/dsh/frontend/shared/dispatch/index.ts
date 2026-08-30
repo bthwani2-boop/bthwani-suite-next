@@ -1,4 +1,8 @@
 export * from "./dispatch.api";
+export {
+  configureDshCaptainLocationStorage,
+} from "./dispatch-location.api";
+export type { DshCaptainLocationStorageAdapter } from "./dispatch-location.api";
 export * from "./dispatch.states";
 export * from "./dispatch.types";
 export * from "./dispatch.view-model";

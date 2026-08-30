@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import crypto from "node:crypto";
-import { createWriteStream, lstatSync, mkdirSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
+import { createWriteStream, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -42,12 +42,11 @@ export function captureCandidate(root = process.cwd()) {
   digest.update(`head\0${headSha}\0status\0${status}\0diff\0${trackedDiff}\0`);
   for (const relativePath of untrackedFiles) {
     if (!isSafeRelativePath(repositoryRoot, relativePath)) throw new Error(`unsafe untracked candidate path: ${relativePath}`);
-    const absolutePath = path.resolve(repositoryRoot, relativePath);
-    const stats = lstatSync(absolutePath);
-    digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
-    if (stats.isSymbolicLink()) digest.update(`symlink\0${readlinkSync(absolutePath)}\0`);
-    else if (stats.isFile()) digest.update(readFileSync(absolutePath));
-    else digest.update(`type\0${stats.type}\0`);
+    // Let Git read the path once and hash the exact untracked blob. This keeps
+    // candidate identity content-sensitive without a lstat/readFile TOCTOU
+    // window or following a path after it was checked by this process.
+    const blobSha = git(["hash-object", "--no-filters", "--", relativePath], repositoryRoot);
+    digest.update(`untracked\0${relativePath}\0blob\0${blobSha}\0`);
   }
   const worktreeSha = digest.digest("hex");
   return {
@@ -73,6 +72,8 @@ const baseChecks = [
   ["jscpd", pnpm, ["run", "diagnostics:jscpd"]],
   ["madge", pnpm, ["run", "diagnostics:madge"]],
 ];
+
+const createEvidenceDir = (prefix) => mkdtempSync(path.join(tmpdir(), prefix));
 
 function buildChecks(full) {
   const checks = [...baseChecks];
@@ -257,9 +258,7 @@ async function main() {
   const full = args.has("--full");
   const concurrencyArg = process.argv.find((v) => v.startsWith("--concurrency="));
   const concurrency = Math.max(1, Number(concurrencyArg?.split("=")[1] ?? 3));
-  const stamp = new Date().toISOString().replaceAll(":", "-");
-  const evidenceDir = path.join(tmpdir(), "bthwani-deep-discovery", stamp);
-  mkdirSync(evidenceDir, { recursive: true });
+  const evidenceDir = createEvidenceDir("bthwani-deep-discovery-");
   const candidate = captureCandidate();
   const candidateSha = candidate.headSha;
   const pending = [...buildChecks(full)];
@@ -342,9 +341,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
   try {
     await main();
   } catch (error) {
-    const stamp = new Date().toISOString().replaceAll(":", "-");
-    const evidenceDir = path.join(tmpdir(), "bthwani-deep-discovery", stamp);
-    mkdirSync(evidenceDir, { recursive: true });
+    const evidenceDir = createEvidenceDir("bthwani-deep-discovery-");
     const fatalPath = path.join(evidenceDir, "collector-fatal.log");
     writeFileSync(fatalPath, `${error?.stack ?? error}\n`);
     process.stderr.write(`COLLECTOR_FATAL=${fatalPath}\n`);

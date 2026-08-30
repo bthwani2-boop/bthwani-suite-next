@@ -3,6 +3,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const SONAR_EVIDENCE_SCHEMA = "bthwani-sonar-evidence/1";
+export const SONAR_REQUIRED_METRIC_KEYS = Object.freeze([
+  "bugs",
+  "vulnerabilities",
+  "code_smells",
+  "security_hotspots",
+  "coverage",
+  "duplicated_lines_density",
+  "ncloc",
+]);
 
 const normalizeText = (value) => String(value ?? "").trim();
 const severityRank = { INFO: 1, MINOR: 1, MAJOR: 2, WARNING: 2, CRITICAL: 3, BLOCKER: 4 };
@@ -26,6 +35,35 @@ const pageCoverage = (payload, label) => {
   return Number(paging.total) <= entries.length
     ? {complete: true}
     : {complete: false, error: `${label}: response truncated (${entries.length}/${paging.total})`};
+};
+
+const measureCoverage = (payload) => {
+  if (!payload || typeof payload !== "object") return {complete: false, error: "measures: response is missing"};
+  if (payload.error) return {complete: false, error: `measures: ${normalizeText(payload.error)}`};
+  if (!payload.component || typeof payload.component !== "object") {
+    return {complete: false, error: "measures: component is missing"};
+  }
+  if (!Array.isArray(payload.component.measures)) {
+    return {complete: false, error: "measures: component.measures is missing"};
+  }
+  const observedMetricKeys = [...new Set(payload.component.measures
+    .map((measure) => normalizeText(measure?.metric))
+    .filter(Boolean))].sort();
+  const missingMetricKeys = SONAR_REQUIRED_METRIC_KEYS.filter((metric) => !observedMetricKeys.includes(metric));
+  if (missingMetricKeys.length) {
+    return {
+      complete: false,
+      error: `measures: required metrics are missing (${missingMetricKeys.join(", ")})`,
+      expectedMetricKeys: SONAR_REQUIRED_METRIC_KEYS,
+      observedMetricKeys,
+    };
+  }
+  return {
+    complete: true,
+    pagination: "NOT_APPLICABLE_FINITE_METRIC_SET",
+    expectedMetricKeys: SONAR_REQUIRED_METRIC_KEYS,
+    observedMetricKeys,
+  };
 };
 
 const normalizeIssue = (issue) => ({
@@ -70,8 +108,10 @@ export function classifySonarEvidence(payload, metadata = {}) {
   if (!["PASS", "SUCCESS", "COMPLETED"].includes(executionStatus)) errors.push(`execution: ${executionStatus}`);
   const issueCoverage = pageCoverage(issuesPayload, "issues");
   const hotspotCoverage = pageCoverage(hotspotsPayload, "hotspots");
+  const measuresCoverage = measureCoverage(payload?.measures);
   if (!issueCoverage.complete) errors.push(issueCoverage.error);
   if (!hotspotCoverage.complete) errors.push(hotspotCoverage.error);
+  if (!measuresCoverage.complete) errors.push(measuresCoverage.error);
   if (!qualityGate || !normalizeText(qualityGate.status)) errors.push("qualityGate: status is missing");
   const revision = normalizeText(analysis?.analyses?.[0]?.revision ?? analysis?.revision);
   if (!revision) errors.push("analysis: latest revision is missing");
@@ -89,6 +129,16 @@ export function classifySonarEvidence(payload, metadata = {}) {
     mode: metadata.mode ?? "affected",
     executionStatus,
     coverageStatus: evidenceComplete ? "COMPLETE" : "INCOMPLETE",
+    coverage: {
+      issues: issueCoverage.complete ? "COMPLETE" : "INCOMPLETE",
+      hotspots: hotspotCoverage.complete ? "COMPLETE" : "INCOMPLETE",
+      measures: measuresCoverage.complete ? "COMPLETE" : "INCOMPLETE",
+      pagination: {
+        measures: measuresCoverage.pagination ?? "NOT_APPLICABLE_FINITE_METRIC_SET",
+      },
+      measuresExpected: measuresCoverage.expectedMetricKeys ?? SONAR_REQUIRED_METRIC_KEYS,
+      measuresObserved: measuresCoverage.observedMetricKeys ?? [],
+    },
     analysis: {key: normalizeText(analysis?.analyses?.[0]?.key), revision},
     qualityGate: {status: qualityGateStatus, conditions: qualityGate?.conditions ?? []},
     findings,

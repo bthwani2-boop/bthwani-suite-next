@@ -59,32 +59,31 @@ function swallower() {
   };
 }
 
-test("browser durable storage survives a session boundary and surfaces read failures", async () => {
+test("browser durable storage fails closed without secure browser primitives", async () => {
   const previousWindow = globalThis.window;
-  const localValues = new Map();
+  const previousIndexedDB = globalThis.indexedDB;
   const sessionValues = new Map();
-  const storage = (values, failReads = false) => ({
-    getItem: (key) => {
-      if (failReads) throw new Error("storage read rejected");
-      return values.has(key) ? values.get(key) : null;
-    },
+  const storage = (values) => ({
+    getItem: (key) => values.has(key) ? values.get(key) : null,
     setItem: (key, value) => values.set(key, String(value)),
     removeItem: (key) => values.delete(key),
   });
 
   globalThis.window = {
-    localStorage: storage(localValues),
+    localStorage: storage(new Map()),
     sessionStorage: storage(sessionValues),
   };
+  delete globalThis.indexedDB;
   try {
     const browserModule = await import(`../src/storage-adapter.ts?browser-durable=${Date.now()}`);
-    await browserModule.bthwaniDurableStorage.setItem("durable-key", "value");
-    assert.equal(localValues.get("durable-key"), "value");
+    await assert.rejects(
+      browserModule.bthwaniDurableStorage.setItem("durable-key", "value"),
+      /SECURE_DURABLE_STORAGE_UNAVAILABLE/,
+    );
     assert.equal(sessionValues.has("durable-key"), false);
-
-    globalThis.window.localStorage = storage(localValues, true);
-    await assert.rejects(browserModule.bthwaniDurableStorage.getItem("durable-key"), /storage read rejected/);
   } finally {
+    if (previousIndexedDB === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = previousIndexedDB;
     if (previousWindow === undefined) delete globalThis.window;
     else globalThis.window = previousWindow;
   }

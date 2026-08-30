@@ -79,6 +79,14 @@ test("PowerShell-only runtime phases use the initialized exit-code boundary", ()
   assert.doesNotMatch(phaseScript, /if \(\$LASTEXITCODE -ne 0\)/);
 });
 
+test("runtime provenance binds the prepared environment to the exact worktree candidate", () => {
+  assert.match(phaseScript, /captureCandidate\(process\.argv\[1\]\)/u);
+  assert.match(phaseScript, /\$CurrentWorktreeSha\s*=\s*\[string\]\$CurrentCandidate\.worktreeSha/u);
+  assert.match(phaseScript, /\$CurrentCandidateIdentity\s*=\s*\[string\]\$CurrentCandidate\.candidateIdentity/u);
+  assert.match(phaseScript, /candidateIdentity\s*=\s*\$CurrentCandidateIdentity/u);
+  assert.match(phaseScript, /\[string\]\$marker\.candidateIdentity\s*-ne\s*\$CurrentCandidateIdentity/u);
+});
+
 test("DSH runtime smoke enforces the canonical HEALTHY readiness state", () => {
   assert.match(dshCatalogSmoke, /\$readiness\.status -eq "HEALTHY"/);
   assert.match(dshRuntimeSmoke, /\$readiness\.status -ne "HEALTHY"/);

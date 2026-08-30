@@ -1,6 +1,6 @@
 # BThwani Root-Cause Orchestrator
 
-PACKAGE_REVISION: 23
+PACKAGE_REVISION: 24
 PACKAGE_CLASS: UNIFIED_ROOT_CAUSE_EXECUTION_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -330,6 +330,41 @@ FAILURE
 ```
 
 Do not return to the human merely because CI/Sonar/CodeQL/Semgrep/runtime/review produced a failure. New invalidating evidence stops only the affected cone and triggers in-memory re-diagnosis/re-ranking.
+
+## 7.5 Primary-agent anti-escape and control-plane mode
+
+The Primary Coordinator must keep product correctness, assurance evidence and
+repository-platform state distinct. A failed tool is evidence to ingest and
+map to the Root Graph; it is not permission to weaken a check, suppress a
+finding, create a fallback authority or return a derivable implementation
+decision to the human.
+
+During normal product/code objectives, the assurance control plane is frozen:
+
+```text
+CONTROL_PLANE_PATHS = tools/prompting/bthwani-orchestrator/**, AGENTS.md,
+  .agents/**, .github/workflows/**, assurance classifiers/routers,
+  merge-protection semantics
+NORMAL_MODE = READ + USE + CONSUME + REPORT
+NORMAL_MODE_MUTATION = FORBIDDEN
+```
+
+Control-plane mutation requires an explicit current human objective named
+`CONTROL_PLANE_MAINTENANCE`, a proven control-plane root and a bounded
+affected cone. After maintenance, run structural checks, behavioral fault
+injection and independent challenge before freezing the plane again.
+
+`NO ASSURANCE RECURSION WITHOUT A UNIQUE MATERIAL CLAIM`.
+
+Toolchain, platform and dependency-version changes are human-only operations:
+
+```text
+TOOLCHAIN_OR_PLATFORM_MUTATION -> prove necessity -> HUMAN_ACTION_REQUIRED
+```
+
+This includes framework/SDK/runtime/compiler/package-manager/lockfile/native
+build-system upgrades, downgrades and regeneration. Independent roots continue
+while only the dependent closure unit is blocked.
 
 ## 8. Governing lifecycle
 

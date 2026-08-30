@@ -89,6 +89,12 @@ test("CodeQL trusted upload consumes SARIF findings before publishing", () => {
   assert.match(f, /classify-codeql-evidence\.mjs/u);
   assert.match(f, /Consume CodeQL findings with explicit disposition/u);
   assert.match(f, /Upload CodeQL finding disposition evidence/u);
+  assert.match(f, /processing_status/u);
+  assert.match(f, /code-scanning\/sarifs\/\$\{upload_id\}/u);
+  assert.match(f, /analyses_url/u);
+  assert.match(f, /did not bind exactly one analysis to candidate\/category/u);
+  assert.match(f, /codeql-upload-readback\.json/u);
+  assert.match(read("tools/scripts/classify-codeql-evidence.mjs"), /duplicateFindingsCorrelated/u);
   assert.match(f, /CodeQL evidence is incomplete/u);
   assert.match(read("tools/scripts/classify-codeql-evidence.mjs"), /FINDINGS_OPEN/u);
 });
@@ -108,12 +114,78 @@ test("Sonar raw API output is consumed as explicit evidence", () => {
   assert.match(f, /api\/issues\/search/u);
   assert.match(f, /api\/hotspots\/search/u);
   assert.match(f, /api\/measures\/component/u);
+  assert.match(f, /componentKeys=\$\{SONAR_PROJECT_KEY\}/u);
+  assert.match(f, /component=\$\{SONAR_PROJECT_KEY\}/u);
+  assert.match(f, /fetch_paged_json/u);
+  assert.match(f, /paging\.total/u);
   assert.match(f, /TRUSTED_SONAR_CLASSIFIER/u);
   assert.match(f, /Upload consumed Sonar evidence/u);
   assert.match(evidenceBlock, /if: \$\{\{ always\(\) && inputs\.trusted_scan/u);
   assert.doesNotMatch(evidenceBlock, /needs\.scan\.result == 'success'/u);
   assert.match(classifier, /evidenceComplete/u);
+  assert.match(classifier, /measuresCoverage/u);
   assert.match(classifier, /QUALITY_GATE_OPEN/u);
+});
+
+test("routine Dependabot version-update PRs are disabled during healing", () => {
+  const dependabot = read(".github/dependabot.yml");
+  assert.equal((dependabot.match(/open-pull-requests-limit: 0/g) ?? []).length, 8);
+  assert.doesNotMatch(dependabot, /open-pull-requests-limit: [1-9]/u);
+});
+
+test("normal product mode freezes assurance control-plane mutation", () => {
+  const orchestrator = read("tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md");
+  assert.match(orchestrator, /NORMAL_MODE_MUTATION = FORBIDDEN/u);
+  assert.match(orchestrator, /CONTROL_PLANE_MAINTENANCE/u);
+  assert.match(orchestrator, /TOOLCHAIN_OR_PLATFORM_MUTATION -> prove necessity -> HUMAN_ACTION_REQUIRED/u);
+  assert.match(orchestrator, /NO ASSURANCE RECURSION/u);
+});
+
+test("external security-tool wrappers pass argument arrays without a shell", () => {
+  const runner = read("tools/scripts/_external-tool-runner.mjs");
+  assert.match(runner, /execFileSync\(binary, selectedArgs/u);
+  assert.match(runner, /shell: false/u);
+  assert.match(runner, /must be an array of strings/u);
+  assert.doesNotMatch(runner, /execSync\(cmd/u);
+  for (const script of ["run-trivy.mjs", "run-hadolint.mjs", "run-shellcheck.mjs", "run-yamllint.mjs"]) {
+    assert.match(read(`tools/scripts/${script}`), /args|makeArgs/u, script);
+    assert.doesNotMatch(read(`tools/scripts/${script}`), /makeCommand/u, script);
+  }
+});
+
+test("candidate analysis never uses the checkout action with an untrusted ref", () => {
+  for (const workflow of [
+    ".github/workflows/ci-check.yml",
+    ".github/workflows/final-closure.yml",
+    ".github/workflows/rendered-web-evidence.yml",
+    ".github/workflows/sonarqube.yml",
+  ]) {
+    const source = read(workflow);
+    assert.doesNotMatch(source, /ref:\s*\$\{\{\s*(?:inputs\.(?:head_sha|head_ref)|needs\.[^}]*head_sha|steps\.[^}]*head_sha|env\.HEAD_SHA)\s*\}\}/u, workflow);
+    assert.match(source, /Materialize exact .*candidate without untrusted checkout action/u, workflow);
+    assert.match(source, /git fetch --no-tags origin/u, workflow);
+    assert.match(source, /git checkout --detach/u, workflow);
+  }
+});
+
+test("foreground location storage has an encrypted browser path and secure native wiring", () => {
+  const storage = read("services/dsh/frontend/shared/dispatch/secure-location-storage.ts");
+  assert.match(storage, /indexedDB/u);
+  assert.match(storage, /AES-GCM/u);
+  assert.match(storage, /subtle\.encrypt/u);
+  assert.match(storage, /subtle\.decrypt/u);
+  assert.match(storage, /extractable.*false|false,\s*\["encrypt",\s*"decrypt"\]/u);
+  assert.doesNotMatch(storage, /localStorage\.setItem|sessionStorage\.setItem/u);
+  assert.match(storage, /migrateLegacyBrowserEntries/u);
+
+  const location = read("services/dsh/frontend/shared/dispatch/dispatch-location.api.ts");
+  assert.doesNotMatch(location, /bthwaniDurableStorage/u);
+  assert.match(location, /resolveDshCaptainLocationStorage/u);
+
+  const captain = read("apps/app-captain/runtime/src/App.tsx");
+  assert.match(captain, /configureNativeCaptainLocationStorage/u);
+  assert.match(captain, /SecureStore\.setItemAsync/u);
+  assert.match(captain, /SecureStore\.deleteItemAsync/u);
 });
 
 test("evidence attestation rejects candidate-linked reviewers and binds assurance bootstrap exactly", () => {

@@ -31,7 +31,7 @@ test("orchestrator package keeps its declared nine owners and revision", () => {
   }
   assert.deepEqual(actual.sort(), [...orchestratorFiles].sort());
   const entrypoint = read("tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md");
-  assert.match(entrypoint, /PACKAGE_REVISION: 23/u);
+  assert.match(entrypoint, /PACKAGE_REVISION: 24/u);
   assert.match(entrypoint, /Exactly nine files are semantic owners/u);
   for (const relativePath of orchestratorFiles) assert.equal(exists(`tools/prompting/bthwani-orchestrator/${relativePath}`), true, relativePath);
 });
@@ -149,7 +149,7 @@ test("final closure resolves once then collects independent analyzers and experi
   assert.match(workflow, /name: Full CI preflight/u);
   assert.match(workflow, /full_scope: false/u);
   assert.match(workflow, /trusted_scan: true/u);
-  assert.match(read(".github/workflows/repository-baseline.yml"), /BThwani \/ Repository Health/u);
+  assert.match(read(".github/workflows/repository-baseline.yml"), /BThwani \/ Static Repository Baseline/u);
   for (const worker of ["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml"]) {
     assert.ok(workflow.includes(`uses: ./.github/workflows/${worker}`), worker);
   }

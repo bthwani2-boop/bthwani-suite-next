@@ -1,8 +1,10 @@
 import { resolveDshApiBaseUrl } from '../_kernel/dsh-api-base-url';
 import { createDshHttpClient } from '../_kernel/dsh-http-request';
-import { bthwaniDurableStorage } from '@bthwani/data-runtime/storage-adapter';
 import { resolveMutationIdentityScope } from '@bthwani/data-runtime/mutation-identity-scope';
 import type { DshDispatchAssignment } from './dispatch.types';
+import {
+  resolveDshCaptainLocationStorage,
+} from './secure-location-storage';
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), 'dispatch-location');
 const MAX_PENDING_LOCATION_AGE_MS = 9 * 60 * 1000;
@@ -29,6 +31,9 @@ type LocationScope = {
 };
 
 const PENDING_LOCATION_PREFIX = '@bthwani/captain-foreground-location:v1';
+
+export { configureDshCaptainLocationStorage } from './secure-location-storage';
+export type { DshCaptainLocationStorageAdapter } from './secure-location-storage';
 
 // Delivery transport state only. This is not operational truth: DSH remains the
 // sole owner of the accepted location, timestamp, and delivery lifecycle. The
@@ -90,7 +95,8 @@ function parsePendingLocation(value: unknown, expectedAssignmentId: string): Pen
 }
 
 async function readPendingLocation(scope: LocationScope, assignmentId: string): Promise<PendingLocation | null> {
-  const raw = await bthwaniDurableStorage.getItem(pendingLocationKey(scope, assignmentId));
+  const storage = resolveDshCaptainLocationStorage();
+  const raw = await storage.getItem(pendingLocationKey(scope, assignmentId));
   if (raw === null) return null;
   let parsed: unknown;
   try {
@@ -104,7 +110,7 @@ async function readPendingLocation(scope: LocationScope, assignmentId: string): 
 async function writePendingLocation(scope: LocationScope, pending: PendingLocation): Promise<void> {
   const current = await readPendingLocation(scope, pending.assignmentId);
   if (current && Date.parse(current.sample.recordedAt) > Date.parse(pending.sample.recordedAt)) return;
-  await bthwaniDurableStorage.setItem(
+  await resolveDshCaptainLocationStorage().setItem(
     pendingLocationKey(scope, pending.assignmentId),
     JSON.stringify(pending),
   );
@@ -117,13 +123,13 @@ async function clearPendingLocationIfExact(
 ): Promise<void> {
   const current = await readPendingLocation(scope, assignmentId);
   if (current && sameSample(current.sample, sample)) {
-    await bthwaniDurableStorage.removeItem(pendingLocationKey(scope, assignmentId));
+    await resolveDshCaptainLocationStorage().removeItem(pendingLocationKey(scope, assignmentId));
   }
 }
 
 async function listPendingLocations(scope: LocationScope): Promise<readonly PendingLocation[]> {
   const prefix = pendingLocationPrefix(scope);
-  const keys = (await bthwaniDurableStorage.getAllKeys()).filter((key) => key.startsWith(prefix));
+  const keys = (await resolveDshCaptainLocationStorage().getAllKeys()).filter((key) => key.startsWith(prefix));
   const pending: PendingLocation[] = [];
   for (const key of keys) {
     const assignmentId = decodeURIComponent(key.slice(prefix.length));

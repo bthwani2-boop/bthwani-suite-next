@@ -577,9 +577,67 @@ jobs:
         run: |
           set -euo pipefail
           : > "${RUNNER_TEMP}/codeql-upload-ids.txt"
+          : > "${RUNNER_TEMP}/codeql-upload-readback.jsonl"
+          api_url="${GITHUB_API_URL:-https://api.github.com}"
+          poll_upload() {
+            local upload_id="$1" category="$2" attempt response processing_status analyses_url analyses match
+            for attempt in {1..30}; do
+              response="$(gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "${api_url}/repos/${GITHUB_REPOSITORY}/code-scanning/sarifs/${upload_id}")" || {
+                echo "::error::CodeQL SARIF upload read-back request failed for ${upload_id}"
+                return 1
+              }
+              processing_status="$(jq -r '.processing_status // empty' <<<"${response}")"
+              case "${processing_status}" in
+                complete)
+                  analyses_url="$(jq -r '.analyses_url // empty' <<<"${response}")"
+                  [[ "${analyses_url}" == "${api_url}/repos/${GITHUB_REPOSITORY}/code-scanning/analyses"* ]] || {
+                    echo "::error::CodeQL SARIF upload returned an unexpected analyses URL"
+                    return 1
+                  }
+                  analyses="$(gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+                    "${analyses_url}" -f per_page=100)" || {
+                    echo "::error::CodeQL analysis read-back request failed for ${upload_id}"
+                    return 1
+                  }
+                  match="$(jq -c --arg upload_id "${upload_id}" --arg candidate "${CANDIDATE_SHA}" \
+                    --arg ref "${CANDIDATE_REF}" --arg category "${category}" \
+                    '[.[] | select((.sarif_id // "") == $upload_id and (.commit_sha // "") == $candidate and (.ref // "") == $ref and ((.category // "") | rtrimstr("/")) == $category)] | if length == 1 then .[0] else empty end' \
+                    <<<"${analyses}")"
+                  [[ -n "${match}" ]] || {
+                    echo "::error::CodeQL SARIF upload read-back did not bind exactly one analysis to candidate/category: ${upload_id}/${category}"
+                    return 1
+                  }
+                  jq -cn --arg upload_id "${upload_id}" --arg category "${category}" \
+                    --argjson upload "${response}" --argjson analysis "${match}" \
+                    '{uploadId:$upload_id,category:$category,processingStatus:$upload.processing_status,analysis:$analysis}' \
+                    >> "${RUNNER_TEMP}/codeql-upload-readback.jsonl"
+                  return 0
+                  ;;
+                pending|queued|in_progress)
+                  sleep 10
+                  ;;
+                failed|error)
+                  echo "::error::CodeQL SARIF upload processing failed: ${upload_id} status=${processing_status}"
+                  return 1
+                  ;;
+                *)
+                  echo "::error::CodeQL SARIF upload returned unknown processing status: ${processing_status:-missing}"
+                  return 1
+                  ;;
+              esac
+            done
+            echo "::error::CodeQL SARIF upload processing did not complete before timeout: ${upload_id}"
+            return 1
+          }
           while IFS= read -r -d '' sarif; do
             encoded="${RUNNER_TEMP}/$(basename "${sarif}").gz.b64"
             payload="${encoded}.json"
+            mapfile -t categories < <(jq -r '.runs[]?.automationDetails.id // empty' "${sarif}" | sed -E 's:/+$::')
+            [[ "${#categories[@]}" -eq 1 && -n "${categories[0]}" ]] || {
+              echo "::error::CodeQL SARIF must contain exactly one automation category before upload"
+              exit 1
+            }
             gzip -c -- "${sarif}" | base64 -w0 > "${encoded}"
             jq -Rs --arg commit_sha "${CANDIDATE_SHA}" --arg ref "${CANDIDATE_REF}" \
             '{commit_sha:$commit_sha,ref:$ref,sarif:.}' "${encoded}" > "${payload}"
@@ -587,13 +645,23 @@ jobs:
             "/repos/${GITHUB_REPOSITORY}/code-scanning/sarifs" --input "${payload}" --jq '.id')"
             [[ -n "${upload_id}" ]] || { echo "::error::CodeQL SARIF upload id missing"; exit 1; }
             echo "${upload_id}" >> "${RUNNER_TEMP}/codeql-upload-ids.txt"
+            poll_upload "${upload_id}" "${categories[0]}"
           done < "${RUNNER_TEMP}/codeql-sarif-files"
 
           [[ -s "${RUNNER_TEMP}/codeql-upload-ids.txt" ]] || {
             echo "::error::CodeQL SARIF upload ids missing"
             exit 1
           }
-          echo "CodeQL SARIF uploads accepted by GitHub for asynchronous processing"
+          jq -s --arg candidate "${CANDIDATE_SHA}" \
+            '{schema:"bthwani-codeql-upload-readback/1",candidateSha:$candidate,uploads:.}' \
+            "${RUNNER_TEMP}/codeql-upload-readback.jsonl" > "${RUNNER_TEMP}/codeql-upload-readback.json"
+          jq -e --arg candidate "${CANDIDATE_SHA}" \
+            '.candidateSha == $candidate and (.uploads | length == 8) and all(.[]; .processingStatus == "complete" and .analysis.commit_sha == $candidate)' \
+            "${RUNNER_TEMP}/codeql-upload-readback.json" >/dev/null || {
+            echo "::error::CodeQL SARIF upload processing read-back is incomplete or not candidate-bound"
+            exit 1
+          }
+          echo "CodeQL SARIF uploads processed and bound to exact candidate/category"
 
   result:
     name: >-
