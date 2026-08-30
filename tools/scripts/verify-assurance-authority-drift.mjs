@@ -6,12 +6,14 @@ const targetRepo = path.resolve(process.env.BTHWANI_TARGET_REPO || process.cwd()
 const trustedSha = String(process.env.BTHWANI_TRUSTED_SHA || "").trim();
 const candidateSha = String(process.env.BTHWANI_CANDIDATE_SHA || "HEAD").trim() || "HEAD";
 
-// These paths own how evidence is selected, executed, normalized, or judged.
-// Product source/tests are intentionally not frozen here; changing the judge is
-// different from changing the subject under test and requires assurance bootstrap.
+// These paths own how evidence is selected, executed, normalized, interpreted,
+// waived, or judged. Product source/tests are intentionally not frozen here;
+// changing the judge/policy is different from changing the subject under test
+// and requires assurance bootstrap.
 const protectedPathspecs = [
   ".github/workflows",
   ".github/actions",
+  ".opencodereview",
   "AGENTS.md",
   ".agents/INDEX.md",
   ".agents/skills/bthwani-orchestrator/SKILL.md",
@@ -20,6 +22,7 @@ const protectedPathspecs = [
   ".agents/skills/bthwani-final-journey-closure-judge/SKILL.md",
   "tools/prompting/bthwani-orchestrator",
   "tools/guards",
+  "tools/verification",
   "tools/scripts/check-ci-source-immutability.mjs",
   "tools/scripts/check-sonarqube-config.ps1",
   "tools/scripts/classify-semgrep-evidence.mjs",
@@ -50,7 +53,6 @@ const protectedPathspecs = [
   "tools/scripts/verify-pr-evidence-comments.mjs",
   "tools/mobile/lib/invoke-package-manager.ps1",
   "tools/mobile/lib/package-manager-invocation.mjs",
-  "tools/verification/ownership.manifest.json",
   "infra/docker/scripts/runtime-dispatch.ps1",
   "infra/docker/scripts/runtime",
   "sonar-project.properties",
