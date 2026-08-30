@@ -74,6 +74,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const databaseChanged = fullScope || migrationAuthority || hasPath(files, (file) => file.includes("/database/") || file.includes("/migrations/"));
   const infrastructure = fullScope || hasPath(files, (file) => file.startsWith("infra/") || isDockerFile(file));
   const ciControlPlane = fullScope || hasPath(files, (file) =>
+    file === "sonar-project.properties" ||
     startsWithAny(file, [
       ".github/",
       ".agents/",

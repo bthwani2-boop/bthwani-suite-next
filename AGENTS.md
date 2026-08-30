@@ -1,6 +1,6 @@
 # BThwani Agents
 
-`AGENTS.md` is a thin coding-agent adapter. Keep work direct, affected-scope, and evidence-driven.
+`AGENTS.md` is a thin coding-agent adapter. Keep work direct, evidence-driven, root-correct, and proportional to the material cone.
 
 ## Authority
 
@@ -18,16 +18,18 @@ There is intentionally no agent-role registry, skill registry, tool registry, gu
 
 ## Execution
 
-1. Pin the exact repository, user-named branch/ref, and live SHA.
-2. Inspect the smallest complete affected vertical path.
-3. Prove the highest material root cause before broadening scope.
-4. Fix the actual source owner: code, contract, data, configuration, runtime, or consumer.
-5. Migrate affected consumers/readbacks and remove obsolete parallel behavior.
-6. Run the smallest verification set that adds unique assurance for the affected code cone.
-7. Expand verification only when risk or evidence requires it.
-8. Re-pin after material writes and before the final remote claim.
+Use **wide discovery; narrow complete execution**:
 
-“Deep”, “complete”, and “100%” raise the evidence standard; they do not justify unrelated scans, every available tool, or repository-wide verification by default.
+1. Pin the exact repository, user-named branch/ref, live SHA, and PR identity when applicable.
+2. Orient broadly enough across the Project Frame to avoid a narrow local diagnosis. Use parallel read-only investigation when it materially accelerates discovery.
+3. Prove the highest material root cause and actual Source-of-Fix. Discovery breadth must not be confused with mutation breadth.
+4. Mutate only the smallest causally complete working cone required to remove that root from the canonical owner: code, contract, data, configuration, runtime, or consumer.
+5. Migrate affected writers/readers/consumers/readbacks, perform the canonical cutover, and remove obsolete parallel behavior in the same root closure.
+6. Run the smallest verification set that adds unique assurance for claims invalidated by the actual treatment cone.
+7. Expand verification only when risk, new evidence, uncertainty, or final closure requires it.
+8. Re-pin after material writes and before every final remote claim.
+
+“Deep”, “complete”, and “100%” raise the evidence standard and discovery altitude; they do not justify unrelated mutation, every available tool, or repository-wide verification after every write.
 
 ## Verification
 
@@ -39,7 +41,9 @@ Do not create guards or workflows to validate governance prose, agent instructio
 
 Prefer:
 
-`affected code → targeted checks → runtime proof when applicable → broad/full verification only when closure or risk requires it`
+`wide enough discovery -> root proof -> smallest complete treatment -> invalidated claims only -> runtime proof when applicable -> broad/full verification only at fixed point, closure, or material risk`
+
+A newer commit invalidates only evidence whose covered claim, inputs, environment, authority, or consumer cone changed. When independence cannot be proven, widen verification rather than guess.
 
 ## Repository safety
 
@@ -65,7 +69,7 @@ Static/security analysis is remote-owned. Do not launch a local SonarQube server
 
 Delegation is optional and only for bounded work that materially benefits from it.
 
-Parallel read-only investigation is allowed when useful. At most one writer may modify an overlapping work unit at a time. When delegation is used, use one integration/push owner for the combined result.
+Use maximum useful parallelism for read-only discovery. Parallel mutation is allowed only for Closure Units proven independent in canonical authority, write set, contracts/data, migration/cutover, runtime effects, and evidence dependencies. At most one writer may modify an overlapping work unit at a time. When delegation is used, use one integration/push owner for the combined result.
 
 The active executor owns reconciliation and final verification unless those responsibilities are explicitly assigned within a delegated workflow.
 
