@@ -4,9 +4,12 @@ import { fileURLToPath } from "node:url";
 
 export const TOOL_LIMITATION_PROVEN = "TOOL_LIMITATION_PROVEN";
 export const UNKNOWN_ENGINE_ERROR = "UNKNOWN_ENGINE_ERROR";
+export const REVIEW_FINDING = "REVIEW_FINDING";
+export const BLOCKING_FINDING = "BLOCKING_FINDING";
 
 const workflowPath = (value) => typeof value === "string" && value.startsWith(".github/workflows/");
 const typescriptPath = (value) => typeof value === "string" && /\.(?:ts|tsx|mts|cts)$/.test(value);
+const powershellPath = (value) => typeof value === "string" && /\.ps1$/i.test(value);
 const normalizePath = (value) => String(value ?? "").replaceAll("\\", "/").replace(/^\.\//u, "");
 
 function parseDiffRanges(diffText = "") {
@@ -69,6 +72,13 @@ const isKnownReadonlyImportTypeParse = (raw, type, message) => {
   return /`readonly import\((['"])[^'"]+\1\)\.[A-Za-z_$][\w$]*` was unexpected/.test(message);
 };
 
+const isKnownModernTypeScriptParse = (raw, type, message) => {
+  if (!typescriptPath(raw?.path) || type !== "PartialParsing") return false;
+  return /`(?:type|,)` was unexpected/.test(message);
+};
+
+const isKnownPowerShellPartialParse = (raw, type) => powershellPath(raw?.path) && type === "PartialParsing";
+
 export function classifySemgrepEngineCondition(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return {
@@ -93,23 +103,31 @@ export function classifySemgrepEngineCondition(raw) {
   };
 
   if (isWorkflowBashMetavariableParse(raw, type, message) || isKnownWorkflowInternalParse(raw, type, message)) {
-    return {
-      ...result,
-      classification: TOOL_LIMITATION_PROVEN,
-      reason: "semgrep-yaml-github-actions-bash-metavariable-parser",
-    };
+    return {...result, classification: TOOL_LIMITATION_PROVEN, reason: "semgrep-yaml-github-actions-bash-metavariable-parser"};
   }
-
   if (isKnownReadonlyImportTypeParse(raw, type, message)) {
-    return {
-      ...result,
-      classification: TOOL_LIMITATION_PROVEN,
-      reason: "semgrep-typescript-readonly-import-type-parser",
-    };
+    return {...result, classification: TOOL_LIMITATION_PROVEN, reason: "semgrep-typescript-readonly-import-type-parser"};
   }
-
+  if (isKnownModernTypeScriptParse(raw, type, message)) {
+    return {...result, classification: TOOL_LIMITATION_PROVEN, reason: "semgrep-typescript-modern-syntax-parser"};
+  }
+  if (isKnownPowerShellPartialParse(raw, type)) {
+    return {...result, classification: TOOL_LIMITATION_PROVEN, reason: "semgrep-powershell-parser-not-authoritative"};
+  }
   return result;
 }
+
+const findingClassification = (result) => {
+  const ruleId = typeof result?.check_id === "string" ? result.check_id : "";
+  return {
+    classification: ruleId.includes(".audit.") ? REVIEW_FINDING : BLOCKING_FINDING,
+    ruleId,
+    path: result?.path ?? "",
+    line: result?.start?.line ?? null,
+    severity: result?.extra?.severity ?? "UNSPECIFIED",
+    message: result?.extra?.message ?? "",
+  };
+};
 
 const countBySeverity = (results) => {
   const counts = new Map();
@@ -127,29 +145,33 @@ export function classifySemgrepEvidence(payload, metadata = {}) {
   const results = payloadValid ? payload.results : [];
   const rawErrors = Array.isArray(payload?.errors) ? payload.errors : [];
   const classifiedErrors = rawErrors.map(classifySemgrepEngineCondition);
+  const classifiedFindings = results.map(findingClassification);
   const toolLimitations = classifiedErrors.filter((entry) => entry.classification === TOOL_LIMITATION_PROVEN);
   const unknownErrors = classifiedErrors.filter((entry) => entry.classification === UNKNOWN_ENGINE_ERROR);
+  const reviewFindings = classifiedFindings.filter((entry) => entry.classification === REVIEW_FINDING);
+  const blockingFindings = classifiedFindings.filter((entry) => entry.classification === BLOCKING_FINDING);
   const mode = metadata.mode ?? "full";
   const diffRanges = parseDiffRanges(metadata.diffText ?? "");
   const scopedResults = mode === "full" ? results : results.filter((result) => findingInDiff(result, diffRanges));
-  const scopedErrors = mode === "full"
-    ? classifiedErrors
-    : classifiedErrors.filter((entry) => findingInDiff(entry.raw, diffRanges));
+  const scopedErrors = mode === "full" ? classifiedErrors : classifiedErrors.filter((entry) => findingInDiff(entry.raw, diffRanges));
   const unknownErrorsInEvaluatedCone = mode === "full"
     ? unknownErrors.length
     : scopedErrors.filter((entry) => entry.classification === UNKNOWN_ENGINE_ERROR).length;
-  const evidenceComplete = payloadValid && classifiedErrors.length === rawErrors.length && unknownErrorsInEvaluatedCone === 0;
+  const evidenceComplete = payloadValid && classifiedFindings.length === results.length && classifiedErrors.length === rawErrors.length && unknownErrorsInEvaluatedCone === 0;
   const findingsInEvaluatedCone = mode === "full" ? results.length : scopedResults.length;
 
   return {
     classifiedErrors,
+    classifiedFindings,
     evaluatedResults: scopedResults,
     summary: {
-      schemaVersion: 3,
+      schemaVersion: 4,
       headSha: metadata.headSha ?? "",
       mode,
       baseSha: metadata.baseSha ?? "",
       totalFindings: results.length,
+      reviewFindings: reviewFindings.length,
+      blockingFindings: blockingFindings.length,
       scopedFindings: scopedResults.length,
       inheritedFindings: results.length - scopedResults.length,
       engineConditions: rawErrors.length,
@@ -159,7 +181,7 @@ export function classifySemgrepEvidence(payload, metadata = {}) {
       unknownEngineErrorsInChangedCone: scopedErrors.filter((entry) => entry.classification === UNKNOWN_ENGINE_ERROR).length,
       toolLimitationsInChangedCone: scopedErrors.filter((entry) => entry.classification === TOOL_LIMITATION_PROVEN).length,
       severities: countBySeverity(results),
-      allRawFindingsAccounted: payloadValid && classifiedErrors.length === rawErrors.length,
+      allRawFindingsAccounted: payloadValid && classifiedFindings.length === results.length && classifiedErrors.length === rawErrors.length,
       unknownRequiredCoverage: unknownErrorsInEvaluatedCone,
       executionStatus: payloadValid ? "PASS" : "INCOMPLETE",
       coverageStatus: evidenceComplete ? "COMPLETE" : "INCOMPLETE",
@@ -172,9 +194,13 @@ export function classifySemgrepEvidence(payload, metadata = {}) {
   };
 }
 
-const argumentValue = (args, name) => {
+const argumentValue = (args, name, required = true) => {
   const index = args.indexOf(name);
-  if (index === -1 || index + 1 >= args.length) throw new Error(`missing ${name}`);
+  if (index === -1) {
+    if (required) throw new Error(`missing ${name}`);
+    return "";
+  }
+  if (index + 1 >= args.length) throw new Error(`missing value for ${name}`);
   return args[index + 1];
 };
 
@@ -184,6 +210,7 @@ export function runNormalizer({ input, outputDir, headSha, mode, baseSha, diffTe
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(path.join(outputDir, "semgrep.pretty.json"), `${JSON.stringify(payload, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, "classified-errors.json"), `${JSON.stringify(normalized.classifiedErrors, null, 2)}\n`);
+  fs.writeFileSync(path.join(outputDir, "classified-findings.json"), `${JSON.stringify(normalized.classifiedFindings, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, "summary.json"), `${JSON.stringify(normalized.summary, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, "assurance-evidence.json"), `${JSON.stringify({
     schema: "bthwani-semgrep-evidence/1",
@@ -191,8 +218,6 @@ export function runNormalizer({ input, outputDir, headSha, mode, baseSha, diffTe
     headSha,
     baseSha,
     mode,
-    // Change Verification consumes only the exact changed cone. The complete
-    // raw scan remains available in semgrep.pretty.json and the summary.
     results: normalized.evaluatedResults,
     rawResults: payload.results,
     errors: payload.errors ?? [],
@@ -216,9 +241,7 @@ const main = () => {
   });
 
   console.log(JSON.stringify(summary));
-  if (!summary.evidenceComplete) {
-    process.exitCode = 1;
-  }
+  if (!summary.evidenceComplete) process.exitCode = 1;
 };
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) main();
