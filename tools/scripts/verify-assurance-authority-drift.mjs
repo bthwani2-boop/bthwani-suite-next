@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import path from "node:path";
 
 const targetRepo = path.resolve(process.env.BTHWANI_TARGET_REPO || process.cwd());
@@ -64,13 +65,21 @@ const protectedPathspecs = [
   "trivy.yaml",
 ];
 
-function git(args, options = {}) {
+function gitText(args, options = {}) {
   return execFileSync("git", args, {
     cwd: targetRepo,
     encoding: "utf8",
-    maxBuffer: 32 * 1024 * 1024,
+    maxBuffer: 64 * 1024 * 1024,
     ...options,
   }).trim();
+}
+
+function gitBytes(args) {
+  return execFileSync("git", args, {
+    cwd: targetRepo,
+    encoding: "buffer",
+    maxBuffer: 128 * 1024 * 1024,
+  });
 }
 
 function requireFullSha(value, label) {
@@ -79,40 +88,64 @@ function requireFullSha(value, label) {
   }
 }
 
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function emitEvidence({ verdict, trusted, candidate, changedPaths, authorityDiffSha256 }) {
+  const evidence = {
+    schema: "BTHWANI_ASSURANCE_AUTHORITY_DRIFT",
+    version: 1,
+    verdict,
+    trustedSha: trusted,
+    candidateSha: candidate,
+    changedCount: changedPaths.length,
+    changedPaths,
+    authorityDiffSha256,
+  };
+  const line = `BTHWANI_ASSURANCE_AUTHORITY_DRIFT:v1 ${JSON.stringify(evidence)}`;
+  if (verdict === "PASS") console.log(line);
+  else console.error(line);
+}
+
 requireFullSha(trustedSha, "BTHWANI_TRUSTED_SHA");
-const resolvedCandidate = git(["rev-parse", candidateSha]);
+const resolvedCandidate = gitText(["rev-parse", candidateSha]);
 requireFullSha(resolvedCandidate, "candidate SHA");
-git(["cat-file", "-e", `${trustedSha}^{commit}`]);
-git(["cat-file", "-e", `${resolvedCandidate}^{commit}`]);
+gitText(["cat-file", "-e", `${trustedSha}^{commit}`]);
+gitText(["cat-file", "-e", `${resolvedCandidate}^{commit}`]);
 
 if (trustedSha === resolvedCandidate) {
+  const emptyDigest = sha256(Buffer.alloc(0));
+  emitEvidence({ verdict: "PASS", trusted: trustedSha, candidate: resolvedCandidate, changedPaths: [], authorityDiffSha256: emptyDigest });
   console.log(`ASSURANCE_AUTHORITY_DRIFT: PASS simulated-trust-root=${trustedSha}`);
   process.exit(0);
 }
 
 try {
-  git(["merge-base", "--is-ancestor", trustedSha, resolvedCandidate]);
+  gitText(["merge-base", "--is-ancestor", trustedSha, resolvedCandidate]);
 } catch {
   throw new Error(`trusted authority ${trustedSha} is not an ancestor of candidate ${resolvedCandidate}`);
 }
 
-const diff = git([
-  "diff",
-  "--name-status",
-  "--find-renames",
-  trustedSha,
-  resolvedCandidate,
-  "--",
-  ...protectedPathspecs,
-]);
+const diffArgs = [trustedSha, resolvedCandidate, "--", ...protectedPathspecs];
+const nameStatus = gitText(["diff", "--name-status", "--find-renames", ...diffArgs]);
+const changedPaths = nameStatus
+  ? nameStatus.split(/\r?\n/u).filter(Boolean).map((line) => line.split("\t").slice(1)).flat().filter(Boolean)
+  : [];
+const canonicalDiff = gitBytes(["diff", "--binary", "--full-index", "--find-renames", ...diffArgs]);
+const authorityDiffSha256 = sha256(canonicalDiff);
 
-if (diff) {
+if (nameStatus) {
+  emitEvidence({ verdict: "BOOTSTRAP_REQUIRED", trusted: trustedSha, candidate: resolvedCandidate, changedPaths, authorityDiffSha256 });
   console.error("ASSURANCE_AUTHORITY_DRIFT: FAIL");
   console.error(`trusted=${trustedSha}`);
   console.error(`candidate=${resolvedCandidate}`);
+  console.error(`authorityDiffSha256=${authorityDiffSha256}`);
+  console.error(`protectedChanges=${changedPaths.length}`);
   console.error("ASSURANCE_AUTHORITY_CHANGE_REQUIRES_BOOTSTRAP");
-  for (const line of diff.split(/\r?\n/u).filter(Boolean)) console.error(`- ${line}`);
+  for (const line of nameStatus.split(/\r?\n/u).filter(Boolean)) console.error(`- ${line}`);
   process.exit(1);
 }
 
+emitEvidence({ verdict: "PASS", trusted: trustedSha, candidate: resolvedCandidate, changedPaths, authorityDiffSha256 });
 console.log(`ASSURANCE_AUTHORITY_DRIFT: PASS trusted=${trustedSha} candidate=${resolvedCandidate}`);
