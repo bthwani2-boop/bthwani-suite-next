@@ -24,7 +24,7 @@ test("CI control-plane authorities are loaded from trusted workflow SHA", () => 
   assert.match(f, /fetch_trusted tools\/scripts\/check-ci-source-immutability\.mjs/u);
   assert.match(f, /fetch_trusted tools\/guards\/migration-manifest-drift-gate\.mjs/u);
   assert.match(f, /fetch_trusted tools\/guards\/sonar-coverage-ownership-gate\.mjs/u);
-  assert.match(f, /fetch_trusted tools\/verification\/ownership\.manifest\.json/u);
+  assert.match(f, /fetch_trusted tools\/verification\/ownership.manifest\.json/u);
   assert.match(f, /TRUSTED_MIGRATION_MANIFEST_GUARD/u);
   assert.match(f, /TRUSTED_SONAR_OWNERSHIP_GUARD/u);
   assert.doesNotMatch(f, /run:\s*node tools\/guards\/migration-manifest-drift-gate\.mjs/u);
@@ -42,6 +42,8 @@ test("CI control-plane authorities are loaded from trusted workflow SHA", () => 
     '"infra/docker/scripts/runtime-dispatch.ps1"',
   ]) assert.ok(drift.includes(protectedAuthority), `missing drift authority ${protectedAuthority}`);
   assert.match(drift, /ASSURANCE_AUTHORITY_CHANGE_REQUIRES_BOOTSTRAP/u);
+  assert.match(drift, /BTHWANI_ASSURANCE_AUTHORITY_DRIFT:v1/u);
+  assert.match(drift, /authorityDiffSha256/u);
   assert.match(drift, /tools\/prompting\/bthwani-orchestrator/u);
 
   const verifier = read("tools/scripts/check-ci-source-immutability.mjs");
@@ -81,7 +83,7 @@ test("Semgrep evidence disposition is loaded from trusted workflow authority", (
   assert.doesNotMatch(f, /node tools\/scripts\/classify-semgrep-evidence\.mjs/u);
 });
 
-test("evidence attestation rejects candidate-linked reviewers and weak evidence identities", () => {
+test("evidence attestation rejects candidate-linked reviewers and binds assurance bootstrap exactly", () => {
   const v = read("tools/scripts/verify-pr-evidence-comments.mjs");
   assert.match(v, /candidateAuthors/u);
   assert.match(v, /candidate author\/committer\/PR creator cannot attest/u);
@@ -89,4 +91,9 @@ test("evidence attestation rejects candidate-linked reviewers and weak evidence 
   assert.match(v, /capturedAt/u);
   assert.match(v, /external-device-runner/u);
   assert.match(v, /device\?\.appBuild/u);
+  assert.match(v, /BTHWANI_ASSURANCE_BOOTSTRAP:v1/u);
+  assert.match(v, /external-authorized-assurance-reviewer/u);
+  assert.match(v, /bootstrap authority diff SHA-256 does not match trusted evidence/u);
+  assert.match(v, /bootstrap protected changed-count does not match trusted evidence/u);
+  assert.match(v, /assurance-authority-only/u);
 });
