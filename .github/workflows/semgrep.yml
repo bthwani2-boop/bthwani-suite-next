@@ -48,14 +48,24 @@ jobs:
         shell: bash
         env:
           TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           trusted_classifier="${RUNNER_TEMP}/classify-semgrep-evidence.mjs"
-          git cat-file -e "${TRUSTED_WORKFLOW_SHA}^{commit}"
-          git show "${TRUSTED_WORKFLOW_SHA}:tools/scripts/classify-semgrep-evidence.mjs" > "${trusted_classifier}"
+          trusted_comparator="${RUNNER_TEMP}/compare-assurance-baseline.mjs"
+          # Read trusted tools from the immutable workflow SHA, not from the working checkout.
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/classify-semgrep-evidence.mjs" \
+            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_classifier}"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/compare-assurance-baseline.mjs" \
+            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_comparator}"
           [[ -s "${trusted_classifier}" ]] || { echo "::error::trusted Semgrep classifier missing"; exit 1; }
+          [[ -s "${trusted_comparator}" ]] || { echo "::error::trusted baseline comparator missing"; exit 1; }
           node --check "${trusted_classifier}"
+          node --check "${trusted_comparator}"
           echo "TRUSTED_SEMGREP_CLASSIFIER=${trusted_classifier}" >> "${GITHUB_ENV}"
+          echo "TRUSTED_BASELINE_COMPARATOR=${trusted_comparator}" >> "${GITHUB_ENV}"
       - name: Install pinned Semgrep
         shell: bash
         run: |
@@ -68,9 +78,10 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          set +e
+          set -euo pipefail
           evidence="${RUNNER_TEMP}/semgrep-evidence"
           mkdir -p "${evidence}"
+          git diff --no-ext-diff --unified=0 "${BASE_SHA}" "${HEAD_SHA}" -- > "${evidence}/candidate.diff"
           mode="diff"
           args=(scan --config p/default --config p/security-audit --json --metrics=off --exclude=".github/workflows/**")
           if [[ "${FULL_SCOPE}" == "true" ]]; then
@@ -78,24 +89,52 @@ jobs:
           else
             args+=(--baseline-commit "${BASE_SHA}")
           fi
-          semgrep "${args[@]}" . > "${evidence}/semgrep.json" 2> "${evidence}/stderr.log"
-          status=$?
-          set -e
-          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
-          echo "mode=${mode}" >> "${GITHUB_OUTPUT}"
-          exit "${status}"
+          run_scan() {
+            local source="$1" output="$2" stderr="$3" status
+            set +e
+            (cd "${source}" && semgrep "${args[@]}" .) > "${output}" 2> "${stderr}"
+            status=$?
+            set -e
+            if (( status == 0 || status == 1 )) && jq -e 'type == "object" and (.results | type == "array")' "${output}" >/dev/null 2>&1; then
+              printf 'success'
+            else
+              printf 'failure'
+            fi
+          }
+          candidate_execution_status="$(run_scan "${GITHUB_WORKSPACE}" "${evidence}/semgrep.json" "${evidence}/stderr.log")"
+          baseline_execution_status="not-required"
+          if [[ "${FULL_SCOPE}" == "true" ]]; then
+            baseline_source="${RUNNER_TEMP}/semgrep-baseline-source"
+            git worktree add --detach "${baseline_source}" "${BASE_SHA}" >/dev/null
+            baseline_execution_status="$(run_scan "${baseline_source}" "${evidence}/baseline.json" "${evidence}/baseline.stderr.log")"
+            git worktree remove --force "${baseline_source}" >/dev/null 2>&1 || true
+          fi
+          baseline_required="false"
+          if [[ "${FULL_SCOPE}" == "true" ]]; then
+            baseline_required="true"
+          fi
+          {
+            echo "candidate_execution_status=${candidate_execution_status}"
+            echo "baseline_execution_status=${baseline_execution_status}"
+            echo "mode=${mode}"
+            echo "baseline_required=${baseline_required}"
+          } >> "${GITHUB_OUTPUT}"
+          [[ "${candidate_execution_status}" == "success" ]] || { echo "::error::Semgrep candidate did not produce valid evidence"; exit 1; }
+          [[ "${baseline_execution_status}" != "failure" ]] || { echo "::error::Semgrep baseline did not produce valid evidence"; exit 1; }
       - name: Normalize every raw finding and engine condition with trusted classifier
         id: policy
         if: ${{ always() }}
         continue-on-error: true
         shell: bash
         env:
-          SCAN_OUTCOME: ${{ steps.semgrep.outcome }}
+          CANDIDATE_EXECUTION_STATUS: ${{ steps.semgrep.outputs.candidate_execution_status }}
+          BASELINE_EXECUTION_STATUS: ${{ steps.semgrep.outputs.baseline_execution_status }}
+          BASELINE_REQUIRED: ${{ steps.semgrep.outputs.baseline_required }}
           MODE: ${{ steps.semgrep.outputs.mode }}
         run: |
           set -euo pipefail
           src="${RUNNER_TEMP}/semgrep-evidence/semgrep.json"
-          [[ "${SCAN_OUTCOME}" == "success" ]] || { echo "::error::Semgrep execution failed"; exit 1; }
+          [[ "${CANDIDATE_EXECUTION_STATUS}" == "success" ]] || { echo "::error::Semgrep execution failed"; exit 1; }
           [[ -s "${src}" ]] || { echo "::error::Semgrep JSON evidence missing"; exit 1; }
           [[ -n "${TRUSTED_SEMGREP_CLASSIFIER:-}" && -s "${TRUSTED_SEMGREP_CLASSIFIER}" ]] || {
             echo "::error::trusted Semgrep classifier was not materialized"
@@ -106,10 +145,29 @@ jobs:
             --output-dir "${RUNNER_TEMP}/semgrep-evidence" \
             --head-sha "${HEAD_SHA}" \
             --mode "${MODE}" \
-            --base-sha "${BASE_SHA}"
+            --base-sha "${BASE_SHA}" \
+            --diff-file "${RUNNER_TEMP}/semgrep-evidence/candidate.diff"
+          if [[ "${BASELINE_REQUIRED}" == "true" ]]; then
+            [[ "${BASELINE_EXECUTION_STATUS}" == "success" && -s "${RUNNER_TEMP}/semgrep-evidence/baseline.json" ]] || {
+              echo "::error::Semgrep baseline evidence is required but missing"
+              exit 1
+            }
+            node "${TRUSTED_SEMGREP_CLASSIFIER}" \
+              --input "${RUNNER_TEMP}/semgrep-evidence/baseline.json" \
+              --output-dir "${RUNNER_TEMP}/semgrep-evidence/baseline" \
+              --head-sha "${BASE_SHA}" \
+              --mode full \
+              --base-sha "${BASE_SHA}"
+          fi
           summary="${RUNNER_TEMP}/semgrep-evidence/summary.json"
           total="$(jq -r '.totalFindings' "${summary}")"
           unknown="$(jq -r '.unknownEngineErrors' "${summary}")"
+          scoped="$(jq -r '.scopedFindings' "${summary}")"
+          scoped_unknown="$(jq -r '.unknownEngineErrorsInChangedCone' "${summary}")"
+          evaluated_unknown="${unknown}"
+          if [[ "${MODE}" != "full" ]]; then
+            evaluated_unknown="${scoped_unknown}"
+          fi
           accounted="$(jq -r '.allRawFindingsAccounted' "${summary}")"
           {
             echo "### Semgrep exact candidate"
@@ -117,12 +175,47 @@ jobs:
             echo "- Base: \`${BASE_SHA}\`"
             echo "- Mode: \`${MODE}\`"
             echo "- Raw findings: \`${total}\`"
+            echo "- Findings in evaluated cone: \`${scoped}\`"
             echo "- Unknown engine errors: \`${unknown}\`"
+            echo "- Unknown engine errors in evaluated cone: \`${evaluated_unknown}\`"
             echo "- All raw engine conditions accounted: \`${accounted}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
           [[ "${accounted}" == "true" ]] || { echo "::error::Semgrep raw engine conditions were not fully accounted"; exit 1; }
-          [[ "${unknown}" == "0" ]] || { echo "::error::Semgrep unknown engine errors=${unknown}"; exit 1; }
-          [[ "${total}" == "0" ]] || { echo "::error::Semgrep findings require diagnosis/disposition before closure: total=${total}"; exit 1; }
+          [[ "${evaluated_unknown}" == "0" ]] || {
+            echo "::error::Semgrep unknown engine errors in evaluated cone=${evaluated_unknown}"
+            exit 1
+          }
+          compare_args=(
+            --candidate "${RUNNER_TEMP}/semgrep-evidence/assurance-evidence.json"
+            --head-sha "${HEAD_SHA}"
+            --base-sha "${BASE_SHA}"
+            --execution-status "${CANDIDATE_EXECUTION_STATUS}"
+          )
+          if [[ "${BASELINE_REQUIRED}" == "true" ]]; then
+            compare_args+=(
+              --baseline "${RUNNER_TEMP}/semgrep-evidence/baseline/assurance-evidence.json"
+              --baseline-execution-status "${BASELINE_EXECUTION_STATUS}"
+              --require-baseline
+            )
+          fi
+          node "${TRUSTED_BASELINE_COMPARATOR}" "${compare_args[@]}" \
+            --output "${RUNNER_TEMP}/semgrep-evidence/baseline-ratchet.json"
+          ratchet="${RUNNER_TEMP}/semgrep-evidence/baseline-ratchet.json"
+          jq -e '.schema == "bthwani-assurance-baseline/1" and .policy.evidenceComplete == true' "${ratchet}" >/dev/null || {
+            echo "::error::Semgrep evidence was not complete for the exact candidate"; exit 1;
+          }
+          new_material="$(jq -r '.counts.newMaterial' "${ratchet}")"
+          worsened_material="$(jq -r '.counts.worsenedMaterial' "${ratchet}")"
+          {
+            echo "- Baseline ratchet: \`$(jq -r '.changeVerification.state' "${ratchet}")\`"
+            echo "- New material findings: \`${new_material}\`"
+            echo "- Worsened material findings: \`${worsened_material}\`"
+            echo "- Inherited findings remain Repository Health debt"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          [[ "${new_material}" == "0" && "${worsened_material}" == "0" ]] || {
+            echo "::error::Semgrep baseline ratchet rejected new or worsened material findings"
+            exit 1
+          }
       - name: Upload complete Semgrep evidence
         if: ${{ always() }}
         id: artifact

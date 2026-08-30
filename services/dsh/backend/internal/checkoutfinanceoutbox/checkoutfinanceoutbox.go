@@ -22,22 +22,22 @@ const (
 )
 
 type Event struct {
-	ID                   string
-	EventType            string
-	Status               string
-	OperatorContextID    string
-	CheckoutIntentID     string
-	PaymentSessionID     string
-	OrderID              string
-	ClientID             string
-	Reason               string
-	CorrelationID        string
-	AttemptCount         int
-	ReadbackAttemptCount int
-	FailureDisposition   string
+	ID                    string
+	EventType             string
+	Status                string
+	OperatorContextID     string
+	CheckoutIntentID      string
+	PaymentSessionID      string
+	OrderID               string
+	ClientID              string
+	Reason                string
+	CorrelationID         string
+	AttemptCount          int
+	ReadbackAttemptCount  int
+	FailureDisposition    string
 	FailureClassification string
-	DiagnosticCode       string
-	LeaseToken           string
+	DiagnosticCode        string
+	LeaseToken            string
 }
 
 type EnqueueInput struct {
@@ -166,6 +166,16 @@ func leaseInterval(lease time.Duration) (string, error) {
 // token. Pending work, durable unknown outcomes, and expired processing leases
 // are all recoverable; failed and sent rows are never claimed automatically.
 func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
+	return claimBatch(db, limit, lease, "")
+}
+
+// claimBatchForCheckoutIntent narrows an integration claim to one fixture
+// without changing the worker's production-wide claim behavior.
+func claimBatchForCheckoutIntent(db *sql.DB, limit int, lease time.Duration, checkoutIntentID string) ([]Event, error) {
+	return claimBatch(db, limit, lease, checkoutIntentID)
+}
+
+func claimBatch(db *sql.DB, limit int, lease time.Duration, checkoutIntentID string) ([]Event, error) {
 	if limit <= 0 {
 		return []Event{}, nil
 	}
@@ -195,9 +205,10 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 			(outbox.status IN ('pending', 'unknown') AND outbox.next_retry_at <= NOW())
 			OR (outbox.status = 'processing' AND (outbox.lease_expires_at IS NULL OR outbox.lease_expires_at <= NOW()))
 		)
+		AND (NULLIF($2, '') IS NULL OR outbox.checkout_intent_id = NULLIF($2, '')::uuid)
 		ORDER BY outbox.created_at, outbox.id
 		LIMIT $1
-		FOR UPDATE OF outbox SKIP LOCKED`, limit)
+		FOR UPDATE OF outbox SKIP LOCKED`, limit, checkoutIntentID)
 	if err != nil {
 		return nil, fmt.Errorf("claim checkout finance outbox batch: %w", err)
 	}
@@ -209,8 +220,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 			&event.ID, &event.EventType, &event.Status, &event.OperatorContextID,
 			&event.CheckoutIntentID, &event.PaymentSessionID, &event.OrderID,
 			&event.ClientID, &event.Reason, &event.CorrelationID, &event.AttemptCount,
-							&event.ReadbackAttemptCount, &event.FailureDisposition, &event.FailureClassification, &event.DiagnosticCode,
-
+			&event.ReadbackAttemptCount, &event.FailureDisposition, &event.FailureClassification, &event.DiagnosticCode,
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan checkout finance outbox event: %w", err)

@@ -5,18 +5,11 @@ import {
   purgeExactDurableMutationAttempt,
 } from "../_kernel/durable-mutation-attempt-registry.ts";
 import { secureCorrelationId, secureRandomId } from "../_kernel/secure-random.ts";
-import type { DshStoreCaptainHandoffExceptionReason } from "../orders/orders.types.ts";
-import type { StoreCaptainHandoffExceptionActor } from "./use-store-captain-handoff-exception.ts";
+import type { StoreCaptainHandoffExceptionAttemptIntent } from "./store-captain-handoff-exception.types.ts";
+
+export type { StoreCaptainHandoffExceptionActor, StoreCaptainHandoffExceptionAttemptIntent } from "./store-captain-handoff-exception.types.ts";
 
 const OPERATION = "store-captain-handoff-exception-report";
-
-export type StoreCaptainHandoffExceptionAttemptIntent = {
-  readonly actor: StoreCaptainHandoffExceptionActor;
-  readonly actorId: string;
-  readonly entityId: string;
-  readonly reasonCode: DshStoreCaptainHandoffExceptionReason;
-  readonly note: string;
-};
 
 export type StoredStoreCaptainHandoffExceptionAttempt = DurableMutationAttemptEnvelope<{
   readonly idempotencyKey: string;

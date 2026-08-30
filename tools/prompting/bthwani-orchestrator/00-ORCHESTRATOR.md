@@ -1,6 +1,6 @@
 # BThwani Root-Cause Orchestrator
 
-PACKAGE_REVISION: 22
+PACKAGE_REVISION: 23
 PACKAGE_CLASS: UNIFIED_ROOT_CAUSE_EXECUTION_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -195,6 +195,26 @@ Any such artifact:
 
 A supplied historical plan is evidence/context only. Re-resolve live truth before using it.
 
+### 3.3 Change verification, repository baseline and closure are distinct claims
+
+The execution loop MUST keep change-scoped claims separate from repository-wide health claims. Presence on `master`, a passing change check, or a successful closure workflow does not by itself prove that the repository is healthy or that all inherited debt is closed.
+
+```text
+BThwani / Change Verification = exact candidate change safety and new/worsened material findings
+BThwani / Change Closure = exact candidate treatment cone, invalidated proofs and required evidence closed
+BThwani / Repository Baseline = exact repository-wide health snapshot, including inherited debt
+BThwani / Repository Closure = repository baseline healthy AND change closure passed
+```
+
+Baseline comparison MUST use the ratchet dispositions `BASELINE`, `CANDIDATE`, `NEW`, `FIXED`, `UNCHANGED`, and `WORSENED`. Inherited findings may keep `BThwani / Repository Baseline` open; they MUST NOT be relabeled as new change findings, and new or worsened material findings MUST keep Change Verification open. Evidence collected by discovery is not a closure claim until it is processed, mapped to roots, and consumed by the authoritative verifier.
+
+Change and baseline evidence MUST be maintained as two concurrent tracks in the same root loop:
+
+- `CURRENT ROOT EXECUTION`: selected treatment cone, affected consumers/readbacks, and exact-candidate closure proof;
+- `BASELINE SCOUTING`: independent repository-wide evidence, inherited debt accounting, and root candidates for later work.
+
+Neither track may bypass an unresolved required proof or self-certify its own closure. A baseline workflow may publish `BASELINE_OPEN` while Change Verification and Change Closure remain separately evaluated.
+
 ## 4. Objective declaration and concurrent-work law
 
 When concurrent sessions/providers exist or are known, `ACTIVE_WORKSET` completeness and missing-snapshot behavior are owned by `05-OBJECTIVES-PLAYBOOK.md` and MUST be satisfied before any new concurrent mutation may be claimed `PARALLEL_SAFE`. Provider names such as ChatGPT, Claude, Manus, Codex or others are optional coordination labels only.
@@ -294,6 +314,8 @@ No "later cleanup" is allowed for known material residue tied to the root.
 A newly exposed **independent** root does not silently expand the current Closure Unit; it enters reranking unless it is a higher causal parent that invalidates the current treatment.
 
 ## 7. Evidence/failure self-driving law
+
+Every material tool invocation creates `EVIDENCE_DEBT`. Raw output, findings, warnings, execution limitations and coverage gaps must be accounted for, mapped to the canonical Root Graph, treated at the actual Source-of-Fix and followed by invalidated re-proof. An uploaded artifact or a zero exit code is not consumption or closure.
 
 Tool/runtime/review failures are evidence, not automatic stop states.
 

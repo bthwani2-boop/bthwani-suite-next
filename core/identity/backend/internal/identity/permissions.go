@@ -95,12 +95,27 @@ func (e *PermissionEnforcer) ListRoles(ctx context.Context) ([]RbacRole, error) 
 	return roles, rows.Err()
 }
 
-func (e *PermissionEnforcer) GrantRoleWithIdempotency(ctx context.Context, operatorContextID, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int, idempotencyKey, caller string) (ActorRoleAssignment, bool, error) {
+// RoleMutationRequest contains the canonical identity and idempotency context
+// for a role grant or revoke.
+type RoleMutationRequest struct {
+	OperatorContextID   string
+	TargetActorID       string
+	RoleName            string
+	RequestedByActorID  string
+	ExpectedRoleVersion int
+	IdempotencyKey      string
+	Caller              string
+}
+
+func (e *PermissionEnforcer) GrantRoleWithIdempotency(ctx context.Context, request RoleMutationRequest) (ActorRoleAssignment, bool, error) {
 	var err error
-	operatorContextID, err = requireOperatorContextID(operatorContextID)
-	targetActorID = strings.TrimSpace(targetActorID)
-	roleName = strings.TrimSpace(roleName)
-	requestedByActorID = strings.TrimSpace(requestedByActorID)
+	operatorContextID, err := requireOperatorContextID(request.OperatorContextID)
+	targetActorID := strings.TrimSpace(request.TargetActorID)
+	roleName := strings.TrimSpace(request.RoleName)
+	requestedByActorID := strings.TrimSpace(request.RequestedByActorID)
+	expectedRoleVersion := request.ExpectedRoleVersion
+	idempotencyKey := request.IdempotencyKey
+	caller := request.Caller
 
 	if err != nil {
 		return ActorRoleAssignment{}, false, err
@@ -211,12 +226,15 @@ func requireActorsInOperatorContextTx(ctx context.Context, tx *sql.Tx, operatorC
 	return nil
 }
 
-func (e *PermissionEnforcer) RevokeRoleWithIdempotency(ctx context.Context, operatorContextID, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int, idempotencyKey, caller string) error {
+func (e *PermissionEnforcer) RevokeRoleWithIdempotency(ctx context.Context, request RoleMutationRequest) error {
 	var err error
-	operatorContextID, err = requireOperatorContextID(operatorContextID)
-	targetActorID = strings.TrimSpace(targetActorID)
-	roleName = strings.TrimSpace(roleName)
-	requestedByActorID = strings.TrimSpace(requestedByActorID)
+	operatorContextID, err := requireOperatorContextID(request.OperatorContextID)
+	targetActorID := strings.TrimSpace(request.TargetActorID)
+	roleName := strings.TrimSpace(request.RoleName)
+	requestedByActorID := strings.TrimSpace(request.RequestedByActorID)
+	expectedRoleVersion := request.ExpectedRoleVersion
+	idempotencyKey := request.IdempotencyKey
+	caller := request.Caller
 
 	if err != nil {
 		return err
@@ -270,7 +288,7 @@ RETURNING request_hash, status, result`, operatorContextID, caller, idempotencyK
 	if _, err := mutateActorRoleTx(ctx, tx, targetActorID, roleName, roleID, requestedByActorID, false); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE identity_rbac_operation_ledger SET status = 'succeeded', result = jsonb_build_object('revoked', true, 'actorId', $4), updated_at = now() WHERE operator_context_id = $1 AND caller = $2 AND operation = 'role-revoke' AND idempotency_key = $3 AND request_hash = $5`, operatorContextID, caller, idempotencyKey, targetActorID, requestHash); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE identity_rbac_operation_ledger SET status = 'succeeded', result = jsonb_build_object('revoked', true, 'actorId', $4::text), updated_at = now() WHERE operator_context_id = $1 AND caller = $2 AND operation = 'role-revoke' AND idempotency_key = $3 AND request_hash = $5`, operatorContextID, caller, idempotencyKey, targetActorID, requestHash); err != nil {
 		return err
 	}
 	return tx.Commit()

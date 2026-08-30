@@ -18,3 +18,4 @@ jobs:
       head_sha: ${{ github.sha }}
       base_sha: ${{ github.event.before }}
       trusted_scan: true
+      full_scope: true

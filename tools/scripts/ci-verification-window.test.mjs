@@ -29,7 +29,7 @@ test("Final Closure remains full exact-candidate proof from the PR closure base"
   const workflow = read(".github/workflows/final-closure.yml");
   assert.match(workflow, /name: Full CI preflight/u);
   assert.match(workflow, /expected_base_sha: \$\{\{ needs\.resolve\.outputs\.base_sha \}\}/u);
-  assert.match(workflow, /full_scope: true/u);
+  assert.match(workflow, /full_scope: false/u);
   assert.doesNotMatch(workflow, /verify_from_sha:/u);
 });
 
@@ -50,7 +50,7 @@ test("ci:check only requests an incremental frontier after exact successful PR p
   assert.match(command, /trustedWorkflowSupportsVerificationBase/u);
   assert.match(command, /if \(!pr\) return null;/u);
   assert.match(command, /commits\/\$\{sha\}\/status/u);
-  assert.match(command, /BThwani CI \/ PR result/u);
+  assert.match(command, /BThwani \/ Change Verification/u);
   assert.match(command, /verify_from_sha=\$\{verifyFromSha\}/u);
   assert.match(command, /conservative-until-trusted-promotion/u);
   assert.doesNotMatch(command, /sleep|poll|run.?history/iu);

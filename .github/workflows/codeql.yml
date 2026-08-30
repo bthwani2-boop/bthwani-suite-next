@@ -310,13 +310,177 @@ jobs:
           if-no-files-found: error
           retention-days: 2
 
+  disposition:
+    name: Consume CodeQL findings and diff scope
+    needs: [scope, analyze-javascript-typescript, analyze-go, analyze-actions]
+    if: >-
+      ${{ always() && needs.scope.result == 'success' &&
+      needs.scope.outputs.skip_duplicate_push != 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      status: ${{ steps.classify.outputs.status }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CANDIDATE_SHA: ${{ inputs.head_sha || github.sha }}
+      BASE_SHA: ${{ inputs.base_sha || github.event.before || '' }}
+      # Full analyzers still run for exact closure; PR disposition is diff-scoped so inherited
+      # baseline alerts do not masquerade as new change findings.
+      MODE: ${{ inputs.pr_number != '' && 'affected' || (needs.scope.outputs.full_scope == 'true' && 'full' || 'affected') }}
+      LANGUAGES: ${{ needs.scope.outputs.languages }}
+      ACTIONS_REQUIRED: ${{ needs.scope.outputs.actions_required }}
+      SCOPE_RESULT: ${{ needs.scope.result }}
+      JAVASCRIPT_RESULT: ${{ needs.analyze-javascript-typescript.result }}
+      GO_RESULT: ${{ needs.analyze-go.result }}
+      ACTIONS_RESULT: ${{ needs.analyze-actions.result }}
+    steps:
+      - name: Checkout immutable candidate history for the diff boundary
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+          show-progress: false
+
+      - name: Verify analyzer outcomes and candidate ancestry
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "${CANDIDATE_SHA}" ]] || {
+            echo "::error::CodeQL disposition candidate checkout drift"
+            exit 1
+          }
+          if [[ -n "${BASE_SHA}" ]]; then
+            git cat-file -e "${BASE_SHA}^{commit}"
+            git merge-base --is-ancestor "${BASE_SHA}" "${CANDIDATE_SHA}" || {
+              echo "::error::CodeQL disposition base is not an ancestor of the candidate"
+              exit 1
+            }
+          fi
+          [[ "${LANGUAGES}" != *javascript-typescript* || "${JAVASCRIPT_RESULT}" == "success" ]] || {
+            echo "::error::CodeQL JavaScript analysis did not complete"
+            exit 1
+          }
+          [[ "${LANGUAGES}" != *go* || "${GO_RESULT}" == "success" ]] || {
+            echo "::error::CodeQL Go analysis did not complete"
+            exit 1
+          }
+          [[ "${ACTIONS_REQUIRED}" != "true" || "${ACTIONS_RESULT}" == "success" ]] || {
+            echo "::error::CodeQL Actions analysis did not complete"
+            exit 1
+          }
+          if [[ -n "${BASE_SHA}" && "${MODE}" == "affected" ]]; then
+            git diff --no-ext-diff --unified=0 "${BASE_SHA}" "${CANDIDATE_SHA}" -- > "${RUNNER_TEMP}/codeql.diff"
+          else
+            : > "${RUNNER_TEMP}/codeql.diff"
+          fi
+
+      - name: Load trusted CodeQL evidence classifier
+        shell: bash
+        env:
+          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          trusted_classifier="${RUNNER_TEMP}/classify-codeql-evidence.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/classify-codeql-evidence.mjs" \
+            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_classifier}"
+          [[ -s "${trusted_classifier}" ]] || { echo "::error::trusted CodeQL classifier missing"; exit 1; }
+          node --check "${trusted_classifier}"
+          echo "TRUSTED_CODEQL_CLASSIFIER=${trusted_classifier}" >> "${GITHUB_ENV}"
+
+      - name: Download unprivileged CodeQL SARIF evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${LANGUAGES}" == "[]" && "${ACTIONS_REQUIRED}" != "true" ]]; then
+            mkdir -p "${RUNNER_TEMP}/codeql-sarif"
+            echo "No CodeQL analyzer is applicable to this exact candidate."
+            exit 0
+          fi
+          artifacts="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100")"
+          destination="${RUNNER_TEMP}/codeql-sarif"
+          mkdir -p "${destination}"
+          mapfile -t artifact_ids < <(jq -r '.artifacts[] | select(.name | startswith("codeql-sarif-")) | .id' <<<"${artifacts}")
+          for artifact_id in "${artifact_ids[@]}"; do
+            archive="${RUNNER_TEMP}/codeql-${artifact_id}.zip"
+            target="${destination}/${artifact_id}"
+            mkdir -p "${target}"
+            gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${archive}"
+            while IFS= read -r entry; do
+              [[ -n "${entry}" && "${entry}" != ".." && "${entry}" != /* && "${entry}" != ../* && \
+                "${entry}" != */../* && "${entry}" != */.. ]] || {
+                echo "::error::unsafe CodeQL SARIF artifact path"
+                exit 1
+              }
+            done < <(unzip -Z1 "${archive}")
+            unzip -q "${archive}" -d "${target}"
+          done
+
+      # Consume CodeQL findings with explicit disposition before the trusted upload boundary.
+      # Consume exact CodeQL findings before trusted upload.
+      # Related CodeQL locations are evaluated against the same exact candidate diff cone.
+      - name: Consume CodeQL findings with explicit disposition
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          output_dir="${RUNNER_TEMP}/codeql-evidence"
+          if [[ "${LANGUAGES}" == "[]" && "${ACTIONS_REQUIRED}" != "true" ]]; then
+            mkdir -p "${output_dir}"
+            jq -n \
+              --arg headSha "${CANDIDATE_SHA}" \
+              --arg baseSha "${BASE_SHA}" \
+              '{schema:"bthwani-codeql-evidence/1",candidate:{headSha:$headSha,baseSha:$baseSha},mode:"not-applicable",status:"NOT_APPLICABLE",executionStatus:"NOT_APPLICABLE",coverageStatus:"NOT_APPLICABLE",findingStatus:"NOT_APPLICABLE",evidenceConsumption:"NOT_APPLICABLE",evidenceComplete:true,closureClaim:false,counts:{documents:0,categories:0,findings:0,materialFindings:0,scopedFindings:0,scopedMaterialFindings:0,inheritedFindings:0,errors:0}}' \
+              > "${output_dir}/summary.json"
+            echo "status=NOT_APPLICABLE" >> "${GITHUB_OUTPUT}"
+            cat "${output_dir}/summary.json"
+            exit 0
+          fi
+          node "${TRUSTED_CODEQL_CLASSIFIER}" \
+            --input-dir "${RUNNER_TEMP}/codeql-sarif" \
+            --output-dir "${output_dir}" \
+            --head-sha "${CANDIDATE_SHA}" \
+            --base-sha "${BASE_SHA}" \
+            --mode "${MODE}" \
+            --diff-file "${RUNNER_TEMP}/codeql.diff" || classifier_exit=$?
+          classifier_exit="${classifier_exit:-0}"
+          [[ -s "${output_dir}/summary.json" ]] || {
+            echo "::error::CodeQL classifier did not produce evidence"
+            exit 1
+          }
+          status="$(jq -r '.status' "${output_dir}/summary.json")"
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          cat "${output_dir}/summary.json"
+          # Findings are not execution failures. They remain explicit in the disposition artifact;
+          # only incomplete SARIF is a collection failure here.
+          [[ "${classifier_exit}" == "0" || "${status}" == "FINDINGS_OPEN" ]] || {
+            echo "::error::CodeQL evidence is incomplete"
+            exit 1
+          }
+
+      - name: Upload CodeQL finding disposition evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codeql-disposition-${{ env.CANDIDATE_SHA }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/codeql-evidence
+          if-no-files-found: error
+          retention-days: 14
+
   upload:
     name: Upload trusted CodeQL SARIF
-    needs: [scope, analyze-javascript-typescript, analyze-go, analyze-actions]
+    needs: [scope, analyze-javascript-typescript, analyze-go, analyze-actions, disposition]
     if: >-
       ${{ needs.scope.outputs.skip_duplicate_push != 'true' && needs.scope.outputs.full_scope == 'true' &&
       needs.analyze-javascript-typescript.result == 'success' && needs.analyze-go.result == 'success' &&
-      needs.analyze-actions.result == 'success' &&
+      needs.analyze-actions.result == 'success' && needs.disposition.result == 'success' &&
       (github.event_name == 'workflow_call' ||
       (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) ||
       github.event_name == 'schedule' ||
@@ -331,7 +495,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       CANDIDATE_SHA: ${{ inputs.head_sha || github.sha }}
-      CANDIDATE_REF: ${{ inputs.head_ref && format('refs/heads/{0}', inputs.head_ref) || github.ref }}
+      CANDIDATE_REF: ${{ inputs.pr_number && format('refs/pull/{0}/head', inputs.pr_number) || inputs.head_ref && format('refs/heads/{0}', inputs.head_ref) || github.ref }}
       PR_NUMBER: ${{ inputs.pr_number }}
       BASE_SHA: ${{ inputs.base_sha }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
@@ -397,7 +561,7 @@ jobs:
             /language:go-platform-control
             /language:go-providers
           )
-          mapfile -t actual_categories < <(jq -r '.runs[]?.automationDetails.id // empty' "${sarif_files[@]}")
+          mapfile -t actual_categories < <(jq -r '.runs[]?.automationDetails.id // empty' "${sarif_files[@]}" | sed -E 's:/+$::')
           [[ "${#actual_categories[@]}" -eq 8 ]] || { echo \
           "::error::expected one CodeQL automation category per SARIF"; exit 1; }
           for category in "${expected_categories[@]}"; do
@@ -435,21 +599,24 @@ jobs:
     name: >-
       ${{ github.event_name == 'pull_request' && 'CodeQL / PR result' || github.event_name == 'push' &&
       'CodeQL / push result' || 'CodeQL / dispatched result' }}
-    needs: [scope, analyze-javascript-typescript, analyze-go, analyze-actions, upload]
+    needs: [scope, analyze-javascript-typescript, analyze-go, analyze-actions, disposition, upload]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
     steps:
-      - name: Enforce applicable CodeQL results
+      - name: Enforce CodeQL findings were consumed and dispositioned
         shell: bash
         env:
           SCOPE_RESULT: ${{ needs.scope.result }}
           JAVASCRIPT_RESULT: ${{ needs.analyze-javascript-typescript.result }}
           GO_RESULT: ${{ needs.analyze-go.result }}
           ACTIONS_RESULT: ${{ needs.analyze-actions.result }}
+          DISPOSITION_RESULT: ${{ needs.disposition.result }}
+          DISPOSITION_STATUS: ${{ needs.disposition.outputs.status }}
           UPLOAD_RESULT: ${{ needs.upload.result }}
+          MODE: ${{ inputs.pr_number != '' && 'affected' || (needs.scope.outputs.full_scope == 'true' && 'full' || 'affected') }}
           LANGUAGES: ${{ needs.scope.outputs.languages }}
           ACTIONS_REQUIRED: ${{ needs.scope.outputs.actions_required }}
           FULL_SCOPE: ${{ needs.scope.outputs.full_scope }}
@@ -466,6 +633,29 @@ jobs:
           if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
             echo "CodeQL development push skipped because an open PR owns the same branch analysis."
             exit 0
+          fi
+          if [[ "${LANGUAGES}" == "[]" && "${ACTIONS_REQUIRED}" != "true" ]]; then
+            [[ "${DISPOSITION_RESULT}" == "success" && "${DISPOSITION_STATUS}" == "NOT_APPLICABLE" ]] || {
+              echo "::error title=CodeQL applicability unresolved::no analyzer was applicable but disposition was not explicit"
+              exit 1
+            }
+            [[ "${UPLOAD_RESULT}" == "skipped" ]] || {
+              echo "::error::non-applicable CodeQL analysis unexpectedly ran the write boundary"
+              exit 1
+            }
+            echo "CodeQL is not applicable to this exact candidate."
+            exit 0
+          fi
+          [[ "${DISPOSITION_RESULT}" == "success" ]] || {
+            echo "::error title=CodeQL evidence incomplete::SARIF evidence was not consumed successfully"
+            exit 1
+          }
+          [[ "${DISPOSITION_STATUS}" == "PASS" ]] || {
+            echo "::error title=CodeQL findings require treatment::status=${DISPOSITION_STATUS}; inspect the disposition artifact"
+            exit 1
+          }
+          if [[ "${MODE}" == "affected" ]]; then
+            echo "CodeQL changed-cone verification passed; inherited baseline findings are not a repository-clean claim."
           fi
           if [[ "${LANGUAGES}" == *javascript-typescript* && "${JAVASCRIPT_RESULT}" != "success" ]]; then
             echo "::error title=CodeQL JavaScript analysis failed::applicable source-language analysis failed"

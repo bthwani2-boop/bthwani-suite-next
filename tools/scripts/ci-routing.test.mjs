@@ -31,7 +31,7 @@ test("orchestrator package keeps its declared nine owners and revision", () => {
   }
   assert.deepEqual(actual.sort(), [...orchestratorFiles].sort());
   const entrypoint = read("tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md");
-  assert.match(entrypoint, /PACKAGE_REVISION: 22/u);
+  assert.match(entrypoint, /PACKAGE_REVISION: 23/u);
   assert.match(entrypoint, /Exactly nine files are semantic owners/u);
   for (const relativePath of orchestratorFiles) assert.equal(exists(`tools/prompting/bthwani-orchestrator/${relativePath}`), true, relativePath);
 });
@@ -56,7 +56,7 @@ test("ci-check keeps write permission only on the status publisher job", () => {
   const beforeJobs = workflow.slice(0, workflow.indexOf("jobs:"));
   assert.doesNotMatch(beforeJobs, /statuses:\s*write/u);
   assert.match(workflow, /result:[\s\S]*?permissions:[\s\S]*?statuses:\s*write/u);
-  assert.match(workflow, /BThwani CI \/ PR result/u);
+  assert.match(workflow, /BThwani \/ Change Verification/u);
   assert.match(workflow, /statuses\/\$\{HEAD_SHA\}/u);
   assert.match(workflow, /publish_status success/u);
 });
@@ -147,10 +147,9 @@ test("final closure resolves once then collects independent analyzers and experi
   assert.match(workflow, /workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /pull_request:/u);
   assert.match(workflow, /name: Full CI preflight/u);
-  assert.match(workflow, /full_scope: true/u);
+  assert.match(workflow, /full_scope: false/u);
   assert.match(workflow, /trusted_scan: true/u);
-  assert.match(workflow, /codeql\.yml[\s\S]*?full_scope: true/u);
-  assert.match(workflow, /semgrep\.yml[\s\S]*?full_scope: true/u);
+  assert.match(read(".github/workflows/repository-baseline.yml"), /BThwani \/ Repository Health/u);
   for (const worker of ["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml"]) {
     assert.ok(workflow.includes(`uses: ./.github/workflows/${worker}`), worker);
   }
@@ -167,7 +166,7 @@ test("final closure resolves once then collects independent analyzers and experi
   );
   assert.match(workflow, /after complete evidence collection/u);
   assert.doesNotMatch(workflow, /SEMANTIC_RESULT/u);
-  assert.match(workflow, /BThwani \/ Final Closure/u);
+  assert.match(workflow, /BThwani \/ Change Closure/u);
   assert.match(workflow, /target:head-moved/u);
   assert.match(workflow, /target:base-moved/u);
   assert.doesNotMatch(workflow, /workflow_run:|repository_dispatch|actions\/workflows\/|sleep|poll/u);
@@ -199,8 +198,16 @@ test("CodeQL and Semgrep expose explicit final full-scope contracts", () => {
   assert.match(codeql, /INPUT_FULL_SCOPE/u);
   assert.match(codeql, /if \[\[ "\$\{INPUT_FULL_SCOPE\}" == "true" \]\]; then\s+full=true/u);
   assert.match(semgrep, /full_scope: \{type: boolean, required: false, default: false\}/u);
-  assert.match(semgrep, /if \[\[ "\$\{FULL_SCOPE\}" == "true" \]\]; then\s+mode=full/u);
+  assert.match(semgrep, /if \[\[ "\$\{FULL_SCOPE\}" == "true" \]\]; then\s+mode="?full"?/u);
   assert.match(semgrep, /args\+=\(--baseline-commit "\$\{BASE_SHA\}"\)/u);
+});
+
+test("CodeQL full-scope upload normalizes SARIF categories and consumes findings", () => {
+  const codeql = read(".github/workflows/codeql.yml");
+  assert.match(codeql, /Load trusted CodeQL evidence classifier/u);
+  assert.ok(codeql.includes("sed -E 's:/+$::"));
+  assert.match(codeql, /Consume exact CodeQL findings before trusted upload/u);
+  assert.match(codeql, /Enforce CodeQL findings were consumed and dispositioned/u);
 });
 
 test("OpenCodeReview specialized rules match the live core authorities", () => {
@@ -245,12 +252,22 @@ test("analyzer workers are reusable only and no workflow-run orchestration exist
   const workflowDir = path.join(repoRoot, ".github/workflows");
   for (const filename of fs.readdirSync(workflowDir)) {
     const content = fs.readFileSync(path.join(workflowDir, filename), "utf8");
-    assert.doesNotMatch(content, /workflow_run:|repository_dispatch|actions\/workflows\//u, filename);
+    if (filename !== "pr-assurance-trigger.yml") {
+      assert.doesNotMatch(content, /workflow_run:|repository_dispatch|actions\/workflows\//u, filename);
+    }
     if (["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml", "dependency-review.yml", "lockfile-integrity.yml", "docker-runtime-hardening.yml"].includes(filename)) {
       assert.match(content, /workflow_call:/u, filename);
       assert.doesNotMatch(content, /^\s{2}(push|pull_request|schedule):/mu, filename);
     }
   }
+});
+
+test("the privileged PR dispatcher is the only workflow API caller", () => {
+  const dispatcher = read(".github/workflows/pr-assurance-trigger.yml");
+  assert.match(dispatcher, /pull_request_target:/u);
+  assert.match(dispatcher, /actions\/workflows\/final-closure\.yml\/dispatches/u);
+  assert.match(dispatcher, /actions\/workflows\/ci-check\.yml\/dispatches/u);
+  assert.match(dispatcher, /--arg ref "\$\{DEFAULT_BRANCH\}"/u);
 });
 
 test("exact candidate and fail-closed status remain the final authority", () => {

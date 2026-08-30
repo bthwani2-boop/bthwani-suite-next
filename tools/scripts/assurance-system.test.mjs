@@ -35,10 +35,42 @@ test("full Node final verification is fresh", () => {
 
 test("discovery is candidate-pinned and Windows shell-safe", () => {
   const d = read("tools/scripts/run-deep-discovery.mjs");
-  assert.match(d, /const candidateSha =/u);
+  assert.match(d, /const candidate = captureCandidate\(\)/u);
+  assert.match(d, /candidateIdentity/u);
+  assert.match(d, /candidateWorktreeSha/u);
   assert.match(d, /candidate-stability/u);
   assert.match(d, /shell: false/u);
   assert.doesNotMatch(d, /shell:\s*process\.platform/u);
+  assert.match(d, /evidenceLifecycle/u);
+  assert.match(d, /ROOT_MAPPING_REQUIRED/u);
+  assert.doesNotMatch(d, /disposition:\s*"UNPROCESSED"/u);
+  assert.match(d, /closureClaim: false/u);
+});
+
+test("repository baseline is a separate exact-SHA health signal", () => {
+  const workflow = read(".github/workflows/repository-baseline.yml");
+  assert.match(workflow, /BThwani \/ Repository Health/u);
+  assert.match(workflow, /BASELINE_OPEN/u);
+  assert.match(workflow, /statuses\/\$\{HEAD_SHA\}/u);
+  assert.doesNotMatch(workflow, /BThwani \/ Change Closure/u);
+  assert.doesNotMatch(workflow, /BThwani \/ Change Verification/u);
+});
+
+test("baseline ratchet distinguishes inherited findings from regressions", () => {
+  const evaluator = read("tools/scripts/compare-assurance-baseline.mjs");
+  assert.match(evaluator, /newMaterial/u);
+  assert.match(evaluator, /worsenedMaterial/u);
+  assert.match(evaluator, /BASELINE_OPEN/u);
+  assert.match(evaluator, /repositoryClosure/u);
+});
+
+test("CodeQL output is a consumed evidence input, not upload-only activity", () => {
+  const workflow = read(".github/workflows/codeql.yml");
+  assert.match(workflow, /Consume CodeQL findings with explicit disposition/u);
+  assert.match(workflow, /Upload CodeQL finding disposition evidence/u);
+  assert.match(workflow, /DISPOSITION_STATUS/u);
+  assert.match(read("tools/scripts/classify-codeql-evidence.mjs"), /relatedLocations/u);
+  assert.match(read("tools/scripts/classify-codeql-evidence.mjs"), /closureClaim: false/u);
 });
 
 test("machine router exposes rendered and mobile materiality", () => {

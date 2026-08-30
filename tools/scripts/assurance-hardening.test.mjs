@@ -9,7 +9,7 @@ test("Final Closure cannot publish success before manifest upload", () => {
   const success = f.indexOf("Publish Final Closure success only after manifest publication");
   assert.ok(upload >= 0 && success > upload);
   const beforeUpload = f.slice(0, upload);
-  assert.doesNotMatch(beforeUpload, /-f state=success -f context='BThwani \/ Final Closure'/u);
+  assert.doesNotMatch(beforeUpload, /-f state=success -f context='BThwani \/ Change Closure'/u);
 });
 
 test("CI control-plane authorities are loaded from trusted workflow SHA", () => {
@@ -78,9 +78,42 @@ test("Semgrep evidence disposition is loaded from trusted workflow authority", (
   assert.match(f, /Load trusted Semgrep evidence classifier/u);
   assert.match(f, /TRUSTED_WORKFLOW_SHA/u);
   assert.match(f, /TRUSTED_SEMGREP_CLASSIFIER/u);
-  assert.ok(f.includes('git show "${TRUSTED_WORKFLOW_SHA}:tools/scripts/classify-semgrep-evidence.mjs"'));
+  assert.match(f, /contents\/tools\/scripts\/classify-semgrep-evidence\.mjs/u);
   assert.ok(f.includes('node "${TRUSTED_SEMGREP_CLASSIFIER}"'));
   assert.doesNotMatch(f, /node tools\/scripts\/classify-semgrep-evidence\.mjs/u);
+});
+
+test("CodeQL trusted upload consumes SARIF findings before publishing", () => {
+  const f = read(".github/workflows/codeql.yml");
+  assert.match(f, /Load trusted CodeQL evidence classifier/u);
+  assert.match(f, /classify-codeql-evidence\.mjs/u);
+  assert.match(f, /Consume CodeQL findings with explicit disposition/u);
+  assert.match(f, /Upload CodeQL finding disposition evidence/u);
+  assert.match(f, /CodeQL evidence is incomplete/u);
+  assert.match(read("tools/scripts/classify-codeql-evidence.mjs"), /FINDINGS_OPEN/u);
+});
+
+test("Sonar scan waits for the remote quality-gate result", () => {
+  const f = read(".github/workflows/sonarqube.yml");
+  assert.match(f, /-Dsonar\.qualitygate\.wait=true/u);
+  assert.match(f, /-Dsonar\.qualitygate\.timeout=300/u);
+});
+
+test("Sonar raw API output is consumed as explicit evidence", () => {
+  const f = read(".github/workflows/sonarqube.yml");
+  const classifier = read("tools/scripts/classify-sonar-evidence.mjs");
+  const evidenceBlock = f.slice(f.indexOf("  evidence:"), f.indexOf("  result:"));
+  assert.match(f, /name: Consume Sonar evidence/u);
+  assert.match(f, /api\/qualitygates\/project_status/u);
+  assert.match(f, /api\/issues\/search/u);
+  assert.match(f, /api\/hotspots\/search/u);
+  assert.match(f, /api\/measures\/component/u);
+  assert.match(f, /TRUSTED_SONAR_CLASSIFIER/u);
+  assert.match(f, /Upload consumed Sonar evidence/u);
+  assert.match(evidenceBlock, /if: \$\{\{ always\(\) && inputs\.trusted_scan/u);
+  assert.doesNotMatch(evidenceBlock, /needs\.scan\.result == 'success'/u);
+  assert.match(classifier, /evidenceComplete/u);
+  assert.match(classifier, /QUALITY_GATE_OPEN/u);
 });
 
 test("evidence attestation rejects candidate-linked reviewers and binds assurance bootstrap exactly", () => {

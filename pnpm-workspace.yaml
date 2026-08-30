@@ -16,8 +16,11 @@ allowBuilds:
   nx: true
   sharp: true
 autoInstallPeers: false
+blockExoticSubdeps: true
 engineStrict: true
+minimumReleaseAge: 10080
 nodeLinker: isolated
+trustPolicy: no-downgrade
 
 # BEGIN BTHWANI_RUNTIME_VERSION_POLICY
 overrides:

@@ -184,16 +184,16 @@ describe("operational capability verification hygiene", () => {
     assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-node-verification\.yml/);
     assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-backends\.yml/);
     assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-runtime\.yml/);
-    assert.match(contextualCi, /BThwani CI \/ PR result/);
-    assert.match(contextualCi, /BThwani CI \/ check result/);
-    assert.doesNotMatch(contextualCi, /BThwani CI \/ push result|BThwani CI \/ dispatched result/);
+    assert.match(contextualCi, /BThwani \/ Change Verification/);
+    assert.doesNotMatch(contextualCi, /BThwani CI \/ (?:PR|check|push|dispatched) result/);
   });
 
   it("preserves sovereign boundary assurance on the immutable contextual verification path", () => {
     assert.match(nodeVerification, /Checkout immutable source candidate/);
     assert.match(nodeVerification, /persist-credentials: false/);
     assert.match(nodeVerification, /Verify exact candidate and fetch base/);
-    assert.match(nodeVerification, /run-affected-verification\.mjs typecheck lint test/);
+    assert.match(nodeVerification, /for target in typecheck lint test/);
+    assert.match(nodeVerification, /run-affected-verification\.mjs "\$\{target\}"/);
     assert.match(dshPackage.scripts.lint, /guard:fullstack-boundary/);
     assert.match(wltPackage.scripts.lint, /guard:fullstack-boundary/);
     assert.match(wltPackage.scripts.lint, /guard:wlt-financial-boundary/);

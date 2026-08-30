@@ -279,13 +279,19 @@ func upsertCase(ctx context.Context, db *sql.DB, partner partnerReadback, issue 
 		verificationStatus = ref.DestinationVerificationStatus
 	}
 	_, err := db.ExecContext(ctx, `
+		WITH existing_partner AS (
+			SELECT id
+			FROM dsh_partners
+			WHERE id=$1 AND operator_context_id=$8
+			FOR KEY SHARE
+		)
 		INSERT INTO dsh_partner_wlt_reconciliation_cases (
 			partner_id, issue_type, dsh_payout_destination_id,
 			wlt_payout_destination_id, wlt_destination_method,
 			wlt_masked_destination_reference, wlt_destination_verification_status
 		)
 		SELECT $1,$2,$3,$4,$5,$6,$7
-		WHERE EXISTS (SELECT 1 FROM dsh_partners WHERE id=$1 AND operator_context_id=$8)
+		FROM existing_partner
 		ON CONFLICT (partner_id, issue_type) DO UPDATE SET
 			dsh_payout_destination_id = EXCLUDED.dsh_payout_destination_id,
 			wlt_payout_destination_id = EXCLUDED.wlt_payout_destination_id,

@@ -14,6 +14,7 @@ on:
       head_ref: {type: string, required: false, default: ""}
       base_ref: {type: string, required: false, default: ""}
       trusted_scan: {type: boolean, required: false, default: false}
+      full_scope: {type: boolean, required: false, default: false}
     secrets:
       SONAR_TOKEN:
         required: true
@@ -71,6 +72,7 @@ jobs:
           EVENT_BEFORE: ${{ github.event.before }}
           PR_BASE_SHA: ${{ inputs.base_sha || github.event.pull_request.base.sha }}
           EXPECTED_HEAD_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
+          INPUT_FULL_SCOPE: ${{ inputs.full_scope }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
@@ -93,7 +95,8 @@ jobs:
           }
 
           mode=affected
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "workflow_call" || \
+          if [[ "${INPUT_FULL_SCOPE}" == "true" || \
+                ( "${EVENT_NAME}" == "workflow_dispatch" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) || \
                 ( "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
             mode=full
           fi
@@ -799,16 +802,154 @@ jobs:
             ${{ inputs.base_ref && format('-Dsonar.pullrequest.base={0}', inputs.base_ref) || '' }}
             ${{ inputs.head_ref && format('-Dsonar.pullrequest.branch={0}', inputs.head_ref) || '' }}
             ${{ inputs.head_sha && format('-Dsonar.scm.revision={0}', inputs.head_sha) || '' }}
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
             ${{ needs.scope.outputs.node_required == 'true' && '-Dsonar.javascript.lcov.reportPaths=.sonar/node-coverage/lcov.info' || '' }}
             ${{ needs.scope.outputs.go_required == 'true' && '-Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out' || '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+  evidence:
+    name: Consume Sonar evidence
+    needs: [scope, scan]
+    # Consume the remote API evidence even when the scanner failed; the result
+    # job still requires a successful scanner and a clean consumed evidence set.
+    if: ${{ always() && inputs.trusted_scan && needs.scope.result == 'success' && needs.scope.outputs.sonar_required == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      HEAD_SHA: ${{ needs.scope.outputs.head_sha }}
+      BASE_SHA: ${{ needs.scope.outputs.base_sha }}
+      MODE: ${{ needs.scope.outputs.mode }}
+      PR_NUMBER: ${{ inputs.pr_number }}
+      BRANCH_NAME: ${{ inputs.head_ref || github.ref_name }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - name: Checkout immutable candidate identity
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ env.HEAD_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+          show-progress: false
+
+      - name: Load trusted Sonar evidence classifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          trusted_classifier="${RUNNER_TEMP}/classify-sonar-evidence.mjs"
+          trusted_properties="${RUNNER_TEMP}/sonar-project.properties"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/classify-sonar-evidence.mjs" \
+            -f "ref=${DEFAULT_BRANCH}" --jq '.content' | base64 --decode > "${trusted_classifier}"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/sonar-project.properties" \
+            -f "ref=${DEFAULT_BRANCH}" --jq '.content' | base64 --decode > "${trusted_properties}"
+          [[ -s "${trusted_classifier}" ]] || { echo "::error::trusted Sonar evidence classifier missing"; exit 1; }
+          [[ -s "${trusted_properties}" ]] || { echo "::error::trusted Sonar project settings missing"; exit 1; }
+          node --check "${trusted_classifier}"
+          project_key="$(sed -n 's/^sonar\.projectKey=//p' "${trusted_properties}" | head -n 1)"
+          [[ -n "${project_key}" ]] || { echo "::error::trusted Sonar project key missing"; exit 1; }
+          echo "TRUSTED_SONAR_CLASSIFIER=${trusted_classifier}" >> "${GITHUB_ENV}"
+          echo "SONAR_PROJECT_KEY=${project_key}" >> "${GITHUB_ENV}"
+
+      - name: Retrieve raw Sonar evidence for the exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="${RUNNER_TEMP}/sonar-evidence"
+          mkdir -p "${evidence}/raw"
+          : > "${evidence}/warnings.log"
+          [[ -n "${SONAR_TOKEN}" ]] || { echo "::error::SONAR_TOKEN is not configured"; exit 1; }
+
+          scope_args=(--data-urlencode "projectKey=${SONAR_PROJECT_KEY}")
+          analysis_args=(--data-urlencode "project=${SONAR_PROJECT_KEY}")
+          if [[ -n "${PR_NUMBER}" ]]; then
+            scope_args+=(--data-urlencode "pullRequest=${PR_NUMBER}")
+            analysis_args+=(--data-urlencode "pullRequest=${PR_NUMBER}")
+          else
+            scope_args+=(--data-urlencode "branch=${BRANCH_NAME}")
+            analysis_args+=(--data-urlencode "branch=${BRANCH_NAME}")
+          fi
+
+          fetch_json() {
+            local name="$1" endpoint="$2"
+            shift 2
+            if ! curl --fail-with-body --silent --show-error --retry 4 --retry-delay 3 \
+              --connect-timeout 20 --max-time 120 --user "${SONAR_TOKEN}:" \
+              --get "https://sonarcloud.io/${endpoint}" "$@" > "${evidence}/raw/${name}.json"; then
+              echo "${name}: Sonar API request failed" >> "${evidence}/warnings.log"
+              printf '%s\n' '{}' > "${evidence}/raw/${name}.json"
+            fi
+            if ! jq -e 'type == "object"' "${evidence}/raw/${name}.json" >/dev/null 2>&1; then
+              echo "${name}: Sonar API response was not a JSON object" >> "${evidence}/warnings.log"
+              printf '%s\n' '{}' > "${evidence}/raw/${name}.json"
+            fi
+          }
+
+          fetch_json quality-gate api/qualitygates/project_status "${scope_args[@]}"
+          fetch_json issues api/issues/search "${scope_args[@]}" --data-urlencode "resolved=false" --data-urlencode "ps=500" --data-urlencode "p=1"
+          fetch_json hotspots api/hotspots/search "${scope_args[@]}" --data-urlencode "ps=500" --data-urlencode "p=1"
+          fetch_json measures api/measures/component "${scope_args[@]}" --data-urlencode "metricKeys=bugs,vulnerabilities,code_smells,security_hotspots,coverage,duplicated_lines_density,ncloc"
+          fetch_json analysis api/project_analyses/search "${analysis_args[@]}" --data-urlencode "ps=1"
+
+          warnings="$(jq -Rsc 'split("\n") | map(select(length > 0))' "${evidence}/warnings.log")"
+          jq -n \
+            --slurpfile qualityGate "${evidence}/raw/quality-gate.json" \
+            --slurpfile issues "${evidence}/raw/issues.json" \
+            --slurpfile hotspots "${evidence}/raw/hotspots.json" \
+            --slurpfile measures "${evidence}/raw/measures.json" \
+            --slurpfile analysis "${evidence}/raw/analysis.json" \
+            --argjson warnings "${warnings}" \
+            '{qualityGate:$qualityGate[0],issues:$issues[0],hotspots:$hotspots[0],measures:$measures[0],analysis:$analysis[0],warnings:$warnings}' \
+            > "${evidence}/input.json"
+
+      - name: Normalize and consume Sonar findings and diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="${RUNNER_TEMP}/sonar-evidence"
+          classifier_exit=0
+          node "${TRUSTED_SONAR_CLASSIFIER}" \
+            --input "${evidence}/input.json" \
+            --output-dir "${evidence}/classified" \
+            --head-sha "${HEAD_SHA}" \
+            --base-sha "${BASE_SHA}" \
+            --mode "${MODE}" \
+            --execution-status success || classifier_exit=$?
+          [[ -s "${evidence}/classified/summary.json" ]] || {
+            echo "::error::Sonar evidence classifier did not produce a summary"
+            exit 1
+          }
+          cat "${evidence}/classified/summary.json"
+          [[ "${classifier_exit}" == "0" ]] || {
+            echo "::error::Sonar evidence is incomplete; raw API output remains in the artifact"
+            exit 1
+          }
+          jq -e '.status == "PASS" and .qualityGate.status == "OK" and .evidenceComplete == true and .counts.materialFindings == 0' \
+            "${evidence}/classified/summary.json" >/dev/null || {
+            echo "::error::Sonar quality gate, evidence consumption, or material-finding disposition is not closed"
+            exit 1
+          }
+
+      - name: Upload consumed Sonar evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonar-evidence-${{ env.HEAD_SHA }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/sonar-evidence
+          if-no-files-found: error
+          retention-days: 14
+
   result:
     name: >-
       ${{ github.event_name == 'pull_request' && 'SonarQube / PR result' || github.event_name == 'push' &&
       'SonarQube / push result' || 'SonarQube / dispatched result' }}
-    needs: [scope, node_coverage, go_coverage, assemble, scan]
+    needs: [scope, node_coverage, go_coverage, assemble, scan, evidence]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -823,6 +964,7 @@ jobs:
           GO_RESULT: ${{ needs.go_coverage.result }}
           ASSEMBLE_RESULT: ${{ needs.assemble.result }}
           SCAN_RESULT: ${{ needs.scan.result }}
+          EVIDENCE_RESULT: ${{ needs.evidence.result }}
           TRUSTED_SCAN: ${{ inputs.trusted_scan }}
           SONAR_REQUIRED: ${{ needs.scope.outputs.sonar_required }}
         run: |
@@ -852,8 +994,10 @@ jobs:
           fi
           if [[ "${trusted_scan_required}" == "true" ]]; then
             [[ "${SCAN_RESULT}" == "success" ]] || failures+=("trusted-scan:${SCAN_RESULT}")
+            [[ "${EVIDENCE_RESULT}" == "success" ]] || failures+=("evidence-consumption:${EVIDENCE_RESULT}")
           else
             [[ "${SCAN_RESULT}" == "skipped" ]] || failures+=("untrusted-scan-unexpected:${SCAN_RESULT}")
+            [[ "${EVIDENCE_RESULT}" == "skipped" ]] || failures+=("evidence-unexpected:${EVIDENCE_RESULT}")
           fi
 
           if (( ${#failures[@]} != 0 )); then
