@@ -52,6 +52,16 @@ test("Remote Security authority, wrappers, installer, and policy come from trust
   assert.match(read("tools/scripts/run-shellcheck.mjs"), /--norc/u);
 });
 
+test("Semgrep evidence disposition is loaded from trusted workflow authority", () => {
+  const f = read(".github/workflows/semgrep.yml");
+  assert.match(f, /Load trusted Semgrep evidence classifier/u);
+  assert.match(f, /TRUSTED_WORKFLOW_SHA/u);
+  assert.match(f, /TRUSTED_SEMGREP_CLASSIFIER/u);
+  assert.ok(f.includes('git show "${TRUSTED_WORKFLOW_SHA}:tools/scripts/classify-semgrep-evidence.mjs"'));
+  assert.ok(f.includes('node "${TRUSTED_SEMGREP_CLASSIFIER}"'));
+  assert.doesNotMatch(f, /node tools\/scripts\/classify-semgrep-evidence\.mjs/u);
+});
+
 test("evidence attestation rejects candidate-linked reviewers and weak evidence identities", () => {
   const v = read("tools/scripts/verify-pr-evidence-comments.mjs");
   assert.match(v, /candidateAuthors/u);
