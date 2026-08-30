@@ -109,7 +109,7 @@ jobs:
             2> "${RUNNER_TEMP}/repository-baseline/semgrep.stderr.log"
           status=$?
           set -e
-          if (( (status == 0 || status == 1) )) && jq -e 'type == "object" and (.results | type == "array")' \
+          if (( status == 0 || status == 1 )) && jq -e 'type == "object" and (.results | type == "array")' \
             "${RUNNER_TEMP}/repository-baseline/semgrep.json" >/dev/null 2>&1; then
             execution_status=success
           else
@@ -125,13 +125,19 @@ jobs:
           EXECUTION_STATUS: ${{ steps.semgrep.outputs.execution_status }}
         run: |
           set -euo pipefail
-          classifier_exit=0
-          node "${TRUSTED_SEMGREP_CLASSIFIER}" \
+          if node "${TRUSTED_SEMGREP_CLASSIFIER}" \
             --input "${RUNNER_TEMP}/repository-baseline/semgrep.json" \
             --output-dir "${RUNNER_TEMP}/repository-baseline/classified" \
             --head-sha "${HEAD_SHA}" \
             --mode full \
-            --base-sha "${HEAD_SHA}" || classifier_exit=$?
+            --base-sha "${HEAD_SHA}"; then
+            classifier_exit=0
+          else
+            classifier_exit=$?
+          fi
+          if (( classifier_exit != 0 )); then
+            echo "::warning::baseline classifier returned ${classifier_exit}; evidence disposition remains explicit"
+          fi
           [[ -s "${RUNNER_TEMP}/repository-baseline/classified/assurance-evidence.json" ]] || {
             echo "::error::baseline classifier did not produce evidence"; exit 1;
           }

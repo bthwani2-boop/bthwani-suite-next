@@ -82,10 +82,10 @@ jobs:
           evidence="${RUNNER_TEMP}/semgrep-evidence"
           mkdir -p "${evidence}"
           git diff --no-ext-diff --unified=0 "${BASE_SHA}" "${HEAD_SHA}" -- > "${evidence}/candidate.diff"
-          mode=diff
+          mode="diff"
           args=(scan --config p/default --config p/security-audit --json --metrics=off --exclude=".github/workflows/**")
           if [[ "${FULL_SCOPE}" == "true" ]]; then
-            mode=full
+            mode="full"
           else
             args+=(--baseline-commit "${BASE_SHA}")
           fi
@@ -95,7 +95,7 @@ jobs:
             (cd "${source}" && semgrep "${args[@]}" .) > "${output}" 2> "${stderr}"
             status=$?
             set -e
-            if (( (status == 0 || status == 1) )) && jq -e 'type == "object" and (.results | type == "array")' "${output}" >/dev/null 2>&1; then
+            if (( status == 0 || status == 1 )) && jq -e 'type == "object" and (.results | type == "array")' "${output}" >/dev/null 2>&1; then
               printf 'success'
             else
               printf 'failure'
@@ -109,10 +109,16 @@ jobs:
             baseline_execution_status="$(run_scan "${baseline_source}" "${evidence}/baseline.json" "${evidence}/baseline.stderr.log")"
             git worktree remove --force "${baseline_source}" >/dev/null 2>&1 || true
           fi
-          echo "candidate_execution_status=${candidate_execution_status}" >> "${GITHUB_OUTPUT}"
-          echo "baseline_execution_status=${baseline_execution_status}" >> "${GITHUB_OUTPUT}"
-          echo "mode=${mode}" >> "${GITHUB_OUTPUT}"
-          echo "baseline_required=$([[ "${FULL_SCOPE}" == "true" ]] && echo true || echo false)" >> "${GITHUB_OUTPUT}"
+          baseline_required="false"
+          if [[ "${FULL_SCOPE}" == "true" ]]; then
+            baseline_required="true"
+          fi
+          {
+            echo "candidate_execution_status=${candidate_execution_status}"
+            echo "baseline_execution_status=${baseline_execution_status}"
+            echo "mode=${mode}"
+            echo "baseline_required=${baseline_required}"
+          } >> "${GITHUB_OUTPUT}"
           [[ "${candidate_execution_status}" == "success" ]] || { echo "::error::Semgrep candidate did not produce valid evidence"; exit 1; }
           [[ "${baseline_execution_status}" != "failure" ]] || { echo "::error::Semgrep baseline did not produce valid evidence"; exit 1; }
       - name: Normalize every raw finding and engine condition with trusted classifier

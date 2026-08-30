@@ -5,10 +5,7 @@ import {
   purgeExactDurableMutationAttempt,
 } from "../_kernel/durable-mutation-attempt-registry.ts";
 import { secureCorrelationId, secureRandomId } from "../_kernel/secure-random.ts";
-import type {
-  StoreCaptainHandoffExceptionActor,
-  StoreCaptainHandoffExceptionAttemptIntent,
-} from "./store-captain-handoff-exception.types.ts";
+import type { StoreCaptainHandoffExceptionAttemptIntent } from "./store-captain-handoff-exception.types.ts";
 
 export type { StoreCaptainHandoffExceptionActor, StoreCaptainHandoffExceptionAttemptIntent } from "./store-captain-handoff-exception.types.ts";
 

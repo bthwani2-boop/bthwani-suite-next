@@ -137,7 +137,15 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		t.Fatalf("direct actor permission was lost before grant: %#v", before.Permissions)
 	}
 
-	if _, inserted, err := repository.Enforcer.GrantRoleWithIdempotency(context.Background(), operatorContextID, actorID, roleName, reviewerActorID, role.Version, "canonical-access-projection:grant:"+actorID+":"+roleName, "projection-test"); err != nil || !inserted {
+	if _, inserted, err := repository.Enforcer.GrantRoleWithIdempotency(context.Background(), RoleMutationRequest{
+		OperatorContextID:   operatorContextID,
+		TargetActorID:       actorID,
+		RoleName:            roleName,
+		RequestedByActorID:  reviewerActorID,
+		ExpectedRoleVersion: role.Version,
+		IdempotencyKey:      "canonical-access-projection:grant:" + actorID + ":" + roleName,
+		Caller:              "projection-test",
+	}); err != nil || !inserted {
 		t.Fatalf("grant role: inserted=%v err=%v", inserted, err)
 	}
 
@@ -211,16 +219,15 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 	if len(durableAssignments) != 1 || durableAssignments[0].RoleID != role.ID {
 		t.Fatalf("inactive role assignment was not durable: %#v", durableAssignments)
 	}
-	if err := repository.Enforcer.RevokeRoleWithIdempotency(
-		context.Background(),
-		operatorContextID,
-		actorID,
-		roleName,
-		reviewerActorID,
-		role.Version,
-		"canonical-access-projection:stale-revoke:"+actorID+":"+roleName,
-		"projection-test",
-	); !errors.Is(err, ErrRoleVersionConflict) {
+	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), RoleMutationRequest{
+		OperatorContextID:   operatorContextID,
+		TargetActorID:       actorID,
+		RoleName:            roleName,
+		RequestedByActorID:  reviewerActorID,
+		ExpectedRoleVersion: role.Version,
+		IdempotencyKey:      "canonical-access-projection:stale-revoke:" + actorID + ":" + roleName,
+		Caller:              "projection-test",
+	}); !errors.Is(err, ErrRoleVersionConflict) {
 		t.Fatalf("stale role version must fence revoke, got %v", err)
 	}
 	durableAssignments, err = repository.Enforcer.ListActorRoleAssignments(context.Background(), operatorContextID, actorID)
@@ -244,10 +251,26 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		t.Fatalf("inactive durable assignment remained effective: %#v", deactivated)
 	}
 
-	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), operatorContextID, actorID, roleName, reviewerActorID, deactivatedRole.Version, "canonical-access-projection:revoke:"+actorID+":"+roleName, "projection-test"); err != nil {
+	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), RoleMutationRequest{
+		OperatorContextID:   operatorContextID,
+		TargetActorID:       actorID,
+		RoleName:            roleName,
+		RequestedByActorID:  reviewerActorID,
+		ExpectedRoleVersion: deactivatedRole.Version,
+		IdempotencyKey:      "canonical-access-projection:revoke:" + actorID + ":" + roleName,
+		Caller:              "projection-test",
+	}); err != nil {
 		t.Fatalf("revoke inactive role: %v", err)
 	}
-	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), operatorContextID, actorID, roleName, reviewerActorID, deactivatedRole.Version, "canonical-access-projection:revoke:"+actorID+":"+roleName, "projection-test"); err != nil {
+	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), RoleMutationRequest{
+		OperatorContextID:   operatorContextID,
+		TargetActorID:       actorID,
+		RoleName:            roleName,
+		RequestedByActorID:  reviewerActorID,
+		ExpectedRoleVersion: deactivatedRole.Version,
+		IdempotencyKey:      "canonical-access-projection:revoke:" + actorID + ":" + roleName,
+		Caller:              "projection-test",
+	}); err != nil {
 		t.Fatalf("retry inactive role revoke: %v", err)
 	}
 	durableAssignments, err = repository.Enforcer.ListActorRoleAssignments(context.Background(), operatorContextID, actorID)

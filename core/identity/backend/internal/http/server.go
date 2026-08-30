@@ -784,7 +784,15 @@ func (s *server) internalRbacGrantRole(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &request) {
 		return
 	}
-	assignment, created, err := s.repository.Enforcer.GrantRoleWithIdempotency(r.Context(), strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")), actorID, request.RoleName, request.RequestedByActorID, request.ExpectedRoleVersion, idempotencyKey, "dsh")
+	assignment, created, err := s.repository.Enforcer.GrantRoleWithIdempotency(r.Context(), identity.RoleMutationRequest{
+		OperatorContextID:   strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")),
+		TargetActorID:       actorID,
+		RoleName:            request.RoleName,
+		RequestedByActorID:  request.RequestedByActorID,
+		ExpectedRoleVersion: request.ExpectedRoleVersion,
+		IdempotencyKey:      idempotencyKey,
+		Caller:              "dsh",
+	})
 	if err != nil {
 		writeRbacError(w, err)
 		return
@@ -816,7 +824,15 @@ func (s *server) internalRbacRevokeRole(w http.ResponseWriter, r *http.Request) 
 		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "expectedRoleVersion must be a positive integer")
 		return
 	}
-	if err := s.repository.Enforcer.RevokeRoleWithIdempotency(r.Context(), strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")), actorID, roleName, requestedByActorID, expectedRoleVersion, idempotencyKey, "dsh"); err != nil {
+	if err := s.repository.Enforcer.RevokeRoleWithIdempotency(r.Context(), identity.RoleMutationRequest{
+		OperatorContextID:   strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")),
+		TargetActorID:       actorID,
+		RoleName:            roleName,
+		RequestedByActorID:  requestedByActorID,
+		ExpectedRoleVersion: expectedRoleVersion,
+		IdempotencyKey:      idempotencyKey,
+		Caller:              "dsh",
+	}); err != nil {
 		writeRbacError(w, err)
 		return
 	}

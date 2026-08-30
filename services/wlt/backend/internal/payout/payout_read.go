@@ -19,7 +19,13 @@ const payoutReadCols = `id, beneficiary_actor_id, beneficiary_actor_type, payout
 	verified_by_operator_id, completed_by_operator_id, failed_by_operator_id,
 	idempotency_key`
 
-const payoutListQuery = `SELECT ` + payoutReadCols + `
+const payoutListQuery = `SELECT id, beneficiary_actor_id, beneficiary_actor_type, payout_destination_id,
+	amount_minor_units, currency, status, reconciliation_status,
+	requested_at, approved_at, rejected_at, executed_at, verified_at, completed_at, failed_at,
+	failure_reason, operator_id,
+	approved_by_operator_id, rejected_by_operator_id, executed_by_operator_id,
+	verified_by_operator_id, completed_by_operator_id, failed_by_operator_id,
+	idempotency_key
 FROM wlt_payout_requests
 WHERE operator_context_id = $1
   AND (NOT $2::boolean OR (beneficiary_actor_id = $3 AND beneficiary_actor_type = $4))
