@@ -125,3 +125,23 @@ test("consumes an unknown JSON analyzer report instead of dropping it", () => {
   assert.equal(result.summary.unmappedMaterialFindings, 0);
   assert.equal(result.closed, false, "material unknown findings must remain open in the Root Graph");
 });
+
+test("fails closed when an unrecognized JSON report claims PASS without a recognized evidence contract", () => {
+  const inputDir = temporaryDirectory();
+  const outputDir = temporaryDirectory();
+  fs.writeFileSync(path.join(inputDir, "mystery-report.json"), JSON.stringify({
+    tool: "mystery-tool",
+    status: "PASS",
+    summary: {message: "producer claims success but exposes no recognized evidence contract"},
+  }));
+
+  const result = consumeEvidenceArtifacts({inputDir, outputDir, headSha, baseSha});
+
+  assert.equal(result.envelopes.length, 1);
+  assert.equal(result.envelopes[0].tool.id, "mystery-tool");
+  assert.equal(result.envelopes[0].execution.status, "INCOMPLETE");
+  assert.equal(result.envelopes[0].coverage.status, "INCOMPLETE");
+  assert.equal(result.summary.unknownRequiredCoverage, 1);
+  assert.ok(result.summary.rootQueue >= 1);
+  assert.equal(result.closed, false);
+});

@@ -44,15 +44,8 @@ function payloadCandidate(payload) {
   };
 }
 
-function payloadStatus(payload) {
-  const value = String(payload?.status ?? payload?.outcome ?? payload?.executionStatus ?? "PASS").toUpperCase();
-  return ["PASS", "SUCCESS", "COMPLETED", "NOT_APPLICABLE"].includes(value) ? "PASS" : value;
-}
-
-function isUniversalPayload(payload) {
-  const normalized = String(payload?.schema ?? "").startsWith("bthwani-")
-    && (Array.isArray(payload?.findings) || Array.isArray(payload?.results) || payload?.evidenceComplete !== undefined);
-  const nativeAnalyzer = Array.isArray(payload?.duplicates)
+function hasRecognizedNativeAnalyzerShape(payload) {
+  return Array.isArray(payload?.duplicates)
     || Array.isArray(payload?.issues)
     || Array.isArray(payload?.findings)
     || Array.isArray(payload?.violations)
@@ -60,7 +53,33 @@ function isUniversalPayload(payload) {
     || Array.isArray(payload?.messages)
     || Array.isArray(payload?.failures)
     || Array.isArray(payload?.circularDependencies);
-  return normalized || nativeAnalyzer;
+}
+
+function payloadStatus(payload, {allowImplicitPass = false} = {}) {
+  const explicitRaw = payload?.status ?? payload?.outcome ?? payload?.executionStatus;
+  const explicit = explicitRaw === undefined || explicitRaw === null || String(explicitRaw).trim() === ""
+    ? ""
+    : String(explicitRaw).toUpperCase();
+  const passing = ["PASS", "SUCCESS", "COMPLETED", "NOT_APPLICABLE"];
+
+  if (explicit && !passing.includes(explicit)) return explicit;
+  if (payload?.evidenceComplete === false || String(payload?.coverageStatus ?? "").toUpperCase() === "INCOMPLETE") {
+    return "INCOMPLETE";
+  }
+  if (explicit) return "PASS";
+  return allowImplicitPass ? "PASS" : "INCOMPLETE";
+}
+
+function canImplicitlyPass(payload) {
+  const schema = String(payload?.schema ?? "");
+  if (schema.startsWith("bthwani-")) return payload?.evidenceComplete === true;
+  return !schema && hasRecognizedNativeAnalyzerShape(payload);
+}
+
+function isUniversalPayload(payload) {
+  const normalized = String(payload?.schema ?? "").startsWith("bthwani-")
+    && (Array.isArray(payload?.findings) || Array.isArray(payload?.results) || payload?.evidenceComplete !== undefined);
+  return normalized || hasRecognizedNativeAnalyzerShape(payload);
 }
 
 function isUploadMetadata(file, payload) {
@@ -94,6 +113,7 @@ function universalEnvelope(file, payload, candidate, baseline = false) {
   const nativeToolId = toolFromSchema(payload, file);
   const toolId = baseline ? `${nativeToolId}-baseline` : nativeToolId;
   const nativeCandidate = payloadCandidate(payload);
+  const status = payloadStatus(payload, {allowImplicitPass: canImplicitlyPass(payload)});
   return buildEvidenceEnvelope({
     toolId,
     candidate: {
@@ -102,8 +122,8 @@ function universalEnvelope(file, payload, candidate, baseline = false) {
       baseSha: nativeCandidate.baseSha || candidate.baseSha,
       identity: baseline ? `${nativeCandidate.headSha || candidate.baseSha}:baseline-for:${candidate.headSha}` : candidate.identity,
     },
-    status: payloadStatus(payload),
-    exitCode: payloadStatus(payload) === "PASS" ? 0 : 1,
+    status,
+    exitCode: status === "PASS" ? 0 : 1,
     nativePayload: payload,
     rawText: JSON.stringify(payload),
     rawPath: file,
@@ -188,12 +208,18 @@ export function consumeEvidenceArtifacts({inputDir, outputDir, headSha, baseSha 
       consumed.add(file);
       continue;
     }
-    // Every remaining JSON artifact is still evidence.  Keep GitHub upload
-    // bookkeeping out of the tool graph, but never silently drop an unknown
-    // analyzer report merely because its schema is new to this consumer.
+    // Every remaining JSON artifact is still evidence, but an unrecognized
+    // schema may never infer PASS. Preserve it, mark coverage incomplete, and
+    // force explicit disposition before closure.
     if (!isUploadMetadata(file, payload)) {
       const baseline = normalizePath(path.relative(root, file)).split("/").includes("baseline");
-      envelopes.push(universalEnvelope(file, payload, candidate, baseline));
+      const errors = Array.isArray(payload?.errors) ? payload.errors : [];
+      const unknownPayload = {
+        ...payload,
+        evidenceComplete: false,
+        errors: [...errors, `UNRECOGNIZED_JSON_EVIDENCE_SCHEMA:${String(payload?.schema ?? "<none>")}`],
+      };
+      envelopes.push(universalEnvelope(file, unknownPayload, candidate, baseline));
       consumed.add(file);
     }
   }
