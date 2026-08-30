@@ -122,7 +122,7 @@ test("the affected router is based on the exact caller-supplied verification win
   const workflow = read(".github/workflows/ci-check.yml");
   assert.match(router, /\["diff", "--name-only"/u);
   assert.match(router, /baseSha, headSha/u);
-  assert.match(workflow, /CI_BASE_SHA: \$\{\{ steps\.identity\.outputs\.verification_base_sha \}\}/u);
+  assert.match(workflow, /verification_base_sha: \$\{\{ steps\.scope\.outputs\.verification_base_sha \}\}/u);
   assert.doesNotMatch(router, /previous|run.?history|semantic|financial|security_scan/u);
 });
 

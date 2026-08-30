@@ -6,14 +6,20 @@ import test from "node:test";
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 
-test("development CI separates closure identity from the verification window", () => {
+test("development CI separates closure identity from a trusted verification frontier", () => {
   const workflow = read(".github/workflows/ci-check.yml");
   assert.match(workflow, /verify_from_sha: \{type: string, required: false, default: ""\}/u);
-  assert.match(workflow, /verification_base_sha: \$\{\{ steps\.identity\.outputs\.verification_base_sha \}\}/u);
+  assert.match(workflow, /requested_verification_base_sha: \$\{\{ steps\.identity\.outputs\.requested_verification_base_sha \}\}/u);
+  assert.match(workflow, /verification_base_sha: \$\{\{ steps\.scope\.outputs\.verification_base_sha \}\}/u);
   assert.match(workflow, /git merge-base --is-ancestor "\$\{base_sha\}" "\$\{INPUT_VERIFY_FROM_SHA\}"/u);
   assert.match(workflow, /git merge-base --is-ancestor "\$\{INPUT_VERIFY_FROM_SHA\}" "\$\{expected_head\}"/u);
-  assert.match(workflow, /INPUT_FULL_SCOPE.*verification_base_sha="\$\{base_sha\}"/su);
-  assert.match(workflow, /CI_BASE_SHA: \$\{\{ steps\.identity\.outputs\.verification_base_sha \}\}/u);
+  assert.match(workflow, /commits\/\$\{INPUT_VERIFY_FROM_SHA\}\/status/u);
+  assert.match(workflow, /actions\/runs\/\$\{run_id\}/u);
+  assert.match(workflow, /expected_title="BThwani CI PR \$\{PR_NUMBER\} \$\{INPUT_VERIFY_FROM_SHA\} @ \$\{base_sha\}"/u);
+  assert.match(workflow, /verify_from_sha has no trusted exact PR\/base-bound successful CI evidence/u);
+  assert.match(workflow, /CI_BASE_SHA="\$\{effective_base\}"/u);
+  assert.match(workflow, /ci_control_plane' "\$\{probe\}"\)" == "true"/u);
+  assert.match(workflow, /effective_base="\$\{CLOSURE_BASE_SHA\}"/u);
   assert.match(workflow, /diagnostics:[\s\S]*?base_sha: \$\{\{ needs\.context\.outputs\.verification_base_sha \}\}/u);
   assert.match(workflow, /verification:[\s\S]*?base_sha: \$\{\{ needs\.context\.outputs\.verification_base_sha \}\}/u);
   assert.match(workflow, /backends:[\s\S]*?base_sha: \$\{\{ needs\.context\.outputs\.verification_base_sha \}\}/u);
@@ -39,7 +45,7 @@ test("development control-plane verification is materiality routed", () => {
   assert.match(workflow, /check_result controls "\$\{CONTROLS_RESULT\}" "\$\{CONTROLS_REQUIRED\}"/u);
 });
 
-test("ci:check activates incremental verification only through trusted workflow support", () => {
+test("ci:check only requests an incremental frontier after exact successful parent evidence and trusted workflow support", () => {
   const command = read("tools/scripts/ci-check.mjs");
   assert.match(command, /trustedWorkflowSupportsVerificationBase/u);
   assert.match(command, /commits\/\$\{sha\}\/status/u);
