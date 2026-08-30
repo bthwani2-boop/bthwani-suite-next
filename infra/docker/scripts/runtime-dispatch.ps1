@@ -10,7 +10,8 @@ param(
   [string]$Profiles = "",
   [string]$Service = "",
   [switch]$Force,
-  [switch]$PreparedRuntime
+  [switch]$PreparedRuntime,
+  [switch]$SeedWlt
 )
 
 Set-StrictMode -Version Latest
@@ -109,7 +110,9 @@ if ($PreparedRuntime) {
 } else {
   Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles $dshProfileString
 }
-Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles $dshProfileString
+$seedProfiles = @($dshProfiles)
+if ($SeedWlt) { $seedProfiles += "wlt" }
+Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles ($seedProfiles -join ",")
 
 $statePath = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-dsh-smoke-$([Guid]::NewGuid().ToString('N')).json"
 try {
@@ -122,7 +125,11 @@ try {
   Invoke-DshSmokeScript -Name "DSH partner onboarding smoke" -ScriptPath $DshPartnerSmoke -Parameters $partnerParameters
 
   $clientParameters = @{ StatePath = $statePath }
-  if ($profileList -contains "wlt") { $clientParameters.WltEnabled = $true }
+  # invoke-runtime-phase removes wlt from the base runtime profile list so the
+  # authenticated WLT smoke can run as its own phase. Preserve that capability
+  # for the DSH checkout handoff slice when the phase explicitly requested
+  # governed WLT seeding.
+  if ($profileList -contains "wlt" -or $SeedWlt) { $clientParameters.WltEnabled = $true }
   if ($hasLocalSeedMedia) { $clientParameters.MediaEnabled = $true }
   Invoke-DshSmokeScript -Name "DSH client and home smoke" -ScriptPath $DshClientSmoke -Parameters $clientParameters
 } finally {

@@ -2,8 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const workflowsRoot = path.join(repoRoot, ".github", "workflows");
+const authorityRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const targetRepoRoot = path.resolve(process.env.BTHWANI_TARGET_REPO || authorityRepoRoot);
+const workflowsRoot = path.join(targetRepoRoot, ".github", "workflows");
 const remediationWorkflow = ".github/workflows/remediation-analysis.yml";
 const generatedArtifactIgnoreMarkers = [
   "**/contracts/generated/*.bundle.openapi.yaml",
@@ -28,7 +29,10 @@ const forbiddenPatterns = [
   },
   {
     id: "SOURCE_MUTATING_GIT_COMMAND",
-    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:sudo\s+|env\s+(?:[^\s=]+=[^\s]+\s+)+)?git\s+(?:add|commit|push|merge|rebase|reset|restore|update-ref|checkout\s+(?:-B|--)|switch\s+-C|switch\s+-c|branch\s+-f|tag\s+-f)\b/i,
+    // Read-only inspection commands must stay allowed: `git merge-base` (and
+    // its --is-ancestor form) resolves ancestry without touching any ref, so
+    // only a bare `git merge` is forbidden.
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:sudo\s+|env\s+(?:[^\s=]+=[^\s]+\s+)+)?git\s+(?:add|commit|push|merge(?![a-z-])|rebase|reset|restore|update-ref|checkout\s+(?:-B|--)|switch\s+-C|switch\s+-c|branch\s+-f|tag\s+-f)\b/i,
     reason: "verification workflows must not mutate the worktree, index, refs, commits, tags, or branches",
   },
   {
@@ -86,7 +90,7 @@ function listWorkflowFiles(directory, output = []) {
 }
 
 function generatedArtifactPolicyViolations() {
-  const gitignorePath = path.join(repoRoot, ".gitignore");
+  const gitignorePath = path.join(targetRepoRoot, ".gitignore");
   if (!fs.existsSync(gitignorePath)) {
     return [{
       file: ".gitignore",
@@ -184,7 +188,7 @@ export function scanWorkflowContent(content, relative = "workflow.yml") {
 export function scanWorkflowDirectory(directory = workflowsRoot) {
   if (!fs.existsSync(directory)) {
     return [{
-      file: path.relative(repoRoot, directory).replaceAll(path.sep, "/"),
+      file: path.relative(targetRepoRoot, directory).replaceAll(path.sep, "/"),
       line: 0,
       id: "WORKFLOWS_DIRECTORY_MISSING",
       reason: ".github/workflows is missing",
@@ -193,7 +197,7 @@ export function scanWorkflowDirectory(directory = workflowsRoot) {
 
   const violations = [...generatedArtifactPolicyViolations()];
   for (const absolute of listWorkflowFiles(directory)) {
-    const relative = path.relative(repoRoot, absolute).replaceAll(path.sep, "/");
+    const relative = path.relative(targetRepoRoot, absolute).replaceAll(path.sep, "/");
     violations.push(...scanWorkflowContent(fs.readFileSync(absolute, "utf8"), relative));
   }
   return violations;

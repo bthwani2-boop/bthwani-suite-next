@@ -113,6 +113,7 @@ if ($publicStore.store.publicationDecision -ne "PUBLISHED") { throw "store publi
 $partnerToken = Get-LocalActorToken (Get-LocalUsername "partner")
 $partnerHeaders = @{
   Authorization = "Bearer $partnerToken"
+  "Idempotency-Key" = "smoke-catalog-proposal-$([guid]::NewGuid())"
   "X-Correlation-ID" = "smoke-catalog-$([guid]::NewGuid())"
 }
 $proposalBody = @{
@@ -201,7 +202,12 @@ $priceBody = @{
   prepTimeMax = 30
   effectiveFrom = [DateTimeOffset]::UtcNow.AddMinutes(-1).ToString("o")
 } | ConvertTo-Json
-Invoke-RestMethod "$assortmentUrl/prices/schedule" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $priceBody -TimeoutSec 10 | Out-Null
+$priceHeaders = @{
+  Authorization = "Bearer $operatorToken"
+  "Idempotency-Key" = "smoke-catalog-price-$([guid]::NewGuid())"
+  "X-Correlation-ID" = "smoke-catalog-price-$([guid]::NewGuid())"
+}
+Invoke-RestMethod "$assortmentUrl/prices" -Method Post -Headers $priceHeaders -ContentType "application/json" -Body $priceBody -TimeoutSec 10 | Out-Null
 
 $inventoryBody = @{
   policyType = "quantity"
@@ -249,11 +255,31 @@ if ($MediaEnabled) {
 
   $publishedCatalog = Invoke-RestMethod "http://localhost:18080/dsh/stores/store-test-grocery/catalog" -TimeoutSec 10
   if ($publishedCatalog.products.Count -lt 1) { throw "approved catalog is not visible to app-client" }
+  $publishedCheckoutProduct = @($publishedCatalog.products) |
+    Where-Object { [string]$_.id -eq [string]$proposal.proposal.adoptedMasterProductId } |
+    Select-Object -First 1
+  if ($null -eq $publishedCheckoutProduct) {
+    throw "newly approved catalog product is not visible to app-client"
+  }
+  $clientCheckoutProductId = [string]$proposal.proposal.adoptedMasterProductId
 } else {
-  Write-Host "  DSH catalog media-neutral mode: client-visible cutover skipped because no governed product image overlay is active."
+  # Media-neutral mode deliberately leaves the newly adopted product at
+  # publication_status=approved because no governed product image overlay is
+  # active. Checkout must consume a separate canonical client-visible product
+  # readback; it must never reinterpret approved as client-visible.
+  $clientCatalog = Invoke-RestMethod "http://localhost:18080/dsh/stores/store-test-grocery/catalog" -TimeoutSec 10
+  $clientCheckoutProduct = @($clientCatalog.products) | Select-Object -First 1
+  if ($null -eq $clientCheckoutProduct -or [string]::IsNullOrWhiteSpace([string]$clientCheckoutProduct.id)) {
+    throw "media-neutral catalog has no canonical client-visible product for checkout handoff"
+  }
+  $clientCheckoutProductId = [string]$clientCheckoutProduct.id
+  Write-Host "  DSH catalog media-neutral mode: client-visible cutover skipped; checkout uses canonical product $clientCheckoutProductId."
 }
 
 $smokeCatalogProductId = $proposal.proposal.adoptedMasterProductId
-@{ masterProductId = [string]$smokeCatalogProductId } |
+@{
+  masterProductId = [string]$smokeCatalogProductId
+  clientCheckoutProductId = [string]$clientCheckoutProductId
+} |
   ConvertTo-Json | Set-Content -LiteralPath $StatePath -Encoding utf8
 Write-Host "DSH catalog smoke: PASS"

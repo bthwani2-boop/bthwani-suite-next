@@ -94,7 +94,8 @@ function Invoke-RunnerProcess {
   param(
     [Parameter(Mandatory = $true)][string]$Directory,
     [Parameter(Mandatory = $true)][bool]$ExpectSuccess,
-    [string]$RunnerServiceKey = $ServiceKey
+    [string]$RunnerServiceKey = $ServiceKey,
+    [string]$OverrideDatabaseUrl = ""
   )
 
   $runnerArguments = @(
@@ -103,8 +104,11 @@ function Invoke-RunnerProcess {
     '-MigrationDirectory', $Directory,
     '-DatabaseUrl', $DatabaseUrl
   )
+  if (-not [string]::IsNullOrWhiteSpace($OverrideDatabaseUrl)) {
+    $runnerArguments[-1] = $OverrideDatabaseUrl
+  }
   if ($ServiceKey -eq 'workforce') {
-    $runnerArguments += @('-IdentityDatabaseUrl', $DatabaseUrl)
+    $runnerArguments += @('-IdentityDatabaseUrl', $runnerArguments[-1])
   }
   $output = & pwsh @runnerArguments 2>&1
   $exitCode = $LASTEXITCODE
@@ -283,6 +287,199 @@ ON CONFLICT DO NOTHING;
 "@ | Out-Null
   Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $false
   Invoke-DatabaseSql -Sql "DELETE FROM bthwani_migration_ledger WHERE service_name = '$ServiceKeySql' AND migration_id = 'legacy-unknown.sql';" | Out-Null
+
+  Write-Host "--- ${ServiceKey}: amendment historical-checksum upgrade reconciliation ---"
+  $amendmentsPath = Join-Path $RepoRoot 'tools/verification/migration-amendments.json'
+  $amendmentsDocument = Get-Content -LiteralPath $amendmentsPath -Raw | ConvertFrom-Json
+  $reconcilableAmendments = @($amendmentsDocument.amendments | Where-Object {
+    $historicalProperty = $_.PSObject.Properties['acceptedHistoricalSha256']
+    $_.service -eq $ServiceKey -and $null -ne $historicalProperty -and @($historicalProperty.Value).Count -gt 0
+  })
+  if ($reconcilableAmendments.Count -eq 0) {
+    Write-Host "amendment reconciliation: SKIPPED service=$ServiceKey reason=no-amendment-with-accepted-historical-checksums"
+  } else {
+    $maxVariants = 0
+    foreach ($amendment in $reconcilableAmendments) {
+      $count = @($amendment.acceptedHistoricalSha256).Count
+      if ($count -gt $maxVariants) { $maxVariants = $count }
+    }
+
+    $uri = [System.Uri]$DatabaseUrl
+    $probeBaseName = ($uri.AbsolutePath.Trim('/') -replace '[^a-zA-Z0-9_]', '_')
+
+    function New-ProbeDatabaseUrl {
+      param([Parameter(Mandatory = $true)][int]$Variant)
+      $probeName = "$($probeBaseName)_amendment_$Variant"
+      return @{
+        Name = $probeName
+        Url = "$($uri.Scheme)://$($uri.UserInfo)@$($uri.Host):$($uri.Port)/$probeName$($uri.Query)"
+      }
+    }
+
+    function New-ProbeDatabase {
+      param([Parameter(Mandatory = $true)][string]$Name)
+      Invoke-DatabaseSql -Sql "CREATE DATABASE `"$Name`";"
+    }
+
+    function Remove-ProbeDatabase {
+      param([Parameter(Mandatory = $true)][string]$Name)
+      Invoke-DatabaseSql -Sql "DROP DATABASE IF EXISTS `"$Name`";"
+    }
+
+    # Build the full governed ledger row set once: every migration recorded as
+    # applied, with the current canonical checksum except where an amendment
+    # exposes a historical variant for this index.
+    $historicalByFile = @{}
+    foreach ($amendment in $reconcilableAmendments) {
+      $historicalByFile[[string]$amendment.migrationId] = @($amendment.acceptedHistoricalSha256)
+    }
+
+    for ($variant = 0; $variant -lt $maxVariants; $variant++) {
+      $probe = New-ProbeDatabaseUrl -Variant $variant
+      New-ProbeDatabase -Name $probe.Name
+      $amendmentProbeCreated = $true
+      try {
+        # Pre-create the governed ledger exactly as the runner would, recording
+        # the historical accepted checksum for every amended migration and the
+        # current canonical checksum for every other migration. This is the
+        # fixture of a real environment that applied the historical byte forms
+        # and is now upgrading to the current migration set: the runner must
+        # accept the whole ledger and skip every migration without rewriting
+        # any recorded checksum.
+        $hasVariant = $false
+        $historicalRows = @()
+        foreach ($file in $canonicalFiles) {
+          $migrationIdSql = "'" + (ConvertTo-SqlLiteral $file.Name) + "'"
+          $digestSql = ""
+          if ($historicalByFile.ContainsKey($file.Name)) {
+            $variants = @($historicalByFile[$file.Name])
+            $digest = $null
+            if ($variant -lt $variants.Count) { $digest = $variants[$variant] }
+            if (-not [string]::IsNullOrWhiteSpace([string]$digest)) {
+              $digestSql = "'" + (ConvertTo-SqlLiteral ([string]$digest)) + "'"
+              $hasVariant = $true
+            }
+          }
+          if ([string]::IsNullOrWhiteSpace($digestSql)) {
+            $checksums = Get-BthwaniPortableSqlChecksums -File $file
+            $digestSql = "'" + (ConvertTo-SqlLiteral ([string]$checksums.Canonical)) + "'"
+          }
+          $historicalRows += "('$ServiceKeySql', $migrationIdSql, $digestSql, 'HISTORICAL_AMENDMENT_FIXTURE', clock_timestamp(), 0, TRUE, NULL, FALSE)"
+        }
+        if (-not $hasVariant) { continue }
+
+        $probeArguments = @($probe.Url, "-X", "-q", "-v", "ON_ERROR_STOP=1")
+        $ledgerFixture = @"
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  service_name      TEXT        NOT NULL,
+  migration_id      TEXT        NOT NULL,
+  checksum_sha256   TEXT        NOT NULL,
+  source_commit_sha TEXT        NOT NULL,
+  applied_at        TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  execution_ms      BIGINT      NOT NULL DEFAULT 0,
+  success           BOOLEAN     NOT NULL DEFAULT FALSE,
+  error_code        TEXT,
+  dirty             BOOLEAN     NOT NULL DEFAULT TRUE,
+  PRIMARY KEY (service_name, migration_id),
+  CHECK (execution_ms >= 0),
+  CHECK (NOT success OR NOT dirty)
+);
+INSERT INTO schema_migrations
+  (service_name, migration_id, checksum_sha256, source_commit_sha, applied_at, execution_ms, success, error_code, dirty)
+VALUES
+$($historicalRows -join ",
+");
+"@
+        $ledgerFixture | & psql @probeArguments 2>&1 | ForEach-Object { Write-Host "$_" }
+        if ($LASTEXITCODE -ne 0) {
+          throw "Historical amendment ledger fixture failed for variant $variant (exit $LASTEXITCODE)."
+        }
+
+        $runnerArguments = @(
+          '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $RunnerPath,
+          '-ServiceKey', $ServiceKey,
+          '-MigrationDirectory', $MigrationPath,
+          '-DatabaseUrl', $probe.Url
+        )
+        if ($ServiceKey -eq 'workforce') {
+          $runnerArguments += @('-IdentityDatabaseUrl', $probe.Url)
+        }
+        $upgradeOutput = & pwsh @runnerArguments 2>&1
+        $upgradeExitCode = $LASTEXITCODE
+        $upgradeOutput | ForEach-Object { Write-Host "$_" }
+        if ($upgradeExitCode -ne 0) {
+          throw "Upgrade from recorded historical checksums failed for '$ServiceKey' variant $variant (exit $upgradeExitCode): the governed amendment registry does not reconcile recorded history."
+        }
+
+        foreach ($amendment in $reconcilableAmendments) {
+          $variantDigests = @($amendment.acceptedHistoricalSha256)
+          $digest = $null
+          if ($variant -lt $variantDigests.Count) { $digest = $variantDigests[$variant] }
+          if ([string]::IsNullOrWhiteSpace($digest)) { continue }
+          $migrationIdSql2 = "'" + (ConvertTo-SqlLiteral ([string]$amendment.migrationId)) + "'"
+          $digestSql2 = "'" + (ConvertTo-SqlLiteral ([string]$digest)) + "'"
+          $probeQueryArguments = @($probe.Url, "-X", "-q", "-tA", "-v", "ON_ERROR_STOP=1", "-c")
+          $preserved = (& psql @probeQueryArguments "SELECT count(*) FROM schema_migrations WHERE service_name = '$ServiceKeySql' AND migration_id = $migrationIdSql2 AND checksum_sha256 = $digestSql2 AND success AND NOT dirty;" | Select-Object -First 1)
+          if ("$preserved".Trim() -ne "1") {
+            throw "Amendment reconciliation rewrote recorded history for '$($amendment.migrationId)' variant ${variant}: expected the historical checksum row to be preserved."
+          }
+          $appliedQuery = (& psql @probeQueryArguments "SELECT count(*) FROM schema_migrations WHERE service_name = '$ServiceKeySql';" | Select-Object -First 1)
+          if ([int]"$appliedQuery".Trim() -ne $canonicalFiles.Count) {
+            throw "Amendment reconciliation ledger coverage mismatch for '$ServiceKey' variant ${variant}: expected=$($canonicalFiles.Count) actual=$appliedQuery"
+          }
+        }
+        Write-Host "amendment reconciliation: PASS service=$ServiceKey variant=$variant migrations=$($canonicalFiles.Count)"
+      } finally {
+        if ($amendmentProbeCreated) {
+          Remove-ProbeDatabase -Name $probe.Name
+          $amendmentProbeCreated = $false
+        }
+      }
+    }
+
+    # Negative space: a ledger row with an unknown checksum must hard-fail the
+    # governed upgrade instead of being silently tolerated.
+    $negativeProbe = New-ProbeDatabaseUrl -Variant ($maxVariants + 100)
+    New-ProbeDatabase -Name $negativeProbe.Name
+    $amendmentProbeCreated = $true
+    try {
+      $firstAmendment = $reconcilableAmendments[0]
+      $migrationIdSql3 = "'" + (ConvertTo-SqlLiteral ([string]$firstAmendment.migrationId)) + "'"
+      $unknownDigestSql = "'" + (ConvertTo-SqlLiteral ('0' * 64)) + "'"
+      $negativeArguments = @($negativeProbe.Url, "-X", "-q", "-v", "ON_ERROR_STOP=1")
+      $negativeFixture = @"
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  service_name      TEXT        NOT NULL,
+  migration_id      TEXT        NOT NULL,
+  checksum_sha256   TEXT        NOT NULL,
+  source_commit_sha TEXT        NOT NULL,
+  applied_at        TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+  execution_ms      BIGINT      NOT NULL DEFAULT 0,
+  success           BOOLEAN     NOT NULL DEFAULT FALSE,
+  error_code        TEXT,
+  dirty             BOOLEAN     NOT NULL DEFAULT TRUE,
+  PRIMARY KEY (service_name, migration_id),
+  CHECK (execution_ms >= 0),
+  CHECK (NOT success OR NOT dirty)
+);
+INSERT INTO schema_migrations
+  (service_name, migration_id, checksum_sha256, source_commit_sha, applied_at, execution_ms, success, error_code, dirty)
+VALUES
+('$ServiceKeySql', $migrationIdSql3, $unknownDigestSql, 'UNKNOWN_CHECKSUM_PROBE', clock_timestamp(), 0, TRUE, NULL, FALSE);
+"@
+      $negativeFixture | & psql @negativeArguments 2>&1 | ForEach-Object { Write-Host "$_" }
+      if ($LASTEXITCODE -ne 0) {
+        throw "Unknown-checksum negative fixture failed to seed for '$ServiceKey'."
+      }
+      Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $false -RunnerServiceKey $ServiceKey -OverrideDatabaseUrl $negativeProbe.Url
+      Write-Host "amendment reconciliation negative probe: PASS service=$ServiceKey (unknown checksum rejected)"
+    } finally {
+      if ($amendmentProbeCreated) {
+        Remove-ProbeDatabase -Name $negativeProbe.Name
+        $amendmentProbeCreated = $false
+      }
+    }
+  }
 
   Write-Host "--- ${ServiceKey}: partial failure rollback and roll-forward ---"
   Set-Content -LiteralPath (Join-Path $partialDirectory $ProbeOneFile) -Value @"

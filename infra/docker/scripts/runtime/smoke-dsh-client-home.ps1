@@ -16,9 +16,9 @@ $identityApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_AP
 $identityBaseUrl = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_API_BASE_URL)) { "http://localhost:$identityApiHostPort" } else { $env:IDENTITY_API_BASE_URL }
 
 $state = Get-Content -LiteralPath $StatePath -Raw | ConvertFrom-Json
-$smokeCatalogProductId = [string]$state.masterProductId
+$smokeCatalogProductId = [string]$state.clientCheckoutProductId
 if ([string]::IsNullOrWhiteSpace($smokeCatalogProductId)) {
-  throw "DSH client smoke state is missing masterProductId"
+  throw "DSH client smoke state is missing clientCheckoutProductId"
 }
 
 $identityPassword = Get-LocalPassword
@@ -32,14 +32,54 @@ function Get-LocalActorToken([string] $Username) {
   return $login.accessToken
 }
 
+function Get-GovernedStoreServicePoint([string] $StoreId) {
+  $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../../..")).Path
+  $composeFile = Join-Path $repoRoot "infra/docker/compose.runtime.yml"
+  $envFile = Join-Path $repoRoot "infra/docker/env/runtime.env.example"
+  $statement = @"
+WITH target_store AS (
+  SELECT latitude, longitude
+  FROM dsh_stores
+  WHERE id = '$StoreId'
+    AND latitude IS NOT NULL
+    AND longitude IS NOT NULL
+), effective_versions AS (
+  SELECT DISTINCT ON (service_area_code)
+         service_area_code, polygon, active, priority, effective_from, expires_at, version
+  FROM dsh_service_area_versions
+  WHERE effective_from <= NOW()
+    AND (expires_at IS NULL OR expires_at > NOW())
+  ORDER BY service_area_code, effective_from DESC, version DESC
+)
+SELECT v.service_area_code || '|' || s.latitude::text || '|' || s.longitude::text
+FROM target_store s
+JOIN effective_versions v
+  ON v.active = TRUE
+ AND ST_Contains(v.polygon, ST_SetSRID(ST_MakePoint(s.longitude, s.latitude), 4326))
+ORDER BY v.priority DESC, v.service_area_code ASC
+LIMIT 1;
+"@
+  $output = docker compose --env-file $envFile -f $composeFile exec -T postgres psql -X -v ON_ERROR_STOP=1 -U dsh_runtime -d dsh_runtime -qAt -c $statement
+  if ($LASTEXITCODE -ne 0) { throw "governed DSH service-point readback failed" }
+  $parts = (($output -join "`n").Trim()).Split("|", [StringSplitOptions]::None)
+  if ($parts.Count -ne 3 -or [string]::IsNullOrWhiteSpace($parts[0])) { throw "governed DSH service-point readback was empty or malformed" }
+  return [pscustomobject]@{
+    ServiceAreaCode = [string]$parts[0]
+    Latitude = [double]$parts[1]
+    Longitude = [double]$parts[2]
+  }
+}
+
 $operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
 $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
 
 if ($WltEnabled) {
   $clientToken = Get-LocalActorToken (Get-LocalUsername "client")
+  $checkoutAttempt = [guid]::NewGuid().ToString()
   $clientHeaders = @{
     Authorization = "Bearer $clientToken"
-    "X-Correlation-ID" = "smoke-checkout-$([guid]::NewGuid())"
+    "X-Correlation-ID" = "smoke-checkout-cart-$checkoutAttempt"
+    "Idempotency-Key" = "smoke-checkout-cart-$checkoutAttempt"
   }
   $cartBody = @{
     storeId = "store-test-grocery"
@@ -49,15 +89,64 @@ if ($WltEnabled) {
   } | ConvertTo-Json
   $cartItem = Invoke-RestMethod "http://localhost:18080/dsh/client/cart/items" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $cartBody -TimeoutSec 10
   if ([string]::IsNullOrWhiteSpace($cartItem.cartId)) { throw "cart item did not return cartId" }
+  $clientReadHeaders = @{ Authorization = "Bearer $clientToken" }
+  $cartReadback = Invoke-RestMethod "http://localhost:18080/dsh/client/cart?storeId=store-test-grocery" -Headers $clientReadHeaders -TimeoutSec 10
+  if ($null -eq $cartReadback.cart -or $cartReadback.cart.id -ne $cartItem.cartId) { throw "client cart canonical readback did not match the committed cart mutation" }
+  $cartVersion = [int]$cartReadback.cart.version
+  if ($cartVersion -lt 1) { throw "cart item did not return a positive canonical cart version" }
+
+  # Store discovery deliberately withholds exact coordinates. Resolve the
+  # effective DSH geofence from the canonical store/geofence read model so the
+  # address writer receives the same service-area truth checkout will enforce.
+  $servicePoint = Get-GovernedStoreServicePoint "store-test-grocery"
+  $serviceAreaCode = $servicePoint.ServiceAreaCode
+  $storeLatitude = $servicePoint.Latitude
+  $storeLongitude = $servicePoint.Longitude
+
+  $addressList = Invoke-RestMethod "http://localhost:18080/dsh/client/addresses" -Headers $clientReadHeaders -TimeoutSec 10
+  $deliveryAddress = @($addressList.addresses | Where-Object {
+    $_.serviceAreaCode -eq $serviceAreaCode -and
+    [math]::Abs([double]$_.latitude - $storeLatitude) -lt 0.000001 -and
+    [math]::Abs([double]$_.longitude - $storeLongitude) -lt 0.000001
+  } | Select-Object -First 1)
+  if ($deliveryAddress.Count -eq 0) {
+    $addressHeaders = @{
+      Authorization = "Bearer $clientToken"
+      "X-Correlation-ID" = "smoke-checkout-address-$checkoutAttempt"
+      "Idempotency-Key" = "smoke-checkout-address-$checkoutAttempt"
+    }
+    $addressBody = @{
+      label = "runtime-checkout"
+      recipientName = "Runtime Smoke Client"
+      phoneE164 = "+967711111111"
+      addressLine = "حدة، عنوان فحص checkout"
+      serviceAreaCode = $serviceAreaCode
+      latitude = $storeLatitude
+      longitude = $storeLongitude
+      makeDefault = $true
+    } | ConvertTo-Json
+    $createdAddress = Invoke-RestMethod "http://localhost:18080/dsh/client/addresses" -Method Post -Headers $addressHeaders -ContentType "application/json" -Body $addressBody -TimeoutSec 10
+    $deliveryAddress = @($createdAddress.address)
+  }
+  $deliveryAddressId = [string]$deliveryAddress[0].id
+  if ([string]::IsNullOrWhiteSpace($deliveryAddressId)) { throw "client checkout did not resolve a canonical delivery address" }
+
+  $checkoutHeaders = @{}
+  foreach ($key in $clientHeaders.Keys) {
+    $checkoutHeaders[$key] = $clientHeaders[$key]
+  }
+  $checkoutHeaders["X-Correlation-ID"] = "smoke-checkout-intent-$checkoutAttempt"
+  $checkoutHeaders["Idempotency-Key"] = "smoke-checkout-intent-$checkoutAttempt"
   $checkoutBody = @{
     cartId = $cartItem.cartId
     storeId = "store-test-grocery"
+    expectedCartVersion = $cartVersion
     fulfillmentMode = "bthwani_delivery"
     paymentMethod = "cod"
-    deliveryAddress = "runtime smoke checkout address"
+    deliveryAddressId = $deliveryAddressId
     note = "runtime Checkout & WLT Handoff smoke"
   } | ConvertTo-Json
-  $checkout = Invoke-RestMethod "http://localhost:18080/dsh/client/checkout-intents" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $checkoutBody -TimeoutSec 10
+  $checkout = Invoke-RestMethod "http://localhost:18080/dsh/client/checkout-intents" -Method Post -Headers $checkoutHeaders -ContentType "application/json" -Body $checkoutBody -TimeoutSec 10
   Write-Host "  /dsh/client/checkout-intents: $($checkout.intent.id) / WLT=$($checkout.intent.wltPaymentSessionId)"
   if ([string]::IsNullOrWhiteSpace($checkout.intent.wltPaymentSessionId)) { throw "checkout intent missing WLT payment session reference" }
   $operatorCheckout = Invoke-RestMethod "http://localhost:18080/dsh/operator/checkout-intents" -Headers $operatorHeaders -TimeoutSec 10

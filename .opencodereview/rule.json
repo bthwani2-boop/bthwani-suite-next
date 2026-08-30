@@ -111,14 +111,24 @@
       "rule": "Treat DSH as operational commerce/fulfillment truth, never financial truth. Review lifecycle/state-machine invariants, auth/authz, ownership/scopes, idempotency, concurrency, order/assignment/preparation/handoff/outbox reliability, retries/recovery, WLT integration boundaries, runtime route binding, cross-surface consumers, missing migrations/backfills, and obsolete parallel paths after cutover."
     },
     {
-      "path": "services/identity/**/*",
+      "path": "core/identity/**/*",
       "merge_system_rule": true,
       "rule": "Treat Identity as authentication/session/role/permission authority. Search for authentication bypass, role/scope confusion, insecure activation/recovery/session handling, authorization drift, identifier ambiguity, token leakage/replay, insufficient revocation, missing auditability, duplicated actor truth, and privilege escalation across surfaces."
     },
     {
-      "path": "services/workforce/**/*",
+      "path": "core/workforce/**/*",
       "merge_system_rule": true,
       "rule": "Treat Workforce as employee/profile/employment-state authority. Check actor linkage, lifecycle/status gates, provisioning/suspension semantics, supervisor/scope ownership, authorization, privacy, incomplete onboarding/offboarding propagation, and duplicated profile truth in applications or DSH."
+    },
+    {
+      "path": "core/platform-control/**/*",
+      "merge_system_rule": true,
+      "rule": "Treat Platform Control as administrative platform-governance authority. Review privileged command authorization, operator context, change-set lifecycle, auditability, idempotency, cross-service propagation, generated contract/client provenance, failure recovery, stale administrative state, and any path that bypasses the canonical control-plane writer or creates parallel operational truth."
+    },
+    {
+      "path": "core/providers/**/*",
+      "merge_system_rule": true,
+      "rule": "Treat Providers as external-provider integration authority. Review credential and secret boundaries, provider identity/config ownership, request signing and authentication, idempotency/retry/replay behavior, timeout/circuit/failure semantics, webhook validation, mapping of external to canonical internal states, observability, safe degradation, and prevention of provider-specific state becoming a competing project truth."
     },
     {
       "path": "apps/**/*.{ts,tsx,js,jsx}",

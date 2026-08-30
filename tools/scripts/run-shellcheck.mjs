@@ -7,5 +7,5 @@ runFilesTool({
   binary: "shellcheck",
   files,
   noFilesMessage: "No *.sh files found.",
-  makeCommand: (items) => "shellcheck " + items.map(quoteRel).join(" ")
+  makeCommand: (items) => "shellcheck --norc " + items.map(quoteRel).join(" ")
 });

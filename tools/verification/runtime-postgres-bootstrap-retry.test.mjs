@@ -26,6 +26,10 @@ const dshRuntimeDispatcher = await readFile(
   new URL("../../infra/docker/scripts/runtime-dispatch.ps1", import.meta.url),
   "utf8",
 );
+const dshClientHomeSmoke = await readFile(
+  new URL("../../infra/docker/scripts/runtime/smoke-dsh-client-home.ps1", import.meta.url),
+  "utf8",
+);
 
 test("runtime retries only the transient PostgreSQL bootstrap restart", () => {
   assert.match(phaseScript, /function Test-TransientPostgresBootstrapRestart/);
@@ -66,7 +70,7 @@ test("runtime accepts a single non-WLT profile under StrictMode", () => {
 test("PowerShell-only runtime phases use the initialized exit-code boundary", () => {
   assert.match(
     phaseScript,
-    /\$catalogExitCode = Invoke-RuntimeBasePhase -ScriptPath \$CatalogReadbackScript -Parameters @\{\}/,
+    /\$catalogParameters = @\{\}[\s\S]*\$catalogExitCode = Invoke-RuntimeBasePhase -ScriptPath \$CatalogReadbackScript -Parameters \$catalogParameters/,
   );
   assert.match(
     phaseScript,
@@ -99,17 +103,64 @@ test("partner onboarding uses the governed owner and idempotent creation contrac
   assert.doesNotMatch(dshPartnerOnboardingSmoke, /\n\s*ownerName\s*=/);
 });
 
+test("partner onboarding propagates distinct idempotency keys to required mutations", () => {
+  assert.match(
+    dshPartnerOnboardingSmoke,
+    /\$visitHeaders\s*=\s*@\{[\s\S]*?\$visitHeaders\["Idempotency-Key"\][\s\S]*?-Headers \$visitHeaders/,
+  );
+  assert.match(
+    dshPartnerOnboardingSmoke,
+    /\$documentHeaders\s*=\s*@\{[\s\S]*?\$documentHeaders\["Idempotency-Key"\][\s\S]*?-Headers \$documentHeaders/,
+  );
+  assert.match(
+    dshPartnerOnboardingSmoke,
+    /\$submitHeaders\s*=\s*@\{[\s\S]*?\$submitHeaders\["Idempotency-Key"\][\s\S]*?-Headers \$submitHeaders/,
+  );
+  assert.match(
+    dshPartnerOnboardingSmoke,
+    /\$reviewHeaders\s*=\s*@\{[\s\S]*?\$reviewHeaders\["Idempotency-Key"\][\s\S]*?-Headers \$reviewHeaders/,
+  );
+});
+
 test("partner onboarding closes the canonical store publication journey", () => {
   assert.match(dshRuntimeDispatcher, /DSH partner onboarding smoke[\s\S]*StatePath = \$statePath/);
+  assert.match(dshRuntimeDispatcher, /\[switch\]\$SeedWlt[\s\S]*if \(\$SeedWlt\) \{ \$seedProfiles \+= "wlt" \}[\s\S]*EngineAction "seed" -EngineProfiles \(\$seedProfiles -join ","\)/);
+  assert.match(dshRuntimeDispatcher, /\$profileList -contains "wlt" -or \$SeedWlt[\s\S]*clientParameters\.WltEnabled/);
+  assert.match(phaseScript, /\$runtimeParameters\.SeedWlt = \$true/);
+  assert.match(dshClientHomeSmoke, /\$checkoutAttempt = \[guid\]::NewGuid\(\)\.ToString\(\)/);
+  assert.match(dshCatalogSmoke, /clientCheckoutProductId/);
+  assert.match(dshClientHomeSmoke, /\$state\.clientCheckoutProductId/);
+  assert.doesNotMatch(dshClientHomeSmoke, /\$state\.masterProductId/);
+  assert.match(dshClientHomeSmoke, /"Idempotency-Key" = "smoke-checkout-cart-\$checkoutAttempt"/);
+  assert.match(dshClientHomeSmoke, /\$checkoutHeaders\["Idempotency-Key"\] = "smoke-checkout-intent-\$checkoutAttempt"/);
+  assert.match(dshClientHomeSmoke, /expectedCartVersion = \$cartVersion/);
+  assert.match(dshClientHomeSmoke, /deliveryAddressId = \$deliveryAddressId/);
+  assert.match(dshClientHomeSmoke, /dsh\/client\/addresses/);
+  assert.match(dshClientHomeSmoke, /-Headers \$checkoutHeaders/);
   assert.match(dshPartnerOnboardingSmoke, /catalogState\.masterProductId/);
   assert.match(dshPartnerOnboardingSmoke, /status = "ready"[\s\S]*deliveryModes = @\("delivery", "pickup"\)/);
   assert.match(dshPartnerOnboardingSmoke, /role = "store_logo"/);
   assert.match(dshPartnerOnboardingSmoke, /role = "store_cover"/);
   assert.match(dshPartnerOnboardingSmoke, /isPrimary = \$true/);
-  assert.match(dshPartnerOnboardingSmoke, /publicationStatus = "client_visible"/);
+  assert.match(dshPartnerOnboardingSmoke, /\$expectedAssortmentPublicationStatus = if \(\$MediaEnabled\) \{ "client_visible" \} else \{ "approved" \}/);
+  assert.match(dshPartnerOnboardingSmoke, /publicationStatus = \$expectedAssortmentPublicationStatus/);
   assert.match(dshPartnerOnboardingSmoke, /decision = "publish"/);
   assert.match(dshPartnerOnboardingSmoke, /\/dsh\/operator\/marketing\/stores\/\$smokeStoreId\/publication/);
   assert.match(dshPartnerOnboardingSmoke, /\/dsh\/stores\/\$smokeStoreId"/);
   assert.match(dshPartnerOnboardingSmoke, /\/dsh\/stores\/\$smokeStoreId\/catalog"/);
   assert.doesNotMatch(dshPartnerOnboardingSmoke, /"lifecycle" "active"/);
+});
+
+test("DSH catalog smoke supplies the required proposal idempotency key", () => {
+  assert.match(
+    dshCatalogSmoke,
+    /"Idempotency-Key" = "smoke-catalog-proposal-/,
+  );
+});
+
+test("DSH catalog smoke supplies the required assortment price idempotency key", () => {
+  assert.match(
+    dshCatalogSmoke,
+    /\$priceHeaders\s*=\s*@\{[\s\S]*?"Idempotency-Key"\s*=\s*"smoke-catalog-price-/,
+  );
 });

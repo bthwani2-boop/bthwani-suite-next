@@ -14,6 +14,12 @@ import { adjudicateOsvReport, scopedGoImports } from "./lib/osv-go-reachability.
 
 const toolId = "osv-scanner";
 requireRemoteExecution(toolId);
+const trustedPolicyRoot = path.resolve(process.env.BTHWANI_TRUSTED_POLICY_ROOT || repoRoot);
+const osvConfig = path.join(trustedPolicyRoot, "osv-scanner.toml");
+if (!fs.existsSync(osvConfig)) {
+  console.error(`[OSV-SCANNER FAIL] trusted policy config missing: ${osvConfig}`);
+  process.exit(1);
+}
 const rootLockfile = path.join(repoRoot, "pnpm-lock.yaml");
 const lockfiles = [
   ...(fs.existsSync(rootLockfile) ? [rootLockfile] : []),
@@ -30,16 +36,13 @@ const baseArgs = [
   "scan",
   "source",
   "--config",
-  "osv-scanner.toml",
+  osvConfig,
   ...lockfiles.flatMap((file) => ["-L", path.relative(repoRoot, file)])
 ];
 const reportRel = ".diagnostics/security/osv-report.json";
 const reportPath = path.join(repoRoot, reportRel);
 fs.mkdirSync(path.dirname(reportPath), { recursive: true });
 
-// JSON is the single scan result used for both the exit decision and detailed
-// adjudication. OSV-Scanner returns 0 for no findings and 1 for findings; other
-// exit codes are scanner/input failures and must not be mistaken for findings.
 console.log(`Running: osv-scanner ${baseArgs.map((arg) => JSON.stringify(arg)).join(" ")} --format json`);
 const scan = spawnSync("osv-scanner", [...baseArgs, "--format", "json"], {
   cwd: repoRoot,
@@ -74,10 +77,6 @@ try {
   handleCommandFailure(toolId, true);
 }
 
-// The adjudication rule lives in lib/osv-go-reachability.mjs; this file supplies
-// the two real inputs it needs: the module import graph and the advisory scope.
-// The graph is resolved module-locally with GOWORK off, so a developer's partial
-// workspace cannot change which module is analyzed.
 const importGraphs = new Map();
 
 function moduleImportGraph(goModAbsolutePath) {
@@ -101,9 +100,6 @@ function moduleImportGraph(goModAbsolutePath) {
   return graph;
 }
 
-// The report embeds the OSV record, but a truncated or reshaped record must not
-// silently become either a pass or a false blocker, so the advisory is
-// re-resolved from OSV itself when the embedded copy carries no scope.
 async function resolveScopedImports(vulnerability, packageName) {
   const embedded = scopedGoImports(vulnerability, packageName);
   if (embedded.length > 0) return embedded;

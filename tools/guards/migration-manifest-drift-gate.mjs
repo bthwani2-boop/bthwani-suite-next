@@ -4,7 +4,8 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-const repositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..", "..");
+const moduleRepositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..", "..");
+const repositoryRoot = path.resolve(process.env.BTHWANI_TARGET_REPO || moduleRepositoryRoot);
 const amendmentsRelative = "tools/verification/migration-amendments.json";
 const servicePaths = {
   dsh: "services/dsh/database/migrations",
@@ -172,19 +173,27 @@ function checkImmutableDigestHistory(service, relativeDirectory, manifest) {
   let baselineManifest;
   try {
     baselineManifest = JSON.parse(git(["show", `${baseline}:${manifestRelative}`]));
-  } catch {
-    return [];
+  } catch (error) {
+    const detail = String(error?.stderr ?? error?.message ?? error);
+    if (/does not exist in/u.test(detail)) return [];
+    throw new Error(`unable to read baseline manifest for ${service} at ${baseline}: ${detail}`);
   }
 
-  const historical = new Map((baselineManifest.migrations ?? []).filter((entry) => entry?.file && entry.sha256).map((entry) => [entry.file, entry.sha256]));
+  const published = new Map((baselineManifest.migrations ?? []).filter((entry) => entry?.file && entry.sha256).map((entry) => [entry.file, entry.sha256]));
   const failures = [];
+  const currentFiles = new Set((manifest.migrations ?? []).map((entry) => entry.file));
+  for (const [file, baselineDigest] of published) {
+    if (!currentFiles.has(file)) {
+      failures.push(`published migration removed from manifest: ${file} baseline=${baselineDigest}`);
+    }
+  }
   for (const entry of manifest.migrations ?? []) {
-    if (entry.state !== "HISTORICAL_IMMUTABLE") continue;
-    const baselineDigest = historical.get(entry.file);
+    const baselineDigest = published.get(entry.file);
     if (!baselineDigest || baselineDigest === entry.sha256) continue;
-    const accepted = new Set(amendments.get(`${service}:${entry.file}`)?.acceptedHistoricalSha256 ?? []);
+    const amendment = amendments.get(`${service}:${entry.file}`);
+    const accepted = new Set(amendment?.acceptedHistoricalSha256 ?? []);
     if (!accepted.has(baselineDigest)) {
-      failures.push(`HISTORICAL_IMMUTABLE digest changed without accepted historical checksum: ${entry.file} baseline=${baselineDigest} current=${entry.sha256}`);
+      failures.push(`published migration digest changed without governed amendment disposition: ${entry.file} state=${entry.state} baseline=${baselineDigest} current=${entry.sha256} amendment=${amendment?.replacementSha256 ?? "<none>"}`);
     }
   }
   return failures;

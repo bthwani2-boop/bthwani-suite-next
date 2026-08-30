@@ -19,7 +19,7 @@ jobs:
     name: Contract and binding integrity
     if: ${{ inputs.contracts == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Verify routed candidate identity
         shell: bash
@@ -45,13 +45,38 @@ jobs:
           repository: ${{ github.repository }}
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Materialize and verify contract integrity
+
+      - name: Materialize authoritative contracts
+        id: materialize
+        continue-on-error: true
         shell: bash
+        env:
+          FULL_SCOPE: ${{ inputs.full_scope }}
         run: |
           set -euo pipefail
-          pnpm exec nx run contracts:materialize
-          pnpm run contracts:lint
-          node --test tools/guards/*.test.mjs
+          args=(run contracts:materialize)
+          if [[ "${FULL_SCOPE}" == "true" ]]; then
+            args+=(--skip-nx-cache)
+          fi
+          pnpm exec nx "${args[@]}"
+
+      - name: Lint materialized contracts
+        id: contract_lint
+        if: ${{ steps.materialize.outcome == 'success' }}
+        continue-on-error: true
+        run: pnpm run contracts:lint
+
+      - name: Execute contract guard regression tests
+        id: guard_tests
+        if: ${{ steps.materialize.outcome == 'success' }}
+        continue-on-error: true
+        run: node --test tools/guards/*.test.mjs
+
+      - name: Execute binding and provenance guards
+        id: binding_guards
+        if: ${{ steps.materialize.outcome == 'success' }}
+        continue-on-error: true
+        run: |
           node tools/scripts/run-guard-suite.mjs --concurrency 2 \
             tools/guards/no-broken-imports.mjs \
             tools/guards/api-binding-gate.mjs \
@@ -59,14 +84,47 @@ jobs:
             tools/guards/generated-client-provenance-gate.mjs \
             tools/guards/contract-scope-binding-gate.mjs \
             tools/guards/runtime-real-bindings-gate.mjs
-      - name: Run full contract guards
-        if: ${{ inputs.full_scope == 'true' }}
-        shell: bash
+
+      - name: Execute full-scope contract guards
+        id: full_guards
+        if: ${{ steps.materialize.outcome == 'success' && inputs.full_scope == 'true' }}
+        continue-on-error: true
         run: |
-          set -euo pipefail
           node tools/scripts/run-guard-suite.mjs --concurrency 2 \
             tools/guards/service-manifest-drift-gate.mjs \
             tools/guards/openapi-bundle-provenance-gate.mjs \
             tools/guards/frontend-feature-binding-gate.mjs \
             tools/guards/dsh-openapi-modular-gate.mjs \
             tools/guards/wlt-openapi-bundle-gate.mjs
+
+      - name: Enforce complete contract diagnostic collection
+        if: ${{ always() }}
+        shell: bash
+        env:
+          MATERIALIZE: ${{ steps.materialize.outcome }}
+          CONTRACT_LINT: ${{ steps.contract_lint.outcome }}
+          GUARD_TESTS: ${{ steps.guard_tests.outcome }}
+          BINDING_GUARDS: ${{ steps.binding_guards.outcome }}
+          FULL_SCOPE: ${{ inputs.full_scope }}
+          FULL_GUARDS: ${{ steps.full_guards.outcome }}
+        run: |
+          set -euo pipefail
+          failures=()
+          [[ "${MATERIALIZE}" == "success" ]] || failures+=("materialize:${MATERIALIZE}")
+          if [[ "${MATERIALIZE}" == "success" ]]; then
+            [[ "${CONTRACT_LINT}" == "success" ]] || failures+=("contract-lint:${CONTRACT_LINT}")
+            [[ "${GUARD_TESTS}" == "success" ]] || failures+=("guard-tests:${GUARD_TESTS}")
+            [[ "${BINDING_GUARDS}" == "success" ]] || failures+=("binding-guards:${BINDING_GUARDS}")
+            if [[ "${FULL_SCOPE}" == "true" ]]; then
+              [[ "${FULL_GUARDS}" == "success" ]] || failures+=("full-contract-guards:${FULL_GUARDS}")
+            else
+              [[ "${FULL_GUARDS}" == "skipped" ]] || failures+=("full-contract-guards-unexpected:${FULL_GUARDS}")
+            fi
+          else
+            echo "Contract lint/guards BLOCKED_BY materialize:${MATERIALIZE}"
+          fi
+          if (( ${#failures[@]} )); then
+            echo "::error::Contract diagnostics failed after collecting all independently executable checks: $(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+          echo "Complete contract diagnostic collection passed."

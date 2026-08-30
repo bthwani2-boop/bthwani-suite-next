@@ -6,12 +6,27 @@ run-name: >-
   || format('OpenCodeReview dispatched candidate {0}', inputs.head_sha) }}
 
 "on":
+  workflow_dispatch:
+    inputs:
+      pr_number: {description: Exact open PR number, required: true, type: string}
+      base_ref: {description: Trusted base ref, required: true, type: string}
+      head_sha: {description: Exact candidate SHA, required: true, type: string}
+      base_sha: {description: Exact base SHA, required: true, type: string}
   workflow_call:
     inputs:
       pr_number: {type: string, required: true}
       base_ref: {type: string, required: true}
       head_sha: {type: string, required: true}
       base_sha: {type: string, required: true}
+    outputs:
+      context_sha256:
+        value: ${{ jobs.delegation-context.outputs.context_sha256 }}
+      artifact_identity:
+        value: ${{ jobs.delegation-context.outputs.artifact_identity }}
+      package_integrity:
+        value: ${{ jobs.delegation-context.outputs.package_integrity }}
+      tool_version:
+        value: ${{ jobs.delegation-context.outputs.tool_version }}
 
 permissions:
   contents: read
@@ -27,6 +42,11 @@ jobs:
       contents: read
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      context_sha256: ${{ steps.delegate.outputs.context_sha256 }}
+      artifact_identity: ${{ steps.delegate.outputs.artifact_identity }}
+      package_integrity: ${{ steps.delegate.outputs.package_integrity }}
+      tool_version: ${{ steps.delegate.outputs.tool_version }}
     env:
       OCR_PACKAGE_INTEGRITY: /p+9mE+gEG1HrkGZu25ocKxrPWPJbdLhqfbKgG7idMJEc6gLF3RpS/u+2V3lpnKKVallXj7IHW4sSjNFQO1F9w==
 
@@ -220,7 +240,7 @@ jobs:
           files_sha256="$(sha256sum "${evidence}/reviewable-files.txt" | awk '{print $1}')"
           context_sha256="$(sha256sum "${evidence}/context-files.sha256" | awk '{print $1}')"
           files_json="$(jq -R -s 'split("\n") | map(select(length > 0))' "${evidence}/reviewable-files.txt")"
-          artifact_identity="opencodereview-delegation-${HEAD_SHA}-${GITHUB_RUN_ID}"
+          artifact_identity="opencodereview-delegation-${HEAD_SHA}-${context_sha256}"
           jq -n \
             --arg repository "${GITHUB_REPOSITORY}" \
             --arg prNumber "${PR_NUMBER}" \
@@ -291,6 +311,8 @@ jobs:
             echo "count=${count}"
             echo "context_sha256=${context_sha256}"
             echo "artifact_identity=${artifact_identity}"
+            echo "package_integrity=${OCR_PACKAGE_INTEGRITY}"
+            echo "tool_version=1.9.9"
           } >> "${GITHUB_OUTPUT}"
           popd >/dev/null
 
@@ -303,7 +325,7 @@ jobs:
         id: artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          name: opencodereview-delegation-${{ steps.request.outputs.head_sha }}-${{ github.run_id }}
+          name: ${{ steps.delegate.outputs.artifact_identity }}
           path: ${{ runner.temp }}/ocr-evidence
           if-no-files-found: error
           retention-days: 14

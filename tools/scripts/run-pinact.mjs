@@ -5,7 +5,8 @@ import { requireRemoteExecution } from "./_external-tool-runner.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 requireRemoteExecution("pinact");
-const repoRoot = path.resolve(scriptDir, "../..");
+const moduleRepoRoot = path.resolve(scriptDir, "../..");
+const repoRoot = path.resolve(process.env.BTHWANI_TARGET_REPO || moduleRepoRoot);
 const workflowRoot = path.join(repoRoot, ".github/workflows");
 const verify = process.argv.includes("--verify");
 const mutable = [];

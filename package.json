@@ -10,6 +10,8 @@
   "scripts": {
     "ci:check": "node tools/scripts/ci-check.mjs",
     "ci:close": "node tools/scripts/ci-close.mjs",
+    "assurance:discover": "node tools/scripts/run-deep-discovery.mjs",
+    "assurance:self-test": "node --test tools/scripts/assurance-system.test.mjs tools/scripts/assurance-experience-binding.test.mjs tools/scripts/assurance-hardening.test.mjs && node tools/scripts/verify-assurance-bootstrap.mjs",
     "contracts:redocly": "node tools/scripts/contracts/typecheck.mjs",
     "contracts:lint": "pnpm run contracts:redocly && pnpm run guard:contract-registry-drift",
     "typecheck": "pnpm run affected:typecheck",

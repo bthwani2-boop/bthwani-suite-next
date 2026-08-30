@@ -1,5 +1,5 @@
 name: BThwani CI
-run-name: BThwani CI ${{ inputs.expected_head_sha || github.sha }}
+run-name: BThwani CI PR ${{ inputs.pr_number || 'none' }} ${{ inputs.expected_head_sha || github.sha }} @ ${{ inputs.expected_base_sha || 'auto' }}
 
 on:
   workflow_call:
@@ -8,18 +8,20 @@ on:
       pr_number: {type: string, required: false, default: ""}
       expected_head_sha: {type: string, required: false, default: ""}
       expected_base_sha: {type: string, required: false, default: ""}
+      verify_from_sha: {type: string, required: false, default: ""}
   workflow_dispatch:
     inputs:
       pr_number: {description: Optional open PR number, required: false, type: string}
       expected_head_sha: {description: Optional exact HEAD SHA, required: false, type: string}
-      expected_base_sha: {description: Optional exact BASE SHA, required: false, type: string}
-      full_scope: {description: Run all owner checks, required: false, default: false, type: boolean}
+      expected_base_sha: {description: Optional exact closure BASE SHA, required: false, type: string}
+      verify_from_sha: {description: Optional exact trusted verified ancestor for incremental routing, required: false, type: string}
+      full_scope: {description: Run all owner checks from the closure base, required: false, default: false, type: boolean}
 
 permissions:
   actions: read
   contents: read
   pull-requests: read
-  statuses: write
+  statuses: read
 
 concurrency:
   group: bthwani-ci-${{ inputs.pr_number || inputs.expected_head_sha || github.ref }}
@@ -36,6 +38,8 @@ jobs:
     outputs:
       head_sha: ${{ steps.identity.outputs.head_sha }}
       base_sha: ${{ steps.identity.outputs.base_sha }}
+      requested_verification_base_sha: ${{ steps.identity.outputs.requested_verification_base_sha }}
+      verification_base_sha: ${{ steps.scope.outputs.verification_base_sha }}
       pr_number: ${{ steps.identity.outputs.pr_number }}
       full_scope: ${{ steps.scope.outputs.full_scope }}
       dependency_changed: ${{ steps.scope.outputs.dependency_changed }}
@@ -66,16 +70,23 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
-      - name: Revalidate exact candidate and PR when supplied
+      - name: Revalidate trusted workflow definition, exact candidate, PR, and evidence frontier
         id: identity
         shell: bash
         env:
           PR_NUMBER: ${{ inputs.pr_number }}
           INPUT_HEAD_SHA: ${{ inputs.expected_head_sha }}
           INPUT_BASE_SHA: ${{ inputs.expected_base_sha }}
+          INPUT_VERIFY_FROM_SHA: ${{ inputs.verify_from_sha }}
+          INPUT_FULL_SCOPE: ${{ inputs.full_scope }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
+          [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]] || {
+            echo "::error::BThwani CI authoritative definition must run from ${DEFAULT_BRANCH}, got ${GITHUB_REF_NAME}"
+            exit 1
+          }
+          [[ "${GITHUB_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::trusted workflow SHA must be exact"; exit 1; }
           actual_head="$(git rev-parse HEAD)"
           expected_head="${INPUT_HEAD_SHA:-${actual_head}}"
           [[ "${actual_head}" == "${expected_head}" ]] || { echo "::error::candidate checkout drift"; exit 1; }
@@ -91,24 +102,245 @@ jobs:
               base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${DEFAULT_BRANCH}" --jq '.commit.sha')"
             fi
           fi
-          [[ "${expected_head}" =~ ^[0-9a-fA-F]{40}$ && "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::exact head/base SHA required"; exit 1; }
+          [[ "${expected_head}" =~ ^[0-9a-fA-F]{40}$ && "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || {
+            echo "::error::exact head/closure-base SHA required"
+            exit 1
+          }
           git cat-file -e "${base_sha}^{commit}"
-          git merge-base --is-ancestor "${base_sha}" "${expected_head}" || { echo "::error::base is not an ancestor"; exit 1; }
+          git merge-base --is-ancestor "${base_sha}" "${expected_head}" || {
+            echo "::error::closure base is not an ancestor of the exact candidate"
+            exit 1
+          }
+
+          requested_verification_base_sha="${base_sha}"
+          if [[ "${INPUT_FULL_SCOPE}" != "true" && -n "${INPUT_VERIFY_FROM_SHA}" ]]; then
+            [[ -n "${PR_NUMBER}" ]] || {
+              echo "::error::incremental evidence frontier requires an exact open PR identity"
+              exit 1
+            }
+            [[ "${INPUT_VERIFY_FROM_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || {
+              echo "::error::verify_from_sha must be an exact 40-character commit SHA"
+              exit 1
+            }
+            git cat-file -e "${INPUT_VERIFY_FROM_SHA}^{commit}"
+            git merge-base --is-ancestor "${base_sha}" "${INPUT_VERIFY_FROM_SHA}" || {
+              echo "::error::verify_from_sha is outside the closure-base ancestry"
+              exit 1
+            }
+            git merge-base --is-ancestor "${INPUT_VERIFY_FROM_SHA}" "${expected_head}" || {
+              echo "::error::verify_from_sha is not an ancestor of the exact candidate"
+              exit 1
+            }
+
+            status_context='BThwani CI / PR result'
+            status_payload="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/commits/${INPUT_VERIFY_FROM_SHA}/status")"
+            expected_title="BThwani CI PR ${PR_NUMBER} ${INPUT_VERIFY_FROM_SHA} @ ${base_sha}"
+            run_prefix="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/"
+            trusted_frontier=false
+            mapfile -t target_urls < <(jq -r --arg context "${status_context}" \
+              '.statuses[]? | select(.context == $context and .state == "success") | .target_url // empty' \
+              <<<"${status_payload}")
+            for target_url in "${target_urls[@]}"; do
+              [[ "${target_url}" == "${run_prefix}"* ]] || continue
+              run_id="${target_url#"${run_prefix}"}"
+              [[ "${run_id}" =~ ^[1-9][0-9]*$ ]] || continue
+              run_json="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" 2>/dev/null || true)"
+              [[ -n "${run_json}" ]] || continue
+              if jq -e \
+                --arg branch "${DEFAULT_BRANCH}" \
+                --arg title "${expected_title}" \
+                '.conclusion == "success" and .event == "workflow_dispatch" and .path == ".github/workflows/ci-check.yml" and .head_branch == $branch and .display_title == $title' \
+                <<<"${run_json}" >/dev/null; then
+                trusted_frontier=true
+                break
+              fi
+            done
+            if [[ "${trusted_frontier}" == "true" ]]; then
+              requested_verification_base_sha="${INPUT_VERIFY_FROM_SHA}"
+            else
+              echo "::notice::verify_from_sha has no trusted exact PR/base-bound successful CI evidence; using closure base"
+            fi
+          fi
+
           {
             echo "head_sha=${expected_head}"
             echo "base_sha=${base_sha}"
+            echo "requested_verification_base_sha=${requested_verification_base_sha}"
             echo "pr_number=${PR_NUMBER}"
           } >> "${GITHUB_OUTPUT}"
-      - name: Resolve affected owners from exact Git diff
+
+      - name: Resolve affected owners from exact verification window using trusted router
         id: scope
         shell: bash
         env:
-          CI_BASE_SHA: ${{ steps.identity.outputs.base_sha }}
+          CLOSURE_BASE_SHA: ${{ steps.identity.outputs.base_sha }}
+          REQUESTED_VERIFICATION_BASE_SHA: ${{ steps.identity.outputs.requested_verification_base_sha }}
           CI_HEAD_SHA: ${{ steps.identity.outputs.head_sha }}
           CI_FULL_SCOPE: ${{ inputs.full_scope }}
-        run: node tools/scripts/detect-ci-context.mjs
-      - name: Verify Sonar coverage ownership and configuration
-        run: node --test tools/guards/sonar-coverage-ownership-gate.test.mjs && node tools/guards/sonar-coverage-ownership-gate.mjs
+          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          trusted_router="${RUNNER_TEMP}/detect-ci-context.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/detect-ci-context.mjs" \
+            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_router}"
+          [[ -s "${trusted_router}" ]] || { echo "::error::trusted CI router could not be loaded"; exit 1; }
+
+          effective_base="${REQUESTED_VERIFICATION_BASE_SHA}"
+          if [[ "${effective_base}" != "${CLOSURE_BASE_SHA}" && "${CI_FULL_SCOPE}" != "true" ]]; then
+            probe="${RUNNER_TEMP}/ci-verification-window-probe.json"
+            GITHUB_OUTPUT="" CI_BASE_SHA="${effective_base}" CI_HEAD_SHA="${CI_HEAD_SHA}" CI_FULL_SCOPE=false \
+              node "${trusted_router}" > "${probe}"
+            jq -e '.ci_control_plane | type == "boolean"' "${probe}" >/dev/null
+            if [[ "$(jq -r '.ci_control_plane' "${probe}")" == "true" ]]; then
+              effective_base="${CLOSURE_BASE_SHA}"
+            fi
+          fi
+
+          echo "verification_base_sha=${effective_base}" >> "${GITHUB_OUTPUT}"
+          CI_BASE_SHA="${effective_base}" CI_HEAD_SHA="${CI_HEAD_SHA}" CI_FULL_SCOPE="${CI_FULL_SCOPE}" \
+            node "${trusted_router}"
+
+          {
+            echo "### Verification window"
+            echo "- Closure base: ${CLOSURE_BASE_SHA}"
+            echo "- Requested evidence frontier: ${REQUESTED_VERIFICATION_BASE_SHA}"
+            echo "- Effective verification base: ${effective_base}"
+            echo "- Candidate: ${CI_HEAD_SHA}"
+            if [[ "${CI_FULL_SCOPE}" == "true" ]]; then
+              echo "- Mode: full closure-base verification"
+            elif [[ "${effective_base}" == "${CLOSURE_BASE_SHA}" && "${REQUESTED_VERIFICATION_BASE_SHA}" != "${CLOSURE_BASE_SHA}" ]]; then
+              echo "- Mode: conservative closure-base verification because verification authority changed"
+            elif [[ "${effective_base}" == "${CLOSURE_BASE_SHA}" ]]; then
+              echo "- Mode: conservative closure-base verification"
+            else
+              echo "- Mode: incremental evidence invalidation"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  controls:
+    name: CI control-plane verification
+    needs: [context]
+    if: ${{ needs.context.result == 'success' && (needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' || needs.context.outputs.database_changed == 'true') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable candidate with verification-base history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.context.outputs.head_sha }}
+          fetch-depth: 0
+          fetch-tags: false
+          persist-credentials: false
+      - name: Set up locked Node runtime
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24.17.0"
+      - name: Load trusted CI control-plane authorities
+        shell: bash
+        env:
+          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          trusted_root="${RUNNER_TEMP}/bthwani-trusted-controls"
+          mkdir -p \
+            "${trusted_root}/tools/guards" \
+            "${trusted_root}/tools/scripts/lib" \
+            "${trusted_root}/tools/mobile/lib" \
+            "${trusted_root}/tools/verification"
+          fetch_trusted() {
+            local relative="$1" target="${trusted_root}/$1"
+            mkdir -p "$(dirname "${target}")"
+            gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/contents/${relative}" \
+              -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${target}"
+            [[ -s "${target}" ]] || { echo "::error::trusted control missing: ${relative}"; exit 1; }
+          }
+          fetch_trusted tools/scripts/check-ci-source-immutability.mjs
+          fetch_trusted tools/scripts/verify-assurance-authority-drift.mjs
+          fetch_trusted tools/guards/migration-manifest-drift-gate.mjs
+          fetch_trusted tools/guards/sonar-coverage-ownership-gate.mjs
+          fetch_trusted tools/guards/sonar-coverage-ownership-gate.test.mjs
+          fetch_trusted tools/guards/_guard-utils.mjs
+          fetch_trusted tools/scripts/generate-sonar-node-coverage.mjs
+          fetch_trusted tools/scripts/lib/package-manager-invocation.mjs
+          fetch_trusted tools/mobile/lib/package-manager-invocation.mjs
+          fetch_trusted tools/verification/ownership.manifest.json
+          {
+            echo "TRUSTED_CI_SOURCE_IMMUTABILITY=${trusted_root}/tools/scripts/check-ci-source-immutability.mjs"
+            echo "TRUSTED_ASSURANCE_AUTHORITY_DRIFT=${trusted_root}/tools/scripts/verify-assurance-authority-drift.mjs"
+            echo "TRUSTED_MIGRATION_MANIFEST_GUARD=${trusted_root}/tools/guards/migration-manifest-drift-gate.mjs"
+            echo "TRUSTED_SONAR_OWNERSHIP_GUARD=${trusted_root}/tools/guards/sonar-coverage-ownership-gate.mjs"
+            echo "TRUSTED_SONAR_OWNERSHIP_TEST=${trusted_root}/tools/guards/sonar-coverage-ownership-gate.test.mjs"
+          } >> "${GITHUB_ENV}"
+      - name: Check protected assurance authority drift
+        id: assurance_authority
+        if: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' }}
+        continue-on-error: true
+        shell: bash
+        env:
+          BTHWANI_TARGET_REPO: ${{ github.workspace }}
+          BTHWANI_TRUSTED_SHA: ${{ github.sha }}
+          BTHWANI_CANDIDATE_SHA: ${{ needs.context.outputs.head_sha }}
+        run: node "${TRUSTED_ASSURANCE_AUTHORITY_DRIFT}"
+      - name: Check governed migration manifest history with trusted authority
+        id: migrations
+        if: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.database_changed == 'true' }}
+        continue-on-error: true
+        shell: bash
+        run: >-
+          BTHWANI_TARGET_REPO="${GITHUB_WORKSPACE}"
+          node "${TRUSTED_MIGRATION_MANIFEST_GUARD}"
+          --immutable-baseline "${{ needs.context.outputs.verification_base_sha }}"
+      - name: Check verification-workflow source immutability with trusted verifier
+        id: source_immutability
+        if: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' }}
+        continue-on-error: true
+        shell: bash
+        run: BTHWANI_TARGET_REPO="${GITHUB_WORKSPACE}" node "${TRUSTED_CI_SOURCE_IMMUTABILITY}"
+      - name: Check Sonar coverage ownership and configuration with trusted authority
+        id: sonar_ownership
+        if: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test "${TRUSTED_SONAR_OWNERSHIP_TEST}"
+          BTHWANI_TARGET_REPO="${GITHUB_WORKSPACE}" node "${TRUSTED_SONAR_OWNERSHIP_GUARD}"
+      - name: Enforce complete material control-plane collection
+        if: ${{ always() }}
+        shell: bash
+        env:
+          ASSURANCE_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' }}
+          MIGRATIONS_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.database_changed == 'true' }}
+          SOURCE_IMMUTABILITY_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' }}
+          SONAR_OWNERSHIP_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' }}
+          ASSURANCE_AUTHORITY: ${{ steps.assurance_authority.outcome }}
+          MIGRATIONS: ${{ steps.migrations.outcome }}
+          SOURCE_IMMUTABILITY: ${{ steps.source_immutability.outcome }}
+          SONAR_OWNERSHIP: ${{ steps.sonar_ownership.outcome }}
+        run: |
+          set -euo pipefail
+          failures=()
+          check_control() {
+            local name="$1" result="$2" required="$3"
+            if [[ "${required}" == "true" ]]; then
+              [[ "${result}" == "success" ]] || failures+=("${name}:${result}")
+            else
+              [[ "${result}" == "skipped" ]] || failures+=("${name}:unexpected-${result}")
+            fi
+          }
+          check_control assurance-authority-drift "${ASSURANCE_AUTHORITY}" "${ASSURANCE_REQUIRED}"
+          check_control migration-manifest "${MIGRATIONS}" "${MIGRATIONS_REQUIRED}"
+          check_control ci-source-immutability "${SOURCE_IMMUTABILITY}" "${SOURCE_IMMUTABILITY_REQUIRED}"
+          check_control sonar-coverage-ownership "${SONAR_OWNERSHIP}" "${SONAR_OWNERSHIP_REQUIRED}"
+          if (( ${#failures[@]} )); then
+            echo "::error::CI control-plane verification failed after collecting all materially required controls: $(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+          echo "All materially required CI control-plane checks passed."
 
   diagnostics:
     name: Contract diagnostics
@@ -116,7 +348,7 @@ jobs:
     if: ${{ needs.context.outputs.diagnostics_required == 'true' }}
     uses: ./.github/workflows/ci-node-diagnostics.yml
     with:
-      base_sha: ${{ needs.context.outputs.base_sha }}
+      base_sha: ${{ needs.context.outputs.verification_base_sha }}
       candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_scope: ${{ needs.context.outputs.full_scope }}
       contracts: ${{ needs.context.outputs.contracts }}
@@ -127,7 +359,7 @@ jobs:
     if: ${{ needs.context.outputs.verification_required == 'true' }}
     uses: ./.github/workflows/ci-node-verification.yml
     with:
-      base_sha: ${{ needs.context.outputs.base_sha }}
+      base_sha: ${{ needs.context.outputs.verification_base_sha }}
       candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_scope: ${{ needs.context.outputs.full_scope }}
       contracts: ${{ needs.context.outputs.contracts }}
@@ -141,7 +373,7 @@ jobs:
     if: ${{ needs.context.outputs.backend_required == 'true' }}
     uses: ./.github/workflows/ci-backends.yml
     with:
-      base_sha: ${{ needs.context.outputs.base_sha }}
+      base_sha: ${{ needs.context.outputs.verification_base_sha }}
       candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_scope: ${{ needs.context.outputs.full_scope }}
       database_changed: ${{ needs.context.outputs.database_changed }}
@@ -162,36 +394,49 @@ jobs:
 
   result:
     name: ${{ inputs.pr_number != '' && 'BThwani CI / PR result' || 'BThwani CI / check result' }}
-    needs: [context, diagnostics, verification, backends, runtime]
+    needs: [context, controls, diagnostics, verification, backends, runtime]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      contents: read
+      statuses: write
     steps:
       - name: Enforce applicable results
         shell: bash
         env:
           CONTEXT_RESULT: ${{ needs.context.result }}
+          CONTROLS_RESULT: ${{ needs.controls.result }}
           DIAGNOSTICS_RESULT: ${{ needs.diagnostics.result }}
           VERIFICATION_RESULT: ${{ needs.verification.result }}
           BACKENDS_RESULT: ${{ needs.backends.result }}
           RUNTIME_RESULT: ${{ needs.runtime.result }}
+          CONTROLS_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' || needs.context.outputs.database_changed == 'true' }}
           DIAGNOSTICS_REQUIRED: ${{ needs.context.outputs.diagnostics_required }}
           VERIFICATION_REQUIRED: ${{ needs.context.outputs.verification_required }}
           BACKEND_REQUIRED: ${{ needs.context.outputs.backend_required }}
           RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime_required }}
-          HEAD_SHA: ${{ needs.context.outputs.head_sha }}
-          PR_NUMBER: ${{ needs.context.outputs.pr_number }}
+          HEAD_SHA: ${{ needs.context.outputs.head_sha || inputs.expected_head_sha || github.sha }}
+          VERIFICATION_BASE_SHA: ${{ needs.context.outputs.verification_base_sha }}
+          PR_NUMBER: ${{ needs.context.outputs.pr_number || inputs.pr_number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
+          [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]] || {
+            echo "::error::required CI status publication is forbidden outside ${DEFAULT_BRANCH} workflow authority"
+            exit 1
+          }
           context='BThwani CI / check result'
           [[ -n "${PR_NUMBER}" ]] && context='BThwani CI / PR result'
           target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           publish_status() {
             local state="$1" description="$2"
-            gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
-              -f state="${state}" -f context="${context}" \
-              -f description="${description}" -f target_url="${target_url}" >/dev/null
+            if [[ "${HEAD_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+              gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+                -f state="${state}" -f context="${context}" \
+                -f description="${description}" -f target_url="${target_url}" >/dev/null
+            fi
           }
           [[ "${CONTEXT_RESULT}" == "success" ]] || {
             publish_status failure "Exact CI failed: candidate context ${CONTEXT_RESULT}"
@@ -204,6 +449,7 @@ jobs:
             [[ "${required}" != "true" && "${result}" == "skipped" ]] && return 0
             [[ "${result}" == "success" ]] || failures+=("${name}:${result}")
           }
+          check_result controls "${CONTROLS_RESULT}" "${CONTROLS_REQUIRED}"
           check_result diagnostics "${DIAGNOSTICS_RESULT}" "${DIAGNOSTICS_REQUIRED}"
           check_result node "${VERIFICATION_RESULT}" "${VERIFICATION_REQUIRED}"
           check_result backends "${BACKENDS_RESULT}" "${BACKEND_REQUIRED}"
@@ -215,4 +461,4 @@ jobs:
             exit 1
           fi
           publish_status success "Exact candidate ${HEAD_SHA} passed applicable verification."
-          echo "Exact candidate ${HEAD_SHA} passed applicable verification."
+          echo "Exact candidate ${HEAD_SHA} passed applicable verification from ${VERIFICATION_BASE_SHA}."
