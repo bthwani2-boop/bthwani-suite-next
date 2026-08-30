@@ -155,11 +155,11 @@ jobs:
                 break
               fi
             done
-            [[ "${trusted_frontier}" == "true" ]] || {
-              echo "::error::verify_from_sha has no trusted exact PR/base-bound successful CI evidence"
-              exit 1
-            }
-            requested_verification_base_sha="${INPUT_VERIFY_FROM_SHA}"
+            if [[ "${trusted_frontier}" == "true" ]]; then
+              requested_verification_base_sha="${INPUT_VERIFY_FROM_SHA}"
+            else
+              echo "::notice::verify_from_sha has no trusted exact PR/base-bound successful CI evidence; using closure base"
+            fi
           fi
 
           {
