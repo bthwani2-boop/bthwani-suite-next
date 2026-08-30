@@ -406,6 +406,18 @@ export function buildEvidenceEnvelope({
   };
 }
 
+const NON_ROOT_DISPOSITIONS = new Set([
+  "BASELINE",
+  "N/A_PROVEN",
+  "SUPERSEDED",
+  "DUPLICATE_CORRELATED",
+  "DESCENDANT_OF_ROOT",
+]);
+
+function dispositionSuppressesRoot(value) {
+  return NON_ROOT_DISPOSITIONS.has(String(value?.disposition ?? "").trim().toUpperCase());
+}
+
 export function buildUnifiedRootGraph(envelopes, candidateIdentity = "") {
   const roots = new Map();
   for (const envelope of envelopes) {
@@ -414,7 +426,7 @@ export function buildUnifiedRootGraph(envelopes, candidateIdentity = "") {
       ...envelope.engineConditions.map((condition) => ({kind: "engine-condition", value: condition})),
     ];
     for (const entry of evidenceEntries) {
-      if (entry.value.material === false || !entry.value.rootCandidate?.rootKey) continue;
+      if (entry.value.material === false || dispositionSuppressesRoot(entry.value) || !entry.value.rootCandidate?.rootKey) continue;
       const key = entry.value.rootCandidate.rootKey;
       const root = roots.get(key) ?? {
         rootId: key,
@@ -434,6 +446,7 @@ export function buildUnifiedRootGraph(envelopes, candidateIdentity = "") {
         tool: envelope.tool.id,
         candidateIdentity: envelope.candidate.identity || candidateIdentity,
         rawPath: envelope.raw.path,
+        disposition: entry.value.disposition ?? "ROOT_MAPPED",
       });
       roots.set(key, root);
     }

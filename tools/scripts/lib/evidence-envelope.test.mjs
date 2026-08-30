@@ -203,3 +203,58 @@ test("one Root Graph correlates findings and exposes unresolved Source-of-Fix wo
   assert.equal(summary.unmappedMaterialFindings, 0);
   assert.equal(summary.sourceOfFixUnresolved, 1);
 });
+
+
+test("proven non-root dispositions remain accounted without opening duplicate Root Queue entries", () => {
+  for (const disposition of ["N/A_PROVEN", "SUPERSEDED", "DUPLICATE_CORRELATED", "DESCENDANT_OF_ROOT"]) {
+    const envelope = buildEvidenceEnvelope({
+      toolId: "custom",
+      candidate,
+      status: "FAIL",
+      exitCode: 1,
+      nativePayload: {
+        findings: [{
+          ruleId: "CUSTOM",
+          level: "ERROR",
+          path: "src/a.ts",
+          startLine: 1,
+          message: disposition,
+          material: true,
+          disposition,
+        }],
+        errors: [],
+        evidenceComplete: true,
+      },
+    });
+    envelope.findings[0].disposition = disposition;
+    const graph = buildUnifiedRootGraph([envelope], candidate.identity);
+    assert.equal(envelope.accounting.allRawFindingsAccounted, true, disposition);
+    assert.equal(graph.rootQueue.length, 0, disposition);
+  }
+});
+
+test("BLOCKED_BY remains an open root until the blocker relationship is actually resolved", () => {
+  const envelope = buildEvidenceEnvelope({
+    toolId: "custom",
+    candidate,
+    status: "FAIL",
+    exitCode: 1,
+    nativePayload: {
+      findings: [{
+        ruleId: "CUSTOM",
+        level: "ERROR",
+        path: "src/a.ts",
+        startLine: 1,
+        message: "blocked descendant",
+        material: true,
+        disposition: "BLOCKED_BY",
+      }],
+      errors: [],
+      evidenceComplete: true,
+    },
+  });
+  envelope.findings[0].disposition = "BLOCKED_BY";
+  const graph = buildUnifiedRootGraph([envelope], candidate.identity);
+  assert.equal(graph.rootQueue.length, 1);
+  assert.equal(graph.roots[0].evidence[0].disposition, "BLOCKED_BY");
+});

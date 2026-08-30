@@ -101,7 +101,14 @@ test("all assurance outputs converge through one evidence contract and Root Grap
   assert.match(security, /capture-tool-evidence\.mjs/u);
   assert.match(final, /Collect every available analyzer artifact and completed job log/u);
   assert.match(final, /Consume all tool evidence into one exact-candidate Root Graph/u);
-  assert.match(final, /--required-tools 'codeql,sonar,semgrep,gitleaks,osv-scanner,trivy,actionlint,zizmor,pinact,shellcheck,hadolint,yamllint'/u);
+  assert.match(final, /verify-closure-required-claims\.mjs/u);
+  assert.match(final, /closure_required_claims/u);
+  assert.match(final, /TRUSTED_CLOSURE_CLAIMS/u);
+  assert.match(final, /--print-required-tools/u);
+  assert.doesNotMatch(final, /--required-tools 'codeql,sonar,semgrep,gitleaks,osv-scanner,trivy,actionlint,zizmor,pinact,shellcheck,hadolint,yamllint'/u);
+  const closureClaims = read("tools/scripts/verify-closure-required-claims.mjs");
+  assert.match(closureClaims, /UNKNOWN_REQUIRED_CLOSURE_CLAIM/u);
+  assert.match(closureClaims, /security:remote/u);
   assert.match(final, /conclusion.*skipped/u);
   assert.match(final, /outcome='NOT_APPLICABLE'/u);
   assert.match(final, /evidenceConsumption: \$evidenceConsumption\[0\]/u);

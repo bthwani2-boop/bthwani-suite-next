@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyFiles, resolveFullScope } from "./detect-ci-context.mjs";
+import { applyForcedVerification, classifyFiles, deriveClosureRequiredClaims, deriveRequiredClaims, resolveFullScope } from "./detect-ci-context.mjs";
 
 test("governance authority changes enter control-plane verification without unrelated product workers", () => {
   const result = classifyFiles(["governance/policies/engineering.md"]);
@@ -191,4 +191,31 @@ test("fullScope requires both human-experience evidence dimensions", () => {
   const result = classifyFiles([], { fullScope: true });
   assert.equal(result.rendered_web_required, true);
   assert.equal(result.mobile_evidence_required, true);
+});
+
+
+test("router emits claim-level CI and closure proof requirements", () => {
+  const result = classifyFiles(["services/dsh/database/migrations/0002_add_column.sql"]);
+  assert.ok(result.required_claims.includes("control:migration-manifest"));
+  assert.ok(result.required_claims.includes("backend:dsh"));
+  assert.ok(result.required_claims.includes("runtime:verification"));
+  assert.ok(result.closure_required_claims.includes("change:verification"));
+  assert.ok(result.closure_required_claims.includes("analysis:sonar"));
+});
+
+test("control-plane and backend DB replay inputs are decoupled from successful sibling claims", () => {
+  const base = classifyFiles(["README.md"]);
+  const forced = applyForcedVerification(base, ["control:assurance-authority-drift", "backend:dsh"]);
+  assert.equal(forced.ci_control_plane, true);
+  assert.equal(forced.verification_required, false);
+  assert.equal(forced.dsh, true);
+  assert.equal(forced.backend_required, true);
+  assert.equal(forced.runtime_required, false);
+});
+
+test("claim derivation is deterministic and rejects unknown forced claims", () => {
+  const result = classifyFiles([".github/workflows/ci-check.yml"]);
+  assert.deepEqual(deriveRequiredClaims(result), result.required_claims);
+  assert.deepEqual(deriveClosureRequiredClaims(result), result.closure_required_claims);
+  assert.throws(() => applyForcedVerification(result, ["unknown:claim"]), /UNKNOWN_FORCED_CI_CLAIM/u);
 });
