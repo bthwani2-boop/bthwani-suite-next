@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 
-const [kind, prNumber, candidateSha, expectedContextSha = "", expectedArtifactIdentity = "", expectedPackageIntegrity = "", expectedToolVersion = ""] = process.argv.slice(2);
+const [kind, prNumber, candidateSha, expectedPrimary = "", expectedSecondary = "", expectedTertiary = "", expectedQuaternary = ""] = process.argv.slice(2);
 
 const fail = (message) => {
   process.stderr.write(`evidence-comment: ${message}\n`);
@@ -19,11 +19,12 @@ const pagedArray = (endpoint) => {
 };
 const nonEmpty = (value) => String(value ?? "").trim();
 const sha256 = (value) => /^[0-9a-f]{64}$/iu.test(nonEmpty(value));
+const exactSha = (value) => /^[0-9a-f]{40}$/iu.test(nonEmpty(value));
 const validInstant = (value) => Number.isFinite(Date.parse(nonEmpty(value)));
 
 if (!/^[1-9][0-9]*$/u.test(prNumber ?? "")) fail("positive PR number required");
-if (!/^[0-9a-f]{40}$/iu.test(candidateSha ?? "")) fail("exact candidate SHA required");
-if (!["semantic", "rendered", "mobile"].includes(kind)) fail("kind must be semantic, rendered, or mobile");
+if (!exactSha(candidateSha)) fail("exact candidate SHA required");
+if (!["semantic", "rendered", "mobile", "bootstrap"].includes(kind)) fail("kind must be semantic, rendered, mobile, or bootstrap");
 
 const repository = process.env.GITHUB_REPOSITORY;
 if (!repository) fail("GITHUB_REPOSITORY is required");
@@ -43,6 +44,7 @@ const markers = {
   semantic: "BTHWANI_SEMANTIC_REVIEW:v1",
   rendered: "BTHWANI_RENDERED_WEB_EVIDENCE:v1",
   mobile: "BTHWANI_MOBILE_EVIDENCE:v1",
+  bootstrap: "BTHWANI_ASSURANCE_BOOTSTRAP:v1",
 };
 const marker = markers[kind];
 const matching = comments.filter((c) => String(c.body ?? "").startsWith(`${marker}\n`));
@@ -74,17 +76,17 @@ if (kind === "semantic") {
   if (nonEmpty(payload.reviewIdentity?.login).toLowerCase() !== reviewerLogin) fail("semantic reviewIdentity.login must match comment author");
 
   for (const [name, value] of [
-    ["expected context SHA-256", expectedContextSha],
-    ["expected artifact identity", expectedArtifactIdentity],
-    ["expected package integrity", expectedPackageIntegrity],
-    ["expected tool version", expectedToolVersion],
+    ["expected context SHA-256", expectedPrimary],
+    ["expected artifact identity", expectedSecondary],
+    ["expected package integrity", expectedTertiary],
+    ["expected tool version", expectedQuaternary],
   ]) if (!nonEmpty(value)) fail(`${name} was not supplied by trusted OCR context`);
 
   const provenance = payload.reviewProvenance ?? {};
-  if (provenance.contextSha256 !== expectedContextSha) fail("semantic context SHA-256 does not match trusted OCR context");
-  if (provenance.artifactIdentity !== expectedArtifactIdentity) fail("semantic artifact identity does not match trusted OCR context");
-  if (provenance.packageIntegrity !== expectedPackageIntegrity) fail("semantic package integrity does not match trusted OCR context");
-  if (provenance.toolVersion !== expectedToolVersion) fail("semantic tool version does not match trusted OCR context");
+  if (provenance.contextSha256 !== expectedPrimary) fail("semantic context SHA-256 does not match trusted OCR context");
+  if (provenance.artifactIdentity !== expectedSecondary) fail("semantic artifact identity does not match trusted OCR context");
+  if (provenance.packageIntegrity !== expectedTertiary) fail("semantic package integrity does not match trusted OCR context");
+  if (provenance.toolVersion !== expectedQuaternary) fail("semantic tool version does not match trusted OCR context");
 }
 
 if (kind === "rendered") {
@@ -108,6 +110,26 @@ if (kind === "mobile") {
   if (!nonEmpty(payload.device?.model) || !nonEmpty(payload.device?.osVersion) || !nonEmpty(payload.device?.appBuild)) fail("mobile device model/osVersion/appBuild are required");
   if (!Array.isArray(payload.scenarios) || payload.scenarios.length === 0 || payload.scenarios.some((x) => !nonEmpty(x))) fail("mobile evidence requires non-empty scenarios");
   if (!nonEmpty(payload.evidenceIdentity)) fail("mobile evidence identity required");
+}
+
+if (kind === "bootstrap") {
+  if (payload.schema !== "BTHWANI_ASSURANCE_BOOTSTRAP" || payload.version !== 1) fail("bootstrap schema/version mismatch");
+  if (payload.reviewIdentity?.kind !== "external-authorized-assurance-reviewer") fail("bootstrap reviewer identity kind mismatch");
+  if (nonEmpty(payload.reviewIdentity?.login).toLowerCase() !== reviewerLogin) fail("bootstrap reviewIdentity.login must match comment author");
+
+  const expectedAuthorityDiffSha256 = nonEmpty(expectedPrimary).toLowerCase();
+  const expectedTrustedSha = nonEmpty(expectedSecondary).toLowerCase();
+  const expectedChangedCount = Number.parseInt(nonEmpty(expectedTertiary), 10);
+  if (!sha256(expectedAuthorityDiffSha256)) fail("trusted authorityDiffSha256 was not supplied");
+  if (!exactSha(expectedTrustedSha)) fail("trusted bootstrap base SHA was not supplied");
+  if (!Number.isSafeInteger(expectedChangedCount) || expectedChangedCount < 1) fail("trusted protected changed-count must be a positive integer");
+
+  const provenance = payload.authorityProvenance ?? {};
+  if (nonEmpty(provenance.trustedSha).toLowerCase() !== expectedTrustedSha) fail("bootstrap trusted SHA does not match authority evidence");
+  if (nonEmpty(provenance.authorityDiffSha256).toLowerCase() !== expectedAuthorityDiffSha256) fail("bootstrap authority diff SHA-256 does not match trusted evidence");
+  if (Number(provenance.changedCount) !== expectedChangedCount) fail("bootstrap protected changed-count does not match trusted evidence");
+  if (provenance.reviewScope !== "assurance-authority-only") fail("bootstrap reviewScope must be assurance-authority-only");
+  if (nonEmpty(payload.evidenceSha256).toLowerCase() !== expectedAuthorityDiffSha256) fail("bootstrap evidenceSha256 must bind directly to the authority diff SHA-256");
 }
 
 process.stdout.write(`${kind} evidence PASS for ${candidateSha} by independent reviewer ${reviewerLogin}\n`);
