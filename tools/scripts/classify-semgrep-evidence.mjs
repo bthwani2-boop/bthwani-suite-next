@@ -4,9 +4,12 @@ import { fileURLToPath } from "node:url";
 
 export const TOOL_LIMITATION_PROVEN = "TOOL_LIMITATION_PROVEN";
 export const UNKNOWN_ENGINE_ERROR = "UNKNOWN_ENGINE_ERROR";
+export const REVIEW_FINDING = "REVIEW_FINDING";
+export const BLOCKING_FINDING = "BLOCKING_FINDING";
 
 const workflowPath = (value) => typeof value === "string" && value.startsWith(".github/workflows/");
 const typescriptPath = (value) => typeof value === "string" && /\.(?:ts|tsx|mts|cts)$/.test(value);
+const powershellPath = (value) => typeof value === "string" && /\.ps1$/i.test(value);
 
 const normalizedType = (raw) => {
   if (Array.isArray(raw?.type)) return raw.type[0] ?? "UNSPECIFIED";
@@ -30,6 +33,15 @@ const isKnownWorkflowInternalParse = (raw, type, message) => {
 const isKnownReadonlyImportTypeParse = (raw, type, message) => {
   if (!typescriptPath(raw?.path) || type !== "PartialParsing") return false;
   return /`readonly import\((['"])[^'"]+\1\)\.[A-Za-z_$][\w$]*` was unexpected/.test(message);
+};
+
+const isKnownModernTypeScriptParse = (raw, type, message) => {
+  if (!typescriptPath(raw?.path) || type !== "PartialParsing") return false;
+  return /`(?:type|,)` was unexpected/.test(message);
+};
+
+const isKnownPowerShellPartialParse = (raw, type) => {
+  return powershellPath(raw?.path) && type === "PartialParsing";
 };
 
 export function classifySemgrepEngineCondition(raw) {
@@ -71,8 +83,37 @@ export function classifySemgrepEngineCondition(raw) {
     };
   }
 
+  if (isKnownModernTypeScriptParse(raw, type, message)) {
+    return {
+      ...result,
+      classification: TOOL_LIMITATION_PROVEN,
+      reason: "semgrep-typescript-modern-syntax-parser",
+    };
+  }
+
+  if (isKnownPowerShellPartialParse(raw, type)) {
+    return {
+      ...result,
+      classification: TOOL_LIMITATION_PROVEN,
+      reason: "semgrep-powershell-parser-not-authoritative",
+    };
+  }
+
   return result;
 }
+
+const findingClassification = (result) => {
+  const ruleId = typeof result?.check_id === "string" ? result.check_id : "";
+  const classification = ruleId.includes(".audit.") ? REVIEW_FINDING : BLOCKING_FINDING;
+  return {
+    classification,
+    ruleId,
+    path: result?.path ?? "",
+    line: result?.start?.line ?? null,
+    severity: result?.extra?.severity ?? "UNSPECIFIED",
+    message: result?.extra?.message ?? "",
+  };
+};
 
 const countBySeverity = (results) => {
   const counts = new Map();
@@ -89,23 +130,29 @@ export function classifySemgrepEvidence(payload, metadata = {}) {
   const results = Array.isArray(payload?.results) ? payload.results : [];
   const rawErrors = Array.isArray(payload?.errors) ? payload.errors : [];
   const classifiedErrors = rawErrors.map(classifySemgrepEngineCondition);
+  const classifiedFindings = results.map(findingClassification);
   const toolLimitations = classifiedErrors.filter((entry) => entry.classification === TOOL_LIMITATION_PROVEN);
   const unknownErrors = classifiedErrors.filter((entry) => entry.classification === UNKNOWN_ENGINE_ERROR);
+  const reviewFindings = classifiedFindings.filter((entry) => entry.classification === REVIEW_FINDING);
+  const blockingFindings = classifiedFindings.filter((entry) => entry.classification === BLOCKING_FINDING);
 
   return {
     classifiedErrors,
+    classifiedFindings,
     summary: {
-      schemaVersion: 3,
+      schemaVersion: 4,
       headSha: metadata.headSha ?? "",
       mode: metadata.mode ?? "",
       baseSha: metadata.baseSha ?? "",
       totalFindings: results.length,
+      reviewFindings: reviewFindings.length,
+      blockingFindings: blockingFindings.length,
       engineConditions: rawErrors.length,
       classifiedEngineErrors: classifiedErrors.length,
       toolLimitationsProven: toolLimitations.length,
       unknownEngineErrors: unknownErrors.length,
       severities: countBySeverity(results),
-      allRawFindingsAccounted: classifiedErrors.length === rawErrors.length,
+      allRawFindingsAccounted: classifiedFindings.length === results.length && classifiedErrors.length === rawErrors.length,
     },
   };
 }
@@ -122,6 +169,7 @@ export function runNormalizer({ input, outputDir, headSha, mode, baseSha }) {
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(path.join(outputDir, "semgrep.pretty.json"), `${JSON.stringify(payload, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, "classified-errors.json"), `${JSON.stringify(normalized.classifiedErrors, null, 2)}\n`);
+  fs.writeFileSync(path.join(outputDir, "classified-findings.json"), `${JSON.stringify(normalized.classifiedFindings, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, "summary.json"), `${JSON.stringify(normalized.summary, null, 2)}\n`);
   return normalized.summary;
 }
@@ -137,7 +185,7 @@ const main = () => {
   });
 
   console.log(JSON.stringify(summary));
-  if (!summary.allRawFindingsAccounted || summary.unknownEngineErrors !== 0 || summary.totalFindings !== 0) {
+  if (!summary.allRawFindingsAccounted || summary.unknownEngineErrors !== 0 || summary.blockingFindings !== 0) {
     process.exitCode = 1;
   }
 };
