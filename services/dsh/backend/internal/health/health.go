@@ -145,6 +145,7 @@ func handleReadiness(readinessStore runtimeReadinessStore, storageStatus func(co
 	}
 }
 
+// configuredStatus deliberately checks only whether configuration is present, not whether the dependency is reachable.
 func configuredStatus(value string) string {
 	if strings.TrimSpace(value) == "" {
 		return "missing"
