@@ -9,7 +9,6 @@ export const BLOCKING_FINDING = "BLOCKING_FINDING";
 
 const workflowPath = (value) => typeof value === "string" && value.startsWith(".github/workflows/");
 const typescriptPath = (value) => typeof value === "string" && /\.(?:ts|tsx|mts|cts)$/.test(value);
-const powershellPath = (value) => typeof value === "string" && /\.ps1$/i.test(value);
 const normalizePath = (value) => String(value ?? "").replaceAll("\\", "/").replace(/^\.\//u, "");
 
 function parseDiffRanges(diffText = "") {
@@ -72,13 +71,6 @@ const isKnownReadonlyImportTypeParse = (raw, type, message) => {
   return /`readonly import\((['"])[^'"]+\1\)\.[A-Za-z_$][\w$]*` was unexpected/.test(message);
 };
 
-const isKnownModernTypeScriptParse = (raw, type, message) => {
-  if (!typescriptPath(raw?.path) || type !== "PartialParsing") return false;
-  return /`(?:type|,)` was unexpected/.test(message);
-};
-
-const isKnownPowerShellPartialParse = (raw, type) => powershellPath(raw?.path) && type === "PartialParsing";
-
 export function classifySemgrepEngineCondition(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return {
@@ -107,12 +99,6 @@ export function classifySemgrepEngineCondition(raw) {
   }
   if (isKnownReadonlyImportTypeParse(raw, type, message)) {
     return {...result, classification: TOOL_LIMITATION_PROVEN, reason: "semgrep-typescript-readonly-import-type-parser"};
-  }
-  if (isKnownModernTypeScriptParse(raw, type, message)) {
-    return {...result, classification: TOOL_LIMITATION_PROVEN, reason: "semgrep-typescript-modern-syntax-parser"};
-  }
-  if (isKnownPowerShellPartialParse(raw, type)) {
-    return {...result, classification: TOOL_LIMITATION_PROVEN, reason: "semgrep-powershell-parser-not-authoritative"};
   }
   return result;
 }
