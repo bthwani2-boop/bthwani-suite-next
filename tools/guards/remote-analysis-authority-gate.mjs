@@ -21,6 +21,7 @@ const mustNotMatch = (text, patterns, owner) => {
 
 const workflowDir = path.resolve(".github/workflows");
 const workflowFiles = fs.readdirSync(workflowDir).filter((file) => file.endsWith(".yml"));
+const workflowEntries = workflowFiles.map((file) => ({file, content: read(path.join(workflowDir, file))}));
 const workerWorkflowFiles = workflowFiles.filter((file) => file !== "pr-assurance-trigger.yml");
 const workerWorkflowText = workerWorkflowFiles.map((file) => read(path.join(workflowDir, file))).join("\n");
 const ci = read(path.join(workflowDir, "ci-check.yml"));
@@ -49,13 +50,30 @@ mustNotMatch(closure, [/\/pulls\/[^\s"']+\/files(?:\?|["'])/u], "final closure c
 
 mustContain(repositoryBaseline, ["workflow_dispatch:", "BThwani / Repository Health", "BASELINE_OPEN", "exact candidate", "uses: ./.github/workflows/codeql.yml", "uses: ./.github/workflows/sonarqube.yml", "CODEQL_RESULT", "SONAR_RESULT"], "repository health");
 mustNotContain(repositoryBaseline, ["BThwani / Change Closure", "BThwani / Change Verification"], "repository baseline status separation");
+
+const dispatchingWorkflows = workflowEntries
+  .filter(({content}) => content.includes("/actions/workflows/"))
+  .map(({file}) => file);
+if (dispatchingWorkflows.length !== 1 || dispatchingWorkflows[0] !== "pr-assurance-trigger.yml") {
+  fail(`trusted workflow dispatch authority must be exclusive to pr-assurance-trigger.yml; found=${dispatchingWorkflows.join(",") || "none"}`);
+}
 mustContain(assuranceDispatcher, [
   "pull_request_target:",
+  "actions: write",
+  "pull-requests: read",
   "/actions/workflows/final-closure.yml/dispatches",
   "/actions/workflows/ci-check.yml/dispatches",
+  "expected_head_sha",
+  "expected_base_sha",
   "--arg ref \"${DEFAULT_BRANCH}\"",
 ], "trusted assurance dispatcher");
-mustNotContain(assuranceDispatcher, ["workflow_run:", "repository_dispatch"], "trusted assurance dispatcher");
+mustNotContain(assuranceDispatcher, [
+  "actions/checkout@",
+  "workflow_run:",
+  "repository_dispatch",
+  "\n  push:",
+  "\n  schedule:",
+], "trusted assurance dispatcher");
 
 mustContain(semanticContext, [
   "workflow_call:",
@@ -88,4 +106,4 @@ const security = read(path.join(workflowDir, "security-remote.yml"));
 mustContain(security, ["gitleaks detect", "run-osv-scanner.mjs", "run-trivy.mjs", "runs-on: ubuntu-24.04"], "security authority");
 mustContain(read(path.join(workflowDir, "codeql.yml")), ["github/codeql-action/init@", "github/codeql-action/analyze@"], "CodeQL authority");
 mustContain(read("sonar-project.properties"), ["sonar.organization=bthwani2-boop", "sonar.projectKey=bthwani2-boop_bthwani-suite-next"], "Sonar identity");
-console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Final Closure remains the closure controller; exact changed-file authority remains Git diff; OpenCodeReview is deterministic context only; analyzers remain reusable workers.");
+console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Final Closure remains the closure controller; the thin PR trigger is the sole trusted workflow dispatcher and never executes PR source; exact changed-file authority remains Git diff; analyzers remain reusable workers.");
