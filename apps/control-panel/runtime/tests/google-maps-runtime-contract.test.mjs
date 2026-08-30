@@ -43,6 +43,15 @@ function assertPowerShellParses(relativePath, t) {
   assert.equal(result.status, 0, result.stderr || result.stdout);
 }
 
+function cspDirectiveTokens(policy, directiveName) {
+  const directive = policy
+    .split(";")
+    .map((entry) => entry.trim())
+    .find((entry) => entry === directiveName || entry.startsWith(`${directiveName} `));
+  assert.ok(directive, `Missing CSP directive ${directiveName}`);
+  return new Set(directive.split(/\s+/).slice(1));
+}
+
 test("control-panel development imports and fail-closes on the governed browser Maps key", () => {
   const start = read(startPath);
   const runtimePackage = JSON.parse(read(packagePath));
@@ -78,7 +87,7 @@ test("Maps JavaScript loader uses async loading and exposes authentication failu
   const canvas = read(canvasPath);
 
   assert.match(config, /loading:\s*"async"/);
-  assert.match(config, /https:\/\/maps\.googleapis\.com\/maps\/api\/js/);
+  assert.ok(config.includes("https://maps.googleapis.com/maps/api/js"));
   assert.match(canvas, /gm_authFailure/);
   assert.match(canvas, /HTTP referrer/);
   assert.match(canvas, /GOOGLE_MAPS_SCRIPT_ID/);
@@ -88,14 +97,19 @@ test("Maps JavaScript loader uses async loading and exposes authentication failu
 
 test("control-panel CSP permits the official Maps JavaScript runtime domains", async () => {
   const csp = buildControlPanelContentSecurityPolicy({ nonce: "test-nonce" });
+  const scriptSrc = cspDirectiveTokens(csp, "script-src");
+  const connectSrc = cspDirectiveTokens(csp, "connect-src");
+  const fontSrc = cspDirectiveTokens(csp, "font-src");
+  const styleSrc = cspDirectiveTokens(csp, "style-src");
+  const frameSrc = cspDirectiveTokens(csp, "frame-src");
 
-  assert.match(csp, /script-src[^;]*https:\/\/\*\.googleapis\.com/);
-  assert.match(csp, /script-src[^;]*https:\/\/\*\.gstatic\.com/);
-  assert.match(csp, /connect-src[^;]*https:\/\/\*\.googleapis\.com/);
-  assert.match(csp, /connect-src[^;]*https:\/\/\*\.gstatic\.com/);
-  assert.match(csp, /font-src[^;]*https:\/\/fonts\.gstatic\.com/);
-  assert.match(csp, /style-src[^;]*'nonce-test-nonce'/);
-  assert.match(csp, /frame-src https:\/\/\*\.google\.com/);
+  assert.ok(scriptSrc.has("https://*.googleapis.com"));
+  assert.ok(scriptSrc.has("https://*.gstatic.com"));
+  assert.ok(connectSrc.has("https://*.googleapis.com"));
+  assert.ok(connectSrc.has("https://*.gstatic.com"));
+  assert.ok(fontSrc.has("https://fonts.gstatic.com"));
+  assert.ok(styleSrc.has("'nonce-test-nonce'"));
+  assert.ok(frameSrc.has("https://*.google.com"));
 });
 
 test("Google platform manifest separates Android Maps from the control-panel browser key", () => {

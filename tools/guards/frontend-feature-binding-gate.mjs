@@ -46,6 +46,16 @@ const aliases = Object.entries(tsconfig?.compilerOptions?.paths ?? {}).flatMap((
   (Array.isArray(targets) ? targets : []).map((target) => ({ pattern, target })),
 );
 
+function expandSingleWildcard(pattern, value) {
+  const star = pattern.indexOf("*");
+  if (star < 0) return pattern;
+  if (pattern.indexOf("*", star + 1) >= 0) {
+    violations.push({ file: "tsconfig.base.json", message: `MULTIPLE_ALIAS_WILDCARDS_UNSUPPORTED ${pattern}` });
+    return null;
+  }
+  return `${pattern.slice(0, star)}${value}${pattern.slice(star + 1)}`;
+}
+
 function resolveModule(fromFile, specifier) {
   if (specifier.startsWith(".")) {
     return sourceCandidate(path.resolve(repoRoot, path.dirname(fromFile), specifier));
@@ -60,7 +70,8 @@ function resolveModule(fromFile, specifier) {
     const suffix = alias.pattern.slice(star + 1);
     if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix)) continue;
     const value = specifier.slice(prefix.length, specifier.length - suffix.length);
-    return sourceCandidate(path.resolve(repoRoot, alias.target.replace("*", value)));
+    const expandedTarget = expandSingleWildcard(alias.target, value);
+    return expandedTarget ? sourceCandidate(path.resolve(repoRoot, expandedTarget)) : null;
   }
   return null;
 }
