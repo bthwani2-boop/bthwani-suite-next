@@ -99,11 +99,13 @@ jobs:
             "${trusted_root}/tools/verification"
           fetch_qualified() {
             local relative="$1" target="${trusted_root}/$1"
+            mkdir -p "$(dirname "${target}")"
             gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/contents/${relative}" \
               -f "ref=${QUALIFICATION_SHA}" --jq '.content' | base64 --decode > "${target}"
             [[ -s "${target}" ]] || { echo "::error::qualified control missing: ${relative}"; exit 1; }
           }
+          fetch_qualified tools/scripts/verify-assurance-authority-drift.mjs
           fetch_qualified tools/guards/migration-manifest-drift-gate.mjs
           fetch_qualified tools/guards/sonar-coverage-ownership-gate.mjs
           fetch_qualified tools/guards/_guard-utils.mjs
@@ -112,9 +114,18 @@ jobs:
           fetch_qualified tools/mobile/lib/package-manager-invocation.mjs
           fetch_qualified tools/verification/ownership.manifest.json
           {
+            echo "QUALIFIED_AUTHORITY_DRIFT=${trusted_root}/tools/scripts/verify-assurance-authority-drift.mjs"
             echo "QUALIFIED_MIGRATION_GUARD=${trusted_root}/tools/guards/migration-manifest-drift-gate.mjs"
             echo "QUALIFIED_SONAR_GUARD=${trusted_root}/tools/guards/sonar-coverage-ownership-gate.mjs"
           } >> "${GITHUB_ENV}"
+
+      - name: Execute qualified assurance authority drift gate in simulated trust-root mode
+        shell: bash
+        env:
+          BTHWANI_TARGET_REPO: ${{ github.workspace }}
+          BTHWANI_TRUSTED_SHA: ${{ github.event.pull_request.head.sha }}
+          BTHWANI_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node "${QUALIFIED_AUTHORITY_DRIFT}"
 
       - name: Execute qualified migration authority against exact candidate data
         shell: bash
