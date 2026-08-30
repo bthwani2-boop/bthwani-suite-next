@@ -320,7 +320,6 @@ export async function main(argv = process.argv.slice(2)) {
 
   const hooksPath = path.join(repoRoot, ".agents", "hooks.json");
   fs.mkdirSync(path.dirname(hooksPath), { recursive: true });
-  if (fs.existsSync(hooksPath)) fail(".agents/hooks.json already exists. Refusing to overwrite workspace hook configuration.");
   const privateRoot = gitPrivateRoot();
   const lockPath = acquireLock(privateRoot);
   let hookExpectedHash = null;
@@ -337,7 +336,14 @@ export async function main(argv = process.argv.slice(2)) {
     };
     const hookText = `${JSON.stringify(hookConfig, null, 2)}\n`;
     hookExpectedHash = crypto.createHash("sha256").update(hookText).digest("hex");
-    fs.writeFileSync(hooksPath, hookText, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    try {
+      fs.writeFileSync(hooksPath, hookText, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    } catch (error) {
+      if (error?.code === "EEXIST") {
+        fail(".agents/hooks.json already exists. Refusing to overwrite workspace hook configuration.");
+      }
+      throw error;
+    }
 
     const prompt = [
       `You are the Antigravity CLI Implementer for one bounded BThwani work unit delegated by the ${args.orchestrator === "codex" ? "Codex" : "Claude"} orchestrator.`,
