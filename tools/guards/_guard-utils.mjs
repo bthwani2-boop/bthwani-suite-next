@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const moduleRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-export const repoRoot = path.resolve(process.env.BTHWANI_TARGET_REPO || moduleRepoRoot);
+export const repoRoot = path.resolve(process.env.BTHWANI_TARGET_REPO || process.env.GITHUB_WORKSPACE || moduleRepoRoot);
 
 const EXCLUDED_DIRS = new Set([
   ".git", ".diagnostics", "node_modules", ".pnpm-store", ".next", ".expo", ".turbo", ".nx", ".cache",
