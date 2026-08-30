@@ -434,11 +434,11 @@ func TestClaimBatchFencesDuplicateWorkersAndExpiredLeasesDBIntegration(t *testin
 		t.Fatal(err)
 	}
 
-	first, err := ClaimBatch(db, 1, time.Minute)
+	first, err := claimBatchForCheckoutIntent(db, 1, time.Minute, intentID)
 	if err != nil || len(first) != 1 {
 		t.Fatalf("first claim=%+v err=%v", first, err)
 	}
-	second, err := ClaimBatch(db, 1, time.Minute)
+	second, err := claimBatchForCheckoutIntent(db, 1, time.Minute, intentID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -448,7 +448,7 @@ func TestClaimBatchFencesDuplicateWorkersAndExpiredLeasesDBIntegration(t *testin
 	if _, err := db.Exec(`UPDATE dsh_checkout_financial_closure_outbox SET lease_expires_at=NOW()-INTERVAL '1 second' WHERE id=$1::uuid`, first[0].ID); err != nil {
 		t.Fatal(err)
 	}
-	reclaimed, err := ClaimBatch(db, 1, time.Minute)
+	reclaimed, err := claimBatchForCheckoutIntent(db, 1, time.Minute, intentID)
 	if err != nil || len(reclaimed) != 1 {
 		t.Fatalf("expired lease reclaim=%+v err=%v", reclaimed, err)
 	}
