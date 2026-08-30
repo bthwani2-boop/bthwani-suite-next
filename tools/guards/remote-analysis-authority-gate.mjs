@@ -15,6 +15,9 @@ const mustContain = (text, patterns, owner) => {
 const mustNotContain = (text, patterns, owner) => {
   for (const pattern of patterns) if (text.includes(pattern)) fail(`${owner} contains forbidden path: ${pattern}`);
 };
+const mustNotMatch = (text, patterns, owner) => {
+  for (const pattern of patterns) if (pattern.test(text)) fail(`${owner} matches forbidden pattern: ${pattern}`);
+};
 
 const workflowDir = path.resolve(".github/workflows");
 const workflowFiles = fs.readdirSync(workflowDir).filter((file) => file.endsWith(".yml"));
@@ -38,7 +41,8 @@ mustContain(closure, [
   "semantic-review:",
   "verify-pr-evidence-comments.mjs",
 ], "final closure");
-mustNotContain(closure, ["pull_request:", "pulls/.*?/files?", "per_page=100", "workflow_run:", "repository_dispatch", "sleep", "poll"], "final closure control plane");
+mustNotContain(closure, ["pull_request:", "SEMANTIC_RESULT", "workflow_run:", "repository_dispatch", "sleep", "poll"], "final closure control plane");
+mustNotMatch(closure, [/\/pulls\/[^\s"']+\/files(?:\?|["'])/u], "final closure changed-file authority");
 
 mustContain(semanticContext, [
   "workflow_call:",
@@ -70,4 +74,4 @@ const security = read(path.join(workflowDir, "security-remote.yml"));
 mustContain(security, ["gitleaks detect", "run-osv-scanner.mjs", "run-trivy.mjs", "runs-on: ubuntu-24.04"], "security authority");
 mustContain(read(path.join(workflowDir, "codeql.yml")), ["github/codeql-action/init@", "github/codeql-action/analyze@"], "CodeQL authority");
 mustContain(read("sonar-project.properties"), ["sonar.organization=bthwani2-boop", "sonar.projectKey=bthwani2-boop_bthwani-suite-next"], "Sonar identity");
-console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Final Closure remains the closure controller; OpenCodeReview is deterministic context only; analyzers remain reusable workers.");
+console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Final Closure remains the closure controller; exact changed-file authority remains Git diff; OpenCodeReview is deterministic context only; analyzers remain reusable workers.");
