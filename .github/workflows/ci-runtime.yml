@@ -99,7 +99,7 @@ jobs:
           "${venv}/bin/python" -m pip install \
             --disable-pip-version-check \
             --no-input \
-            -r tools/verification/schemathesis-requirements.txt
+            -r tools/verification/schemathesis-requirements.lock
           "${venv}/bin/schemathesis" --version
 
           "${venv}/bin/schemathesis" run \
