@@ -44,8 +44,18 @@ jobs:
         with:
           node-version: "24.17.0"
           package-manager-cache: false
-      - name: Validate Semgrep evidence classifier
-        run: node --test tools/scripts/classify-semgrep-evidence.test.mjs
+      - name: Load trusted Semgrep evidence classifier
+        shell: bash
+        env:
+          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          trusted_classifier="${RUNNER_TEMP}/classify-semgrep-evidence.mjs"
+          git cat-file -e "${TRUSTED_WORKFLOW_SHA}^{commit}"
+          git show "${TRUSTED_WORKFLOW_SHA}:tools/scripts/classify-semgrep-evidence.mjs" > "${trusted_classifier}"
+          [[ -s "${trusted_classifier}" ]] || { echo "::error::trusted Semgrep classifier missing"; exit 1; }
+          node --check "${trusted_classifier}"
+          echo "TRUSTED_SEMGREP_CLASSIFIER=${trusted_classifier}" >> "${GITHUB_ENV}"
       - name: Install pinned Semgrep
         shell: bash
         run: |
@@ -74,7 +84,7 @@ jobs:
           echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
           echo "mode=${mode}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
-      - name: Normalize every raw finding and engine condition
+      - name: Normalize every raw finding and engine condition with trusted classifier
         id: policy
         if: ${{ always() }}
         continue-on-error: true
@@ -87,7 +97,11 @@ jobs:
           src="${RUNNER_TEMP}/semgrep-evidence/semgrep.json"
           [[ "${SCAN_OUTCOME}" == "success" ]] || { echo "::error::Semgrep execution failed"; exit 1; }
           [[ -s "${src}" ]] || { echo "::error::Semgrep JSON evidence missing"; exit 1; }
-          node tools/scripts/classify-semgrep-evidence.mjs \
+          [[ -n "${TRUSTED_SEMGREP_CLASSIFIER:-}" && -s "${TRUSTED_SEMGREP_CLASSIFIER}" ]] || {
+            echo "::error::trusted Semgrep classifier was not materialized"
+            exit 1
+          }
+          node "${TRUSTED_SEMGREP_CLASSIFIER}" \
             --input "${src}" \
             --output-dir "${RUNNER_TEMP}/semgrep-evidence" \
             --head-sha "${HEAD_SHA}" \
