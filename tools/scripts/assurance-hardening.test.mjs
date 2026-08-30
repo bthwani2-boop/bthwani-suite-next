@@ -40,10 +40,10 @@ test("Remote Security authority, wrappers, installer, and policy come from trust
   assert.match(f, /git archive "\$\{TRUSTED_WORKFLOW_SHA\}"/u);
   assert.match(f, /TRUSTED_SECURITY_ROOT/u);
   assert.match(f, /BTHWANI_TRUSTED_POLICY_ROOT/u);
-  assert.match(f, /TRUSTED_SECURITY_ROOT}\/tools\/scripts\/install-oss-toolchain-binaries\.sh/u);
-  assert.match(f, /TRUSTED_SECURITY_ROOT}\/tools\/guards\/remote-analysis-authority-gate\.mjs/u);
-  assert.match(f, /TRUSTED_SECURITY_ROOT}\/tools\/scripts\/run-osv-scanner\.mjs/u);
-  assert.match(f, /TRUSTED_SECURITY_ROOT}\/\.gitleaksignore/u);
+  assert.ok(f.includes("${TRUSTED_SECURITY_ROOT}/tools/scripts/install-oss-toolchain-binaries.sh"));
+  assert.ok(f.includes("${TRUSTED_SECURITY_ROOT}/tools/guards/remote-analysis-authority-gate.mjs"));
+  assert.ok(f.includes("${TRUSTED_SECURITY_ROOT}/tools/scripts/run-osv-scanner.mjs"));
+  assert.ok(f.includes("${TRUSTED_SECURITY_ROOT}/.gitleaksignore"));
   assert.doesNotMatch(f, /run:\s*bash tools\/scripts\/install-oss-toolchain-binaries\.sh/u);
   assert.doesNotMatch(f, /osv-scanner\) node tools\/scripts\/run-osv-scanner\.mjs/u);
   assert.match(read("tools/scripts/run-pinact.mjs"), /BTHWANI_TARGET_REPO/u);
