@@ -73,7 +73,7 @@ The active executor owns reconciliation and final verification unless those resp
 
 Use `.agents/INDEX.md` only when routing is not obvious. Load the smallest relevant skill/tool set. Prefer direct scoped inspection and existing affected/runtime commands; use Graphify, LeanCTX, or OpenCodeReview only when they materially reduce uncertainty or repeated work.
 
-`tools/prompting/bthwani-orchestrator/**` is a separate self-contained textual execution package. It is not implicit repository authority. Use it only when the current human instruction explicitly invokes it, and treat it as read-only unless package maintenance is explicitly authorized.
+`tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` is the canonical repository execution/closure authority for repository work. `AGENTS.md` and `.agents/**` are thin execution adapters only: they must load/apply the orchestrator and may not redefine its scope, root-ranking, evidence, delegation, PR lifecycle, or closure semantics. The package remains read-only unless current human intent explicitly authorizes package maintenance.
 
 ## Final response
 

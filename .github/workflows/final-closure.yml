@@ -211,6 +211,35 @@ jobs:
       head_ref: ${{ needs.resolve.outputs.head_ref }}
       base_ref: ${{ needs.resolve.outputs.base_ref }}
 
+
+  semantic-review:
+    name: Validate exact host semantic review attestation
+    needs: [resolve]
+    if: ${{ needs.resolve.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Load trusted semantic attestation validator
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRUSTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          validator="${RUNNER_TEMP}/verify-pr-evidence-comments.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28'             "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/verify-pr-evidence-comments.mjs"             -f "ref=${TRUSTED_SHA}" --jq '.content' | base64 --decode > "${validator}"
+          [[ -s "${validator}" ]]
+          echo "EVIDENCE_VALIDATOR=${validator}" >> "${GITHUB_ENV}"
+
+      - name: Validate exact semantic review attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node "${EVIDENCE_VALIDATOR}" semantic "${{ needs.resolve.outputs.pr_number }}" "${{ needs.resolve.outputs.head_sha }}"
+
   dependency:
     name: Dependency review when applicable
     needs: [resolve]
@@ -253,7 +282,7 @@ jobs:
 
   final:
     name: BThwani / Final Closure
-    needs: [resolve, ci, sonar, codeql, semgrep, security, dependency, lockfile, docker]
+    needs: [resolve, ci, sonar, codeql, semgrep, security, semantic-review, dependency, lockfile, docker]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -275,6 +304,7 @@ jobs:
           CODEQL_RESULT: ${{ needs.codeql.result }}
           SEMGREP_RESULT: ${{ needs.semgrep.result }}
           SECURITY_RESULT: ${{ needs.security.result }}
+          SEMANTIC_REVIEW_RESULT: ${{ needs.semantic-review.result }}
           DEPENDENCY_RESULT: ${{ needs.dependency.result }}
           DEPENDENCY_CHANGED: ${{ needs.resolve.outputs.dependency_changed }}
           LOCKFILE_RESULT: ${{ needs.lockfile.result }}
@@ -290,7 +320,8 @@ jobs:
             "sonar:${SONAR_RESULT}" \
             "codeql:${CODEQL_RESULT}" \
             "semgrep:${SEMGREP_RESULT}" \
-            "security:${SECURITY_RESULT}"; do
+            "security:${SECURITY_RESULT}" \
+            "semantic-review:${SEMANTIC_REVIEW_RESULT}"; do
             name="${pair%%:*}"
             result="${pair#*:}"
             [[ "${result}" == "success" ]] || failures+=("${name}:${result}")

@@ -156,7 +156,7 @@ test("final closure resolves once then collects independent analyzers in paralle
     assert.match(workflow, new RegExp(`${job}:[\\s\\S]*?needs: \\[resolve\\]`, "u"), job);
   }
   assert.doesNotMatch(workflow, /needs: \[resolve, ci\]/u);
-  assert.match(workflow, /needs: \[resolve, ci, sonar, codeql, semgrep, security, dependency, lockfile, docker\]/u);
+  assert.match(workflow, /needs: \[resolve, ci, sonar, codeql, semgrep, security, semantic-review, dependency, lockfile, docker\]/u);
   assert.match(workflow, /after complete evidence collection/u);
   assert.doesNotMatch(workflow, /open-code-review\.yml|SEMANTIC_RESULT/u);
   assert.match(workflow, /BThwani \/ Final Closure/u);

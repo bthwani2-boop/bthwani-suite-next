@@ -8,15 +8,17 @@ Use this index only when routing is not already obvious. Normal focused work sho
 
 Load only when the trigger matches:
 
+- `bthwani-orchestrator` — canonical thin agent entrypoint; loads the repository Root-Cause Orchestrator. All other skills remain subordinate.
+
 - `bthwani-current-workspace-authority` — pin repository, branch, commit, and ref provenance.
-- `bthwani-universal-task-router` — task mode or risk is unclear.
-- `bthwani-evidence-gate-router` — verification, readiness, closure, or evidence scope is unclear.
+- `bthwani-universal-task-router` — compatibility redirect only; do not treat as authority.
+- `bthwani-evidence-gate-router` — compatibility redirect only; evidence authority remains orchestrator owner 04.
 - `bthwani-api-runtime-binding` — API contract, generated client, route, or consumer binding changes.
 - `bthwani-ci-workflow-guardian` — executable GitHub Actions or CI code changes.
 - `bthwani-cost-aware-subagent-orchestrator` — independent bounded work units materially benefit from delegation.
 - `bthwani-docker-journey-runtime` — Docker, persistence, startup, or live runtime proof.
 - `bthwani-dsh-wlt-finance-boundary` — payment, wallet, ledger, settlement, payout, refund, commission, or reconciliation.
-- `bthwani-final-journey-closure-judge` — explicit final multi-scope closure.
+- `bthwani-final-journey-closure-judge` — compatibility redirect only; cannot decide closure.
 - `bthwani-independent-implementation-reviewer` — bounded independent implementation review when materially required.
 - `bthwani-platform-runtime-config` — environment, provider, URL, port, CORS, or sensitive runtime configuration.
 - `bthwani-product-truth-governor` — user-visible, role-sensitive, commercial, cross-surface, or workflow behavior.

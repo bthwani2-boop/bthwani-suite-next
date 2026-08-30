@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, writeFileSync, createWriteStream } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -11,6 +11,9 @@ const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const stamp = new Date().toISOString().replaceAll(":", "-");
 const evidenceDir = path.join(tmpdir(), "bthwani-deep-discovery", stamp);
 mkdirSync(evidenceDir, { recursive: true });
+
+const git = (args) => execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const candidateSha = git(["rev-parse", "HEAD"]);
 
 const checks = [
   ["git-diff-check", "git", ["diff", "--check"]],
@@ -53,12 +56,18 @@ function runCheck([id, command, commandArgs]) {
       log.end(() => resolve(result));
     };
 
-    const child = spawn(command, commandArgs, {
+    const usesWindowsCommandShim = process.platform === "win32" && /\.(cmd|bat)$/iu.test(command);
+    const executable = usesWindowsCommandShim ? (process.env.ComSpec ?? "cmd.exe") : command;
+    const executableArgs = usesWindowsCommandShim
+      ? ["/d", "/s", "/c", command, ...commandArgs]
+      : commandArgs;
+
+    const child = spawn(executable, executableArgs, {
       cwd: process.cwd(),
       env: { ...process.env, NO_COLOR: "1", CI: process.env.CI ?? "1" },
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
-      shell: process.platform === "win32" && /\.(cmd|bat)$/iu.test(command),
+      shell: false,
     });
 
     child.stdout?.pipe(log, { end: false });
@@ -111,12 +120,26 @@ async function main() {
 
   await Promise.all(workers);
 
+  const endingSha = git(["rev-parse", "HEAD"]);
+  if (endingSha !== candidateSha) {
+    results.push({
+      id: "candidate-stability",
+      status: "FAIL",
+      exitCode: 1,
+      logPath: "",
+      startedAt: new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+      error: `Candidate moved during discovery: ${candidateSha} -> ${endingSha}`,
+    });
+  }
+
   results.sort((a, b) => a.id.localeCompare(b.id));
   const manifest = {
     schemaVersion: 1,
     mode: full ? "FULL_FRESH_DISCOVERY" : "DIAGNOSTIC_DISCOVERY",
     generatedAt: new Date().toISOString(),
     evidenceDir,
+    candidateSha,
     results,
     counts: {
       pass: results.filter((r) => r.status === "PASS").length,

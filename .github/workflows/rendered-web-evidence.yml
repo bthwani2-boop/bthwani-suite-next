@@ -1,0 +1,77 @@
+name: Rendered Web Evidence
+
+on:
+  workflow_call:
+    inputs:
+      head_sha: {type: string, required: true}
+      base_sha: {type: string, required: true}
+
+permissions:
+  contents: read
+
+jobs:
+  control-panel:
+    name: Rendered control-panel baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ inputs.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact candidate
+        shell: bash
+        env:
+          HEAD_SHA: ${{ inputs.head_sha }}
+          BASE_SHA: ${{ inputs.base_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "${HEAD_SHA}" ]]
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "${BASE_SHA}" "${HEAD_SHA}"
+
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24.17.0"
+          package-manager-cache: false
+
+      - name: Enable locked pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.34.0 --activate
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium runtime
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Load trusted rendered verifier
+        shell: bash
+        env:
+          TRUSTED_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          trusted="${RUNNER_TEMP}/run-rendered-control-panel-proof.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28'             "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/run-rendered-control-panel-proof.mjs"             -f "ref=${TRUSTED_SHA}" --jq '.content' | base64 --decode > "${trusted}"
+          [[ -s "${trusted}" ]]
+          echo "TRUSTED_RENDERED_VERIFIER=${trusted}" >> "${GITHUB_ENV}"
+
+      - name: Execute rendered proof against candidate
+        run: node "${TRUSTED_RENDERED_VERIFIER}"
+
+      - name: Upload rendered evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rendered-web-${{ inputs.head_sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/bthwani-rendered-web
+          if-no-files-found: warn
+          retention-days: 14

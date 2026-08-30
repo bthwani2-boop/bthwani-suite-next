@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { classifyFiles, resolveFullScope } from "./detect-ci-context.mjs";
 
-test("governance text does not widen executable verification", () => {
+test("governance authority changes enter control-plane verification without unrelated product workers", () => {
   const result = classifyFiles(["governance/policies/engineering.md"]);
   assert.equal(result.full_scope, false);
-  assert.equal(result.node, false);
+  assert.equal(result.ci_control_plane, true);
+  assert.equal(result.node, true);
   assert.equal(result.backend, false);
   assert.equal(result.human_review_required, false);
-  assert.deepEqual(result.required_jobs, []);
+  assert.deepEqual(result.required_jobs, ["node"]);
 });
 
 test("backend changes always require the matching backend worker", () => {
