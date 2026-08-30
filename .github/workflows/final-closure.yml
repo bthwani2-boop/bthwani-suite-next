@@ -483,6 +483,111 @@ jobs:
           fetch-tags: false
           persist-credentials: false
 
+      - name: Collect every available analyzer artifact and completed job log
+        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+        shell: bash
+        env:
+          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          evidence_root="closure-raw-evidence"
+          mkdir -p "${evidence_root}/artifacts" "${evidence_root}/jobs"
+          artifacts="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100")"
+          while IFS= read -r artifact; do
+            artifact_id="$(jq -r '.id' <<<"${artifact}")"
+            artifact_name="$(jq -r '.name' <<<"${artifact}")"
+            archive="${RUNNER_TEMP}/closure-artifact-${artifact_id}.zip"
+            target="${evidence_root}/artifacts/${artifact_id}"
+            mkdir -p "${target}"
+            gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${archive}"
+            while IFS= read -r entry; do
+              [[ -n "${entry}" && "${entry}" != ".." && "${entry}" != /* && "${entry}" != ../* && \
+                "${entry}" != */../* && "${entry}" != */.. ]] || {
+                echo "::error::unsafe evidence artifact path in ${artifact_name}"
+                exit 1
+              }
+            done < <(unzip -Z1 "${archive}")
+            unzip -q "${archive}" -d "${target}"
+            jq -n --arg name "${artifact_name}" --argjson id "${artifact_id}" \
+              '{artifactId:$id,artifactName:$name}' > "${target}/artifact-metadata.json"
+          done < <(jq -c '.artifacts[]' <<<"${artifacts}")
+
+          gh api --paginate -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?filter=all&per_page=100" \
+            --jq '.jobs[] | select(.status == "completed") | @base64' |
+          while IFS= read -r encoded; do
+            job="$(base64 --decode <<<"${encoded}")"
+            job_id="$(jq -r '.id' <<<"${job}")"
+            job_name="$(jq -r '.name' <<<"${job}")"
+            conclusion="$(jq -r '.conclusion // "unknown"' <<<"${job}")"
+            log="${evidence_root}/jobs/job-${job_id}.log"
+            if ! gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/actions/jobs/${job_id}/logs" > "${log}"; then
+              printf '[GITHUB-JOB-LOG BLOCKED] completed job log could not be retrieved\n' > "${log}"
+              conclusion='failure'
+            fi
+            outcome='FAIL'
+            if [[ "${conclusion}" == "success" ]]; then
+              outcome='PASS'
+            elif [[ "${conclusion}" == "skipped" ]]; then
+              outcome='NOT_APPLICABLE'
+            fi
+            jq -n \
+              --arg analyzer "github-job-${job_id}" \
+              --arg candidateSha "${HEAD_SHA}" \
+              --arg outcome "${outcome}" \
+              --arg scope "completed job: ${job_name}" \
+              --arg log "job-${job_id}.log" \
+              '{schemaVersion:1,analyzer:$analyzer,candidateSha:$candidateSha,scope:$scope,outcome:$outcome,log:$log}' \
+              > "${evidence_root}/jobs/job-${job_id}.json"
+          done
+
+      - name: Load trusted universal evidence consumer
+        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+        shell: bash
+        env:
+          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          trusted_root="${RUNNER_TEMP}/bthwani-evidence-consumer/tools/scripts"
+          mkdir -p "${trusted_root}/lib"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/consume-evidence-artifacts.mjs" \
+            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_root}/consume-evidence-artifacts.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/lib/evidence-envelope.mjs" \
+            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_root}/lib/evidence-envelope.mjs"
+          [[ -s "${trusted_root}/consume-evidence-artifacts.mjs" && -s "${trusted_root}/lib/evidence-envelope.mjs" ]]
+          node --check "${trusted_root}/consume-evidence-artifacts.mjs"
+          node --check "${trusted_root}/lib/evidence-envelope.mjs"
+          echo "TRUSTED_EVIDENCE_CONSUMER=${trusted_root}/consume-evidence-artifacts.mjs" >> "${GITHUB_ENV}"
+
+      - name: Consume all tool evidence into one exact-candidate Root Graph
+        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+        shell: bash
+        env:
+          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+          BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p closure-evidence
+          consumer_exit=0
+          node "${TRUSTED_EVIDENCE_CONSUMER}" \
+            --input-dir closure-raw-evidence \
+            --output-dir closure-evidence \
+            --head-sha "${HEAD_SHA}" \
+            --base-sha "${BASE_SHA}" \
+            --required-tools 'codeql,sonar,semgrep,gitleaks,osv-scanner,trivy,actionlint,zizmor,pinact,shellcheck,hadolint,yamllint' \
+            || consumer_exit=$?
+          [[ -s closure-evidence/evidence-consumption.json && -s closure-evidence/root-graph.json ]]
+          cat closure-evidence/evidence-consumption.json
+          [[ "${consumer_exit}" == "0" ]] || {
+            echo "::error::unconsumed, unmapped, uncovered, or open tool evidence remains"
+            exit "${consumer_exit}"
+          }
+
       - name: Publish generated exact-candidate closure manifest
         if: ${{ !cancelled() && needs.resolve.result == 'success' }}
         shell: bash
@@ -525,9 +630,13 @@ jobs:
             reviews="$(gh api --paginate -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" 2>/dev/null | jq -s 'add // []' || echo '[]')"
             approvals_on_head="$(jq -r --arg head "${HEAD_SHA}" '[.[] | select(.state == "APPROVED" and .commit_id == $head)] | length' <<<"${reviews}" || echo 0)"
           fi
+          [[ -s closure-evidence/evidence-consumption.json && -s closure-evidence/root-graph.json ]] || {
+            echo "::error::universal evidence consumption outputs are missing"
+            exit 1
+          }
           manifest="$(mktemp -d)/closure-manifest.json"
           jq -n \
-            --arg schema "bthwani-closure-manifest/2" \
+            --arg schema "bthwani-closure-manifest/3" \
             --arg repository "${GITHUB_REPOSITORY}" \
             --arg runUrl "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -560,6 +669,8 @@ jobs:
             --arg lockfileResult "${LOCKFILE_RESULT}" \
             --arg dockerResult "${DOCKER_RESULT}" \
             --argjson approvalsOnHead "${approvals_on_head}" \
+            --slurpfile evidenceConsumption closure-evidence/evidence-consumption.json \
+            --slurpfile rootGraph closure-evidence/root-graph.json \
             '{
               schema: $schema,
               source: "generated-from-git-truth",
@@ -572,6 +683,8 @@ jobs:
               mandatoryProofs: {riskClasses: ($riskClasses | split(",") | map(select(length > 0))), requiredJobs: ($requiredJobs | split(",") | map(select(length > 0)))},
               migrations: {changed: $migrations, manifests: $migrationManifests, amendmentsRegistryTouched: ($amendmentsTouched == "true")},
               analysis: {ci: $ciResult, sonar: $sonarResult, codeql: $codeqlResult, semgrep: $semgrepResult, security: $securityResult, semanticReview: $semanticReviewResult, dependency: $dependencyResult, lockfile: $lockfileResult, docker: $dockerResult},
+              evidenceConsumption: $evidenceConsumption[0],
+              rootGraph: $rootGraph[0],
               assuranceClaims: {
                 changeVerification: {context: "BThwani / Change Verification", disposition: "EVIDENCE_PASSED"},
                 changeClosure: {context: "BThwani / Change Closure", disposition: "EVIDENCE_PASSED"},
@@ -612,7 +725,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: closure-manifest-${{ needs.resolve.outputs.pr_number }}-${{ needs.resolve.outputs.head_sha }}
-          path: closure-evidence/closure-manifest.json
+          path: closure-evidence
           if-no-files-found: error
           retention-days: 90
 

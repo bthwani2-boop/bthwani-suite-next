@@ -17,6 +17,9 @@ for (const policyFile of [trivyConfig, trivyIgnore]) {
 }
 
 const policyArgs = ["--config", trivyConfig, "--ignorefile", trivyIgnore];
+const reportPath = path.resolve(repoRoot, process.env.BTHWANI_TRIVY_REPORT ?? ".diagnostics/security/trivy-report.json");
+fs.mkdirSync(path.dirname(reportPath), {recursive: true});
+const reportArgs = ["--format", "json", "--output", reportPath];
 
 if (baseSha && candidateSha) {
   const files = changedFiles(baseSha, candidateSha, ["."], () => true);
@@ -35,16 +38,16 @@ if (baseSha && candidateSha) {
   runTool({
     toolId: "trivy",
     binary: "trivy",
-    args: ["fs", ...policyArgs, staging],
-    diagnosticArgs: ["fs", ...policyArgs, "--format", "json", "--output", path.join(staging, "trivy-report.json"), staging],
+    args: ["fs", ...policyArgs, ...reportArgs, staging],
+    diagnosticArgs: ["fs", ...policyArgs, ...reportArgs, staging],
     required: true,
   });
 } else {
   runTool({
     toolId: "trivy",
     binary: "trivy",
-    args: ["fs", ...policyArgs, "."],
-    diagnosticArgs: ["fs", ...policyArgs, "--format", "json", "--output", ".diagnostics/security/trivy-report.json", "."],
+    args: ["fs", ...policyArgs, ...reportArgs, "."],
+    diagnosticArgs: ["fs", ...policyArgs, ...reportArgs, "."],
     required: true,
   });
 }

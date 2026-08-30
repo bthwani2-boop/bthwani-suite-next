@@ -41,6 +41,7 @@ const baseArgs = [
 ];
 const reportRel = ".diagnostics/security/osv-report.json";
 const reportPath = path.join(repoRoot, reportRel);
+const evidencePath = path.resolve(repoRoot, process.env.BTHWANI_OSV_EVIDENCE ?? ".diagnostics/security/osv-evidence.json");
 fs.mkdirSync(path.dirname(reportPath), { recursive: true });
 
 console.log(`Running: osv-scanner ${baseArgs.map((arg) => JSON.stringify(arg)).join(" ")} --format json`);
@@ -121,6 +122,35 @@ const { blocking, unreachable } = await adjudicateOsvReport({
   resolveScopedImports,
   importGraph: moduleImportGraph
 });
+
+fs.mkdirSync(path.dirname(evidencePath), {recursive: true});
+fs.writeFileSync(evidencePath, `${JSON.stringify({
+  schema: "bthwani-osv-adjudication/1",
+  findings: [
+    ...blocking.map((finding) => ({
+      fingerprint: `${finding.id}:${finding.name}:${finding.version}`,
+      ruleId: finding.id,
+      severity: "ERROR",
+      path: finding.source,
+      message: `${finding.name}@${finding.version}: ${finding.reason}`,
+      material: true,
+      disposition: "MAPPED_TO_FINDING",
+      category: "SECURITY_OR_SUPPLY_CHAIN",
+    })),
+    ...unreachable.map((finding) => ({
+      fingerprint: `${finding.id}:${finding.name}:${finding.version}`,
+      ruleId: finding.id,
+      severity: "INFO",
+      path: finding.source,
+      message: `${finding.name}@${finding.version}: import graph excludes ${finding.vulnerableImports.join(", ")}`,
+      material: false,
+      disposition: "N/A_PROVEN",
+      category: "SECURITY_OR_SUPPLY_CHAIN",
+    })),
+  ],
+  counts: {blocking: blocking.length, unreachable: unreachable.length},
+  evidenceComplete: true,
+}, null, 2)}\n`, {encoding: "utf8", mode: 0o600});
 
 for (const finding of unreachable) {
   console.log(

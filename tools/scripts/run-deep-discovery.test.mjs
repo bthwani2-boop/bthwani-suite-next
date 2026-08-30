@@ -18,8 +18,9 @@ test("discovery turns a Knip failure into an actionable root candidate", () => {
   );
   assert.equal(result.disposition, "ROOT_ANALYSIS_REQUIRED");
   assert.equal(result.failureClass, "STRUCTURAL_UNUSED_OR_OWNERLESS_ARTIFACT");
-  assert.deepEqual(result.rootCandidates[0].files, ["src/unused.ts"]);
-  assert.equal(result.rootCandidates[0].issueCount, 1);
+  assert.deepEqual(result.specializedEvidence.files, ["src/unused.ts"]);
+  assert.equal(result.specializedEvidence.issueCount, 1);
+  assert.equal(result.envelope.accounting.allRawFindingsAccounted, true);
 });
 
 test("discovery preserves Madge cycles and skipped imports as evidence", () => {
@@ -28,9 +29,9 @@ test("discovery preserves Madge cycles and skipped imports as evidence", () => {
     "1) src/a.ts > src/b.ts\n\nSkipped 2 files\n@bthwani/dsh/openapi\n@bthwani/ui-kit/web\n\n- Finding files\nEXIT_CODE: 1\n",
   );
   assert.equal(result.failureClass, "STRUCTURAL_CYCLE_AND_UNRESOLVED_IMPORT");
-  assert.deepEqual(result.rootCandidates[0].circularDependencies, ["src/a.ts > src/b.ts"]);
-  assert.equal(result.rootCandidates[0].skippedFiles, 2);
-  assert.deepEqual(result.rootCandidates[0].skippedImports, [
+  assert.deepEqual(result.specializedEvidence.circularDependencies, ["src/a.ts > src/b.ts"]);
+  assert.equal(result.specializedEvidence.skippedFiles, 2);
+  assert.deepEqual(result.specializedEvidence.skippedImports, [
     "@bthwani/dsh/openapi",
     "@bthwani/ui-kit/web",
   ]);
@@ -42,16 +43,28 @@ test("discovery keeps unresolved Madge imports visible after cycles are closed",
     "Processed 1038 files (10s) (26 warnings)\n\n✖ Skipped 2 files\n@bthwani/dsh/openapi\n@bthwani/ui-kit/web\n\n- Finding files\n√ No circular dependency found!\nEXIT_CODE: 1\n",
   );
   assert.equal(result.failureClass, "STRUCTURAL_UNRESOLVED_IMPORT");
-  assert.deepEqual(result.rootCandidates[0].circularDependencies, []);
-  assert.deepEqual(result.rootCandidates[0].skippedImports, [
+  assert.deepEqual(result.specializedEvidence.circularDependencies, []);
+  assert.deepEqual(result.specializedEvidence.skippedImports, [
     "@bthwani/dsh/openapi",
     "@bthwani/ui-kit/web",
   ]);
 });
 
+test("discovery consumes jscpd native duplication JSON", () => {
+  const result = classifyDiscoveryResult(
+    {id: "jscpd", status: "PASS", exitCode: 0, logPath: "jscpd.log"},
+    "JSON report saved\n",
+    {},
+    {duplicates: [{firstFile: {name: "src/a.ts", start: 4}, secondFile: {name: "src/b.ts", start: 8}}]},
+  );
+  assert.equal(result.disposition, "ROOT_ANALYSIS_REQUIRED");
+  assert.equal(result.envelope.findings[0].ruleId, "JSCPD_DUPLICATION");
+  assert.equal(result.envelope.accounting.allRawFindingsAccounted, true);
+});
+
 test("a passing check is accounted without becoming a closure claim", () => {
   const result = classifyDiscoveryResult({id: "guard", status: "PASS", exitCode: 0, logPath: "guard.log"}, "PASS\n");
-  assert.equal(result.disposition, "EXECUTION_PASS");
+  assert.equal(result.disposition, "EVIDENCE_ACCOUNTED");
   assert.deepEqual(result.rootCandidates, []);
 });
 
@@ -68,9 +81,9 @@ test("discovery merges failure candidates into one ephemeral Root Graph", () => 
     {...first, candidateIdentity: "head:tree"},
     {...second, candidateIdentity: "head:tree"},
   ], "head:tree");
-  assert.equal(graph.schema, "bthwani-ephemeral-root-graph/1");
+  assert.equal(graph.schema, "bthwani-root-graph/1");
   assert.equal(graph.closureClaim, false);
   assert.equal(graph.roots.length, 1);
-  assert.deepEqual(graph.roots[0].checks, ["knip"]);
+  assert.deepEqual(graph.roots[0].sources, ["knip"]);
   assert.equal(graph.roots[0].evidence.length, 2);
 });

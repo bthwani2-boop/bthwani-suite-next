@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import YAML from "yaml";
 const read = (p) => readFileSync(p, "utf8");
+
+test("assurance workflow YAML remains parseable", () => {
+  for (const workflow of [".github/workflows/final-closure.yml", ".github/workflows/security-remote.yml"]) {
+    assert.equal(typeof YAML.parse(read(workflow)), "object");
+  }
+});
 
 test("agent layer converges on one canonical orchestrator", () => {
   assert.match(read("AGENTS.md"), /canonical repository execution\/closure authority/u);
@@ -81,6 +88,32 @@ test("CodeQL output is a consumed evidence input, not upload-only activity", () 
   assert.match(workflow, /DISPOSITION_STATUS/u);
   assert.match(read("tools/scripts/classify-codeql-evidence.mjs"), /relatedLocations/u);
   assert.match(read("tools/scripts/classify-codeql-evidence.mjs"), /closureClaim: false/u);
+});
+
+test("all assurance outputs converge through one evidence contract and Root Graph", () => {
+  const discovery = read("tools/scripts/run-deep-discovery.mjs");
+  const security = read(".github/workflows/security-remote.yml");
+  const final = read(".github/workflows/final-closure.yml");
+  const envelope = read("tools/scripts/lib/evidence-envelope.mjs");
+  const campaign = read("tools/scripts/run-root-closure-campaign.mjs");
+  assert.match(discovery, /buildEvidenceEnvelope/u);
+  assert.doesNotMatch(discovery, /CHECK_OR_TOOL_EXECUTION_FAILURE/u);
+  assert.match(security, /capture-tool-evidence\.mjs/u);
+  assert.match(final, /Collect every available analyzer artifact and completed job log/u);
+  assert.match(final, /Consume all tool evidence into one exact-candidate Root Graph/u);
+  assert.match(final, /--required-tools 'codeql,sonar,semgrep,gitleaks,osv-scanner,trivy,actionlint,zizmor,pinact,shellcheck,hadolint,yamllint'/u);
+  assert.match(final, /conclusion.*skipped/u);
+  assert.match(final, /outcome='NOT_APPLICABLE'/u);
+  assert.match(final, /evidenceConsumption: \$evidenceConsumption\[0\]/u);
+  assert.match(final, /rootGraph: \$rootGraph\[0\]/u);
+  assert.match(envelope, /bthwani-evidence-envelope\/1/u);
+  assert.match(envelope, /bthwani-root-graph\/1/u);
+  assert.match(envelope, /unparsedMaterialOutput/u);
+  assert.match(envelope, /unmappedMaterialFindings/u);
+  assert.match(envelope, /sourceOfFixUnresolved/u);
+  assert.match(campaign, /buildUnifiedRootGraph/u);
+  assert.match(campaign, /evidence-envelopes\.json/u);
+  assert.match(campaign, /closureClaim: false/u);
 });
 
 test("machine router exposes rendered and mobile materiality", () => {

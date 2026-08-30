@@ -4,6 +4,11 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
+import {
+  buildEvidenceEnvelope,
+  buildUnifiedRootGraph,
+  summarizeEvidenceConsumption,
+} from "./lib/evidence-envelope.mjs";
 
 const SCRIPT_VERSION = "1";
 const CANONICAL_CHANGE_CONTEXT = "BThwani / Change Verification";
@@ -279,7 +284,7 @@ function buildTasks(options, extraCommands) {
   return tasks;
 }
 
-function executeTask(task, repoRoot, evidenceDir, index) {
+function executeTask(task, repoRoot, evidenceDir, index, candidate) {
   const startedAt = new Date();
   process.stdout.write(`\n[${index}] ${task.phase}/${task.name}\n$ ${task.command}\n`);
   const result = spawnSync(task.command, {
@@ -306,6 +311,16 @@ function executeTask(task, repoRoot, evidenceDir, index) {
     phase: task.phase, name: task.name, command: task.command, exitCode: code,
     status: code === 0 ? "PASS" : "FAIL", startedAt: startedAt.toISOString(), finishedAt: finishedAt.toISOString(),
     durationMs: finishedAt.getTime() - startedAt.getTime(), logPath,
+    envelope: buildEvidenceEnvelope({
+      toolId: `campaign:${task.phase}:${task.name}`,
+      candidate: {headSha: candidate.headSha, baseSha: candidate.baseSha, identity: candidate.identity},
+      status: code === 0 ? "PASS" : "FAIL",
+      exitCode: code,
+      rawText: [stdout, stderr].filter(Boolean).join("\n"),
+      rawPath: logPath,
+      claim: `root-closure campaign task: ${task.command}`,
+      scope: `candidate ${candidate.headSha}`,
+    }),
   };
 }
 
@@ -328,6 +343,7 @@ function main() {
   const baseRef = options.baseRef || defaultBranch;
   const remoteBase = safeJson(gh(["api", "-H", "X-GitHub-Api-Version: 2022-11-28", `/repos/${repository}/branches/${encodeURIComponent(baseRef)}`], repoRoot).stdout, `base branch ${baseRef}`);
   const baseSha = remoteBase?.commit?.sha ?? "";
+  const candidate = {headSha, baseSha, identity: headSha};
 
   const evidenceDir = options.evidenceDir
     ? (isAbsolute(options.evidenceDir) ? options.evidenceDir : resolve(repoRoot, options.evidenceDir))
@@ -381,10 +397,16 @@ function main() {
   if (fundamentalIdentityFailure) {
     process.stderr.write("\nroot-closure: candidate identity/precondition failure; command execution is withheld because evidence would be ambiguously bound.\n");
   } else {
-    for (let i = 0; i < tasks.length; i += 1) taskResults.push(executeTask(tasks[i], repoRoot, evidenceDir, i + 1));
+    for (let i = 0; i < tasks.length; i += 1) taskResults.push(executeTask(tasks[i], repoRoot, evidenceDir, i + 1, candidate));
   }
 
   const taskFailures = taskResults.filter((result) => result.status === "FAIL");
+  const envelopes = taskResults.map((result) => result.envelope);
+  const rootGraph = buildUnifiedRootGraph(envelopes, candidate.identity);
+  const evidenceConsumption = summarizeEvidenceConsumption(envelopes, rootGraph);
+  writeFileSync(join(evidenceDir, "evidence-envelopes.json"), `${JSON.stringify(envelopes, null, 2)}\n`, "utf8");
+  writeFileSync(join(evidenceDir, "root-graph.json"), `${JSON.stringify(rootGraph, null, 2)}\n`, "utf8");
+  writeFileSync(join(evidenceDir, "evidence-consumption.json"), `${JSON.stringify({...evidenceConsumption, closureClaim: false}, null, 2)}\n`, "utf8");
   const summary = {
     schema: "bthwani-root-closure-campaign-run/1",
     scriptVersion: SCRIPT_VERSION,
@@ -405,8 +427,15 @@ function main() {
       blockingProbeFailures: preflightBlockingFailures.length,
       commandFailures: taskFailures.length,
       commandsExecuted: taskResults.length,
+      rootQueue: evidenceConsumption.rootQueue,
+      unaccountedRawFindings: evidenceConsumption.unaccountedRawFindings,
     },
-    verdict: preflightBlockingFailures.length === 0 && taskFailures.length === 0 ? "PASS_FOR_EXECUTED_CLAIMS" : "OPEN",
+    verdict: preflightBlockingFailures.length === 0 && taskFailures.length === 0
+      && evidenceConsumption.allToolEvidenceConsumed && evidenceConsumption.rootQueue === 0
+      ? "PASS_FOR_EXECUTED_CLAIMS"
+      : "OPEN",
+    evidenceConsumption,
+    rootGraph,
     closureClaims: {
       changeVerification: options.mode === "remote-change" || options.mode === "all" ? "DISPATCH_REQUESTED_ONLY" : "NOT_CLAIMED",
       changeClosure: options.mode === "remote-closure" ? "DISPATCH_REQUESTED_ONLY" : "NOT_CLAIMED",
