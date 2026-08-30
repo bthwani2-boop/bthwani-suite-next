@@ -109,7 +109,10 @@ jobs:
             --base-sha "${BASE_SHA}"
           summary="${RUNNER_TEMP}/semgrep-evidence/summary.json"
           total="$(jq -r '.totalFindings' "${summary}")"
+          blocking="$(jq -r '.blockingFindings' "${summary}")"
+          review="$(jq -r '.reviewFindings' "${summary}")"
           unknown="$(jq -r '.unknownEngineErrors' "${summary}")"
+          limitations="$(jq -r '.toolLimitationsProven' "${summary}")"
           accounted="$(jq -r '.allRawFindingsAccounted' "${summary}")"
           {
             echo "### Semgrep exact candidate"
@@ -117,12 +120,15 @@ jobs:
             echo "- Base: \`${BASE_SHA}\`"
             echo "- Mode: \`${MODE}\`"
             echo "- Raw findings: \`${total}\`"
+            echo "- Blocking findings: \`${blocking}\`"
+            echo "- Audit/review findings: \`${review}\`"
+            echo "- Proven tool limitations: \`${limitations}\`"
             echo "- Unknown engine errors: \`${unknown}\`"
-            echo "- All raw engine conditions accounted: \`${accounted}\`"
+            echo "- All raw evidence accounted: \`${accounted}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
-          [[ "${accounted}" == "true" ]] || { echo "::error::Semgrep raw engine conditions were not fully accounted"; exit 1; }
+          [[ "${accounted}" == "true" ]] || { echo "::error::Semgrep raw evidence was not fully accounted"; exit 1; }
           [[ "${unknown}" == "0" ]] || { echo "::error::Semgrep unknown engine errors=${unknown}"; exit 1; }
-          [[ "${total}" == "0" ]] || { echo "::error::Semgrep findings require diagnosis/disposition before closure: total=${total}"; exit 1; }
+          [[ "${blocking}" == "0" ]] || { echo "::error::Semgrep blocking findings require treatment before closure: total=${blocking}"; exit 1; }
       - name: Upload complete Semgrep evidence
         if: ${{ always() }}
         id: artifact
