@@ -3,12 +3,21 @@ import { Platform, StyleSheet, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import {
   ClientOrderRatingGate,
+  DshClientPlatformProvider,
   DshClientSurface,
   IdentitySessionGate,
   useDshMobilePushRegistration,
   type DshClientNavigation,
   type DshClientRoute,
+  type DshClientPlatform,
 } from "@bthwani/dsh/app-client";
+import {
+  createClientEphemeralId,
+  openClientExternalUrl,
+  performClientSelectionHaptic,
+  shareClientTextDocument,
+} from "./platform/client-platform-actions";
+import { ClientRemoteImage } from "./media/ClientRemoteImage";
 import { secureRandomId } from "@bthwani/dsh/mobile-capabilities";
 import {
   configureIdentityDeviceFingerprintProvider,
@@ -47,6 +56,14 @@ export type ClientAppProps = {
   readonly navigation: DshClientNavigation;
 };
 
+const clientPlatform: DshClientPlatform = {
+  RemoteImage: ClientRemoteImage,
+  createEphemeralId: createClientEphemeralId,
+  selectionHaptic: performClientSelectionHaptic,
+  openExternalUrl: openClientExternalUrl,
+  shareTextDocument: shareClientTextDocument,
+};
+
 function AppContent({ route, navigation }: ClientAppProps) {
   const identity = useIdentitySession();
   useDshMobilePushRegistration(identity.state.kind, "app-client", "bthwani-client-next");
@@ -54,7 +71,9 @@ function AppContent({ route, navigation }: ClientAppProps) {
     <View style={styles.root}>
       <IdentitySessionGate requiredRole="client" requiredSurface="app-client">
         <ClientOrderRatingGate>
-          <DshClientSurface route={route} navigation={navigation} />
+          <DshClientPlatformProvider platform={clientPlatform}>
+            <DshClientSurface route={route} navigation={navigation} />
+          </DshClientPlatformProvider>
         </ClientOrderRatingGate>
       </IdentitySessionGate>
     </View>

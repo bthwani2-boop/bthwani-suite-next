@@ -42,7 +42,3 @@ export type {
   StoreCourierCompensation,
 } from './dsh-partner-binding.contracts';
 export { DSH_PARTNER_BINDING_CONTRACTS } from './dsh-partner-binding.contracts';
-
-// UI panels
-export { PartnerCatalogReadinessPanel } from './catalog/PartnerCatalogReadinessPanel';
-export type { PartnerCatalogReadinessPanelProps } from './catalog/PartnerCatalogReadinessPanel';

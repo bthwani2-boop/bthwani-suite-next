@@ -17,6 +17,8 @@ import {
   type CpBadgeTone,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import {
   useNotificationDeliveryAuditController,
   usePlatformNotificationConfigController,
@@ -110,6 +112,27 @@ function LabeledTextArea({
 }
 
 export function PlatformNotificationConfigScreen() {
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canReadSupport = hasServiceControlPanelPermission(identity, "dsh", "support.read");
+  const canManageSupport = hasServiceControlPanelPermission(identity, "dsh", "support.manage");
+
+  if (!canReadSupport) {
+    return (
+      <DataTablePageFrame dir="rtl" header={<CpPageHeader title="إعدادات الإشعارات" />}>
+        <CpStatePanel
+          role="alert"
+          title="غير مصرح"
+          description="تتطلب إعدادات إشعارات المنصة صلاحية support.read."
+        />
+      </DataTablePageFrame>
+    );
+  }
+
+  return <PlatformNotificationConfigContent canManage={canManageSupport} />;
+}
+
+function PlatformNotificationConfigContent({ canManage }: { readonly canManage: boolean }) {
   const { state, reload, save } = usePlatformNotificationConfigController("authenticated");
   const deliveryAudit = useNotificationDeliveryAuditController("authenticated");
   const [editingConfig, setEditingConfig] = React.useState<DshPlatformNotificationConfig | null>(null);
@@ -157,6 +180,7 @@ export function PlatformNotificationConfigScreen() {
   }
 
   async function handleSave(nextEnabled: boolean) {
+    if (!canManage) return;
     const resolvedTopic = topic.trim();
     if (!resolvedTopic) {
       setSaveMessage("الموضوع مطلوب قبل الحفظ.");
@@ -245,7 +269,7 @@ export function PlatformNotificationConfigScreen() {
                   <CpTableCell>{row.description}</CpTableCell>
                   <CpTableCell>{row.updatedBy}</CpTableCell>
                   <CpTableCell>
-                    <CpButton onClick={() => startEdit(row)}>تعديل</CpButton>
+                    {canManage ? <CpButton onClick={() => startEdit(row)}>تعديل</CpButton> : <CpMutedInline tight>قراءة فقط</CpMutedInline>}
                   </CpTableCell>
                 </tr>
               ))}
@@ -253,7 +277,7 @@ export function PlatformNotificationConfigScreen() {
           </CpTable>
         )}
 
-        <section style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        {canManage ? <section style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <strong>{editingConfig ? `تعديل ${editingConfig.topic}` : "تهيئة إشعار منصة"}</strong>
           <LabeledField label="الموضوع">
             <CpTextInput value={topic} onChange={setTopic} placeholder="order.status_changed" aria-label="الموضوع" />
@@ -285,7 +309,7 @@ export function PlatformNotificationConfigScreen() {
             <CpButton disabled={isSaving} onClick={() => { void handleSave(false); }}>حفظ معطّل</CpButton>
             {editingConfig ? <CpButton variant="ghost" onClick={resetEditor}>إلغاء</CpButton> : null}
           </div>
-        </section>
+        </section> : <CpStatePanel role="status" title="إعدادات الإشعارات للقراءة فقط" description="تتطلب أوامر إنشاء وتعديل القوالب صلاحية support.manage." />}
 
         <section style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <strong>تدقيق تسليم الإشعارات</strong>

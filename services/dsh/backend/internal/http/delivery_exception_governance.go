@@ -94,6 +94,11 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		ReasonCode    dispatch.DeliveryExceptionReasonCode `json:"reasonCode"`
 		Note          string                               `json:"note"`
@@ -105,17 +110,23 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	if body.CorrelationID != "" && strings.TrimSpace(body.CorrelationID) != correlationID {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_MISMATCH", "body correlationId must match X-Correlation-ID")
+		return
+	}
 	if err := validateDeliveryExceptionReportNote(body.Note); err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
 	}
 	item, err := dispatch.ReportDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID, dispatch.ReportDeliveryExceptionInput{
-		ReasonCode:    body.ReasonCode,
-		Note:          strings.TrimSpace(body.Note),
-		CorrelationID: operationalCorrelationID(r, body.CorrelationID),
-		Latitude:      body.Latitude,
-		Longitude:     body.Longitude,
-		ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
+		OperatorContextID: actor.OperatorContextID,
+		ReasonCode:        body.ReasonCode,
+		Note:              strings.TrimSpace(body.Note),
+		IdempotencyKey:    idempotencyKey,
+		CorrelationID:     correlationID,
+		Latitude:          body.Latitude,
+		Longitude:         body.Longitude,
+		ProofMediaRef:     strings.TrimSpace(body.ProofMediaRef),
 	})
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
@@ -132,15 +143,11 @@ func (s *protectedStoreServer) handleResolveDeliveryExceptionGoverned(w http.Res
 	if !ok {
 		return
 	}
-	current, err := dispatch.GetDeliveryException(s.db, r.PathValue("exceptionId"))
-	if err != nil {
-		writeDeliveryExceptionError(w, err)
+	idempotencyKey, correlationID, ok := requireOperatorCommandIdentity(w, r)
+	if !ok {
 		return
 	}
-	if err := validateDeliveryExceptionResolutionState(current); err != nil {
-		writeDeliveryExceptionError(w, err)
-		return
-	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 
 	var body struct {
 		ExpectedVersion int    `json:"expectedVersion"`
@@ -153,15 +160,16 @@ func (s *protectedStoreServer) handleResolveDeliveryExceptionGoverned(w http.Res
 	}
 
 	var item *dispatch.DeliveryException
+	var err error
 	switch body.Action {
 	case "retry_same_captain":
-		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, current.ID, body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptainIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
 	case "reassign_captain":
-		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, current.ID, body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionReassignCaptainIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID, idempotencyKey, correlationID)
 	case "return_to_store":
-		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, current.ID, body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionReturnToStoreIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
 	case "cancel_order":
-		item, err = dispatch.ResolveDeliveryExceptionCancelOrder(s.db, current.ID, body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionCancelOrderIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
 	default:
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
 		return

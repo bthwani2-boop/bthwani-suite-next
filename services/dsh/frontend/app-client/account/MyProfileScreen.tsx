@@ -15,6 +15,8 @@ import {
   fetchClientProfile,
   upsertClientProfilePreferences,
   upsertClientProfileConsents,
+  getOrCreateClientProfileMutationAttempt,
+  clearClientProfileMutationAttempt,
   type ClientProfile,
 } from "../../shared/client-profile";
 
@@ -37,6 +39,7 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
   const [consentSms, setConsentSms] = React.useState(false);
   const [consentPush, setConsentPush] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
 
   const loadProfile = React.useCallback(async () => {
     if (sessionState.kind !== "authenticated") return;
@@ -97,34 +100,71 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
   const handleSave = async () => {
     if (profileState.kind !== "ready") return;
     setSaving(true);
+    setSaveError(null);
+    let updatedProfile = profileState.profile;
     try {
       const isPreferencesChanged = locale !== profileState.profile.locale || currency !== profileState.profile.currencyPreference;
       const isConsentsChanged = consentEmail !== profileState.profile.marketingConsentEmail || consentSms !== profileState.profile.marketingConsentSms || consentPush !== profileState.profile.marketingConsentPush;
 
-      let updatedProfile = profileState.profile;
-
       if (isPreferencesChanged) {
-        updatedProfile = await upsertClientProfilePreferences({
+        const input = {
           locale,
           currencyPreference: currency,
           ...(profileState.profile.version > 0
             ? { expectedVersion: profileState.profile.version }
             : {}),
-        });
+        };
+        const intent = {
+          actorId: identity.subject,
+          operation: "preferences" as const,
+          input,
+        };
+        const attempt = await getOrCreateClientProfileMutationAttempt(intent);
+        updatedProfile = await upsertClientProfilePreferences(input, attempt.context);
+        const readback = await fetchClientProfile();
+        if (readback.locale !== locale || readback.currencyPreference !== currency) {
+          throw new Error("تم حفظ التفضيلات لكن القراءة المعتمدة لم تطابق القيم المطلوبة");
+        }
+        updatedProfile = readback;
+        try {
+          await clearClientProfileMutationAttempt(intent, attempt.signature);
+        } catch {
+          // The server returned canonical state; retaining the replay-safe key is safe.
+        }
       }
 
       if (isConsentsChanged) {
-        updatedProfile = await upsertClientProfileConsents({
+        const input = {
           marketingConsentEmail: consentEmail,
           marketingConsentSms: consentSms,
           marketingConsentPush: consentPush,
           ...((isPreferencesChanged ? updatedProfile.version : profileState.profile.version) > 0
             ? { expectedVersion: isPreferencesChanged ? updatedProfile.version : profileState.profile.version }
             : {}),
-        });
+        };
+        const intent = {
+          actorId: identity.subject,
+          operation: "consents" as const,
+          input,
+        };
+        const attempt = await getOrCreateClientProfileMutationAttempt(intent);
+        updatedProfile = await upsertClientProfileConsents(input, attempt.context);
+        const readback = await fetchClientProfile();
+        if (readback.marketingConsentEmail !== consentEmail
+          || readback.marketingConsentSms !== consentSms
+          || readback.marketingConsentPush !== consentPush) {
+          throw new Error("تم حفظ الموافقات لكن القراءة المعتمدة لم تطابق القيم المطلوبة");
+        }
+        updatedProfile = readback;
+        try {
+          await clearClientProfileMutationAttempt(intent, attempt.signature);
+        } catch {
+          // The server returned canonical state; retaining the replay-safe key is safe.
+        }
       }
 
       setProfileState({ kind: "ready", profile: updatedProfile });
+      setSaveError(null);
     } catch (error: any) {
       if (error?.status === 409) {
         try {
@@ -140,6 +180,9 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
             message: reloadError?.message || "تعذر إعادة تحميل الملف بعد التعارض",
           });
         }
+      } else if (updatedProfile.version !== profileState.profile.version) {
+        setProfileState({ kind: "ready", profile: updatedProfile });
+        setSaveError(error?.message || "تم حفظ جزء من التغييرات؛ أكمل الحفظ لإتمام الباقي");
       } else {
         setProfileState({ kind: "error", message: error?.message || "حدث خطأ أثناء الحفظ" });
       }
@@ -193,6 +236,7 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
             <Button label="إعادة المحاولة" onPress={loadProfile} />
           </View>
         )}
+        {saveError && <StateView tone="danger" title="تعذر إكمال الحفظ" description={saveError} />}
         {profileState.kind === "conflict" && (
           <StateView tone="warning" title="تعارض في الإصدار" description={profileState.message} />
         )}

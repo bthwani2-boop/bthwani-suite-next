@@ -19,7 +19,7 @@ import {
   spacing,
   statusScale,
 } from "@bthwani/ui-kit";
-import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
+import { useDshClientPlatform } from "../client-platform-context";
 import type { BannerViewModel } from "../../shared/home-discovery";
 
 type Props = {
@@ -40,6 +40,7 @@ function bannerActionLabel(banner: BannerViewModel): string {
 }
 
 export function HomeHeroBannerSection({ banners, onBannerPress }: Props) {
+  const { RemoteImage } = useDshClientPlatform();
   const { width } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -72,7 +73,7 @@ export function HomeHeroBannerSection({ banners, onBannerPress }: Props) {
       >
         {banners.map((banner) => {
           const actionLabel = bannerActionLabel(banner);
-          const interactive = actionLabel.length > 0 && onBannerPress != null;
+          const interactive = actionLabel.length > 0 && banner.actionTarget.trim().length > 0 && onBannerPress != null;
           return (
             <Pressable
               key={banner.id}
@@ -83,7 +84,7 @@ export function HomeHeroBannerSection({ banners, onBannerPress }: Props) {
               accessibilityLabel={interactive ? `${banner.title}، ${actionLabel}` : banner.title}
             >
               {banner.imageUrl ? (
-                <ClientRemoteImage uri={banner.imageUrl} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={`صورة ${banner.title}`} />
+                <RemoteImage uri={banner.imageUrl} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={`صورة ${banner.title}`} />
               ) : (
                 <View style={[StyleSheet.absoluteFill, styles.bannerPlaceholder]} />
               )}

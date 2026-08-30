@@ -38,10 +38,10 @@ func TestCancelledPickupCannotBeVerifiedOrExtendedDBIntegration(t *testing.T) {
 		t.Fatalf("cancelled pickup must not look consumed: usedAt=%v method=%v", cancelled.UsedAt, cancelled.VerificationMethod)
 	}
 
-	if _, err := service.VerifyOtp(ctx, fixture.orderID, plain, "partner-1", "partner", "cancelled-verify"); !errors.Is(err, ErrCancelled) {
+	if _, err := service.VerifyOtp(ctx, fixture.operatorContextID, fixture.orderID, plain, "partner-1", "partner", "cancelled-verify"); !errors.Is(err, ErrCancelled) {
 		t.Fatalf("expected ErrCancelled from VerifyOtp, got %v", err)
 	}
-	if _, err := service.ExtendWindow(ctx, fixture.orderID, time.Now().Add(time.Hour), "operator-1", "operator", "manual extension", "cancelled-extend"); !errors.Is(err, ErrCancelled) {
+	if _, err := service.ExtendWindow(ctx, fixture.operatorContextID, fixture.orderID, time.Now().Add(time.Hour), "operator-1", "operator", "manual extension", "cancelled-extend"); !errors.Is(err, ErrCancelled) {
 		t.Fatalf("expected ErrCancelled from ExtendWindow, got %v", err)
 	}
 }

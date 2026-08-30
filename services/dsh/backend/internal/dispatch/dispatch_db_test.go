@@ -33,13 +33,13 @@ func openRequiredDB(t *testing.T) *sql.DB {
 
 // seedArrivedCustomerFixture builds a store/cart/checkout-intent/order/
 // assignment/delivery chain sitting in the arrived_customer state, ready for
-// SubmitPoD, with the checkout intent's payment method controllable so both
+// canonical delivery proof review, with the checkout intent's payment method controllable so both
 // the COD and non-COD outbox-enqueue paths can be exercised.
-func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) (assignmentID, captainID, orderID, checkoutIntentID, partnerID string) {
+func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) (assignmentID, captainID, orderID, checkoutIntentID, partnerID, operatorContextID string) {
 	t.Helper()
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	operatorContextID := "OperatorContext-pod-outbox-test-" + suffix
+	operatorContextID = "OperatorContext-pod-outbox-test-" + suffix
 	storeID := "pod-outbox-test-store-" + suffix
 	clientID := "pod-outbox-test-client-" + suffix
 	captainID = "pod-outbox-test-captain-" + suffix
@@ -97,10 +97,10 @@ func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) 
 	}
 
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_assignments (order_id, captain_id, assigned_by, status, response_deadline_at, accepted_at)
-		VALUES ($1::uuid, $2, 'operator-test', 'accepted', NOW() + interval '1 hour', NOW())
+		INSERT INTO dsh_assignments (operator_context_id, order_id, captain_id, assigned_by, status, response_deadline_at, accepted_at)
+		VALUES ($1, $2::uuid, $3, 'operator-test', 'accepted', NOW() + interval '1 hour', NOW())
 		RETURNING id::text`,
-		orderID, captainID,
+		operatorContextID, orderID, captainID,
 	).Scan(&assignmentID); err != nil {
 		t.Fatalf("failed to insert test assignment: %v", err)
 	}
@@ -120,21 +120,36 @@ func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) 
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID)
 	})
 
-	return assignmentID, captainID, orderID, checkoutIntentID, partnerID
+	return assignmentID, captainID, orderID, checkoutIntentID, partnerID, operatorContextID
 }
 
-func TestSubmitPoDEnqueuesWltOutboxEventForCodOrderDBIntegration(t *testing.T) {
+func TestSubmitDeliveryProofEnqueuesWltOutboxEventForCodOrderDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
-	assignmentID, captainID, orderID, checkoutIntentID, partnerID := seedArrivedCustomerFixture(t, db, "cod")
+	assignmentID, captainID, orderID, checkoutIntentID, partnerID, operatorContextID := seedArrivedCustomerFixture(t, db, "cod")
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
-	seedCaptainDeliveryProofMedia(t, db, captainID, "ref-123", partnerID, "")
+	mediaRef := "ref-123-" + orderID
+	seedCaptainDeliveryProofMedia(t, db, captainID, mediaRef, partnerID, "", orderID)
 
-	assignment, err := SubmitPoD(db, assignmentID, captainID, PoDInput{Method: "photo", Reference: "ref-123"})
+	proof, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
+		OperatorContextID: operatorContextID,
+		Method:            DeliveryProofPhoto,
+		PhotoMediaRef:     mediaRef,
+		IdempotencyKey:    "cod-photo-proof-" + orderID,
+	})
 	if err != nil {
-		t.Fatalf("SubmitPoD failed: %v", err)
+		t.Fatalf("SubmitDeliveryProof failed: %v", err)
 	}
-	if assignment.OrderID != orderID {
-		t.Fatalf("expected assignment order id %s, got %s", orderID, assignment.OrderID)
+	if proof.Status != DeliveryProofPendingReview || proof.OrderID != orderID {
+		t.Fatalf("unexpected submitted proof: %+v", proof)
+	}
+	if _, err := ReviewDeliveryProof(db, proof.ID, "operator-cod", ReviewDeliveryProofInput{
+		OperatorContextID: operatorContextID,
+		ExpectedVersion:   proof.Version,
+		Reason:            "تمت مراجعة إثبات التسليم",
+		Accept:            true,
+		IdempotencyKey:    "cod-photo-review-" + orderID,
+	}); err != nil {
+		t.Fatalf("ReviewDeliveryProof failed: %v", err)
 	}
 
 	var gotCaptainID, gotPartnerID, gotCheckoutIntentID, status string
@@ -157,19 +172,20 @@ func TestSubmitPoDEnqueuesWltOutboxEventForCodOrderDBIntegration(t *testing.T) {
 
 func TestSubmitDeliveryProofOTPDoesNotUseChallengeAsMediaReferenceDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
-	assignmentID, captainID, orderID, _, _ := seedArrivedCustomerFixture(t, db, "cod")
+	assignmentID, captainID, orderID, _, _, operatorContextID := seedArrivedCustomerFixture(t, db, "cod")
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
 
 	var clientID string
 	if err := db.QueryRow(`SELECT client_id FROM dsh_orders WHERE id = $1::uuid`, orderID).Scan(&clientID); err != nil {
 		t.Fatalf("failed to resolve OTP fixture client: %v", err)
 	}
-	issued, err := IssueDeliveryPIN(db, orderID, clientID)
+	issued, err := IssueDeliveryPINForOperatorContext(db, operatorContextID, orderID, clientID)
 	if err != nil {
 		t.Fatalf("IssueDeliveryPIN failed: %v", err)
 	}
 
 	proof, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
+		OperatorContextID:     operatorContextID,
 		Method:                DeliveryProofOTP,
 		PIN:                   issued.PIN,
 		RecipientRelationship: "customer",
@@ -209,14 +225,30 @@ func TestSubmitDeliveryProofOTPDoesNotUseChallengeAsMediaReferenceDBIntegration(
 	}
 }
 
-func TestSubmitPoDDoesNotEnqueueOutboxForNonCodOrderDBIntegration(t *testing.T) {
+func TestSubmitDeliveryProofDoesNotEnqueueOutboxForNonCodOrderDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
-	assignmentID, captainID, orderID, _, partnerID := seedArrivedCustomerFixture(t, db, "wallet")
+	assignmentID, captainID, orderID, _, partnerID, operatorContextID := seedArrivedCustomerFixture(t, db, "wallet")
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
-	seedCaptainDeliveryProofMedia(t, db, captainID, "ref-456", partnerID, "")
+	mediaRef := "ref-456-" + orderID
+	seedCaptainDeliveryProofMedia(t, db, captainID, mediaRef, partnerID, "", orderID)
 
-	if _, err := SubmitPoD(db, assignmentID, captainID, PoDInput{Method: "photo", Reference: "ref-456"}); err != nil {
-		t.Fatalf("SubmitPoD failed: %v", err)
+	proof, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
+		OperatorContextID: operatorContextID,
+		Method:            DeliveryProofPhoto,
+		PhotoMediaRef:     mediaRef,
+		IdempotencyKey:    "wallet-photo-proof-" + orderID,
+	})
+	if err != nil {
+		t.Fatalf("SubmitDeliveryProof failed: %v", err)
+	}
+	if _, err := ReviewDeliveryProof(db, proof.ID, "operator-wallet", ReviewDeliveryProofInput{
+		OperatorContextID: operatorContextID,
+		ExpectedVersion:   proof.Version,
+		Reason:            "تمت مراجعة إثبات التسليم",
+		Accept:            true,
+		IdempotencyKey:    "wallet-photo-review-" + orderID,
+	}); err != nil {
+		t.Fatalf("ReviewDeliveryProof failed: %v", err)
 	}
 
 	var count int

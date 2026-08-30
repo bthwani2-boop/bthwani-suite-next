@@ -266,8 +266,11 @@ function AuthenticatedCaptainSurface({
         <DshCaptainOrderJourneyRenderer
           route={state.route}
           activeAssignmentId={state.activeAssignmentId}
-          activeOrderId={state.activeOrderId}
+           activeOrderId={state.activeOrderId}
+           activeWorkItemId={state.activeWorkItemId}
+           activeWorkItemSource={state.activeWorkItemSource}
           activeDeliveryStatus={state.activeDeliveryStatus}
+          activeDeliveryAction={derived.activeDeliveryAction}
           isActiveAssignmentOperational={isActiveAssignmentOperational}
           activeOrderDisplayId={derived.activeOrderDisplayId}
           activeSummary={state.activeAssignmentId ? derived.activeSummary : null}
@@ -277,15 +280,16 @@ function AuthenticatedCaptainSurface({
           captainPodRequired={derived.captainPodRequired && isActiveAssignmentOperational}
           isStoreCourierMode={derived.isStoreCourierMode}
           isCaptainAvailable={derived.isCaptainAvailable}
+          availabilityBusy={state.availabilityBusy}
+          availabilityError={state.availabilityError}
           selectedSupportScreen={state.selectedSupportScreen}
-          isPickupSheetVisible={state.isPickupSheetVisible}
-          isDeliverySheetVisible={state.isDeliverySheetVisible}
-          isDeclineSheetVisible={state.isDeclineSheetVisible}
+           isDeclineSheetVisible={state.isDeclineSheetVisible}
           declineOrderId={state.declineOrderId}
           declineSheetState={state.declineSheetState}
-          pickupSheetState={state.pickupSheetState}
-          captainPodState={state.captainPodState}
+            captainPodState={state.captainPodState}
           captainPodPhotoUri={state.captainPodPhotoUri}
+          deliveryActionState={state.deliveryActionState}
+          deliveryActionMessage={state.deliveryActionMessage}
           showBottomNav={derived.showBottomNav}
           bottomNavNode={bottomNav}
           dshClientId={captainId}
@@ -298,9 +302,10 @@ function AuthenticatedCaptainSurface({
           wltSummaryLabel="الرصيد من WLT"
           onOpenOrder={(assignmentId) => navigation.navigate({ kind: "detail", assignmentId })}
           onRetryInbox={() => void actions.refreshInbox()}
-          onConfirmPickup={() => void actions.confirmPickup()}
-          onConfirmDelivery={() => {
-            void actions.confirmDelivery().then((readyForProof) => {
+          onConfirmStoreArrival={() => actions.confirmStoreArrival()}
+          onConfirmPickup={() => actions.confirmPickup()}
+          onConfirmCustomerArrival={() => {
+            return actions.confirmCustomerArrival().then((readyForProof) => {
               if (
                 readyForProof
                 && operationalAssignmentId
@@ -310,10 +315,11 @@ function AuthenticatedCaptainSurface({
               } else if (readyForProof) {
                 goToInbox();
               }
+              return readyForProof;
             });
           }}
           onOpenPod={() => {
-            if (isActiveAssignmentOperational && operationalAssignmentId) {
+            if (isActiveAssignmentOperational && operationalAssignmentId && state.activeDeliveryStatus === 'arrived_customer') {
               navigation.navigate({ kind: "pod-submission", assignmentId: operationalAssignmentId });
             } else {
               goToInbox();
@@ -332,9 +338,7 @@ function AuthenticatedCaptainSurface({
           onBack={navigation.back}
           onGoToInbox={goToInbox}
           onGoToAccount={goToAccount}
-          onClosePickupSheet={() => actions.setIsPickupSheetVisible(false)}
-          onCloseDeliverySheet={() => actions.setIsDeliverySheetVisible(false)}
-          onCloseDeclineSheet={() => actions.setIsDeclineSheetVisible(false)}
+           onCloseDeclineSheet={() => actions.setIsDeclineSheetVisible(false)}
           onConfirmDecline={(assignmentId, reason) => {
             void actions.handleDeclineConfirm(assignmentId, reason).then((declined) => {
               if (declined) navigation.navigate({ kind: "inbox" }, "replace");
@@ -370,6 +374,7 @@ function AuthenticatedCaptainSurface({
             navigation.navigate({ kind: "home" }, "replace");
           }}
           onToggleAvailability={(available) => actions.setCaptainAvailabilityStatus(available ? "available" : "unavailable")}
+          onRetryAvailability={() => void actions.refreshAvailability()}
           onPushLocation={actions.pushLocation}
         />
       </View>

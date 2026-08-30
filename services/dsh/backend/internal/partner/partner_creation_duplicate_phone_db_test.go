@@ -23,22 +23,24 @@ func TestPartnerCreationRejectsDuplicatePrimaryPhoneWithinOperatorContextDBInteg
 		CreatedByActorID:    "field-j020-phone-" + suffix,
 		CreatedBySurface:    "app-field",
 	}
-	if _, _, err := CreatePartnerForOperatorContextIdempotent(
+	created, _, err := CreatePartnerForOperatorContextIdempotent(
 		context.Background(),
 		db,
 		operatorContextID,
 		"j020-phone-first-"+suffix,
 		"",
 		base,
-	); err != nil {
+	)
+	if err != nil {
 		t.Fatal(err)
 	}
+	registerPartnerFixtureCleanup(t, db, created.ID, partnerStoreID(t, db, created.ID))
 
 	duplicate := base
 	duplicate.LegalNameAr = "Ø´Ø±ÙŠÙƒ Ù‡Ø§ØªÙ Ø«Ø§Ù† " + suffix
 	duplicate.DisplayName = "Phone Owner B " + suffix
 	duplicate.LegalIdentityNumber = "J020-PHONE-B-" + suffix
-	_, _, err := CreatePartnerForOperatorContextIdempotent(
+	_, _, err = CreatePartnerForOperatorContextIdempotent(
 		context.Background(),
 		db,
 		operatorContextID,

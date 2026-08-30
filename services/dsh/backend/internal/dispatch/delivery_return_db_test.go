@@ -28,7 +28,7 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	var assignmentID string
-	if err := db.QueryRow(`INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at) VALUES($1::uuid,$2,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, orderID, captainID).Scan(&assignmentID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at) VALUES($1,$2::uuid,$3,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, operatorContextID, orderID, captainID).Scan(&assignmentID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`INSERT INTO dsh_deliveries(assignment_id,order_id,captain_id,status) VALUES($1::uuid,$2::uuid,$3,'picked_up')`, assignmentID, orderID, captainID); err != nil {
@@ -40,11 +40,11 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
 	})
 
-	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{ReasonCode: ExceptionRecipientRefused, Note: "رفض العميل استلام الطلب بعد الوصول", CorrelationID: "return-command-" + suffix})
+	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{OperatorContextID: operatorContextID, ReasonCode: ExceptionRecipientRefused, Note: "رفض العميل استلام الطلب بعد الوصول", IdempotencyKey: "return-command-key-" + suffix, CorrelationID: "return-command-" + suffix})
 	if err != nil {
 		t.Fatal(err)
 	}
-	returning, err := ResolveDeliveryExceptionReturnToStore(db, item.ID, item.Version, "إعادة الطلب إلى المتجر بعد رفض المستلم", "operator-1")
+	returning, err := ResolveDeliveryExceptionReturnToStore(db, operatorContextID, item.ID, item.Version, "إعادة الطلب إلى المتجر بعد رفض المستلم", "operator-1")
 	if err != nil {
 		t.Fatalf("start return: %v", err)
 	}
@@ -58,19 +58,28 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if orderStatus != "returning_to_store" || deliveryStatus != "returning_to_store" || assignmentStatus != "accepted" {
 		t.Fatalf("return start mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
 	}
-	if _, err := PushLocation(db, assignmentID, captainID, PushLocationInput{Latitude: 15.37, Longitude: 44.19}); err != nil {
+	if _, err := PushLocationForOperatorContext(db, operatorContextID, assignmentID, captainID, PushLocationInput{Latitude: 15.37, Longitude: 44.19}); err != nil {
 		t.Fatalf("GPS must remain active during return: %v", err)
 	}
-	visible, err := GetCaptainOpenDeliveryException(db, assignmentID, captainID)
+	visible, err := GetCaptainOpenDeliveryExceptionForOperatorContext(db, operatorContextID, assignmentID, captainID)
 	if err != nil || visible.ID != item.ID {
 		t.Fatalf("return decision must remain visible to captain: %+v err=%v", visible, err)
 	}
-	arrived, err := CaptainArriveReturnToStore(db, assignmentID, captainID)
+	arrivalKey := "captain-return-arrive-key-" + suffix
+	arrivalCorrelation := "captain-return-arrive-correlation-" + suffix
+	arrived, err := CaptainArriveReturnToStoreForOperatorContext(db, operatorContextID, assignmentID, captainID, arrivalKey, arrivalCorrelation)
 	if err != nil {
 		t.Fatalf("captain arrive return: %v", err)
 	}
 	if arrived.ReturnArrivedAt == nil || arrived.ReturnedAt != nil {
 		t.Fatalf("captain arrival must not complete store receipt: %+v", arrived)
+	}
+	arrivedReplay, err := CaptainArriveReturnToStoreForOperatorContext(db, operatorContextID, assignmentID, captainID, arrivalKey, arrivalCorrelation)
+	if err != nil {
+		t.Fatalf("captain arrival replay: %v", err)
+	}
+	if arrivedReplay.ID != arrived.ID || arrivedReplay.ReturnArrivedAt == nil || !arrivedReplay.ReturnArrivedAt.Equal(*arrived.ReturnArrivedAt) {
+		t.Fatalf("captain arrival replay did not preserve canonical receipt: original=%+v replay=%+v", arrived, arrivedReplay)
 	}
 	if err := db.QueryRow(`SELECT o.status,d.status,a.status FROM dsh_orders o JOIN dsh_assignments a ON a.order_id=o.id JOIN dsh_deliveries d ON d.assignment_id=a.id WHERE a.id=$1::uuid`, assignmentID).Scan(&orderStatus, &deliveryStatus, &assignmentStatus); err != nil {
 		t.Fatal(err)
@@ -78,12 +87,34 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if orderStatus != "return_arrived_store" || deliveryStatus != "return_arrived_store" || assignmentStatus != "accepted" {
 		t.Fatalf("arrival handshake mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
 	}
-	returned, err := AcceptReturnToStoreByPartner(db, orderID, "partner-return-receipt-test")
+	partnerReturnKey := "partner-return-accept-key-" + suffix
+	partnerReturnCorrelation := "partner-return-accept-correlation-" + suffix
+	returned, err := AcceptReturnToStoreByPartner(db, operatorContextID, orderID, "partner-return-receipt-test", partnerReturnKey, partnerReturnCorrelation)
 	if err != nil {
 		t.Fatalf("partner accept return: %v", err)
 	}
 	if returned.ReturnedAt == nil || returned.ReturnAcceptedByActorID == nil {
 		t.Fatalf("partner receipt was not recorded: %+v", returned)
+	}
+	returnedReplay, err := AcceptReturnToStoreByPartner(db, operatorContextID, orderID, "partner-return-receipt-test", partnerReturnKey, partnerReturnCorrelation)
+	if err != nil {
+		t.Fatalf("partner receipt replay: %v", err)
+	}
+	if returnedReplay.ID != returned.ID || returnedReplay.ReturnedAt == nil || !returnedReplay.ReturnedAt.Equal(*returned.ReturnedAt) || returnedReplay.ReturnAcceptedByActorID == nil || *returnedReplay.ReturnAcceptedByActorID != "partner-return-receipt-test" {
+		t.Fatalf("partner receipt replay did not preserve the original canonical receipt: original=%+v replay=%+v", returned, returnedReplay)
+	}
+	if _, err := CaptainArriveReturnToStoreForOperatorContext(db, operatorContextID, assignmentID, captainID, partnerReturnKey, partnerReturnCorrelation); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("reusing partner return key for captain arrival returned %v, want ErrIdempotencyConflict", err)
+	}
+	var arrivalEvents, receiptEvents int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_order_status_events WHERE order_id=$1::uuid AND from_status='returning_to_store' AND to_status='return_arrived_store'`, orderID).Scan(&arrivalEvents); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_order_status_events WHERE order_id=$1::uuid AND from_status='return_arrived_store' AND to_status='returned_to_store'`, orderID).Scan(&receiptEvents); err != nil {
+		t.Fatal(err)
+	}
+	if arrivalEvents != 1 || receiptEvents != 1 {
+		t.Fatalf("return replays duplicated lifecycle events: arrival=%d receipt=%d", arrivalEvents, receiptEvents)
 	}
 	if err := db.QueryRow(`SELECT o.status,d.status,a.status FROM dsh_orders o JOIN dsh_assignments a ON a.order_id=o.id JOIN dsh_deliveries d ON d.assignment_id=a.id WHERE a.id=$1::uuid`, assignmentID).Scan(&orderStatus, &deliveryStatus, &assignmentStatus); err != nil {
 		t.Fatal(err)
@@ -91,7 +122,7 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	if orderStatus != "returned_to_store" || deliveryStatus != "returned_to_store" || assignmentStatus != "completed" {
 		t.Fatalf("partner receipt completion mismatch: %s %s %s", orderStatus, deliveryStatus, assignmentStatus)
 	}
-	if _, err := GetCaptainOpenDeliveryException(db, assignmentID, captainID); !errors.Is(err, ErrNotFound) {
+	if _, err := GetCaptainOpenDeliveryExceptionForOperatorContext(db, operatorContextID, assignmentID, captainID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("accepted return must leave captain exception view, got %v", err)
 	}
 	inbox, err := ListCaptainAssignments(db, captainID, 50)

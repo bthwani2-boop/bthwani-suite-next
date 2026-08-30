@@ -28,8 +28,9 @@ import { hasServiceControlPanelPermission } from "../../shared/session/control-p
 
 type CountableState = DshAdminState<readonly unknown[]>;
 
-function count(state: CountableState): number {
-  return state.kind === "success" ? state.data.length : 0;
+function countValue(state: CountableState, allowed: boolean): number | string {
+  if (!allowed) return "غير مصرح";
+  return state.kind === "success" ? state.data.length : "—";
 }
 
 function statePanel(state: CountableState, loadingTitle: string) {
@@ -62,13 +63,21 @@ export function AdministrationDashboardScreen() {
       || (item.id === "approval-chain" && canReview)
       || (item.id === "audit" && canReadAudit))
     .map((item) => ({ value: item.id, label: item.label }));
+  const hasRestrictedOverviewData = !canReadRoles || !canReadStaff || !canReadAudit;
 
   const renderOverview = () => (
     <>
       <CpKpiStrip>
-        <CpKpiCard label="الأدوار المعرّفة" value={count(roles.state)} />
-        <CpKpiCard label="إسنادات الأدوار المعتمدة" value={count(staff.state)} />
+        <CpKpiCard label="الأدوار المعرّفة" value={countValue(roles.state, canReadRoles)} />
+        <CpKpiCard label="إسنادات الأدوار المعتمدة" value={countValue(staff.state, canReadStaff)} />
       </CpKpiStrip>
+      {hasRestrictedOverviewData ? (
+        <CpStatePanel
+          role="status"
+          title="بعض حقائق الإدارة محجوبة حسب صلاحيات المشغّل"
+          description="لن تُعرض البيانات غير المقروءة كأرقام صفرية. تظهر القيمة فقط بعد إثبات صلاحية القراءة ونجاح المصدر المالك."
+        />
+      ) : null}
       <CpStatePanel
         role="status"
         title={ADMINISTRATION_TRUTH_NOTICE.title}
@@ -76,10 +85,11 @@ export function AdministrationDashboardScreen() {
       />
       <section aria-label="حالة القراءة التشغيلية">
         <h2>حالة القراءة التشغيلية</h2>
-        {statePanel(roles.state, "جارٍ تحميل الأدوار من Identity…")}
-        {statePanel(staff.state, "جارٍ تحميل إسنادات الأدوار…")}
-        {statePanel(audit.state, "جارٍ تحميل سجل التدقيق…")}
-        {roles.state.kind === "success" && staff.state.kind === "success" && audit.state.kind === "success" ? (
+        {canReadRoles ? statePanel(roles.state, "جارٍ تحميل الأدوار من Identity…") : null}
+        {canReadStaff ? statePanel(staff.state, "جارٍ تحميل إسنادات الأدوار…") : null}
+        {canReadAudit ? statePanel(audit.state, "جارٍ تحميل سجل التدقيق…") : null}
+        {canReadRoles && canReadStaff && canReadAudit
+          && roles.state.kind === "success" && staff.state.kind === "success" && audit.state.kind === "success" ? (
           <CpStatePanel role="status" title="تم تحميل تعريفات الأدوار من Identity وسجل الحوكمة من DSH." />
         ) : null}
       </section>

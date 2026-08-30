@@ -120,7 +120,7 @@ func TestEmployeeBundlesGrantOnlyTheirExactDshDomain(t *testing.T) {
 		},
 		{
 			bundle: EmployeeBundleOperationsManager, department: "operations",
-			required: []string{"operations.read", "operations.manage"}, forbidden: []string{"finance.manage", "partners.manage"},
+			required: []string{"operations.read", "operations.manage", "partner_delivery.read", "partner_delivery.manage", "pickup.read", "pickup.manage"}, forbidden: []string{"finance.manage", "partners.manage"},
 		},
 		{
 			bundle: EmployeeBundlePartnersManager, department: "partners",
@@ -140,7 +140,7 @@ func TestEmployeeBundlesGrantOnlyTheirExactDshDomain(t *testing.T) {
 		},
 		{
 			bundle: EmployeeBundlePlatformOwner, department: "platform",
-			required: []string{"platform:read", "platform.manage"},
+			required: []string{"platform:read", "platform.manage", "catalog.approval.read", "catalog.approval.manage"},
 		},
 	}
 

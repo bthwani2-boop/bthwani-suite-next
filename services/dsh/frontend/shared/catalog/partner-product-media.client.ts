@@ -1,4 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { corrId } from "../_kernel/dsh-http-request";
 import type { DshMediaAsset } from "../media/dsh-media-api.client";
 import { uploadCatalogBinary } from "./catalog-binary-upload.adapter";
 import {
@@ -30,6 +31,7 @@ export type PartnerProductMediaUploadInput = {
   readonly mimeType: string;
   readonly fileSizeBytes: number;
   readonly altAr?: string;
+  readonly idempotencyKey?: string;
 };
 
 function publicUrl(path: string | undefined, status: string): string {
@@ -119,6 +121,7 @@ export async function uploadPartnerProductMedia(
   if (validationError) throw new Error(validationError);
 
   const assortment = await requireStoreAssortment(input.storeId, input.productId);
+  const idempotencyKey = input.idempotencyKey ?? corrId("catalog-partner-media");
   const intent = await createAssetUploadIntent({
     fileName: input.fileName,
     mimeType: input.mimeType,
@@ -127,7 +130,7 @@ export async function uploadPartnerProductMedia(
     intendedEntityType: "store_assortment",
     intendedEntityId: assortment.id,
     intendedRole: PARTNER_CUSTOM_IMAGE_ROLE,
-  });
+  }, idempotencyKey);
 
   await uploadCatalogBinary({
     uploadUrl: intent.uploadUrl,

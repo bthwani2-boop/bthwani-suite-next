@@ -13,6 +13,7 @@ import {
 } from "@bthwani/control-panel/components";
 import { QueuePageFrame } from "@bthwani/control-panel/shell";
 import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { usePartnersController } from "../../shared/partner";
 import { PartnerListScreen } from "./PartnerListScreen";
 import { StoreManagementScreen } from "./stores/StoreManagementScreen";
@@ -64,9 +65,19 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
     );
   }
 
+  const canManagePartners = hasServiceControlPanelPermission(sessionState.identity, "dsh", "partners.manage");
+
   const renderContent = () => {
-    if (activeTab === "field_readiness") return <FieldReadinessQueueScreen />;
-    if (activeTab === "field_assignment") return <FieldAssignmentWorkspace />;
+    if (activeTab === "field_readiness") {
+      return canManagePartners
+        ? <FieldReadinessQueueScreen />
+        : <CpStatePanel role="status" title="مساحة الجاهزية للقراءة فقط" description="تتطلب إجراءات الجاهزية صلاحية partners.manage." />;
+    }
+    if (activeTab === "field_assignment") {
+      return canManagePartners
+        ? <FieldAssignmentWorkspace />
+        : <CpStatePanel role="status" title="مساحة الإسناد للقراءة فقط" description="تتطلب أوامر الإسناد والتعليق صلاحية partners.manage." />;
+    }
     if (activeTab === "stores") return <StoreManagementScreen />;
     if (activeTab === "all_partners") {
       return <PartnerListScreen {...(onOpenPartner ? { onSelectPartner: onOpenPartner } : {})} />;
@@ -87,9 +98,9 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
         <CpPageHeader title="الشركاء والمتاجر">
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
             <CpBadge tone="brand">فول ستاك متعدد المستأجرين</CpBadge>
-            <CpButton variant="primary" onClick={() => setCreateOpen((current) => !current)}>
+            {canManagePartners ? <CpButton variant="primary" onClick={() => setCreateOpen((current) => !current)}>
               {createOpen ? "إغلاق نموذج الإضافة" : "+ إضافة شريك"}
-            </CpButton>
+            </CpButton> : <CpBadge tone="neutral">قراءة فقط</CpBadge>}
           </div>
         </CpPageHeader>
       )}
@@ -117,7 +128,7 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
           <CpKpiCard label="نشطون أو ظاهرون" value={activePartnersCount} />
           <CpKpiCard label="قيد المعالجة" value={pendingCount} />
         </CpKpiStrip>
-        {createOpen ? (
+        {createOpen && canManagePartners ? (
           <PartnerCreatePanel
             controller={adminController}
             onClose={() => setCreateOpen(false)}

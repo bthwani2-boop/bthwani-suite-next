@@ -2,6 +2,7 @@ import React from "react";
 import { StateView } from "@bthwani/ui-kit";
 import type {
   DshPartnerOperationalFlowId,
+  DshPartnerAppearanceState,
   DshPartnerSupportCommandContext,
   DshPartnerSupportRouteId,
   PartnerHubSection,
@@ -24,7 +25,7 @@ import { PartnerCatalogManagementScreen } from "./catalog/PartnerCatalogManageme
 import { ProductEditScreen } from "./catalog/ProductEditScreen";
 import { CategoryManagementScreen } from "./catalog/CategoryManagementScreen";
 import { ProductMediaScreen } from "./catalog/ProductMediaScreen";
-import { ProductOverridesScreen } from "./catalog/ProductOverridesScreen";
+import { ProductControlsScreen } from "./catalog/ProductControlsScreen";
 import { hasDshPartnerBindingContract } from "./dsh-partner-binding.contracts";
 import {
   buildDshPartnerSupportDirectoryRoute,
@@ -45,6 +46,7 @@ type PartnerSupportSource = NonNullable<DshPartnerSupportCommandContext["source"
 export type DshPartnerRouteRendererProps = {
   readonly route: DshPartnerNavigationRoute;
   readonly navigation: DshPartnerNavigation;
+  readonly appearance: DshPartnerAppearanceState;
   readonly partnerOrdersState:
     | "ready"
     | "loading"
@@ -87,7 +89,7 @@ const STORE_SCOPED_ROUTES = new Set<DshPartnerNavigationRoute["kind"]>([
   "product-edit",
   "category-management",
   "product-media",
-  "product-overrides",
+  "product-controls",
   "store-courier",
   "team",
 ]);
@@ -148,6 +150,7 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
   const {
     route,
     navigation,
+    appearance,
     partnerOrdersState,
     partnerOrders,
     runtimePartnerProfile,
@@ -167,7 +170,7 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
   } = props;
 
   const scopedStoreId = selectedStoreScope.storeId;
-  const productId = route.kind === "product-edit" || route.kind === "product-media" || route.kind === "product-overrides"
+  const productId = route.kind === "product-edit" || route.kind === "product-media" || route.kind === "product-controls"
     ? route.productId
     : undefined;
   const activeOrderId = "orderId" in route ? route.orderId : undefined;
@@ -229,7 +232,7 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
     );
   }
 
-  if ((route.kind === "product-edit" || route.kind === "product-media" || route.kind === "product-overrides") && !productId?.trim()) {
+  if ((route.kind === "product-edit" || route.kind === "product-media" || route.kind === "product-controls") && !productId?.trim()) {
     return renderSurfaceShell(
       <StateView
         title="اختر منتجًا"
@@ -244,6 +247,7 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
   if (route.kind === "home") {
     return renderSurfaceShell(
       <DshPartnerHubSurface
+        appearance={appearance}
         section={route.section}
         onSectionChange={(section) => navigation.navigate({ kind: "home", section }, "replace")}
         storeName={runtimePartnerProfile.storeName}
@@ -252,8 +256,6 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
         managerLabel={runtimePartnerProfile.managerLabel}
         todayHoursLabel={runtimePartnerProfile.todayHoursLabel}
         activeZoneLabel={runtimePartnerProfile.activeZoneLabel}
-        storeOpen={false}
-        listingEnabled={false}
         activeOrdersCount={deliveryOpsSummary.outForDelivery + deliveryOpsSummary.handoffReady}
         urgentOrdersCount={deliveryOpsSummary.delayedRisk}
         pendingActionsCount={deliveryOpsSummary.handoffReady}
@@ -264,8 +266,6 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
         onOpenSupportDirectory={() => openSupportDirectory({ source: "hub" })}
         onOpenWalletHub={() => openAccountHub("wallet")}
         onOpenBell={() => navigation.navigate({ kind: "bell" })}
-        onOpenOperationalFlow={(flowId) => openSupportFlow(flowId, "hub")}
-        onOpenSupportScreen={(screenId) => openSupportScreen(screenId, "hub")}
         onOpenStoreCourierSetup={() => navigation.navigate({ kind: "store-courier" })}
         onOpenTeamManagement={() => navigation.navigate({ kind: "team" })}
         onOpenCommercialModel={() => navigation.navigate({ kind: "commercial-model" })}
@@ -328,9 +328,9 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
     );
   }
 
-  if (route.kind === "product-overrides") {
+  if (route.kind === "product-controls") {
     return renderSurfaceShell(
-      <ProductOverridesScreen storeId={scopedStoreId} productId={route.productId} onBack={navigation.back} />,
+      <ProductControlsScreen storeId={scopedStoreId} productId={route.productId} onBack={navigation.back} />,
     );
   }
 

@@ -45,12 +45,6 @@ function commissionActionPath(
   }
 }
 
-function newAdjustmentIdempotencyKey(commissionId: string): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return `commission-adjustment:${commissionId}:${uuid}`;
-  throw new Error("Secure randomness is unavailable; refusing to create a commission idempotency key");
-}
-
 export async function fetchOwnCommissions(
   actorType: RepresentativeActorType,
 ): Promise<readonly Commission[]> {
@@ -107,15 +101,13 @@ export const adjustCommission = (
   commissionId: string,
   deltaMinorUnits: number,
   reason: string,
-) => {
-  const idempotencyKey = newAdjustmentIdempotencyKey(commissionId);
-  return commissionAction(
+  idempotencyKey: string,
+) => commissionAction(
     commissionId,
     "adjust",
     { deltaMinorUnits, reason, idempotencyKey },
     idempotencyKey,
   );
-};
 
 export const confirmCommission = (commissionId: string) =>
   commissionAction(commissionId, "confirm", {});

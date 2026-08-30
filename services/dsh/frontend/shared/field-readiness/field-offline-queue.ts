@@ -4,21 +4,20 @@
  * Durable queue scoped to the authenticated platform-workforce actor and the
  * current app installation. Mobile runtimes must use encrypted storage.
  *
- * The queue is configured with a FieldOfflineQueueStorageAdapter at runtime;
- * it does not import the shared storage adapter directly. The platform owner
- * (mobile runtime or web bootstrap) must install a storage adapter that
- * surfaces platform rejections as throws for the durable path so the queue
- * fails closed on quota exhaustion, native module rejection, or browser
- * security exceptions.
+ * Session end must only detach the active scope. Destructive deletion is an
+ * explicit recovery/maintenance action because unresolved work, corrupt
+ * archives, and terminal quarantine are operational evidence, not session
+ * cache.
  */
 
 import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
+import { secureRandomId } from "../_kernel/secure-random.ts";
+import {
+  buildFieldIntentFingerprint,
+  type FieldMutationOperation,
+} from "./field-intent-identity.ts";
 
-export type FieldOfflineOperationType =
-  | "create_visit"
-  | "complete_visit"
-  | "upsert_readiness_check"
-  | "create_escalation";
+export type FieldOfflineOperationType = Exclude<FieldMutationOperation, "update_escalation">;
 
 export type FieldOfflineOperationStatus =
   | "pending"
@@ -38,7 +37,9 @@ export type FieldOfflineQueueStorageAdapter = {
   readonly removeItem: (key: string) => Promise<void>;
 };
 
-export type FieldOfflineQuarantineReason = "TERMINAL_SYNC_FAILURE";
+export type FieldOfflineQuarantineReason =
+  | "TERMINAL_SYNC_FAILURE"
+  | "LEGACY_INTENT_AMBIGUOUS";
 
 export type FieldOfflineQuarantineRecord = {
   readonly sourceKey: string;
@@ -53,6 +54,8 @@ export type FieldOfflineOperation<P = unknown> = {
   readonly actorId: string;
   readonly installationId: string;
   readonly payload: P;
+  /** Exact local business-intent identity. It is never sent as an HTTP header. */
+  readonly intentFingerprint: string;
   readonly idempotencyKey: string;
   readonly correlationId: string;
   readonly createdAt: string;
@@ -62,10 +65,17 @@ export type FieldOfflineOperation<P = unknown> = {
   readonly lastError?: string;
 };
 
-const STORAGE_PREFIX = "bthwani.field-offline-queue.v3";
+type FieldOfflineOperationV3<P = unknown> = Omit<FieldOfflineOperation<P>, "intentFingerprint" | "operationId"> & {
+  readonly operationId?: string;
+};
+
+const STORAGE_PREFIX = "bthwani.field-offline-queue.v4";
+const V3_STORAGE_PREFIX = "bthwani.field-offline-queue.v3";
 const MAX_ATTEMPTS = 10;
 const MAX_QUEUE_OPERATIONS = 100;
-const MAX_SERIALIZED_CHARACTERS = 48_000;
+// The identity fingerprint is compact, but the queue intentionally retains
+// the original request payload for deterministic replay and reconciliation.
+const MAX_SERIALIZED_CHARACTERS = 96_000;
 
 let storageAdapter: FieldOfflineQueueStorageAdapter = {
   getItem: (key) => bthwaniDurableStorage.getItem(key),
@@ -73,15 +83,6 @@ let storageAdapter: FieldOfflineQueueStorageAdapter = {
   removeItem: (key) => bthwaniDurableStorage.removeItem(key),
 };
 let activeScope: FieldOfflineQueueScope | null = null;
-
-function stableHash(value: string): string {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(36);
-}
 
 function requireNonEmpty(value: string, label: string): string {
   const normalized = value.trim();
@@ -101,20 +102,63 @@ function requireScope(): FieldOfflineQueueScope {
   return activeScope;
 }
 
-function scopeFingerprint(scope: FieldOfflineQueueScope): string {
-  return stableHash(`${scope.actorId}|${scope.installationId}`);
+/**
+ * Collision-free encoding for SecureStore keys. Every UTF-16 code unit is
+ * represented by exactly four hex characters, so different scope strings can
+ * never alias because of a bounded hash.
+ */
+function encodeStorageSegment(value: string): string {
+  let encoded = "";
+  for (let index = 0; index < value.length; index += 1) {
+    encoded += value.charCodeAt(index).toString(16).padStart(4, "0");
+  }
+  return encoded;
+}
+
+function scopeStorageSuffix(scope: FieldOfflineQueueScope): string {
+  return `${encodeStorageSegment(scope.actorId)}.${encodeStorageSegment(scope.installationId)}`;
 }
 
 function storageKey(scope: FieldOfflineQueueScope): string {
-  return `${STORAGE_PREFIX}.${scopeFingerprint(scope)}`;
+  return `${STORAGE_PREFIX}.${scopeStorageSuffix(scope)}`;
 }
 
 function corruptStorageKey(scope: FieldOfflineQueueScope): string {
-  return `${STORAGE_PREFIX}.corrupt.${scopeFingerprint(scope)}`;
+  return `${STORAGE_PREFIX}.corrupt.${scopeStorageSuffix(scope)}`;
+}
+
+function recoveryCorruptStorageKey(scope: FieldOfflineQueueScope): string {
+  return `${STORAGE_PREFIX}.recovery-corrupt.${scopeStorageSuffix(scope)}`;
 }
 
 function recoveryQuarantineStorageKey(scope: FieldOfflineQueueScope): string {
-  return `${STORAGE_PREFIX}.recovery-quarantine.${scopeFingerprint(scope)}`;
+  return `${STORAGE_PREFIX}.recovery-quarantine.${scopeStorageSuffix(scope)}`;
+}
+
+/** Historical v3 addressing exists only to perform the one-way cutover. */
+function v3BoundedHash(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function v3ScopeSuffix(scope: FieldOfflineQueueScope): string {
+  return v3BoundedHash(`${scope.actorId}|${scope.installationId}`);
+}
+
+function v3StorageKey(scope: FieldOfflineQueueScope): string {
+  return `${V3_STORAGE_PREFIX}.${v3ScopeSuffix(scope)}`;
+}
+
+function v3CorruptStorageKey(scope: FieldOfflineQueueScope): string {
+  return `${V3_STORAGE_PREFIX}.corrupt.${v3ScopeSuffix(scope)}`;
+}
+
+function v3RecoveryQuarantineStorageKey(scope: FieldOfflineQueueScope): string {
+  return `${V3_STORAGE_PREFIX}.recovery-quarantine.${v3ScopeSuffix(scope)}`;
 }
 
 export function configureFieldOfflineQueueStorage(adapter: FieldOfflineQueueStorageAdapter): void {
@@ -125,44 +169,60 @@ export function configureFieldOfflineQueueScope(scope: FieldOfflineQueueScope | 
   activeScope = scope ? normalizeScope(scope) : null;
 }
 
-function isOperation(value: unknown, scope: FieldOfflineQueueScope): value is FieldOfflineOperation {
+export function detachFieldOfflineQueueScope(): void {
+  activeScope = null;
+}
+
+function isOperationType(value: unknown): value is FieldOfflineOperationType {
+  return value === "create_visit"
+    || value === "complete_visit"
+    || value === "upsert_readiness_check"
+    || value === "create_escalation";
+}
+
+function isOperationStatus(value: unknown): value is FieldOfflineOperationStatus {
+  return value === "pending"
+    || value === "retrying"
+    || value === "unknown"
+    || value === "synced"
+    || value === "failed_permanent";
+}
+
+function hasCommonOperationShape(
+  value: unknown,
+  scope: FieldOfflineQueueScope,
+): value is FieldOfflineOperationV3 {
   if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<FieldOfflineOperationV3>;
+  return typeof candidate.operationId === "string"
+    && isOperationType(candidate.operationType)
+    && candidate.actorId === scope.actorId
+    && candidate.installationId === scope.installationId
+    && typeof candidate.idempotencyKey === "string"
+    && candidate.idempotencyKey.trim().length > 0
+    && typeof candidate.correlationId === "string"
+    && candidate.correlationId.trim().length > 0
+    && typeof candidate.createdAt === "string"
+    && typeof candidate.attemptCount === "number"
+    && Number.isInteger(candidate.attemptCount)
+    && candidate.attemptCount >= 0
+    && typeof candidate.nextRetryAt === "string"
+    && isOperationStatus(candidate.status);
+}
+
+function isOperation(value: unknown, scope: FieldOfflineQueueScope): value is FieldOfflineOperation {
+  if (!hasCommonOperationShape(value, scope)) return false;
   const candidate = value as Partial<FieldOfflineOperation>;
-  const validStatus =
-    candidate.status === "pending" ||
-    candidate.status === "retrying" ||
-    candidate.status === "unknown" ||
-    candidate.status === "synced" ||
-    candidate.status === "failed_permanent";
-  return (
-    typeof candidate.operationId === "string" &&
-    typeof candidate.operationType === "string" &&
-    typeof candidate.actorId === "string" &&
-    candidate.actorId === scope.actorId &&
-    typeof candidate.installationId === "string" &&
-    candidate.installationId === scope.installationId &&
-    typeof candidate.idempotencyKey === "string" &&
-    typeof candidate.correlationId === "string" &&
-    typeof candidate.createdAt === "string" &&
-    typeof candidate.attemptCount === "number" &&
-    typeof candidate.nextRetryAt === "string" &&
-    validStatus
-  );
+  return typeof candidate.intentFingerprint === "string" && candidate.intentFingerprint.trim().length > 0;
 }
 
-async function readQuarantine(scope: FieldOfflineQueueScope): Promise<FieldOfflineQuarantineRecord[]> {
-  const raw = await storageAdapter.getItem(recoveryQuarantineStorageKey(scope));
-  if (!raw) return [];
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as FieldOfflineQuarantineRecord[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-export async function readFieldOfflineRecovery(): Promise<FieldOfflineQuarantineRecord[]> {
-  return readQuarantine(requireScope());
+function isQuarantineRecord(value: unknown): value is FieldOfflineQuarantineRecord {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Partial<FieldOfflineQuarantineRecord>;
+  return typeof record.sourceKey === "string"
+    && (record.reason === "TERMINAL_SYNC_FAILURE" || record.reason === "LEGACY_INTENT_AMBIGUOUS")
+    && typeof record.capturedAt === "string"
+    && typeof record.raw === "string";
 }
 
 export class FieldOfflineQueueCorruptError extends Error {
@@ -174,8 +234,145 @@ export class FieldOfflineQueueCorruptError extends Error {
   }
 }
 
+async function writeQueueForScope(scope: FieldOfflineQueueScope, queue: FieldOfflineOperation[]): Promise<void> {
+  if (queue.length > MAX_QUEUE_OPERATIONS) throw new Error("field offline queue capacity exceeded");
+  const serialized = JSON.stringify(queue);
+  if (serialized.length > MAX_SERIALIZED_CHARACTERS) {
+    throw new Error("field offline queue encrypted storage limit exceeded");
+  }
+  await storageAdapter.setItem(storageKey(scope), serialized);
+}
+
+async function migrateV3Artifacts(scope: FieldOfflineQueueScope): Promise<void> {
+  const currentCorrupt = await storageAdapter.getItem(corruptStorageKey(scope));
+  if (!currentCorrupt) {
+    const archivedV3Corrupt = await storageAdapter.getItem(v3CorruptStorageKey(scope));
+    if (archivedV3Corrupt) {
+      await storageAdapter.setItem(corruptStorageKey(scope), archivedV3Corrupt);
+      await storageAdapter.removeItem(v3CorruptStorageKey(scope));
+    }
+  }
+
+  const currentRecovery = await storageAdapter.getItem(recoveryQuarantineStorageKey(scope));
+  if (!currentRecovery) {
+    const v3Recovery = await storageAdapter.getItem(v3RecoveryQuarantineStorageKey(scope));
+    if (v3Recovery) {
+      try {
+        const parsed: unknown = JSON.parse(v3Recovery);
+        if (!Array.isArray(parsed) || !parsed.every(isQuarantineRecord)) {
+          throw new Error("stored v3 recovery quarantine does not match its schema");
+        }
+        await storageAdapter.setItem(recoveryQuarantineStorageKey(scope), v3Recovery);
+        await storageAdapter.removeItem(v3RecoveryQuarantineStorageKey(scope));
+      } catch (error) {
+        await storageAdapter.setItem(recoveryCorruptStorageKey(scope), v3Recovery);
+        await storageAdapter.removeItem(v3RecoveryQuarantineStorageKey(scope));
+        throw new FieldOfflineQueueCorruptError(error instanceof Error ? error.message : String(error));
+      }
+    }
+  }
+
+  const v3Raw = await storageAdapter.getItem(v3StorageKey(scope));
+  if (!v3Raw) return;
+  try {
+    const parsed: unknown = JSON.parse(v3Raw);
+    if (!Array.isArray(parsed)) {
+      throw new Error("stored v3 queue does not match the scoped field offline operation schema");
+    }
+
+    const currentRaw = await storageAdapter.getItem(storageKey(scope));
+    let current: FieldOfflineOperation[] = [];
+    if (currentRaw) {
+      const currentParsed: unknown = JSON.parse(currentRaw);
+      if (!Array.isArray(currentParsed) || !currentParsed.every((entry) => isOperation(entry, scope))) {
+        throw new Error("stored v4 queue does not match the scoped field offline operation schema");
+      }
+      current = currentParsed;
+    }
+
+    const capturedAt = new Date().toISOString();
+    const quarantined: FieldOfflineQuarantineRecord[] = [];
+    const migrated: FieldOfflineOperation[] = [];
+    for (const entry of parsed) {
+      const raw = JSON.stringify(entry) ?? String(entry);
+      if (!hasCommonOperationShape(entry, scope)) {
+        quarantined.push({
+          sourceKey: v3StorageKey(scope),
+          reason: "LEGACY_INTENT_AMBIGUOUS",
+          capturedAt,
+          raw,
+        });
+        continue;
+      }
+      const operation = entry as FieldOfflineOperationV3;
+      try {
+        const intentFingerprint = buildFieldIntentFingerprint(operation.operationType, operation.payload);
+        if (current.some((candidate) => candidate.operationType === operation.operationType
+          && candidate.intentFingerprint === intentFingerprint)) {
+          continue;
+        }
+        migrated.push({
+          ...operation,
+          operationId: `field-op:v5:${operation.operationType}:${secureRandomId()}`,
+          correlationId: operation.correlationId === operation.idempotencyKey
+            ? `field:${operation.operationType}:corr:${secureRandomId()}`
+            : operation.correlationId,
+          intentFingerprint,
+        });
+      } catch {
+        quarantined.push({
+          sourceKey: v3StorageKey(scope),
+          reason: "LEGACY_INTENT_AMBIGUOUS",
+          capturedAt,
+          raw,
+        });
+      }
+    }
+
+    if (migrated.length > 0 || !currentRaw) await writeQueueForScope(scope, [...current, ...migrated]);
+    if (quarantined.length > 0) {
+      const recoveryRaw = await storageAdapter.getItem(recoveryQuarantineStorageKey(scope));
+      const recovery = recoveryRaw ? JSON.parse(recoveryRaw) : [];
+      if (!Array.isArray(recovery) || !recovery.every(isQuarantineRecord)) {
+        throw new Error("stored field offline recovery quarantine does not match its schema");
+      }
+      await storageAdapter.setItem(
+        recoveryQuarantineStorageKey(scope),
+        JSON.stringify([...recovery, ...quarantined]),
+      );
+    }
+    await storageAdapter.removeItem(v3StorageKey(scope));
+  } catch (error) {
+    await storageAdapter.setItem(corruptStorageKey(scope), v3Raw);
+    await storageAdapter.removeItem(v3StorageKey(scope));
+    throw new FieldOfflineQueueCorruptError(error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function readQuarantine(scope: FieldOfflineQueueScope): Promise<FieldOfflineQuarantineRecord[]> {
+  await migrateV3Artifacts(scope);
+  const key = recoveryQuarantineStorageKey(scope);
+  const raw = await storageAdapter.getItem(key);
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every(isQuarantineRecord)) {
+      throw new Error("stored field offline recovery quarantine does not match its schema");
+    }
+    return parsed;
+  } catch (error) {
+    await storageAdapter.setItem(recoveryCorruptStorageKey(scope), raw);
+    throw new FieldOfflineQueueCorruptError(error instanceof Error ? error.message : String(error));
+  }
+}
+
+export async function readFieldOfflineRecovery(): Promise<FieldOfflineQuarantineRecord[]> {
+  return readQuarantine(requireScope());
+}
+
 async function readQueue(): Promise<FieldOfflineOperation[]> {
   const scope = requireScope();
+  await migrateV3Artifacts(scope);
   const key = storageKey(scope);
   const raw = await storageAdapter.getItem(key);
   if (!raw) return [];
@@ -192,22 +389,24 @@ async function readQueue(): Promise<FieldOfflineOperation[]> {
 }
 
 async function writeQueue(queue: FieldOfflineOperation[]): Promise<void> {
-  const scope = requireScope();
-  if (queue.length > MAX_QUEUE_OPERATIONS) throw new Error("field offline queue capacity exceeded");
-  const serialized = JSON.stringify(queue);
-  if (serialized.length > MAX_SERIALIZED_CHARACTERS) {
-    throw new Error("field offline queue encrypted storage limit exceeded");
-  }
-  await storageAdapter.setItem(storageKey(scope), serialized);
+  await writeQueueForScope(requireScope(), queue);
 }
 
-export async function clearFieldOfflineQueue(): Promise<void> {
+/**
+ * Explicit destructive maintenance action. Normal logout/session changes must
+ * never call this function.
+ */
+export async function discardFieldOfflineRecoveryState(): Promise<void> {
   const scope = activeScope;
   if (!scope) return;
   await Promise.all([
     storageAdapter.removeItem(storageKey(scope)),
     storageAdapter.removeItem(corruptStorageKey(scope)),
+    storageAdapter.removeItem(recoveryCorruptStorageKey(scope)),
     storageAdapter.removeItem(recoveryQuarantineStorageKey(scope)),
+    storageAdapter.removeItem(v3StorageKey(scope)),
+    storageAdapter.removeItem(v3CorruptStorageKey(scope)),
+    storageAdapter.removeItem(v3RecoveryQuarantineStorageKey(scope)),
   ]);
 }
 
@@ -224,29 +423,39 @@ export async function enqueueFieldOperation<P>(
   payload: P,
   idempotencyKey: string,
   correlationId?: string,
+  intentFingerprint?: string,
+  operationId?: string,
 ): Promise<FieldOfflineOperation<P>> {
   const scope = requireScope();
   const normalizedKey = requireNonEmpty(idempotencyKey, "field offline operation idempotency key");
+  const canonicalFingerprint = buildFieldIntentFingerprint(operationType, payload);
+  const normalizedFingerprint = intentFingerprint?.trim() || canonicalFingerprint;
+  if (normalizedFingerprint !== canonicalFingerprint) {
+    throw new Error("field offline operation identity does not match the canonical business intent");
+  }
+  const normalizedCorrelation = correlationId?.trim()
+    || `field:${operationType}:corr:${secureRandomId()}`;
+  if (normalizedCorrelation === normalizedKey) {
+    throw new Error("field offline correlation id must be distinct from the idempotency key");
+  }
+
   const queue = await readQueue();
   const existing = queue.find(
-    (operation) =>
-      operation.actorId === scope.actorId &&
-      operation.installationId === scope.installationId &&
-      operation.operationType === operationType &&
-      operation.idempotencyKey === normalizedKey,
+    (operation) => operation.operationType === operationType
+      && operation.intentFingerprint === normalizedFingerprint,
   );
   if (existing) return existing as FieldOfflineOperation<P>;
 
-  const fingerprint = stableHash(`${scope.actorId}|${scope.installationId}|${operationType}|${normalizedKey}`);
   const now = new Date().toISOString();
   const operation: FieldOfflineOperation<P> = {
-    operationId: `field-op:${operationType}:${fingerprint}`,
+    operationId: operationId?.trim() || `field-op:v5:${operationType}:${secureRandomId()}`,
     operationType,
     actorId: scope.actorId,
     installationId: scope.installationId,
     payload,
+    intentFingerprint: normalizedFingerprint,
     idempotencyKey: normalizedKey,
-    correlationId: correlationId?.trim() || `field-correlation:${operationType}:${fingerprint}`,
+    correlationId: normalizedCorrelation,
     createdAt: now,
     attemptCount: 0,
     nextRetryAt: now,

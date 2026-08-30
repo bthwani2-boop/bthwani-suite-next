@@ -342,19 +342,6 @@ func LinkPartnerStoreGoverned(ctx context.Context, db *sql.DB, partnerID, storeI
 	return ListPartnerStores(db, partnerID)
 }
 
-func CreateFieldVisitGoverned(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, error) {
-	if strings.TrimSpace(input.PartnerID) == "" || strings.TrimSpace(input.FieldActorID) == "" {
-		return FieldVisit{}, ErrInvalid
-	}
-	if strings.TrimSpace(input.VisitNotes) == "" && input.LocationLatitude == nil && len(input.EvidenceMediaRefs) == 0 {
-		return FieldVisit{}, fmt.Errorf("%w: field visit requires notes, location, or evidence", ErrInvalid)
-	}
-	if strings.TrimSpace(input.StoreID) == "" {
-		return FieldVisit{}, ErrStoreIDRequired
-	}
-	return CreateFieldVisit(db, input)
-}
-
 func FindLatestTransitionEvent(db *sql.DB, partnerID string, status ActivationStatus) (ActivationEvent, error) {
 	var event ActivationEvent
 	err := db.QueryRow(`

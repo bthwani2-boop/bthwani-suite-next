@@ -7,6 +7,12 @@
         "SONARQUBE_ORG": "bthwani2-boop",
         "SONARQUBE_READ_ONLY": "true"
       }
+    },
+    "agent-device": {
+      "args": [
+        "mcp"
+      ],
+      "command": "C:\\Users\\bassa\\AppData\\Roaming\\npm\\agent-device.cmd"
     }
   }
 }

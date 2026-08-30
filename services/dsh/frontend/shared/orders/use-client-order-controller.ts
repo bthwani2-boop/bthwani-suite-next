@@ -35,7 +35,9 @@ export type ClientOrderState =
       readonly pendingCustomerDecisionCount: number;
       readonly assignment: DshDispatchAssignment | null;
       readonly liveTracking: DshLiveTrackingProjection | null;
+      readonly liveTrackingReadbackMessage: string | null;
       readonly partnerDeliveryTask: DshPartnerDeliveryTask | null;
+      readonly partnerDeliveryReadbackMessage: string | null;
     };
 
 function orderErrorMessage(error: unknown): string {
@@ -50,21 +52,11 @@ function orderErrorMessage(error: unknown): string {
 
 /**
  * Shared client journey controller. The order itself is always read from the
- * The actor-scoped order-truth endpoint owns the canonical order view.
- * Preparation, issues, dispatch and live tracking remain separate read-only projections and cannot
- * override order truth.
+ * actor-scoped order-truth endpoint. Preparation, issues, dispatch and live
+ * tracking remain separate read-only projections and cannot override order
+ * truth. Required preparation projections fail the whole read instead of
+ * fabricating an empty/default operational state.
  */
-function fallbackOrderPreparation(orderId: string): DshOrderPreparation {
-  return {
-    orderId,
-    estimatedPreparationMinutes: 0,
-    preparationWarningMinutes: 0,
-    preparationDelayReason: "",
-    preparationEstimateRevisionCount: 0,
-    preparationSlaState: "not_started",
-    preparationRemainingSeconds: 0,
-  };
-}
 
 export function useClientOrderController(orderId: string) {
   const [state, setState] = React.useState<ClientOrderState>({ kind: 'loading' });
@@ -78,16 +70,14 @@ export function useClientOrderController(orderId: string) {
     try {
       const order = await fetchClientOrderTruthDetail(orderId);
       const [preparation, issueList] = await Promise.all([
-        fetchOrderPreparation(orderId).catch(() => fallbackOrderPreparation(orderId)),
-        fetchOrderPreparationIssues(orderId).catch(() => ({
-          issues: [] as readonly DshPreparationIssue[],
-          openCount: 0,
-          pendingCustomerDecisionCount: 0,
-        })),
+        fetchOrderPreparation(orderId),
+        fetchOrderPreparationIssues(orderId),
       ]);
       let assignment: DshDispatchAssignment | null = null;
       let liveTracking: DshLiveTrackingProjection | null = null;
+      let liveTrackingReadbackMessage: string | null = null;
       let partnerDeliveryTask: DshPartnerDeliveryTask | null = null;
+      let partnerDeliveryReadbackMessage: string | null = null;
       if (order.fulfillmentMode === 'partner_delivery') {
         try {
           const response = await fetchClientPartnerDeliveryTask(orderId);
@@ -97,6 +87,9 @@ export function useClientOrderController(orderId: string) {
           if (classified.kind === 'forbidden') {
             setState({ kind: 'error', message: 'لا تملك صلاحية عرض توصيل الشريك لهذا الطلب.' });
             return;
+          }
+          if (classified.kind !== 'not_found') {
+            partnerDeliveryReadbackMessage = classified.message ?? 'تعذر تحديث حالة توصيل الشريك من DSH.';
           }
         }
       } else if (order.fulfillmentMode === 'bthwani_delivery') {
@@ -114,6 +107,9 @@ export function useClientOrderController(orderId: string) {
             if (classified.kind === 'offline') {
               assignment = null;
               liveTracking = null;
+              liveTrackingReadbackMessage = 'تعذر تحديث التتبع الحي بسبب انقطاع الاتصال. أعد المحاولة لقراءة الحالة من DSH.';
+            } else {
+              liveTrackingReadbackMessage = classified.message ?? 'تعذر تحديث التتبع الحي من DSH.';
             }
           }
         }
@@ -127,7 +123,9 @@ export function useClientOrderController(orderId: string) {
         pendingCustomerDecisionCount: issueList.pendingCustomerDecisionCount,
         assignment,
         liveTracking,
+        liveTrackingReadbackMessage,
         partnerDeliveryTask,
+        partnerDeliveryReadbackMessage,
       });
     } catch (error) {
       setState({ kind: 'error', message: orderErrorMessage(error) });

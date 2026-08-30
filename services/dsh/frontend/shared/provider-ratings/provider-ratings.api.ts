@@ -1,5 +1,6 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import type { ClientOrderRatingsInput, StoredClientOrderRatingAttempt } from "./client-order-rating-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "provider-ratings", 10000);
 
@@ -46,6 +47,8 @@ export type ProviderRatingSummary = {
   readonly lastRatedAt?: string;
 };
 
+export type ClientOrderRatingsMutation = Pick<StoredClientOrderRatingAttempt, "idempotencyKey" | "correlationId">;
+
 export async function fetchPartnerFieldRatingPrompt(): Promise<PartnerFieldRatingPrompt> {
   const result = await request<{ prompt: PartnerFieldRatingPrompt }>("/dsh/partner/me/ratings/field/prompt");
   return result.prompt;
@@ -73,12 +76,25 @@ export async function fetchClientOrderRatingPrompt(orderId: string): Promise<Cli
 
 export async function submitClientOrderRatings(
   orderId: string,
-  input: { readonly captainScore: number; readonly orderScore: number; readonly captainComment?: string; readonly orderComment?: string },
+  input: ClientOrderRatingsInput,
+  mutation: ClientOrderRatingsMutation,
 ): Promise<readonly ProviderRating[]> {
-  const result = await request<{ ratings: ProviderRating[] }>(
+  const result = await request<{
+    ratings: ProviderRating[];
+    mutation: { readonly idempotencyKey: string; readonly correlationId: string };
+  }>(
     `/dsh/client/orders/${encodeURIComponent(orderId)}/ratings`,
-    { method: "POST", body: input },
+    {
+      method: "POST",
+      body: input,
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
+  if (result.mutation.idempotencyKey !== mutation.idempotencyKey
+    || result.mutation.correlationId !== mutation.correlationId) {
+    throw new Error("client order rating canonical readback did not preserve the mutation identity");
+  }
   return result.ratings;
 }
 

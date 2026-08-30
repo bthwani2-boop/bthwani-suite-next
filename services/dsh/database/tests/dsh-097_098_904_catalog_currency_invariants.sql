@@ -2,6 +2,11 @@
 
 BEGIN;
 
+-- The store platform-context contract (dsh-954/dsh-962) requires a trusted
+-- OperatorContext: establish the isolated verification session context the
+-- backend/worker connection owns in production.
+SELECT set_config('bthwani.operator_context_id', 'currency-invariant-fixture', true);
+
 DO $$
 DECLARE
   v_suffix text := replace(gen_random_uuid()::text, '-', '');
@@ -62,7 +67,7 @@ BEGIN
     total_minor_units, currency, pricing_snapshot_hash
   ) VALUES (
     v_operator_context_id, v_client_id, v_cart_id, v_store_id,
-    'payment_pending', 'pickup', 'cod', 'currency-session-' || v_suffix,
+    'ready', 'pickup', 'cod', 'currency-session-' || v_suffix,
     5100, 0, 0, 5100, 'USD', repeat('c', 64)
   ) RETURNING id INTO v_checkout_id;
 

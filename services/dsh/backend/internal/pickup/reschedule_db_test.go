@@ -16,6 +16,7 @@ func TestRescheduleNoShowInvalidatesPreviousCodeDBIntegration(t *testing.T) {
 	oldCode, issued := issuedSession(t, service, fixture)
 	noShow, err := service.NoShow(
 		ctx,
+		fixture.operatorContextID,
 		fixture.orderID,
 		"partner-1",
 		"partner",
@@ -32,6 +33,7 @@ func TestRescheduleNoShowInvalidatesPreviousCodeDBIntegration(t *testing.T) {
 	newExpiry := time.Now().UTC().Add(3 * time.Hour)
 	rescheduled, err := service.RescheduleWindow(
 		ctx,
+		fixture.operatorContextID,
 		fixture.orderID,
 		newExpiry,
 		"operator-1",
@@ -61,12 +63,13 @@ func TestRescheduleNoShowInvalidatesPreviousCodeDBIntegration(t *testing.T) {
 		t.Fatalf("expiresAt=%s, want %s within PostgreSQL timestamp precision", rescheduled.ExpiresAt, newExpiry)
 	}
 
-	if _, err := service.VerifyOtp(ctx, fixture.orderID, oldCode, "partner-1", "partner", "old-code"); !errors.Is(err, ErrInvalidCode) {
+	if _, err := service.VerifyOtp(ctx, fixture.operatorContextID, fixture.orderID, oldCode, "partner-1", "partner", "old-code"); !errors.Is(err, ErrInvalidCode) {
 		t.Fatalf("old code must be invalid after reschedule, got %v", err)
 	}
 
 	freshCode, freshSession, err := service.IssueOtp(
 		ctx,
+		fixture.operatorContextID,
 		fixture.orderID,
 		fixture.clientID,
 		"partner-1",
@@ -82,7 +85,7 @@ func TestRescheduleNoShowInvalidatesPreviousCodeDBIntegration(t *testing.T) {
 	if freshSession.Version <= rescheduled.Version {
 		t.Fatalf("fresh session version=%d, rescheduled version=%d", freshSession.Version, rescheduled.Version)
 	}
-	verified, err := service.VerifyOtp(ctx, fixture.orderID, freshCode, "partner-1", "partner", "verify-fresh")
+	verified, err := service.VerifyOtp(ctx, fixture.operatorContextID, fixture.orderID, freshCode, "partner-1", "partner", "verify-fresh")
 	if err != nil {
 		t.Fatalf("VerifyOtp with fresh code failed: %v", err)
 	}
@@ -99,6 +102,7 @@ func TestRescheduleRejectsActiveSessionDBIntegration(t *testing.T) {
 
 	_, err := service.RescheduleWindow(
 		context.Background(),
+		fixture.operatorContextID,
 		fixture.orderID,
 		time.Now().UTC().Add(time.Hour),
 		"operator-1",

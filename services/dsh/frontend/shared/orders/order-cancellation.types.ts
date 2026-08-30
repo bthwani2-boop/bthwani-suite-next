@@ -39,6 +39,7 @@ export type DshOrderCancellation = {
   readonly actorRole: "client" | "partner" | "operator" | "system";
   readonly reasonCode: OrderCancellationReasonCode;
   readonly reasonNote: string;
+  readonly correlationId: string;
   readonly fromStatus: string;
   readonly toStatus: string;
   readonly financialClosureStatus: DshFinancialClosureStatus;
@@ -63,6 +64,11 @@ export type CancelOrderInput = {
   readonly correlationId?: string;
   /** Required on the operator surface: ties the cancellation to an operational_incident. */
   readonly ticketReference?: string;
+};
+
+export type CanonicalCancelOrderInput = CancelOrderInput & {
+  readonly commandId: string;
+  readonly correlationId: string;
 };
 
 export type CancelOrderResponse = {

@@ -11,7 +11,7 @@ import {
   type ReconciliationCase,
 } from '@bthwani/dsh/wlt';
 
-export function ReconciliationCasesPanel() {
+export function ReconciliationCasesPanel({ canManage }: { readonly canManage: boolean }) {
   const [cases, setCases] = useState<readonly ReconciliationCase[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -77,7 +77,7 @@ export function ReconciliationCasesPanel() {
                 </Text>
                 <Text role="caption" tone="muted">السبب: {reconciliationCase.triggerReason}</Text>
                 <Text role="caption" tone="muted">مُسندة إلى: {reconciliationCase.assignedToOperatorId || "—"}</Text>
-                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
+                {canManage ? <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
                   <CpButton
                     variant="secondary"
                     disabled={busy}
@@ -112,7 +112,7 @@ export function ReconciliationCasesPanel() {
                   >
                     تعديل يدوي
                   </CpButton>
-                </div>
+                </div> : <Text role="caption" tone="muted">قراءة فقط — معالجة المطابقة تتطلب finance.manage.</Text>}
               </Card>
             );
           })}

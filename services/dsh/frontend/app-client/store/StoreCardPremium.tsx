@@ -13,7 +13,7 @@ import {
   radius,
   statusScale,
 } from "@bthwani/ui-kit";
-import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
+import { useDshClientPlatform } from "../client-platform-context";
 import type { DshStoreCardViewModel } from "../../shared/store";
 
 export type StoreCardPremiumProps = Readonly<{
@@ -41,6 +41,7 @@ type ServiceChip = Readonly<{
 }>;
 
 export function StoreCardPremium({ store, onPress }: StoreCardPremiumProps) {
+  const { RemoteImage } = useDshClientPlatform();
   const placeholderBgColor = PLACEHOLDER_COLORS[store.placeholderTone] ?? colorRoles.brandStructure;
   const heroUri = store.heroImageSource?.uri ?? null;
   const logoUri = store.logoImageSource?.uri ?? null;
@@ -135,7 +136,7 @@ export function StoreCardPremium({ store, onPress }: StoreCardPremiumProps) {
       <View style={styles.imgBlock}>
         <View style={[styles.imageSquare, { backgroundColor: placeholderBgColor }]}>
           {showHeroImage ? (
-            <ClientRemoteImage
+            <RemoteImage
               uri={heroUri}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
@@ -149,7 +150,7 @@ export function StoreCardPremium({ store, onPress }: StoreCardPremiumProps) {
 
         <View style={styles.logoRing}>
           {showLogoImage ? (
-            <ClientRemoteImage
+            <RemoteImage
               uri={logoUri}
               style={styles.logoImg}
               contentFit="contain"

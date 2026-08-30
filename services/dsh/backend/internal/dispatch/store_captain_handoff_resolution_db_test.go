@@ -6,12 +6,7 @@ func TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration(t *te
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
 
-	if _, err := UpdateDeliveryStatusGovernedIdempotent(
-		db,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryArrivedStore,
-	); err != nil {
+	if _, err := testDeliveryStatusCommand(db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID, DeliveryArrivedStore, 1, "resolution-arrival"); err != nil {
 		t.Fatalf("captain arrival failed: %v", err)
 	}
 	item, err := ReportPartnerStoreCaptainHandoffException(
@@ -20,9 +15,11 @@ func TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration(t *te
 		fixture.StoreID,
 		"partner-resolution-actor",
 		ReportDeliveryExceptionInput{
-			ReasonCode:    ExceptionHandoffShortage,
-			Note:          "قطعة ناقصة وتم إيقاف تسليم العهدة",
-			CorrelationID: "handoff-resolution-retry:" + fixture.AssignmentID,
+			OperatorContextID: fixture.OperatorContextID,
+			ReasonCode:        ExceptionHandoffShortage,
+			Note:              "قطعة ناقصة وتم إيقاف تسليم العهدة",
+			IdempotencyKey:    "handoff-resolution-retry-key:" + fixture.AssignmentID,
+			CorrelationID:     "handoff-resolution-retry:" + fixture.AssignmentID,
 		},
 	)
 	if err != nil {
@@ -32,6 +29,7 @@ func TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration(t *te
 	resolutionNote := "تمت مطابقة الطرد وإضافة القطعة الناقصة"
 	resolved, err := ResolveDeliveryExceptionRetrySameCaptain(
 		db,
+		item.OperatorContextID,
 		item.ID,
 		item.Version,
 		resolutionNote,
@@ -47,20 +45,18 @@ func TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration(t *te
 		t.Fatalf("resolution action=%v want=retry_same_captain", resolved.ResolutionAction)
 	}
 
-	if _, err = ConfirmStoreCaptainHandoffIdempotent(
+	if _, err = ConfirmStoreCaptainHandoffIdempotentForOperatorContext(
 		db,
+		fixture.OperatorContextID,
 		fixture.OrderID,
 		fixture.StoreID,
 		"partner-resolution-actor",
+		"handoff-confirmation-key-resolution",
+		"handoff-confirmation-correlation-resolution",
 	); err != nil {
 		t.Fatalf("partner confirmation after resolution failed: %v", err)
 	}
-	assignment, err := UpdateDeliveryStatusGovernedIdempotent(
-		db,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryPickedUp,
-	)
+	assignment, err := testDeliveryStatusCommand(db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID, DeliveryPickedUp, 2, "resolution-pickup")
 	if err != nil {
 		t.Fatalf("pickup after resolution failed: %v", err)
 	}
@@ -73,12 +69,7 @@ func TestHandoffExceptionReassignmentSupersedesCustodyDBIntegration(t *testing.T
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
 
-	if _, err := UpdateDeliveryStatusGovernedIdempotent(
-		db,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryArrivedStore,
-	); err != nil {
+	if _, err := testDeliveryStatusCommand(db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID, DeliveryArrivedStore, 1, "reassign-arrival"); err != nil {
 		t.Fatalf("captain arrival failed: %v", err)
 	}
 	item, err := ReportCaptainStoreCaptainHandoffException(
@@ -86,9 +77,11 @@ func TestHandoffExceptionReassignmentSupersedesCustodyDBIntegration(t *testing.T
 		fixture.AssignmentID,
 		fixture.CaptainID,
 		ReportDeliveryExceptionInput{
-			ReasonCode:    ExceptionHandoffMismatch,
-			Note:          "بيانات الطرد لا تطابق الطلب ويجب تغيير الكابتن",
-			CorrelationID: "handoff-resolution-reassign:" + fixture.AssignmentID,
+			OperatorContextID: fixture.OperatorContextID,
+			ReasonCode:        ExceptionHandoffMismatch,
+			Note:              "بيانات الطرد لا تطابق الطلب ويجب تغيير الكابتن",
+			IdempotencyKey:    "handoff-resolution-reassign-key:" + fixture.AssignmentID,
+			CorrelationID:     "handoff-resolution-reassign:" + fixture.AssignmentID,
 		},
 	)
 	if err != nil {
@@ -98,6 +91,7 @@ func TestHandoffExceptionReassignmentSupersedesCustodyDBIntegration(t *testing.T
 	replacementCaptainID := fixture.CaptainID + "-replacement"
 	resolved, err := ResolveDeliveryExceptionReassignCaptain(
 		db,
+		item.OperatorContextID,
 		item.ID,
 		item.Version,
 		replacementCaptainID,

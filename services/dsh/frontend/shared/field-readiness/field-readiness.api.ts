@@ -1,5 +1,10 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import {
+  createFieldMutationIdentity,
+  validateFieldMutationIdentity,
+  type FieldMutationIdentityContext,
+} from "./field-intent-identity.ts";
 import type {
   DshFieldVisit,
   DshReadinessCheck,
@@ -27,47 +32,22 @@ export type {
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "field-readiness");
 
-export type FieldMutationContext = {
-  readonly correlationId: string;
-  readonly idempotencyKey: string;
-};
-
-function stableHash(value: string): string {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(36);
-}
+export type FieldMutationContext = FieldMutationIdentityContext;
 
 export function buildFieldMutationContext(
   operation: string,
-  identityParts: readonly unknown[],
-  supplied?: FieldMutationContext,
+  payload: unknown,
+  supplied?: Partial<FieldMutationContext>,
 ): FieldMutationContext {
-  const suppliedCorrelation = supplied?.correlationId.trim() ?? "";
-  const suppliedIdempotency = supplied?.idempotencyKey.trim() ?? "";
-  if (suppliedCorrelation || suppliedIdempotency) {
-    if (!suppliedCorrelation || !suppliedIdempotency) {
-      throw new Error("field mutation correlation and idempotency must be supplied together");
-    }
-    return {
-      correlationId: suppliedCorrelation,
-      idempotencyKey: suppliedIdempotency,
-    };
-  }
+  return supplied && (supplied.idempotencyKey || supplied.correlationId || supplied.intentFingerprint || supplied.operationId)
+    ? validateFieldMutationIdentity(operation, payload, supplied)
+    : createFieldMutationIdentity(operation, payload);
+}
 
-  const identity = identityParts
-    .map((part) => (part === undefined || part === null ? "" : String(part).trim()))
-    .join("|");
-  if (!identity.replaceAll("|", "")) {
-    throw new Error(`field mutation ${operation} has no stable business identity`);
-  }
-  const fingerprint = stableHash(`${operation}|${identity}`);
+function mutationRequestContext(context: FieldMutationContext) {
   return {
-    correlationId: `field:${operation}:${fingerprint}`,
-    idempotencyKey: `field:${operation}:${fingerprint}`,
+    correlationId: context.correlationId,
+    idempotencyKey: context.idempotencyKey,
   };
 }
 
@@ -76,14 +56,14 @@ export async function createFieldVisit(
   input: DshCreateVisitInput,
   supplied?: FieldMutationContext,
 ): Promise<DshFieldVisit> {
-  const headers = buildFieldMutationContext(
-    "create-visit",
-    [storeId, input.visitType ?? "onboarding", input.startLocation.capturedAt],
+  const context = buildFieldMutationContext(
+    "create_visit",
+    { storeId, input },
     supplied,
   );
   const data = await request<{ visit: DshFieldVisit }>(
     `/dsh/field/stores/${encodeURIComponent(storeId)}/visits`,
-    { method: "POST", body: input, ...headers },
+    { method: "POST", body: input, ...mutationRequestContext(context) },
   );
   return data.visit;
 }
@@ -100,10 +80,10 @@ export async function completeFieldVisit(
   input: DshCompleteVisitInput,
   supplied?: FieldMutationContext,
 ): Promise<DshFieldVisit> {
-  const headers = buildFieldMutationContext("complete-visit", [visitId], supplied);
+  const context = buildFieldMutationContext("complete_visit", { visitId, input }, supplied);
   const data = await request<{ visit: DshFieldVisit }>(
     `/dsh/field/visits/${encodeURIComponent(visitId)}/complete`,
-    { method: "POST", body: input, ...headers },
+    { method: "POST", body: input, ...mutationRequestContext(context) },
   );
   return data.visit;
 }
@@ -113,14 +93,14 @@ export async function upsertReadinessCheck(
   input: DshUpsertCheckInput,
   supplied?: FieldMutationContext,
 ): Promise<DshReadinessCheck> {
-  const headers = buildFieldMutationContext(
-    "upsert-check",
-    [visitId, input.checkType, input.status, input.evidenceUrl ?? "", input.notes ?? ""],
+  const context = buildFieldMutationContext(
+    "upsert_readiness_check",
+    { visitId, input },
     supplied,
   );
   const data = await request<{ check: DshReadinessCheck }>(
     `/dsh/field/visits/${encodeURIComponent(visitId)}/checks`,
-    { method: "PUT", body: input, ...headers },
+    { method: "PUT", body: input, ...mutationRequestContext(context) },
   );
   return data.check;
 }
@@ -137,14 +117,14 @@ export async function createReadinessEscalation(
   input: DshCreateEscalationInput,
   supplied?: FieldMutationContext,
 ): Promise<DshReadinessEscalation> {
-  const headers = buildFieldMutationContext(
-    "create-escalation",
-    [storeId, input.visitId ?? "", input.severity, input.category, input.description],
+  const context = buildFieldMutationContext(
+    "create_escalation",
+    { storeId, input },
     supplied,
   );
   const data = await request<{ escalation: DshReadinessEscalation }>(
     `/dsh/field/stores/${encodeURIComponent(storeId)}/escalations`,
-    { method: "POST", body: input, ...headers },
+    { method: "POST", body: input, ...mutationRequestContext(context) },
   );
   return data.escalation;
 }
@@ -162,14 +142,14 @@ export async function updateEscalation(
   input: DshUpdateEscalationInput,
   supplied?: FieldMutationContext,
 ): Promise<DshReadinessEscalation> {
-  const headers = buildFieldMutationContext(
-    "update-escalation",
-    [escalationId, input.status, input.resolutionNote ?? ""],
+  const context = buildFieldMutationContext(
+    "update_escalation",
+    { escalationId, input },
     supplied,
   );
   const data = await request<{ escalation: DshReadinessEscalation }>(
     `/dsh/operator/field-readiness/escalations/${encodeURIComponent(escalationId)}`,
-    { method: "PATCH", body: input, ...headers },
+    { method: "PATCH", body: input, ...mutationRequestContext(context) },
   );
   return data.escalation;
 }

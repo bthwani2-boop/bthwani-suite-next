@@ -486,12 +486,44 @@ func FieldOwnsPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID
 	return nil
 }
 
-func LinkPartnerStoreForOperatorContext(db *sql.DB, operatorContextID, partnerID, storeID, actorID string) ([]PartnerLinkedStore, error) {
+func ListDocumentsForOperatorContext(db *sql.DB, operatorContextID, partnerID string) ([]Document, error) {
 	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
 		return nil, err
 	}
-	if err := EnsureOperatorContextStore(db, operatorContextID, storeID); err != nil {
+	return ListDocuments(db, partnerID)
+}
+
+func UploadDocumentForOperatorContext(ctx context.Context, db *sql.DB, operatorContextID, partnerID string, input UploadDocumentInput) (Document, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return Document{}, err
+	}
+	return UploadDocumentIdempotent(ctx, db, partnerID, input)
+}
+
+func ReviewDocumentForOperatorContext(ctx context.Context, db *sql.DB, operatorContextID, partnerID, documentID string, input ReviewDocumentInput) (Document, DocumentReview, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	return ReviewDocumentIdempotent(ctx, db, partnerID, documentID, input)
+}
+
+func ListFieldVisitsForOperatorContext(db *sql.DB, operatorContextID, partnerID string) ([]FieldVisit, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
 		return nil, err
 	}
-	return LinkPartnerStore(db, partnerID, storeID, actorID)
+	return ListFieldVisits(db, partnerID)
+}
+
+func ListPartnerStoresForOperatorContext(db *sql.DB, operatorContextID, partnerID string) ([]PartnerLinkedStore, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return nil, err
+	}
+	return ListPartnerStores(db, partnerID)
+}
+
+func ListActivationEventsForOperatorContext(db *sql.DB, operatorContextID, partnerID string) ([]ActivationEvent, error) {
+	if err := EnsureOperatorContextPartner(db, operatorContextID, partnerID); err != nil {
+		return nil, err
+	}
+	return ListActivationEvents(db, partnerID)
 }

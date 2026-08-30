@@ -10,6 +10,7 @@ import {
   wireNetInfoOnlineManager,
 } from "@bthwani/data-runtime";
 import { initSentry } from "./observability/sentry";
+import { PartnerAppearanceProvider } from "./appearance";
 
 export const sentryEnabled = initSentry();
 
@@ -35,7 +36,13 @@ export function MobileRuntimeProviders({ children }: { readonly children: React.
     React.createElement(
       BthwaniQueryProvider,
       { client: queryClient, persistenceKey: queryPersistenceKey },
-      React.createElement(MobileUiProvider, null, children),
+      React.createElement(
+        PartnerAppearanceProvider,
+        null,
+        React.createElement(MobileUiProvider, null, children),
+      ),
     ),
   );
 }
+
+export { PartnerAppearanceProvider, usePartnerAppearance } from "./appearance";

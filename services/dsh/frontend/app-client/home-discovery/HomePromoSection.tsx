@@ -9,7 +9,7 @@ import {
   spacing,
   statusScale,
 } from "@bthwani/ui-kit";
-import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
+import { useDshClientPlatform } from "../client-platform-context";
 import type { PromoViewModel } from "../../shared/home-discovery";
 
 type Props = {
@@ -33,6 +33,7 @@ function promoActionLabel(promo: PromoViewModel): string {
 }
 
 export function HomePromoSection({ promos, onPromoPress, onCategoriesPress, onVideoPress }: Props) {
+  const { RemoteImage } = useDshClientPlatform();
   const promo = promos[0] ?? null;
   const actionLabel = promo ? promoActionLabel(promo) : "";
   const interactive = promo != null && actionLabel.length > 0 && promo.actionTarget.trim().length > 0 && onPromoPress != null;
@@ -57,7 +58,7 @@ export function HomePromoSection({ promos, onPromoPress, onCategoriesPress, onVi
             accessibilityState={{ disabled: !interactive }}
           >
             {promo.imageUrl ? (
-              <ClientRemoteImage uri={promo.imageUrl} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={`صورة عرض ${promo.title}`} />
+              <RemoteImage uri={promo.imageUrl} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={`صورة عرض ${promo.title}`} />
             ) : null}
             {promo.imageUrl ? <View style={styles.promoScrim} /> : null}
             <View style={styles.heroPromoContent}>

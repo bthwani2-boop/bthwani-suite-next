@@ -17,21 +17,25 @@ import {
   spacing,
 } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
-import { corrId } from '../../shared/_kernel/dsh-http-request';
 import {
   arriveCaptainReturnToStore,
   fetchCaptainDeliveryException,
+  getOrCreateReturnToStoreCommandAttempt,
+  clearReturnToStoreCommandAttempt,
   type DshDeliveryException,
   type DshDeliveryExceptionReasonCode,
 } from '../../shared/dispatch';
 import { useCaptainDeliveryProofController } from '../../shared/delivery-proof';
 import type { CaptainDeliveryEvidenceKind } from '../../shared/media/pod/delivery-proof-media.api';
+import type { DshDispatchAssignmentSource } from '../../shared/dispatch';
 import type { CaptainDeliveryExceptionDraft } from '../../shared/delivery/use-captain-order-runtime';
 
 export type DshCaptainPoDSubmissionScreenProps = {
   readonly state?: 'ready' | 'loading' | 'pending_review' | 'success' | 'error' | 'rejected';
   readonly assignmentId: string;
   readonly orderId: string;
+  readonly workItemId: string;
+  readonly workItemSource: DshDispatchAssignmentSource | '';
   readonly exceptionReportingEnabled: boolean;
   readonly onCapturePhoto: () => void;
   readonly onConfirm: () => void;
@@ -71,6 +75,8 @@ export function DshCaptainPoDSubmissionScreen({
   state = 'ready',
   assignmentId,
   orderId,
+  workItemId,
+  workItemSource,
   exceptionReportingEnabled,
   onCapturePhoto,
   onConfirm,
@@ -82,8 +88,12 @@ export function DshCaptainPoDSubmissionScreen({
   const theme = useTheme() as { surfaceInset?: string; brandStrong?: string; text?: string };
   const identity = useIdentitySession();
   const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
-  const returnCommandRef = React.useRef<{ readonly actorId: string; readonly id: string } | null>(null);
   const proofController = useCaptainDeliveryProofController(assignmentId);
+  const workItemLabel = workItemSource === 'special_request'
+    ? `المهمة الخاصة ${workItemId}`
+    : `الطلب ${workItemId || orderId}`;
+  const workItemNoun = workItemSource === 'special_request' ? 'المهمة الخاصة' : 'الطلب';
+  const usesCustomerPin = workItemSource !== 'special_request';
   const [pin, setPin] = React.useState('');
   const [evidenceKind, setEvidenceKind] = React.useState<CaptainDeliveryEvidenceKind>('photo');
   const [proofGuideVisible, setProofGuideVisible] = React.useState(false);
@@ -138,10 +148,14 @@ export function DshCaptainPoDSubmissionScreen({
     const normalizedPin = pin.replace(/\D/g, '').slice(0, 6);
     const proof = await proofController.submitCaptured(
       photoUri ? { uri: photoUri } : undefined,
-      { pin: normalizedPin, evidenceKind, capturedAt: new Date().toISOString() },
+      {
+        pin: workItemSource === 'special_request' ? '' : normalizedPin,
+        evidenceKind,
+        capturedAt: new Date().toISOString(),
+      },
     );
     if (proof) await Promise.resolve(onConfirm());
-  }, [evidenceKind, onConfirm, photoUri, pin, proofController.submitCaptured]);
+  }, [evidenceKind, onConfirm, photoUri, pin, proofController.submitCaptured, workItemSource]);
 
   const submitException = React.useCallback(async () => {
     if (reasonNote.trim().length < 5) return;
@@ -166,14 +180,13 @@ export function DshCaptainPoDSubmissionScreen({
       setExceptionLoadError('جلسة الكابتن غير جاهزة لتأكيد الوصول بالمرتجع.');
       return;
     }
-    const existing = returnCommandRef.current?.actorId === actorId ? returnCommandRef.current : null;
-    const command = existing ?? { actorId, id: corrId('captain-return-arrive') };
-    returnCommandRef.current = command;
     setArrivingReturn(true);
     setExceptionLoadError(null);
     try {
-      const item = await arriveCaptainReturnToStore(assignmentId, command.id);
-      returnCommandRef.current = null;
+      const intent = { actorId, command: 'captain_arrive' as const, entityId: assignmentId };
+      const attempt = await getOrCreateReturnToStoreCommandAttempt(intent);
+      const item = await arriveCaptainReturnToStore(assignmentId, attempt.context);
+      await clearReturnToStoreCommandAttempt(intent, attempt.signature);
       setActiveException(item);
     } catch (error) {
       setExceptionLoadError(error instanceof Error ? error.message : 'تعذر تثبيت تسليم المرتجع للمتجر.');
@@ -207,7 +220,7 @@ export function DshCaptainPoDSubmissionScreen({
   if (effectiveState === 'success') {
     return (
       <View style={styles.root}>
-        <StateView tone="success" title="تم قبول إثبات التسليم" description="ثبت DSH الإثبات وأكمل الطلب مرة واحدة، ثم أنشأ حدث الإكمال الدائم إلى WLT." actionLabel="العودة لصندوق الطلبات" onActionPress={onBack} />
+        <StateView tone="success" title="تم قبول إثبات التسليم" description={`ثبت DSH الإثبات وأكمل ${workItemNoun} مرة واحدة، ثم أنشأ حدث الإكمال الدائم إلى WLT.`} actionLabel="العودة لصندوق الطلبات" onActionPress={onBack} />
       </View>
     );
   }
@@ -215,7 +228,7 @@ export function DshCaptainPoDSubmissionScreen({
   if (effectiveState === 'pending_review') {
     return (
       <View style={styles.root}>
-        <StateView tone="warning" title="الإثبات قيد مراجعة العمليات" description="لم يُغلق الطلب بعد. ستظهر النتيجة هنا بعد قبول الإثبات أو رفضه، ويمكنك تحديث الحالة دون إعادة الإرسال." actionLabel="تحديث حالة الإثبات" onActionPress={() => void proofController.refresh().then(() => onConfirm())} />
+        <StateView tone="warning" title="الإثبات قيد مراجعة العمليات" description={`لم تُغلق ${workItemNoun} بعد. ستظهر النتيجة هنا بعد قبول الإثبات أو رفضه، ويمكنك تحديث الحالة دون إعادة الإرسال.`} actionLabel="تحديث حالة الإثبات" onActionPress={() => void proofController.refresh().then(() => onConfirm())} />
         {onBack ? <Button label="العودة إلى المهمة" tone="secondary" onPress={onBack} /> : null}
       </View>
     );
@@ -224,7 +237,7 @@ export function DshCaptainPoDSubmissionScreen({
   if (effectiveState === 'rejected') {
     return (
       <View style={styles.root}>
-        <StateView tone="danger" title="رُفض إثبات التسليم" description={proofController.proof?.reviewReason || 'الإثبات لا يطابق المتطلبات. التقط إثباتًا جديدًا أو استخدم PIN صالحًا.'} actionLabel="بدء محاولة جديدة" onActionPress={() => { proofController.resetRejected(); setPin(''); onCapturePhoto(); }} />
+        <StateView tone="danger" title="رُفض إثبات التسليم" description={proofController.proof?.reviewReason || (usesCustomerPin ? 'الإثبات لا يطابق المتطلبات. التقط إثباتًا جديدًا أو استخدم PIN صالحًا.' : 'الإثبات لا يطابق المتطلبات. التقط صورة أو توقيعًا جديدًا.')} actionLabel="بدء محاولة جديدة" onActionPress={() => { proofController.resetRejected(); setPin(''); onCapturePhoto(); }} />
         {onBack ? <Button label="العودة إلى المهمة" tone="secondary" onPress={onBack} /> : null}
       </View>
     );
@@ -243,30 +256,38 @@ export function DshCaptainPoDSubmissionScreen({
   return (
     <DshOperationScreen
       title="إثبات التسليم"
-      subtitle={`الطلب ${orderId} · الإسناد ${assignmentId}`}
+      subtitle={`${workItemLabel} · الإسناد ${assignmentId}`}
       content={
         <Box gap={4} style={styles.contentPadding}>
           <Box gap={3}>
             <Box layoutDirection="row" justify="space-between" align="center">
               <Badge label="إثبات مطلوب" tone="warning" />
-              <Text role="caption" tone="muted">#{orderId}</Text>
+              <Text role="caption" tone="muted">#{workItemId || orderId}</Text>
             </Box>
-            <Text role="bodySm" tone="muted">استخدم رمز العميل لقبول فوري، أو صورة/توقيع يراجعها المشغل، أو رمزًا مع وسائط كإثبات مركب.</Text>
+            <Text role="bodySm" tone="muted">{usesCustomerPin ? 'استخدم رمز العميل لقبول فوري، أو صورة/توقيع يراجعها المشغل، أو رمزًا مع وسائط كإثبات مركب.' : 'أرسل صورة أو توقيعًا ليراجعه المشغل قبل إكمال المهمة الخاصة.'}</Text>
           </Box>
 
           <Divider />
 
-          <Box gap={2}>
-            <TextField
-              label="رمز التسليم من العميل"
-              value={pin}
-              onChangeText={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="6 أرقام"
+          {workItemSource === 'special_request' ? (
+            <StateView
+              title="إثبات الوسائط مطلوب"
+              description="هذه مهمة خاصة ولا تستخدم PIN الطلب التجاري؛ أرسل صورة أو توقيعًا ليراجعه المشغل."
+              tone="info"
             />
-            <Text role="caption" tone={pin.length > 0 && !pinValid ? 'danger' : 'muted'}>
-              {pin.length > 0 && !pinValid ? 'أدخل الرمز كاملًا من 6 أرقام.' : 'لا يظهر الرمز للكابتن إلا عندما يقدمه العميل عند التسليم.'}
-            </Text>
-          </Box>
+          ) : (
+            <Box gap={2}>
+              <TextField
+                label="رمز التسليم من العميل"
+                value={pin}
+                onChangeText={(value) => setPin(value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="6 أرقام"
+              />
+              <Text role="caption" tone={pin.length > 0 && !pinValid ? 'danger' : 'muted'}>
+                {pin.length > 0 && !pinValid ? 'أدخل الرمز كاملًا من 6 أرقام.' : 'لا يظهر الرمز للكابتن إلا عندما يقدمه العميل عند التسليم.'}
+              </Text>
+            </Box>
+          )}
 
           <Divider />
 
@@ -294,13 +315,13 @@ export function DshCaptainPoDSubmissionScreen({
               <View style={styles.placeholderWrapper}>
                 <Icon name="image-outline" size={40} tone="brand" />
                 <Text role="titleMd" style={{ color: theme.brandStrong ?? theme.text }}>تم حفظ {evidenceLabel}</Text>
-                <Text role="caption" tone="muted">سيُرسل الإثبات المركب إذا أدخلت PIN أيضًا.</Text>
+                <Text role="caption" tone="muted">{usesCustomerPin ? 'سيُرسل الإثبات المركب إذا أدخلت PIN أيضًا.' : 'ستُرسل الوسائط إلى مراجعة العمليات.'}</Text>
               </View>
             ) : (
               <View style={styles.placeholderWrapper}>
                 <Icon name="camera" size={48} tone="brand" />
                 <Text role="titleMd" style={{ color: theme.brandStrong ?? theme.text }}>التقاط {evidenceLabel}</Text>
-                <Text role="caption" tone="muted">الوسائط دون PIN تدخل مراجعة العمليات ولا تغلق الطلب تلقائيًا.</Text>
+                <Text role="caption" tone="muted">{usesCustomerPin ? 'الوسائط دون PIN تدخل مراجعة العمليات ولا تغلق الطلب تلقائيًا.' : 'الوسائط تدخل مراجعة العمليات ولا تغلق المهمة تلقائيًا.'}</Text>
               </View>
             )}
           </Pressable>
@@ -314,7 +335,7 @@ export function DshCaptainPoDSubmissionScreen({
             <Button label={proofGuideVisible ? 'إخفاء الشروط' : 'فتح الشروط'} tone="ghost" size="sm" fullWidth={false} onPress={() => setProofGuideVisible((current) => !current)} />
             {proofGuideVisible ? (
               <Box gap={1}>
-                <Text role="caption" tone="muted">• استخدم PIN الذي يعرضه العميل للطلب نفسه فقط.</Text>
+                {usesCustomerPin ? <Text role="caption" tone="muted">• استخدم PIN الذي يعرضه العميل للطلب نفسه فقط.</Text> : null}
                 <Text role="caption" tone="muted">• صنف الوسائط بصورتها الصحيحة: تسليم أو توقيع.</Text>
                 <Text role="caption" tone="muted">• لا تصوّر الوجوه أو بيانات حساسة دون ضرورة تشغيلية.</Text>
               </Box>

@@ -35,7 +35,7 @@ const licenseStatusLabel = (status: string | undefined): string => {
   return LICENSE_LABEL.missing;
 };
 
-export function CaptainDetailView(props: { readonly actorId: string; readonly onBack: () => void }) {
+export function CaptainDetailView(props: { readonly actorId: string; readonly onBack: () => void; readonly canUpdate: boolean }) {
   const controller = useCaptainDetailController(props.actorId);
   const captain = controller.state.kind === "ready" ? controller.state.captain : null;
 
@@ -110,6 +110,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
   const canApproveLicense = documentCount > 0 && validExpiry;
 
   const pickFile = (purpose: "photo" | "document") => {
+    if (!props.canUpdate) return;
     if (typeof document === "undefined") return;
     const input = document.createElement("input");
     input.type = "file";
@@ -150,6 +151,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
     });
 
   const canSave =
+    props.canUpdate &&
     fullNameAr.trim().length > 0 &&
     zoneId.length > 0 &&
     vehicleType.trim().length > 0 &&
@@ -166,6 +168,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        {!props.canUpdate ? <CpStateView kind="error" title="هذا الملف للقراءة فقط" /> : null}
         <CpTabs
           value={activeTab}
           onChange={setActiveTab}
@@ -179,36 +182,36 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
           <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             <div>
               <Text role="bodySm">الاسم بالعربية *</Text>
-              <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
+              <CpTextInput value={fullNameAr} onChange={setFullNameAr} disabled={!props.canUpdate} aria-label="الاسم بالعربية" />
             </div>
             <div>
               <Text role="bodySm">الاسم بالإنجليزية</Text>
-              <CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" />
+              <CpTextInput value={fullNameEn} onChange={setFullNameEn} disabled={!props.canUpdate} aria-label="الاسم بالإنجليزية" />
             </div>
             <div>
               <Text role="bodySm">تاريخ بداية الارتباط</Text>
-              <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
+              <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" disabled={!props.canUpdate} aria-label="تاريخ بداية الارتباط" />
             </div>
-            <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
+            <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} disabled={!props.canUpdate} />
             <div>
               <Text role="bodySm">نوع المركبة *</Text>
-              <CpTextInput value={vehicleType} onChange={setVehicleType} aria-label="نوع المركبة" />
+              <CpTextInput value={vehicleType} onChange={setVehicleType} disabled={!props.canUpdate} aria-label="نوع المركبة" />
             </div>
             <div>
               <Text role="bodySm">رقم أو لوحة المركبة *</Text>
-              <CpTextInput value={vehicleIdentifier} onChange={setVehicleIdentifier} aria-label="رقم أو لوحة المركبة" />
+              <CpTextInput value={vehicleIdentifier} onChange={setVehicleIdentifier} disabled={!props.canUpdate} aria-label="رقم أو لوحة المركبة" />
             </div>
             <div>
               <Text role="bodySm">نطاق التشغيل</Text>
-              <CpTextInput value={operatingScopeCode} onChange={setOperatingScopeCode} aria-label="نطاق التشغيل" />
+              <CpTextInput value={operatingScopeCode} onChange={setOperatingScopeCode} disabled={!props.canUpdate} aria-label="نطاق التشغيل" />
             </div>
             <div>
               <Text role="bodySm">تاريخ انتهاء الرخصة</Text>
-              <CpTextInput type="date" value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" aria-label="تاريخ انتهاء الرخصة" />
+              <CpTextInput type="date" value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" disabled={!props.canUpdate} aria-label="تاريخ انتهاء الرخصة" />
             </div>
 
             <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف</Text>
-            <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} />
+            <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} disabled={!props.canUpdate} />
             {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
 
             <CpButton
@@ -242,10 +245,10 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
             <Text role="bodySm">حالة الرخصة: {licenseStatusLabel(profile?.licenseStatus)}</Text>
             {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
+              <CpButton variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => pickFile("photo")}>
                 {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
               </CpButton>
-              <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>
+              <CpButton variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => pickFile("document")}>
                 {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة رخصة"}
               </CpButton>
             </div>
@@ -253,16 +256,16 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
               <CpMutedInline>اعتماد الرخصة يتطلب وثيقة مرتبطة وتاريخ انتهاء صالحًا.</CpMutedInline>
             ) : null}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <CpButton variant="primary" disabled={!canApproveLicense || controller.actionBusy} onClick={() => void updateLicenseStatus("valid")}>اعتماد الرخصة</CpButton>
-              <CpButton variant="danger" disabled={controller.actionBusy} onClick={() => void updateLicenseStatus("rejected")}>رفض الرخصة</CpButton>
-              <CpButton variant="secondary" disabled={controller.actionBusy} onClick={() => void updateLicenseStatus("missing")}>طلب استكمال</CpButton>
+              <CpButton variant="primary" disabled={!canApproveLicense || !props.canUpdate || controller.actionBusy} onClick={() => void updateLicenseStatus("valid")}>اعتماد الرخصة</CpButton>
+              <CpButton variant="danger" disabled={!props.canUpdate || controller.actionBusy} onClick={() => void updateLicenseStatus("rejected")}>رفض الرخصة</CpButton>
+              <CpButton variant="secondary" disabled={!props.canUpdate || controller.actionBusy} onClick={() => void updateLicenseStatus("missing")}>طلب استكمال</CpButton>
             </div>
           </div>
         )}
 
         {activeTab === "ops" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <ProviderOperationalCorePanel actorId={captain.actorId} kind="captain" />
+            <ProviderOperationalCorePanel actorId={captain.actorId} kind="captain" canUpdate={props.canUpdate} />
             <CaptainFleetMembershipsPanel actorId={captain.actorId} />
             <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
           </div>

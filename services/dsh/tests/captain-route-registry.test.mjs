@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it } from "node:test";
 
 const contract = await import("../dist/services/dsh/frontend/shared/delivery/captain.contract.js");
@@ -19,6 +21,8 @@ describe("Captain route and screen registry", () => {
       assert.ok(screenRouteIds.has(record.routeId), `missing screen registry entry for ${record.routeId}`);
       assert.deepEqual(contract.getDshCaptainRouteRecord(record.route), record);
       assert.equal(contract.getDshCaptainScreenRegistryItem(record.routeId).routeId, record.routeId);
+      const physicalOwnerPath = record.ownerPath.replace(/^wlt\//, "dsh/");
+      assert.equal(existsSync(resolve(process.cwd(), "services", physicalOwnerPath)), true, `missing owner file for ${record.routeId}`);
     }
   });
 

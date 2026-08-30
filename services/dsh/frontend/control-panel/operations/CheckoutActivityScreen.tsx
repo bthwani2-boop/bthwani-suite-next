@@ -17,6 +17,7 @@ import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
 import { useOperatorCheckoutController } from "../../shared/checkout";
 import type { DshCheckoutIntent, DshFulfillmentMode, DshIntentState } from "../../shared/checkout";
+import { useOperationsCapabilities } from "../../shared/operations";
 
 const FULFILLMENT_LABELS: Record<DshFulfillmentMode, string> = {
   bthwani_delivery: "توصيل بثواني",
@@ -37,6 +38,7 @@ const STATE_LABELS: Record<DshIntentState, string> = {
 
 export function CheckoutActivityScreen() {
   const controller = useOperatorCheckoutController("authenticated");
+  const { canManageOperations } = useOperationsCapabilities();
 
   const stateView = controller.loadState === "loading"
     ? <CpStatePanel role="status" title="جاري تحميل نشاط checkout" description="يتم تحميل نوايا الدفع ومرجع WLT من DSH." />
@@ -54,11 +56,12 @@ export function CheckoutActivityScreen() {
     <DataTablePageFrame
       dir="rtl"
       header={(
-        <CpPageHeader title="نشاط checkout ومرجع WLT">
+          <CpPageHeader title="نشاط checkout ومرجع WLT">
           <div style={styles.boundaryNote}>
             <CpMutedInline tight>
               حدود الخدمة والرحلة التشغيلية: هذه الشاشة مراقبة تشغيلية فقط، DSH يعرض نية checkout وWLT يملك مرجع جلسة الدفع. لا توجد أزرار خصم أو استرداد أو تسوية هنا.
             </CpMutedInline>
+            {!canManageOperations ? <CpMutedInline tight>قراءة فقط — مصالحة checkout تتطلب صلاحية operations.manage.</CpMutedInline> : null}
           </div>
         </CpPageHeader>
       )}
@@ -98,6 +101,7 @@ export function CheckoutActivityScreen() {
                 intent={intent}
                 reconcilingIntentId={controller.reconcilingIntentId}
                 onReconcile={controller.reconcile}
+                canManageOperations={canManageOperations}
               />
             ))}
           </tbody>
@@ -111,10 +115,12 @@ function CheckoutIntentRow({
   intent,
   reconcilingIntentId,
   onReconcile,
+  canManageOperations,
 }: {
   readonly intent: DshCheckoutIntent;
   readonly reconcilingIntentId: string | null;
   readonly onReconcile: (intentId: string) => Promise<boolean>;
+  readonly canManageOperations: boolean;
 }) {
   const isReconciling = reconcilingIntentId === intent.id;
   const reconciliationLocked = reconcilingIntentId !== null;
@@ -130,15 +136,17 @@ function CheckoutIntentRow({
       <CpTableCell><StatusBadge state={intent.state} /></CpTableCell>
       <CpTableCell>
         {intent.reconciliationRequired ? (
-          <CpButton
-            onClick={() => void onReconcile(intent.id)}
-            disabled={reconciliationLocked}
-            aria-label={`إعادة مصالحة checkout ${intent.id}`}
-          >
-            {isReconciling
-              ? "جاري تنفيذ المصالحة…"
-              : `إعادة المصالحة (${Math.max(0, intent.reconciliationAgeSeconds ?? 0)}ث)`}
-          </CpButton>
+          canManageOperations ? (
+            <CpButton
+              onClick={() => void onReconcile(intent.id)}
+              disabled={reconciliationLocked}
+              aria-label={`إعادة مصالحة checkout ${intent.id}`}
+            >
+              {isReconciling
+                ? "جاري تنفيذ المصالحة…"
+                : `إعادة المصالحة (${Math.max(0, intent.reconciliationAgeSeconds ?? 0)}ث)`}
+            </CpButton>
+          ) : "قراءة فقط"
         ) : "لا يلزم"}
       </CpTableCell>
       <CpTableCell>{new Date(intent.updatedAt).toLocaleString("ar-SA")}</CpTableCell>

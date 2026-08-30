@@ -5,6 +5,16 @@ export * from "./field-readiness.states";
 export * from "./field-readiness.policy";
 export * from "./field-readiness.view-model";
 export {
+  FIELD_INTENT_SCHEMA_VERSION,
+  buildFieldIntentFingerprint,
+  normalizeFieldMutationOperation,
+  normalizeFieldMutationPayload,
+} from "./field-intent-identity.ts";
+export type {
+  FieldMutationIdentityContext,
+  FieldMutationOperation,
+} from "./field-intent-identity.ts";
+export {
   buildFieldMutationContext,
   createFieldVisit,
   fetchFieldVisits,
@@ -32,7 +42,8 @@ export { useFieldEscalationSubmissionController } from "./use-field-escalation-s
 export {
   configureFieldOfflineQueueStorage,
   configureFieldOfflineQueueScope,
-  clearFieldOfflineQueue,
+  detachFieldOfflineQueueScope,
+  discardFieldOfflineRecoveryState,
   enqueueFieldOperation,
   markOperationSynced,
   markOperationUnknown,

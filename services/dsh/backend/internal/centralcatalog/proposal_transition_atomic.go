@@ -8,6 +8,24 @@ import (
 	"fmt"
 )
 
+// collectIDs drains a single-column result set before the transaction issues
+// another statement on its single database connection.
+func collectIDs(rows *sql.Rows, err error) ([]string, error) {
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 // TransitionProposalAtomicExpected performs the version check after acquiring
 // the proposal row lock and keeps every governed side effect, the proposal
 // mutation, and its audit record inside the same database transaction.
@@ -76,7 +94,7 @@ func TransitionProposalAtomicExpected(
 
 	switch input.NextStatus {
 	case "partner-review":
-		policy, policyErr := ResolveEffectivePolicy(ctx, db, proposal.DomainID, categoryNodeID)
+		policy, policyErr := ResolveEffectivePolicy(ctx, tx, proposal.DomainID, categoryNodeID)
 		if policyErr != nil {
 			return ProductProposal{}, policyErr
 		}
@@ -127,7 +145,7 @@ func TransitionProposalAtomicExpected(
 		args = []any{input.NextStatus, input.Note, actorID, id}
 
 	case "marketing-review":
-		policy, policyErr := ResolveEffectivePolicy(ctx, db, proposal.DomainID, categoryNodeID)
+		policy, policyErr := ResolveEffectivePolicy(ctx, tx, proposal.DomainID, categoryNodeID)
 		if policyErr != nil {
 			return ProductProposal{}, policyErr
 		}
@@ -210,12 +228,14 @@ func TransitionProposalAtomicExpected(
 					*proposal.AdoptedMasterProductID)
 				if updateErr == nil {
 					// Reassign media links
-					_, _ = tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET entity_id=$1 WHERE entity_type='product_proposal' AND entity_id=$2`,
-						*proposal.AdoptedMasterProductID, id)
+					if _, updateErr = tx.ExecContext(ctx,
+						`UPDATE dsh_catalog_asset_links SET entity_id=$1 WHERE entity_type='product_proposal' AND entity_id=$2`,
+						*proposal.AdoptedMasterProductID, id); updateErr != nil {
+						return ProductProposal{}, updateErr
+					}
 					// Migrate any store assortments that still reference the proposal's
 					// implicit "old" product entity — migrate only if a new master was chosen.
-					// This is a best-effort migration; the unique constraint prevents duplicate links.
-					_, _ = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET
+					if _, updateErr = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET
 						master_product_id=$1, updated_at=NOW(), version=version+1
 						WHERE master_product_id IN (
 							SELECT DISTINCT target_master_product_id FROM dsh_product_proposals WHERE id=$2
@@ -225,7 +245,9 @@ func TransitionProposalAtomicExpected(
 							WHERE sa2.store_id=dsh_store_assortments.store_id
 							  AND sa2.master_product_id=$1
 						)`,
-						*proposal.AdoptedMasterProductID, id)
+						*proposal.AdoptedMasterProductID, id); updateErr != nil {
+						return ProductProposal{}, updateErr
+					}
 				}
 			} else {
 				_, updateErr = tx.ExecContext(ctx, `UPDATE dsh_master_products SET
@@ -236,14 +258,25 @@ func TransitionProposalAtomicExpected(
 				return ProductProposal{}, updateErr
 			}
 			if proposal.SourceStoreID != nil {
+				assortmentID := entityID("assort")
 				_, insertErr := tx.ExecContext(ctx, `INSERT INTO dsh_store_assortments
 					(id, store_id, master_product_id, unit_price, currency, available, stock_status,
 					 publication_status, submitted_by)
 					VALUES ($1,$2,$3,0.00,'YER',true,'in_stock','approved',$4)
 					ON CONFLICT (store_id, master_product_id) DO NOTHING`,
-					entityID("assort"), *proposal.SourceStoreID, *proposal.AdoptedMasterProductID, actorID)
+					assortmentID, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID, actorID)
 				if insertErr != nil {
 					return ProductProposal{}, insertErr
+				}
+				assortment, assortmentErr := scanAssortment(tx.QueryRowContext(ctx,
+					`SELECT `+assortmentColumns+` FROM dsh_store_assortments
+					 WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`,
+					*proposal.SourceStoreID, *proposal.AdoptedMasterProductID))
+				if assortmentErr != nil {
+					return ProductProposal{}, assortmentErr
+				}
+				if err := bootstrapAssortmentRuntimeTruth(ctx, tx, assortment); err != nil {
+					return ProductProposal{}, err
 				}
 			}
 		}
@@ -305,7 +338,7 @@ func TransitionProposalAtomicExpected(
 		); assortmentErr != nil {
 			return ProductProposal{}, assortmentErr
 		}
-		policy, policyErr := ResolveEffectivePolicy(ctx, db, proposal.DomainID, categoryNodeID)
+		policy, policyErr := ResolveEffectivePolicy(ctx, tx, proposal.DomainID, categoryNodeID)
 		if policyErr != nil {
 			return ProductProposal{}, policyErr
 		}

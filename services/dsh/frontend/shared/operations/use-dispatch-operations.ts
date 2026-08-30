@@ -8,12 +8,16 @@ import {
   fetchOperatorDispatchAssignments,
   reassignDispatchAssignment,
 } from '../dispatch/dispatch.api';
+import {
+  clearOperatorDispatchCommandAttempt,
+  getOrCreateOperatorDispatchCommandAttempt,
+} from './operator-dispatch-command-attempt';
+import type { OperatorDispatchCommandIntent } from './operator-dispatch-command-attempt';
 import type {
   DshCaptainDispatchCandidate,
   DshDispatchAssignment,
   DshDispatchDecision,
 } from '../dispatch/dispatch.types';
-import { corrId } from '../_kernel/dsh-http-request';
 import { useIdentitySession } from '@bthwani/core-identity';
 
 export type DispatchOperationsState = {
@@ -51,21 +55,28 @@ function activeAssignments(items: readonly DshDispatchAssignment[]): readonly Ds
   return items.filter((item) => item.status === 'offered' || item.status === 'accepted');
 }
 
+function isUncertainDispatchMutation(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const typed = error as { readonly kind?: unknown; readonly status?: unknown };
+  if (typed.kind === 'network') return true;
+  return typeof typed.status === 'number'
+    && (typed.status === 408 || typed.status === 429 || typed.status >= 500);
+}
+
+async function executeWithReplay<T>(execute: () => Promise<T>): Promise<T> {
+  try {
+    return await execute();
+  } catch (error) {
+    if (!isUncertainDispatchMutation(error)) throw error;
+    return execute();
+  }
+}
+
 export function useDispatchOperations() {
   const [state, setState] = React.useState<DispatchOperationsState>(initialState);
   const requestTokenRef = React.useRef(0);
   const identity = useIdentitySession();
   const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
-  const commandIds = React.useRef<Record<string, string>>({});
-  const commandFor = React.useCallback((key: string) => {
-    if (!actorId) throw new Error('جلسة العمليات غير جاهزة لتنفيذ عملية الإسناد.');
-    const scopedKey = `${actorId}:${key}`;
-    const existing = commandIds.current[scopedKey];
-    if (existing) return { key: scopedKey, id: existing };
-    const id = corrId(`operator-dispatch-${key}`);
-    commandIds.current[scopedKey] = id;
-    return { key: scopedKey, id };
-  }, [actorId]);
 
   const load = React.useCallback(async (options: { readonly preserveSelection?: boolean } = {}) => {
     const token = ++requestTokenRef.current;
@@ -82,7 +93,7 @@ export function useDispatchOperations() {
     }));
     try {
       const assignments = activeAssignments(await fetchOperatorDispatchAssignments());
-      if (requestTokenRef.current !== token) return;
+      if (requestTokenRef.current !== token) return null;
       setState((current) => {
         const selectedAssignment = options.preserveSelection && current.selectedAssignment
           ? assignments.find((item) => item.id === current.selectedAssignment?.id) ?? null
@@ -95,13 +106,15 @@ export function useDispatchOperations() {
           ...(selectedAssignment ? {} : { decisions: [], candidates: [] }),
         };
       });
+      return assignments;
     } catch (error) {
-      if (requestTokenRef.current !== token) return;
+      if (requestTokenRef.current !== token) return null;
       setState((current) => ({
         ...current,
         kind: 'error',
         message: dispatchOperationsErrorMessage(error),
       }));
+      return null;
     }
   }, []);
 
@@ -143,12 +156,14 @@ export function useDispatchOperations() {
       setState((current) => ({ ...current, mutationKind: 'idle', message: 'جلسة العمليات غير جاهزة لإنهاء العروض المتأخرة.' }));
       return;
     }
-    const command = commandFor('expire:200');
+    const intent: OperatorDispatchCommandIntent = { actorId, action: 'expire_assignments', limit: 200 };
     setState((current) => ({ ...current, mutationKind: 'expiring', message: '' }));
     try {
-      const expiredCount = await expireDispatchAssignments(200, command.id);
-      delete commandIds.current[command.key];
-      await load({ preserveSelection: true });
+      const attempt = await getOrCreateOperatorDispatchCommandAttempt(intent);
+      const expiredCount = await executeWithReplay(() => expireDispatchAssignments(200, attempt.context));
+      const readback = await load({ preserveSelection: true });
+      if (!readback) throw new Error('تعذر قراءة الإسنادات بعد إنهاء العروض المتأخرة.');
+      await clearOperatorDispatchCommandAttempt(intent, attempt.fingerprint);
       setState((current) => ({
         ...current,
         message: expiredCount > 0 ? `تم إنهاء ${expiredCount} عرض متأخر.` : 'لا توجد عروض متأخرة.',
@@ -160,7 +175,7 @@ export function useDispatchOperations() {
         message: dispatchOperationsErrorMessage(error),
       }));
     }
-  }, [actorId, commandFor, load]);
+  }, [actorId, load]);
 
   const cancel = React.useCallback(async (assignmentId: string, reason: string) => {
     const normalizedReason = reason.trim();
@@ -172,12 +187,22 @@ export function useDispatchOperations() {
       setState((current) => ({ ...current, mutationKind: 'idle', message: 'جلسة العمليات غير جاهزة لإلغاء الإسناد.' }));
       return;
     }
-    const command = commandFor(`cancel:${assignmentId}:${normalizedReason}`);
+    const intent: OperatorDispatchCommandIntent = {
+      actorId,
+      action: 'cancel_assignment',
+      assignmentId,
+      reasonCode: 'OPERATOR_CANCELLED',
+      reason: normalizedReason,
+    };
     setState((current) => ({ ...current, mutationKind: 'cancelling', message: '' }));
     try {
-      await cancelDispatchAssignment(assignmentId, 'OPERATOR_CANCELLED', normalizedReason, command.id);
-      delete commandIds.current[command.key];
-      await load();
+      const attempt = await getOrCreateOperatorDispatchCommandAttempt(intent);
+      await executeWithReplay(() => cancelDispatchAssignment(assignmentId, 'OPERATOR_CANCELLED', normalizedReason, attempt.context));
+      const readback = await load();
+      if (!readback || readback.some((item) => item.id === assignmentId)) {
+        throw new Error('تعذر إثبات اختفاء الإسناد الملغى من القراءة الأساسية.');
+      }
+      await clearOperatorDispatchCommandAttempt(intent, attempt.fingerprint);
       setState((current) => ({ ...current, message: 'تم إلغاء الإسناد وإعادة الطلب إلى طابور الجاهزية.' }));
     } catch (error) {
       setState((current) => ({
@@ -186,7 +211,7 @@ export function useDispatchOperations() {
         message: dispatchOperationsErrorMessage(error),
       }));
     }
-  }, [actorId, commandFor, load]);
+  }, [actorId, load]);
 
   const reassign = React.useCallback(async (
     assignment: DshDispatchAssignment,
@@ -207,21 +232,41 @@ export function useDispatchOperations() {
       setState((current) => ({ ...current, mutationKind: 'idle', message: 'جلسة العمليات غير جاهزة لإعادة الإسناد.' }));
       return;
     }
-    const command = commandFor(`reassign:${assignment.id}:${assignment.version}:${normalizedCaptainId}:${serviceAreaCode}:${normalizedReason}:${assignment.priority ?? 0}:${assignment.distanceMeters ?? ''}`);
+    const intent: OperatorDispatchCommandIntent = {
+      actorId,
+      action: 'reassign_assignment',
+      assignmentId: assignment.id,
+      sourceVersion: assignment.version,
+      captainId: normalizedCaptainId,
+      serviceAreaCode,
+      priority: assignment.priority ?? 0,
+      ...(assignment.distanceMeters === null || assignment.distanceMeters === undefined
+        ? {}
+        : { distanceMeters: assignment.distanceMeters }),
+      reason: normalizedReason,
+      responseTimeoutSeconds: 90,
+    };
     setState((current) => ({ ...current, mutationKind: 'reassigning', message: '' }));
     try {
-      await reassignDispatchAssignment(assignment.id, {
+      const attempt = await getOrCreateOperatorDispatchCommandAttempt(intent);
+      await executeWithReplay(() => reassignDispatchAssignment(assignment.id, {
         captainId: normalizedCaptainId,
         serviceAreaCode,
-        idempotencyKey: command.id,
+        idempotencyKey: attempt.context.idempotencyKey,
         priority: assignment.priority ?? 0,
         ...(assignment.distanceMeters === null || assignment.distanceMeters === undefined
           ? {}
           : { distanceMeters: assignment.distanceMeters }),
         reason: normalizedReason,
         responseTimeoutSeconds: 90,
-      });
-      await load();
+      }, attempt.context));
+      const readback = await load();
+      if (!readback || !readback.some((item) =>
+        item.captainId === normalizedCaptainId
+        && (item.supersedesAssignmentId === assignment.id || item.orderId === assignment.orderId))) {
+        throw new Error('تعذر إثبات الإسناد البديل من القراءة الأساسية.');
+      }
+      await clearOperatorDispatchCommandAttempt(intent, attempt.fingerprint);
       setState((current) => ({ ...current, message: 'تم إلغاء الإسناد السابق وإنشاء عرض بديل ذريًا.' }));
     } catch (error) {
       setState((current) => ({
@@ -230,7 +275,7 @@ export function useDispatchOperations() {
         message: dispatchOperationsErrorMessage(error),
       }));
     }
-  }, [actorId, commandFor, load]);
+  }, [actorId, load]);
 
   React.useEffect(() => {
     void load();

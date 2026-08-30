@@ -304,9 +304,10 @@ components:
     SlaAlert:
       type: object
       additionalProperties: true
-      required: [ id, orderId, storeId, leg, status, detectedAt, version ]
+      required: [ id, operatorContextId, orderId, storeId, leg, status, detectedAt, version ]
       properties:
         id: { type: string }
+        operatorContextId: { type: string, minLength: 1 }
         taskId: { type: [ string, 'null' ] }
         sessionId: { type: [ string, 'null' ] }
         orderId: { type: string }

@@ -38,11 +38,10 @@ import {
   auditProductQuality,
   parseAndValidateCSV,
   exportProductsToCSV,
-  uploadAndLinkAsset,
+  toUploadFileSource,
+  uploadAndLinkImage,
   cleanupOrphanCatalogAssets,
-  simulateAssetScan,
   type CatalogAsset,
-  reviewReel,
 } from "../../shared/catalog";
 
 import { CategoryControlRoom } from "./products/CategoryControlRoom";
@@ -164,6 +163,27 @@ const DAM_ENTITY_TYPES: readonly DamEntityType[] = ["domains", "nodes", "master-
 export function CatalogDashboardScreen() {
   const { state } = useIdentitySession();
   const controller = useCentralCatalogController(state.kind);
+  const currentUserIdentity = state.kind === "authenticated" ? state.identity : undefined;
+  const currentUserRole = currentUserIdentity?.roles.includes("operator") ? "operator" : currentUserIdentity?.roles[0];
+  const canReadTaxonomy = hasCatalogPermission(currentUserIdentity, "catalog.taxonomy.read");
+  const canManageTaxonomy = hasCatalogPermission(currentUserIdentity, "catalog.taxonomy.manage");
+  const canReadProducts = hasCatalogPermission(currentUserIdentity, "catalog.product.read");
+  const canManageProducts = hasCatalogPermission(currentUserIdentity, "catalog.product.manage");
+  const canReadProposals = hasCatalogPermission(currentUserIdentity, "catalog.proposal.read");
+  const canReviewProposals = hasCatalogPermission(currentUserIdentity, "catalog.proposal.review");
+  const canMarketingReviewProposals = hasCatalogPermission(currentUserIdentity, "catalog.proposal.marketing_review");
+  const canAdoptProposals = hasCatalogPermission(currentUserIdentity, "catalog.proposal.adopt");
+  const canPublishProposals = hasCatalogPermission(currentUserIdentity, "catalog.proposal.publish");
+  const canReadMedia = hasCatalogPermission(currentUserIdentity, "catalog.media.read");
+  const canReviewMedia = hasCatalogPermission(currentUserIdentity, "catalog.media.review");
+  const canManageMedia = hasCatalogPermission(currentUserIdentity, "catalog.media.manage");
+  const canReadAssortment = hasCatalogPermission(currentUserIdentity, "catalog.assortment.read");
+  const canManageAssortment = hasCatalogPermission(currentUserIdentity, "catalog.assortment.manage");
+  const canReadSeed = hasCatalogPermission(currentUserIdentity, "catalog.seed.read");
+  const canReadPolicy = hasCatalogPermission(currentUserIdentity, "catalog.policy.read");
+  const canReadAudit = hasCatalogPermission(currentUserIdentity, "catalog.audit.read");
+  const canImportProducts = hasCatalogPermission(currentUserIdentity, "catalog.bulk.import") && canManageProducts;
+  const canExportProducts = hasCatalogPermission(currentUserIdentity, "catalog.bulk.export");
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -234,18 +254,22 @@ export function CatalogDashboardScreen() {
   const productsPerPage = 20;
 
   useEffect(() => {
-    if (state.kind === "authenticated") {
+    if (state.kind === "authenticated" && canReadSeed) {
       fetchSeedStatus()
         .then(setSeedStatus)
         .catch(console.error);
+    } else {
+      setSeedStatus(null);
+    }
 
+    if (state.kind === "authenticated" && canReadMedia) {
       setAssetsLoading(true);
       fetchCatalogAssetsPage()
         .then((page) => setAssets(page.items))
         .catch(console.error)
         .finally(() => setAssetsLoading(false));
     }
-  }, [state.kind]);
+  }, [canReadMedia, canReadSeed, state.kind]);
 
   const masterProductsQuery = useMemo(
     () => ({
@@ -280,7 +304,7 @@ export function CatalogDashboardScreen() {
   const visibleMasterProducts = controller.state.masterProducts.items;
 
   useEffect(() => {
-    if (state.kind !== "authenticated" || activeTab !== "master_products" || visibleMasterProducts.length === 0) {
+    if (state.kind !== "authenticated" || !canReadMedia || activeTab !== "master_products" || visibleMasterProducts.length === 0) {
       return;
     }
     let cancelled = false;
@@ -303,7 +327,7 @@ export function CatalogDashboardScreen() {
     return () => {
       cancelled = true;
     };
-  }, [state.kind, activeTab, visibleMasterProducts]);
+  }, [activeTab, canReadMedia, state.kind, visibleMasterProducts]);
 
   const handleProposalTransition = async (
     proposalId: string,
@@ -313,6 +337,14 @@ export function CatalogDashboardScreen() {
     createMasterProduct?: boolean,
     mergeData?: boolean,
   ) => {
+    const requiredPermission = nextStatus === "marketing-review"
+      ? "catalog.proposal.marketing_review"
+      : nextStatus === "catalog-adopted"
+        ? "catalog.proposal.adopt"
+        : nextStatus === "client-visible"
+          ? "catalog.proposal.publish"
+          : "catalog.proposal.review";
+    if (!hasCatalogPermission(currentUserIdentity, requiredPermission)) return;
     try {
       await controller.transitionProposal(proposalId, {
         nextStatus,
@@ -339,6 +371,7 @@ export function CatalogDashboardScreen() {
   };
 
   const handleAssetReview = async (assetId: string, status: "approved" | "rejected" | "archived", note: string) => {
+    if (status === "archived" ? !canManageMedia : !canReviewMedia) return;
     try {
       await reviewCatalogAsset(assetId, { decision: status, reviewNote: note });
       alert("تم تسجيل قرار مراجعة الصورة بنجاح");
@@ -349,6 +382,7 @@ export function CatalogDashboardScreen() {
   };
 
   const handleCleanupOrphans = async () => {
+    if (!canManageMedia) return;
     if (!confirm("هل أنت متأكد من رغبتك في تنظيف الأصول الرقمية اليتيمة (التي لا ترتبط بأي عنصر ومر عليها 24 ساعة)؟")) return;
     try {
       const count = await cleanupOrphanCatalogAssets();
@@ -359,19 +393,8 @@ export function CatalogDashboardScreen() {
     }
   };
 
-  const handleSimulateScan = async (assetId: string) => {
-    const status = prompt("أدخل الحالة المستهدفة (approved أو quarantined أو rejected):", "approved");
-    if (!status) return;
-    try {
-      await simulateAssetScan(assetId, status);
-      alert("تمت محاكاة الفحص بنجاح");
-      await reloadAssets();
-    } catch (e: any) {
-      alert("فشل محاكاة فحص الصورة: " + (e.message ?? e.toString()));
-    }
-  };
-
   const handleUploadAsset = async () => {
+    if (!canManageMedia) return;
     const file = uploadFileInputRef.current?.files?.[0];
     if (!file || !uploadEntityId.trim()) {
       alert("يرجى اختيار ملف وتحديد معرف العنصر المستهدف");
@@ -379,8 +402,8 @@ export function CatalogDashboardScreen() {
     }
     setUploading(true);
     try {
-      await uploadAndLinkAsset({
-        file,
+      await uploadAndLinkImage({
+        file: toUploadFileSource(file),
         entityType: uploadEntityType,
         entityId: uploadEntityId.trim(),
         role: uploadRole.trim() || "gallery",
@@ -399,6 +422,7 @@ export function CatalogDashboardScreen() {
   };
 
   const handleLinkExistingAsset = async () => {
+    if (!canManageMedia) return;
     if (!linkAssetId.trim() || !linkEntityId.trim() || !linkRole.trim()) {
       alert("يرجى تحديد الصورة والعنصر المستهدف والدور");
       return;
@@ -415,11 +439,6 @@ export function CatalogDashboardScreen() {
       setLinking(false);
     }
   };
-
-  const currentUserIdentity = state.kind === "authenticated" ? state.identity : undefined;
-  const currentUserRole = currentUserIdentity?.roles.includes("operator") ? "operator" : currentUserIdentity?.roles[0];
-  const canManageTaxonomy = hasCatalogPermission(currentUserIdentity, "catalog.taxonomy.manage");
-  const canManageProducts = hasCatalogPermission(currentUserIdentity, "catalog.product.manage");
 
   const handleBulkActivate = async () => {
     const requestedIds = [...selectedProductIds];
@@ -478,6 +497,28 @@ export function CatalogDashboardScreen() {
     }
   };
 
+  const activeTabReadable = activeTab === "overview"
+    ? [canReadTaxonomy, canReadProducts, canReadProposals, canReadMedia, canReadAssortment, canReadPolicy, canReadAudit, canReadSeed].some(Boolean)
+    : activeTab === "taxonomy"
+      ? canReadTaxonomy
+      : activeTab === "master_products"
+        ? canReadProducts
+        : activeTab === "proposals"
+          ? canReadProposals
+          : activeTab === "marketing_media" || activeTab === "reels"
+            ? canReadMedia
+            : activeTab === "policies"
+              ? canReadPolicy
+              : activeTab === "assortment"
+                ? canReadAssortment
+                : activeTab === "visibility"
+                  ? canReadProducts || canReadAssortment
+                  : activeTab === "audit_logs"
+                    ? canReadAudit
+                    : activeTab === "import_export"
+                      ? canReadProducts || canImportProducts || canExportProducts
+                      : canReadProducts;
+
   return (
     <OperationsRoomFrame
       dir="rtl"
@@ -533,7 +574,7 @@ export function CatalogDashboardScreen() {
         </div>
       )}
 
-      {activeTab !== "overview" && activeTab !== "import_export" && activeTab !== "audit_logs" && (
+      {activeTabReadable && activeTab !== "overview" && activeTab !== "import_export" && activeTab !== "audit_logs" && (
         <CpFilterBar label="تصفية البيانات">
           {activeTab === "assortment" && (
             <div style={filterRowStyle}>
@@ -560,6 +601,13 @@ export function CatalogDashboardScreen() {
       )}
 
       <div style={contentWrapperStyle}>
+        {!activeTabReadable ? (
+          <CpStatePanel
+            role="alert"
+            title="هذه المساحة غير متاحة"
+            description="لا توجد صلاحية قراءة مطابقة لهذا التبويب. اطلب capability صريحة من Identity بدل تجاوز حدود المجال."
+          />
+        ) : <>
         {activeTab === "overview" && (
           <div style={overviewGridStyle}>
             <div style={overviewCardStyle}>
@@ -613,6 +661,7 @@ export function CatalogDashboardScreen() {
               onMoveNode={controller.moveNode}
               onMergeNode={controller.mergeNode}
               onDeprecateNode={controller.deprecateNode}
+              canManage={canManageTaxonomy}
             />
           </div>
         )}
@@ -621,7 +670,7 @@ export function CatalogDashboardScreen() {
           <div>
             <div style={sectionHeaderRowStyle}>
               <h3>المنتجات المركزية L5</h3>
-              <CpButton onClick={() => {
+              {canExportProducts ? <CpButton onClick={() => {
                 const csv = exportProductsToCSV(controller.state.masterProducts.items);
                 const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
                 const url = URL.createObjectURL(blob);
@@ -630,7 +679,7 @@ export function CatalogDashboardScreen() {
                 link.setAttribute("download", `master_products_page_${productPage + 1}_${Date.now()}.csv`);
                 link.click();
                 URL.revokeObjectURL(url);
-              }}>تصدير الصفحة CSV</CpButton>
+              }}>تصدير الصفحة CSV</CpButton> : <CpMutedInline tight>تصدير CSV يتطلب catalog.bulk.export.</CpMutedInline>}
               {selectedProductIds.size > 0 && (
                 <CpButton
                   disabled={bulkActivating || !canManageProducts}
@@ -702,11 +751,9 @@ export function CatalogDashboardScreen() {
                 {
                   key: "actions",
                   header: "إجراءات",
-                  render: (m: any) => (
-                    <CpButton onClick={() => setMediaDrawerProductId(m.id)}>
-                      إدارة الوسائط
-                    </CpButton>
-                  ),
+                  render: (m: any) => canReadMedia
+                    ? <CpButton onClick={() => setMediaDrawerProductId(m.id)}>إدارة الوسائط</CpButton>
+                    : <CpMutedInline tight>الوسائط غير متاحة</CpMutedInline>,
                 },
               ]}
               rows={visibleMasterProducts}
@@ -718,7 +765,7 @@ export function CatalogDashboardScreen() {
               onPageChange={(p) => setProductPage(p - 1)}
             />
 
-            {mediaDrawerProductId && (
+            {mediaDrawerProductId && canReadMedia && (
               <div style={{
                 position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
                 backgroundColor: "var(--bthwani-media-scrim-strong)", display: "flex",
@@ -793,7 +840,7 @@ export function CatalogDashboardScreen() {
                         <CpTableCell><code>{p.sourceSurface}</code></CpTableCell>
                         <CpTableCell style={proposalCellVerticalAlignStyle}>
                           <div style={proposalActionColumnStyle}>
-                            {selectedProposalStatus === "marketing-review" && (
+                            {selectedProposalStatus === "marketing-review" && canMarketingReviewProposals && (
                               <div style={marketingReviewBoxStyle}>
                                 <label style={marketingReviewLabelStyle}>
                                   <input
@@ -828,13 +875,14 @@ export function CatalogDashboardScreen() {
 
                             <div style={proposalNoteRowStyle}>
                               <CpTextInput
+                                disabled={!canReviewProposals && !canMarketingReviewProposals && !canAdoptProposals && !canPublishProposals}
                                 value={note}
                                 onChange={(value) => setReasonByProposal((curr) => ({ ...curr, [p.id]: value }))}
                                 placeholder="ملاحظة أو سبب القرار..."
                                 aria-label={`ملاحظة القرار للاقتراح ${p.id}`}
                               />
 
-                              {selectedProposalStatus === "partner-proposed" && (
+                              {selectedProposalStatus === "partner-proposed" && canReviewProposals && (
                                 <>
                                   <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "partner-review", note)}>بدء المراجعة</CpButton>
                                   <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "needs-fix", note)}>طلب تعديل</CpButton>
@@ -844,25 +892,29 @@ export function CatalogDashboardScreen() {
 
                               {selectedProposalStatus === "partner-review" && (
                                 <>
-                                  <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "marketing-review", note)}>إحالة للتسويق</CpButton>
-                                  <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "needs-fix", note)}>طلب تعديل</CpButton>
-                                  <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "rejected", note)}>رفض</CpButton>
+                                  {canMarketingReviewProposals ? <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "marketing-review", note)}>إحالة للتسويق</CpButton> : null}
+                                  {canReviewProposals ? <>
+                                    <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "needs-fix", note)}>طلب تعديل</CpButton>
+                                    <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "rejected", note)}>رفض</CpButton>
+                                  </> : null}
                                 </>
                               )}
 
                               {selectedProposalStatus === "marketing-review" && (
                                 <>
-                                  <CpButton disabled={!note.trim() || (!isCreate && !linkId.trim() && !p.targetMasterProductId)} onClick={() => handleProposalTransition(p.id, "catalog-adopted", note, p.targetMasterProductId || (isCreate ? null : linkId), isCreate, proposalMergeData[p.id])}>اعتماد ودمج</CpButton>
-                                  <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "needs-fix", note)}>طلب تعديل</CpButton>
-                                  <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "rejected", note)}>رفض</CpButton>
+                                  {canAdoptProposals ? <CpButton disabled={!note.trim() || (!isCreate && !linkId.trim() && !p.targetMasterProductId)} onClick={() => handleProposalTransition(p.id, "catalog-adopted", note, p.targetMasterProductId || (isCreate ? null : linkId), isCreate, proposalMergeData[p.id])}>اعتماد ودمج</CpButton> : null}
+                                  {canReviewProposals ? <>
+                                    <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "needs-fix", note)}>طلب تعديل</CpButton>
+                                    <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "rejected", note)}>رفض</CpButton>
+                                  </> : null}
                                 </>
                               )}
 
-                              {selectedProposalStatus === "catalog-adopted" && (
+                              {selectedProposalStatus === "catalog-adopted" && canReviewProposals && (
                                 <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "catalog-approved", note)}>تفعيل الكتالوج</CpButton>
                               )}
 
-                              {selectedProposalStatus === "catalog-approved" && (
+                              {selectedProposalStatus === "catalog-approved" && canPublishProposals && (
                                 <CpButton disabled={!note.trim()} onClick={() => handleProposalTransition(p.id, "client-visible", note)}>نشر ورؤية للعملاء</CpButton>
                               )}
 
@@ -957,10 +1009,10 @@ export function CatalogDashboardScreen() {
           <div style={damSectionStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0 }}>مكتبة ومراجعة الصور DAM</h3>
-              <CpButton onClick={() => void handleCleanupOrphans()}>تنظيف الأصول الرقمية اليتيمة</CpButton>
+              {canManageMedia ? <CpButton onClick={() => void handleCleanupOrphans()}>تنظيف الأصول الرقمية اليتيمة</CpButton> : <CpMutedInline tight>التنظيف يتطلب catalog.media.manage.</CpMutedInline>}
             </div>
 
-            <div style={damPanelStyle}>
+            {canManageMedia ? <div style={damPanelStyle}>
               <h4 style={damPanelTitleStyle}>رفع صورة جديدة وربطها بعنصر</h4>
               <div style={damFormRowStyle}>
                 <input ref={uploadFileInputRef} type="file" accept="image/*" aria-label="اختيار ملف الصورة" />
@@ -981,9 +1033,9 @@ export function CatalogDashboardScreen() {
                 <CpTextInput value={uploadAltAr} onChange={setUploadAltAr} placeholder="نص بديل (Alt) بالعربية" aria-label="النص البديل للصورة" />
                 <CpButton disabled={uploading} onClick={() => void handleUploadAsset()}>{uploading ? "جاري الرفع..." : "رفع وربط"}</CpButton>
               </div>
-            </div>
+            </div> : null}
 
-            <div style={damPanelStyle}>
+            {canManageMedia ? <div style={damPanelStyle}>
               <h4 style={damPanelTitleStyle}>ضبط صورة عنصر من صور معتمدة موجودة</h4>
               <div style={damFormRowStyle}>
                 <CpTextInput value={linkAssetId} onChange={setLinkAssetId} placeholder="معرف الصورة (Asset ID)" aria-label="معرف الصورة" />
@@ -1003,7 +1055,7 @@ export function CatalogDashboardScreen() {
                 <CpTextInput value={linkRole} onChange={setLinkRole} placeholder="الدور (canonical_product_image ...)" aria-label="دور الربط" />
                 <CpButton disabled={linking} onClick={() => void handleLinkExistingAsset()}>{linking ? "جاري الضبط..." : "ضبط كصورة العنصر"}</CpButton>
               </div>
-            </div>
+            </div> : null}
 
             {assetsLoading ? (
               <p>جاري تحميل مكتبة الوسائط...</p>
@@ -1045,17 +1097,18 @@ export function CatalogDashboardScreen() {
                         <CpTableCell>
                           <div style={assetReviewRowStyle}>
                             <CpTextInput
+                              disabled={!canReviewMedia && !canManageMedia}
                               value={note}
                               onChange={(val) => setReasonByProposal((curr) => ({ ...curr, [asset.id]: val }))}
                               placeholder="ملاحظة للمراجعة..."
                               aria-label={`ملاحظة مراجعة الصورة ${asset.id}`}
                             />
-                            {asset.status === "scanning" && (
-                              <CpButton onClick={() => handleSimulateScan(asset.id)}>محاكاة الفحص</CpButton>
-                            )}
-                            <CpButton onClick={() => handleAssetReview(asset.id, "approved", note)}>موافقة</CpButton>
-                            <CpButton onClick={() => handleAssetReview(asset.id, "rejected", note)}>رفض</CpButton>
-                            <CpButton onClick={() => handleAssetReview(asset.id, "archived", note)}>أرشفة</CpButton>
+                            {canReviewMedia ? <>
+                              <CpButton onClick={() => handleAssetReview(asset.id, "approved", note)}>موافقة</CpButton>
+                              <CpButton onClick={() => handleAssetReview(asset.id, "rejected", note)}>رفض</CpButton>
+                            </> : null}
+                            {canManageMedia ? <CpButton onClick={() => handleAssetReview(asset.id, "archived", note)}>أرشفة</CpButton> : null}
+                            {!canReviewMedia && !canManageMedia ? <CpMutedInline tight>قراءة فقط</CpMutedInline> : null}
                           </div>
                         </CpTableCell>
                       </tr>
@@ -1069,9 +1122,8 @@ export function CatalogDashboardScreen() {
 
         {activeTab === "reels" && (
           <ReelsReviewPanel
-            onReviewReel={async (reelId, decision, note) => {
-              await reviewReel(reelId, { decision, reviewNote: note });
-            }}
+            canReview={canReviewMedia}
+            canPreview={canManageMedia}
           />
         )}
 
@@ -1089,7 +1141,7 @@ export function CatalogDashboardScreen() {
         )}
 
         {activeTab === "assortment" && (
-          <div>
+          canReadAssortment ? <div>
             <h3>تشكيلة المتجر الفعالة ({selectedStoreId})</h3>
 
             {/* ── Diagnostics strip ───────────────────────────────────────── */}
@@ -1107,10 +1159,11 @@ export function CatalogDashboardScreen() {
               );
             })()}
 
-            <div style={filterRowStyle}>
+            {canManageAssortment ? <div style={filterRowStyle}>
               <CpTextInput value={assortmentProductId} onChange={setAssortmentProductId} placeholder="معرف المنتج المركزي" />
               <CpTextInput value={assortmentPrice} onChange={setAssortmentPrice} placeholder="السعر المحلي YER" />
               <CpButton disabled={assortmentSaving} onClick={async () => {
+                if (!canManageAssortment) return;
                 const unitPrice = Number(assortmentPrice.trim());
                 if (!selectedStoreId.trim() || !assortmentProductId.trim() || !Number.isFinite(unitPrice) || unitPrice < 0) {
                   alert("أدخل معرف متجر ومنتج مركزي وسعراً صحيحاً.");
@@ -1136,7 +1189,7 @@ export function CatalogDashboardScreen() {
                   setAssortmentSaving(false);
                 }
               }}>{assortmentSaving ? "جاري الحفظ..." : "إضافة/تحديث التشكيلة"}</CpButton>
-            </div>
+            </div> : <CpMutedInline>قراءة فقط — تعديل تشكيلة المتجر يتطلب catalog.assortment.manage.</CpMutedInline>}
             <CpTable aria-label="جدول تشكيلة المتجر">
               <thead>
                 <tr dir="rtl">
@@ -1182,7 +1235,7 @@ export function CatalogDashboardScreen() {
                         {a.version !== undefined && <CpBadge tone="neutral">v{a.version}</CpBadge>}
                       </CpTableCell>
                       <CpTableCell>
-                        <CpButton
+                        {canManageAssortment ? <CpButton
                             style={{ fontSize: "0.75rem" }}
                             onClick={async () => {
                               const reason = window.prompt("سبب التقاعد (مطلوب)");
@@ -1197,14 +1250,14 @@ export function CatalogDashboardScreen() {
                                 alert("تعذر التقاعد: " + (e.message ?? e.toString()));
                               }
                             }}
-                          >تقاعد</CpButton>
+                          >تقاعد</CpButton> : <CpMutedInline tight>قراءة فقط</CpMutedInline>}
                       </CpTableCell>
                     </tr>
                   );
                 })}
               </tbody>
             </CpTable>
-          </div>
+          </div> : <CpStatePanel role="alert" title="تشكيلة المتجر غير متاحة" description="تتطلب هذه المساحة catalog.assortment.read." />
         )}
 
         {activeTab === "visibility" && (
@@ -1235,8 +1288,8 @@ export function CatalogDashboardScreen() {
                 const validated = parseAndValidateCSV(csvText);
                 setImportPreview(validated);
               }}>معاينة وتدقيق الملف</CpButton>
-              <CpButton disabled={importing || !importPreview || importPreview.errors.length > 0} onClick={async () => {
-                if (!importPreview) return;
+              <CpButton disabled={!canImportProducts || importing || !importPreview || importPreview.errors.length > 0} onClick={async () => {
+                if (!canImportProducts || !importPreview) return;
                 setImporting(true);
                 try {
                   for (const row of importPreview.rows) {
@@ -1265,7 +1318,7 @@ export function CatalogDashboardScreen() {
                 } finally {
                   setImporting(false);
                 }
-              }}>{importing ? "جاري الاستيراد..." : "تأكيد الاستيراد الفعلي"}</CpButton>
+              }}>{!canImportProducts ? "الاستيراد يتطلب catalog.bulk.import + catalog.product.manage" : importing ? "جاري الاستيراد..." : "تأكيد الاستيراد الفعلي"}</CpButton>
             </div>
 
             {importPreview && (
@@ -1305,6 +1358,7 @@ export function CatalogDashboardScreen() {
             </div>
           </div>
         )}
+        </>}
       </div>
     </OperationsRoomFrame>
   );

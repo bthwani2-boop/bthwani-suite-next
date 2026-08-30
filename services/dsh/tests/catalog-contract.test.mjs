@@ -9,7 +9,6 @@ test("catalog UI roots delegate runtime logic to shared", () => {
   for (const file of [
     "frontend/app-client/store/StoreDetailScreen.tsx",
     "frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx",
-    "frontend/control-panel/catalogs/CatalogApprovalScreen.tsx",
   ]) {
     const source = fs.readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /\bfetch\s*\(/);
@@ -53,7 +52,7 @@ test("Dispatch and Captain Delivery routes are implemented and registered at run
   assert.match(contract, /createDshAssignment/);
   assert.match(contract, /listDshCaptainAssignments/);
   assert.match(contract, /updateDshDeliveryStatus/);
-  assert.match(contract, /submitDshPoD/);
+	assert.match(contract, /submitCaptainDeliveryProof/);
   assert.match(contract, /getDshClientOrderTracking/);
   assert.match(router, /dsh\/operator\/dispatch\/assignments/);
   assert.match(router, /dsh\/captain\/dispatch\/assignments/);

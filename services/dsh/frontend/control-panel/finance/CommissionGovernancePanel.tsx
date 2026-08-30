@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { Card, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
@@ -9,12 +10,16 @@ import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 import { formatWltMoney } from '@bthwani/dsh/wlt';
 import {
   adjustCommission,
+  clearCommissionAdjustmentAttempt,
   confirmCommission,
+  fetchCommissionDetail,
+  getOrCreateCommissionAdjustmentAttempt,
   rejectCommission,
   reverseCommission,
   settleCommission,
   upsertCommissionPolicy,
   type Commission,
+  type CommissionAdjustmentAttemptIntent,
   type CommissionPolicyInput,
   type RepresentativeActorType,
 } from '@bthwani/dsh/wlt';
@@ -81,7 +86,9 @@ function validatePolicy(policy: CommissionPolicyInput): string | null {
   return null;
 }
 
-export function CommissionGovernancePanel() {
+export function CommissionGovernancePanel({ canManage }: { readonly canManage: boolean }) {
+  const identity = useIdentitySession();
+  const operatorActorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const [commissions, setCommissions] = useState<readonly Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +162,23 @@ export function CommissionGovernancePanel() {
             setError("قيمة التعديل يجب أن تكون عددًا صحيحًا غير صفري مع سبب إلزامي.");
             return;
           }
-          await adjustCommission(commission.id, deltaMinorUnits, reason);
+          if (!operatorActorId) throw new Error("يجب استعادة هوية المشغل قبل تعديل العمولة.");
+          const attemptIntent: CommissionAdjustmentAttemptIntent = {
+            operatorActorId,
+            commissionId: commission.id,
+            deltaMinorUnits,
+            reason,
+          };
+          const attempt = await getOrCreateCommissionAdjustmentAttempt(attemptIntent);
+          let detail = await fetchCommissionDetail(commission.id);
+          if (!detail.adjustments.some((adjustment) => adjustment.idempotencyKey === attempt.idempotencyKey)) {
+            await adjustCommission(commission.id, deltaMinorUnits, reason, attempt.idempotencyKey);
+            detail = await fetchCommissionDetail(commission.id);
+          }
+          if (!detail.adjustments.some((adjustment) => adjustment.idempotencyKey === attempt.idempotencyKey)) {
+            throw new Error("لم تُثبت القراءة المالية الراجعة تعديل العمولة بعد؛ أعد المحاولة بنفس القيم.");
+          }
+          await clearCommissionAdjustmentAttempt(attemptIntent, attempt.signature);
         }
         setNotice("تم تنفيذ الإجراء وتحديث الحقيقة المالية من WLT.");
         await load();
@@ -165,7 +188,7 @@ export function CommissionGovernancePanel() {
         setBusy(null);
       }
     },
-    [load],
+    [load, operatorActorId],
   );
 
   const savePolicy = useCallback(async () => {
@@ -230,7 +253,7 @@ export function CommissionGovernancePanel() {
         </Card>
       ) : null}
 
-      <Card style={{ padding: "1rem", marginTop: "1rem" }}>
+      {canManage ? <Card style={{ padding: "1rem", marginTop: "1rem" }}>
         <Text role="body" style={{ fontWeight: "bold" }}>
           إصدار سياسة عمولة جديد
         </Text>
@@ -382,7 +405,7 @@ export function CommissionGovernancePanel() {
             {savingPolicy ? "جارٍ حفظ إصدار السياسة…" : "حفظ إصدار السياسة"}
           </CpButton>
         </div>
-      </Card>
+      </Card> : <Text role="body" tone="warning" style={{ marginTop: "1rem" }}>قراءة فقط — حوكمة العمولات تتطلب finance.manage لتنفيذ أي تغيير.</Text>}
 
       <div
         style={{
@@ -453,7 +476,7 @@ export function CommissionGovernancePanel() {
                     </Text>
                   ) : null}
                 </div>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                {canManage ? <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {commission.status === "pending" ? (
                     <CpButton variant="primary" disabled={disabled} onClick={() => void run(commission, "confirm")}>
                       تأكيد
@@ -479,7 +502,7 @@ export function CommissionGovernancePanel() {
                       تعديل
                     </CpButton>
                   ) : null}
-                </div>
+                </div> : null}
               </div>
             </Card>
           );

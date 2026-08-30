@@ -25,6 +25,27 @@ test("runtime routes expose central catalog only", () => {
   assert.match(runtimeRoutes, /GET \/dsh\/field\/partners\/\{partnerId\}\/assortment/);
 });
 
+test("partner commercial truth has one canonical inventory and price resource", () => {
+  const paths = read("contracts/paths/catalog.paths.yaml");
+  const routes = read("backend/internal/http/catalog_unified_routes.go");
+  const handlers = read("backend/internal/http/catalog_inventory_pricing_handlers.go");
+  const client = read("frontend/shared/catalog/central-catalog.api.ts");
+  const partnerCatalog = read("frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx");
+
+  for (const path of [
+    "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/inventory",
+    "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices",
+  ]) assert.match(paths, new RegExp(escapeRegexLiteral(path)));
+  assert.match(routes, /GET \/dsh\/partner\/stores\/\{storeId\}\/assortment\/\{masterProductId\}\/inventory/);
+  assert.match(routes, /POST \/dsh\/partner\/stores\/\{storeId\}\/assortment\/\{masterProductId\}\/prices/);
+  assert.match(handlers, /map\[string\]any\{"prices": prices\}/);
+  assert.match(handlers, /map\[string\]any\{"price": price\}/);
+  assert.match(client, /fetchPartnerStoreAssortmentInventory/);
+  assert.match(client, /fetchPartnerStoreAssortmentPrices/);
+  assert.match(client, /\/prices`/);
+  assert.doesNotMatch(`${paths}\n${routes}\n${handlers}\n${client}\n${partnerCatalog}`, /prices\/schedule|upsertPartnerStoreAssortmentOCC|toggleAvailability/);
+});
+
 test("closure migration preserves legacy data before dropping local catalog tables", () => {
   const migration = read("database/migrations/dsh-036_central_catalog_runtime_closure.sql");
   const migrateProductsAt = migration.indexOf("INSERT INTO dsh_master_products");

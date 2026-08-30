@@ -5,8 +5,7 @@ const {
   nextDeliveryStatus,
   resolveDispatchLoadError,
   resolveDispatchLoadSuccess,
-  resolvePoDValidation,
-  resolveTrackingSuccess,
+	resolveTrackingSuccess,
 } = await import("../dist/services/dsh/frontend/shared/dispatch/dispatch.controller-core.js");
 
 const assignment = {
@@ -59,10 +58,5 @@ describe("dispatch controller core", () => {
       }).kind,
       "delivered",
     );
-  });
-
-  test("validates proof of delivery reference", () => {
-    assert.equal(resolvePoDValidation({ method: "code", reference: "1234" }), null);
-    assert.equal(resolvePoDValidation({ method: "code", reference: " " }).kind, "error");
   });
 });

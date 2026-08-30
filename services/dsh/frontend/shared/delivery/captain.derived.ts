@@ -8,6 +8,7 @@ import {
   buildCaptainHomeTickerPolicy,
   buildCaptainOrderSummaryPolicy,
   buildCaptainPresentationPolicy,
+  resolveCaptainDeliveryAction,
 } from './captain.derived.policy';
 import { ASSIGNMENT_STATUS_LABELS, DELIVERY_STATUS_LABELS, type DshDispatchAssignment } from '../dispatch/dispatch.types';
 import type { DshCaptainOrderDetailSummary } from '../orders';
@@ -30,7 +31,8 @@ export function buildCaptainBottomActiveId(
 }
 
 export function buildCaptainHomeTicker(
-  state: Pick<DshCaptainSurfaceState, 'captainAvailabilityStatus' | 'inboxState' | 'activeOrderId'>,
+  state: Pick<DshCaptainSurfaceState, 'captainAvailabilityStatus' | 'inboxState' | 'activeOrderId'>
+    & Partial<Pick<DshCaptainSurfaceState, 'activeWorkItemId'>>,
   activeSummary: DshCaptainOrderDetailSummary,
 ): DshCaptainSurfaceDerived['homeTicker'] {
   const availabilityMeta = getCaptainAvailabilityMeta(state.captainAvailabilityStatus);
@@ -50,6 +52,7 @@ export function buildCaptainDerived(
     ...presentation,
     currentAvailabilityMeta,
     activeSummary,
+    activeDeliveryAction: resolveCaptainDeliveryAction(activeAssignment?.delivery.status),
     homeTicker,
   };
 }

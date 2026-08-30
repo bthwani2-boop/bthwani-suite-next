@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView } from 'react-native';
+import { corrId } from '../../shared/_kernel/dsh-http-request';
 import {
   Box,
   Button,
@@ -13,8 +14,8 @@ import {
   radius,
   Surface,
 } from '@bthwani/ui-kit';
-import { createPartnerProductProposal, fetchPartnerTaxonomy } from '../../shared/catalog';
-import type { CentralCatalogDomain, CentralCatalogNode } from '../../shared/catalog';
+import { createPartnerProductProposal, fetchPartnerProductProposals, fetchPartnerTaxonomy } from '../../shared/catalog';
+import type { CentralCatalogDomain, CentralCatalogNode, ProductProposal } from '../../shared/catalog';
 
 export type ProductEditScreenProps = {
   storeId: string;
@@ -32,6 +33,15 @@ export function ProductEditScreen({
   const { direction } = useDirection();
   const theme = useTheme() as any;
   const isEditMode = !!productId;
+  const mountedRef = React.useRef(true);
+  const scopeKey = `${storeId}:${productId ?? ''}`;
+  const scopeKeyRef = React.useRef(scopeKey);
+  scopeKeyRef.current = scopeKey;
+  const proposalMutationRef = React.useRef<{ readonly key: string; readonly fingerprint: string } | null>(null);
+
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
 
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
@@ -53,21 +63,25 @@ export function ProductEditScreen({
   const [imageObjectKey, setImageObjectKey] = React.useState('');
 
   React.useEffect(() => {
+    const requestScopeKey = scopeKey;
     setLoading(true);
     fetchPartnerTaxonomy()
       .then((data) => {
+        if (!mountedRef.current || requestScopeKey !== scopeKeyRef.current) return;
         setTaxonomy(data);
         if (data.domains.length > 0) {
           setSelectedDomainId(data.domains[0]!.id);
         }
       })
       .catch((err) => {
+        if (!mountedRef.current || requestScopeKey !== scopeKeyRef.current) return;
         setErrorMessage(err.message ?? 'فشل تحميل بيانات التصنيفات.');
       })
       .finally(() => {
+        if (!mountedRef.current || requestScopeKey !== scopeKeyRef.current) return;
         setLoading(false);
       });
-  }, []);
+  }, [scopeKey]);
 
   const selectedDomain = React.useMemo(() => {
     return taxonomy?.domains.find((d) => d.id === selectedDomainId) ?? null;
@@ -98,6 +112,7 @@ export function ProductEditScreen({
   }, [selectedNode]);
 
   const handleCreateProposal = React.useCallback(async () => {
+    const operationScopeKey = scopeKey;
     if (!proposedNameAr.trim()) {
       setErrorMessage('الاسم العربي المقترح مطلوب.');
       return;
@@ -118,6 +133,21 @@ export function ProductEditScreen({
     setSaving(true);
     setErrorMessage(null);
     try {
+      const fingerprint = JSON.stringify({
+        scope: operationScopeKey,
+        proposedNameAr: proposedNameAr.trim(),
+        proposedNameEn: proposedNameEn.trim(),
+        domainId: selectedDomainId,
+        categoryNodeId: selectedNodeId || null,
+        brand: brand.trim(),
+        barcode: barcode.trim() || null,
+        imageObjectKey: imageObjectKey.trim() || null,
+      });
+      const previous = proposalMutationRef.current;
+      const idempotencyKey = previous?.fingerprint === fingerprint
+        ? previous.key
+        : corrId('catalog-proposal-create');
+      proposalMutationRef.current = { key: idempotencyKey, fingerprint };
       const proposal = await createPartnerProductProposal({
         storeId,
         proposedNameAr: proposedNameAr.trim(),
@@ -128,15 +158,24 @@ export function ProductEditScreen({
         barcode: barcode.trim() || null,
         imageObjectKey: imageObjectKey.trim() || null,
         sourceSurface: 'app-partner',
+        idempotencyKey,
       });
+      const readback = await fetchPartnerProductProposals(storeId, { limit: 100, offset: 0 });
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
+      const saved = readback.items.find((candidate) => candidate.id === proposal.id);
+      if (!saved || !isExactProposalReadback(saved, proposal)) {
+        throw new Error('لم تتطابق قراءة المقترح اللاحقة مع الطلب؛ لم يُعتمد الإرسال.');
+      }
       setSuccessMessage('تم إرسال اقتراح المنتج بنجاح إلى قائمة مراجعة الإدارة.');
-      onSaved?.(proposal);
+      proposalMutationRef.current = null;
+      onSaved?.(saved);
     } catch (err: any) {
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setErrorMessage(err.message ?? 'فشل إرسال اقتراح المنتج.');
     } finally {
-      setSaving(false);
+      if (mountedRef.current && operationScopeKey === scopeKeyRef.current) setSaving(false);
     }
-  }, [proposedNameAr, proposedNameEn, selectedDomainId, selectedNodeId, brand, barcode, imageObjectKey, isProposalDisallowed, proposalDisallowedReason, isBarcodeRequired, onSaved]);
+  }, [scopeKey, storeId, proposedNameAr, proposedNameEn, selectedDomainId, selectedNodeId, brand, barcode, imageObjectKey, isProposalDisallowed, proposalDisallowedReason, isBarcodeRequired, onSaved]);
 
   if (loading) {
     return <StateView title="جاري تحميل البيانات..." loading />;
@@ -188,10 +227,10 @@ export function ProductEditScreen({
               وفقاً لقرار سيادة الكتالوج المركزي، لا يحق للمتجر أو الشريك تعديل تفاصيل هوية المنتج (الاسم، الماركة، الباركود، التصنيفات) محلياً.
             </Text>
             <Text role="bodySm" tone="muted" align="start">
-              يمكنك تعديل الأسعار، التوفر، المخزون، والملاحظات المحلية للمنتج من صفحة التجاوزات المحلية المخصصة للفرع.
+              لإدارة السعر افتح أدوات الأسعار، ولإدارة التوفر والمخزون افتح إعدادات المخزون؛ بيانات العرض المحلية تدار من إدارة الكتالوج.
             </Text>
             {onBack && (
-              <Button label="العودة وإدارة التوافر" tone="secondary" onPress={onBack} />
+              <Button label="العودة إلى إدارة الكتالوج" tone="secondary" onPress={onBack} />
             )}
           </Surface>
         ) : (
@@ -314,4 +353,16 @@ export function ProductEditScreen({
       </Box>
     </ScrollView>
   );
+}
+
+function isExactProposalReadback(readback: ProductProposal, created: ProductProposal): boolean {
+  return readback.id === created.id
+    && readback.version >= 1
+    && readback.sourceStoreId === created.sourceStoreId
+    && readback.status === created.status
+    && readback.proposedNameAr === created.proposedNameAr
+    && readback.proposedNameEn === created.proposedNameEn
+    && readback.domainId === created.domainId
+    && readback.categoryNodeId === created.categoryNodeId
+    && readback.sourceSurface === created.sourceSurface;
 }

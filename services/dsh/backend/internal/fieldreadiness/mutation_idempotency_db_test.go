@@ -155,7 +155,7 @@ func TestGovernedCheckReceiptDoesNotReapplyAnOlderMutation(t *testing.T) {
 	actor := testFieldActor(t, agentID)
 	cleanupFieldMutationReceipts(t, db, agentID)
 
-	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
+	visit, err := createTestVisit(t, ctx, db, actor, CreateVisitInput{
 		StoreID: storeID, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
 	})
 	if err != nil {
@@ -262,7 +262,7 @@ func TestCompleteGovernedVisitIdempotentDoesNotDuplicateCommissionOutbox(t *test
 	actor := testFieldActor(t, agentID)
 	cleanupFieldMutationReceipts(t, db, agentID)
 
-	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
+	visit, err := createTestVisit(t, ctx, db, actor, CreateVisitInput{
 		StoreID: storeID, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
 	})
 	if err != nil {
@@ -274,7 +274,7 @@ func TestCompleteGovernedVisitIdempotentDoesNotDuplicateCommissionOutbox(t *test
 	})
 	for _, checkType := range policyCheckTypes(t, db, visit.ID) {
 		mediaRef := seedStoreBoundReadinessMedia(t, db, partnerID, storeID, agentID)
-		if _, err := UpsertGovernedReadinessCheck(ctx, db, actor, visit.ID, UpdateCheckInput{
+		if _, err := upsertTestCheck(t, ctx, db, actor, visit.ID, UpdateCheckInput{
 			CheckType: checkType, Status: CheckPassed, EvidenceURL: mediaRef,
 		}); err != nil {
 			t.Fatalf("upsert governed check %s: %v", checkType, err)
@@ -321,7 +321,7 @@ func TestGovernedEscalationCannotMutateCompletedVisit(t *testing.T) {
 	actor := testFieldActor(t, agentID)
 	cleanupFieldMutationReceipts(t, db, agentID)
 
-	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
+	visit, err := createTestVisit(t, ctx, db, actor, CreateVisitInput{
 		StoreID: storeID, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
 	})
 	if err != nil {
@@ -333,13 +333,13 @@ func TestGovernedEscalationCannotMutateCompletedVisit(t *testing.T) {
 	})
 	for _, checkType := range policyCheckTypes(t, db, visit.ID) {
 		mediaRef := seedStoreBoundReadinessMedia(t, db, partnerID, storeID, agentID)
-		if _, err := UpsertGovernedReadinessCheck(ctx, db, actor, visit.ID, UpdateCheckInput{
+		if _, err := upsertTestCheck(t, ctx, db, actor, visit.ID, UpdateCheckInput{
 			CheckType: checkType, Status: CheckPassed, EvidenceURL: mediaRef,
 		}); err != nil {
 			t.Fatalf("upsert governed check %s: %v", checkType, err)
 		}
 	}
-	if _, err := CompleteGovernedVisit(ctx, db, actor, visit.ID, testCompleteInput()); err != nil {
+	if _, err := completeTestVisit(t, ctx, db, actor, visit.ID, testCompleteInput()); err != nil {
 		t.Fatalf("complete governed visit: %v", err)
 	}
 

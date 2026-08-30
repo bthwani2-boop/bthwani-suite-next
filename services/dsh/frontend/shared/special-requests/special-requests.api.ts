@@ -14,8 +14,14 @@ import type {
   SpecialRequestStatus,
   SpecialRequestType,
 } from "./special-requests.types";
+import type { StoredClientSpecialRequestCommandAttempt } from "./client-special-request-command-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "special-requests");
+
+export type ClientSpecialRequestMutationContext = Pick<
+  StoredClientSpecialRequestCommandAttempt,
+  "idempotencyKey" | "correlationId"
+>;
 
 function deterministicMutationHash(value: string): string {
   let hash = 2166136261;
@@ -65,10 +71,16 @@ export async function fetchClientSpecialRequestInformation(
 export async function respondClientSpecialRequestInformation(
   id: string,
   input: DshRespondSpecialRequestInformation,
+  mutation: ClientSpecialRequestMutationContext,
 ): Promise<DshSpecialRequestInformationMutationResponse> {
   return request<DshSpecialRequestInformationMutationResponse>(
     `/dsh/client/special-requests/${encodeURIComponent(id)}/information-response`,
-    { method: "POST", body: input },
+    {
+      method: "POST",
+      body: input,
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
 }
 
@@ -83,14 +95,15 @@ export async function fetchClientSpecialRequestExecution(
 export async function cancelSpecialRequest(
   id: string,
   expectedVersion: number | undefined,
-  idempotencyKey: string,
-): Promise<DshSpecialRequestResponse> {
-  return request<DshSpecialRequestResponse>(
+  mutation: ClientSpecialRequestMutationContext,
+): Promise<void> {
+  await request<unknown>(
     `/dsh/client/special-requests/${encodeURIComponent(id)}/cancel`,
     {
       method: "POST",
       ...(expectedVersion !== undefined ? { body: { expectedVersion } } : {}),
-      idempotencyKey,
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
     },
   );
 }
@@ -98,11 +111,16 @@ export async function cancelSpecialRequest(
 export async function approveSpecialRequestQuote(
   id: string,
   expectedVersion: number,
-  idempotencyKey: string,
-): Promise<DshSpecialRequestResponse> {
-  return request<DshSpecialRequestResponse>(
+  mutation: ClientSpecialRequestMutationContext,
+): Promise<void> {
+  await request<unknown>(
     `/dsh/client/special-requests/${encodeURIComponent(id)}/approve-quote`,
-    { method: "POST", body: { expectedVersion }, idempotencyKey },
+    {
+      method: "POST",
+      body: { expectedVersion },
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    },
   );
 }
 

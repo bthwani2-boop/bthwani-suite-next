@@ -8,27 +8,18 @@ import type { CaptainServiceType, CaptainAppMode } from './captain.contract';
 type ServiceModeDeps = {
   setActiveServiceType: React.Dispatch<React.SetStateAction<CaptainServiceType>>;
   setInboxState: React.Dispatch<React.SetStateAction<any>>;
-  setActiveOrderExpanded: React.Dispatch<React.SetStateAction<boolean>>;
-  setIsPickupSheetVisible: React.Dispatch<React.SetStateAction<boolean>>;
-  setIsDeliverySheetVisible: React.Dispatch<React.SetStateAction<boolean>>;
   setCaptainAppMode: React.Dispatch<React.SetStateAction<CaptainAppMode>>;
 };
 
 export function useCaptainServiceModeModel({
   setActiveServiceType,
   setInboxState,
-  setActiveOrderExpanded,
-  setIsPickupSheetVisible,
-  setIsDeliverySheetVisible,
   setCaptainAppMode,
 }: ServiceModeDeps) {
   const handleSelectServiceType = React.useCallback((typeId: string) => {
     setActiveServiceType(typeId === 'amn' ? 'amn' : 'dsh');
     setInboxState('ready');
-    setActiveOrderExpanded(false);
-    setIsPickupSheetVisible(false);
-    setIsDeliverySheetVisible(false);
-  }, [setActiveServiceType, setInboxState, setActiveOrderExpanded, setIsPickupSheetVisible, setIsDeliverySheetVisible]);
+  }, [setActiveServiceType, setInboxState]);
 
   const toggleStoreCourierMode = React.useCallback((next: boolean) => {
     setCaptainAppMode(next ? 'store_courier_mode' : 'bthwani_captain_mode');

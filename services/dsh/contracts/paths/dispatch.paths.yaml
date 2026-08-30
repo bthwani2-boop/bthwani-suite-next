@@ -19,6 +19,9 @@
     summary: Operator assigns a ready-for-pickup order to a captain.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -71,6 +74,10 @@
     summary: Captain changes only their available or unavailable operational state.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/ExpectedVersion"
     requestBody:
       required: true
       content:
@@ -101,6 +108,8 @@
         in: path
         required: true
         schema: { type: string }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     responses:
       "200":
         description: Assignment accepted.
@@ -122,6 +131,8 @@
         in: path
         required: true
         schema: { type: string }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: false
       content:
@@ -152,6 +163,7 @@
         in: header
         required: true
         schema: { type: string, minLength: 8, maxLength: 200 }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
       - name: If-Match-Version
         in: header
         required: true
@@ -164,33 +176,6 @@
     responses:
       "200":
         description: Delivery status updated.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
-
-/dsh/captain/dispatch/assignments/{assignmentId}/pod:
-  post:
-    operationId: submitDshPoD
-    summary: Captain submits proof of delivery and closes the DSH delivery lifecycle.
-    tags: [DshDispatch]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: assignmentId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSubmitPoDRequest" }
-    responses:
-      "200":
-        description: Proof of delivery submitted.
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
@@ -337,6 +322,9 @@
       foreground location pushes remain allowed for safety and response coordination.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -389,6 +377,9 @@
     summary: Acknowledge an open delivery exception for operations review.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -421,6 +412,9 @@
     summary: Resolve an exception by allowing the same captain to retry from the preserved stage.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -454,6 +448,9 @@
     description: Does not complete custody; the owning partner must accept the return.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     responses:
       "200":
         description: Captain arrival recorded; store receipt remains pending.
@@ -500,6 +497,9 @@
     summary: Confirm store custody of a returned order after captain arrival.
     tags: [DshDispatch]
     security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     responses:
       "200":
         description: Store receipt confirmed and return completed.

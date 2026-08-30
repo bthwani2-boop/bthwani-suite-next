@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("not found")
-	ErrInvalid  = errors.New("invalid input")
-	ErrConflict = errors.New("request conflicts with another pending role change")
+	ErrNotFound                = errors.New("not found")
+	ErrInvalid                 = errors.New("invalid input")
+	ErrConflict                = errors.New("request conflicts with another pending role change")
+	ErrOperatorContextRequired = errors.New("operator context is required")
 	// ErrIdentityUnavailable is returned when a review requires a canonical
 	// Identity mutation but no Identity client is configured.
 	ErrIdentityUnavailable = errors.New("identity is unavailable")
@@ -83,6 +84,9 @@ func roleFromCanonical(definition auth.RbacRoleDefinition) Role {
 // ListRoles reads role shells and each complete definition from Identity. DSH
 // does not retain a local role-definition registry.
 func ListRoles(ctx context.Context, identityClient *auth.Client) ([]Role, error) {
+	if _, err := requireOperatorContext(ctx); err != nil {
+		return nil, err
+	}
 	if identityClient == nil {
 		return nil, ErrIdentityUnavailable
 	}
@@ -130,6 +134,11 @@ func LoadDiagnostics(ctx context.Context, db *sql.DB, identityClient *auth.Clien
 		diagnostics.Status = "attention"
 		diagnostics.Details = detail
 	}
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		attention("Operator context is unavailable.")
+		return diagnostics
+	}
 
 	if db == nil {
 		attention("Administration database is not configured.")
@@ -139,17 +148,18 @@ func LoadDiagnostics(ctx context.Context, db *sql.DB, identityClient *auth.Clien
 	var pendingRoleDefinitions, pendingAssignments, pendingRollbacks, appliedAssignments, recentRestrictedAudit int
 	err := db.QueryRowContext(ctx, `
 		SELECT
-			(SELECT COUNT(*) FROM dsh_admin_role_definition_requests WHERE status = 'pending'),
-			(SELECT COUNT(*) FROM dsh_admin_approval_requests WHERE status = 'pending'),
-			(SELECT COUNT(*) FROM dsh_admin_rollback_requests WHERE status = 'pending'),
+			(SELECT COUNT(*) FROM dsh_admin_role_definition_requests WHERE operator_context_id = $1 AND status = 'pending'),
+			(SELECT COUNT(*) FROM dsh_admin_approval_requests WHERE operator_context_id = $1 AND status = 'pending'),
+			(SELECT COUNT(*) FROM dsh_admin_rollback_requests WHERE operator_context_id = $1 AND status = 'pending'),
 			(SELECT COUNT(*)
 			 FROM dsh_admin_approval_requests request
 			 JOIN dsh_admin_canonical_mutation_intents intent
 			   ON intent.operation_type = 'role-assignment' AND intent.request_id = request.id
-			 WHERE request.status = 'approved' AND intent.status = 'applied'),
+			  AND intent.operator_context_id = request.operator_context_id
+			 WHERE request.operator_context_id = $1 AND request.status = 'approved' AND intent.status = 'applied'),
 			(SELECT COUNT(*) FROM dsh_admin_audit
-			 WHERE sensitivity = 'restricted' AND created_at >= NOW() - INTERVAL '24 hours')
-	`).Scan(
+			 WHERE operator_context_id = $1 AND sensitivity = 'restricted' AND created_at >= NOW() - INTERVAL '24 hours')
+	`, operatorContextID).Scan(
 		&pendingRoleDefinitions, &pendingAssignments, &pendingRollbacks,
 		&appliedAssignments, &recentRestrictedAudit,
 	)
@@ -191,19 +201,23 @@ type AdminAuditEntry struct {
 	CreatedAt     time.Time `json:"createdAt"`
 }
 
-func ListAdminAudit(db *sql.DB, actorID string, limit int) ([]AdminAuditEntry, error) {
+func ListAdminAudit(ctx context.Context, db *sql.DB, actorID string, limit int) ([]AdminAuditEntry, error) {
 	if db == nil {
 		return nil, ErrInvalid
+	}
+	operatorContextID, err := requireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if limit < 1 || limit > 500 {
 		limit = 100
 	}
-	rows, err := db.Query(`
+	rows, err := db.QueryContext(ctx, `
 		SELECT id, actor_id, action, COALESCE(target_id,''),
 		       COALESCE(detail,''), sensitivity, COALESCE(correlation_id,''), created_at
 		FROM dsh_admin_audit
-		WHERE ($1='' OR actor_id=$1)
-		ORDER BY created_at DESC LIMIT $2`, strings.TrimSpace(actorID), limit)
+		WHERE operator_context_id = $1 AND ($2='' OR actor_id=$2)
+		ORDER BY created_at DESC LIMIT $3`, operatorContextID, strings.TrimSpace(actorID), limit)
 	if err != nil {
 		return nil, err
 	}

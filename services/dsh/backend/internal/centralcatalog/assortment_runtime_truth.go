@@ -25,6 +25,7 @@ type assortmentInventoryTruth struct {
 type assortmentRuntimeTruth struct {
 	AmountMinor int64
 	Currency    string
+	Paused      bool
 	assortmentInventoryTruth
 }
 
@@ -53,8 +54,10 @@ func readAssortmentRuntimeTruth(ctx context.Context, q assortmentRuntimeTruthQue
 	err := q.QueryRowContext(ctx, `
 		SELECT p.amount_minor, p.currency,
 		       i.policy_type, i.quantity, i.reserved_quantity,
-		       i.min_order_quantity, i.max_order_quantity, i.step_quantity
+		       i.min_order_quantity, i.max_order_quantity, i.step_quantity,
+		       a.paused_at IS NOT NULL
 		FROM dsh_store_assortment_inventory i
+		JOIN dsh_store_assortments a ON a.id = i.store_assortment_id
 		JOIN LATERAL (
 			SELECT amount_minor, currency
 			FROM dsh_store_assortment_prices
@@ -73,6 +76,7 @@ func readAssortmentRuntimeTruth(ctx context.Context, q assortmentRuntimeTruthQue
 		&out.MinOrderQuantity,
 		&out.MaxOrderQuantity,
 		&out.StepQuantity,
+		&out.Paused,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return assortmentRuntimeTruth{}, ErrNotFound
@@ -114,7 +118,8 @@ func assortmentInventoryStockStatus(truth assortmentInventoryTruth) string {
 }
 
 func assortmentTruthPurchasable(truth assortmentRuntimeTruth) bool {
-	return truth.AmountMinor > 0 &&
+	return !truth.Paused &&
+		truth.AmountMinor > 0 &&
 		len(strings.TrimSpace(truth.Currency)) == 3 &&
 		assortmentInventoryAvailable(truth.assortmentInventoryTruth)
 }
@@ -123,7 +128,11 @@ func projectAssortmentRuntimeTruth(a StoreAssortment, truth assortmentRuntimeTru
 	a.UnitPrice = float64(truth.AmountMinor) / 100
 	a.Currency = truth.Currency
 	a.Available = assortmentTruthPurchasable(truth)
-	a.StockStatus = assortmentInventoryStockStatus(truth.assortmentInventoryTruth)
+	if truth.Paused {
+		a.StockStatus = "out_of_stock"
+	} else {
+		a.StockStatus = assortmentInventoryStockStatus(truth.assortmentInventoryTruth)
+	}
 	return a
 }
 

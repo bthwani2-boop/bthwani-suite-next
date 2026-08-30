@@ -39,6 +39,18 @@ func TestAssortmentTruthPurchasable(t *testing.T) {
 			want:  false,
 		},
 		{
+			name: "paused assortment fails closed",
+			truth: assortmentRuntimeTruth{
+				AmountMinor: 1250,
+				Currency:    "YER",
+				Paused:      true,
+				assortmentInventoryTruth: assortmentInventoryTruth{
+					PolicyType: "signal", Quantity: 5, MinOrderQuantity: 1, MaxOrderQuantity: 100, StepQuantity: 1,
+				},
+			},
+			want: false,
+		},
+		{
 			name:  "quantity policy must satisfy minimum order",
 			truth: runtimeTruth(1250, "YER", "quantity", 2, 0, 3, 10, 1),
 			want:  false,

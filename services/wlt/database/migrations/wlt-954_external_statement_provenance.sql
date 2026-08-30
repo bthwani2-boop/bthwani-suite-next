@@ -7,9 +7,13 @@ ALTER TABLE wlt_external_provider_statements
   ADD COLUMN IF NOT EXISTS provenance_type text NOT NULL DEFAULT 'operator_attested',
   ADD COLUMN IF NOT EXISTS provenance_evidence_sha256 text NOT NULL DEFAULT '';
 
+ALTER TABLE wlt_external_provider_statements DISABLE TRIGGER USER;
+
 UPDATE wlt_external_provider_statements
 SET provenance_evidence_sha256 = artifact_sha256
 WHERE provenance_type = 'operator_attested' AND provenance_evidence_sha256 = '';
+
+ALTER TABLE wlt_external_provider_statements ENABLE TRIGGER USER;
 
 ALTER TABLE wlt_external_provider_statements
   DROP CONSTRAINT IF EXISTS wlt_external_provider_statements_provenance_type_chk;

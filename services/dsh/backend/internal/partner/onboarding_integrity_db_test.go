@@ -159,11 +159,12 @@ func TestCreateFieldVisitGovernedRequiresExplicitStoreIDDBIntegration(t *testing
 	db := openRequiredDB(t)
 	partner := createPartnerFixture(t, db, "VISIT-STORE")
 	wantStoreID := partnerStoreID(t, db, partner.ID)
-	visit, err := CreateFieldVisitGoverned(db, CreateFieldVisitInput{
-		PartnerID:    partner.ID,
-		FieldActorID: "field-local-001",
-		StoreID:      wantStoreID,
-		VisitNotes:   "evidence-bearing visit",
+	visit, err := CreateFieldVisitIdempotent(context.Background(), db, CreateFieldVisitInput{
+		PartnerID:      partner.ID,
+		FieldActorID:   "field-local-001",
+		StoreID:        wantStoreID,
+		VisitNotes:     "evidence-bearing visit",
+		IdempotencyKey: "field-visit-governed-001",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -174,7 +175,7 @@ func TestCreateFieldVisitGovernedRequiresExplicitStoreIDDBIntegration(t *testing
 }
 
 func TestCreateFieldVisitGovernedRejectsMissingStoreID(t *testing.T) {
-	_, err := CreateFieldVisitGoverned(nil, CreateFieldVisitInput{
+	_, err := CreateFieldVisitIdempotent(context.Background(), nil, CreateFieldVisitInput{
 		PartnerID:    "partner-under-test",
 		FieldActorID: "field-under-test",
 		VisitNotes:   "evidence-bearing visit",

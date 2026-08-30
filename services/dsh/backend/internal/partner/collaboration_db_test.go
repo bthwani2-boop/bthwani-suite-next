@@ -1,6 +1,7 @@
 package partner
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -51,6 +52,21 @@ func TestOnboardingCollaborationIsObjectScopedAndLifecycleBound(t *testing.T) {
 	})
 	if err != nil || replay.ID != message.ID || replay.SequenceNumber != message.SequenceNumber {
 		t.Fatalf("message replay was not stable: first=%+v replay=%+v err=%v", message, replay, err)
+	}
+	if _, err := AddCollaborationMessage(t.Context(), db, "field-local-001", "app-field", partnerTestOperatorContextID, p.ID, assignmentID, "", CollaborationMessageInput{
+		Body: "نص مختلف لا يجوز أن يستبدل الرسالة الأصلية.", ClientMessageID: "client-collab-1",
+	}); !errors.Is(err, ErrCollaborationIdempotencyConflict) {
+		t.Fatalf("message identity collision was not rejected: %v", err)
+	}
+	var threadVersion, messageCount int
+	if err := db.QueryRow(`SELECT version FROM dsh_onboarding_collaboration_threads WHERE id=$1`, message.ThreadID).Scan(&threadVersion); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_onboarding_collaboration_messages WHERE thread_id=$1`, message.ThreadID).Scan(&messageCount); err != nil {
+		t.Fatal(err)
+	}
+	if threadVersion != 2 || messageCount != 1 {
+		t.Fatalf("message replay changed canonical thread state: version=%d messages=%d", threadVersion, messageCount)
 	}
 
 	operatorView, err := LoadCollaborationView(t.Context(), db, "operator-local-001", "control-panel", partnerTestOperatorContextID, p.ID, assignmentID, "")

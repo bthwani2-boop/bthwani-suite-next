@@ -14,16 +14,18 @@ import (
 // though HTTP authorization already resolved it, so direct callers cannot
 // turn this domain function into an IDOR primitive.
 type PartnerPreparationTransitionInput struct {
-	OrderID         string
-	StoreID         string
-	ActorID         string
-	Operation       string
-	ExpectedVersion int
-	IdempotencyKey  string
+	OperatorContextID string
+	OrderID           string
+	StoreID           string
+	ActorID           string
+	Operation         string
+	ExpectedVersion   int
+	IdempotencyKey    string
 }
 
 func partnerPreparationFingerprint(input PartnerPreparationTransitionInput) string {
 	hash := sha256.Sum256([]byte(strings.Join([]string{
+		input.OperatorContextID,
 		input.OrderID,
 		input.StoreID,
 		input.Operation,
@@ -37,12 +39,13 @@ func partnerPreparationFingerprint(input PartnerPreparationTransitionInput) stri
 // A replay with the same key and request fingerprint has no second side
 // effect; a reused key with another request is a conflict.
 func TransitionPartnerPreparation(db *sql.DB, input PartnerPreparationTransitionInput) (*Order, error) {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.StoreID = strings.TrimSpace(input.StoreID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.Operation = strings.TrimSpace(input.Operation)
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
-	if db == nil || input.OrderID == "" || input.StoreID == "" || input.ActorID == "" ||
+	if db == nil || input.OperatorContextID == "" || input.OrderID == "" || input.StoreID == "" || input.ActorID == "" ||
 		(input.Operation != "prepare" && input.Operation != "ready") ||
 		input.ExpectedVersion < 1 || len(input.IdempotencyKey) < 8 || len(input.IdempotencyKey) > 200 {
 		return nil, ErrInvalid
@@ -80,7 +83,7 @@ func TransitionPartnerPreparation(db *sql.DB, input PartnerPreparationTransition
 		if err := tx.Commit(); err != nil {
 			return nil, err
 		}
-		return GetOrder(db, input.OrderID)
+		return GetOrderForContext(db, input.OperatorContextID, input.OrderID)
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
@@ -92,8 +95,8 @@ func TransitionPartnerPreparation(db *sql.DB, input PartnerPreparationTransition
 	if err := tx.QueryRow(`
 		SELECT status, version, store_id
 		FROM dsh_orders
-		WHERE id=$1::uuid
-		FOR UPDATE`, input.OrderID).Scan(&currentStatus, &currentVersion, &actualStoreID); errors.Is(err, sql.ErrNoRows) {
+		WHERE id=$1::uuid AND operator_context_id=$2
+		FOR UPDATE`, input.OrderID, input.OperatorContextID).Scan(&currentStatus, &currentVersion, &actualStoreID); errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	} else if err != nil {
 		return nil, err
@@ -120,8 +123,8 @@ func TransitionPartnerPreparation(db *sql.DB, input PartnerPreparationTransition
 	query := fmt.Sprintf(`
 		UPDATE dsh_orders
 		SET status=$2, %s, updated_at=NOW()
-		WHERE id=$1::uuid AND store_id=$4 AND status=$3 AND version=$5`, assignment)
-	result, err := tx.Exec(query, input.OrderID, string(toStatus), string(fromStatus), input.StoreID, input.ExpectedVersion)
+		WHERE id=$1::uuid AND store_id=$4 AND status=$3 AND version=$5 AND operator_context_id=$6`, assignment)
+	result, err := tx.Exec(query, input.OrderID, string(toStatus), string(fromStatus), input.StoreID, input.ExpectedVersion, input.OperatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -149,5 +152,5 @@ func TransitionPartnerPreparation(db *sql.DB, input PartnerPreparationTransition
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return GetOrder(db, input.OrderID)
+	return GetOrderForContext(db, input.OperatorContextID, input.OrderID)
 }

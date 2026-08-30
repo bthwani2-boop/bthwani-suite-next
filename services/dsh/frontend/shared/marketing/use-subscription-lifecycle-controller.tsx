@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { registerIdentityBeforeSessionEndHook, useIdentitySession } from "@bthwani/core-identity";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { fetchClientBenefits } from "./marketing.api";
 import {
   activateDshSubscriptionPurchase,
@@ -11,7 +11,6 @@ import {
   recoverDshSubscriptionPurchase,
   renewDshSubscription,
 } from "./subscription-lifecycle.api";
-import { clearSubscriptionMutationAttempts } from "./subscription-mutation-attempt";
 import type { ClientBenefitsPayload } from "./loyalty-subscriptions.types";
 import type {
   SubscriptionPaymentSession,
@@ -105,7 +104,6 @@ export function useSubscriptionLifecycleController() {
         active = false;
       };
     }
-    const unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(() => clearSubscriptionMutationAttempts(actorId));
     void (async () => {
       try {
         const recovered = await recoverDshSubscriptionPurchase(actorId);
@@ -120,7 +118,6 @@ export function useSubscriptionLifecycleController() {
     })();
     return () => {
       active = false;
-      unregisterSessionEndHook();
     };
   }, [actorId, reload]);
 

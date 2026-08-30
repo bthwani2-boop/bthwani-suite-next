@@ -8,6 +8,12 @@ import {
   type PartnerOrderMutationOptions,
 } from './orders.api';
 import { corrId } from '../_kernel/dsh-http-request';
+import { useIdentitySession } from '@bthwani/core-identity';
+import {
+  clearStoreCaptainHandoffConfirmationAttempt,
+  getOrCreateStoreCaptainHandoffConfirmationAttempt,
+  type StoreCaptainHandoffConfirmationIntent,
+} from './store-captain-handoff-confirmation-attempt';
 import {
   type PartnerOrderMutationCommand,
   resolvePartnerOrderMutation,
@@ -44,8 +50,15 @@ function resolveReadbackFailureMessage(error: unknown): string {
   return classified.message ?? 'تعذر إعادة قراءة الحالة canonical.';
 }
 
+type PendingHandoffAttempt = {
+  readonly intent: StoreCaptainHandoffConfirmationIntent;
+  readonly signature: string;
+};
+
 /** Shared mutation/readback controller for partner order preparation and handoff. */
 export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void>) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
   const [state, setState] = React.useState<PartnerOrderCommandState>({ kind: 'idle' });
 
   const execute = React.useCallback(async (
@@ -61,13 +74,20 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
       expectedVersion: resolvedExpectedVersion as number,
       idempotencyKey: corrId('partner-order-command'),
     };
+    let pendingHandoffAttempt: PendingHandoffAttempt | null = null;
 
     setState({ kind: 'submitting', command, orderId });
     try {
       if (command === 'accept') await acceptOrder(orderId, mutationOptions);
       else if (command === 'prepare') await markOrderPreparing(orderId, mutationOptions);
       else if (command === 'ready') await markOrderReady(orderId, mutationOptions);
-      else await confirmStoreCaptainHandoff(orderId);
+      else {
+        if (!actorId) throw new Error('جلسة الشريك غير جاهزة لتأكيد تسليم العهدة.');
+        const intent: StoreCaptainHandoffConfirmationIntent = { actorId, orderId };
+        const attempt = await getOrCreateStoreCaptainHandoffConfirmationAttempt(intent);
+        pendingHandoffAttempt = { intent, signature: attempt.signature };
+        await confirmStoreCaptainHandoff(orderId, attempt.context);
+      }
     } catch (error) {
       setState({ kind: 'error', command, orderId, message: resolveErrorMessage(error) });
       try {
@@ -85,7 +105,6 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
 
     try {
       await refreshOrders();
-      setState({ kind: 'success', command, orderId, readback: 'fresh' });
     } catch (readbackError) {
       setState({
         kind: 'error',
@@ -95,8 +114,27 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
       });
       return false;
     }
+
+    if (pendingHandoffAttempt) {
+      try {
+        await clearStoreCaptainHandoffConfirmationAttempt(
+          pendingHandoffAttempt.intent,
+          pendingHandoffAttempt.signature,
+        );
+      } catch {
+        setState({
+          kind: 'error',
+          command,
+          orderId,
+          message: 'تم تأكيد حالة التسليم من DSH، لكن تعذر تنظيف محاولة التسليم المحلية. أعد فتح الطلب قبل تنفيذ أي إجراء جديد.',
+        });
+        return false;
+      }
+    }
+
+    setState({ kind: 'success', command, orderId, readback: 'fresh' });
     return true;
-  }, [refreshOrders]);
+  }, [actorId, refreshOrders]);
 
   const reset = React.useCallback(() => setState({ kind: 'idle' }), []);
 

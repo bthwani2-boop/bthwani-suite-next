@@ -19,6 +19,7 @@ import {
   purgeSyncedOperations,
   evacuateTerminalOperations,
   recoverCorruptFieldOfflineQueue,
+  readFieldOfflineRecovery,
   type FieldOfflineQueueScope,
   type FieldOfflineOperationType,
   type FieldOfflineOperation,
@@ -52,12 +53,7 @@ export type FieldOfflineSyncController = {
   readonly state: FieldOfflineSyncState;
   readonly retry: () => void;
   readonly recover: () => void;
-  /**
-   * Work carried over from a retired queue generation that this build cannot
-   * execute (unscoped v1, another actor, or a retired operation). It is
-   * preserved for recovery, so the surface must report it rather than let the
-   * worker believe the capture succeeded.
-   */
+  /** Persisted terminal work that still requires operator/employee attention. */
   readonly quarantinedCount: number;
 };
 
@@ -150,8 +146,10 @@ export function useFieldOfflineSync(
         }
       }
       await purgeSyncedOperations();
-      const evacuated = await evacuateTerminalOperations();
-      if (evacuated > 0) setQuarantinedCount((current) => current + evacuated);
+      await evacuateTerminalOperations();
+      // Recovery is durable across app restarts and logout, so derive the
+      // surface count from storage instead of only counting this drain pass.
+      setQuarantinedCount((await readFieldOfflineRecovery()).length);
       if (reconciliationError) setState(queueErrorState(reconciliationError));
       else setState({ kind: "ready" });
     } catch (error) {
@@ -180,6 +178,7 @@ export function useFieldOfflineSync(
   useEffect(() => {
     const currentScope = scopeRef.current;
     configureFieldOfflineQueueScope(currentScope ?? null);
+    setQuarantinedCount(0);
     if (!currentScope) {
       setState({ kind: "idle" });
       return undefined;

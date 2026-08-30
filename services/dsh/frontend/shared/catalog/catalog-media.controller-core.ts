@@ -4,16 +4,25 @@
  * native File directly through `toUploadFileSource`.
  */
 import * as catalogMediaApi from "./central-catalog.api";
+import {
+  fetchGovernedPublicReels,
+  fetchOperatorReels as fetchGovernedOperatorReels,
+  reviewGovernedReel,
+  submitGovernedReel,
+} from "./reels.api";
 import { uploadBinaryToPresignedUrl } from "../media/presigned-upload.client";
+import { corrId } from "../_kernel/dsh-http-request";
 import type {
   CatalogAsset,
   CatalogAssetLink,
   AssetUploadProgress,
-  CreateReelSubmissionInput,
-  ReviewReelInput,
-  Reel,
-  PublicReel,
 } from "./central-catalog.types";
+import type {
+  GovernedPublicReel,
+  GovernedReel,
+  GovernedReelReviewInput,
+  GovernedReelSubmissionInput,
+} from "./reels.types";
 
 export type { AssetUploadProgress };
 
@@ -73,6 +82,7 @@ export interface UploadImageOptions {
   readonly role: string;
   readonly altAr?: string;
   readonly altEn?: string;
+  readonly idempotencyKey?: string;
   readonly onProgress?: (p: AssetUploadProgress) => void;
 }
 
@@ -88,7 +98,7 @@ const entityTypeServerMap: Record<string, string> = {
 export async function uploadAndLinkImage(
   opts: UploadImageOptions,
 ): Promise<{ asset: CatalogAsset; link: CatalogAssetLink }> {
-  const { file, entityType, entityId, role, altAr = "", altEn = "", onProgress } = opts;
+  const { file, entityType, entityId, role, altAr = "", altEn = "", idempotencyKey = corrId("catalog-asset-link"), onProgress } = opts;
   const validationError = validateImageFile(file);
   if (validationError) {
     onProgress?.({ stage: "failed", error: validationError });
@@ -106,15 +116,15 @@ export async function uploadAndLinkImage(
     intendedEntityType: normalizedEntityType,
     intendedEntityId: entityId,
     intendedRole: role,
-  });
+  }, idempotencyKey);
 
   onProgress?.({ stage: "uploading", percent: 0 });
   const uploadResp = await uploadBinaryToPresignedUrl(intent.uploadUrl, file.body, file.type);
   if (!uploadResp.ok) {
-    await deleteAssetsBestEffort([intent.asset.id]);
     const message = `Upload to storage failed: HTTP ${uploadResp.status}`;
+    const cleanupError = await cleanupCatalogAssets([intent.asset.id]);
     onProgress?.({ stage: "failed", error: message });
-    throw new Error(message);
+    throw combineOperationAndCleanupError(message, cleanupError);
   }
 
   onProgress?.({ stage: "verifying" });
@@ -122,34 +132,21 @@ export async function uploadAndLinkImage(
   try {
     uploadedAsset = await catalogMediaApi.completeAssetUpload(intent.asset.id);
   } catch (error) {
-    await deleteAssetsBestEffort([intent.asset.id]);
-    onProgress?.({ stage: "failed", error: String(error) });
-    throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    const cleanupError = await cleanupCatalogAssets([intent.asset.id]);
+    onProgress?.({ stage: "failed", error: message });
+    throw combineOperationAndCleanupError(message, cleanupError);
   }
 
-  let link: CatalogAssetLink | undefined;
-  try {
-    const links = await catalogMediaApi.fetchCatalogAssetLinks({
-      entityType: normalizedEntityType,
-      entityId,
-    });
-    link = links.find((item) => item.assetId === uploadedAsset.id);
-  } catch {
-    // Explicit linking below remains the canonical fallback.
-  }
-
-  try {
-    if (!link) {
-      link = await catalogMediaApi.linkCatalogAsset(uploadedAsset.id, {
-        entityType: normalizedEntityType,
-        entityId,
-        role,
-        isPrimary: false,
-      });
-    }
-  } catch (error) {
-    await deleteAssetsBestEffort([uploadedAsset.id]);
-    throw error;
+  const links = await catalogMediaApi.fetchCatalogAssetLinks({
+    entityType: normalizedEntityType,
+    entityId,
+  });
+  const link = links.find((item) => item.assetId === uploadedAsset.id);
+  if (!link) {
+    const message = "The completed catalog asset has no canonical intended link.";
+    const cleanupError = await cleanupCatalogAssets([uploadedAsset.id]);
+    throw combineOperationAndCleanupError(message, cleanupError);
   }
 
   onProgress?.({ stage: "linked", assetId: uploadedAsset.id, linkId: link.id });
@@ -171,30 +168,29 @@ export interface UploadReelVideoOptions {
   readonly ctaLabelAr?: string;
   readonly ctaLabelEn?: string;
   readonly sourceStoreId?: string;
+  readonly idempotencyKey?: string;
   readonly onProgress?: (p: AssetUploadProgress) => void;
 }
 
-type GovernedReelSubmissionInput = CreateReelSubmissionInput & {
-  readonly posterAssetId?: string;
-  readonly subtitleAr?: string;
-  readonly subtitleEn?: string;
-  readonly highlightAr?: string;
-  readonly highlightEn?: string;
-  readonly ctaLabelAr?: string;
-  readonly ctaLabelEn?: string;
-};
-
-async function deleteAssetsBestEffort(assetIds: readonly string[]): Promise<void> {
+async function cleanupCatalogAssets(assetIds: readonly string[]): Promise<Error | null> {
+  const failures: string[] = [];
   await Promise.all(assetIds.map(async (assetId) => {
     try {
       await catalogMediaApi.deleteCatalogAsset(assetId);
-    } catch {
-      // Cleanup is best effort and must not hide the original failure.
+    } catch (error) {
+      failures.push(`${assetId}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }));
+  return failures.length > 0 ? new Error(failures.join("; ")) : null;
 }
 
-async function uploadReelPoster(file: UploadFileSource): Promise<string> {
+function combineOperationAndCleanupError(message: string, cleanupError: Error | null): Error {
+  return cleanupError
+    ? new Error(`${message}; catalog cleanup failed: ${cleanupError.message}`)
+    : new Error(message);
+}
+
+async function uploadReelPoster(file: UploadFileSource, idempotencyKey: string): Promise<string> {
   const validationError = validateImageFile(file);
   if (validationError) throw new Error(validationError);
 
@@ -205,7 +201,7 @@ async function uploadReelPoster(file: UploadFileSource): Promise<string> {
     altAr: "غلاف فيديو ريلز",
     altEn: "Reel poster",
     intendedRole: "reel_poster",
-  });
+  }, idempotencyKey);
 
   try {
     const uploadResp = await uploadBinaryToPresignedUrl(intent.uploadUrl, file.body, file.type);
@@ -215,12 +211,12 @@ async function uploadReelPoster(file: UploadFileSource): Promise<string> {
     await catalogMediaApi.completeAssetUpload(intent.asset.id);
     return intent.asset.id;
   } catch (error) {
-    await deleteAssetsBestEffort([intent.asset.id]);
-    throw error;
+    const cleanupError = await cleanupCatalogAssets([intent.asset.id]);
+    throw combineOperationAndCleanupError(error instanceof Error ? error.message : String(error), cleanupError);
   }
 }
 
-export async function uploadAndSubmitReel(opts: UploadReelVideoOptions): Promise<Reel> {
+export async function uploadAndSubmitReel(opts: UploadReelVideoOptions): Promise<GovernedReel> {
   const {
     file,
     posterFile,
@@ -236,8 +232,10 @@ export async function uploadAndSubmitReel(opts: UploadReelVideoOptions): Promise
     ctaLabelAr,
     ctaLabelEn,
     sourceStoreId,
+    idempotencyKey,
     onProgress,
   } = opts;
+  const workflowKey = idempotencyKey ?? corrId("catalog-reel-workflow");
 
   const validationError = validateVideoFile(file);
   if (validationError) {
@@ -260,7 +258,7 @@ export async function uploadAndSubmitReel(opts: UploadReelVideoOptions): Promise
       mimeType: "video/mp4",
       sizeBytes: file.size,
       intendedRole: "reel_video",
-    });
+    }, `${workflowKey}:video`);
     createdAssetIds.push(intent.asset.id);
 
     onProgress?.({ stage: "uploading", percent: 0 });
@@ -274,7 +272,7 @@ export async function uploadAndSubmitReel(opts: UploadReelVideoOptions): Promise
 
     let resolvedPosterAssetId = posterAssetId?.trim() || undefined;
     if (posterFile) {
-      resolvedPosterAssetId = await uploadReelPoster(posterFile);
+      resolvedPosterAssetId = await uploadReelPoster(posterFile, `${workflowKey}:poster`);
       createdAssetIds.push(resolvedPosterAssetId);
     }
 
@@ -294,41 +292,31 @@ export async function uploadAndSubmitReel(opts: UploadReelVideoOptions): Promise
       ...(sourceStoreId !== undefined ? { sourceStoreId } : {}),
     };
 
-    const reel = await catalogMediaApi.submitReel(input);
+    const reel = await submitGovernedReel(input, `${workflowKey}:submit`);
     onProgress?.({ stage: "linked", assetId: intent.asset.id });
     return reel;
   } catch (error) {
-    await deleteAssetsBestEffort(createdAssetIds);
     const message = error instanceof Error ? error.message : String(error);
+    const cleanupError = await cleanupCatalogAssets(createdAssetIds);
     onProgress?.({ stage: "failed", error: message });
-    throw error;
+    throw combineOperationAndCleanupError(message, cleanupError);
   }
 }
 
-export type GovernedReviewReelInput = ReviewReelInput & {
-  readonly posterAssetId?: string;
-  readonly titleAr?: string;
-  readonly titleEn?: string;
-  readonly subtitleAr?: string;
-  readonly subtitleEn?: string;
-  readonly highlightAr?: string;
-  readonly highlightEn?: string;
-  readonly ctaLabelAr?: string;
-  readonly ctaLabelEn?: string;
-};
+export type GovernedReviewReelInput = GovernedReelReviewInput;
 
-export async function reviewReelAsOperator(reelId: string, input: GovernedReviewReelInput): Promise<Reel> {
-  return catalogMediaApi.reviewReel(reelId, input);
+export async function reviewReelAsOperator(reelId: string, input: GovernedReviewReelInput): Promise<GovernedReel> {
+  return reviewGovernedReel(reelId, input);
 }
 
-export async function fetchPublicReels(limit?: number): Promise<readonly PublicReel[]> {
-  return catalogMediaApi.fetchPublicReels(limit);
+export async function fetchPublicReels(limit?: number): Promise<readonly GovernedPublicReel[]> {
+  return fetchGovernedPublicReels(limit);
 }
 
 export async function fetchOperatorReels(query?: {
   status?: string;
   limit?: number;
   offset?: number;
-}): Promise<readonly Reel[]> {
-  return catalogMediaApi.fetchReels(query);
+}): Promise<readonly GovernedReel[]> {
+  return fetchGovernedOperatorReels(query);
 }

@@ -80,11 +80,16 @@ ORDER BY service, surface, action`, service, surface)
 // supplied canonical bindings. It validates all permissions before mutating
 // anything, conditionally advances the role version, and records the complete
 // result in the durable idempotency ledger.
-func (e *PermissionEnforcer) UpsertRoleDefinitionWithOptions(ctx context.Context, name, description string, active bool, expectedVersion int, permissions []Permission, idempotencyKey, caller string) (RoleDefinition, error) {
+func (e *PermissionEnforcer) UpsertRoleDefinitionWithOptions(ctx context.Context, operatorContextID, name, description string, active bool, expectedVersion int, permissions []Permission, idempotencyKey, caller string) (RoleDefinition, error) {
+	var contextErr error
+	operatorContextID, contextErr = requireOperatorContextID(operatorContextID)
 	name = strings.TrimSpace(name)
 	description = strings.TrimSpace(description)
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	caller = strings.TrimSpace(caller)
+	if contextErr != nil {
+		return RoleDefinition{}, contextErr
+	}
 	if caller == "" {
 		caller = "dsh"
 	}
@@ -118,7 +123,7 @@ func (e *PermissionEnforcer) UpsertRoleDefinitionWithOptions(ctx context.Context
 		seen[key] = struct{}{}
 		normalized = append(normalized, permission)
 	}
-	requestHash := roleDefinitionRequestHash(name, description, active, expectedVersion, normalized)
+	requestHash := roleDefinitionRequestHash(operatorContextID, name, description, active, expectedVersion, normalized)
 	tx, err := e.db.BeginTx(ctx, nil)
 	if err != nil {
 		return RoleDefinition{}, err
@@ -128,10 +133,10 @@ func (e *PermissionEnforcer) UpsertRoleDefinitionWithOptions(ctx context.Context
 	var ledgerHash, ledgerStatus string
 	var ledgerResult []byte
 	err = tx.QueryRowContext(ctx, `
-INSERT INTO identity_rbac_operation_ledger(caller, operation, idempotency_key, request_hash, status)
-VALUES ($1, 'role-definition-upsert', $2, $3, 'processing')
-ON CONFLICT (caller, operation, idempotency_key) DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
-RETURNING request_hash, status, result`, caller, idempotencyKey, requestHash).Scan(&ledgerHash, &ledgerStatus, &ledgerResult)
+INSERT INTO identity_rbac_operation_ledger(operator_context_id, caller, operation, idempotency_key, request_hash, status)
+VALUES ($1, $2, 'role-definition-upsert', $3, $4, 'processing')
+ON CONFLICT (operator_context_id, caller, operation, idempotency_key) DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
+RETURNING request_hash, status, result`, operatorContextID, caller, idempotencyKey, requestHash).Scan(&ledgerHash, &ledgerStatus, &ledgerResult)
 	if err != nil {
 		return RoleDefinition{}, err
 	}
@@ -194,7 +199,7 @@ RETURNING request_hash, status, result`, caller, idempotencyKey, requestHash).Sc
 	if err != nil {
 		return RoleDefinition{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE identity_rbac_operation_ledger SET status = 'succeeded', result = $4::jsonb, updated_at = now() WHERE caller = $1 AND operation = 'role-definition-upsert' AND idempotency_key = $2 AND request_hash = $3`, caller, idempotencyKey, requestHash, string(encoded)); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE identity_rbac_operation_ledger SET status = 'succeeded', result = $4::jsonb, updated_at = now() WHERE operator_context_id = $1 AND caller = $2 AND operation = 'role-definition-upsert' AND idempotency_key = $3 AND request_hash = $5`, operatorContextID, caller, idempotencyKey, string(encoded), requestHash); err != nil {
 		return RoleDefinition{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -203,9 +208,9 @@ RETURNING request_hash, status, result`, caller, idempotencyKey, requestHash).Sc
 	return role, nil
 }
 
-func roleDefinitionRequestHash(name, description string, active bool, expectedVersion int, permissions []Permission) string {
+func roleDefinitionRequestHash(operatorContextID, name, description string, active bool, expectedVersion int, permissions []Permission) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "%s\x00%s\x00%t\x00%d\x00", name, description, active, expectedVersion)
+	fmt.Fprintf(h, "%s\x00%s\x00%s\x00%t\x00%d\x00", operatorContextID, name, description, active, expectedVersion)
 	for _, permission := range permissions {
 		fmt.Fprintf(h, "%s\x00", permissionSetKey(permission))
 	}

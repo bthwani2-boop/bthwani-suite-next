@@ -1,12 +1,11 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import {
   createDshHttpClient,
-  corrId,
   type DshRequestOptions,
 } from "../_kernel/dsh-http-request";
 import type {
-  CancelOrderInput,
   CancelOrderResponse,
+  CanonicalCancelOrderInput,
   DshOrderCancellation,
   OrderCancellationSurface,
 } from "./order-cancellation.types";
@@ -56,15 +55,19 @@ export async function fetchOrderCancellation(
 export async function cancelOrder(
   surface: OrderCancellationSurface,
   orderId: string,
-  input: CancelOrderInput,
+  input: CanonicalCancelOrderInput,
   token?: string,
 ): Promise<CancelOrderResponse> {
-  const commandId = input.commandId?.trim() || corrId(`${surface}-order-cancel`);
+  const commandId = input.commandId.trim();
+  const correlationId = input.correlationId.trim();
+  if (!commandId || !correlationId) {
+    throw { kind: "invalid_request", message: "commandId and correlationId are required" };
+  }
   const body = {
     reasonCode: input.reasonCode,
     reasonNote: input.reasonNote?.trim() ?? "",
     commandId,
-    correlationId: input.correlationId?.trim() || commandId,
+    correlationId,
     ...(input.ticketReference?.trim() ? { ticketReference: input.ticketReference.trim() } : {}),
   };
   return request<CancelOrderResponse>(

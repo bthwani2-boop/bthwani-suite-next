@@ -110,7 +110,7 @@ test("mobile backend recovery bypasses stale prepared state and waits for canoni
         return;
       }
       if (request.url === "/workforce/readiness" || request.url === "/wlt/readiness") {
-        response.end(JSON.stringify({ status: "ready" }));
+        response.end(JSON.stringify({ status: "HEALTHY" }));
         return;
       }
       response.end(JSON.stringify({ status: "ready" }));

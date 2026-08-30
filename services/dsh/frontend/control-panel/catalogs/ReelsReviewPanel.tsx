@@ -23,11 +23,8 @@ import {
 } from "../../shared/catalog";
 
 interface ReelsReviewPanelProps {
-  readonly onReviewReel?: (
-    reelId: string,
-    decision: "approved" | "rejected" | "archived",
-    note: string,
-  ) => Promise<void>;
+  readonly canReview: boolean;
+  readonly canPreview: boolean;
 }
 
 type ReelDraft = {
@@ -78,7 +75,7 @@ function draftFromReel(reel: GovernedReel): ReelDraft {
   };
 }
 
-export function ReelsReviewPanel(_props: ReelsReviewPanelProps) {
+export function ReelsReviewPanel({ canReview, canPreview }: ReelsReviewPanelProps) {
   const [reels, setReels] = useState<readonly GovernedReel[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("pending_review");
@@ -128,7 +125,7 @@ export function ReelsReviewPanel(_props: ReelsReviewPanelProps) {
     let posterUrl: string | null = null;
     setPreviewVideoUrl(null);
     setPreviewPosterUrl(null);
-    if (!selectedReel) return undefined;
+    if (!selectedReel || !canPreview) return undefined;
 
     setPreviewLoading(true);
     setError(null);
@@ -157,7 +154,7 @@ export function ReelsReviewPanel(_props: ReelsReviewPanelProps) {
       if (videoUrl) URL.revokeObjectURL(videoUrl);
       if (posterUrl) URL.revokeObjectURL(posterUrl);
     };
-  }, [selectedReel]);
+  }, [canPreview, selectedReel]);
 
   const updateDraft = (reelId: string, patch: Partial<ReelDraft>) => {
     setDrafts((current) => ({
@@ -170,6 +167,7 @@ export function ReelsReviewPanel(_props: ReelsReviewPanelProps) {
     reel: GovernedReel,
     decision: "approved" | "rejected" | "archived",
   ) => {
+    if (!canReview) return;
     const draft = drafts[reel.id] ?? draftFromReel(reel);
     if (decision === "approved" && !draft.titleAr.trim() && !draft.titleEn.trim()) {
       setError("يجب تثبيت عنوان عربي أو إنجليزي قبل الاعتماد.");
@@ -255,18 +253,20 @@ export function ReelsReviewPanel(_props: ReelsReviewPanelProps) {
               const busy = actionLoading === selectedReel.id;
               return (
                 <>
-                  <CpTextInput value={draft.titleAr} onChange={(value) => updateDraft(selectedReel.id, { titleAr: value })} placeholder="العنوان العربي" aria-label="العنوان العربي" />
-                  <CpTextInput value={draft.titleEn} onChange={(value) => updateDraft(selectedReel.id, { titleEn: value })} placeholder="العنوان الإنجليزي" aria-label="العنوان الإنجليزي" />
-                  <CpTextInput value={draft.subtitleAr} onChange={(value) => updateDraft(selectedReel.id, { subtitleAr: value })} placeholder="الوصف العربي" aria-label="الوصف العربي" />
-                  <CpTextInput value={draft.highlightAr} onChange={(value) => updateDraft(selectedReel.id, { highlightAr: value })} placeholder="سطر الإبراز" aria-label="سطر الإبراز" />
-                  <CpTextInput value={draft.ctaLabelAr} onChange={(value) => updateDraft(selectedReel.id, { ctaLabelAr: value })} placeholder="نص CTA العربي" aria-label="نص CTA العربي" />
-                  <CpTextInput value={draft.targetId} onChange={(value) => updateDraft(selectedReel.id, { targetId: value })} placeholder="معرف الهدف" aria-label="معرف هدف الريل" />
-                  <CpTextInput value={draft.sortOrder} onChange={(value) => updateDraft(selectedReel.id, { sortOrder: value })} placeholder="الترتيب" aria-label="ترتيب الريل" />
-                  <CpTextInput value={draft.reviewNote} onChange={(value) => updateDraft(selectedReel.id, { reviewNote: value })} placeholder="ملاحظة المراجعة أو سبب الرفض" aria-label="ملاحظة المراجعة" />
+                  <CpTextInput disabled={!canReview} value={draft.titleAr} onChange={(value) => updateDraft(selectedReel.id, { titleAr: value })} placeholder="العنوان العربي" aria-label="العنوان العربي" />
+                  <CpTextInput disabled={!canReview} value={draft.titleEn} onChange={(value) => updateDraft(selectedReel.id, { titleEn: value })} placeholder="العنوان الإنجليزي" aria-label="العنوان الإنجليزي" />
+                  <CpTextInput disabled={!canReview} value={draft.subtitleAr} onChange={(value) => updateDraft(selectedReel.id, { subtitleAr: value })} placeholder="الوصف العربي" aria-label="الوصف العربي" />
+                  <CpTextInput disabled={!canReview} value={draft.highlightAr} onChange={(value) => updateDraft(selectedReel.id, { highlightAr: value })} placeholder="سطر الإبراز" aria-label="سطر الإبراز" />
+                  <CpTextInput disabled={!canReview} value={draft.ctaLabelAr} onChange={(value) => updateDraft(selectedReel.id, { ctaLabelAr: value })} placeholder="نص CTA العربي" aria-label="نص CTA العربي" />
+                  <CpTextInput disabled={!canReview} value={draft.targetId} onChange={(value) => updateDraft(selectedReel.id, { targetId: value })} placeholder="معرف الهدف" aria-label="معرف هدف الريل" />
+                  <CpTextInput disabled={!canReview} value={draft.sortOrder} onChange={(value) => updateDraft(selectedReel.id, { sortOrder: value })} placeholder="الترتيب" aria-label="ترتيب الريل" />
+                  <CpTextInput disabled={!canReview} value={draft.reviewNote} onChange={(value) => updateDraft(selectedReel.id, { reviewNote: value })} placeholder="ملاحظة المراجعة أو سبب الرفض" aria-label="ملاحظة المراجعة" />
                   <div style={styles.actions}>
-                    <CpButton disabled={busy || selectedReel.status !== "pending_review"} onClick={() => void handleReview(selectedReel, "approved")}>اعتماد ونشر مؤهل</CpButton>
-                    <CpButton disabled={busy || selectedReel.status !== "pending_review"} onClick={() => void handleReview(selectedReel, "rejected")}>رفض مع السبب</CpButton>
-                    <CpButton disabled={busy || selectedReel.status !== "approved"} onClick={() => void handleReview(selectedReel, "archived")}>أرشفة</CpButton>
+                    {canReview ? <>
+                      <CpButton disabled={busy || selectedReel.status !== "pending_review"} onClick={() => void handleReview(selectedReel, "approved")}>اعتماد ونشر مؤهل</CpButton>
+                      <CpButton disabled={busy || selectedReel.status !== "pending_review"} onClick={() => void handleReview(selectedReel, "rejected")}>رفض مع السبب</CpButton>
+                      <CpButton disabled={busy || selectedReel.status !== "approved"} onClick={() => void handleReview(selectedReel, "archived")}>أرشفة</CpButton>
+                    </> : <CpMutedInline tight>قراءة فقط — قرارات الريلز تتطلب catalog.media.review.</CpMutedInline>}
                     <CpButton disabled={busy} onClick={() => setSelectedReelId(null)}>إغلاق المعاينة</CpButton>
                   </div>
                 </>

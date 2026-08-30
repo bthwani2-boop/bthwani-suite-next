@@ -13,15 +13,15 @@ export type ControlPanelTopBarProps = {
   readonly actions?: ReactNode;
   readonly userMenu?: ReactNode;
   readonly dir?: "ltr" | "rtl";
-  /** Real backend health signal. Omit to hide the status indicator entirely
-   * rather than defaulting to a fake "active" claim. */
+  /** Real DSH backend health signal. Omit to hide the status indicator entirely
+   * rather than defaulting to a fake active/capability-wide claim. */
   readonly serviceStatus?: ControlPanelServiceStatus;
 };
 
 const SERVICE_STATUS_META: Record<ControlPanelServiceStatus, { readonly color: string; readonly label: string }> = {
-  checking: { color: colorRoles.textMuted, label: "جارٍ التحقق" },
-  healthy: { color: colorRoles.success, label: "متصل" },
-  unhealthy: { color: colorRoles.danger, label: "غير متصل" },
+  checking: { color: colorRoles.textMuted, label: "جارٍ فحص DSH" },
+  healthy: { color: colorRoles.success, label: "DSH متصل" },
+  unhealthy: { color: colorRoles.danger, label: "DSH غير متصل" },
 };
 
 export function ControlPanelTopBar({
@@ -78,7 +78,7 @@ export function ControlPanelTopBar({
         </>
       )}
 
-      {/* Real backend health indicator — hidden entirely if no status was supplied */}
+      {/* Real DSH backend health indicator — hidden entirely if no status was supplied */}
       {serviceStatus != null && (
         <div style={styles.statusWrapper}>
           <span

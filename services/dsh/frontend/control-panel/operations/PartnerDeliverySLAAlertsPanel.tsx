@@ -20,8 +20,10 @@ const LEG_LABELS: Record<string, string> = {
 /** Persisted, acknowledgeable SLA breach alerts for partner_delivery tasks. */
 export function PartnerDeliverySLAAlertsPanel({
   onOpenOrder,
+  canManage,
 }: {
   readonly onOpenOrder: (orderId: string) => void;
+  readonly canManage: boolean;
 }) {
   const [alerts, setAlerts] = React.useState<readonly DshDeliverySLAAlert[]>([]);
   const [loaded, setLoaded] = React.useState(false);
@@ -77,7 +79,9 @@ export function PartnerDeliverySLAAlertsPanel({
           <Text role="label">تنبيهات SLA — توصيل المتجر</Text>
           <Text role="bodySm" tone="muted">تُحفظ التنبيهات في DSH وتغلق تلقائيًا عند زوال سببها.</Text>
         </Box>
-        <Button label={busy ? 'جارٍ فحص SLA…' : 'فحص SLA الآن'} tone="secondary" disabled={busy} onPress={() => void scan()} />
+        {canManage ? (
+          <Button label={busy ? 'جارٍ فحص SLA…' : 'فحص SLA الآن'} tone="secondary" disabled={busy} onPress={() => void scan()} />
+        ) : <Text role="caption" tone="muted">قراءة فقط — فحص وإقرار التنبيهات يتطلبان صلاحية إدارة توصيل الشريك.</Text>}
       </Box>
 
       {!loaded ? <StateView stateId="loading" title="جارٍ تحميل تنبيهات SLA" /> : null}
@@ -104,7 +108,7 @@ export function PartnerDeliverySLAAlertsPanel({
                 <Text role="caption" tone="muted">{`المتجر: ${alert.storeId} · اكتشف: ${new Date(alert.detectedAt).toLocaleString('ar-YE')}`}</Text>
                 <Box layoutDirection="row" gap={2}>
                   <Button label="فتح الطلب" tone="secondary" disabled={busy} onPress={() => onOpenOrder(alert.orderId)} />
-                  {alert.status === 'open' ? (
+                  {alert.status === 'open' && canManage ? (
                     <Button label={busy ? 'جارٍ الإقرار…' : 'إقرار المراجعة'} tone="brand" disabled={busy} onPress={() => void acknowledge(alert)} />
                   ) : null}
                 </Box>

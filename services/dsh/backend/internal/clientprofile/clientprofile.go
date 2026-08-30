@@ -1,15 +1,22 @@
 package clientprofile
 
 import (
+	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 )
 
 var (
-	ErrNotFound = errors.New("client profile not found")
-	ErrConflict = errors.New("client profile version conflict")
+	ErrNotFound            = errors.New("client profile not found")
+	ErrConflict            = errors.New("client profile version conflict")
+	ErrInvalid             = errors.New("client profile mutation is invalid")
+	ErrIdempotencyConflict = errors.New("client profile idempotency conflict")
 )
 
 type ClientProfile struct {
@@ -37,143 +44,224 @@ type ClientProfileConsentsInput struct {
 	ExpectedVersion       int  `json:"expectedVersion"`
 }
 
-func GetClientProfile(db *sql.DB, clientID string) (ClientProfile, error) {
-	query := `
-		SELECT client_id, locale, currency_preference, marketing_consent_email, marketing_consent_sms, marketing_consent_push, version, created_at, updated_at
-		FROM dsh_client_profiles
-		WHERE client_id = $1
-	`
-	var p ClientProfile
-	err := db.QueryRow(query, clientID).Scan(
-		&p.ClientID, &p.Locale, &p.CurrencyPreference,
-		&p.MarketingConsentEmail, &p.MarketingConsentSms, &p.MarketingConsentPush,
-		&p.Version, &p.CreatedAt, &p.UpdatedAt,
-	)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			// Profile might not exist yet
-			return ClientProfile{}, ErrNotFound
-		}
-		return ClientProfile{}, err
-	}
-	return p, nil
+type MutationContext struct {
+	IdempotencyKey string
+	CorrelationID  string
 }
 
-func UpsertClientProfilePreferences(db *sql.DB, clientID string, input ClientProfilePreferencesInput) (ClientProfile, error) {
-	tx, err := db.Begin()
+type mutationReceipt struct {
+	Operation          string
+	RequestFingerprint string
+	ResultVersion      int
+}
+
+const profileColumns = `client_id, locale, currency_preference, marketing_consent_email,
+	marketing_consent_sms, marketing_consent_push, version, created_at, updated_at`
+
+func GetClientProfile(ctx context.Context, db *sql.DB, clientID string) (ClientProfile, error) {
+	clientID = strings.TrimSpace(clientID)
+	if clientID == "" {
+		return ClientProfile{}, ErrInvalid
+	}
+	return scanProfile(db.QueryRowContext(ctx, `SELECT `+profileColumns+`
+		FROM dsh_client_profiles WHERE client_id = $1`, clientID))
+}
+
+func UpsertClientProfilePreferences(
+	ctx context.Context,
+	db *sql.DB,
+	clientID string,
+	input ClientProfilePreferencesInput,
+	mutation MutationContext,
+) (ClientProfile, error) {
+	fingerprint, err := mutationFingerprint("preferences", input)
 	if err != nil {
 		return ClientProfile{}, err
 	}
-	defer tx.Rollback()
-
-	var currentVersion int
-	err = tx.QueryRow(`SELECT version FROM dsh_client_profiles WHERE client_id = $1 FOR UPDATE`, clientID).Scan(&currentVersion)
-	if err != nil && err != sql.ErrNoRows {
-		return ClientProfile{}, err
-	}
-
-	isNew := err == sql.ErrNoRows
-	if !isNew && input.ExpectedVersion > 0 && currentVersion != input.ExpectedVersion {
-		return ClientProfile{}, ErrConflict
-	}
-
-	var p ClientProfile
-	if isNew {
-		err = tx.QueryRow(`
+	return upsert(ctx, db, clientID, "preferences", input.ExpectedVersion, fingerprint, mutation, func(tx *sql.Tx, profileExists bool) (ClientProfile, error) {
+		if profileExists {
+			return scanProfile(tx.QueryRowContext(ctx, `
+				UPDATE dsh_client_profiles
+				SET locale = $2, currency_preference = $3, version = version + 1, updated_at = NOW()
+				WHERE client_id = $1
+				RETURNING `+profileColumns,
+				clientID, input.Locale, input.CurrencyPreference))
+		}
+		return scanProfile(tx.QueryRowContext(ctx, `
 			INSERT INTO dsh_client_profiles (client_id, locale, currency_preference, version, created_at, updated_at)
 			VALUES ($1, $2, $3, 1, NOW(), NOW())
-			RETURNING client_id, locale, currency_preference, marketing_consent_email, marketing_consent_sms, marketing_consent_push, version, created_at, updated_at
-		`, clientID, input.Locale, input.CurrencyPreference).Scan(
-			&p.ClientID, &p.Locale, &p.CurrencyPreference,
-			&p.MarketingConsentEmail, &p.MarketingConsentSms, &p.MarketingConsentPush,
-			&p.Version, &p.CreatedAt, &p.UpdatedAt,
-		)
-		if err == nil {
-			logEvent(tx, clientID, "created", 1, input)
-		}
-	} else {
-		err = tx.QueryRow(`
-			UPDATE dsh_client_profiles
-			SET locale = $2, currency_preference = $3, version = version + 1, updated_at = NOW()
-			WHERE client_id = $1
-			RETURNING client_id, locale, currency_preference, marketing_consent_email, marketing_consent_sms, marketing_consent_push, version, created_at, updated_at
-		`, clientID, input.Locale, input.CurrencyPreference).Scan(
-			&p.ClientID, &p.Locale, &p.CurrencyPreference,
-			&p.MarketingConsentEmail, &p.MarketingConsentSms, &p.MarketingConsentPush,
-			&p.Version, &p.CreatedAt, &p.UpdatedAt,
-		)
-		if err == nil {
-			logEvent(tx, clientID, "preferences_updated", p.Version, input)
-		}
-	}
+			RETURNING `+profileColumns,
+			clientID, input.Locale, input.CurrencyPreference))
+	}, input)
+}
+
+func UpsertClientProfileConsents(
+	ctx context.Context,
+	db *sql.DB,
+	clientID string,
+	input ClientProfileConsentsInput,
+	mutation MutationContext,
+) (ClientProfile, error) {
+	fingerprint, err := mutationFingerprint("consents", input)
 	if err != nil {
 		return ClientProfile{}, err
 	}
-
-	if err := tx.Commit(); err != nil {
-		return ClientProfile{}, err
-	}
-	return p, nil
+	return upsert(ctx, db, clientID, "consents", input.ExpectedVersion, fingerprint, mutation, func(tx *sql.Tx, profileExists bool) (ClientProfile, error) {
+		if profileExists {
+			return scanProfile(tx.QueryRowContext(ctx, `
+				UPDATE dsh_client_profiles
+				SET marketing_consent_email = $2, marketing_consent_sms = $3,
+					marketing_consent_push = $4, version = version + 1, updated_at = NOW()
+				WHERE client_id = $1
+				RETURNING `+profileColumns,
+				clientID, input.MarketingConsentEmail, input.MarketingConsentSms, input.MarketingConsentPush))
+		}
+		return scanProfile(tx.QueryRowContext(ctx, `
+			INSERT INTO dsh_client_profiles (
+				client_id, marketing_consent_email, marketing_consent_sms, marketing_consent_push,
+				version, created_at, updated_at
+			) VALUES ($1, $2, $3, $4, 1, NOW(), NOW())
+			RETURNING `+profileColumns,
+			clientID, input.MarketingConsentEmail, input.MarketingConsentSms, input.MarketingConsentPush))
+	}, input)
 }
 
-func UpsertClientProfileConsents(db *sql.DB, clientID string, input ClientProfileConsentsInput) (ClientProfile, error) {
-	tx, err := db.Begin()
+func upsert(
+	ctx context.Context,
+	db *sql.DB,
+	clientID string,
+	operation string,
+	expectedVersion int,
+	fingerprint string,
+	mutation MutationContext,
+	apply func(*sql.Tx, bool) (ClientProfile, error),
+	input any,
+) (ClientProfile, error) {
+	clientID = strings.TrimSpace(clientID)
+	mutation.IdempotencyKey = strings.TrimSpace(mutation.IdempotencyKey)
+	mutation.CorrelationID = strings.TrimSpace(mutation.CorrelationID)
+	if clientID == "" || len(mutation.IdempotencyKey) < 8 || len(mutation.IdempotencyKey) > 200 ||
+		len(mutation.CorrelationID) < 8 || len(mutation.CorrelationID) > 200 || expectedVersion < 0 {
+		return ClientProfile{}, ErrInvalid
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return ClientProfile{}, err
 	}
 	defer tx.Rollback()
-
-	var currentVersion int
-	err = tx.QueryRow(`SELECT version FROM dsh_client_profiles WHERE client_id = $1 FOR UPDATE`, clientID).Scan(&currentVersion)
-	if err != nil && err != sql.ErrNoRows {
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "dsh-client-profile:"+clientID); err != nil {
 		return ClientProfile{}, err
 	}
 
-	isNew := err == sql.ErrNoRows
-	if !isNew && input.ExpectedVersion > 0 && currentVersion != input.ExpectedVersion {
-		return ClientProfile{}, ErrConflict
-	}
-
-	var p ClientProfile
-	if isNew {
-		err = tx.QueryRow(`
-			INSERT INTO dsh_client_profiles (client_id, marketing_consent_email, marketing_consent_sms, marketing_consent_push, version, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, 1, NOW(), NOW())
-			RETURNING client_id, locale, currency_preference, marketing_consent_email, marketing_consent_sms, marketing_consent_push, version, created_at, updated_at
-		`, clientID, input.MarketingConsentEmail, input.MarketingConsentSms, input.MarketingConsentPush).Scan(
-			&p.ClientID, &p.Locale, &p.CurrencyPreference,
-			&p.MarketingConsentEmail, &p.MarketingConsentSms, &p.MarketingConsentPush,
-			&p.Version, &p.CreatedAt, &p.UpdatedAt,
-		)
-		if err == nil {
-			logEvent(tx, clientID, "created", 1, input)
-		}
-	} else {
-		err = tx.QueryRow(`
-			UPDATE dsh_client_profiles
-			SET marketing_consent_email = $2, marketing_consent_sms = $3, marketing_consent_push = $4, version = version + 1, updated_at = NOW()
-			WHERE client_id = $1
-			RETURNING client_id, locale, currency_preference, marketing_consent_email, marketing_consent_sms, marketing_consent_push, version, created_at, updated_at
-		`, clientID, input.MarketingConsentEmail, input.MarketingConsentSms, input.MarketingConsentPush).Scan(
-			&p.ClientID, &p.Locale, &p.CurrencyPreference,
-			&p.MarketingConsentEmail, &p.MarketingConsentSms, &p.MarketingConsentPush,
-			&p.Version, &p.CreatedAt, &p.UpdatedAt,
-		)
-		if err == nil {
-			logEvent(tx, clientID, "consents_updated", p.Version, input)
-		}
-	}
+	receipt, found, err := loadReceipt(ctx, tx, clientID, mutation.IdempotencyKey)
 	if err != nil {
 		return ClientProfile{}, err
 	}
+	if found {
+		if receipt.Operation != operation || receipt.RequestFingerprint != fingerprint {
+			return ClientProfile{}, ErrIdempotencyConflict
+		}
+		profile, err := scanProfile(tx.QueryRowContext(ctx, `SELECT `+profileColumns+`
+			FROM dsh_client_profiles WHERE client_id = $1`, clientID))
+		if err != nil {
+			return ClientProfile{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return ClientProfile{}, err
+		}
+		return profile, nil
+	}
 
+	var currentVersion int
+	err = tx.QueryRowContext(ctx, `SELECT version FROM dsh_client_profiles WHERE client_id = $1 FOR UPDATE`, clientID).Scan(&currentVersion)
+	profileExists := err == nil
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return ClientProfile{}, err
+	}
+	if profileExists && expectedVersion > 0 && currentVersion != expectedVersion {
+		return ClientProfile{}, ErrConflict
+	}
+
+	profile, err := apply(tx, profileExists)
+	if err != nil {
+		return ClientProfile{}, err
+	}
+	if err := logEvent(ctx, tx, clientID, eventAction(operation, profileExists), profile.Version, mutation.CorrelationID, input); err != nil {
+		return ClientProfile{}, err
+	}
+	if err := saveReceipt(ctx, tx, clientID, mutation, operation, fingerprint, profile.Version); err != nil {
+		return ClientProfile{}, err
+	}
 	if err := tx.Commit(); err != nil {
 		return ClientProfile{}, err
 	}
-	return p, nil
+	return profile, nil
 }
 
-func logEvent(tx *sql.Tx, clientID, action string, version int, input any) {
-	meta, _ := json.Marshal(input)
-	tx.Exec(`INSERT INTO dsh_client_profile_events (client_id, action, version, metadata) VALUES ($1, $2, $3, $4)`, clientID, action, version, meta)
+func scanProfile(scanner interface{ Scan(...any) error }) (ClientProfile, error) {
+	var profile ClientProfile
+	err := scanner.Scan(
+		&profile.ClientID, &profile.Locale, &profile.CurrencyPreference,
+		&profile.MarketingConsentEmail, &profile.MarketingConsentSms, &profile.MarketingConsentPush,
+		&profile.Version, &profile.CreatedAt, &profile.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ClientProfile{}, ErrNotFound
+	}
+	return profile, err
+}
+
+func loadReceipt(ctx context.Context, tx *sql.Tx, clientID, idempotencyKey string) (mutationReceipt, bool, error) {
+	var receipt mutationReceipt
+	err := tx.QueryRowContext(ctx, `SELECT operation, request_fingerprint, result_version
+		FROM dsh_client_profile_mutation_receipts
+		WHERE client_id = $1 AND idempotency_key = $2
+		FOR UPDATE`, clientID, idempotencyKey).Scan(
+		&receipt.Operation, &receipt.RequestFingerprint, &receipt.ResultVersion)
+	if errors.Is(err, sql.ErrNoRows) {
+		return mutationReceipt{}, false, nil
+	}
+	if err != nil {
+		return mutationReceipt{}, false, err
+	}
+	return receipt, true, nil
+}
+
+func saveReceipt(ctx context.Context, tx *sql.Tx, clientID string, mutation MutationContext, operation, fingerprint string, resultVersion int) error {
+	_, err := tx.ExecContext(ctx, `INSERT INTO dsh_client_profile_mutation_receipts
+		(client_id, idempotency_key, operation, request_fingerprint, correlation_id, result_version)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		clientID, mutation.IdempotencyKey, operation, fingerprint, mutation.CorrelationID, resultVersion)
+	return err
+}
+
+func mutationFingerprint(operation string, input any) (string, error) {
+	encoded, err := json.Marshal(struct {
+		Operation string `json:"operation"`
+		Input     any    `json:"input"`
+	}{operation, input})
+	if err != nil {
+		return "", fmt.Errorf("marshal client profile mutation fingerprint: %w", err)
+	}
+	digest := sha256.Sum256(encoded)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func eventAction(operation string, profileExists bool) string {
+	if !profileExists {
+		return "created"
+	}
+	return operation + "_updated"
+}
+
+func logEvent(ctx context.Context, tx *sql.Tx, clientID, action string, version int, correlationID string, input any) error {
+	meta, err := json.Marshal(input)
+	if err != nil {
+		return fmt.Errorf("marshal client profile event: %w", err)
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO dsh_client_profile_events
+		(client_id, action, version, correlation_id, metadata) VALUES ($1, $2, $3, $4, $5)`,
+		clientID, action, version, correlationID, meta)
+	return err
 }

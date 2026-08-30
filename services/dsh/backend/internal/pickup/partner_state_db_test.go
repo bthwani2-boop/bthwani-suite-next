@@ -18,7 +18,7 @@ func TestResolvePartnerStageResumesAndCancelsDBIntegration(t *testing.T) {
 		t.Fatalf("expected ready after issue, got stage=%q err=%v", stage, err)
 	}
 
-	if err := service.NotifyCustomer(ctx, fixture.orderID, "partner-1", "partner", "stage-notify"); err != nil {
+	if err := service.NotifyCustomer(ctx, fixture.operatorContextID, fixture.orderID, "partner-1", "partner", "stage-notify"); err != nil {
 		t.Fatalf("notify customer: %v", err)
 	}
 	stage, err = ResolvePartnerStage(db, fixture.orderID, "ready_for_pickup", session)
@@ -26,7 +26,7 @@ func TestResolvePartnerStageResumesAndCancelsDBIntegration(t *testing.T) {
 		t.Fatalf("expected notified, got stage=%q err=%v", stage, err)
 	}
 
-	if err := service.CustomerArrived(ctx, fixture.orderID, "partner-1", "partner", "stage-arrived"); err != nil {
+	if err := service.CustomerArrived(ctx, fixture.operatorContextID, fixture.orderID, "partner-1", "partner", "stage-arrived"); err != nil {
 		t.Fatalf("customer arrived: %v", err)
 	}
 	stage, err = ResolvePartnerStage(db, fixture.orderID, "ready_for_pickup", session)

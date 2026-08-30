@@ -48,11 +48,25 @@ test("client native wiring leaves inbound URL navigation to Expo Router", () => 
   assert.match(platform, /linking: Linking/);
 });
 
+test("client platform capabilities cross the runtime boundary through the DSH adapter", () => {
+  const surface = assertMarkers(
+    "services/dsh/frontend/app-client/DshClientSurface.tsx",
+    ["useDshClientPlatform", "selectionHaptic", "openExternalUrl"],
+  );
+  assert.doesNotMatch(surface, /apps\/app-client\/runtime/);
+  const runtime = assertMarkers(
+    "apps/app-client/runtime/src/App.tsx",
+    ["DshClientPlatformProvider", "RemoteImage: ClientRemoteImage", "selectionHaptic: performClientSelectionHaptic", "shareTextDocument: shareClientTextDocument"],
+  );
+  assert.match(runtime, /<DshClientPlatformProvider platform=\{clientPlatform\}>/);
+});
+
 test("client discovery exposes real search, cached images, and a persistent donor-style reels launcher", () => {
   const discovery = assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx",
     [
-      "createClientEphemeralId",
+      "useDshClientPlatform",
+      "createEphemeralId",
       "searchQuery",
       "normalizedQuery",
       "setReels([])",
@@ -63,6 +77,11 @@ test("client discovery exposes real search, cached images, and a persistent dono
       "openCategoryDestination",
       'category.destinationType === "special_request"',
       'category.destinationType === "catalog_domain"',
+      "discoveryRequestSequence",
+      "queryError",
+      "تعذر تحديث النتائج",
+      "إعادة المحاولة",
+      "onMarketingAction?.(\"unsupported\", target)",
     ],
   );
   assert.equal(discovery.includes("Math.random("), false);
@@ -102,6 +121,10 @@ test("client discovery exposes real search, cached images, and a persistent dono
   assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx",
     ["promo.actionTarget.trim().length > 0", "hasQuickActions", 'label="فيديو"', "isVideo"],
+  );
+  assertMarkers(
+    "services/dsh/frontend/app-client/home-discovery/HomeHeroBannerSection.tsx",
+    ["banner.actionTarget.trim().length > 0"],
   );
 });
 
@@ -183,8 +206,167 @@ test("client order and support routes remain navigable and failure-safe", () => 
   );
   assertMarkers(
     "services/dsh/frontend/app-client/DshClientSurface.tsx",
-    ["openClientExternalUrl", "onOpenPickup={openPickupSession}", "onOpenOrderSupport={openOrderSupport}", "performClientSelectionHaptic"],
+    ["openExternalUrl", "onOpenPickup={openPickupSession}", "onOpenOrderSupport={openOrderSupport}", "selectionHaptic", "هذا الإجراء غير مدعوم", "هذا الإجراء التسويقي غير مدعوم", "case \"profile\":\n      content"],
   );
+});
+
+test("client order ratings preserve one durable mutation through canonical readback", () => {
+  const attempt = assertMarkers(
+    "services/dsh/frontend/shared/provider-ratings/client-order-rating-attempt.ts",
+    ["client-order-ratings-submit", "resolveMutationIdentityScope", "getOrCreateDurableMutationAttempt", "purgeExactDurableMutationAttempt"],
+  );
+  assert.match(attempt, /entityId: `order:\$\{normalizedOrderId\}`/);
+  const gate = assertMarkers(
+    "services/dsh/frontend/app-client/ratings/ClientOrderRatingGate.tsx",
+    ["getOrCreateClientOrderRatingAttempt", "fetchClientOrderRatingPrompt", "clearClientOrderRatingAttempt", "promptLoadError", "إعادة التحقق من التقييمات"],
+  );
+  assert.match(gate, /submitClientOrderRatings\(prompt\.orderId, input, attempt\.context\)/);
+  const api = assertMarkers(
+    "services/dsh/frontend/shared/provider-ratings/provider-ratings.api.ts",
+    ["idempotencyKey: mutation.idempotencyKey", "canonical readback did not preserve the mutation identity"],
+  );
+  assert.match(api, /correlationId: mutation\.correlationId/);
+  const backend = assertMarkers(
+    "services/dsh/backend/internal/ratings/ratings.go",
+    ["dsh_provider_rating_mutation_receipts", "ErrIdempotencyConflict", "clientOrderRatingsFingerprint"],
+  );
+  assert.match(backend, /pg_advisory_xact_lock/);
+  assertMarkers(
+    "services/dsh/database/migrations/dsh-1060_provider_rating_mutation_idempotency.sql",
+    ["dsh_provider_rating_mutation_receipts", "uq_dsh_provider_rating_receipts_actor_key", "request_fingerprint"],
+  );
+});
+
+test("client order preparation never fabricates an operational readback", () => {
+  const controller = assertMarkers(
+    "services/dsh/frontend/shared/orders/use-client-order-controller.ts",
+    ["fetchOrderPreparation(orderId)", "fetchOrderPreparationIssues(orderId)", "Required preparation projections fail the whole read"],
+  );
+  assert.doesNotMatch(controller, /fallbackOrderPreparation/);
+  assert.doesNotMatch(controller, /fetchOrderPreparation\(orderId\)\.catch/);
+  assert.doesNotMatch(controller, /fetchOrderPreparationIssues\(orderId\)\.catch/);
+});
+
+test("client preparation decisions keep one actor-scoped command until readback", () => {
+  const attempt = assertMarkers(
+    "services/dsh/frontend/shared/orders/client-preparation-decision-attempt.ts",
+    ["client-preparation-decision", "resolveMutationIdentityScope", "getOrCreateDurableMutationAttempt", "purgeExactDurableMutationAttempt"],
+  );
+  assert.match(attempt, /entityId: `order:\$\{normalized\.orderId\}:issue:\$\{normalized\.issueId\}`/);
+  const panel = assertMarkers(
+    "services/dsh/frontend/app-client/orders/ClientPreparationDecisionPanel.tsx",
+    ["useIdentitySession", "getOrCreateClientPreparationDecisionAttempt", "clearClientPreparationDecisionAttempt", "await onUpdated()"],
+  );
+  assert.match(panel, /decideOrderPreparationIssue\(orderId, issue\.id, input, attempt\.context\)/);
+  const api = assertMarkers(
+    "services/dsh/frontend/shared/orders/orders.api.ts",
+    ["idempotencyKey: mutation.idempotencyKey", "canonical readback did not preserve the mutation"],
+  );
+  assert.match(api, /decideOrderPreparationIssue\(/);
+  const backend = assertMarkers(
+    "services/dsh/backend/internal/orders/preparation_issues.go",
+    ["clientPreparationDecisionFingerprint", "idempotency_key", "request_fingerprint", "ErrIdempotencyConflict"],
+  );
+  assert.match(backend, /customer_decision/);
+  assertMarkers(
+    "services/dsh/database/migrations/dsh-1061_preparation_decision_idempotency.sql",
+    ["idempotency_key", "request_fingerprint", "uq_dsh_preparation_issue_events_idempotency"],
+  );
+});
+
+test("client special-request saga commands survive restart through durable identity", () => {
+  const attempt = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/client-special-request-command-attempt.ts",
+    ["client-special-request-command", "resolveMutationIdentityScope", "getOrCreateDurableMutationAttempt", "purgeExactDurableMutationAttempt"],
+  );
+  assert.match(attempt, /entityId: `special-request:\$\{normalized\.requestId\}:\$\{normalized\.action\}`/);
+  const controller = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/use-special-requests-controller.tsx",
+    ["getOrCreateClientSpecialRequestCommandAttempt", "clearClientSpecialRequestCommandAttempt", "fetchClientSpecialRequest"],
+  );
+  assert.match(controller, /cancelSpecialRequest\(id, expectedVersion, attempt\.context\)/);
+  assert.match(controller, /approveSpecialRequestQuote\(id, expectedVersion, attempt\.context\)/);
+  const api = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/special-requests.api.ts",
+    ["idempotencyKey: mutation.idempotencyKey", "correlationId: mutation.correlationId"],
+  );
+  assert.match(api, /Promise<void>/);
+  const contract = assertMarkers(
+    "services/dsh/contracts/paths/misc.paths.yaml",
+    ["cancelDshClientSpecialRequest", "approveDshSpecialRequestQuote", "DshSpecialRequestSagaResponse", "IdempotencyKey", "CorrelationId"],
+  );
+  assert.match(contract, /description: Durable cancellation saga accepted/);
+  assert.match(contract, /description: Durable payment-session saga accepted/);
+});
+
+test("client special-request information responses replay through a canonical exchange", () => {
+  const controller = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/use-special-requests-controller.tsx",
+    ["respond-information", "getOrCreateClientSpecialRequestCommandAttempt", "fetchClientSpecialRequestInformation", "canonicalExchange"],
+  );
+  assert.match(controller, /respondClientSpecialRequestInformation\(request\.id,[\s\S]*attempt\.context\)/);
+  const api = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/special-requests.api.ts",
+    ["respondClientSpecialRequestInformation", "idempotencyKey: mutation.idempotencyKey", "correlationId: mutation.correlationId"],
+  );
+  assert.match(api, /input: DshRespondSpecialRequestInformation,[\s\S]*mutation: ClientSpecialRequestMutationContext/);
+  const contract = assertMarkers(
+    "services/dsh/contracts/paths/misc.paths.yaml",
+    ["/dsh/client/special-requests/{requestId}/information-response", "IdempotencyKey", "CorrelationId"],
+  );
+  const service = assertMarkers(
+    "services/dsh/backend/internal/specialrequests/information_exchange.go",
+    ["InformationResponseMutationContext", "dsh_special_request_information_response_receipts", "informationResponseFingerprint", "pg_advisory_xact_lock"],
+  );
+  assert.ok(service.includes("ErrInformationResponseIdempotencyConflict"));
+  const handler = assertMarkers(
+    "services/dsh/backend/internal/http/specialrequests_information.go",
+    ["specialRequestInformationMutationContext", "IDEMPOTENCY_CONFLICT", "X-Correlation-ID"],
+  );
+  assert.ok(handler.includes("Idempotency-Key"));
+  const migration = assertMarkers(
+    "services/dsh/database/migrations/dsh-1065_special_request_information_response_idempotency.sql",
+    ["dsh_special_request_information_response_receipts", "exchange_id", "PRIMARY KEY"],
+  );
+  assert.ok(migration.includes("request_fingerprint"));
+});
+
+test("client order delivery projections distinguish unavailable data from readback failure", () => {
+  const controller = assertMarkers(
+    "services/dsh/frontend/shared/orders/use-client-order-controller.ts",
+    ["liveTrackingReadbackMessage", "partnerDeliveryReadbackMessage", "classified.kind !== 'not_found'"],
+  );
+  assert.match(controller, /تعذر تحديث التتبع الحي/);
+  assert.match(controller, /تعذر تحديث حالة توصيل الشريك/);
+  const tracking = assertMarkers(
+    "services/dsh/frontend/app-client/orders/ClientLiveTrackingCard.tsx",
+    ["readbackMessage", "إعادة قراءة التتبع", "tone={readbackMessage ? \"danger\" : \"muted\"}"],
+  );
+  assert.ok(tracking.includes("onRetry"));
+  assertMarkers(
+    "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
+    ["partnerDeliveryReadbackMessage", "تعذر تحديث توصيل الشريك", "readbackMessage={liveTrackingReadbackMessage}"],
+  );
+});
+
+test("client notification action routes are canonical and fail closed", () => {
+  const navigation = assertMarkers(
+    "services/dsh/frontend/app-client/client-navigation.ts",
+    [
+      "function decodeSegment",
+      "decodeURIComponent(value)",
+      'parts.path === \"/orders/pickup\"',
+      'return queryFor(parts, []) ? { kind: \"orders\" } : null',
+      'parts.path === \"/cart\"',
+      'parts.path === \"/support\"',
+    ],
+  );
+  assert.doesNotMatch(navigation, /decodeURIComponent\([^)]*\)\s*\}/);
+  const backend = assertMarkers(
+    "services/dsh/backend/internal/operationaloutbox/notification_policy.go",
+    ["pickupOrderID(event)", 'return \"/orders/\" + url.PathEscape(orderID) + \"/pickup\"'],
+  );
+  assert.ok(backend.includes("pickup_order_ready"));
 });
 
 test("client commercial profile is reachable from My Space and has no inert privacy actions", () => {
@@ -209,6 +391,43 @@ test("client commercial profile is reachable from My Space and has no inert priv
   assert.equal(profileApi.includes('createDshHttpClient("",'), false);
   assert.equal(profile.includes("طلب نسخة بياناتي"), false);
   assert.equal(profile.includes("طلب حذف الحساب"), false);
+});
+
+test("client profile mutations persist identity and reconcile partial saves", () => {
+  const attempt = assertMarkers(
+    "services/dsh/frontend/shared/client-profile/client-profile-mutation-attempt.ts",
+    ["client-profile-mutation", "resolveMutationIdentityScope", "getOrCreateDurableMutationAttempt", "purgeExactDurableMutationAttempt"],
+  );
+  assert.match(attempt, /entityId: `client-profile:\$\{normalized\.operation\}`/);
+  const screen = assertMarkers(
+    "services/dsh/frontend/app-client/account/MyProfileScreen.tsx",
+    ["getOrCreateClientProfileMutationAttempt", "clearClientProfileMutationAttempt", "fetchClientProfile", "saveError"],
+  );
+  assert.match(screen, /upsertClientProfilePreferences\(input, attempt\.context\)/);
+  assert.match(screen, /upsertClientProfileConsents\(input, attempt\.context\)/);
+  const api = assertMarkers(
+    "services/dsh/frontend/shared/client-profile/client-profile.api.ts",
+    ["idempotencyKey: mutation.idempotencyKey", "correlationId: mutation.correlationId"],
+  );
+  const handler = assertMarkers(
+    "services/dsh/backend/internal/http/clientprofile_handlers.go",
+    ["clientProfileMutationContext", "X-Correlation-ID", "IDEMPOTENCY_CONFLICT"],
+  );
+  assert.ok(handler.includes("Idempotency-Key"));
+  const backend = assertMarkers(
+    "services/dsh/backend/internal/clientprofile/clientprofile.go",
+    ["dsh_client_profile_mutation_receipts", "pg_advisory_xact_lock", "request_fingerprint"],
+  );
+  const migration = assertMarkers(
+    "services/dsh/database/migrations/dsh-1063_client_profile_mutation_idempotency.sql",
+    ["dsh_client_profile_mutation_receipts", "preferences", "consents"],
+  );
+  assert.ok(migration.includes("PRIMARY KEY (client_id, idempotency_key)"));
+  const contract = assertMarkers(
+    "services/dsh/contracts/dsh.runtime-extensions.openapi.yaml",
+    ["ClientIdempotencyKey", "ClientCorrelationId", "dsh_client_me_profile_preferences", "dsh_client_me_profile_consents"],
+  );
+  assert.ok(contract.includes("#/components/responses/Conflict"));
 });
 
 test("catalog verification wrapper initializes native exit state before a PowerShell child", () => {
@@ -259,6 +478,66 @@ test("checkout carries the confirmed cart version into the canonical DSH OCC con
   );
 });
 
+test("checkout keeps an unresolved payment intent visible and blocks duplicate submission", () => {
+  const flow = assertMarkers(
+    "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+    ["operationLock", "checkout_action_error", "بقيت الجلسة محفوظة", "currentIntent.id !== intentId", "isOrderCreationEligible", "intent.state === \"confirmed\"", "reconciliation_pending", "checkoutInputRef", "clearCurrentCheckoutAttempt", "await cancelCheckoutIntent(intentId);"],
+  );
+  assert.doesNotMatch(flow, /catch \{\s*\/\/ Best effort cancel/);
+  const cart = assertMarkers(
+    "services/dsh/frontend/app-client/cart/CartScreen.tsx",
+    ["const checkoutLocked", "checkoutLocked || !cartReady", "checkoutState?.kind === \"order_error\"", "serviceabilityController.serviceability.kind === \"serviceable\"", "disabled={!canProceed}"],
+  );
+  assert.match(cart, /actionPending \|\| checkoutLocked/);
+  assertMarkers(
+    "services/dsh/frontend/app-client/cart/CheckoutProgress.tsx",
+    ["جلسة الدفع ما تزال محفوظة", "إعادة محاولة الإلغاء", "state.intent.id"],
+  );
+});
+
+test("client payment choices honor the provider capability boundary", () => {
+  const payment = assertMarkers(
+    "services/dsh/frontend/wlt/payment/use-wlt-payment-controller.tsx",
+    [
+      "providerPaymentsEnabled &&",
+      "method === \"wallet\" && (!providerPaymentsEnabled || !hasSufficientWallet)",
+      "method === \"mixed\" && (!providerPaymentsEnabled || !hasPartialWallet)",
+      "disabled: !providerPaymentsEnabled || !hasSufficientWallet",
+      "disabled: !providerPaymentsEnabled || !hasPartialWallet",
+      "الدفع من المحفظة غير مفعّل حاليًا لهذا التطبيق.",
+      "الدفع المختلط غير مفعّل حاليًا لهذا التطبيق.",
+      "walletReadbackError",
+      "تعذر التحقق من رصيد المحفظة حاليًا.",
+      "label: \"إعادة التحقق\"",
+    ],
+  );
+  assert.match(payment, /providerPaymentsEnabled/);
+  assertMarkers(
+    "services/dsh/frontend/app-client/cart/PaymentDecisionSection.tsx",
+    ["<View key={option.id} style={styles.optionContainer}>", "{option.action ? ("],
+  );
+});
+
+test("special-request creation keeps one actor-scoped idempotency attempt until readback", () => {
+  const attempt = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/special-request-create-attempt.ts",
+    [
+      "client-special-request-create",
+      "getOrCreateDurableMutationAttempt",
+      "purgeExactDurableMutationAttempt",
+      "fingerprintSpecialRequestInput",
+    ],
+  );
+  assert.match(attempt, /Omit<DshCreateSpecialRequest, "idempotencyKey">/);
+  const controller = assertMarkers(
+    "services/dsh/frontend/shared/special-requests/use-special-requests-controller.tsx",
+    ["getOrCreateSpecialRequestCreateAttempt", "fetchClientSpecialRequest(created.id)", "clearSpecialRequestCreateAttempt"],
+  );
+  assert.doesNotMatch(controller, /generateSpecialRequestIdempotencyKey/);
+  const surface = source("services/dsh/frontend/app-client/DshClientSurface.tsx");
+  assert.doesNotMatch(surface, /generateSpecialRequestIdempotencyKey/);
+});
+
 test("privacy-safe order sharing uses temporary Expo files and no sensitive references", () => {
   const platform = assertMarkers(
     "apps/app-client/runtime/src/platform/client-platform-actions.ts",
@@ -275,7 +554,7 @@ test("privacy-safe order sharing uses temporary Expo files and no sensitive refe
 
   const orders = assertMarkers(
     "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
-    ["shareClientTextDocument", "shareableOrderSummary", "مشاركة الملخص"],
+    ["shareTextDocument", "shareableOrderSummary", "مشاركة الملخص"],
   );
   const summaryStart = orders.indexOf("function shareableOrderSummary");
   const summaryEnd = orders.indexOf("type Props", summaryStart);
@@ -307,7 +586,7 @@ test("notification mutations are contained and provide canonical readback", () =
       "Promise<boolean>",
       "setActionError(resolveMessage(err))",
       "await loadNotifications()",
-      "await loadPreferences()",
+      "return loadPreferences()",
     ],
   );
   assertMarkers(
@@ -334,8 +613,11 @@ test("subscription mutations persist one governed attempt across retries and res
   assert.equal(lifecycle.includes("Date.now"), false);
   assertMarkers(
     "services/dsh/frontend/shared/marketing/use-subscription-lifecycle-controller.tsx",
-    ["registerIdentityBeforeSessionEndHook", "clearSubscriptionMutationAttempts", "recoverDshSubscriptionPurchase"],
+    ["recoverDshSubscriptionPurchase"],
   );
+  const controller = source("services/dsh/frontend/shared/marketing/use-subscription-lifecycle-controller.tsx");
+  assert.doesNotMatch(controller, /registerIdentityBeforeSessionEndHook/);
+  assert.doesNotMatch(controller, /clearSubscriptionMutationAttempts/);
   assertMarkers(
     "services/dsh/frontend/shared/marketing/subscription-mutation-attempt.ts",
     ["@bthwani/data-runtime", "bthwaniDurableStorage", "latestPurchaseKey", "PREFIX"],

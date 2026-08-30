@@ -873,15 +873,75 @@ func GetProposal(ctx context.Context, db *sql.DB, id string) (ProductProposal, e
 // product-shaped record. It is a request, never a sellable entity — the
 // governing node must allow proposals (allows_product_proposal), enforced by
 // the caller via ResolveEffectivePolicy before invoking this.
-func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input ProductProposalInput) (ProductProposal, error) {
-	if strings.TrimSpace(input.ProposedNameAr) == "" || strings.TrimSpace(input.DomainID) == "" ||
-		!validSourceSurface[input.SourceSurface] {
+func CreateProposal(ctx context.Context, db *sql.DB, actorID, idempotencyKey string, input ProductProposalInput) (ProductProposal, error) {
+	input.ProposedNameAr = strings.TrimSpace(input.ProposedNameAr)
+	input.ProposedNameEn = strings.TrimSpace(input.ProposedNameEn)
+	input.DomainID = strings.TrimSpace(input.DomainID)
+	input.Brand = strings.TrimSpace(input.Brand)
+	input.SourceSurface = strings.TrimSpace(input.SourceSurface)
+	if input.CategoryNodeID != nil {
+		normalized := strings.TrimSpace(*input.CategoryNodeID)
+		input.CategoryNodeID = &normalized
+	}
+	if input.Barcode != nil {
+		normalized := strings.TrimSpace(*input.Barcode)
+		input.Barcode = &normalized
+	}
+	if input.ImageObjectKey != nil {
+		normalized := strings.TrimSpace(*input.ImageObjectKey)
+		if normalized == "" {
+			input.ImageObjectKey = nil
+		} else {
+			input.ImageObjectKey = &normalized
+		}
+	}
+	if input.SourceStoreID != nil {
+		normalized := strings.TrimSpace(*input.SourceStoreID)
+		if normalized == "" {
+			input.SourceStoreID = nil
+		} else {
+			input.SourceStoreID = &normalized
+		}
+	}
+	if input.TargetMasterProductID != nil {
+		normalized := strings.TrimSpace(*input.TargetMasterProductID)
+		if normalized == "" {
+			input.TargetMasterProductID = nil
+		} else {
+			input.TargetMasterProductID = &normalized
+		}
+	}
+	if len(input.DuplicateCandidates) == 0 {
+		input.DuplicateCandidates = []byte("[]")
+	}
+	mutationRequest := struct {
+		Input ProductProposalInput `json:"input"`
+	}{Input: input}
+	tx, mutation, replay, err := beginCatalogCreateMutation(
+		ctx, db, actorID, "product_proposal.create", idempotencyKey, mutationRequest,
+	)
+	if err != nil {
+		return ProductProposal{}, err
+	}
+	defer tx.Rollback()
+	if replay != nil {
+		proposal, err := scanProposal(tx.QueryRowContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1`, replay.ResourceID))
+		if err != nil {
+			return ProductProposal{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return ProductProposal{}, err
+		}
+		return proposal, nil
+	}
+
+	if input.ProposedNameAr == "" || input.DomainID == "" || !validSourceSurface[input.SourceSurface] {
 		return ProductProposal{}, ErrInvalid
 	}
 
 	// 1. Manual request domains check
 	var isManual bool
-	err := db.QueryRowContext(ctx, `SELECT is_manual_request FROM dsh_catalog_domains WHERE id=$1`, input.DomainID).Scan(&isManual)
+	err = tx.QueryRowContext(ctx, `SELECT is_manual_request FROM dsh_catalog_domains WHERE id=$1`, input.DomainID).Scan(&isManual)
 	if err != nil {
 		return ProductProposal{}, err
 	}
@@ -903,7 +963,7 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input Produ
 		}
 	}
 	if nodeID != "" {
-		node, err := GetNode(ctx, db, nodeID)
+		node, err := GetNode(ctx, tx, nodeID)
 		if err != nil {
 			if errors.Is(err, ErrNotFound) {
 				return ProductProposal{}, fmt.Errorf("%w: CATEGORY_NODE_NOT_IN_DOMAIN", ErrInvalid)
@@ -916,7 +976,7 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input Produ
 	}
 
 	// 3. Resolve effective catalog policy
-	policy, err := ResolveEffectivePolicy(ctx, db, input.DomainID, nodeID)
+	policy, err := ResolveEffectivePolicy(ctx, tx, input.DomainID, nodeID)
 	if err != nil {
 		return ProductProposal{}, err
 	}
@@ -932,23 +992,28 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input Produ
 		return ProductProposal{}, fmt.Errorf("%w: CUSTOM_IMAGE_NOT_ALLOWED_FOR_CATEGORY", ErrForbidden)
 	}
 
-	dupCandidates := input.DuplicateCandidates
-	if len(dupCandidates) == 0 {
-		dupCandidates = []byte("[]")
-	}
-
 	id := entityID("proposal")
-	_, err = db.ExecContext(ctx, `INSERT INTO dsh_product_proposals
+	_, err = tx.ExecContext(ctx, `INSERT INTO dsh_product_proposals
 		(id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode, image_object_key,
 		 source_surface, source_actor_id, source_store_id, status, target_master_product_id, base_version, duplicate_candidates)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'partner-proposed',$12,$13,$14)`,
-		id, strings.TrimSpace(input.ProposedNameAr), input.ProposedNameEn, input.DomainID, categoryNodeID,
+		id, input.ProposedNameAr, input.ProposedNameEn, input.DomainID, categoryNodeID,
 		input.Brand, input.Barcode, input.ImageObjectKey, input.SourceSurface, actorID, input.SourceStoreID,
-		input.TargetMasterProductID, input.BaseVersion, dupCandidates)
+		input.TargetMasterProductID, input.BaseVersion, input.DuplicateCandidates)
 	if err != nil {
 		return ProductProposal{}, err
 	}
-	return GetProposal(ctx, db, id)
+	if err := recordCatalogCreateMutation(ctx, tx, mutation, "product_proposal", id); err != nil {
+		return ProductProposal{}, err
+	}
+	proposal, err := scanProposal(tx.QueryRowContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1`, id))
+	if err != nil {
+		return ProductProposal{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return ProductProposal{}, err
+	}
+	return proposal, nil
 }
 
 // ── Store assortment (store-local truth: price/availability/stock/note/image) ─
@@ -1067,85 +1132,6 @@ func ListStoreAssortment(ctx context.Context, db *sql.DB, storeID string) ([]Sto
 		out = append(out, a)
 	}
 	return out, rows.Err()
-}
-
-// UpsertStoreAssortment creates or edits the store's link to a master
-// product. The caller MUST resolve the node's platform policy first and pass
-// allowCustomImage=false when the policy forbids it — a non-empty
-// CustomImageObjectKey is rejected with ErrForbidden in that case, so no
-// surface can silently bypass platform policy.
-func UpsertStoreAssortment(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInput, allowCustomImage bool) (StoreAssortment, error) {
-	if strings.TrimSpace(storeID) == "" || strings.TrimSpace(masterProductID) == "" || input.UnitPrice < 0 {
-		return StoreAssortment{}, ErrInvalid
-	}
-	stockStatus := input.StockStatus
-	if stockStatus == "" {
-		stockStatus = "in_stock"
-	}
-	if !validStockStatus[stockStatus] {
-		return StoreAssortment{}, ErrInvalid
-	}
-	publicationStatus := input.PublicationStatus
-	if publicationStatus == "" {
-		publicationStatus = "draft"
-	}
-	if !validPublicationStatus[publicationStatus] {
-		return StoreAssortment{}, ErrInvalid
-	}
-	currency := input.Currency
-	if currency == "" {
-		currency = "YER"
-	}
-	if input.CustomImageObjectKey != nil && strings.TrimSpace(*input.CustomImageObjectKey) != "" && !allowCustomImage {
-		return StoreAssortment{}, ErrForbidden
-	}
-	if publicationStatus == "client_visible" {
-		// A store assortment cannot be client_visible if it doesn't have an image (either custom or canonical)
-		var masterImage *string
-		err := db.QueryRowContext(ctx, `SELECT canonical_image_object_key FROM dsh_master_products WHERE id=$1`, masterProductID).Scan(&masterImage)
-		if err != nil {
-			return StoreAssortment{}, err
-		}
-
-		hasCustomImage := input.CustomImageObjectKey != nil && *input.CustomImageObjectKey != ""
-		hasMasterImage := masterImage != nil && *masterImage != ""
-
-		if !hasCustomImage && !hasMasterImage {
-			return StoreAssortment{}, fmt.Errorf("%w: cannot set publication_status to client_visible without an approved image", ErrInvalid)
-		}
-	}
-
-	id := entityID("assortment")
-	result, err := db.ExecContext(ctx, `INSERT INTO dsh_store_assortments
-		(id, store_id, master_product_id, unit_price, currency, available, stock_status, local_note,
-		 custom_image_object_key, publication_status, submitted_by)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-		ON CONFLICT (store_id, master_product_id) DO UPDATE SET
-		  unit_price=EXCLUDED.unit_price, currency=EXCLUDED.currency, available=EXCLUDED.available,
-		  stock_status=EXCLUDED.stock_status, local_note=EXCLUDED.local_note,
-		  custom_image_object_key=EXCLUDED.custom_image_object_key,
-		  publication_status=EXCLUDED.publication_status, updated_at=now(), version = dsh_store_assortments.version + 1
-		WHERE ($12::int IS NULL OR dsh_store_assortments.version=$12)`,
-		id, storeID, masterProductID, input.UnitPrice, currency, input.Available, stockStatus, input.LocalNote,
-		input.CustomImageObjectKey, publicationStatus, actorID, input.ExpectedVersion)
-	if err != nil {
-		return StoreAssortment{}, err
-	}
-	if n, _ := result.RowsAffected(); n == 0 {
-		return StoreAssortment{}, ErrConflict
-	}
-	var out StoreAssortment
-	return out, scanInto(&out, db.QueryRowContext(ctx, `SELECT `+assortmentColumns+`
-		FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2`, storeID, masterProductID))
-}
-
-func scanInto(dst *StoreAssortment, row *sql.Row) error {
-	a, err := scanAssortment(row)
-	if err != nil {
-		return err
-	}
-	*dst = a
-	return nil
 }
 
 // ── Platform catalog policy (commission/fee/capability flags per category) ─
@@ -1292,7 +1278,7 @@ func UpdateCatalogPolicy(ctx context.Context, db *sql.DB, id string, input Catal
 // dsh-030: node-scoped policy -> domain-scoped policy -> platform default.
 // This is the ONLY sanctioned way any surface learns a commission rate, fee,
 // or capability flag for a category — never hardcode these in app code.
-func ResolveEffectivePolicy(ctx context.Context, db *sql.DB, domainID, nodeID string) (CatalogPolicy, error) {
+func ResolveEffectivePolicy(ctx context.Context, db dbtx, domainID, nodeID string) (CatalogPolicy, error) {
 	if nodeID != "" {
 		p, err := scanPolicy(db.QueryRowContext(ctx, `SELECT `+policyColumns+`
 			FROM dsh_catalog_platform_policies WHERE node_id=$1 AND policy_scope='node' AND is_active=true`, nodeID))
@@ -1340,12 +1326,10 @@ type EffectiveImage struct {
 	Source string `json:"source"`
 }
 
-// GetClientCatalog returns only what rule 4 of the sovereignty decision
-// allows through: approved+active master products, in an active+client
-// visible domain/node, with a client_visible+available store assortment row,
-// for a published store. No local product/category can leak in here because
-// the query originates entirely from the master tables joined through the
-// assortment link.
+// GetClientCatalog returns the structural candidates allowed by rule 4 of the
+// sovereignty decision. Commercial eligibility is applied by
+// GetPurchasableClientCatalog from normalized price/inventory truth; legacy
+// assortment projections must not filter candidates before that gate runs.
 func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain, []Node, []ClientCatalogEntry, []CatalogAssetLinkWithAsset, []CatalogPolicy, error) {
 	var storePublished bool
 	err := db.QueryRowContext(ctx, `SELECT EXISTS (
@@ -1429,14 +1413,15 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 
 	// 3. Fetch candidate products
 	rows, err := db.QueryContext(ctx, `
-		SELECT `+prefixColumns("mp", masterProductColumns)+`, a.id, a.unit_price, a.currency, a.stock_status,
+		SELECT `+prefixColumns("mp", masterProductColumns)+`, a.id,
+		       0::double precision, ''::text, 'out_of_stock'::text,
 		       COALESCE(a.custom_image_object_key, mp.canonical_image_object_key, '')
 		FROM dsh_store_assortments a
 		JOIN dsh_master_products mp ON mp.id = a.master_product_id
 		JOIN dsh_catalog_domains d ON d.id = mp.domain_id
 		LEFT JOIN dsh_catalog_nodes n ON n.id = mp.category_node_id
 		WHERE a.store_id = $1
-		  AND a.publication_status = 'client_visible' AND a.available = true
+		  AND a.publication_status = 'client_visible'
 		  AND mp.approval_status = 'approved' AND mp.is_active = true
 		  AND d.is_active = true AND d.is_client_visible = true AND d.is_manual_request = false
 		  AND (n.id IS NULL OR (n.is_active = true AND n.is_client_visible = true))
@@ -1571,354 +1556,6 @@ func entityID(prefix string) string {
 	return prefix + "-" + uuid.NewString()
 }
 
-type ProposalTransitionInput struct {
-	NextStatus             string  `json:"nextStatus"`
-	Note                   string  `json:"note"`
-	AdoptedMasterProductID *string `json:"adoptedMasterProductId"`
-	CreateMasterProduct    *bool   `json:"createMasterProduct"`
-	MergeData              *bool   `json:"mergeData"`
-}
-
-// collectIDs drains a single-column id result set and closes it before the
-// caller issues any further statement on the same transaction connection.
-func collectIDs(rows *sql.Rows, err error) ([]string, error) {
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var ids []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	return ids, rows.Err()
-}
-
-func TransitionProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id string, input ProposalTransitionInput) (ProductProposal, error) {
-	if !validProposalStatus[input.NextStatus] {
-		return ProductProposal{}, fmt.Errorf("%w: invalid nextStatus", ErrInvalid)
-	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return ProductProposal{}, err
-	}
-	defer tx.Rollback()
-
-	proposal, err := scanProposal(tx.QueryRowContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1 FOR UPDATE`, id))
-	if err != nil {
-		return ProductProposal{}, err
-	}
-
-	// Validate transition rules
-	allowed := false
-	switch proposal.Status {
-	case "catalog-draft":
-		allowed = (input.NextStatus == "partner-proposed")
-	case "partner-proposed":
-		allowed = (input.NextStatus == "partner-review" || input.NextStatus == "needs-fix" || input.NextStatus == "rejected")
-	case "partner-review":
-		allowed = (input.NextStatus == "marketing-review" || input.NextStatus == "needs-fix" || input.NextStatus == "rejected")
-	case "marketing-review":
-		allowed = (input.NextStatus == "catalog-adopted" || input.NextStatus == "needs-fix" || input.NextStatus == "rejected")
-	case "catalog-adopted":
-		allowed = (input.NextStatus == "catalog-approved")
-	case "catalog-approved":
-		allowed = (input.NextStatus == "client-visible")
-	case "needs-fix":
-		allowed = (input.NextStatus == "partner-proposed")
-	case "rejected":
-		allowed = (input.NextStatus == "partner-proposed" || input.NextStatus == "partner-review")
-	case "conflict":
-		allowed = (input.NextStatus == "partner-proposed")
-	case "withdrawn":
-		allowed = false
-	}
-
-	if !allowed {
-		return ProductProposal{}, fmt.Errorf("%w: transition from %s to %s is not allowed", ErrInvalid, proposal.Status, input.NextStatus)
-	}
-
-	var updateQuery string
-	var args []any
-
-	categoryNodeID := ""
-	if proposal.CategoryNodeID != nil {
-		categoryNodeID = *proposal.CategoryNodeID
-	}
-
-	switch input.NextStatus {
-	case "partner-review":
-		// Resolve effective policy and check capabilities
-		policy, err := ResolveEffectivePolicy(ctx, db, proposal.DomainID, categoryNodeID)
-		if err != nil {
-			return ProductProposal{}, err
-		}
-		if !policy.AllowsProductProposal {
-			return ProductProposal{}, fmt.Errorf("%w: product proposal not allowed for this category", ErrForbidden)
-		}
-		if policy.RequiresBarcode && (proposal.Barcode == nil || *proposal.Barcode == "") {
-			return ProductProposal{}, fmt.Errorf("%w: barcode is required for this category", ErrInvalid)
-		}
-
-		// Check for duplicate candidates (barcode matches or exact name matches
-		// in category). The candidate ids are collected before inserting: the
-		// transaction owns a single connection, so executing while rows are
-		// still open would poison every later statement in the transition.
-		if proposal.Barcode != nil && *proposal.Barcode != "" {
-			barcodeMatches, err := collectIDs(tx.QueryContext(ctx, `SELECT id FROM dsh_master_products WHERE barcode=$1`, *proposal.Barcode))
-			if err != nil {
-				return ProductProposal{}, err
-			}
-			for _, mpID := range barcodeMatches {
-				dupID := entityID("dup-candidate")
-				if _, err := tx.ExecContext(ctx, `INSERT INTO dsh_product_duplicate_candidates
-					(id, proposal_id, candidate_master_product_id, reason, score, status)
-					VALUES ($1, $2, $3, 'barcode match', 1.0, 'pending')
-					ON CONFLICT DO NOTHING`, dupID, id, mpID); err != nil {
-					return ProductProposal{}, err
-				}
-			}
-		}
-
-		if proposal.CategoryNodeID != nil {
-			nameMatches, err := collectIDs(tx.QueryContext(ctx, `SELECT id FROM dsh_master_products WHERE category_node_id=$1 AND LOWER(canonical_name_ar)=LOWER($2)`, *proposal.CategoryNodeID, proposal.ProposedNameAr))
-			if err != nil {
-				return ProductProposal{}, err
-			}
-			for _, mpID := range nameMatches {
-				dupID := entityID("dup-candidate")
-				if _, err := tx.ExecContext(ctx, `INSERT INTO dsh_product_duplicate_candidates
-					(id, proposal_id, candidate_master_product_id, reason, score, status)
-					VALUES ($1, $2, $3, 'exact name match in category', 0.9, 'pending')
-					ON CONFLICT DO NOTHING`, dupID, id, mpID); err != nil {
-					return ProductProposal{}, err
-				}
-			}
-		}
-
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='partner-review', partner_reviewed_by=$3, updated_at=now(), version = version + 1 WHERE id=$4`
-		args = []any{input.NextStatus, input.Note, actorID, id}
-
-	case "marketing-review":
-		// Verify policy requirements for images, descriptions, etc.
-		policy, err := ResolveEffectivePolicy(ctx, db, proposal.DomainID, categoryNodeID)
-		if err != nil {
-			return ProductProposal{}, err
-		}
-		if policy.RequiresProductImage {
-			var hasImg bool
-			err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_asset_links WHERE entity_type='product_proposal' AND entity_id=$1 AND role='canonical_product_image' AND status IN ('approved', 'pending_review'))`, id).Scan(&hasImg)
-			if err != nil || !hasImg {
-				return ProductProposal{}, fmt.Errorf("%w: product image is required by platform policy", ErrForbidden)
-			}
-		}
-		if policy.RequiresBrand && proposal.Brand == "" {
-			return ProductProposal{}, fmt.Errorf("%w: brand is required for this category", ErrInvalid)
-		}
-
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='marketing-review', marketing_reviewed_by=$3, updated_at=now(), version = version + 1 WHERE id=$4`
-		args = []any{input.NextStatus, input.Note, actorID, id}
-
-	case "catalog-adopted":
-		adoptedID := input.AdoptedMasterProductID
-
-		if proposal.TargetMasterProductID != nil {
-			adoptedID = proposal.TargetMasterProductID
-			// Validate OCC if base version is set
-			if proposal.BaseVersion != nil {
-				var currentVer int
-				err = tx.QueryRowContext(ctx, `SELECT version FROM dsh_master_products WHERE id=$1`, *adoptedID).Scan(&currentVer)
-				if err != nil {
-					return ProductProposal{}, err
-				}
-				if currentVer != *proposal.BaseVersion {
-					// OCC failure -> conflict
-					updateQuery = `UPDATE dsh_product_proposals SET status='conflict', review_note='Conflict: Base product has changed since proposal creation', updated_at=now(), version = version + 1 WHERE id=$1`
-					_, err = tx.ExecContext(ctx, updateQuery, id)
-					if err != nil {
-						return ProductProposal{}, err
-					}
-					return scanProposal(tx.QueryRowContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1`, id))
-				}
-			}
-		} else {
-			// Check if there is an accepted duplicate candidate for this proposal
-			var acceptedDupID string
-			err = tx.QueryRowContext(ctx, `SELECT candidate_master_product_id FROM dsh_product_duplicate_candidates WHERE proposal_id=$1 AND status='accepted_existing' LIMIT 1`, id).Scan(&acceptedDupID)
-			if err == nil {
-				adoptedID = &acceptedDupID
-			}
-
-			if (input.CreateMasterProduct != nil && *input.CreateMasterProduct) || (adoptedID == nil && input.AdoptedMasterProductID == nil) {
-				if proposal.Barcode != nil && *proposal.Barcode != "" && adoptedID == nil {
-					var existingID string
-					err = tx.QueryRowContext(ctx, `SELECT id FROM dsh_master_products WHERE barcode=$1 LIMIT 1`, *proposal.Barcode).Scan(&existingID)
-					if err == nil {
-						adoptedID = &existingID
-					} else if !errors.Is(err, sql.ErrNoRows) {
-						return ProductProposal{}, err
-					}
-				}
-
-				if adoptedID == nil {
-					mpID := entityID("mp")
-					_, err = tx.ExecContext(ctx, `INSERT INTO dsh_master_products
-						(id, domain_id, category_node_id, canonical_name_ar, canonical_name_en, brand, barcode,
-						 approval_status, created_source)
-						VALUES ($1,$2,$3,$4,$5,$6,$7,'pending_review',$8)`,
-						mpID, proposal.DomainID, proposal.CategoryNodeID, proposal.ProposedNameAr, proposal.ProposedNameEn,
-						proposal.Brand, proposal.Barcode, "product-proposal:"+proposal.SourceSurface)
-					if err != nil {
-						return ProductProposal{}, err
-					}
-					adoptedID = &mpID
-				}
-			}
-		}
-
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='catalog-adopted', catalog_adopted_by=$3, adopted_master_product_id=$4, updated_at=now(), version = version + 1 WHERE id=$5`
-		args = []any{input.NextStatus, input.Note, actorID, adoptedID, id}
-
-	case "catalog-approved":
-		if proposal.AdoptedMasterProductID != nil {
-			if proposal.TargetMasterProductID != nil {
-				// This is a correction, update the existing product canonical fields
-				_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET
-					canonical_name_ar=$1, canonical_name_en=$2, brand=$3, barcode=$4,
-					approval_status='approved', is_active=true, updated_at=now(), version = version + 1
-					WHERE id=$5`,
-					proposal.ProposedNameAr, proposal.ProposedNameEn, proposal.Brand, proposal.Barcode, *proposal.AdoptedMasterProductID)
-				if err != nil {
-					return ProductProposal{}, err
-				}
-			} else {
-				_, err = tx.ExecContext(ctx, `UPDATE dsh_master_products SET approval_status='approved', is_active=true, updated_at=now(), version = version + 1 WHERE id=$1`, *proposal.AdoptedMasterProductID)
-				if err != nil {
-					return ProductProposal{}, err
-				}
-			}
-
-			if proposal.SourceStoreID != nil {
-				assortID := entityID("assort")
-				_, err = tx.ExecContext(ctx, `INSERT INTO dsh_store_assortments
-					(id, store_id, master_product_id, unit_price, currency, available, stock_status, publication_status, submitted_by)
-					VALUES ($1,$2,$3,0.00,'YER',true,'in_stock','approved',$4)
-					ON CONFLICT (store_id, master_product_id) DO NOTHING`,
-					assortID, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID, actorID)
-				if err != nil {
-					return ProductProposal{}, err
-				}
-			}
-		}
-
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='catalog-approved', catalog_approved_by=$3, updated_at=now(), version = version + 1 WHERE id=$4`
-		args = []any{input.NextStatus, input.Note, actorID, id}
-
-	case "client-visible":
-		if proposal.AdoptedMasterProductID == nil || proposal.SourceStoreID == nil {
-			return ProductProposal{}, fmt.Errorf("%w: cannot transition to client-visible without approved product and store association", ErrInvalid)
-		}
-
-		// Verify master product is approved and active
-		var mpApproved bool
-		var mpActive bool
-		err = tx.QueryRowContext(ctx, `SELECT (approval_status='approved'), is_active FROM dsh_master_products WHERE id=$1`, *proposal.AdoptedMasterProductID).Scan(&mpApproved, &mpActive)
-		if err != nil || !mpApproved || !mpActive {
-			return ProductProposal{}, fmt.Errorf("%w: master product must be approved and active", ErrForbidden)
-		}
-
-		// Verify domain is active and client visible
-		var domActive bool
-		var domVisible bool
-		err = tx.QueryRowContext(ctx, `SELECT is_active, is_client_visible FROM dsh_catalog_domains WHERE id=$1`, proposal.DomainID).Scan(&domActive, &domVisible)
-		if err != nil || !domActive || !domVisible {
-			return ProductProposal{}, fmt.Errorf("%w: domain must be active and client visible", ErrForbidden)
-		}
-
-		// Verify node is active and client visible
-		var nodeActive bool
-		var nodeVisible bool
-		err = tx.QueryRowContext(ctx, `SELECT is_active, is_client_visible FROM dsh_catalog_nodes WHERE id=$1`, proposal.CategoryNodeID).Scan(&nodeActive, &nodeVisible)
-		if err != nil || !nodeActive || !nodeVisible {
-			return ProductProposal{}, fmt.Errorf("%w: category node must be active and client visible", ErrForbidden)
-		}
-
-		// Verify store is active and visible
-		var storePublished bool
-		var storeVisible bool
-		err = tx.QueryRowContext(ctx, `SELECT (status = 'published'), is_visible FROM dsh_stores WHERE id=$1`, *proposal.SourceStoreID).Scan(&storePublished, &storeVisible)
-		if err != nil || !storePublished || !storeVisible {
-			return ProductProposal{}, fmt.Errorf("%w: store must be active and visible", ErrForbidden)
-		}
-
-		// Verify store assortment price & availability
-		var available bool
-		var unitPrice float64
-		err = tx.QueryRowContext(ctx, `SELECT available, unit_price FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2`, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID).Scan(&available, &unitPrice)
-		if err != nil {
-			return ProductProposal{}, fmt.Errorf("store assortment not found: %w", err)
-		}
-		if !available || unitPrice <= 0 {
-			return ProductProposal{}, fmt.Errorf("%w: store assortment price must be greater than 0 and available=true", ErrInvalid)
-		}
-
-		// Verify image policy if required
-		policy, err := ResolveEffectivePolicy(ctx, db, proposal.DomainID, categoryNodeID)
-		if err == nil && policy.RequiresProductImage {
-			var hasApprovedImg bool
-			err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_asset_links WHERE entity_type='master_product' AND entity_id=$1 AND role='canonical_product_image' AND status='approved')`, *proposal.AdoptedMasterProductID).Scan(&hasApprovedImg)
-			if err != nil || !hasApprovedImg {
-				err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_asset_links WHERE entity_type='product_proposal' AND entity_id=$1 AND role='canonical_product_image' AND status='approved')`, id).Scan(&hasApprovedImg)
-				if err != nil || !hasApprovedImg {
-					return ProductProposal{}, fmt.Errorf("%w: client visibility requires approved product image", ErrForbidden)
-				}
-			}
-		}
-
-		_, err = tx.ExecContext(ctx, `UPDATE dsh_store_assortments SET publication_status='client_visible', approved_by=$1, updated_at=now(), version = version + 1 WHERE store_id=$2 AND master_product_id=$3`,
-			actorID, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID)
-		if err != nil {
-			return ProductProposal{}, err
-		}
-
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='client-visible', client_visible_at=now(), updated_at=now(), version = version + 1 WHERE id=$3`
-		args = []any{input.NextStatus, input.Note, id}
-
-	case "needs-fix":
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, review_stage='needs-fix', blocked_reason=$3, resubmission_count=resubmission_count+1, updated_at=now(), version = version + 1 WHERE id=$4`
-		args = []any{input.NextStatus, input.Note, input.Note, id}
-
-	default:
-		updateQuery = `UPDATE dsh_product_proposals SET status=$1, review_note=$2, updated_at=now(), version = version + 1 WHERE id=$3`
-		args = []any{input.NextStatus, input.Note, id}
-	}
-
-	_, err = tx.ExecContext(ctx, updateQuery, args...)
-	if err != nil {
-		return ProductProposal{}, err
-	}
-
-	// Record proposal-specific audit trail (dsh-032)
-	auditID := entityID("proposal-audit")
-	payloadJSON := `{"nextStatus":"` + input.NextStatus + `"}`
-	_, err = tx.ExecContext(ctx, `INSERT INTO dsh_product_proposal_audit
-		(id, proposal_id, from_status, to_status, actor_id, actor_role, note, payload_json)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)`,
-		auditID, id, proposal.Status, input.NextStatus, actorID, actorRole, input.Note, payloadJSON)
-	if err != nil {
-		return ProductProposal{}, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return ProductProposal{}, err
-	}
-	return GetProposal(ctx, db, id)
-}
-
 // ── Catalog assets (DAM) ─────────────────────────────────────────────────────
 
 type CatalogAsset struct {
@@ -1957,7 +1594,7 @@ var validAssetRole = map[string]bool{
 	"icon": true, "cover": true, "thumbnail": true, "gallery": true, "canonical_product_image": true,
 	"partner_custom_product_image": true, "marketing_banner": true, "document": true,
 	"store_logo": true, "store_cover": true, "storefront_photo": true, "interior_photo": true, "signage_photo": true,
-	"reel_video": true,
+	"reel_video": true, "reel_poster": true,
 }
 var validAssetEntityType = map[string]bool{
 	"domain": true, "node": true, "master_product": true, "product_proposal": true,
@@ -2096,18 +1733,60 @@ type AssetUploadIntent struct {
 // the file to. Nothing is client-visible until an operator/marketing
 // reviewer runs ReviewAsset, and nothing is even eligible for review until
 // CompleteAssetUpload confirms the object landed in MinIO.
-func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media.Client, actorID, sourceSurface string, input AssetUploadIntentInput) (AssetUploadIntent, error) {
+func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media.Client, actorID, sourceSurface, idempotencyKey string, input AssetUploadIntentInput) (AssetUploadIntent, error) {
+	input.FileName = strings.TrimSpace(input.FileName)
+	input.MimeType = strings.TrimSpace(input.MimeType)
+	input.AltAr = strings.TrimSpace(input.AltAr)
+	input.AltEn = strings.TrimSpace(input.AltEn)
+	if input.IntendedEntityType != nil {
+		normalized := strings.TrimSpace(*input.IntendedEntityType)
+		input.IntendedEntityType = &normalized
+	}
+	if input.IntendedEntityID != nil {
+		normalized := strings.TrimSpace(*input.IntendedEntityID)
+		input.IntendedEntityID = &normalized
+	}
+	if input.IntendedRole != nil {
+		normalized := strings.TrimSpace(*input.IntendedRole)
+		input.IntendedRole = &normalized
+	}
 	maxSize, ok := maxUploadSizeForRoleAndMime(input.IntendedRole, input.MimeType)
-	if strings.TrimSpace(input.FileName) == "" || input.SizeBytes <= 0 || input.SizeBytes > maxSize ||
+	if input.FileName == "" || input.SizeBytes <= 0 || input.SizeBytes > maxSize ||
 		!ok || !validAssetSourceSurface[sourceSurface] || !validIntendedAssetTarget(input.IntendedEntityType, input.IntendedEntityID, input.IntendedRole) {
 		return AssetUploadIntent{}, ErrInvalid
 	}
 	if mediaClient == nil {
 		return AssetUploadIntent{}, fmt.Errorf("%w: media storage is not configured", ErrInvalid)
 	}
+	mutationRequest := struct {
+		SourceSurface string                 `json:"sourceSurface"`
+		Input         AssetUploadIntentInput `json:"input"`
+	}{SourceSurface: sourceSurface, Input: input}
+	tx, mutation, replay, err := beginCatalogCreateMutation(
+		ctx, db, actorID, "catalog_asset_upload_intent.create", idempotencyKey, mutationRequest,
+	)
+	if err != nil {
+		return AssetUploadIntent{}, err
+	}
+	defer tx.Rollback()
+	if replay != nil {
+		asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, replay.ResourceID))
+		if err != nil {
+			return AssetUploadIntent{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return AssetUploadIntent{}, err
+		}
+		uploadURL, expiresAt, err := mediaClient.PresignPut(ctx, asset.ObjectKey, assetUploadIntentTTL)
+		if err != nil {
+			return AssetUploadIntent{}, err
+		}
+		return AssetUploadIntent{Asset: asset, UploadURL: uploadURL, ExpiresAt: expiresAt}, nil
+	}
+
 	id := entityID("asset")
 	objectKey := fmt.Sprintf("catalog-assets/%s/%s", id, sanitizeAssetFileName(input.FileName))
-	_, err := db.ExecContext(ctx, `INSERT INTO dsh_catalog_assets
+	_, err = tx.ExecContext(ctx, `INSERT INTO dsh_catalog_assets
 		(id, object_key, original_file_name, mime_type, size_bytes, alt_ar, alt_en, status, source_surface, uploaded_by,
 		 intended_entity_type, intended_entity_id, intended_role)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,'draft',$8,$9,$10,$11,$12)`,
@@ -2116,8 +1795,14 @@ func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media
 	if err != nil {
 		return AssetUploadIntent{}, err
 	}
-	asset, err := scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+	if err := recordCatalogCreateMutation(ctx, tx, mutation, "catalog_asset", id); err != nil {
+		return AssetUploadIntent{}, err
+	}
+	asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
 	if err != nil {
+		return AssetUploadIntent{}, err
+	}
+	if err := tx.Commit(); err != nil {
 		return AssetUploadIntent{}, err
 	}
 	uploadURL, expiresAt, err := mediaClient.PresignPut(ctx, objectKey, assetUploadIntentTTL)
@@ -2142,6 +1827,9 @@ func maxUploadSizeForRoleAndMime(role *string, mimeType string) (int64, bool) {
 func validIntendedAssetTarget(entityType, entityID, role *string) bool {
 	if entityType == nil && entityID == nil && role == nil {
 		return true
+	}
+	if entityType == nil && entityID == nil && role != nil {
+		return *role == "reel_poster"
 	}
 	if entityType == nil || entityID == nil || role == nil {
 		return false
@@ -2231,11 +1919,22 @@ func CompleteAssetUpload(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	if mediaClient == nil {
 		return CatalogAsset{}, fmt.Errorf("%w: media storage is not configured", ErrInvalid)
 	}
-	asset, err := scanAsset(db.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return CatalogAsset{}, err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "dsh-catalog-asset-complete:"+id); err != nil {
+		return CatalogAsset{}, err
+	}
+	asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id))
 	if err != nil {
 		return CatalogAsset{}, err
 	}
 	if asset.Status == "uploaded" || asset.Status == "scanning" || asset.Status == "pending_review" {
+		if err := tx.Commit(); err != nil {
+			return CatalogAsset{}, err
+		}
 		return asset, nil
 	}
 	if asset.Status != "draft" {
@@ -2245,11 +1944,6 @@ func CompleteAssetUpload(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	if err != nil {
 		return CatalogAsset{}, err
 	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return CatalogAsset{}, err
-	}
-	defer tx.Rollback()
 	result, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
 		status='scanning', size_bytes=$1, mime_type=$2, checksum_sha256=$3, width=$4, height=$5, updated_at=now(), version = version + 1
 		WHERE id=$6 AND status='draft'`,
@@ -2757,13 +2451,18 @@ func DeleteUnlinkedAsset(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	if attached {
 		return fmt.Errorf("%w: asset is still linked", ErrForbidden)
 	}
+	if err := mediaClient.Remove(ctx, objectKey); err != nil {
+		return fmt.Errorf("remove catalog asset object: %w", err)
+	}
 	if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET status='archived', updated_at=now(), version = version + 1 WHERE id=$1`, id); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM dsh_catalog_create_idempotency WHERE resource_type='catalog_asset' AND resource_id=$1`, id); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	_ = mediaClient.Remove(ctx, objectKey)
 	return nil
 }
 
@@ -2795,7 +2494,31 @@ func GetSeedStatus(ctx context.Context, db *sql.DB) (SeedStatus, error) {
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_master_products WHERE approval_status='approved' AND is_active=true`).Scan(&s.MasterProductsCount); err != nil {
 		return SeedStatus{}, err
 	}
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_store_assortments WHERE publication_status='client_visible' AND available=true`).Scan(&s.AssortmentsCount); err != nil {
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM dsh_store_assortments a
+		JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
+		JOIN LATERAL (
+			SELECT amount_minor, currency
+			FROM dsh_store_assortment_prices
+			WHERE store_assortment_id = a.id
+			  AND effective_from <= NOW()
+			  AND (effective_until IS NULL OR effective_until > NOW())
+			ORDER BY effective_from DESC, version DESC, id DESC
+			LIMIT 1
+		) p ON TRUE
+		WHERE a.publication_status='client_visible'
+		  AND a.paused_at IS NULL
+		  AND p.amount_minor > 0
+		  AND char_length(trim(p.currency)) = 3
+		  AND i.min_order_quantity >= 1
+		  AND i.max_order_quantity >= i.min_order_quantity
+		  AND i.step_quantity >= 1
+		  AND (
+			 i.policy_type = 'infinite'
+			 OR (i.policy_type = 'signal' AND i.quantity > 0)
+			 OR (i.policy_type = 'quantity' AND i.quantity - i.reserved_quantity >= i.min_order_quantity)
+		  )`).Scan(&s.AssortmentsCount); err != nil {
 		return SeedStatus{}, err
 	}
 	if err := db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_catalog_domains WHERE id='domain-manual-request')`).Scan(&s.ManualRequestExists); err != nil {
@@ -2830,20 +2553,22 @@ func GetSeedStatus(ctx context.Context, db *sql.DB) (SeedStatus, error) {
 	return s, nil
 }
 
-// CleanupOrphanCatalogAssets physically removes assets from MinIO and deletes rows
-// from dsh_catalog_assets if they are unlinked and older than 24 hours.
+// CleanupOrphanCatalogAssets physically removes only truly unlinked assets
+// from storage and the database. Reel foreign-key references are part of the
+// ownership check even though reels do not use catalog_asset_links.
 func CleanupOrphanCatalogAssets(ctx context.Context, db *sql.DB, mediaClient *media.Client) (int, error) {
 	if mediaClient == nil {
 		return 0, fmt.Errorf("%w: media storage is not configured", ErrInvalid)
 	}
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT id, object_key FROM dsh_catalog_assets
+		SELECT id FROM dsh_catalog_assets
 		WHERE created_at < NOW() - INTERVAL '24 hours'
 		  AND NOT EXISTS (
 			SELECT 1 FROM dsh_catalog_asset_links
 			WHERE asset_id = dsh_catalog_assets.id
 		  )
+		  AND NOT EXISTS (SELECT 1 FROM dsh_reels WHERE asset_id = dsh_catalog_assets.id OR poster_asset_id = dsh_catalog_assets.id)
 	`)
 	if err != nil {
 		return 0, err
@@ -2851,25 +2576,80 @@ func CleanupOrphanCatalogAssets(ctx context.Context, db *sql.DB, mediaClient *me
 	defer rows.Close()
 
 	var deletedCount int
+	var failures []string
 	for rows.Next() {
-		var id, objectKey string
-		if err := rows.Scan(&id, &objectKey); err != nil {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			failures = append(failures, fmt.Sprintf("scan %s: %v", id, err))
 			continue
 		}
 
-		// Attempt to delete from media provider first
-		_ = mediaClient.Remove(ctx, objectKey)
-
-		// Delete from database
-		res, err := db.ExecContext(ctx, `DELETE FROM dsh_catalog_assets WHERE id = $1`, id)
-		if err == nil {
-			affected, _ := res.RowsAffected()
-			if affected > 0 {
-				deletedCount++
-			}
+		tx, txErr := db.BeginTx(ctx, nil)
+		if txErr != nil {
+			failures = append(failures, fmt.Sprintf("%s: begin: %v", id, txErr))
+			continue
+		}
+		var objectKey string
+		lockErr := tx.QueryRowContext(ctx, `SELECT object_key FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id).Scan(&objectKey)
+		if errors.Is(lockErr, sql.ErrNoRows) {
+			_ = tx.Rollback()
+			continue
+		}
+		if lockErr != nil {
+			_ = tx.Rollback()
+			failures = append(failures, fmt.Sprintf("%s: lock: %v", id, lockErr))
+			continue
+		}
+		var attached bool
+		if lockErr = tx.QueryRowContext(ctx, `SELECT EXISTS(
+			SELECT 1 FROM dsh_catalog_asset_links WHERE asset_id=$1
+			UNION ALL SELECT 1 FROM dsh_reels WHERE asset_id=$1 OR poster_asset_id=$1
+		)`, id).Scan(&attached); lockErr != nil {
+			_ = tx.Rollback()
+			failures = append(failures, fmt.Sprintf("%s: ownership check: %v", id, lockErr))
+			continue
+		}
+		if attached {
+			_ = tx.Rollback()
+			continue
+		}
+		if removeErr := mediaClient.Remove(ctx, objectKey); removeErr != nil {
+			_ = tx.Rollback()
+			failures = append(failures, fmt.Sprintf("%s: storage removal: %v", id, removeErr))
+			continue
+		}
+		res, deleteErr := tx.ExecContext(ctx, `DELETE FROM dsh_catalog_assets WHERE id = $1`, id)
+		if deleteErr != nil {
+			_ = tx.Rollback()
+			failures = append(failures, fmt.Sprintf("%s: database delete: %v", id, deleteErr))
+			continue
+		}
+		if _, deleteErr = tx.ExecContext(ctx, `DELETE FROM dsh_catalog_create_idempotency WHERE resource_type='catalog_asset' AND resource_id=$1`, id); deleteErr != nil {
+			_ = tx.Rollback()
+			failures = append(failures, fmt.Sprintf("%s: idempotency cleanup: %v", id, deleteErr))
+			continue
+		}
+		affected, rowsErr := res.RowsAffected()
+		if rowsErr != nil {
+			_ = tx.Rollback()
+			failures = append(failures, fmt.Sprintf("%s: affected rows: %v", id, rowsErr))
+			continue
+		}
+		if commitErr := tx.Commit(); commitErr != nil {
+			failures = append(failures, fmt.Sprintf("%s: commit: %v", id, commitErr))
+			continue
+		}
+		if affected > 0 {
+			deletedCount++
 		}
 	}
-	return deletedCount, rows.Err()
+	if err := rows.Err(); err != nil {
+		failures = append(failures, fmt.Sprintf("candidate scan: %v", err))
+	}
+	if len(failures) > 0 {
+		return deletedCount, fmt.Errorf("catalog orphan cleanup failed: %s", strings.Join(failures, "; "))
+	}
+	return deletedCount, nil
 }
 
 // SimulateAssetScan transitions an asset from scanning to the target status.
@@ -2891,80 +2671,48 @@ func SimulateAssetScan(ctx context.Context, db *sql.DB, id string, targetStatus 
 	return GetAsset(ctx, db, id)
 }
 
-func UpsertAssortmentInventoryAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInventoryInput) (StoreAssortmentInventory, error) {
-	if !validPolicyType[input.PolicyType] {
-		return StoreAssortmentInventory{}, ErrInvalid
-	}
-	if input.Quantity < 0 || input.MinOrderQuantity < 1 || input.StepQuantity < 1 || input.MaxOrderQuantity < input.MinOrderQuantity {
-		return StoreAssortmentInventory{}, ErrInvalid
-	}
-
-	tx, err := db.BeginTx(ctx, nil)
+func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID, idempotencyKey string, input StoreAssortmentPriceInput) (StoreAssortmentPrice, error) {
+	storeID = strings.TrimSpace(storeID)
+	masterProductID = strings.TrimSpace(masterProductID)
+	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
+	mutationRequest := struct {
+		StoreID         string                    `json:"storeId"`
+		MasterProductID string                    `json:"masterProductId"`
+		Input           StoreAssortmentPriceInput `json:"input"`
+	}{StoreID: strings.TrimSpace(storeID), MasterProductID: strings.TrimSpace(masterProductID), Input: input}
+	tx, mutation, replay, err := beginCatalogCreateMutation(
+		ctx, db, actorID, "assortment_price.create", idempotencyKey, mutationRequest,
+	)
 	if err != nil {
-		return StoreAssortmentInventory{}, err
+		return StoreAssortmentPrice{}, err
 	}
 	defer tx.Rollback()
-
-	var assortmentID string
-	err = tx.QueryRowContext(ctx, `SELECT id FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`, storeID, masterProductID).Scan(&assortmentID)
-	if err == sql.ErrNoRows {
-		return StoreAssortmentInventory{}, ErrNotFound
-	} else if err != nil {
-		return StoreAssortmentInventory{}, err
-	}
-
-	var inv StoreAssortmentInventory
-	if input.ExpectedVersion > 0 {
-		err = tx.QueryRowContext(ctx, `
-			UPDATE dsh_store_assortment_inventory
-			SET policy_type=$1, quantity=$2, min_order_quantity=$3, max_order_quantity=$4, step_quantity=$5, version=version+1, updated_at=now()
-			WHERE store_assortment_id=$6 AND version=$7
-			RETURNING store_assortment_id, policy_type, quantity, reserved_quantity, min_order_quantity, max_order_quantity, step_quantity, version, updated_at
-		`, input.PolicyType, input.Quantity, input.MinOrderQuantity, input.MaxOrderQuantity, input.StepQuantity, assortmentID, input.ExpectedVersion).
-			Scan(&inv.StoreAssortmentID, &inv.PolicyType, &inv.Quantity, &inv.ReservedQuantity, &inv.MinOrderQuantity, &inv.MaxOrderQuantity, &inv.StepQuantity, &inv.Version, &inv.UpdatedAt)
-		if err == sql.ErrNoRows {
-			return StoreAssortmentInventory{}, ErrConflict
+	if replay != nil {
+		var price StoreAssortmentPrice
+		err := tx.QueryRowContext(ctx, `
+			SELECT id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max,
+			       effective_from, effective_until, version
+			FROM dsh_store_assortment_prices WHERE id=$1`, replay.ResourceID).
+			Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin,
+				&price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
+		if errors.Is(err, sql.ErrNoRows) {
+			return StoreAssortmentPrice{}, ErrNotFound
 		}
-	} else {
-		err = tx.QueryRowContext(ctx, `
-			INSERT INTO dsh_store_assortment_inventory (
-				store_assortment_id, policy_type, quantity, min_order_quantity, max_order_quantity, step_quantity, version
-			) VALUES ($1, $2, $3, $4, $5, $6, 1)
-			ON CONFLICT (store_assortment_id) DO UPDATE SET
-				policy_type=EXCLUDED.policy_type,
-				quantity=EXCLUDED.quantity,
-				min_order_quantity=EXCLUDED.min_order_quantity,
-				max_order_quantity=EXCLUDED.max_order_quantity,
-				step_quantity=EXCLUDED.step_quantity,
-				version=dsh_store_assortment_inventory.version + 1,
-				updated_at=now()
-			RETURNING store_assortment_id, policy_type, quantity, reserved_quantity, min_order_quantity, max_order_quantity, step_quantity, version, updated_at
-		`, assortmentID, input.PolicyType, input.Quantity, input.MinOrderQuantity, input.MaxOrderQuantity, input.StepQuantity).
-			Scan(&inv.StoreAssortmentID, &inv.PolicyType, &inv.Quantity, &inv.ReservedQuantity, &inv.MinOrderQuantity, &inv.MaxOrderQuantity, &inv.StepQuantity, &inv.Version, &inv.UpdatedAt)
+		if err != nil {
+			return StoreAssortmentPrice{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return StoreAssortmentPrice{}, err
+		}
+		return price, nil
 	}
 
-	if err != nil {
-		return StoreAssortmentInventory{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return StoreAssortmentInventory{}, err
-	}
-	return inv, nil
-}
-
-func ScheduleAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentPriceInput) (StoreAssortmentPrice, error) {
 	if input.AmountMinor < 0 || input.PrepTimeMin < 0 || input.PrepTimeMax < input.PrepTimeMin {
 		return StoreAssortmentPrice{}, ErrInvalid
 	}
 	if len(input.Currency) != 3 {
 		return StoreAssortmentPrice{}, ErrInvalid
 	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return StoreAssortmentPrice{}, err
-	}
-	defer tx.Rollback()
 
 	var assortmentID string
 	err = tx.QueryRowContext(ctx, `SELECT id FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`, storeID, masterProductID).Scan(&assortmentID)
@@ -3005,6 +2753,9 @@ func ScheduleAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, mas
 		Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin, &price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
 
 	if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	if err := recordCatalogCreateMutation(ctx, tx, mutation, "assortment_price", id); err != nil {
 		return StoreAssortmentPrice{}, err
 	}
 	if err := tx.Commit(); err != nil {

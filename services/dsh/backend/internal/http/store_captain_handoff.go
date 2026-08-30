@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
-	"strings"
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
@@ -19,9 +18,11 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 	if !ok {
 		return
 	}
-	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
 		return
 	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		Status          dispatch.DeliveryStatus `json:"status"`
 		Latitude        *float64                `json:"latitude,omitempty"`
@@ -46,14 +47,14 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 		}
 		var sLat, sLng, cLat, cLng sql.NullFloat64
 		err := s.db.QueryRowContext(r.Context(), `
-			SELECT s.latitude, s.longitude,
+		SELECT s.latitude, s.longitude,
 			       NULLIF(o.delivery_address_snapshot->>'latitude', '')::float8,
 			       NULLIF(o.delivery_address_snapshot->>'longitude', '')::float8
 			FROM dsh_assignments a
 			JOIN dsh_orders o ON o.id = a.order_id
 			JOIN dsh_stores s ON s.id = o.store_id
-			WHERE a.id = $1::uuid
-		`, assignmentID).Scan(&sLat, &sLng, &cLat, &cLng)
+			WHERE a.id = $1::uuid AND a.operator_context_id = $2
+		`, assignmentID, actor.OperatorContextID).Scan(&sLat, &sLng, &cLat, &cLng)
 		if errors.Is(err, sql.ErrNoRows) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "assignment or order location was not found")
 			return
@@ -78,12 +79,15 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 		}
 	}
 
-	assignment, err := dispatch.UpdateDeliveryStatusGovernedIdempotentVersioned(
+	assignment, err := dispatch.UpdateDeliveryStatusGovernedIdempotentVersionedForOperatorContext(
 		s.db,
+		actor.OperatorContextID,
 		assignmentID,
 		actor.ID,
 		body.Status,
 		body.ExpectedVersion,
+		idempotencyKey,
+		correlationID,
 	)
 	if errors.Is(err, dispatch.ErrStoreHandoffRequired) {
 		store.SendError(
@@ -103,14 +107,19 @@ func (s *protectedStoreServer) handleConfirmPartnerStoreCaptainHandoff(w http.Re
 	if !ok {
 		return
 	}
-	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
 		return
 	}
-	item, err := dispatch.ConfirmStoreCaptainHandoffIdempotent(
+	w.Header().Set("X-Correlation-ID", correlationID)
+	item, err := dispatch.ConfirmStoreCaptainHandoffIdempotentForOperatorContext(
 		s.db,
+		actor.OperatorContextID,
 		r.PathValue("orderId"),
 		storeID,
 		actor.ID,
+		idempotencyKey,
+		correlationID,
 	)
 	if err != nil {
 		writeStoreCaptainHandoffError(w, err)
@@ -119,19 +128,12 @@ func (s *protectedStoreServer) handleConfirmPartnerStoreCaptainHandoff(w http.Re
 	store.SendJSON(w, http.StatusOK, map[string]any{"handoff": marshalStoreCaptainHandoff(item)})
 }
 
-func requireStoreCaptainHandoffIdempotencyKey(w http.ResponseWriter, r *http.Request) (string, bool) {
-	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if len(key) < 8 || len(key) > 200 {
-		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
-		return "", false
-	}
-	return key, true
-}
-
 func writeStoreCaptainHandoffError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, dispatch.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "active store-captain handoff was not found")
+	case errors.Is(err, dispatch.ErrIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
 	case errors.Is(err, dispatch.ErrConflict):
 		store.SendError(w, http.StatusConflict, "STORE_HANDOFF_CONFLICT", err.Error())
 	case errors.Is(err, dispatch.ErrInvalid):

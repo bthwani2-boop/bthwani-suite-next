@@ -10,7 +10,7 @@ import (
 )
 
 // IncidentPermissionOverride gates every sovereign-intervention entry point
-// (cancel, suspend, raise_exception against a partner-owned task). It is
+// (cancel and raise_exception against a partner-owned task). It is
 // deliberately distinct from the ordinary control-panel permissions so an
 // operator role can read/monitor without being able to override.
 const IncidentPermissionOverride = "incident.override"
@@ -23,6 +23,7 @@ type reportIncidentBody struct {
 	Reason             string   `json:"reason"`
 	TicketReference    string   `json:"ticketReference"`
 	CorrelationID      string   `json:"correlationId"`
+	CommandID          string   `json:"commandId"`
 	ExpectedVersion    int      `json:"expectedVersion"`
 	EvidenceReferences []string `json:"evidenceReferences"`
 	ReasonCode         string   `json:"reasonCode"`
@@ -33,6 +34,7 @@ func marshalOperationalIncident(inc *incident.Incident) map[string]any {
 	return map[string]any{
 		"id":                inc.ID,
 		"orderId":           inc.OrderID,
+		"operatorContextId": inc.OperatorContextID,
 		"targetEntityType":  inc.TargetEntityType,
 		"targetEntityId":    inc.TargetEntityID,
 		"incidentType":      inc.IncidentType,
@@ -59,6 +61,8 @@ func writeOperationalIncidentError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "operational incident not found")
 	case errors.Is(err, incident.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	case errors.Is(err, incident.ErrConflict):
+		store.SendError(w, http.StatusConflict, "INCIDENT_IDEMPOTENCY_CONFLICT", "incident command identity was already used with different details")
 	default:
 		store.SendError(w, http.StatusUnprocessableEntity, "INCIDENT_APPLY_FAILED", err.Error())
 	}
@@ -79,7 +83,7 @@ func (s *protectedStoreServer) handleReportOperationalIncident(w http.ResponseWr
 	}
 	reported, err := incident.NewService(s.db).Report(r.Context(), incident.ReportInput{
 		OrderID:            strings.TrimSpace(body.OrderID),
-		OperatorContextID:           actor.OperatorContextID,
+		OperatorContextID:  actor.OperatorContextID,
 		TargetEntityType:   incident.TargetEntityType(strings.TrimSpace(body.TargetEntityType)),
 		TargetEntityID:     strings.TrimSpace(body.TargetEntityID),
 		IncidentType:       incident.IncidentType(strings.TrimSpace(body.IncidentType)),
@@ -88,6 +92,7 @@ func (s *protectedStoreServer) handleReportOperationalIncident(w http.ResponseWr
 		ActorID:            actor.ID,
 		ActorRole:          actor.Role,
 		CorrelationID:      operationalCorrelationID(r, body.CorrelationID),
+		CommandID:          strings.TrimSpace(body.CommandID),
 		ExpectedVersion:    body.ExpectedVersion,
 		EvidenceReferences: body.EvidenceReferences,
 		ReasonCode:         body.ReasonCode,
@@ -101,15 +106,16 @@ func (s *protectedStoreServer) handleReportOperationalIncident(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handleListOperatorIncidents(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	limit, offset := parseLimitOffset(r)
 	incidents, err := incident.List(s.db, incident.ListFilter{
-		OrderID: r.URL.Query().Get("orderId"),
-		Limit:   limit,
-		Offset:  offset,
+		OperatorContextID: actor.OperatorContextID,
+		OrderID:           r.URL.Query().Get("orderId"),
+		Limit:             limit,
+		Offset:            offset,
 	})
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list operational incidents")
@@ -123,11 +129,11 @@ func (s *protectedStoreServer) handleListOperatorIncidents(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handleGetOperatorIncident(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	inc, err := incident.Get(s.db, r.PathValue("incidentId"))
+	inc, err := incident.Get(s.db, r.PathValue("incidentId"), actor.OperatorContextID)
 	if err != nil {
 		writeOperationalIncidentError(w, err)
 		return

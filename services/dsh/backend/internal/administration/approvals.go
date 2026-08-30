@@ -53,6 +53,10 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	if db == nil {
 		return nil, ErrInvalid
 	}
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, contextErr
+	}
 	if params.ActionType != "staff_role_assignment" && params.ActionType != "staff_role_revocation" {
 		return nil, errors.New("invalid action type")
 	}
@@ -80,8 +84,8 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	if err := db.QueryRowContext(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM dsh_admin_approval_requests
-			WHERE target_actor_id = $1 AND role_name = $2 AND status = 'pending'
-		)`, targetActorID, params.RoleName).Scan(&pending); err != nil {
+			WHERE operator_context_id = $1 AND target_actor_id = $2 AND role_name = $3 AND status = 'pending'
+		)`, operatorContextID, targetActorID, params.RoleName).Scan(&pending); err != nil {
 		return nil, err
 	}
 	if pending {
@@ -97,16 +101,18 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	var req RoleAssignmentApproval
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_admin_approval_requests
-			(action_type, target_actor_id, role_name, expected_role_version, requested_by, reason, status)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+			(operator_context_id, action_type, target_actor_id, role_name, expected_role_version, requested_by, reason, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
 		RETURNING id, action_type, target_actor_id, role_name, expected_role_version, requested_by, reason, status, version, created_at, updated_at
-	`, params.ActionType, targetActorID, params.RoleName, definition.Version, actorID, params.Reason).Scan(
+	`, operatorContextID, params.ActionType, targetActorID, params.RoleName, definition.Version, actorID, params.Reason).Scan(
 		&req.ID, &req.ActionType, &req.TargetActorID, &req.RoleName,
 		&req.ExpectedRoleVersion, &req.RequestedBy, &req.Reason, &req.Status, &req.Version, &req.CreatedAt, &req.UpdatedAt,
 	)
 	if err != nil {
 		var pqErr *pq.Error
-		if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "uq_dsh_admin_pending_role_change_by_actor_role" {
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" &&
+			(pqErr.Constraint == "uq_dsh_admin_pending_role_change_by_actor_role" ||
+				pqErr.Constraint == "uq_dsh_admin_pending_role_change_by_context_actor_role") {
 			return nil, ErrConflict
 		}
 		return nil, err
@@ -114,11 +120,11 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	req.ExecutionStatus = "not_started"
 
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-		VALUES ($1, 'ROLE_ASSIGNMENT_REQUESTED', $2,
-		        jsonb_build_object('request_id', $2::text, 'action_type', $3::text, 'reason_provided', TRUE)::text,
-		        'restricted', $2)
-	`, actorID, req.ID, params.ActionType); err != nil {
+		INSERT INTO dsh_admin_audit (operator_context_id, actor_id, action, target_id, detail, sensitivity, correlation_id)
+		VALUES ($1, $2, 'ROLE_ASSIGNMENT_REQUESTED', $3,
+		        jsonb_build_object('request_id', $3::text, 'action_type', $4::text, 'reason_provided', TRUE)::text,
+		        'restricted', $3)
+	`, operatorContextID, actorID, req.ID, params.ActionType); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -131,6 +137,10 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 func ListRoleAssignmentApprovals(ctx context.Context, db *sql.DB, status string) ([]RoleAssignmentApproval, error) {
 	if db == nil {
 		return nil, ErrInvalid
+	}
+	operatorContextID, err := requireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	query := `
@@ -146,10 +156,12 @@ func ListRoleAssignmentApprovals(ctx context.Context, db *sql.DB, status string)
 		FROM dsh_admin_approval_requests request
 		LEFT JOIN dsh_admin_canonical_mutation_intents intent
 		  ON intent.operation_type = 'role-assignment' AND intent.request_id = request.id
+		 AND intent.operator_context_id = request.operator_context_id
 	`
-	args := []interface{}{}
+	query += ` WHERE request.operator_context_id = $1 `
+	args := []interface{}{operatorContextID}
 	if status != "" {
-		query += ` WHERE request.status = $1 `
+		query += ` AND request.status = $2 `
 		args = append(args, status)
 	}
 	query += ` ORDER BY created_at DESC`
@@ -174,7 +186,7 @@ func ListRoleAssignmentApprovals(ctx context.Context, db *sql.DB, status string)
 	return out, rows.Err()
 }
 
-func getRoleAssignmentApproval(ctx context.Context, db *sql.DB, approvalID string) (*RoleAssignmentApproval, error) {
+func getRoleAssignmentApproval(ctx context.Context, db *sql.DB, operatorContextID, approvalID string) (*RoleAssignmentApproval, error) {
 	var req RoleAssignmentApproval
 	if err := db.QueryRowContext(ctx, `
 		SELECT request.id, request.action_type, request.target_actor_id, request.role_name, COALESCE(request.expected_role_version, 0),
@@ -189,8 +201,9 @@ func getRoleAssignmentApproval(ctx context.Context, db *sql.DB, approvalID strin
 		FROM dsh_admin_approval_requests request
 		LEFT JOIN dsh_admin_canonical_mutation_intents intent
 		  ON intent.operation_type = 'role-assignment' AND intent.request_id = request.id
-		WHERE request.id = $1
-	`, approvalID).Scan(
+		 AND intent.operator_context_id = request.operator_context_id
+		WHERE request.operator_context_id = $1 AND request.id = $2
+	`, operatorContextID, approvalID).Scan(
 		&req.ID, &req.ActionType, &req.TargetActorID, &req.RoleName, &req.ExpectedRoleVersion, &req.RequestedBy, &req.Reason, &req.Status, &req.ExecutionStatus,
 		&req.ReviewedBy, &req.ReviewNote, &req.Version, &req.CreatedAt, &req.UpdatedAt, &req.ReviewedAt,
 	); err != nil {
@@ -209,6 +222,10 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	if db == nil {
 		return nil, nil, ErrInvalid
 	}
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, nil, contextErr
+	}
 	if params.Decision != "approved" && params.Decision != "rejected" {
 		return nil, nil, errors.New("invalid decision")
 	}
@@ -223,8 +240,8 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	err = tx.QueryRowContext(ctx, `
 		SELECT id, action_type, target_actor_id, role_name, COALESCE(expected_role_version, 0), requested_by, reason, status, version
 		FROM dsh_admin_approval_requests
-		WHERE id = $1 FOR UPDATE
-	`, approvalID).Scan(
+		WHERE operator_context_id = $1 AND id = $2 FOR UPDATE
+	`, operatorContextID, approvalID).Scan(
 		&req.ID, &req.ActionType, &req.TargetActorID, &req.RoleName, &req.ExpectedRoleVersion, &req.RequestedBy, &req.Reason, &req.Status, &req.Version,
 	)
 	if err != nil {
@@ -247,18 +264,18 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 		if err = tx.QueryRowContext(ctx, `
 			UPDATE dsh_admin_approval_requests
 			SET status = 'rejected', reviewed_by = $1, review_note = $2, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
-			WHERE id = $3 AND status = 'pending' AND version = $4
+			WHERE operator_context_id = $3 AND id = $4 AND status = 'pending' AND version = $5
 			RETURNING version, updated_at, reviewed_at
-		`, actorID, params.ReviewNote, approvalID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
+		`, actorID, params.ReviewNote, operatorContextID, approvalID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
 			return nil, nil, errors.New("version conflict")
 		}
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-			VALUES ($1, 'ROLE_ASSIGNMENT_REJECTED', $2,
-			        jsonb_build_object('request_id', $2::text, 'decision', 'rejected',
-			                           'action_type', $3::text, 'note_provided', btrim($4::text) <> '')::text,
-			        'restricted', $2)
-		`, actorID, req.ID, req.ActionType, params.ReviewNote); err != nil {
+			INSERT INTO dsh_admin_audit (operator_context_id, actor_id, action, target_id, detail, sensitivity, correlation_id)
+			VALUES ($1, $2, 'ROLE_ASSIGNMENT_REJECTED', $3,
+			        jsonb_build_object('request_id', $3::text, 'decision', 'rejected',
+			                           'action_type', $4::text, 'note_provided', btrim($5::text) <> '')::text,
+			        'restricted', $3)
+		`, operatorContextID, actorID, req.ID, req.ActionType, params.ReviewNote); err != nil {
 			return nil, nil, err
 		}
 		if err := tx.Commit(); err != nil {
@@ -273,6 +290,7 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	}
 
 	intentPayload, _ := json.Marshal(roleMutationIntentPayload{
+		OperatorContextID:   operatorContextID,
 		TargetActorID:       req.TargetActorID,
 		RoleName:            req.RoleName,
 		ExpectedRoleVersion: req.ExpectedRoleVersion,
@@ -280,7 +298,7 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 		ReviewerID:          actorID,
 		ReviewNote:          params.ReviewNote,
 	})
-	if err := enqueueCanonicalMutationTx(ctx, tx, "role-assignment", req.ID, string(intentPayload)); err != nil {
+	if err := enqueueCanonicalMutationTx(ctx, tx, operatorContextID, "role-assignment", req.ID, string(intentPayload)); err != nil {
 		return nil, nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -290,7 +308,7 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	if err != nil {
 		return nil, nil, err
 	}
-	readback, err := getRoleAssignmentApproval(ctx, db, req.ID)
+	readback, err := getRoleAssignmentApproval(ctx, db, operatorContextID, req.ID)
 	if err != nil {
 		return nil, nil, err
 	}

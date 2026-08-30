@@ -333,7 +333,7 @@ export const DSH_OPERATIONS_SUPPORT_FLOWS: readonly DshOperationsSupportFlowSpec
     title: 'إثبات التسليم',
     description: 'إثبات التسليم يجب أن يبقى on-demand ويُراجع قبل الإغلاق النهائي للحالة.',
     surfaceVisibility: [
-      visibility('app-captain', 'primary', 'proof-upload', 'الكابتن يرفع الإثبات ضمن مساره فقط.'),
+      visibility('app-captain', 'primary', '/orders/:assignmentId/proof', 'الكابتن يرفع الإثبات ضمن مساره القانوني بعد الوصول للعميل.'),
       visibility('control-panel', 'primary', 'support/escalation', 'control-panel يراجع الإثبات ضمن audit/support.'),
     ],
     ownerSurface: 'app-captain', ownerLabel: 'الكابتن',

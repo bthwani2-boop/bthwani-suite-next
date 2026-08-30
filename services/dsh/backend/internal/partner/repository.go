@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -106,137 +107,6 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 
 // â”€â”€â”€ Activation transition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expectedVersion int) (Partner, ActivationEvent, error) {
-	tx, err := db.Begin()
-	if err != nil {
-		return Partner{}, ActivationEvent{}, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-
-	var current Partner
-	err = tx.QueryRow(`
-		SELECT id, activation_status, version
-		FROM dsh_partners WHERE id = $1 FOR UPDATE`, partnerID,
-	).Scan(&current.ID, &current.ActivationStatus, &current.Version)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Partner{}, ActivationEvent{}, ErrNotFound
-	}
-	if err != nil {
-		return Partner{}, ActivationEvent{}, err
-	}
-
-	if expectedVersion > 0 && current.Version != expectedVersion {
-		return Partner{}, ActivationEvent{}, ErrConflict
-	}
-
-	if !IsTransitionAllowed(current.ActivationStatus, input.ToStatus) {
-		return Partner{}, ActivationEvent{}, ErrInvalidTransition
-	}
-
-	if input.ToStatus == StatusOpsRejected && strings.TrimSpace(input.Reason) == "" {
-		return Partner{}, ActivationEvent{}, ErrInvalid
-	}
-
-	if input.ToStatus == StatusClientVisible {
-		var storeCount, blockedStoreCount int
-		// The canonical readiness view includes the partner's current
-		// client-visible state. During this transition that one blocker is the
-		// transition's own projected result; every other canonical store gate
-		// must still pass before the status mutation is committed.
-		err = tx.QueryRow(`
-			SELECT COUNT(*), COUNT(*) FILTER (
-				WHERE publication_decision <> 'PUBLISHED'
-				  AND NOT COALESCE('PARTNER_NOT_CLIENT_VISIBLE' = ANY(blocking_reason_codes), FALSE)
-			)
-			FROM dsh_partner_store_readiness_v
-			WHERE partner_id = $1`, partnerID,
-		).Scan(&storeCount, &blockedStoreCount)
-		if err != nil {
-			return Partner{}, ActivationEvent{}, err
-		}
-		if storeCount == 0 {
-			return Partner{}, ActivationEvent{}, errors.New("store publication gates failed: no linked store found")
-		}
-		if blockedStoreCount > 0 {
-			return Partner{}, ActivationEvent{}, ErrStorePublicationGatesFailed
-		}
-	}
-
-	var updated Partner
-	err = tx.QueryRow(`
-		UPDATE dsh_partners SET
-			activation_status = $2,
-			version           = version + 1,
-			updated_at        = NOW()
-		WHERE id = $1
-		RETURNING id, legal_name_ar, legal_name_en, display_name,
-		          legal_identity_type, legal_identity_number,
-		          owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
-		          category, COALESCE(business_vertical_id,''), activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
-		          notes,
-		          COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
-		          COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
-		          version, created_at, updated_at`,
-		partnerID, input.ToStatus,
-	).Scan(
-		&updated.ID, &updated.LegalNameAr, &updated.LegalNameEn, &updated.DisplayName,
-		&updated.LegalIdentityType, &updated.LegalIdentityNumber,
-		&updated.OwnerActorID, &updated.WorkforcePersonID, &updated.PrimaryPhone, &updated.SecondaryPhone, &updated.Email,
-		&updated.Category, &updated.BusinessVerticalID, &updated.ActivationStatus, &updated.OnboardingCaseStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
-		&updated.Notes,
-		&updated.PayoutDestinationID, &updated.DestinationMethod, &updated.MaskedDestinationReference, &updated.DestinationVerificationStatus,
-		&updated.Version, &updated.CreatedAt, &updated.UpdatedAt,
-	)
-	if err != nil {
-		return Partner{}, ActivationEvent{}, err
-	}
-	updated = SanitizePartnerForSurface(updated)
-
-	var evt ActivationEvent
-	err = tx.QueryRow(`
-		INSERT INTO dsh_partner_activation_events
-			(partner_id, from_status, to_status, actor_id, actor_surface, reason, correlation_id, idempotency_key)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-		RETURNING id, partner_id, from_status, to_status, actor_id, actor_surface, reason, correlation_id, created_at`,
-		partnerID, string(current.ActivationStatus), string(input.ToStatus),
-		input.ActorID, input.ActorSurface, input.Reason, input.CorrelationID, input.IdempotencyKey,
-	).Scan(&evt.ID, &evt.PartnerID, &evt.FromStatus, &evt.ToStatus,
-		&evt.ActorID, &evt.ActorSurface, &evt.Reason, &evt.CorrelationID, &evt.CreatedAt)
-	if err != nil {
-		return Partner{}, ActivationEvent{}, err
-	}
-
-	// Propagate partner_readiness to linked stores inside the same transaction.
-	// client_visible â†’ stores become discoverable; client_hidden/deactivated â†’ stores hidden.
-	if readiness, ok := partnerReadinessForActivationStatus(input.ToStatus); ok {
-		if _, err = tx.Exec(
-			`UPDATE dsh_stores SET partner_readiness = $2, version = version + 1, updated_at = NOW() WHERE partner_id = $1`,
-			partnerID, readiness,
-		); err != nil {
-			return Partner{}, ActivationEvent{}, err
-		}
-
-		// Write to dsh_store_action_audit
-		role := "operator"
-		if input.ActorSurface == "app-field" {
-			role = "field"
-		}
-		_, _ = tx.Exec(`
-			INSERT INTO dsh_store_action_audit
-			  (id, actor_id, actor_role, store_id, action, from_state, to_state, reason, correlation_id, created_at)
-			SELECT 'evt-' || md5($1 || s.id), $2, $3, s.id,
-			       'store_partner_readiness_updated','{}'::jsonb,'{}'::jsonb,$4,$5,NOW()
-			FROM dsh_stores s WHERE s.partner_id = $6`,
-			evt.ID, input.ActorID, role, "partner transition to "+string(input.ToStatus), input.CorrelationID, partnerID,
-		)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return Partner{}, ActivationEvent{}, err
-	}
-	return updated, evt, nil
-}
-
 func partnerReadinessForActivationStatus(status ActivationStatus) (string, bool) {
 	switch status {
 	case StatusClientVisible:
@@ -250,22 +120,80 @@ func partnerReadinessForActivationStatus(status ActivationStatus) (string, bool)
 
 // â”€â”€â”€ Documents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Document, error) {
+const partnerDocumentReadColumns = `id, partner_id, document_type, upload_status, review_status, document_status,
+	uploaded_by_actor_id, media_ref, notes, rejection_reason,
+	COALESCE(reviewed_by_actor_id,''),
+	reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
+	version, created_at, updated_at`
+
+func UploadDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID string, input UploadDocumentInput) (Document, error) {
+	partnerID = strings.TrimSpace(partnerID)
+	input.DocumentType = strings.TrimSpace(input.DocumentType)
+	input.MediaRef = strings.TrimSpace(input.MediaRef)
+	input.Notes = strings.TrimSpace(input.Notes)
+	input.UploadedByActorID = strings.TrimSpace(input.UploadedByActorID)
+	input.UploadedBySurface = strings.TrimSpace(input.UploadedBySurface)
+	if input.UploadedBySurface == "" {
+		input.UploadedBySurface = "app-field"
+	}
 	if err := input.Validate(); err != nil {
 		return Document{}, err
 	}
-	tx, err := db.Begin()
+	key, correlationID, err := normalizePartnerMutationIdentity(input.IdempotencyKey, input.CorrelationID, partnerID, input.UploadedByActorID, "document-upload")
+	if err != nil {
+		return Document{}, err
+	}
+	requestHash, err := partnerMutationRequestHash(struct {
+		PartnerID         string `json:"partnerId"`
+		DocumentType      string `json:"documentType"`
+		MediaRef          string `json:"mediaRef"`
+		Notes             string `json:"notes"`
+		UploadedByActorID string `json:"uploadedByActorId"`
+		UploadedBySurface string `json:"uploadedBySurface"`
+	}{partnerID, input.DocumentType, input.MediaRef, input.Notes, input.UploadedByActorID, input.UploadedBySurface})
+	if err != nil {
+		return Document{}, err
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return Document{}, err
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	var exists bool
-	if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM dsh_partners WHERE id=$1)`, partnerID).Scan(&exists); err != nil {
+	var operatorContextID string
+	if err := tx.QueryRowContext(ctx, `SELECT operator_context_id FROM dsh_partners WHERE id = $1`, partnerID).Scan(&operatorContextID); errors.Is(err, sql.ErrNoRows) {
+		return Document{}, ErrNotFound
+	} else if err != nil {
 		return Document{}, err
 	}
-	if !exists {
-		return Document{}, ErrNotFound
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, partnerMutationLock(operatorContextID, partnerID, input.UploadedByActorID, "document-upload", key)); err != nil {
+		return Document{}, err
+	}
+
+	var replayID, storedHash string
+	err = tx.QueryRowContext(ctx, `
+		SELECT id, request_hash
+		FROM dsh_partner_documents
+		WHERE operator_context_id = $1 AND partner_id = $2
+		  AND uploaded_by_actor_id = $3 AND idempotency_key = $4`,
+		operatorContextID, partnerID, input.UploadedByActorID, key,
+	).Scan(&replayID, &storedHash)
+	if err == nil {
+		if storedHash != requestHash {
+			return Document{}, ErrIdempotencyConflict
+		}
+		document, loadErr := loadDocumentTx(ctx, tx, partnerID, replayID)
+		if loadErr != nil {
+			return Document{}, loadErr
+		}
+		if err := tx.Commit(); err != nil {
+			return Document{}, err
+		}
+		return document, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return Document{}, err
 	}
 	if err := validateLegalDocumentType(tx, input.DocumentType); err != nil {
 		return Document{}, err
@@ -275,38 +203,47 @@ func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Do
 	}
 
 	var supersedesID sql.NullString
-	_ = tx.QueryRow(`
+	_ = tx.QueryRowContext(ctx, `
 		SELECT id FROM dsh_partner_documents
 		WHERE partner_id = $1 AND document_type = $2 AND review_status = 'reupload_required'
 		ORDER BY created_at DESC LIMIT 1`, partnerID, input.DocumentType).Scan(&supersedesID)
 
 	var d Document
-	err = tx.QueryRow(`
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_partner_documents
 			(partner_id, document_type, media_ref, notes, uploaded_by_actor_id, upload_status,
-			 review_status, supersedes_document_id)
-		VALUES ($1,$2,$3,$4,$5,'uploaded','pending',$6)
-		RETURNING id, partner_id, document_type, upload_status, review_status, document_status,
-		          uploaded_by_actor_id, media_ref, notes, rejection_reason,
-		          COALESCE(reviewed_by_actor_id,''),
-		          reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
-		          version, created_at, updated_at`,
+			 review_status, supersedes_document_id, idempotency_key, request_hash, correlation_id)
+		VALUES ($1,$2,$3,$4,$5,'uploaded','pending',$6,$7,$8,$9)
+		RETURNING `+partnerDocumentReadColumns,
 		partnerID, input.DocumentType, input.MediaRef, input.Notes, input.UploadedByActorID, supersedesID,
+		key, requestHash, correlationID,
 	).Scan(documentScanArgs(&d)...)
 	if err != nil {
 		return Document{}, err
 	}
-	if err := recordActivationEvent(tx, partnerID, "document_uploaded:"+d.DocumentType, input.UploadedByActorID, "app-field", input.Notes); err != nil {
+	if err := recordActivationEventWithIdentity(tx, partnerID, "document_uploaded:"+d.DocumentType, input.UploadedByActorID, input.UploadedBySurface, input.Notes, correlationID, key, requestHash); err != nil {
 		return Document{}, err
 	}
 
-	if err := EvaluateOnboardingCaseStatus(context.Background(), tx, partnerID); err != nil {
+	if err := EvaluateOnboardingCaseStatus(ctx, tx, partnerID); err != nil {
 		return Document{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return Document{}, err
 	}
 	return d, nil
+}
+
+func loadDocumentTx(ctx context.Context, tx *sql.Tx, partnerID, documentID string) (Document, error) {
+	var document Document
+	err := tx.QueryRowContext(ctx, `SELECT `+partnerDocumentReadColumns+` FROM dsh_partner_documents WHERE partner_id = $1 AND id = $2`, partnerID, documentID).Scan(documentScanArgs(&document)...)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Document{}, ErrNotFound
+	}
+	if err != nil {
+		return Document{}, err
+	}
+	return document, nil
 }
 
 func ListDocuments(db *sql.DB, partnerID string) ([]Document, error) {
@@ -335,16 +272,74 @@ func ListDocuments(db *sql.DB, partnerID string) ([]Document, error) {
 	return list, rows.Err()
 }
 
-func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocumentInput) (Document, DocumentReview, error) {
+func ReviewDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID, documentID string, input ReviewDocumentInput) (Document, DocumentReview, error) {
+	partnerID = strings.TrimSpace(partnerID)
+	documentID = strings.TrimSpace(documentID)
+	input.Decision = strings.TrimSpace(input.Decision)
+	input.Reason = strings.TrimSpace(input.Reason)
+	input.ReviewedByActorID = strings.TrimSpace(input.ReviewedByActorID)
 	if err := input.Validate(); err != nil {
 		return Document{}, DocumentReview{}, err
 	}
+	key, correlationID, err := normalizePartnerMutationIdentity(input.IdempotencyKey, input.CorrelationID, partnerID, documentID, input.ReviewedByActorID, "document-review")
+	if err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	requestHash, err := partnerMutationRequestHash(struct {
+		PartnerID         string `json:"partnerId"`
+		DocumentID        string `json:"documentId"`
+		Decision          string `json:"decision"`
+		Reason            string `json:"reason"`
+		ReviewedByActorID string `json:"reviewedByActorId"`
+	}{partnerID, documentID, input.Decision, input.Reason, input.ReviewedByActorID})
+	if err != nil {
+		return Document{}, DocumentReview{}, err
+	}
 
-	tx, err := db.Begin()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return Document{}, DocumentReview{}, err
 	}
 	defer tx.Rollback() //nolint:errcheck
+
+	var operatorContextID string
+	if err := tx.QueryRowContext(ctx, `SELECT operator_context_id FROM dsh_partners WHERE id = $1`, partnerID).Scan(&operatorContextID); errors.Is(err, sql.ErrNoRows) {
+		return Document{}, DocumentReview{}, ErrNotFound
+	} else if err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, partnerMutationLock(operatorContextID, partnerID, documentID, input.ReviewedByActorID, "document-review", key)); err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+
+	var replayID, storedHash string
+	err = tx.QueryRowContext(ctx, `
+		SELECT id, request_hash
+		FROM dsh_partner_document_reviews
+		WHERE operator_context_id = $1 AND partner_id = $2 AND document_id = $3
+		  AND reviewed_by_actor_id = $4 AND idempotency_key = $5`,
+		operatorContextID, partnerID, documentID, input.ReviewedByActorID, key,
+	).Scan(&replayID, &storedHash)
+	if err == nil {
+		if storedHash != requestHash {
+			return Document{}, DocumentReview{}, ErrIdempotencyConflict
+		}
+		document, loadErr := loadDocumentTx(ctx, tx, partnerID, documentID)
+		if loadErr != nil {
+			return Document{}, DocumentReview{}, loadErr
+		}
+		review, loadErr := loadDocumentReviewTx(ctx, tx, partnerID, documentID, replayID)
+		if loadErr != nil {
+			return Document{}, DocumentReview{}, loadErr
+		}
+		if err := tx.Commit(); err != nil {
+			return Document{}, DocumentReview{}, err
+		}
+		return document, review, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return Document{}, DocumentReview{}, err
+	}
 
 	// document_status remains a compatibility projection; review_status is canonical.
 	newDocStatus := "under_review"
@@ -363,7 +358,7 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 	}
 
 	var d Document
-	err = tx.QueryRow(`
+	err = tx.QueryRowContext(ctx, `
 		UPDATE dsh_partner_documents SET
 			document_status  = $3,
 			review_status    = $4,
@@ -374,11 +369,7 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 			version          = version + 1,
 			updated_at       = NOW()
 		WHERE id = $1 AND partner_id = $2
-		RETURNING id, partner_id, document_type, upload_status, review_status, document_status,
-		          uploaded_by_actor_id, media_ref, notes, rejection_reason,
-		          COALESCE(reviewed_by_actor_id,''),
-		          reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
-		          version, created_at, updated_at`,
+		RETURNING `+partnerDocumentReadColumns,
 		documentID, partnerID, newDocStatus, newReviewStatus, input.ReviewedByActorID, input.Reason,
 	).Scan(documentScanArgs(&d)...)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -389,19 +380,19 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 	}
 
 	var rev DocumentReview
-	err = tx.QueryRow(`
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_partner_document_reviews
-			(document_id, partner_id, reviewed_by_actor_id, decision, reason, correlation_id)
-		VALUES ($1,$2,$3,$4,$5,$6)
+			(document_id, partner_id, reviewed_by_actor_id, decision, reason, correlation_id, idempotency_key, request_hash)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
 		RETURNING id, document_id, partner_id, reviewed_by_actor_id, decision, reason, correlation_id, created_at`,
-		documentID, partnerID, input.ReviewedByActorID, input.Decision, input.Reason, input.CorrelationID,
+		documentID, partnerID, input.ReviewedByActorID, input.Decision, input.Reason, correlationID, key, requestHash,
 	).Scan(&rev.ID, &rev.DocumentID, &rev.PartnerID, &rev.ReviewedByActorID,
 		&rev.Decision, &rev.Reason, &rev.CorrelationID, &rev.CreatedAt)
 	if err != nil {
 		return Document{}, DocumentReview{}, err
 	}
 
-	if err := recordActivationEvent(tx, partnerID, "document_reviewed:"+input.Decision, input.ReviewedByActorID, "control-panel", input.Reason); err != nil {
+	if err := recordActivationEventWithIdentity(tx, partnerID, "document_reviewed:"+input.Decision, input.ReviewedByActorID, "control-panel", input.Reason, correlationID, key, requestHash); err != nil {
 		return Document{}, DocumentReview{}, err
 	}
 
@@ -409,6 +400,23 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 		return Document{}, DocumentReview{}, err
 	}
 	return d, rev, nil
+}
+
+func loadDocumentReviewTx(ctx context.Context, tx *sql.Tx, partnerID, documentID, reviewID string) (DocumentReview, error) {
+	var review DocumentReview
+	err := tx.QueryRowContext(ctx, `
+		SELECT id, document_id, partner_id, reviewed_by_actor_id, decision, reason, correlation_id, created_at
+		FROM dsh_partner_document_reviews
+		WHERE id = $1 AND document_id = $2 AND partner_id = $3`, reviewID, documentID, partnerID).Scan(
+		&review.ID, &review.DocumentID, &review.PartnerID, &review.ReviewedByActorID,
+		&review.Decision, &review.Reason, &review.CorrelationID, &review.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return DocumentReview{}, ErrNotFound
+	}
+	if err != nil {
+		return DocumentReview{}, err
+	}
+	return review, nil
 }
 
 func documentScanArgs(d *Document) []any {
@@ -456,28 +464,103 @@ func validateLegalDocumentType(tx *sql.Tx, documentType string) error {
 
 // â”€â”€â”€ Field visits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, error) {
+const partnerFieldVisitReadColumns = `id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
+	visit_notes, location_latitude, location_longitude,
+	COALESCE((SELECT array_agg(media_ref ORDER BY created_at ASC)
+	          FROM dsh_partner_field_visit_media vm
+	          WHERE vm.visit_id = v.id AND vm.status = 'uploaded'), ARRAY[]::TEXT[]),
+	version, created_at, submitted_at`
+
+func CreateFieldVisitIdempotent(ctx context.Context, db *sql.DB, input CreateFieldVisitInput) (FieldVisit, error) {
+	input.PartnerID = strings.TrimSpace(input.PartnerID)
+	input.StoreID = strings.TrimSpace(input.StoreID)
+	input.VisitNotes = strings.TrimSpace(input.VisitNotes)
+	input.FieldActorID = strings.TrimSpace(input.FieldActorID)
+	input.FieldActorSurface = strings.TrimSpace(input.FieldActorSurface)
+	if input.FieldActorSurface == "" {
+		input.FieldActorSurface = "app-field"
+	}
 	if input.PartnerID == "" || input.FieldActorID == "" {
 		return FieldVisit{}, ErrInvalid
 	}
 	if (input.LocationLatitude == nil) != (input.LocationLongitude == nil) {
 		return FieldVisit{}, ErrInvalid
 	}
+	if input.StoreID == "" {
+		return FieldVisit{}, ErrStoreIDRequired
+	}
+	if input.VisitNotes == "" && input.LocationLatitude == nil && len(input.EvidenceMediaRefs) == 0 {
+		return FieldVisit{}, fmt.Errorf("%w: field visit requires notes, location, or evidence", ErrInvalid)
+	}
 
-	var storeIDSQL sql.NullString
-	if input.StoreID != "" {
-		var partnerID sql.NullString
-		err := db.QueryRow(`SELECT partner_id FROM dsh_stores WHERE id = $1`, input.StoreID).Scan(&partnerID)
-		if errors.Is(err, sql.ErrNoRows) {
-			return FieldVisit{}, ErrInvalid
+	mediaRefs := uniqueTrimmedMediaRefs(input.EvidenceMediaRefs)
+	key, correlationID, err := normalizePartnerMutationIdentity(input.IdempotencyKey, input.CorrelationID, input.PartnerID, input.FieldActorID, "field-visit-create")
+	if err != nil {
+		return FieldVisit{}, err
+	}
+	requestHash, err := partnerMutationRequestHash(struct {
+		PartnerID         string   `json:"partnerId"`
+		StoreID           string   `json:"storeId"`
+		VisitNotes        string   `json:"visitNotes"`
+		LocationLatitude  *float64 `json:"locationLatitude"`
+		LocationLongitude *float64 `json:"locationLongitude"`
+		EvidenceMediaRefs []string `json:"evidenceMediaRefs"`
+		FieldActorID      string   `json:"fieldActorId"`
+		FieldActorSurface string   `json:"fieldActorSurface"`
+	}{input.PartnerID, input.StoreID, input.VisitNotes, input.LocationLatitude, input.LocationLongitude, mediaRefs, input.FieldActorID, input.FieldActorSurface})
+	if err != nil {
+		return FieldVisit{}, err
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return FieldVisit{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	var operatorContextID string
+	if err := tx.QueryRowContext(ctx, `SELECT operator_context_id FROM dsh_partners WHERE id = $1`, input.PartnerID).Scan(&operatorContextID); errors.Is(err, sql.ErrNoRows) {
+		return FieldVisit{}, ErrNotFound
+	} else if err != nil {
+		return FieldVisit{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, partnerMutationLock(operatorContextID, input.PartnerID, input.FieldActorID, "field-visit-create", key)); err != nil {
+		return FieldVisit{}, err
+	}
+
+	var replayID, storedHash string
+	err = tx.QueryRowContext(ctx, `
+		SELECT id, request_hash
+		FROM dsh_partner_field_visits
+		WHERE operator_context_id = $1 AND partner_id = $2
+		  AND field_actor_id = $3 AND idempotency_key = $4`,
+		operatorContextID, input.PartnerID, input.FieldActorID, key,
+	).Scan(&replayID, &storedHash)
+	if err == nil {
+		if storedHash != requestHash {
+			return FieldVisit{}, ErrIdempotencyConflict
 		}
-		if err != nil {
+		visit, loadErr := loadFieldVisitTx(ctx, tx, input.PartnerID, replayID)
+		if loadErr != nil {
+			return FieldVisit{}, loadErr
+		}
+		if err := tx.Commit(); err != nil {
 			return FieldVisit{}, err
 		}
-		if !partnerID.Valid || partnerID.String != input.PartnerID {
-			return FieldVisit{}, ErrInvalid
-		}
-		storeIDSQL = sql.NullString{String: input.StoreID, Valid: true}
+		return visit, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return FieldVisit{}, err
+	}
+
+	var storePartnerID sql.NullString
+	if err := tx.QueryRowContext(ctx, `SELECT partner_id FROM dsh_stores WHERE id = $1 FOR SHARE`, input.StoreID).Scan(&storePartnerID); errors.Is(err, sql.ErrNoRows) {
+		return FieldVisit{}, ErrInvalid
+	} else if err != nil {
+		return FieldVisit{}, err
+	}
+	if !storePartnerID.Valid || storePartnerID.String != input.PartnerID {
+		return FieldVisit{}, ErrInvalid
 	}
 
 	var latSQL, lonSQL sql.NullFloat64
@@ -485,30 +568,18 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 		latSQL = sql.NullFloat64{Float64: *input.LocationLatitude, Valid: true}
 		lonSQL = sql.NullFloat64{Float64: *input.LocationLongitude, Valid: true}
 	}
+	storeIDSQL := sql.NullString{String: input.StoreID, Valid: true}
 
-	mediaRefs := uniqueTrimmedMediaRefs(input.EvidenceMediaRefs)
-
-	tx, err := db.Begin()
-	if err != nil {
-		return FieldVisit{}, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-
-	var v FieldVisit
-	var lat, lon sql.NullFloat64
-	var submittedAt sql.NullTime
-	var storeIDOut sql.NullString
-	err = tx.QueryRow(`
+	var visitID string
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_partner_field_visits
-			(partner_id, store_id, field_actor_id, visit_status, visit_notes, location_latitude, location_longitude, evidence_media_refs, submitted_at)
-		VALUES ($1,$2,$3,'submitted',$4,$5,$6,$7,NOW())
-		RETURNING id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
-		          visit_notes, location_latitude, location_longitude, evidence_media_refs,
-		          version, created_at, submitted_at`,
+			(partner_id, store_id, field_actor_id, visit_status, visit_notes, location_latitude, location_longitude,
+			 evidence_media_refs, submitted_at, idempotency_key, request_hash, correlation_id)
+		VALUES ($1,$2,$3,'submitted',$4,$5,$6,$7,NOW(),$8,$9,$10)
+		RETURNING id`,
 		input.PartnerID, storeIDSQL, input.FieldActorID, input.VisitNotes, latSQL, lonSQL, pq.Array(mediaRefs),
-	).Scan(&v.ID, &v.PartnerID, &storeIDOut, &v.FieldActorID, &v.VisitStatus,
-		&v.VisitNotes, &lat, &lon, pq.Array(&v.EvidenceMediaRefs),
-		&v.Version, &v.CreatedAt, &submittedAt)
+		key, requestHash, correlationID,
+	).Scan(&visitID)
 	if err != nil {
 		return FieldVisit{}, err
 	}
@@ -516,36 +587,58 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 		if err := validateVisitMedia(tx, input.PartnerID, input.StoreID, input.FieldActorID, mediaRef); err != nil {
 			return FieldVisit{}, err
 		}
-		if _, err := tx.Exec(`
+		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO dsh_partner_field_visit_media
 				(partner_id, visit_id, store_id, media_ref, captured_by_actor_id, context)
 			VALUES ($1,$2,$3,$4,$5,'partner_onboarding')
 			ON CONFLICT (visit_id, media_ref) DO NOTHING`,
-			input.PartnerID, v.ID, storeIDSQL, mediaRef, input.FieldActorID); err != nil {
+			input.PartnerID, visitID, storeIDSQL, mediaRef, input.FieldActorID); err != nil {
 			return FieldVisit{}, err
 		}
 	}
-	if err := recordActivationEvent(tx, input.PartnerID, "field_visit_submitted", input.FieldActorID, "app-field", input.VisitNotes); err != nil {
+	if err := recordActivationEventWithIdentity(tx, input.PartnerID, "field_visit_submitted", input.FieldActorID, input.FieldActorSurface, input.VisitNotes, correlationID, key, requestHash); err != nil {
+		return FieldVisit{}, err
+	}
+	visit, err := loadFieldVisitTx(ctx, tx, input.PartnerID, visitID)
+	if err != nil {
 		return FieldVisit{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return FieldVisit{}, err
 	}
+	return visit, nil
+}
+
+func loadFieldVisitTx(ctx context.Context, tx *sql.Tx, partnerID, visitID string) (FieldVisit, error) {
+	var visit FieldVisit
+	var lat, lon sql.NullFloat64
+	var submittedAt sql.NullTime
+	var storeIDOut sql.NullString
+	err := tx.QueryRowContext(ctx, `SELECT `+partnerFieldVisitReadColumns+` FROM dsh_partner_field_visits v WHERE v.partner_id = $1 AND v.id = $2`, partnerID, visitID).Scan(
+		&visit.ID, &visit.PartnerID, &storeIDOut, &visit.FieldActorID, &visit.VisitStatus,
+		&visit.VisitNotes, &lat, &lon, pq.Array(&visit.EvidenceMediaRefs),
+		&visit.Version, &visit.CreatedAt, &submittedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return FieldVisit{}, ErrNotFound
+	}
+	if err != nil {
+		return FieldVisit{}, err
+	}
 	if lat.Valid {
-		v.LocationLatitude = &lat.Float64
+		visit.LocationLatitude = &lat.Float64
 	}
 	if lon.Valid {
-		v.LocationLongitude = &lon.Float64
+		visit.LocationLongitude = &lon.Float64
 	}
 	if submittedAt.Valid {
-		v.SubmittedAt = &submittedAt.Time
+		t := submittedAt.Time
+		visit.SubmittedAt = &t
 	}
-	v.StoreID = storeIDOut.String
-	v.EvidenceMediaRefs = mediaRefs
-	if v.EvidenceMediaRefs == nil {
-		v.EvidenceMediaRefs = []string{}
+	visit.StoreID = storeIDOut.String
+	if visit.EvidenceMediaRefs == nil {
+		visit.EvidenceMediaRefs = []string{}
 	}
-	return v, nil
+	return visit, nil
 }
 
 func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerLinkedStore, error) {
@@ -573,33 +666,6 @@ func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerLinkedStore, erro
 		stores = append(stores, s)
 	}
 	return stores, rows.Err()
-}
-
-func LinkPartnerStore(db *sql.DB, partnerID, storeID, actorID string) ([]PartnerLinkedStore, error) {
-	if partnerID == "" || storeID == "" {
-		return nil, ErrInvalid
-	}
-	res, err := db.Exec(`
-		UPDATE dsh_stores
-		SET partner_id = $1,
-		    partner_readiness = 'pending',
-		    version = version + 1,
-		    updated_at = NOW()
-		WHERE id = $2`, partnerID, storeID)
-	if err != nil {
-		return nil, err
-	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return nil, err
-	}
-	if affected == 0 {
-		return nil, ErrNotFound
-	}
-	if err := recordActivationEvent(db, partnerID, "store_linked:"+storeID, actorID, "control-panel", ""); err != nil {
-		return nil, err
-	}
-	return ListPartnerStores(db, partnerID)
 }
 
 func ListFieldVisits(db *sql.DB, partnerID string) ([]FieldVisit, error) {
@@ -648,50 +714,6 @@ func ListFieldVisits(db *sql.DB, partnerID string) ([]FieldVisit, error) {
 	return list, rows.Err()
 }
 
-func SubmitFieldVisit(db *sql.DB, partnerID, visitID, actorID string) (FieldVisit, error) {
-	now := time.Now()
-	var v FieldVisit
-	var lat, lon sql.NullFloat64
-	var submittedAt sql.NullTime
-	var storeIDOut sql.NullString
-	err := db.QueryRow(`
-		UPDATE dsh_partner_field_visits SET
-			visit_status = 'submitted',
-			submitted_at = $4,
-			version      = version + 1
-		WHERE id = $1 AND partner_id = $2 AND field_actor_id = $3 AND visit_status IN ('draft','in_progress')
-		RETURNING id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
-		          visit_notes, location_latitude, location_longitude,
-		          ARRAY[]::TEXT[],
-		          version, created_at, submitted_at`,
-		visitID, partnerID, actorID, now,
-	).Scan(&v.ID, &v.PartnerID, &storeIDOut, &v.FieldActorID, &v.VisitStatus,
-		&v.VisitNotes, &lat, &lon, pq.Array(&v.EvidenceMediaRefs),
-		&v.Version, &v.CreatedAt, &submittedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return FieldVisit{}, ErrNotFound
-	}
-	if err != nil {
-		return FieldVisit{}, err
-	}
-	if lat.Valid {
-		v.LocationLatitude = &lat.Float64
-	}
-	if lon.Valid {
-		v.LocationLongitude = &lon.Float64
-	}
-	if submittedAt.Valid {
-		t := submittedAt.Time
-		v.SubmittedAt = &t
-	}
-	v.StoreID = storeIDOut.String
-	v.EvidenceMediaRefs, err = listVisitMedia(db, v.ID)
-	if err != nil {
-		return FieldVisit{}, err
-	}
-	return v, nil
-}
-
 func uniqueTrimmedMediaRefs(refs []string) []string {
 	seen := make(map[string]struct{}, len(refs))
 	result := make([]string, 0, len(refs))
@@ -729,27 +751,6 @@ func validateVisitMedia(tx *sql.Tx, partnerID, storeID, actorID, mediaRef string
 	return nil
 }
 
-func listVisitMedia(db *sql.DB, visitID string) ([]string, error) {
-	rows, err := db.Query(`
-		SELECT media_ref FROM dsh_partner_field_visit_media
-		WHERE visit_id = $1 AND status = 'uploaded' ORDER BY created_at ASC`, visitID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	refs := []string{}
-	for rows.Next() {
-		var ref string
-		if err := rows.Scan(&ref); err != nil {
-			return nil, err
-		}
-		refs = append(refs, ref)
-	}
-	return refs, rows.Err()
-}
-
-// â”€â”€â”€ Activation audit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 // execer is satisfied by both *sql.DB and *sql.Tx, letting audit events be
 // recorded either standalone or as part of an existing transaction.
 type execer interface {
@@ -757,15 +758,24 @@ type execer interface {
 }
 
 // recordActivationEvent appends a non-transition activation event (document
-// upload, document review, field visit, store link) to the same audit trail
-// TransitionStatus writes to, so the full partner lifecycle is visible from
-// a single ordered timeline instead of being scattered across tables.
+// upload, document review, field visit, store link) to the canonical activation
+// audit trail, so the full partner lifecycle is visible from one ordered timeline.
 func recordActivationEvent(x execer, partnerID, toStatus, actorID, actorSurface, reason string) error {
 	_, err := x.Exec(`
 		INSERT INTO dsh_partner_activation_events
 			(partner_id, from_status, to_status, actor_id, actor_surface, reason)
 		VALUES ($1, '', $2, $3, $4, $5)`,
 		partnerID, toStatus, actorID, actorSurface, reason)
+	return err
+}
+
+func recordActivationEventWithIdentity(x execer, partnerID, toStatus, actorID, actorSurface, reason, correlationID, idempotencyKey, requestHash string) error {
+	_, err := x.Exec(`
+		INSERT INTO dsh_partner_activation_events
+			(partner_id, from_status, to_status, actor_id, actor_surface, reason,
+			 correlation_id, idempotency_key, request_hash)
+		VALUES ($1, '', $2, $3, $4, $5, $6, $7, $8)`,
+		partnerID, toStatus, actorID, actorSurface, reason, correlationID, idempotencyKey, requestHash)
 	return err
 }
 

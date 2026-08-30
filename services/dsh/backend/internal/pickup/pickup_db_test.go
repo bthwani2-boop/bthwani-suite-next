@@ -34,22 +34,24 @@ func openRequiredDB(t *testing.T) *sql.DB {
 }
 
 type fixture struct {
-	partnerID string
-	storeID   string
-	clientID  string
-	orderID   string
+	partnerID         string
+	storeID           string
+	clientID          string
+	orderID           string
+	operatorContextID string
 }
 
 func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	t.Helper()
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	operatorContextID := "OperatorContext-pickup-test-" + suffix
 	f := fixture{
-		partnerID: "pk-test-partner-" + suffix,
-		storeID:   "pk-test-store-" + suffix,
-		clientID:  uuid.NewString(),
+		partnerID:         "pk-test-partner-" + suffix,
+		storeID:           "pk-test-store-" + suffix,
+		clientID:          uuid.NewString(),
+		operatorContextID: "OperatorContext-pickup-test-" + suffix,
 	}
+	operatorContextID := f.operatorContextID
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_partners (id, legal_name_ar, display_name, legal_identity_number, primary_phone)
@@ -111,7 +113,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 
 func issuedSession(t *testing.T, svc *Service, f fixture) (string, *PickupSession) {
 	t.Helper()
-	plain, session, err := svc.IssueOtp(context.Background(), f.orderID, f.clientID, "partner-1", "partner", "")
+	plain, session, err := svc.IssueOtp(context.Background(), f.operatorContextID, f.orderID, f.clientID, "partner-1", "partner", "")
 	if err != nil {
 		t.Fatalf("IssueOtp failed: %v", err)
 	}
@@ -125,7 +127,7 @@ func TestVerifyOtpSuccessDBIntegration(t *testing.T) {
 
 	plain, _ := issuedSession(t, svc, f)
 
-	session, err := svc.VerifyOtp(context.Background(), f.orderID, plain, "partner-1", "partner", "")
+	session, err := svc.VerifyOtp(context.Background(), f.operatorContextID, f.orderID, plain, "partner-1", "partner", "")
 	if err != nil {
 		t.Fatalf("VerifyOtp failed: %v", err)
 	}
@@ -157,13 +159,13 @@ func TestVerifyOtpWrongCodeIncrementsAttemptAndLocksOutDBIntegration(t *testing.
 	}
 
 	for i := 0; i < session.MaxAttempts; i++ {
-		_, err := svc.VerifyOtp(ctx, f.orderID, "000000", "partner-1", "partner", "")
+		_, err := svc.VerifyOtp(ctx, f.operatorContextID, f.orderID, "000000", "partner-1", "partner", "")
 		if !errors.Is(err, ErrInvalidCode) {
 			t.Fatalf("attempt %d: expected ErrInvalidCode, got %v", i, err)
 		}
 	}
 
-	_, err := svc.VerifyOtp(ctx, f.orderID, "000000", "partner-1", "partner", "")
+	_, err := svc.VerifyOtp(ctx, f.operatorContextID, f.orderID, "000000", "partner-1", "partner", "")
 	if !errors.Is(err, ErrAttemptsExceeded) {
 		t.Fatalf("expected ErrAttemptsExceeded after exhausting attempts, got %v", err)
 	}
@@ -176,11 +178,11 @@ func TestVerifyOtpReuseAfterVerifiedRejectedDBIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	plain, _ := issuedSession(t, svc, f)
-	if _, err := svc.VerifyOtp(ctx, f.orderID, plain, "partner-1", "partner", ""); err != nil {
+	if _, err := svc.VerifyOtp(ctx, f.operatorContextID, f.orderID, plain, "partner-1", "partner", ""); err != nil {
 		t.Fatalf("first VerifyOtp failed: %v", err)
 	}
 
-	if _, err := svc.VerifyOtp(ctx, f.orderID, plain, "partner-1", "partner", ""); !errors.Is(err, ErrAlreadyUsed) {
+	if _, err := svc.VerifyOtp(ctx, f.operatorContextID, f.orderID, plain, "partner-1", "partner", ""); !errors.Is(err, ErrAlreadyUsed) {
 		t.Fatalf("expected ErrAlreadyUsed on reuse, got %v", err)
 	}
 }
@@ -196,7 +198,7 @@ func TestVerifyOtpExpiredRejectedDBIntegration(t *testing.T) {
 		t.Fatalf("failed to force expiry: %v", err)
 	}
 
-	if _, err := svc.VerifyOtp(ctx, f.orderID, plain, "partner-1", "partner", ""); !errors.Is(err, ErrExpired) {
+	if _, err := svc.VerifyOtp(ctx, f.operatorContextID, f.orderID, plain, "partner-1", "partner", ""); !errors.Is(err, ErrExpired) {
 		t.Fatalf("expected ErrExpired, got %v", err)
 	}
 }
@@ -209,12 +211,12 @@ func TestExtendWindowRequiresReasonDBIntegration(t *testing.T) {
 
 	_, _ = issuedSession(t, svc, f)
 
-	_, err := svc.ExtendWindow(ctx, f.orderID, time.Now().Add(time.Hour), "operator-1", "operator", "", "")
+	_, err := svc.ExtendWindow(ctx, f.operatorContextID, f.orderID, time.Now().Add(time.Hour), "operator-1", "operator", "", "")
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid when reason is missing, got %v", err)
 	}
 
-	session, err := svc.ExtendWindow(ctx, f.orderID, time.Now().Add(time.Hour), "operator-1", "operator", "customer requested more time", "")
+	session, err := svc.ExtendWindow(ctx, f.operatorContextID, f.orderID, time.Now().Add(time.Hour), "operator-1", "operator", "customer requested more time", "")
 	if err != nil {
 		t.Fatalf("ExtendWindow with reason failed: %v", err)
 	}

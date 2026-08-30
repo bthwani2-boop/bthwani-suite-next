@@ -21,7 +21,7 @@ import {
   spacing,
   statusScale,
 } from "@bthwani/ui-kit";
-import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
+import { useDshClientPlatform } from "../client-platform-context";
 import type { HomePublicReel } from "../../shared/home-discovery";
 import { isPlayableVideoUrl } from "../../shared/home-discovery/playable-video-url.adapter";
 import { getDshVideoRenderer } from "../../shared/mobile-capabilities";
@@ -80,6 +80,7 @@ function ReelSlide({
   readonly height: number;
   readonly onOpenStore?: (() => void) | undefined;
 }) {
+  const { RemoteImage } = useDshClientPlatform();
   const VideoSurface = getDshVideoRenderer();
 
   const target = targetCopy(reel);
@@ -90,7 +91,7 @@ function ReelSlide({
     <View style={[styles.slideShell, { height }]}>
       <View style={styles.slideCard}>
         {reel.posterUrl ? (
-          <ClientRemoteImage
+          <RemoteImage
             uri={reel.posterUrl}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
@@ -295,6 +296,7 @@ export function HomeReelsSection({
   onReelPress,
   onItemImpression,
 }: Props) {
+  const { RemoteImage } = useDshClientPlatform();
   const [viewerVisible, setViewerVisible] = React.useState(false);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const lastHandledOpenRequest = React.useRef(0);
@@ -344,7 +346,7 @@ export function HomeReelsSection({
               >
                 <View style={styles.videoPlane}>
                   {item.posterUrl ? (
-                    <ClientRemoteImage
+                    <RemoteImage
                       uri={item.posterUrl}
                       style={StyleSheet.absoluteFill}
                       contentFit="cover"

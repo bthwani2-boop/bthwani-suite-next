@@ -59,6 +59,37 @@ function swallower() {
   };
 }
 
+test("browser durable storage survives a session boundary and surfaces read failures", async () => {
+  const previousWindow = globalThis.window;
+  const localValues = new Map();
+  const sessionValues = new Map();
+  const storage = (values, failReads = false) => ({
+    getItem: (key) => {
+      if (failReads) throw new Error("storage read rejected");
+      return values.has(key) ? values.get(key) : null;
+    },
+    setItem: (key, value) => values.set(key, String(value)),
+    removeItem: (key) => values.delete(key),
+  });
+
+  globalThis.window = {
+    localStorage: storage(localValues),
+    sessionStorage: storage(sessionValues),
+  };
+  try {
+    const browserModule = await import(`../src/storage-adapter.ts?browser-durable=${Date.now()}`);
+    await browserModule.bthwaniDurableStorage.setItem("durable-key", "value");
+    assert.equal(localValues.get("durable-key"), "value");
+    assert.equal(sessionValues.has("durable-key"), false);
+
+    globalThis.window.localStorage = storage(localValues, true);
+    await assert.rejects(browserModule.bthwaniDurableStorage.getItem("durable-key"), /storage read rejected/);
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
+});
+
 test("cache store round-trip preserves a successful write", async () => {
   configureBthwaniCacheStorage({
     getItem: async (key) => key === "cache-key" ? "v" : null,

@@ -22,6 +22,8 @@ import {
   type SovereignLeadershipRecord,
   type SovereignLeadershipReferenceData,
 } from "../../shared/workforce";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
 const selectStyle = {
   width: "100%",
@@ -54,6 +56,10 @@ function bundleForCode(
 }
 
 export function SovereignLeadershipPanel() {
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canRead = hasServiceControlPanelPermission(identity, "workforce", "leadership:read");
+  const canCreate = hasServiceControlPanelPermission(identity, "workforce", "leadership:create");
   const [records, setRecords] = useState<readonly SovereignLeadershipRecord[]>([]);
   const [references, setReferences] = useState<SovereignLeadershipReferenceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,12 +90,18 @@ export function SovereignLeadershipPanel() {
   };
 
   const reload = useCallback(async () => {
+    if (!canRead && !canCreate) {
+      setRecords([]);
+      setReferences(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setLoadError(null);
     try {
       const [leadership, referenceData] = await Promise.all([
-        listSovereignLeadership(),
-        getSovereignLeadershipReferenceData(),
+        canRead ? listSovereignLeadership() : Promise.resolve<readonly SovereignLeadershipRecord[]>([]),
+        canRead || canCreate ? getSovereignLeadershipReferenceData() : Promise.resolve<SovereignLeadershipReferenceData | null>(null),
       ]);
       setRecords(leadership);
       setReferences(referenceData);
@@ -98,7 +110,7 @@ export function SovereignLeadershipPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [canCreate, canRead]);
 
   useEffect(() => {
     void reload();
@@ -150,6 +162,17 @@ export function SovereignLeadershipPanel() {
       !submitting,
     [dateError, department, employmentClass, fullNameAr, permissionBundle, phoneE164, positionTitle, submitting, username],
   );
+
+  if (!canRead && !canCreate) {
+    return (
+      <CpStatePanel
+        role="alert"
+        title="صلاحية القيادة السيادية مطلوبة"
+        description="تتطلب قراءة الكادر leadership:read أو إنشاء التكليفات leadership:create على Workforce."
+        code="WORKFORCE_LEADERSHIP_PERMISSION_REQUIRED"
+      />
+    );
+  }
 
   const submit = async () => {
     const currentDateError = assignmentDateError(assignmentStartsOn, assignmentEndsOn);
@@ -220,7 +243,7 @@ export function SovereignLeadershipPanel() {
         code="IDENTITY_WORKFORCE_BOUNDARY_ENFORCED"
       />
 
-      <section style={{ padding: "20px", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px" }}>
+      {canCreate ? <section style={{ padding: "20px", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px" }}>
         <Text role="titleMd">إضافة موظف قيادي</Text>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "12px" }}>
           <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم الكامل بالعربية" placeholder="الاسم الكامل بالعربية" />
@@ -293,9 +316,9 @@ export function SovereignLeadershipPanel() {
             {submitting ? "جارٍ الإنشاء والتفويض…" : "إنشاء الموظف القيادي وإصدار الدعوة"}
           </CpButton>
         </div>
-      </section>
+      </section> : null}
 
-      <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {canRead ? <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
           <Text role="titleMd">الكادر القيادي الحالي</Text>
           <CpButton variant="secondary" onClick={() => void reload()} disabled={loading}>تحديث</CpButton>
@@ -329,7 +352,7 @@ export function SovereignLeadershipPanel() {
             </tbody>
           </CpTable>
         ) : null}
-      </section>
+      </section> : null}
     </div>
   );
 }

@@ -20,6 +20,13 @@ type CapabilityDefinition = {
   readonly rollback?: readonly string[];
 };
 
+export type ControlPanelPermissionRequirement = Readonly<{
+  readonly service: string;
+  readonly action: string;
+}>;
+
+export type ControlPanelPermissionAlternatives = readonly (readonly ControlPanelPermissionRequirement[])[];
+
 const capabilityDefinitions = capabilityContract.capabilities as readonly CapabilityDefinition[];
 
 function registeredCapabilityPermissions(
@@ -69,15 +76,38 @@ function isControlPanelPermission(
   );
 }
 
+export function hasControlPanelPermissionRequirement(
+  identity: ControlPanelPermissionIdentity | null | undefined,
+  requirement: ControlPanelPermissionRequirement,
+): boolean {
+  return identity?.permissions?.some((permission) =>
+    permission.service === requirement.service &&
+    isControlPanelPermission(permission, requirement.action),
+  ) ?? false;
+}
+
+/**
+ * A section may expose several independently governed workspaces. Access is
+ * granted when the session can read at least one complete workspace path;
+ * every permission in one alternative is still required.
+ */
+export function hasAnyControlPanelPermissionAlternative(
+  identity: ControlPanelPermissionIdentity | null | undefined,
+  alternatives: ControlPanelPermissionAlternatives,
+): boolean {
+  return alternatives.some((requirements) =>
+    requirements.length > 0 && requirements.every((requirement) =>
+      hasControlPanelPermissionRequirement(identity, requirement),
+    ),
+  );
+}
+
 export function hasServiceControlPanelPermission(
   identity: ControlPanelPermissionIdentity | null | undefined,
   service: string,
   action: string,
 ): boolean {
-  return identity?.permissions?.some((permission) =>
-    permission.service === service &&
-    isControlPanelPermission(permission, action),
-  ) ?? false;
+  return hasControlPanelPermissionRequirement(identity, { service, action });
 }
 
 export function hasControlPanelPermission(

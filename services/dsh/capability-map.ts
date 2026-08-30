@@ -267,7 +267,7 @@ export const DSH_CAPABILITY_MAP = [
       "pushDshCaptainLocation",
       "declineDshAssignment",
       "updateDshDeliveryStatus",
-      "submitDshPoD",
+		"submitCaptainDeliveryProof",
       "getDshClientOrderTracking",
       "reportCaptainPickupReadiness",
     ],

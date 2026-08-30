@@ -34,7 +34,7 @@ export function DshPartnerSurface(props: DshPartnerSurfaceProps) {
   );
 }
 
-function DshPartnerSurfaceInner({ route, navigation }: DshPartnerSurfaceProps) {
+function DshPartnerSurfaceInner({ route, navigation, appearance }: DshPartnerSurfaceProps) {
   const insets = useSafeAreaInsets();
   const { dshClientId } = usePlatformVars();
   const {
@@ -67,7 +67,7 @@ function DshPartnerSurfaceInner({ route, navigation }: DshPartnerSurfaceProps) {
       || route.kind === 'product-edit'
       || route.kind === 'category-management'
       || route.kind === 'product-media'
-      || route.kind === 'product-overrides'
+      || route.kind === 'product-controls'
     ) return 'inventory';
     if (
       route.kind === 'support-directory'
@@ -88,7 +88,7 @@ function DshPartnerSurfaceInner({ route, navigation }: DshPartnerSurfaceProps) {
     />
   );
 
-  if (!selectedStoreScope) {
+  if (isLoadingScopes || !selectedStoreScope) {
     if (isLoadingScopes) {
       return (
         <View style={styles.shellContainer}>
@@ -98,32 +98,49 @@ function DshPartnerSurfaceInner({ route, navigation }: DshPartnerSurfaceProps) {
         </View>
       );
     }
-    if (!scopesError && scopes.length > 1) {
+
+    if (!selectedStoreScope) {
+      if (!scopesError && scopes.length > 1) {
+        return (
+          <View style={styles.shellContainer}>
+            <View style={styles.emptyStateContainer}>
+              <Icon name="storefront-outline" size={48} tone="brand" />
+              <Text role="bodyStrong" style={styles.emptyStateTitle}>اختر الفرع النشط</Text>
+              <Text role="body" style={styles.emptyStateDesc}>
+                لديك أكثر من فرع. يجب اختيار الفرع صراحةً قبل تنفيذ أي عملية تشغيلية.
+              </Text>
+              <Button label="اختيار الفرع" onPress={actions.openStoreScope} />
+            </View>
+            {storeScopeSheet}
+          </View>
+        );
+      }
       return (
         <View style={styles.shellContainer}>
           <View style={styles.emptyStateContainer}>
-            <Icon name="storefront-outline" size={48} tone="brand" />
-            <Text role="bodyStrong" style={styles.emptyStateTitle}>اختر الفرع النشط</Text>
-            <Text role="body" style={styles.emptyStateDesc}>
-              لديك أكثر من فرع. يجب اختيار الفرع صراحةً قبل تنفيذ أي عملية تشغيلية.
+            <Icon name="warning-outline" size={48} tone="muted" />
+            <Text role="bodyStrong" style={styles.emptyStateTitle}>
+              {scopesError ? 'حدث خطأ أثناء تحميل الفروع' : 'لا يوجد فروع مسجلة'}
             </Text>
-            <Button label="اختيار الفرع" onPress={actions.openStoreScope} />
+            <Text role="body" style={styles.emptyStateDesc}>
+              {scopesError ? 'يرجى المحاولة لاحقاً' : 'يرجى التواصل مع الدعم الفني لإضافة فروع لحسابك'}
+            </Text>
           </View>
-          {storeScopeSheet}
         </View>
       );
     }
+  }
+
+  if (scopesError) {
     return (
       <View style={styles.shellContainer}>
         <View style={styles.emptyStateContainer}>
-          <Icon name="warning-outline" size={48} tone="muted" />
-          <Text role="bodyStrong" style={styles.emptyStateTitle}>
-            {scopesError ? 'حدث خطأ أثناء تحميل الفروع' : 'لا يوجد فروع مسجلة'}
-          </Text>
-          <Text role="body" style={styles.emptyStateDesc}>
-            {scopesError ? 'يرجى المحاولة لاحقاً' : 'يرجى التواصل مع الدعم الفني لإضافة فروع لحسابك'}
-          </Text>
+          <Icon name="warning-outline" size={48} tone="danger" />
+          <Text role="bodyStrong" style={styles.emptyStateTitle}>تعذر التحقق من صلاحية المتجر</Text>
+          <Text role="body" style={styles.emptyStateDesc}>{scopesError}</Text>
+          <Button label="اختيار متجر آخر" onPress={actions.openStoreScope} />
         </View>
+        {storeScopeSheet}
       </View>
     );
   }
@@ -232,6 +249,7 @@ function DshPartnerSurfaceInner({ route, navigation }: DshPartnerSurfaceProps) {
     <DshPartnerOrderJourneyRenderer
       route={route}
       navigation={navigation}
+      appearance={appearance}
       partnerOrdersState={partnerOrdersState}
       partnerOrders={partnerOrders}
       runtimePartnerProfile={runtimePartnerProfile}

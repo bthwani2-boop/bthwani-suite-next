@@ -17,6 +17,7 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import type { DshMediaAsset } from "../../shared/media/dsh-media-api.client";
+import { corrId } from "../../shared/_kernel/dsh-http-request";
 import { getDshImagePickerAdapter } from "../../shared/mobile-capabilities";
 import {
   listPartnerProductMedia,
@@ -149,29 +150,50 @@ export function ProductMediaScreen({
   const [assets, setAssets] = React.useState<readonly DshMediaAsset[]>([]);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = React.useState(0);
+  const mountedRef = React.useRef(true);
+  const requestSeqRef = React.useRef(0);
+  const scopeKey = `${storeId}:${productId}`;
+  const scopeKeyRef = React.useRef(scopeKey);
+  scopeKeyRef.current = scopeKey;
+  const uploadMutationRef = React.useRef<{ readonly key: string; readonly fingerprint: string } | null>(null);
 
-  const loadAssets = React.useCallback(async () => {
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+    requestSeqRef.current += 1;
+  }, []);
+
+  const loadAssets = React.useCallback(async (options?: { readonly throwOnFailure?: boolean }) => {
+    const requestSeq = ++requestSeqRef.current;
+    const requestScopeKey = scopeKey;
+    const isCurrentRequest = () => mountedRef.current
+      && requestSeq === requestSeqRef.current
+      && requestScopeKey === scopeKeyRef.current;
     setScreenState("loading");
     setErrorMessage(null);
     try {
       const items = await listPartnerProductMedia(storeId, productId);
+      if (!isCurrentRequest()) return;
       setAssets(items);
       setScreenState("idle");
+      return items;
     } catch (error) {
+      if (!isCurrentRequest()) return;
       if (isOfflineError(error)) {
         setScreenState("offline");
       } else {
         setErrorMessage(error instanceof Error ? error.message : "تعذر تحميل صورة المتجر للمنتج.");
         setScreenState("error");
       }
+      if (options?.throwOnFailure) throw error;
     }
-  }, [productId, storeId]);
+  }, [productId, scopeKey, storeId]);
 
   React.useEffect(() => {
     void loadAssets();
   }, [loadAssets]);
 
   const handleUpload = React.useCallback(async () => {
+    const operationScopeKey = scopeKey;
     setScreenState("picking");
     setErrorMessage(null);
     try {
@@ -180,10 +202,17 @@ export function ProductMediaScreen({
         setScreenState("idle");
         return;
       }
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
 
       setScreenState("uploading");
       setUploadProgress(15);
-      await uploadPartnerProductMedia({
+      const fingerprint = `${storeId}:${productId}:${selected.fileName}:${selected.mimeType}:${selected.fileSizeBytes}`;
+      const previous = uploadMutationRef.current;
+      const idempotencyKey = previous?.fingerprint === fingerprint
+        ? previous.key
+        : corrId("catalog-partner-media");
+      uploadMutationRef.current = { key: idempotencyKey, fingerprint };
+      const uploaded = await uploadPartnerProductMedia({
         storeId,
         productId,
         fileName: selected.fileName,
@@ -191,10 +220,17 @@ export function ProductMediaScreen({
         mimeType: selected.mimeType,
         fileSizeBytes: selected.fileSizeBytes,
         altAr: `صورة متجر للمنتج ${productId}`,
+        idempotencyKey,
       });
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setUploadProgress(100);
-      await loadAssets();
+      const readback = await loadAssets({ throwOnFailure: true });
+      if (!readback?.some((asset) => asset.id === uploaded.id && asset.status !== "archived")) {
+        throw new Error("لم تثبت قراءة الوسائط اللاحقة ظهور الأصل المرفوع؛ لم يُعتمد الرفع.");
+      }
+      uploadMutationRef.current = null;
     } catch (error) {
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       if (isOfflineError(error)) {
         setScreenState("offline");
       } else if (isStorageUnavailableError(error)) {
@@ -204,19 +240,25 @@ export function ProductMediaScreen({
         setScreenState("error");
       }
     }
-  }, [loadAssets, productId, storeId]);
+  }, [loadAssets, productId, scopeKey, storeId]);
 
   const handleUnlink = React.useCallback(async (assetId: string) => {
+    const operationScopeKey = scopeKey;
     setScreenState("deleting");
     setErrorMessage(null);
     try {
       await unlinkPartnerProductMedia(storeId, productId, assetId);
-      await loadAssets();
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
+      const readback = await loadAssets({ throwOnFailure: true });
+      if (readback?.some((asset) => asset.id === assetId)) {
+        throw new Error("لم تثبت قراءة الوسائط اللاحقة إزالة الأصل؛ لم يُعتمد الحذف.");
+      }
     } catch (error) {
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setErrorMessage(error instanceof Error ? error.message : "تعذر إزالة صورة المتجر.");
       setScreenState("error");
     }
-  }, [loadAssets, productId, storeId]);
+  }, [loadAssets, productId, scopeKey, storeId]);
 
   const busy = screenState === "picking" || screenState === "uploading" || screenState === "deleting";
 
@@ -224,7 +266,7 @@ export function ProductMediaScreen({
     <View style={styles.screen}>
       <TopBar
         title="صورة المتجر للمنتج"
-        subtitle="Store assortment override"
+        subtitle="صورة خاصة بتشكيلة المتجر"
         {...(onBack ? { onBack } : {})}
       />
 

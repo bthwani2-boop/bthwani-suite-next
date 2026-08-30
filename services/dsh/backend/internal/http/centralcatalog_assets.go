@@ -35,11 +35,15 @@ func (s *protectedStoreServer) handleCreateAssetUploadIntent(w http.ResponseWrit
 	if !ok {
 		return
 	}
+	idempotencyKey, ok := requireCatalogCreateIdempotency(w, r)
+	if !ok {
+		return
+	}
 	var input centralcatalog.AssetUploadIntentInput
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	intent, err := centralcatalog.CreateAssetUploadIntent(r.Context(), s.db, s.mediaClient(), actor.ID, sourceSurfaceForActor(actor.Role), input)
+	intent, err := centralcatalog.CreateAssetUploadIntent(r.Context(), s.db, s.mediaClient(), actor.ID, sourceSurfaceForActor(actor.Role), idempotencyKey, input)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
@@ -101,7 +105,15 @@ func (s *protectedStoreServer) authorizeAssetAccess(w http.ResponseWriter, r *ht
 }
 
 func (s *protectedStoreServer) handleDeleteCatalogAsset(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
+	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
+	if !ok {
+		return
+	}
+	if actor.Role == "operator" {
+		if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
+			return
+		}
+	} else if !s.authorizeAssetAccess(w, r, actor, r.PathValue("assetId")) {
 		return
 	}
 	if err := centralcatalog.DeleteUnlinkedAsset(r.Context(), s.db, s.mediaClient(), r.PathValue("assetId")); err != nil {
@@ -201,23 +213,6 @@ func (s *protectedStoreServer) handleListCatalogAssetLinks(w http.ResponseWriter
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"links": links})
-}
-
-func (s *protectedStoreServer) handleSubmitReel(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "partner")
-	if !ok {
-		return
-	}
-	var input centralcatalog.CreateReelSubmissionInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	reel, err := centralcatalog.CreateReelSubmission(r.Context(), s.db, actor.ID, actor.Role, input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"reel": reel})
 }
 
 func (s *protectedStoreServer) handleListReels(w http.ResponseWriter, r *http.Request) {

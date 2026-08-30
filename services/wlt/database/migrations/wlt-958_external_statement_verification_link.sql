@@ -9,6 +9,8 @@ ALTER TABLE wlt_external_provider_statements
 -- Any historical provider label without a receipt is not independently
 -- authenticated. Preserve the financial artifact but explicitly downgrade its
 -- provenance rather than fabricating a receipt.
+ALTER TABLE wlt_external_provider_statements DISABLE TRIGGER USER;
+
 UPDATE wlt_external_provider_statements
 SET provenance_type = 'operator_attested',
     provenance_evidence_sha256 = artifact_sha256,
@@ -17,6 +19,8 @@ SET provenance_type = 'operator_attested',
     provenance_verification_receipt_id = NULL
 WHERE provenance_type IN ('provider_signed', 'provider_api_verified')
   AND (provenance_key_id IS NULL OR provenance_key_id = '' OR provenance_verifier_version IS NULL OR provenance_verifier_version = '' OR provenance_verification_receipt_id IS NULL OR provenance_verification_receipt_id = '');
+
+ALTER TABLE wlt_external_provider_statements ENABLE TRIGGER USER;
 
 ALTER TABLE wlt_external_provider_statements
   DROP CONSTRAINT IF EXISTS wlt_external_provider_statements_provider_provenance_link_chk;

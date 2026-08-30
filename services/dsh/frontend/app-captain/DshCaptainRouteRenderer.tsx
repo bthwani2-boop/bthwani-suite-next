@@ -17,16 +17,15 @@ import {
 import type { DshCaptainRoute } from "./dsh-captain.types";
 import type {
   CaptainAvailabilityMeta,
+  CaptainDeliveryAction,
   CaptainDeliveryExceptionDraft,
   CaptainSupportRoute,
   DshCaptainLocationPush,
 } from "../shared/delivery";
 import { DshEntryScreen } from "./account/DshCaptainEntryScreen";
 import {
-  CaptainDeliveryConfirmSheet,
   CaptainOrderDetailScreen,
   CaptainOrdersInboxScreen,
-  CaptainPickupConfirmSheet,
 } from "./orders/DshCaptainOrdersScreen";
 import { DshCaptainPoDSubmissionScreen } from "./orders/DshCaptainPoDSubmissionScreen";
 import { WltCaptainFinanceScreen } from "./finance/WltCaptainFinanceScreen";
@@ -37,6 +36,7 @@ import { OfferDeclineSheet } from "./orders/OfferDeclineSheet";
 import { CaptainSupportScreenRouter } from "./account/CaptainSupportScreenRouter";
 import type { DshCaptainOrderBellItem, DshCaptainOrdersScreenState } from "../shared/orders";
 import type { DshDeliveryException } from "../shared/dispatch";
+import type { DshDispatchAssignmentSource } from "../shared/dispatch";
 import { ActorNotificationsPanel } from "../shared/notifications";
 import { ProviderRatingSummaryPanel } from "../shared/provider-ratings/ProviderRatingSummaryPanel";
 import { ProviderAvailabilityNoticesPanel } from "../shared/workforce/ProviderAvailabilityNoticesPanel";
@@ -51,6 +51,10 @@ export type DshCaptainRouteRendererProps = {
   readonly route: DshCaptainRoute;
   readonly activeAssignmentId: string;
   readonly activeOrderId: string;
+  readonly activeWorkItemId: string;
+  readonly activeWorkItemSource: DshDispatchAssignmentSource | '';
+  readonly activeDeliveryStatus: import('../shared/dispatch').DshDeliveryStatus | '';
+  readonly activeDeliveryAction: CaptainDeliveryAction;
   readonly activeOrderDisplayId: string;
   readonly activeSummary: CaptainOrderDetailSummary | null;
   readonly inboxItems: readonly DshCaptainOrderBellItem[];
@@ -59,13 +63,14 @@ export type DshCaptainRouteRendererProps = {
   readonly captainPodRequired: boolean;
   readonly isStoreCourierMode: boolean;
   readonly isCaptainAvailable: boolean;
+  readonly availabilityBusy: boolean;
+  readonly availabilityError: string | null;
   readonly selectedSupportScreen: CaptainSupportRoute;
-  readonly isPickupSheetVisible: boolean;
-  readonly isDeliverySheetVisible: boolean;
   readonly isDeclineSheetVisible: boolean;
   readonly declineOrderId: string;
   readonly declineSheetState: "ready" | "loading" | "success" | "error";
-  readonly pickupSheetState: "ready" | "loading" | "success" | "error";
+  readonly deliveryActionState: "idle" | "loading" | "success" | "error";
+  readonly deliveryActionMessage: string | null;
   readonly captainPodState: PodScreenState;
   readonly captainPodPhotoUri: string | undefined;
   readonly showBottomNav: boolean;
@@ -86,8 +91,10 @@ export type DshCaptainRouteRendererProps = {
   readonly wltSummaryLabel: string;
   readonly onOpenOrder: (id: string) => void;
   readonly onRetryInbox: () => void;
-  readonly onConfirmPickup: () => void;
-  readonly onConfirmDelivery: () => void;
+  readonly onConfirmStoreArrival: () => Promise<boolean>;
+  readonly onConfirmPickup: () => Promise<boolean>;
+  readonly onConfirmCustomerArrival: () => Promise<boolean>;
+  readonly onOpenPod: () => void;
   readonly onConfirmPodSubmission: () => void;
   readonly onReportPodFailure: (draft: CaptainDeliveryExceptionDraft) => Promise<DshDeliveryException | undefined>;
   readonly onCapturePhoto: () => void;
@@ -95,8 +102,6 @@ export type DshCaptainRouteRendererProps = {
   readonly onBack: () => void;
   readonly onGoToInbox: () => void;
   readonly onGoToAccount: () => void;
-  readonly onClosePickupSheet: () => void;
-  readonly onCloseDeliverySheet: () => void;
   readonly onCloseDeclineSheet: () => void;
   readonly onConfirmDecline: (orderId: string, reason: string) => void;
   readonly onAcceptTask: (orderId: string) => void;
@@ -107,6 +112,7 @@ export type DshCaptainRouteRendererProps = {
   readonly onSetAppearanceMode: (mode: BThwaniAppearanceMode) => void;
   readonly onToggleStoreCourierMode: (next: boolean) => void;
   readonly onToggleAvailability: (available: boolean) => void;
+  readonly onRetryAvailability: () => void;
   readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<unknown>;
 };
 
@@ -143,21 +149,26 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     route,
     activeAssignmentId,
     activeOrderId,
+    activeWorkItemId,
+    activeWorkItemSource,
     activeOrderDisplayId,
     activeSummary,
+    activeDeliveryStatus,
+    activeDeliveryAction,
     inboxItems,
     inboxState,
     captainRuntimeId,
     captainPodRequired,
     isStoreCourierMode,
     isCaptainAvailable,
+    availabilityBusy,
+    availabilityError,
     selectedSupportScreen,
-    isPickupSheetVisible,
-    isDeliverySheetVisible,
     isDeclineSheetVisible,
     declineOrderId,
     declineSheetState,
-    pickupSheetState,
+    deliveryActionState,
+    deliveryActionMessage,
     captainPodState,
     captainPodPhotoUri,
     showBottomNav,
@@ -172,8 +183,10 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     wltSummaryLabel,
     onOpenOrder,
     onRetryInbox,
+    onConfirmStoreArrival,
     onConfirmPickup,
-    onConfirmDelivery,
+    onConfirmCustomerArrival,
+    onOpenPod,
     onConfirmPodSubmission,
     onReportPodFailure,
     onCapturePhoto,
@@ -181,8 +194,6 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     onBack,
     onGoToInbox,
     onGoToAccount,
-    onClosePickupSheet,
-    onCloseDeliverySheet,
     onCloseDeclineSheet,
     onConfirmDecline,
     onAcceptTask,
@@ -192,10 +203,11 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     onSetAppearanceMode,
     onToggleStoreCourierMode,
     onToggleAvailability,
+    onRetryAvailability,
     onPushLocation,
   } = props;
 
-  const hasActiveAssignment = Boolean(activeAssignmentId && activeOrderId && activeSummary);
+  const hasActiveAssignment = Boolean(activeAssignmentId && activeWorkItemId && activeSummary);
   const captainEntryState = inboxState === "loading" ? "loading" : inboxState === "error" ? "error" : "ready";
 
   function renderFlow(): React.ReactNode {
@@ -204,7 +216,10 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
         <DshEntryScreen
           state={captainEntryState}
           isAvailable={isCaptainAvailable}
+          availabilityBusy={availabilityBusy}
+          availabilityError={availabilityError}
           onToggleAvailability={onToggleAvailability}
+          onRetryAvailability={onRetryAvailability}
           onOpenOffersPress={onGoToInbox}
           {...(hasActiveAssignment
             ? {
@@ -225,10 +240,29 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
       return (
         <>
           <Box gap={3}>
-            <CaptainOrderDetailScreen summary={activeSummary} onConfirmPickup={onConfirmPickup} onConfirmDelivery={onConfirmDelivery} onOpenNextOrder={onGoToInbox} onRetry={onRetryInbox} />
+            <CaptainOrderDetailScreen
+              summary={activeSummary}
+              primaryAction={activeDeliveryAction.enabled ? {
+                label: activeDeliveryAction.label,
+                disabled: deliveryActionState === 'loading',
+                onPress: () => {
+                  if (activeDeliveryAction.id === 'arrive_store') void onConfirmStoreArrival();
+                  else if (activeDeliveryAction.id === 'pickup') void onConfirmPickup();
+                  else if (activeDeliveryAction.id === 'arrive_customer') void onConfirmCustomerArrival();
+                  else if (activeDeliveryAction.id === 'open_pod') onOpenPod();
+                },
+              } : undefined}
+              onOpenNextOrder={onGoToInbox}
+              onRetry={onRetryInbox}
+            />
+            {deliveryActionMessage ? (
+              <StateView
+                title={deliveryActionState === 'success' ? 'تم تثبيت المرحلة' : 'تعذر تثبيت المرحلة'}
+                description={deliveryActionMessage}
+                tone={deliveryActionState === 'success' ? 'success' : 'danger'}
+              />
+            ) : null}
           </Box>
-          <CaptainPickupConfirmSheet visible={isPickupSheetVisible} orderTitle={activeSummary.orderId} state={pickupSheetState} onConfirm={onConfirmPickup} onCancel={onClosePickupSheet} />
-          <CaptainDeliveryConfirmSheet visible={isDeliverySheetVisible} orderTitle={activeSummary.orderId} onConfirm={onConfirmDelivery} onCancel={onCloseDeliverySheet} />
           <OfferDeclineSheet visible={isDeclineSheetVisible} offerId={declineOrderId} state={declineSheetState} onConfirmDecline={onConfirmDecline} onClose={onCloseDeclineSheet} />
         </>
       );
@@ -244,10 +278,10 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     }
 
     if (route === "pod-submission") {
-      if (!hasActiveAssignment || !captainPodRequired) {
+      if (!hasActiveAssignment || !captainPodRequired || activeDeliveryStatus !== 'arrived_customer') {
         return <StateView title="إثبات التسليم غير مطلوب" description="لم تعد المهمة الحية متطلب PoD صالحًا لهذا الكابتن." tone="warning" actionLabel="العودة إلى المهمة" onActionPress={onBack} />;
       }
-      return <DshCaptainPoDSubmissionScreen state={captainPodState} assignmentId={activeAssignmentId} orderId={activeOrderId} exceptionReportingEnabled onCapturePhoto={onCapturePhoto} onConfirm={onConfirmPodSubmission} onReportFailure={onReportPodFailure} onRetry={onRetryPod} onBack={captainPodState === "success" ? onGoToInbox : onBack} {...(captainPodPhotoUri ? { photoUri: captainPodPhotoUri } : {})} />;
+      return <DshCaptainPoDSubmissionScreen state={captainPodState} assignmentId={activeAssignmentId} orderId={activeOrderId} workItemId={activeWorkItemId} workItemSource={activeWorkItemSource} exceptionReportingEnabled onCapturePhoto={onCapturePhoto} onConfirm={onConfirmPodSubmission} onReportFailure={onReportPodFailure} onRetry={onRetryPod} onBack={captainPodState === "success" ? onGoToInbox : onBack} {...(captainPodPhotoUri ? { photoUri: captainPodPhotoUri } : {})} />;
     }
 
     if (route === "account-finance") {
@@ -271,7 +305,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     if (route === "account-orders") {
       if (!activeSummary) return <MissingAssignment onGoToInbox={onGoToInbox} />;
       return <KeyValueList items={[
-        { label: "الطلب النشط", value: `#${activeOrderDisplayId}`, tone: "success" },
+        { label: `${activeSummary.workItemLabel} النشط`, value: `#${activeOrderDisplayId}`, tone: "success" },
         { label: "المرحلة الحالية", value: activeSummary.currentStageLabel, tone: "info" },
         { label: "الاستلام", value: activeSummary.pickupLabel },
         { label: "التسليم", value: activeSummary.dropoffLabel },
@@ -327,7 +361,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
 
     if (route === "support-screen" || route === "orderchat") {
       if (!dshClientId) return <StateView title="هوية الكابتن غير مربوطة" description="لا يمكن تنفيذ الدعم التشغيلي دون معرف DSH موثق." tone="warning" actionLabel="العودة إلى الدليل" onActionPress={onOpenSupportDirectory} />;
-      return <CaptainSupportScreenRouter selectedSupportScreen={selectedSupportScreen} onBack={onOpenSupportDirectory} onNavigate={onOpenSupportScreen} dshClientId={dshClientId} activeOrderId={activeOrderId} onAcceptTask={onAcceptTask} onDeclineTask={onDeclineTask} />;
+      return <CaptainSupportScreenRouter selectedSupportScreen={selectedSupportScreen} onBack={onOpenSupportDirectory} activeOrderId={activeOrderId} />;
     }
 
     return <StateView title="مسار كابتن غير معروف" description={`لم يُربط المسار ${route} بقدرة تشغيلية.`} tone="danger" actionLabel="فتح صندوق الطلبات" onActionPress={onGoToInbox} />;

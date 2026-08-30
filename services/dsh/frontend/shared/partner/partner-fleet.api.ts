@@ -3,6 +3,11 @@ import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
 
 const httpClient = createDshHttpClient(resolveDshApiBaseUrl(), "partner-fleet");
 
+export type DshPartnerFleetMutationContext = {
+  readonly idempotencyKey: string;
+  readonly correlationId: string;
+};
+
 function request<T>(
   path: string,
     options: {
@@ -10,12 +15,15 @@ function request<T>(
       readonly body?: unknown;
       readonly idempotencyKey?: string;
       readonly correlationId?: string;
+      readonly mutationContext?: DshPartnerFleetMutationContext;
     } = {},
 ): Promise<T> {
   return httpClient.request<T>(path, {
     ...options,
-    idempotencyKey: options.method === "POST" ? options.idempotencyKey ?? corrId("partner-fleet") : undefined,
-    correlationId: options.correlationId,
+    idempotencyKey: options.method === "POST"
+      ? options.mutationContext?.idempotencyKey ?? options.idempotencyKey ?? corrId("partner-fleet")
+      : undefined,
+    correlationId: options.mutationContext?.correlationId ?? options.correlationId,
   });
 }
 
@@ -104,10 +112,12 @@ export function revokePartnerCourierConnection(
 
 export function connectCaptainToPartnerFleet(
   code: string,
+  mutationContext: DshPartnerFleetMutationContext,
 ): Promise<{ membership: DshCaptainFleetMembership }> {
   return request("/dsh/captain/partner-fleet/connect", {
     method: "POST",
     body: { code },
+    mutationContext,
   });
 }
 
@@ -119,6 +129,7 @@ export function listCaptainPartnerFleetMemberships(): Promise<{
 
 export function disconnectCaptainPartnerFleetMembership(
   membership: Pick<DshCaptainFleetMembership, "teamMemberId" | "storeId" | "version">,
+  mutationContext: DshPartnerFleetMutationContext,
 ): Promise<{ membership: DshCaptainFleetMembership }> {
   return request(
     `/dsh/captain/partner-fleet/memberships/${membership.teamMemberId}/disconnect`,
@@ -128,6 +139,7 @@ export function disconnectCaptainPartnerFleetMembership(
         storeId: membership.storeId,
         expectedVersion: membership.version,
       },
+      mutationContext,
     },
   );
 }

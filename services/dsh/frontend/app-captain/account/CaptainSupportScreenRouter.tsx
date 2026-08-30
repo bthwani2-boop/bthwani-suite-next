@@ -1,40 +1,17 @@
 import React from 'react';
 import type { CaptainSupportRoute } from '../../shared/delivery';
-import {
-  DshCaptainOrderAcceptScreen,
-  DshCaptainOrderDeliverScreen,
-  DshCaptainOrderDetailsScreen,
-  DshCaptainOrderGetScreen,
-  DshCaptainOrderPickupScreen,
-  DshCaptainOrdersListScreen,
-  DshCaptainOrdersOffersListScreen,
-  DshCaptainProofUploadScreen,
-} from '../orders/DshCaptainOrdersScreen';
 import { CaptainOrderSupportConversationScreen } from '../orders/CaptainOrderSupportConversationScreen';
-import {
-  DshCaptainProfileGetScreen,
-  DshCaptainTierEvaluateScreen,
-  DshCaptainTierInfoScreen,
-} from './DshCaptainProfileScreen';
 
 export type CaptainSupportScreenRouterProps = {
   selectedSupportScreen: CaptainSupportRoute;
   onBack: () => void;
-  onNavigate: (screenId: CaptainSupportRoute) => void;
-  dshClientId?: string | undefined;
   activeOrderId?: string | undefined;
-  onAcceptTask: (orderId: string) => void;
-  onDeclineTask: (orderId: string) => void;
 };
 
 export function CaptainSupportScreenRouter({
   selectedSupportScreen,
   onBack,
-  onNavigate,
-  dshClientId,
   activeOrderId,
-  onAcceptTask,
-  onDeclineTask,
 }: CaptainSupportScreenRouterProps): React.ReactNode {
   const activeOrderProps = activeOrderId ? { orderId: activeOrderId } : {};
 
@@ -55,35 +32,6 @@ export function CaptainSupportScreenRouter({
           onBack={onBack}
         />
       );
-    case 'order-accept':
-      return (
-        <DshCaptainOrderAcceptScreen
-          {...activeOrderProps}
-          onBack={onBack}
-          onAccept={onAcceptTask}
-          onDecline={onDeclineTask}
-        />
-      );
-    case 'order-deliver':
-      return <DshCaptainOrderDeliverScreen onBack={onBack} onSecondaryAction={() => onNavigate('proof-upload')} />;
-    case 'order-details':
-      return <DshCaptainOrderDetailsScreen onBack={onBack} onSecondaryAction={onBack} />;
-    case 'order-get':
-      return <DshCaptainOrderGetScreen onBack={onBack} onSecondaryAction={onBack} />;
-    case 'order-pickup':
-      return <DshCaptainOrderPickupScreen onBack={onBack} onSecondaryAction={() => onNavigate('order-deliver')} />;
-    case 'orders-list':
-      return <DshCaptainOrdersListScreen onBack={onBack} onSecondaryAction={() => onNavigate('orders-offers-list')} />;
-    case 'orders-offers-list':
-      return <DshCaptainOrdersOffersListScreen onBack={onBack} onSecondaryAction={() => onNavigate('order-accept')} />;
-    case 'profile-get':
-      return <DshCaptainProfileGetScreen onBack={onBack} onRetry={onBack} />;
-    case 'proof-upload':
-      return <DshCaptainProofUploadScreen onBack={onBack} onSecondaryAction={onBack} />;
-    case 'tier-evaluate':
-      return <DshCaptainTierEvaluateScreen onBack={onBack} onRetry={onBack} />;
-    case 'tier-info':
-      return <DshCaptainTierInfoScreen onBack={onBack} onRetry={onBack} />;
     default:
       return null;
   }

@@ -63,6 +63,7 @@ func TestPartnerCreationFieldScopesCommitAtomicallyDBIntegration(t *testing.T) {
 		t.Fatal("first field partner creation was incorrectly replayed")
 	}
 	storeID := createdPartnerFirstStoreID(t, created.ID)
+	registerPartnerFixtureCleanup(t, db, created.ID, storeID)
 
 	var fieldScopes int
 	if err := db.QueryRow(`
@@ -112,6 +113,7 @@ func TestPartnerCreationControlPanelNeverPersistsFieldScopeDBIntegration(t *test
 		t.Fatal("first control-panel partner creation was incorrectly replayed")
 	}
 	storeID := createdPartnerFirstStoreID(t, created.ID)
+	registerPartnerFixtureCleanup(t, db, created.ID, storeID)
 
 	var bogusFieldScopes int
 	if err := db.QueryRow(`

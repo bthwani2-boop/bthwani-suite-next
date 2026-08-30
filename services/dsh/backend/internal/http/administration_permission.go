@@ -30,7 +30,11 @@ func resolvedControlPanelPermissions(
 	identity auth.Identity,
 ) ([]auth.Permission, error) {
 	if identity.HasRole("operator") {
-		return s.identity.ResolvePermissions(r.Context(), identity.Subject)
+		operatorContextID := strings.TrimSpace(identity.OperatorContextID)
+		if operatorContextID == "" || operatorContextID == "legacy-unscoped" {
+			return nil, auth.ErrIdentityUnavailable
+		}
+		return s.identity.ResolvePermissions(auth.WithOperatorContext(r.Context(), operatorContextID), identity.Subject)
 	}
 	// Resolve() calls Identity /auth/session for every protected request, so
 	// these are the actor's current server-side permissions, not a browser or
@@ -56,6 +60,11 @@ func (s *protectedStoreServer) requireAdministrationPermission(
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 		return store.StoreActor{}, false
 	}
+	if strings.TrimSpace(identity.OperatorContextID) == "" || strings.TrimSpace(identity.OperatorContextID) == "legacy-unscoped" {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "session has no executable operator context")
+		return store.StoreActor{}, false
+	}
+	*r = *r.WithContext(auth.WithOperatorContext(r.Context(), identity.OperatorContextID))
 	if identity.SessionSurface != "control-panel" {
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "control-panel session is required")
 		return store.StoreActor{}, false

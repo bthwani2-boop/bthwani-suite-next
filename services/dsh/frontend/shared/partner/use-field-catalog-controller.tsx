@@ -1,20 +1,21 @@
 // Field catalog controller — lets a field agent stock a partner's draft store
 // from the sovereign central catalog. Store-local truth is limited to price,
 // availability, stock, note, and governed media; product identity remains central.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   classifyGovernedError,
   type GovernedProblem,
 } from "../_kernel/governed-problem";
 import { fieldGetPartnerStore } from "./partner.api";
+import { corrId } from "../_kernel/dsh-http-request";
 import {
   fetchFieldTaxonomy,
   fetchFieldMasterProducts,
   fetchFieldStoreAssortment,
+  fetchFieldProductProposals,
   createFieldProductProposal,
   withdrawFieldProductProposal,
 } from "../catalog/central-catalog.api";
-import { fetchFieldProductProposals } from "../catalog/product-proposal-readback.api";
 import {
   upsertFieldStoreAssortmentOCC,
   upsertFieldStoreAssortmentBatchOCC,
@@ -119,6 +120,7 @@ export function useFieldCatalogController(partnerId: string) {
 
   const [assortmentItems, setAssortmentItems] = useState<readonly StoreAssortment[]>([]);
   const [proposals, setProposals] = useState<readonly ProductProposal[]>([]);
+  const proposalMutationRef = useRef<{ key: string; fingerprint: string } | null>(null);
 
   const loadStore = useCallback(async () => {
     if (!partnerId) return;
@@ -251,6 +253,12 @@ export function useFieldCatalogController(partnerId: string) {
     async (input: FieldProductProposalInput): Promise<ProductProposal | null> => {
       setActionState({ kind: "submitting" });
       try {
+        const fingerprint = JSON.stringify({ partnerId, input });
+        const previous = proposalMutationRef.current;
+        const idempotencyKey = previous?.fingerprint === fingerprint
+          ? previous.key
+          : corrId("catalog-field-proposal-create");
+        proposalMutationRef.current = { key: idempotencyKey, fingerprint };
         const proposal = await createFieldProductProposal(partnerId, {
           proposedNameAr: input.proposedNameAr,
           proposedNameEn: input.proposedNameEn,
@@ -262,10 +270,20 @@ export function useFieldCatalogController(partnerId: string) {
           targetMasterProductId: input.targetMasterProductId,
           baseVersion: input.baseVersion,
           sourceSurface: "app-field",
-        });
-        setProposals((previous) => [proposal, ...previous.filter((item) => item.id !== proposal.id)]);
+        }, idempotencyKey);
+        const readback = await fetchFieldProductProposals(partnerId, { limit: 100, offset: 0 });
+        const saved = readback.items.find((item) => item.id === proposal.id);
+        if (!saved || saved.id !== proposal.id || saved.version < 1
+          || saved.sourceStoreId !== proposal.sourceStoreId
+          || saved.status !== proposal.status
+          || saved.proposedNameAr !== proposal.proposedNameAr
+          || saved.domainId !== proposal.domainId) {
+          throw new Error("لم تثبت قراءة المقترح اللاحقة من الكتالوج المركزي؛ لم يُعتمد الإرسال.");
+        }
+        setProposals((previous) => [saved, ...previous.filter((item) => item.id !== saved.id)]);
+        proposalMutationRef.current = null;
         setActionState({ kind: "idle" });
-        return proposal;
+        return saved;
       } catch (error) {
         setActionState(fieldCatalogErrorState(error, "تعذر إرسال اقتراح المنتج"));
         return null;

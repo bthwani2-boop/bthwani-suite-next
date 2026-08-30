@@ -61,10 +61,10 @@ function statusTone(status: EngagementStatus): CpBadgeTone {
 
 export function ProviderListView(props: {
   readonly forcedKind?: ProviderKind;
+  readonly canCreate: boolean;
   readonly onCreate: () => void;
   readonly onOpen: (actorId: string, kind: ProviderKind) => void;
   readonly onReference: () => void;
-  readonly onActivation: () => void;
 }) {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>(props.forcedKind || "all");
   const fieldList = useFieldAgentListController();
@@ -140,8 +140,7 @@ export function ProviderListView(props: {
   ) : undefined;
   const header = (
     <CpPageHeader title="سجل Workforce الموحد">
-      <CpButton variant="primary" onClick={props.onCreate}>إضافة عضو</CpButton>
-      <CpButton variant="secondary" onClick={props.onActivation}>تفعيل مقدمي الخدمة</CpButton>
+      {props.canCreate ? <CpButton variant="primary" onClick={props.onCreate}>إضافة عضو</CpButton> : null}
       <CpButton variant="ghost" onClick={props.onReference}>المدن والورديات</CpButton>
     </CpPageHeader>
   );

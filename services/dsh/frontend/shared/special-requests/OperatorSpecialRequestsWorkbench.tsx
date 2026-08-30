@@ -22,6 +22,8 @@ export type OperatorSpecialRequestsWorkbenchProps = {
   hubHref?: string;
   subGroup?: string;
   focusParams?: OperationsFocusParams;
+  canTransitionSpecialRequests: boolean;
+  canDispatchSpecialRequests: boolean;
 };
 
 type FailureCopy = { title: string; description: string; tone: StateTone };
@@ -167,6 +169,8 @@ export function OperatorSpecialRequestsWorkbench({
   stageLabels,
   stageOrder,
   focusParams,
+  canTransitionSpecialRequests,
+  canDispatchSpecialRequests,
 }: OperatorSpecialRequestsWorkbenchProps) {
   const router = useRouter();
   const {
@@ -214,6 +218,10 @@ export function OperatorSpecialRequestsWorkbench({
 
   const handleTransition = React.useCallback(async () => {
     if (!selectedRequest || !form) return;
+    if (!canTransitionSpecialRequests) {
+      setFeedback('هذه الجلسة للقراءة فقط ولا تملك صلاحية انتقالات العمليات الخاصة.');
+      return;
+    }
     if (isTransitionLocked(selectedRequest)) {
       setFeedback('هذه الحالة يملكها Dispatch أو هي نهائية؛ تُقرأ هنا ولا تُعدّل عبر انتقال عام.');
       return;
@@ -234,10 +242,14 @@ export function OperatorSpecialRequestsWorkbench({
     } finally {
       setPendingAction(null);
     }
-  }, [applyReadback, form, selectedRequest, update]);
+  }, [applyReadback, canTransitionSpecialRequests, form, selectedRequest, update]);
 
   const handleRequestInformation = React.useCallback(async () => {
     if (!selectedRequest || !form) return;
+    if (!canTransitionSpecialRequests) {
+      setFeedback('هذه الجلسة للقراءة فقط ولا تملك صلاحية طلب معلومات إضافية.');
+      return;
+    }
     const question = form.informationQuestion.trim();
     if (question.length < 5) {
       setFeedback('سؤال المعلومات الإضافية يجب أن يحتوي على خمسة أحرف على الأقل.');
@@ -255,10 +267,14 @@ export function OperatorSpecialRequestsWorkbench({
     } finally {
       setPendingAction(null);
     }
-  }, [applyReadback, form, requestInformation, selectedRequest]);
+  }, [applyReadback, canTransitionSpecialRequests, form, requestInformation, selectedRequest]);
 
   const handleQuote = React.useCallback(async () => {
     if (!selectedRequest || !form) return;
+    if (!canTransitionSpecialRequests) {
+      setFeedback('هذه الجلسة للقراءة فقط ولا تملك صلاحية إرسال عروض العمليات الخاصة.');
+      return;
+    }
     setPendingAction('quote');
     setFeedback(null);
     try {
@@ -281,10 +297,14 @@ export function OperatorSpecialRequestsWorkbench({
     } finally {
       setPendingAction(null);
     }
-  }, [applyReadback, form, selectedRequest, update]);
+  }, [applyReadback, canTransitionSpecialRequests, form, selectedRequest, update]);
 
   const handleDispatch = React.useCallback(async () => {
     if (!selectedRequest || !form) return;
+    if (!canDispatchSpecialRequests) {
+      setFeedback('هذه الجلسة للقراءة فقط ولا تملك صلاحية إسناد العمليات الخاصة.');
+      return;
+    }
     const captainId = form.captainId.trim();
     if (!captainId) {
       setFeedback('معرّف الكابتن مطلوب قبل الإسناد.');
@@ -299,7 +319,7 @@ export function OperatorSpecialRequestsWorkbench({
     } finally {
       setPendingAction(null);
     }
-  }, [applyReadback, assignDispatch, form, selectedRequest]);
+  }, [applyReadback, assignDispatch, canDispatchSpecialRequests, form, selectedRequest]);
 
   const summaryKpi = stageOrder.map((stage) => ({
     id: stage,
@@ -418,26 +438,32 @@ export function OperatorSpecialRequestsWorkbench({
                 <DetailValue label="حالة الجولة" value={exchange.status} />
               </Box>
             ) : <Text role="bodySm" tone="secondary">لم تُفتح جولة معلومات لهذا الطلب.</Text>}
-            <TextField
-              label="السؤال المطلوب من العميل"
-              value={form.informationQuestion}
-              onChangeText={(value) => updateForm('informationQuestion', value)}
-              multiline
-              numberOfLines={4}
-              maxLength={2000}
-              disabled={pendingAction !== null || exchange?.status === 'pending'}
-            />
-            <Button
-              label={pendingAction === 'information' ? 'جارٍ إرسال السؤال...' : 'طلب المعلومات من العميل'}
-              tone="secondary"
-              loading={pendingAction === 'information'}
-              disabled={pendingAction !== null || exchange?.status === 'pending' || form.informationQuestion.trim().length < 5}
-              onPress={() => void handleRequestInformation()}
-            />
+            {canTransitionSpecialRequests ? (
+              <>
+                <TextField
+                  label="السؤال المطلوب من العميل"
+                  value={form.informationQuestion}
+                  onChangeText={(value) => updateForm('informationQuestion', value)}
+                  multiline
+                  numberOfLines={4}
+                  maxLength={2000}
+                  disabled={pendingAction !== null || exchange?.status === 'pending'}
+                />
+                <Button
+                  label={pendingAction === 'information' ? 'جارٍ إرسال السؤال...' : 'طلب المعلومات من العميل'}
+                  tone="secondary"
+                  loading={pendingAction === 'information'}
+                  disabled={pendingAction !== null || exchange?.status === 'pending' || form.informationQuestion.trim().length < 5}
+                  onPress={() => void handleRequestInformation()}
+                />
+              </>
+            ) : <Text role="bodySm" tone="secondary">قراءة فقط — طلب معلومات إضافية يتطلب صلاحية operations.special_requests.transition.</Text>}
           </Box>
 
           <Box gap={2}>
-            {transitionLocked ? (
+            {!canTransitionSpecialRequests ? (
+              <Text role="bodySm" tone="secondary">قراءة فقط — انتقال الحالة يتطلب صلاحية operations.special_requests.transition.</Text>
+            ) : transitionLocked ? (
               <Text role="bodySm" tone="secondary">الحالة الحالية يملكها Dispatch/WLT أو أُغلقت نهائيًا؛ لا يوجد تعديل lifecycle عام من لوحة العمليات.</Text>
             ) : (
               <>
@@ -463,22 +489,30 @@ export function OperatorSpecialRequestsWorkbench({
 
           <Box gap={2}>
             <Text role="titleSm">طلب تسعير WLT وموافقة العميل</Text>
-            <TextField label="القيمة المقترحة بالوحدة الصغرى" value={form.proposedAmountMinorUnits} keyboardType="numeric" onChangeText={(value) => updateForm('proposedAmountMinorUnits', value)} disabled={pendingAction !== null} />
-            <TextField label="العملة المقترحة" value={form.proposedCurrency} autoCapitalize="characters" onChangeText={(value) => updateForm('proposedCurrency', value)} disabled={pendingAction !== null} />
-            <TextField label="سبب الاقتراح" value={form.proposalReason} multiline numberOfLines={3} maxLength={2000} onChangeText={(value) => updateForm('proposalReason', value)} disabled={pendingAction !== null} />
-            <Button label={pendingAction === 'quote' ? 'جارٍ إرسال العرض...' : 'إرسال العرض للعميل'} tone="primary" loading={pendingAction === 'quote'} disabled={pendingAction !== null || !quoteEligible || exchange?.status === 'pending'} onPress={() => void handleQuote()} />
+            {canTransitionSpecialRequests ? (
+              <>
+                <TextField label="القيمة المقترحة بالوحدة الصغرى" value={form.proposedAmountMinorUnits} keyboardType="numeric" onChangeText={(value) => updateForm('proposedAmountMinorUnits', value)} disabled={pendingAction !== null} />
+                <TextField label="العملة المقترحة" value={form.proposedCurrency} autoCapitalize="characters" onChangeText={(value) => updateForm('proposedCurrency', value)} disabled={pendingAction !== null} />
+                <TextField label="سبب الاقتراح" value={form.proposalReason} multiline numberOfLines={3} maxLength={2000} onChangeText={(value) => updateForm('proposalReason', value)} disabled={pendingAction !== null} />
+                <Button label={pendingAction === 'quote' ? 'جارٍ إرسال العرض...' : 'إرسال العرض للعميل'} tone="primary" loading={pendingAction === 'quote'} disabled={pendingAction !== null || !quoteEligible || exchange?.status === 'pending'} onPress={() => void handleQuote()} />
+              </>
+            ) : <Text role="bodySm" tone="secondary">قراءة فقط — إرسال العرض يتطلب صلاحية operations.special_requests.transition.</Text>}
           </Box>
 
           <Box gap={2}>
             <Text role="titleSm">إسناد الكابتن</Text>
-            <TextField label="معرّف الكابتن" value={form.captainId} onChangeText={(value) => updateForm('captainId', value)} disabled={pendingAction !== null || Boolean(selectedRequest.dispatchAssignmentId)} />
-            <Button
-              label={selectedRequest.dispatchAssignmentId ? 'تم إنشاء الإسناد' : pendingAction === 'dispatch' ? 'جارٍ إنشاء الإسناد...' : 'إسناد الطلب للكابتن'}
-              tone={selectedRequest.dispatchAssignmentId ? 'success' : 'primary'}
-              loading={pendingAction === 'dispatch'}
-              disabled={pendingAction !== null || Boolean(selectedRequest.dispatchAssignmentId)}
-              onPress={() => void handleDispatch()}
-            />
+            {canDispatchSpecialRequests ? (
+              <>
+                <TextField label="معرّف الكابتن" value={form.captainId} onChangeText={(value) => updateForm('captainId', value)} disabled={pendingAction !== null || Boolean(selectedRequest.dispatchAssignmentId)} />
+                <Button
+                  label={selectedRequest.dispatchAssignmentId ? 'تم إنشاء الإسناد' : pendingAction === 'dispatch' ? 'جارٍ إنشاء الإسناد...' : 'إسناد الطلب للكابتن'}
+                  tone={selectedRequest.dispatchAssignmentId ? 'success' : 'primary'}
+                  loading={pendingAction === 'dispatch'}
+                  disabled={pendingAction !== null || Boolean(selectedRequest.dispatchAssignmentId)}
+                  onPress={() => void handleDispatch()}
+                />
+              </>
+            ) : <Text role="bodySm" tone="secondary">قراءة فقط — إسناد الطلب يتطلب صلاحية operations.special_requests.dispatch.</Text>}
           </Box>
 
           <ExecutionEvidence detail={selectedDetail} />

@@ -14,6 +14,8 @@ import (
 	"github.com/lib/pq"
 )
 
+const canonicalIntentTestOperatorContextID = "operator-main"
+
 func openCanonicalIntentTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	databaseURL := strings.TrimSpace(os.Getenv("DSH_TEST_DATABASE_URL"))
@@ -56,6 +58,7 @@ func openCanonicalIntentTestDB(t *testing.T) *sql.DB {
 	const schemaSQL = `
 		CREATE TABLE dsh_admin_approval_requests (
 			id UUID PRIMARY KEY,
+			operator_context_id TEXT NOT NULL,
 			action_type TEXT NOT NULL,
 			target_actor_id TEXT NOT NULL,
 			role_name TEXT NOT NULL,
@@ -72,6 +75,7 @@ func openCanonicalIntentTestDB(t *testing.T) *sql.DB {
 		);
 		CREATE TABLE dsh_admin_canonical_mutation_intents (
 			id UUID PRIMARY KEY,
+			operator_context_id TEXT NOT NULL,
 			operation_type TEXT NOT NULL,
 			request_id UUID NOT NULL,
 			payload JSONB NOT NULL,
@@ -85,10 +89,11 @@ func openCanonicalIntentTestDB(t *testing.T) *sql.DB {
 			terminal_failure BOOLEAN NOT NULL DEFAULT FALSE,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			UNIQUE (operation_type, request_id)
+			UNIQUE (operator_context_id, operation_type, request_id)
 		);
 		CREATE TABLE dsh_admin_audit (
 			id BIGSERIAL PRIMARY KEY,
+			operator_context_id TEXT,
 			actor_id TEXT NOT NULL,
 			action TEXT NOT NULL,
 			target_id TEXT,
@@ -118,6 +123,7 @@ func insertRoleAssignmentIntentFixture(t *testing.T, db *sql.DB, leaseOwner stri
 	const requestID = "11111111-1111-4111-8111-111111111111"
 	const intentID = "22222222-2222-4222-8222-222222222222"
 	payload := roleMutationIntentPayload{
+		OperatorContextID:   canonicalIntentTestOperatorContextID,
 		ActionType:          "staff_role_assignment",
 		TargetActorID:       "beneficiary",
 		RoleName:            "dsh-operator",
@@ -125,28 +131,29 @@ func insertRoleAssignmentIntentFixture(t *testing.T, db *sql.DB, leaseOwner stri
 		ReviewerID:          "checker",
 		ReviewNote:          "approved by integration proof",
 	}
-	payloadJSON := `{"actionType":"staff_role_assignment","targetActorId":"beneficiary","roleName":"dsh-operator","expectedRoleVersion":7,"reviewerId":"checker","reviewNote":"approved by integration proof"}`
+	payloadJSON := `{"operatorContextId":"operator-main","actionType":"staff_role_assignment","targetActorId":"beneficiary","roleName":"dsh-operator","expectedRoleVersion":7,"reviewerId":"checker","reviewNote":"approved by integration proof"}`
 	if _, err := db.ExecContext(context.Background(), `
 		INSERT INTO dsh_admin_approval_requests
-			(id, action_type, target_actor_id, role_name, expected_role_version, requested_by)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, requestID, payload.ActionType, payload.TargetActorID, payload.RoleName, payload.ExpectedRoleVersion, "maker"); err != nil {
+			(id, operator_context_id, action_type, target_actor_id, role_name, expected_role_version, requested_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, requestID, canonicalIntentTestOperatorContextID, payload.ActionType, payload.TargetActorID, payload.RoleName, payload.ExpectedRoleVersion, "maker"); err != nil {
 		t.Fatalf("insert source approval: %v", err)
 	}
 	if _, err := db.ExecContext(context.Background(), `
 		INSERT INTO dsh_admin_canonical_mutation_intents
-			(id, operation_type, request_id, payload, next_attempt_at, lease_owner, lease_expires_at)
-		VALUES ($1, 'role-assignment', $2, $3::jsonb, NOW(), $4, $5)
-	`, intentID, requestID, payloadJSON, leaseOwner, leaseExpiresAt); err != nil {
+			(id, operator_context_id, operation_type, request_id, payload, next_attempt_at, lease_owner, lease_expires_at)
+		VALUES ($1, $2, 'role-assignment', $3, $4::jsonb, NOW(), $5, $6)
+	`, intentID, canonicalIntentTestOperatorContextID, requestID, payloadJSON, leaseOwner, leaseExpiresAt); err != nil {
 		t.Fatalf("insert canonical intent: %v", err)
 	}
 	return canonicalMutationIntent{
-		operationType:   "role-assignment",
-		requestID:       requestID,
-		payload:         []byte(payloadJSON),
-		leaseOwner:      leaseOwner,
-		leaseExpires:    leaseExpiresAt,
-		leaseGeneration: 0,
+		operatorContextID: canonicalIntentTestOperatorContextID,
+		operationType:     "role-assignment",
+		requestID:         requestID,
+		payload:           []byte(payloadJSON),
+		leaseOwner:        leaseOwner,
+		leaseExpires:      leaseExpiresAt,
+		leaseGeneration:   0,
 	}, payload
 }
 
@@ -209,13 +216,13 @@ func TestClaimCanonicalMutationDoesNotStealActiveLease(t *testing.T) {
 	db := openCanonicalIntentTestDB(t)
 	_, _ = insertRoleAssignmentIntentFixture(t, db, "active-worker", time.Now().Add(time.Minute))
 
-	if _, err := claimCanonicalMutation(context.Background(), db, "role-assignment", "11111111-1111-4111-8111-111111111111", "new-worker"); !errors.Is(err, ErrCanonicalMutationInProgress) {
+	if _, err := claimCanonicalMutation(context.Background(), db, canonicalIntentTestOperatorContextID, "role-assignment", "11111111-1111-4111-8111-111111111111", "new-worker"); !errors.Is(err, ErrCanonicalMutationInProgress) {
 		t.Fatalf("claim active lease error = %v, want in progress", err)
 	}
 	if _, err := db.ExecContext(context.Background(), `UPDATE dsh_admin_canonical_mutation_intents SET lease_expires_at = NOW() - INTERVAL '1 second'`); err != nil {
 		t.Fatalf("expire lease: %v", err)
 	}
-	claimed, err := claimCanonicalMutation(context.Background(), db, "role-assignment", "11111111-1111-4111-8111-111111111111", "new-worker")
+	claimed, err := claimCanonicalMutation(context.Background(), db, canonicalIntentTestOperatorContextID, "role-assignment", "11111111-1111-4111-8111-111111111111", "new-worker")
 	if err != nil {
 		t.Fatalf("claim expired lease: %v", err)
 	}

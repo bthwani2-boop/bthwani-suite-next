@@ -16,7 +16,7 @@ func (s *protectedStoreServer) handleIssueDeliveryPIN(w http.ResponseWriter, r *
 	if !ok {
 		return
 	}
-	issued, err := dispatch.IssueDeliveryPIN(s.db, r.PathValue("orderId"), actor.ID)
+	issued, err := dispatch.IssueDeliveryPINForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("orderId"), actor.ID)
 	if err != nil {
 		writeDeliveryProofError(w, err)
 		return
@@ -75,8 +75,11 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 		if evidenceKind == "signature" {
 			purpose = "delivery_signature"
 		}
-		var orderID string
-		if err := s.db.QueryRowContext(r.Context(), `SELECT order_id FROM dsh_assignments WHERE id = $1::uuid`, assignmentID).Scan(&orderID); err != nil {
+		var orderID, specialRequestID string
+		if err := s.db.QueryRowContext(r.Context(), `
+			SELECT COALESCE(order_id::text, ''), COALESCE(special_request_id::text, '')
+			FROM dsh_assignments
+			WHERE id = $1::uuid AND operator_context_id = $2`, assignmentID, actor.OperatorContextID).Scan(&orderID, &specialRequestID); err != nil {
 			s.removeDeliveryProofObject(r, "", uploaded.storageKey)
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "assignment not found")
 			return
@@ -84,9 +87,9 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 
 		if err := s.db.QueryRowContext(r.Context(), `
 			INSERT INTO dsh_media_refs
-				(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename, order_id)
-			VALUES ($1,$2,'captain',$3,$4,$5,$6::uuid)
-			RETURNING media_ref`, uploaded.storageKey, actor.ID, purpose, uploaded.contentType, uploaded.fileName, orderID).Scan(&uploadedMediaRef); err != nil {
+				(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename, order_id, special_request_id)
+			VALUES ($1,$2,'captain',$3,$4,$5,NULLIF($6,'')::uuid,NULLIF($7,'')::uuid)
+			RETURNING media_ref`, uploaded.storageKey, actor.ID, purpose, uploaded.contentType, uploaded.fileName, orderID, specialRequestID).Scan(&uploadedMediaRef); err != nil {
 			s.removeDeliveryProofObject(r, "", uploaded.storageKey)
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register delivery proof")
 			return
@@ -105,6 +108,7 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 			}
 		}
 		input = dispatch.SubmitDeliveryProofInput{
+			OperatorContextID:     actor.OperatorContextID,
 			Method:                method,
 			PIN:                   pin,
 			RecipientRelationship: strings.TrimSpace(r.FormValue("recipientRelationship")),
@@ -150,6 +154,7 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 			return
 		}
 		input = dispatch.SubmitDeliveryProofInput{
+			OperatorContextID:     actor.OperatorContextID,
 			Method:                body.Method,
 			PIN:                   strings.TrimSpace(body.PIN),
 			PhotoMediaRef:         strings.TrimSpace(body.PhotoMediaRef),
@@ -186,7 +191,7 @@ func (s *protectedStoreServer) handleGetCaptainDeliveryProof(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	proof, err := dispatch.GetCaptainDeliveryProof(s.db, r.PathValue("assignmentId"), actor.ID)
+	proof, err := dispatch.GetCaptainDeliveryProofForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		writeDeliveryProofError(w, err)
 		return
@@ -199,7 +204,7 @@ func (s *protectedStoreServer) handleGetClientDeliveryProof(w http.ResponseWrite
 	if !ok {
 		return
 	}
-	proof, err := dispatch.GetClientDeliveryProof(s.db, r.PathValue("orderId"), actor.ID)
+	proof, err := dispatch.GetClientDeliveryProofForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("orderId"), actor.ID)
 	if err != nil {
 		writeDeliveryProofError(w, err)
 		return
@@ -208,12 +213,12 @@ func (s *protectedStoreServer) handleGetClientDeliveryProof(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleListOperatorDeliveryProofs(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	status := dispatch.DeliveryProofStatus(strings.TrimSpace(r.URL.Query().Get("status")))
-	proofs, err := dispatch.ListOperatorDeliveryProofs(s.db, status, 100)
+	proofs, err := dispatch.ListOperatorDeliveryProofsForOperatorContext(s.db, actor.OperatorContextID, status, 100)
 	if err != nil {
 		writeDeliveryProofError(w, err)
 		return
@@ -226,11 +231,11 @@ func (s *protectedStoreServer) handleListOperatorDeliveryProofs(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleGetOperatorDeliveryProof(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	proof, err := dispatch.GetOperatorDeliveryProof(s.db, r.PathValue("proofId"))
+	proof, err := dispatch.GetOperatorDeliveryProofForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("proofId"))
 	if err != nil {
 		writeDeliveryProofError(w, err)
 		return
@@ -264,10 +269,11 @@ func (s *protectedStoreServer) handleReviewOperatorDeliveryProof(w http.Response
 		return
 	}
 	proof, err := dispatch.ReviewDeliveryProof(s.db, r.PathValue("proofId"), actor.ID, dispatch.ReviewDeliveryProofInput{
-		ExpectedVersion: body.ExpectedVersion,
-		Reason:          strings.TrimSpace(body.Reason),
-		Accept:          accept,
-		IdempotencyKey:  idempotencyKey,
+		OperatorContextID: actor.OperatorContextID,
+		ExpectedVersion:   body.ExpectedVersion,
+		Reason:            strings.TrimSpace(body.Reason),
+		Accept:            accept,
+		IdempotencyKey:    idempotencyKey,
 	})
 	if err != nil {
 		writeDeliveryProofError(w, err)
@@ -278,21 +284,22 @@ func (s *protectedStoreServer) handleReviewOperatorDeliveryProof(w http.Response
 
 func marshalDeliveryProof(proof *dispatch.DeliveryProof, includeSensitive bool) map[string]any {
 	out := map[string]any{
-		"id":           proof.ID,
-		"assignmentId": proof.AssignmentID,
-		"orderId":      proof.OrderID,
-		"captainId":    proof.CaptainID,
-		"method":       string(proof.Method),
-		"status":       string(proof.Status),
-		"hasPhoto":     proof.PhotoMediaRef != "",
-		"hasSignature": proof.SignatureMediaRef != "",
-		"capturedAt":   proof.CapturedAt,
-		"submittedAt":  proof.SubmittedAt,
-		"reviewedAt":   proof.ReviewedAt,
-		"reviewReason": proof.ReviewReason,
-		"acceptedAt":   proof.AcceptedAt,
-		"rejectedAt":   proof.RejectedAt,
-		"version":      proof.Version,
+		"id":               proof.ID,
+		"assignmentId":     proof.AssignmentID,
+		"orderId":          nullableDeliveryProofID(proof.OrderID),
+		"specialRequestId": nullableDeliveryProofID(proof.SpecialRequestID),
+		"captainId":        proof.CaptainID,
+		"method":           string(proof.Method),
+		"status":           string(proof.Status),
+		"hasPhoto":         proof.PhotoMediaRef != "",
+		"hasSignature":     proof.SignatureMediaRef != "",
+		"capturedAt":       proof.CapturedAt,
+		"submittedAt":      proof.SubmittedAt,
+		"reviewedAt":       proof.ReviewedAt,
+		"reviewReason":     proof.ReviewReason,
+		"acceptedAt":       proof.AcceptedAt,
+		"rejectedAt":       proof.RejectedAt,
+		"version":          proof.Version,
 	}
 	if includeSensitive {
 		out["photoMediaRef"] = proof.PhotoMediaRef
@@ -304,6 +311,13 @@ func marshalDeliveryProof(proof *dispatch.DeliveryProof, includeSensitive bool) 
 		out["reviewedByActorId"] = proof.ReviewedByActorID
 	}
 	return out
+}
+
+func nullableDeliveryProofID(value string) any {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
 }
 
 func marshalClientDeliveryProof(proof *dispatch.DeliveryProof) map[string]any {

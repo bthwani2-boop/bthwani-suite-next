@@ -38,8 +38,17 @@ test("partner preparation action preserves the backend-supported ready fallback"
   assert.equal(resolvePartnerOrderMutation("unknown", ["accept", "prepare", "ready", "handoff"]), null);
 });
 
-test("partner order reads fail closed instead of retaining stale data", async () => {
+test("partner order reads reject stale route/store responses and expose falsifiable refresh", async () => {
   const source = await readFile(ordersRuntimeUrl, "utf8");
+  assert.match(source, /const mountedRef = React\.useRef\(true\)/);
+  assert.match(source, /const requestSeqRef = React\.useRef\(0\)/);
+  assert.match(source, /const requestSeq = \+\+requestSeqRef\.current/);
+  assert.match(source, /const routeCanReadOrders = route === 'inbox' \|\| route === 'bell'/);
+  assert.match(source, /requestSeq !== requestSeqRef\.current/);
+  assert.match(source, /\}, \[route, storeId\]\);/);
+  assert.match(source, /const refresh = React\.useCallback\(async \(\): Promise<void> =>/);
+  assert.match(source, /const readbackVerified = await fetchOrders\(\);/);
+  assert.match(source, /if \(!readbackVerified\) \{[\s\S]*throw new Error/);
   assert.match(source, /setOrders\(\[\]\);/);
   assert.doesNotMatch(source, /localOptimisticFinalState|setOrders\([^)]*optimistic/);
 });
@@ -48,7 +57,22 @@ test("partner mutation success is emitted only after canonical readback", async 
   const source = await readFile(orderCommandsUrl, "utf8");
   assert.doesNotMatch(source, /readback:\s*['"]stale['"]/);
   assert.doesNotMatch(source, /kind:\s*['"]success['"][\s\S]{0,180}readback:\s*['"]stale['"]/);
+  assert.match(source, /try \{\s*await refreshOrders\(\);\s*\} catch \(readbackError\)/);
   assert.match(source, /kind:\s*['"]error['"][\s\S]{0,240}لم يمكن تأكيد الحالة/);
+  const verifiedReadback = source.indexOf("try {\n      await refreshOrders();\n    } catch (readbackError)");
+  const success = source.indexOf("setState({ kind: 'success', command, orderId, readback: 'fresh' });");
+  assert.ok(verifiedReadback >= 0 && success > verifiedReadback, "success must follow verified canonical readback");
+});
+
+test("handoff idempotency identity survives unknown outcome until readback and cleanup", async () => {
+  const source = await readFile(orderCommandsUrl, "utf8");
+  const confirm = source.indexOf("await confirmStoreCaptainHandoff(orderId, attempt.context);");
+  const postMutationReadback = source.indexOf("try {\n      await refreshOrders();\n    } catch (readbackError)", confirm);
+  const clear = source.indexOf("await clearStoreCaptainHandoffConfirmationAttempt(", confirm);
+  assert.ok(confirm >= 0, "handoff command must use the durable attempt");
+  assert.ok(postMutationReadback > confirm, "handoff must perform canonical readback after mutation");
+  assert.ok(clear > postMutationReadback, "durable handoff attempt must be cleared only after readback");
+  assert.match(source, /تم تأكيد حالة التسليم من DSH، لكن تعذر تنظيف محاولة التسليم المحلية/);
 });
 
 test("partner route registry binds every critical operational surface", () => {
@@ -64,7 +88,7 @@ test("partner route registry binds every critical operational surface", () => {
     "product-edit",
     "category-management",
     "product-media",
-    "product-overrides",
+    "product-controls",
     "team",
     "wallet-bridge",
     "commercial-model",

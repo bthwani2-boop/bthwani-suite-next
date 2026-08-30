@@ -31,6 +31,7 @@ func TestGovernedStoreTransferRejectsClosedPartnerStatesDBIntegration(t *testing
 		if err != nil {
 			t.Fatal(err)
 		}
+		registerPartnerFixtureCleanup(t, db, p.ID, partnerStoreID(t, db, p.ID))
 		return p
 	}
 
@@ -75,5 +76,58 @@ func TestGovernedStoreTransferRejectsClosedPartnerStatesDBIntegration(t *testing
 		if ownerID != source.ID || version != originalVersion {
 			t.Fatalf("rejected transfer mutated store: owner=%s version=%d", ownerID, version)
 		}
+	}
+
+	if _, err := db.Exec(`UPDATE dsh_partners SET activation_status = $2, version = version + 1 WHERE id = $1`, target.ID, StatusDraft); err != nil {
+		t.Fatal(err)
+	}
+	firstCorrelation := "correlation-j024-transfer-" + suffix
+	stores, err := LinkPartnerStoreForOperatorContextGoverned(
+		db,
+		operatorContextID,
+		target.ID,
+		"operator-j024-reviewer",
+		firstCorrelation,
+		GovernedStoreLinkInput{
+			StoreID:              sourceStore.ID,
+			Reason:               "governed ownership transfer replay proof",
+			ExpectedStoreVersion: originalVersion,
+		},
+	)
+	if err != nil || len(stores) == 0 {
+		t.Fatalf("governed ownership transfer failed: stores=%d err=%v", len(stores), err)
+	}
+	if _, err := LinkPartnerStoreForOperatorContextGoverned(
+		db,
+		operatorContextID,
+		target.ID,
+		"operator-j024-reviewer",
+		"correlation-j024-retry-"+suffix,
+		GovernedStoreLinkInput{
+			StoreID:              sourceStore.ID,
+			Reason:               "governed ownership transfer replay proof",
+			ExpectedStoreVersion: originalVersion,
+		},
+	); err != nil {
+		t.Fatalf("governed ownership replay failed: %v", err)
+	}
+
+	var auditCount, sourceEventCount, targetEventCount int
+	var recordedCorrelation string
+	if err := db.QueryRow(`
+		SELECT COUNT(*), COALESCE(MAX(correlation_id), '')
+		FROM dsh_partner_store_transfer_audit
+		WHERE operator_context_id=$1 AND store_id=$2 AND to_partner_id=$3`,
+		operatorContextID, sourceStore.ID, target.ID).Scan(&auditCount, &recordedCorrelation); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_partner_activation_events WHERE partner_id=$1 AND to_status=$2`, source.ID, "store_transferred_out:"+sourceStore.ID).Scan(&sourceEventCount); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_partner_activation_events WHERE partner_id=$1 AND to_status=$2`, target.ID, "store_linked:"+sourceStore.ID).Scan(&targetEventCount); err != nil {
+		t.Fatal(err)
+	}
+	if auditCount != 1 || recordedCorrelation != firstCorrelation || sourceEventCount != 1 || targetEventCount != 1 {
+		t.Fatalf("ownership replay duplicated or replaced canonical evidence: audit=%d correlation=%q sourceEvents=%d targetEvents=%d", auditCount, recordedCorrelation, sourceEventCount, targetEventCount)
 	}
 }

@@ -98,6 +98,128 @@ DshClientCatalogProduct:
         altAr: { type: string }
         source: { type: string, enum: [store_custom, canonical] }
 
+DshStoreAssortment:
+  type: object
+  required: [id, version, storeId, masterProductId, unitPrice, currency, available, stockStatus, localNote, customImageObjectKey, publicationStatus, submittedBy, approvedBy, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    version: { type: integer, minimum: 1 }
+    storeId: { type: string }
+    masterProductId: { type: string }
+    unitPrice: { type: number, format: double, minimum: 0, description: Compatibility projection of the canonical price resource. }
+    currency: { type: string, description: Compatibility projection of the canonical price resource. }
+    available: { type: boolean, description: Compatibility projection of the canonical inventory resource. }
+    stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock], description: Compatibility projection of the canonical inventory resource. }
+    localNote: { type: string }
+    customImageObjectKey: { type: [string, "null"] }
+    publicationStatus: { type: string, enum: [draft, submitted, approved, client_visible, rejected, hidden] }
+    submittedBy: { type: string }
+    approvedBy: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshStoreAssortmentInventory:
+  type: object
+  required: [storeAssortmentId, policyType, quantity, reservedQuantity, minOrderQuantity, maxOrderQuantity, stepQuantity, version, updatedAt]
+  properties:
+    storeAssortmentId: { type: string }
+    policyType: { type: string, enum: [signal, quantity, infinite] }
+    quantity: { type: integer, minimum: 0 }
+    reservedQuantity: { type: integer, minimum: 0 }
+    minOrderQuantity: { type: integer, minimum: 1 }
+    maxOrderQuantity: { type: integer, minimum: 1 }
+    stepQuantity: { type: integer, minimum: 1 }
+    version: { type: integer, minimum: 1 }
+    updatedAt: { type: string, format: date-time }
+
+DshStoreAssortmentPrice:
+  type: object
+  required: [id, storeAssortmentId, amountMinor, currency, prepTimeMin, prepTimeMax, effectiveFrom, effectiveUntil, version]
+  properties:
+    id: { type: string }
+    storeAssortmentId: { type: string }
+    amountMinor: { type: integer, minimum: 0 }
+    currency: { type: string, minLength: 3, maxLength: 3 }
+    prepTimeMin: { type: integer, minimum: 0 }
+    prepTimeMax: { type: integer, minimum: 0 }
+    effectiveFrom: { type: string, format: date-time }
+    effectiveUntil: { type: [string, "null"], format: date-time }
+    version: { type: integer, minimum: 1 }
+
+DshStoreAssortmentInput:
+  type: object
+  additionalProperties: false
+  required: [unitPrice, currency, available, stockStatus, localNote, customImageObjectKey, publicationStatus]
+  properties:
+    unitPrice: { type: number, format: double, minimum: 0, description: Bootstrap-only compatibility projection; existing rows use canonical price resources. }
+    currency: { type: string }
+    available: { type: boolean, description: Bootstrap-only compatibility projection; existing rows use canonical inventory resources. }
+    stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock], description: Bootstrap-only compatibility projection; existing rows use canonical inventory resources. }
+    localNote: { type: string }
+    customImageObjectKey: { type: [string, "null"] }
+    publicationStatus: { type: string, enum: [draft, submitted, approved, client_visible, rejected, hidden] }
+    expectedVersion: { type: integer, minimum: 1, description: Required when updating an existing assortment; omitted during bootstrap creation. }
+
+DshStoreAssortmentMetadataUpdateInput:
+  type: object
+  additionalProperties: false
+  required: [localNote, customImageObjectKey, publicationStatus, expectedVersion]
+  properties:
+    localNote: { type: string }
+    customImageObjectKey: { type: [string, "null"] }
+    publicationStatus: { type: string, enum: [draft, submitted, approved, client_visible, rejected, hidden] }
+    expectedVersion: { type: integer, minimum: 1 }
+
+DshStoreAssortmentInventoryInput:
+  type: object
+  additionalProperties: false
+  required: [policyType, quantity, minOrderQuantity, maxOrderQuantity, stepQuantity]
+  properties:
+    policyType: { type: string, enum: [signal, quantity, infinite] }
+    quantity: { type: integer, minimum: 0 }
+    minOrderQuantity: { type: integer, minimum: 1 }
+    maxOrderQuantity: { type: integer, minimum: 1 }
+    stepQuantity: { type: integer, minimum: 1 }
+    expectedVersion: { type: integer, minimum: 0, description: Required by an update after canonical GET; zero is reserved for first-time bootstrap. }
+
+DshStoreAssortmentPriceInput:
+  type: object
+  additionalProperties: false
+  required: [amountMinor, currency, prepTimeMin, prepTimeMax, effectiveFrom]
+  properties:
+    amountMinor: { type: integer, minimum: 0 }
+    currency: { type: string, minLength: 3, maxLength: 3 }
+    prepTimeMin: { type: integer, minimum: 0 }
+    prepTimeMax: { type: integer, minimum: 0 }
+    effectiveFrom: { type: string, format: date-time }
+    effectiveUntil: { type: [string, "null"], format: date-time }
+
+DshStoreAssortmentResponse:
+  type: object
+  required: [assortment]
+  properties:
+    assortment: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAssortment" }
+
+DshStoreAssortmentInventoryResponse:
+  type: object
+  required: [inventory]
+  properties:
+    inventory: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInventory" }
+
+DshStoreAssortmentPriceResponse:
+  type: object
+  required: [price]
+  properties:
+    price: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPrice" }
+
+DshStoreAssortmentPricesResponse:
+  type: object
+  required: [prices]
+  properties:
+    prices:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPrice" }
+
 DshCatalogAssetLink:
   type: object
   required: [id, assetId, entityType, entityId, role, sortOrder, isPrimary, status]

@@ -16,6 +16,23 @@ func (s *protectedStoreServer) handleOperatorUpsertAssortmentInventory(w http.Re
 	s.upsertAssortmentInventory(w, r, actor.ID, "operator", r.PathValue("storeId"))
 }
 
+func (s *protectedStoreServer) handlePartnerGetAssortmentInventory(w http.ResponseWriter, r *http.Request) {
+	_, storeID, ok := s.partnerStore(w, r)
+	if !ok {
+		return
+	}
+	if storeID != r.PathValue("storeId") {
+		s.writeCatalogMutationError(w, centralcatalog.ErrForbidden)
+		return
+	}
+	inventory, err := centralcatalog.GetAssortmentInventoryRuntimeTruth(r.Context(), s.db, storeID, r.PathValue("masterProductId"))
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"inventory": inventory})
+}
+
 func (s *protectedStoreServer) handlePartnerUpsertAssortmentInventory(w http.ResponseWriter, r *http.Request) {
 	actor, storeID, ok := s.partnerStore(w, r)
 	if !ok {
@@ -28,15 +45,48 @@ func (s *protectedStoreServer) handlePartnerUpsertAssortmentInventory(w http.Res
 	s.upsertAssortmentInventory(w, r, actor.ID, "partner", storeID)
 }
 
-func (s *protectedStoreServer) handleOperatorScheduleAssortmentPrice(w http.ResponseWriter, r *http.Request) {
+func (s *protectedStoreServer) handleOperatorCreateAssortmentPrice(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage)
 	if !ok {
 		return
 	}
-	s.scheduleAssortmentPrice(w, r, actor.ID, "operator", r.PathValue("storeId"))
+	s.createAssortmentPrice(w, r, actor.ID, r.PathValue("storeId"))
 }
 
-func (s *protectedStoreServer) handlePartnerScheduleAssortmentPrice(w http.ResponseWriter, r *http.Request) {
+func (s *protectedStoreServer) handleOperatorGetAssortmentInventory(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage)
+	if !ok {
+		return
+	}
+	s.getAssortmentInventory(w, r, actor.ID, r.PathValue("storeId"))
+}
+
+func (s *protectedStoreServer) handleOperatorListAssortmentPrices(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentManage)
+	if !ok {
+		return
+	}
+	s.listAssortmentPrices(w, r, actor.ID, r.PathValue("storeId"))
+}
+
+func (s *protectedStoreServer) handlePartnerListAssortmentPrices(w http.ResponseWriter, r *http.Request) {
+	_, storeID, ok := s.partnerStore(w, r)
+	if !ok {
+		return
+	}
+	if storeID != r.PathValue("storeId") {
+		s.writeCatalogMutationError(w, centralcatalog.ErrForbidden)
+		return
+	}
+	prices, err := centralcatalog.ListAssortmentPriceRuntimeTruth(r.Context(), s.db, storeID, r.PathValue("masterProductId"))
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"prices": prices})
+}
+
+func (s *protectedStoreServer) handlePartnerCreateAssortmentPrice(w http.ResponseWriter, r *http.Request) {
 	actor, storeID, ok := s.partnerStore(w, r)
 	if !ok {
 		return
@@ -45,7 +95,35 @@ func (s *protectedStoreServer) handlePartnerScheduleAssortmentPrice(w http.Respo
 		s.writeCatalogMutationError(w, centralcatalog.ErrForbidden)
 		return
 	}
-	s.scheduleAssortmentPrice(w, r, actor.ID, "partner", storeID)
+	s.createAssortmentPrice(w, r, actor.ID, storeID)
+}
+
+func (s *protectedStoreServer) getAssortmentInventory(w http.ResponseWriter, r *http.Request, actorID, storeID string) {
+	masterProductID := r.PathValue("masterProductId")
+	if strings.TrimSpace(storeID) == "" || strings.TrimSpace(masterProductID) == "" {
+		s.writeCatalogMutationError(w, centralcatalog.ErrInvalid)
+		return
+	}
+	inventory, err := centralcatalog.GetAssortmentInventoryRuntimeTruth(r.Context(), s.db, storeID, masterProductID)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"inventory": inventory})
+}
+
+func (s *protectedStoreServer) listAssortmentPrices(w http.ResponseWriter, r *http.Request, actorID, storeID string) {
+	masterProductID := r.PathValue("masterProductId")
+	if strings.TrimSpace(storeID) == "" || strings.TrimSpace(masterProductID) == "" {
+		s.writeCatalogMutationError(w, centralcatalog.ErrInvalid)
+		return
+	}
+	prices, err := centralcatalog.ListAssortmentPriceRuntimeTruth(r.Context(), s.db, storeID, masterProductID)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"prices": prices})
 }
 
 func (s *protectedStoreServer) upsertAssortmentInventory(w http.ResponseWriter, r *http.Request, actorID, actorRole, storeID string) {
@@ -67,8 +145,12 @@ func (s *protectedStoreServer) upsertAssortmentInventory(w http.ResponseWriter, 
 	store.SendJSON(w, http.StatusOK, map[string]any{"inventory": inv})
 }
 
-func (s *protectedStoreServer) scheduleAssortmentPrice(w http.ResponseWriter, r *http.Request, actorID, actorRole, storeID string) {
+func (s *protectedStoreServer) createAssortmentPrice(w http.ResponseWriter, r *http.Request, actorID, storeID string) {
 	masterProductID := r.PathValue("masterProductId")
+	idempotencyKey, ok := requireCatalogCreateIdempotency(w, r)
+	if !ok {
+		return
+	}
 	var input centralcatalog.StoreAssortmentPriceInput
 	if !decodeProtectedJSON(w, r, &input) {
 		return
@@ -78,10 +160,10 @@ func (s *protectedStoreServer) scheduleAssortmentPrice(w http.ResponseWriter, r 
 		return
 	}
 
-	price, err := centralcatalog.ScheduleAssortmentPriceAtomic(r.Context(), s.db, storeID, masterProductID, actorID, input)
+	price, err := centralcatalog.CreateAssortmentPriceAtomic(r.Context(), s.db, storeID, masterProductID, actorID, idempotencyKey, input)
 	if err != nil {
 		s.writeCatalogMutationError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"priceSchedule": price})
+	store.SendJSON(w, http.StatusOK, map[string]any{"price": price})
 }

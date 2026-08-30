@@ -50,48 +50,118 @@ export function usePartnerSupportController(actorId: string | null, enabled = tr
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [mutating, setMutating] = useState(false);
   const mutationLock = useRef(false);
+  const mountedRef = useRef(true);
+  const ticketsSequence = useRef(0);
   const detailSequence = useRef(0);
+  const contextKey = enabled && actorId ? actorId : "disabled";
+  const contextKeyRef = useRef(contextKey);
+  contextKeyRef.current = contextKey;
 
-  const loadTickets = useCallback(async () => {
-    if (!enabled) {
-      setState({ kind: "error", message: "جلسة الشريك غير جاهزة." });
-      return;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      ticketsSequence.current += 1;
+      detailSequence.current += 1;
+      mutationLock.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    ticketsSequence.current += 1;
+    detailSequence.current += 1;
+    mutationLock.current = false;
+    setMutating(false);
+    setMutationError(null);
+    if (!enabled || !actorId) {
+      setSelectedTicketId(null);
+      setDetailState({ kind: "idle" });
+    }
+  }, [actorId, enabled]);
+
+  const loadTickets = useCallback(async (expectedTicketId?: string): Promise<boolean> => {
+    const requestContextKey = contextKey;
+    const sequence = ++ticketsSequence.current;
+    if (!enabled || !actorId) {
+      if (mountedRef.current && requestContextKey === contextKeyRef.current) {
+        setState({ kind: "error", message: "جلسة الشريك غير جاهزة." });
+        setSelectedTicketId(null);
+      }
+      return false;
     }
     setState({ kind: "loading" });
     try {
       const tickets = await listPartnerSupportTickets();
+      if (
+        !mountedRef.current
+        || sequence !== ticketsSequence.current
+        || requestContextKey !== contextKeyRef.current
+      ) return false;
+      if (expectedTicketId && !tickets.some((ticket) => ticket.id === expectedTicketId)) {
+        setState({ kind: "error", message: "تم إرسال التذكرة، لكن لم تظهر في القراءة canonical للحساب." });
+        return false;
+      }
       setState({ kind: "ready", tickets });
       setSelectedTicketId((current) => {
+        if (expectedTicketId) return expectedTicketId;
         if (current && tickets.some((ticket) => ticket.id === current)) return current;
         return tickets[0]?.id ?? null;
       });
+      return true;
     } catch (error) {
+      if (
+        !mountedRef.current
+        || sequence !== ticketsSequence.current
+        || requestContextKey !== contextKeyRef.current
+      ) return false;
       setState({ kind: "error", message: supportErrorMessage(error) });
+      return false;
     }
-  }, [enabled]);
+  }, [actorId, contextKey, enabled]);
 
-  const loadDetail = useCallback(async (ticketId: string | null = selectedTicketId) => {
-    if (!enabled || !ticketId) {
-      setDetailState({ kind: "idle" });
-      return;
+  const loadDetail = useCallback(async (
+    ticketId: string | null = selectedTicketId,
+    expectedMessageId?: string,
+  ): Promise<boolean> => {
+    const requestContextKey = contextKey;
+    const sequence = ++detailSequence.current;
+    if (!enabled || !actorId || !ticketId) {
+      if (mountedRef.current && requestContextKey === contextKeyRef.current) {
+        setDetailState({ kind: "idle" });
+      }
+      return false;
     }
-    const sequence = detailSequence.current + 1;
-    detailSequence.current = sequence;
     setDetailState({ kind: "loading" });
     try {
       const [ticket, messages] = await Promise.all([
         getPartnerSupportTicket(ticketId),
         listPartnerSupportMessages(ticketId),
       ]);
-      if (detailSequence.current === sequence) {
-        setDetailState({ kind: "ready", ticket, messages });
+      if (
+        !mountedRef.current
+        || sequence !== detailSequence.current
+        || requestContextKey !== contextKeyRef.current
+      ) return false;
+      if (ticket.id !== ticketId) {
+        setDetailState({ kind: "error", message: "أعاد DSH تذكرة لا تطابق التذكرة المطلوبة." });
+        return false;
       }
+      if (expectedMessageId && !messages.some((message) => message.id === expectedMessageId)) {
+        setDetailState({ kind: "error", message: "تم إرسال الرسالة، لكن لم تظهر في القراءة canonical للمحادثة." });
+        return false;
+      }
+      setDetailState({ kind: "ready", ticket, messages });
+      return true;
     } catch (error) {
-      if (detailSequence.current === sequence) {
-        setDetailState({ kind: "error", message: supportErrorMessage(error) });
-      }
+      if (
+        !mountedRef.current
+        || sequence !== detailSequence.current
+        || requestContextKey !== contextKeyRef.current
+      ) return false;
+      setDetailState({ kind: "error", message: supportErrorMessage(error) });
+      return false;
     }
-  }, [enabled, selectedTicketId]);
+  }, [actorId, contextKey, enabled, selectedTicketId]);
 
   useEffect(() => {
     void loadTickets();
@@ -101,36 +171,54 @@ export function usePartnerSupportController(actorId: string | null, enabled = tr
     void loadDetail(selectedTicketId);
   }, [loadDetail, selectedTicketId]);
 
-  const runMutation = useCallback(async <T,>(operation: () => Promise<T>): Promise<T | null> => {
+  const runMutation = useCallback(async <T,>(
+    mutationContextKey: string,
+    operation: () => Promise<T>,
+  ): Promise<T | null> => {
     if (mutationLock.current) return null;
     mutationLock.current = true;
     setMutating(true);
     setMutationError(null);
     try {
-      return await operation();
+      const result = await operation();
+      if (!mountedRef.current || mutationContextKey !== contextKeyRef.current) return null;
+      return result;
     } catch (error) {
-      setMutationError(supportErrorMessage(error));
+      if (mountedRef.current && mutationContextKey === contextKeyRef.current) {
+        setMutationError(supportErrorMessage(error));
+      }
       return null;
     } finally {
       mutationLock.current = false;
-      setMutating(false);
+      if (mountedRef.current && mutationContextKey === contextKeyRef.current) {
+        setMutating(false);
+      }
     }
   }, []);
 
   const createTicket = useCallback(async (input: DshCreateTicketInput): Promise<boolean> => {
-    if (!actorId) {
+    if (!actorId || !enabled) {
       setMutationError("جلسة الشريك غير جاهزة لتثبيت هوية العملية.");
       return false;
     }
-    const attempt = await getOrCreatePartnerTicketAttempt(actorId, input);
-    const ticket = await runMutation(() => createPartnerSupportTicket(input, attempt.context));
-    if (!ticket) return false;
-    await clearPartnerTicketAttempt(actorId);
-    setSelectedTicketId(ticket.id);
-    await loadTickets();
-    await loadDetail(ticket.id);
-    return true;
-  }, [actorId, loadDetail, loadTickets, runMutation]);
+    const mutationActorId = actorId;
+    const mutationContextKey = contextKey;
+    const result = await runMutation(mutationContextKey, async () => {
+      const attempt = await getOrCreatePartnerTicketAttempt(mutationActorId, input);
+      const ticket = await createPartnerSupportTicket(input, attempt.context);
+      if (!mountedRef.current || mutationContextKey !== contextKeyRef.current) {
+        throw new Error("تغيرت جلسة الشريك أثناء إنشاء التذكرة؛ تم الاحتفاظ بهوية العملية للتحقق الآمن عند العودة للحساب الأصلي.");
+      }
+      const ticketsVerified = await loadTickets(ticket.id);
+      const detailVerified = ticketsVerified ? await loadDetail(ticket.id) : false;
+      if (!ticketsVerified || !detailVerified) {
+        throw new Error("تم إرسال التذكرة، لكن تعذر إثباتها من القراءة canonical؛ تم الاحتفاظ بهوية العملية لإعادة المحاولة الآمنة.");
+      }
+      await clearPartnerTicketAttempt(mutationActorId);
+      return ticket;
+    });
+    return result !== null;
+  }, [actorId, contextKey, enabled, loadDetail, loadTickets, runMutation]);
 
   const sendMessage = useCallback(async (body: string): Promise<boolean> => {
     const ticketId = selectedTicketId;
@@ -139,21 +227,31 @@ export function usePartnerSupportController(actorId: string | null, enabled = tr
       setMutationError("اكتب رسالة وحدد تذكرة أولًا.");
       return false;
     }
-    if (!actorId) {
+    if (!actorId || !enabled) {
       setMutationError("جلسة الشريك غير جاهزة لتثبيت هوية العملية.");
       return false;
     }
-    const attempt = await getOrCreatePartnerMessageAttempt(actorId, ticketId, normalizedBody);
-    const message = await runMutation(() => addPartnerSupportMessage(
-      ticketId,
-      normalizedBody,
-      attempt.context,
-    ));
-    if (!message) return false;
-    await clearPartnerMessageAttempt(actorId, ticketId);
-    await loadDetail(ticketId);
-    return true;
-  }, [actorId, loadDetail, runMutation, selectedTicketId]);
+    const mutationActorId = actorId;
+    const mutationContextKey = contextKey;
+    const result = await runMutation(mutationContextKey, async () => {
+      const attempt = await getOrCreatePartnerMessageAttempt(mutationActorId, ticketId, normalizedBody);
+      const message = await addPartnerSupportMessage(
+        ticketId,
+        normalizedBody,
+        attempt.context,
+      );
+      if (!mountedRef.current || mutationContextKey !== contextKeyRef.current) {
+        throw new Error("تغيرت جلسة الشريك أثناء إرسال الرسالة؛ تم الاحتفاظ بهوية العملية للتحقق الآمن عند العودة للحساب الأصلي.");
+      }
+      const detailVerified = await loadDetail(ticketId, message.id);
+      if (!detailVerified) {
+        throw new Error("تم إرسال الرسالة، لكن تعذر إثباتها من القراءة canonical؛ تم الاحتفاظ بهوية العملية لإعادة المحاولة الآمنة.");
+      }
+      await clearPartnerMessageAttempt(mutationActorId, ticketId);
+      return message;
+    });
+    return result !== null;
+  }, [actorId, contextKey, enabled, loadDetail, runMutation, selectedTicketId]);
 
   const tickets = state.kind === "ready" ? state.tickets : [];
   const selectedTicket = useMemo(

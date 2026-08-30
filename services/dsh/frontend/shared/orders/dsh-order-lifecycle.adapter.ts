@@ -1,14 +1,11 @@
 import type { DshOrderStatus } from './orders.types';
 import type {
   DshOrderRecord,
-  DshOrderItemRecord,
-  DshOrderDetailsResponse,
   DshListOrdersResponse,
   DshOrderApiOfflineError,
   DshOrderApiContractError,
   BackendOrderItem,
-  BackendOrder,
-  BackendDispatchAssignment
+  BackendOrder
 } from './dsh-order-lifecycle.types';
 
 function isDshOrderApiOfflineError(err: unknown): err is DshOrderApiOfflineError {
@@ -63,58 +60,6 @@ export function normalizeDshOrderStatus(status: unknown): DshOrderStatus {
   throw contractStatusError(value);
 }
 
-function deriveOrderStatusFromDispatch(raw: BackendDispatchAssignment): DshOrderStatus {
-  const deliveryStatus = String(raw.delivery?.status ?? '').trim().toLowerCase();
-  switch (deliveryStatus) {
-    case 'assigned':
-    case 'driver_assigned':
-      return 'driver_assigned';
-    case 'driver_arrived_store':
-      return 'driver_arrived_store';
-    case 'picked_up':
-      return 'picked_up';
-    case 'arrived_customer':
-      return 'arrived_customer';
-    case 'delivered':
-      return 'delivered';
-    case 'cancelled':
-      throw contractStatusError(deliveryStatus, 'dispatch');
-    case '':
-      break;
-    default:
-      throw contractStatusError(deliveryStatus, 'delivery');
-  }
-
-  const assignmentStatus = String(raw.status ?? '').trim().toLowerCase();
-  switch (assignmentStatus) {
-    case 'offered':
-    case 'accepted':
-      return 'driver_assigned';
-    case 'completed':
-      return 'delivered';
-    case 'declined':
-    case 'cancelled':
-      throw contractStatusError(assignmentStatus, 'assignment');
-    default:
-      throw contractStatusError(assignmentStatus, 'assignment');
-  }
-}
-
-function normalizeOrderItem(raw: BackendOrderItem, orderId = ''): DshOrderItemRecord {
-  const quantity = Number(raw.quantity ?? 0);
-  const price = Number(raw.price ?? raw.unitPrice ?? 0);
-  const productName = raw.product_name ?? raw.productName;
-  return {
-    id: String(raw.id ?? ''),
-    order_id: String(raw.order_id ?? raw.orderId ?? orderId),
-    product_id: String(raw.product_id ?? raw.productId ?? ''),
-    ...(productName !== undefined ? { product_name: productName } : {}),
-    quantity,
-    price,
-    currency: normalizeCurrency(raw.currency, 'order item'),
-  };
-}
-
 function deriveTotalPrice(raw: BackendOrder): number {
   const explicit = raw.total_price ?? raw.totalPrice;
   if (explicit != null) return Number(explicit);
@@ -161,62 +106,12 @@ function normalizeOrder(raw: BackendOrder): DshOrderRecord {
   };
 }
 
-type DshOrderResponse = { readonly order: DshOrderRecord };
-
-export function normalizeOrderResponse<T extends { readonly order?: BackendOrder }>(resp: T): DshOrderResponse {
-  return { order: normalizeOrder(resp.order ?? {}) };
-}
-
-export function normalizeOrderDetails(resp: { readonly order?: BackendOrder; readonly items?: readonly BackendOrderItem[] }): DshOrderDetailsResponse {
-  const order = normalizeOrder(resp.order ?? {});
-  const items = (resp.items ?? resp.order?.items ?? []).map((item) => normalizeOrderItem(item, order.id));
-  for (const item of items) {
-    if (item.currency !== order.currency) {
-      throw {
-        kind: 'contract',
-        message: `DSH order item currency "${item.currency}" does not match order currency "${order.currency}"`,
-      } as DshOrderApiContractError;
-    }
-  }
-  return {
-    order,
-    items,
-    status_events: [],
-    support_tickets: [],
-  };
-}
-
 export function normalizeOrderList(resp: { readonly orders?: readonly BackendOrder[]; readonly total?: number }): DshListOrdersResponse {
   const orders = (resp.orders ?? []).map(normalizeOrder);
   return {
     orders,
     total: Number(resp.total ?? orders.length),
   };
-}
-
-function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignment): DshOrderRecord {
-  const captainId = raw.captainId;
-  const lifecycleStatus = raw.delivery?.status;
-  const podReference = raw.delivery?.podReference;
-  const deliveryNote = raw.delivery?.note;
-  return {
-    id: String(raw.orderId ?? ''),
-    store_id: '',
-    fulfillment_mode: 'bthwani_delivery',
-    client_id: '',
-    status: deriveOrderStatusFromDispatch(raw),
-    total_price: 0,
-    ...(captainId !== undefined ? { captain_id: captainId } : {}),
-    ...(lifecycleStatus !== undefined ? { captain_lifecycle_status: lifecycleStatus } : {}),
-    ...(podReference !== undefined ? { pod_media_key: podReference } : {}),
-    ...(deliveryNote !== undefined ? { delivery_failure_reason: deliveryNote } : {}),
-    created_at: String(raw.createdAt ?? ''),
-    updated_at: String(raw.delivery?.updatedAt ?? raw.updatedAt ?? ''),
-  };
-}
-
-export function normalizeAssignmentResponse(resp: { readonly assignment?: BackendDispatchAssignment }): DshOrderRecord {
-  return normalizeDispatchAssignmentAsOrder(resp.assignment ?? {});
 }
 
 export { isDshOrderApiOfflineError, isDshOrderApiContractError };

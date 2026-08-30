@@ -44,19 +44,19 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
 
-	if _, err := UpdateDeliveryStatusGovernedIdempotent(
-		db,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryArrivedStore,
+	if _, err := testDeliveryStatusCommandCurrent(
+		db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID,
+		DeliveryArrivedStore, "exception-shortage-arrival",
 	); err != nil {
 		t.Fatalf("captain arrival failed: %v", err)
 	}
 
 	input := ReportDeliveryExceptionInput{
-		ReasonCode:    ExceptionHandoffShortage,
-		Note:          "قطعة واحدة غير موجودة في الطرد عند المطابقة",
-		CorrelationID: "partner-handoff-shortage:" + fixture.AssignmentID,
+		OperatorContextID: fixture.OperatorContextID,
+		ReasonCode:        ExceptionHandoffShortage,
+		Note:              "قطعة واحدة غير موجودة في الطرد عند المطابقة",
+		IdempotencyKey:    "partner-handoff-shortage-key:" + fixture.AssignmentID,
+		CorrelationID:     "partner-handoff-shortage:" + fixture.AssignmentID,
 	}
 	item, err := ReportPartnerStoreCaptainHandoffException(
 		db,
@@ -97,8 +97,8 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 		fixture.StoreID,
 		"partner-handoff-actor",
 		driftedInput,
-	); !errors.Is(err, ErrConflict) {
-		t.Fatalf("partner payload drift error=%v want ErrConflict", err)
+	); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("partner payload drift error=%v want ErrIdempotencyConflict", err)
 	}
 
 	var reporterActorID, reporterRole string
@@ -112,19 +112,20 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 		t.Fatalf("reporter actor=%q role=%q", reporterActorID, reporterRole)
 	}
 
-	if _, err = ConfirmStoreCaptainHandoffIdempotent(
+	if _, err = ConfirmStoreCaptainHandoffIdempotentForOperatorContext(
 		db,
+		fixture.OperatorContextID,
 		fixture.OrderID,
 		fixture.StoreID,
 		"partner-handoff-actor",
+		"handoff-confirm-key-open-exception",
+		"handoff-confirm-correlation-open-exception",
 	); !errors.Is(err, ErrConflict) {
 		t.Fatalf("partner confirmation with open exception error=%v want ErrConflict", err)
 	}
-	if _, err = UpdateDeliveryStatusGovernedIdempotent(
-		db,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryPickedUp,
+	if _, err = testDeliveryStatusCommandCurrent(
+		db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID,
+		DeliveryPickedUp, "exception-shortage-pickup",
 	); !errors.Is(err, ErrConflict) {
 		t.Fatalf("pickup with open exception error=%v want ErrConflict", err)
 	}
@@ -149,27 +150,30 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 	db := openRequiredDB(t)
 	fixture := seedOutboundHandoffFixture(t, db)
 
-	if _, err := UpdateDeliveryStatusGovernedIdempotent(
-		db,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryArrivedStore,
+	if _, err := testDeliveryStatusCommandCurrent(
+		db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID,
+		DeliveryArrivedStore, "exception-mismatch-arrival",
 	); err != nil {
 		t.Fatalf("captain arrival failed: %v", err)
 	}
-	if _, err := ConfirmStoreCaptainHandoffIdempotent(
+	if _, err := ConfirmStoreCaptainHandoffIdempotentForOperatorContext(
 		db,
+		fixture.OperatorContextID,
 		fixture.OrderID,
 		fixture.StoreID,
 		"partner-handoff-actor",
+		"handoff-confirm-key-mismatch",
+		"handoff-confirm-correlation-mismatch",
 	); err != nil {
 		t.Fatalf("partner confirmation failed: %v", err)
 	}
 
 	input := ReportDeliveryExceptionInput{
-		ReasonCode:    ExceptionHandoffMismatch,
-		Note:          "محتوى الطرد لا يطابق تفاصيل الطلب المعروضة",
-		CorrelationID: "captain-handoff-mismatch:" + fixture.AssignmentID,
+		OperatorContextID: fixture.OperatorContextID,
+		ReasonCode:        ExceptionHandoffMismatch,
+		Note:              "محتوى الطرد لا يطابق تفاصيل الطلب المعروضة",
+		IdempotencyKey:    "captain-handoff-mismatch-key:" + fixture.AssignmentID,
+		CorrelationID:     "captain-handoff-mismatch:" + fixture.AssignmentID,
 	}
 	item, err := ReportCaptainStoreCaptainHandoffException(
 		db,
@@ -194,8 +198,8 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 		fixture.AssignmentID,
 		fixture.CaptainID,
 		driftedInput,
-	); !errors.Is(err, ErrConflict) {
-		t.Fatalf("captain payload drift error=%v want ErrConflict", err)
+	); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("captain payload drift error=%v want ErrIdempotencyConflict", err)
 	}
 
 	var reporterActorID, reporterRole string
@@ -208,11 +212,9 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 	if reporterActorID != fixture.CaptainID || reporterRole != "captain" {
 		t.Fatalf("reporter actor=%q role=%q", reporterActorID, reporterRole)
 	}
-	if _, err = UpdateDeliveryStatusGovernedIdempotent(
-		db,
-		fixture.AssignmentID,
-		fixture.CaptainID,
-		DeliveryPickedUp,
+	if _, err = testDeliveryStatusCommandCurrent(
+		db, fixture.OperatorContextID, fixture.AssignmentID, fixture.CaptainID,
+		DeliveryPickedUp, "exception-mismatch-pickup",
 	); !errors.Is(err, ErrConflict) {
 		t.Fatalf("pickup after partner confirmation with open exception error=%v want ErrConflict", err)
 	}

@@ -15,11 +15,11 @@ export type DshDispatchAssignment = components["schemas"]["DshDispatchAssignment
   supersedesAssignmentId?: string;
   version: number;
 };
+export type DshDispatchAssignmentSource = "order" | "special_request";
 export type DshAssignmentStatus = components["schemas"]["DshAssignmentStatus"];
 export type DshDeliveryStatus = components["schemas"]["DshDeliveryStatus"];
 export type DshDelivery = components["schemas"]["DshDelivery"];
 export type DshCreateAssignmentInput = components["schemas"]["DshCreateAssignmentRequest"];
-export type DshSubmitPoDInput = components["schemas"]["DshSubmitPoDRequest"];
 type GeneratedDshDeliveryException = components["schemas"]["DshDeliveryException"];
 type GeneratedDshDeliveryExceptionReasonCode = components["schemas"]["DshDeliveryExceptionReasonCode"];
 type GeneratedDshReportDeliveryExceptionInput = components["schemas"]["DshReportDeliveryExceptionRequest"];

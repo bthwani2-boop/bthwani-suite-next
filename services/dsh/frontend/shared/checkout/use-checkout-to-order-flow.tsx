@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   clearCheckoutAttempt,
@@ -27,7 +27,8 @@ export type CheckoutToOrderFlowState =
   | { readonly kind: "out_of_area" }
   | { readonly kind: "error"; readonly message: string }
   | { readonly kind: "creating_order"; readonly intent: DshCheckoutIntent }
-  | { readonly kind: "order_error"; readonly message: string }
+  | { readonly kind: "order_error"; readonly message: string; readonly intent?: DshCheckoutIntent }
+  | { readonly kind: "checkout_action_error"; readonly intent: DshCheckoutIntent; readonly message: string }
   | {
       readonly kind: "order_ready";
       readonly intent: DshCheckoutIntent;
@@ -36,38 +37,78 @@ export type CheckoutToOrderFlowState =
       readonly correlationId: string;
     };
 
+function checkoutErrorMessage(error: unknown): string {
+  const err = error as { message?: string; code?: string; body?: string };
+  if (err.message) return err.message;
+  if (err.code) return `خطأ: ${err.code}`;
+  if (typeof err.body === "string" && err.body.length > 0) return err.body;
+  return "تعذر إتمام الطلب، يرجى المحاولة مرة أخرى.";
+}
+
+function isOrderCreationEligible(intent: DshCheckoutIntent): boolean {
+  return intent.state === "confirmed"
+    || (intent.state === "confirming" && intent.paymentMethod === "cod");
+}
+
+function resolveUnresolvedIntentState(intent: DshCheckoutIntent): CheckoutToOrderFlowState {
+  switch (intent.state) {
+    case "confirming":
+      return { kind: "confirming", intent };
+    case "cancelled":
+    case "expired":
+      return { kind: "terminal", intent, reason: intent.state };
+    case "blocked":
+      return {
+        kind: "error",
+        message: intent.validationIssues?.[0]?.message ?? "تعذر اعتماد بيانات checkout الحالية.",
+      };
+    case "draft":
+    case "validating":
+    case "ready":
+      return { kind: "reconciliation_pending", intent };
+    case "confirmed":
+      return { kind: "reconciliation_pending", intent };
+  }
+}
+
+function activeIntent(state: CheckoutToOrderFlowState): DshCheckoutIntent | null {
+  if (state.kind === "confirming" || state.kind === "reconciliation_pending" || state.kind === "checkout_action_error") {
+    return state.intent;
+  }
+  return null;
+}
+
 export function useCheckoutToOrderFlow() {
   const identity = useIdentitySession();
   const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : "";
   const [state, setState] = useState<CheckoutToOrderFlowState>({ kind: "idle" });
+  const operationLock = useRef(false);
+  const checkoutInputRef = useRef<DshCreateIntentInput | null>(null);
   const { submit: submitOrder } = useCreateOrderTruthController();
 
-  const start = useCallback(async (input: DshCreateIntentInput) => {
-    if (!actorId) {
-      setState({ kind: "order_error", message: "جلسة العميل غير جاهزة لتثبيت هوية الدفع." });
-      return;
-    }
-    setState({ kind: "loading" });
+  const clearCurrentCheckoutAttempt = useCallback(async () => {
+    const input = checkoutInputRef.current;
+    if (!input || !actorId) return;
     try {
-      const attempt = await getOrCreateCheckoutAttempt(actorId, input);
-      const intent = await createCheckoutIntent(input, attempt.context);
-      try {
-        await clearCheckoutAttempt(actorId, fingerprintCheckoutInput(input));
-      } catch {
-        // The canonical checkout mutation succeeded; stale local cleanup must
-        // not rewrite the server result.
-      }
+      await clearCheckoutAttempt(actorId, fingerprintCheckoutInput(input));
+      checkoutInputRef.current = null;
+    } catch {
+      // The canonical order exists; retaining the idempotency key is safe.
+    }
+  }, [actorId]);
 
-      setState({ kind: "creating_order", intent });
-
-      // Order creation is delegated to the canonical controller so mutation
-      // locking, durable idempotency, actor-scoped readback validation, failure
-      // classification, and attempt cleanup stay in one owner.
+  const createOrderFromIntent = useCallback(async (intent: DshCheckoutIntent): Promise<boolean> => {
+    if (!isOrderCreationEligible(intent)) {
+      setState(resolveUnresolvedIntentState(intent));
+      return false;
+    }
+    setState({ kind: "creating_order", intent });
+    try {
       const readback = await submitOrder({ checkoutIntentId: intent.id });
       if (!readback) {
         throw new Error("تعذر تثبيت الطلب وقراءة الحقيقة المعتمدة بعد الدفع.");
       }
-
+      await clearCurrentCheckoutAttempt();
       setState({
         kind: "order_ready",
         intent,
@@ -75,45 +116,110 @@ export function useCheckoutToOrderFlow() {
         orderNumber: readback.orderNumber,
         correlationId: readback.correlationId,
       });
+      return true;
     } catch (error: unknown) {
-      const err = error as { message?: string; code?: string; body?: string };
-      let message = "تعذر إتمام الطلب، يرجى المحاولة مرة أخرى.";
-      if (err.message) {
-        message = err.message;
-      } else if (err.code) {
-        message = `خطأ: ${err.code}`;
-      } else if (typeof err.body === "string" && err.body.length > 0) {
-        message = err.body;
-      }
-      setState({ kind: "order_error", message });
+      setState({ kind: "order_error", intent, message: checkoutErrorMessage(error) });
+      return false;
     }
-  }, [actorId, submitOrder]);
+  }, [clearCurrentCheckoutAttempt, submitOrder]);
+
+  const start = useCallback(async (input: DshCreateIntentInput) => {
+    if (operationLock.current) return;
+    if (!actorId) {
+      setState({ kind: "order_error", message: "جلسة العميل غير جاهزة لتثبيت هوية الدفع." });
+      return;
+    }
+    operationLock.current = true;
+    checkoutInputRef.current = input;
+    setState({ kind: "loading" });
+    let intent: DshCheckoutIntent | null = null;
+    try {
+      const attempt = await getOrCreateCheckoutAttempt(actorId, input);
+      intent = await createCheckoutIntent(input, attempt.context);
+      if (!isOrderCreationEligible(intent)) {
+        setState(resolveUnresolvedIntentState(intent));
+        return;
+      }
+      await createOrderFromIntent(intent);
+    } catch (error: unknown) {
+      setState({
+        kind: "order_error",
+        message: checkoutErrorMessage(error),
+        ...(intent ? { intent } : {}),
+      });
+    } finally {
+      operationLock.current = false;
+    }
+  }, [actorId, createOrderFromIntent]);
 
   const reset = useCallback(() => {
+    if (state.kind === "order_error" && state.intent) return;
     setState({ kind: "idle" });
-  }, []);
+  }, [state]);
 
   const cancel = useCallback(async (intentId: string) => {
+    const current = state;
+    const currentIntent = activeIntent(current);
+    if (
+      operationLock.current
+      || !currentIntent
+      || currentIntent.id !== intentId
+    ) return;
+    operationLock.current = true;
     try {
       await cancelCheckoutIntent(intentId);
+      await clearCurrentCheckoutAttempt();
+      setState({ kind: "idle" });
     } catch {
-      // Best effort cancel; the next readback remains canonical.
+      setState({
+        kind: "checkout_action_error",
+        intent: currentIntent,
+        message: "تعذر إلغاء جلسة الدفع. بقيت الجلسة محفوظة؛ حدّث حالتها أو أعد محاولة الإلغاء قبل بدء عملية جديدة.",
+      });
+    } finally {
+      operationLock.current = false;
     }
-    setState({ kind: "idle" });
-  }, []);
+  }, [clearCurrentCheckoutAttempt, state]);
 
   const refresh = useCallback(async (intentId: string) => {
+    const current = state;
+    const currentIntent = activeIntent(current);
+    if (
+      operationLock.current
+      || !currentIntent
+      || currentIntent.id !== intentId
+    ) return;
+    operationLock.current = true;
     try {
       const intent = await fetchCheckoutIntent(intentId);
-      setState({ kind: "confirming", intent });
+      if (isOrderCreationEligible(intent)) {
+        await createOrderFromIntent(intent);
+      } else {
+        setState(resolveUnresolvedIntentState(intent));
+      }
     } catch {
-      setState({ kind: "error", message: "تعذر تحديث حالة الطلب." });
+      setState({
+        kind: "checkout_action_error",
+        intent: currentIntent,
+        message: "تعذر تحديث حالة جلسة الدفع. بقيت الجلسة محفوظة؛ أعد المحاولة قبل بدء عملية جديدة.",
+      });
+    } finally {
+      operationLock.current = false;
     }
-  }, []);
+  }, [createOrderFromIntent, state]);
 
   const retryOrder = useCallback(() => {
-    setState({ kind: "idle" });
-  }, []);
+    const intent = state.kind === "order_error" ? state.intent : undefined;
+    if (!intent) {
+      setState({ kind: "idle" });
+      return;
+    }
+    if (operationLock.current) return;
+    operationLock.current = true;
+    void createOrderFromIntent(intent).finally(() => {
+      operationLock.current = false;
+    });
+  }, [createOrderFromIntent, state]);
 
   return { state, start, reset, cancel, refresh, retryOrder };
 }

@@ -12,26 +12,7 @@ export type CaptainAppMode = 'bthwani_captain_mode' | 'store_courier_mode';
 
 export type CaptainSupportRoute =
   | 'chat-read-ack'
-  | 'chat-send'
-  | 'order-accept'
-  | 'order-deliver'
-  | 'order-details'
-  | 'order-get'
-  | 'order-pickup'
-  | 'orders-list'
-  | 'orders-offers-list'
-  | 'profile-get'
-  | 'proof-upload'
-  | 'tier-evaluate'
-  | 'tier-info';
-
-export type CompactOrderChatMessage = {
-  id: string;
-  sender: string;
-  text: string;
-  time: string;
-  side: 'start' | 'end';
-};
+  | 'chat-send';
 
 export type CaptainAvailabilityMeta = {
   label: string;
@@ -180,7 +161,7 @@ export type DshCaptainRouteRecord = {
 export const DSH_CAPTAIN_ROUTE_RECORDS = [
   { routeId: 'dsh-captain-home',             route: 'home',             screenId: 'captain.dsh.home.dashboard',       ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
   { routeId: 'dsh-captain-account',          route: 'account',          screenId: 'captain.dsh.account.root',         ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
-  { routeId: 'dsh-captain-account-profile',  route: 'account-profile',  screenId: 'captain.dsh.account.profile',      ownerPath: 'dsh/frontend/app-captain/account/DshCaptainProfileScreen.tsx' },
+  { routeId: 'dsh-captain-account-profile',  route: 'account-profile',  screenId: 'captain.dsh.account.profile',      ownerPath: 'dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx' },
   { routeId: 'dsh-captain-account-finance',  route: 'account-finance',  screenId: 'captain.dsh.account.finance',      ownerPath: 'wlt/frontend/app-captain/finance/WltCaptainFinanceScreen.tsx' },
   { routeId: 'dsh-captain-account-orders',   route: 'account-orders',   screenId: 'captain.dsh.account.orders',       ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
   { routeId: 'dsh-captain-account-docs',     route: 'account-docs',     screenId: 'captain.dsh.account.docs',         ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
@@ -195,7 +176,7 @@ export const DSH_CAPTAIN_ROUTE_RECORDS = [
   { routeId: 'dsh-captain-support-screen',   route: 'support-screen',   screenId: 'captain.dsh.support.workspace',    ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
   { routeId: 'dsh-captain-pickup-dropoff',   route: 'pickup-dropoff',   screenId: 'captain.dsh.orders.pickup-dropoff',ownerPath: 'dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx' },
   { routeId: 'dsh-captain-pod-submission',   route: 'pod-submission',   screenId: 'captain.dsh.orders.pod-submission',ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx' },
-  { routeId: 'dsh-captain-map',              route: 'map',              screenId: 'captain.dsh.orders.map',           ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx' },
+  { routeId: 'dsh-captain-map',              route: 'map',              screenId: 'captain.dsh.orders.map',           ownerPath: 'dsh/frontend/app-captain/DshCaptainOrderJourneyRenderer.tsx' },
 ] as const satisfies readonly DshCaptainRouteRecord[];
 
 // ─── Surface Bindings (Moved from contracts/captain/dsh-captain-binding.contracts.ts) ───
@@ -227,11 +208,8 @@ type DshCaptainFinanceSnapshot = {
   settlementLabel: string;
 };
 
-export type DshCaptainProfileSnapshot = {
-  displayName: string;
-  tierLabel: string;
-  readinessLabel: string;
-};
+export type DshCaptainFinanceScreenState = 'ready' | 'loading' | 'empty' | 'error';
+export type DshCaptainFinanceSection = 'earnings' | 'settlement';
 
 type DshCaptainOperationsSnapshot = {
   availabilityLabel: string;

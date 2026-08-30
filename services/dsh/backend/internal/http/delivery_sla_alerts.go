@@ -11,13 +11,33 @@ import (
 	"dsh-api/internal/store"
 )
 
+func marshalDeliverySLAAlert(alert partnerdelivery.DeliverySLAAlert) map[string]any {
+	return map[string]any{
+		"id":                    alert.ID,
+		"operatorContextId":     alert.OperatorContextID,
+		"taskId":                alert.TaskID,
+		"orderId":               alert.OrderID,
+		"storeId":               alert.StoreID,
+		"leg":                   alert.Leg,
+		"status":                alert.Status,
+		"detectedAt":            alert.DetectedAt,
+		"acknowledgedByActorId": alert.AcknowledgedByActorID,
+		"acknowledgedAt":        alert.AcknowledgedAt,
+		"resolvedAt":            alert.ResolvedAt,
+		"correlationId":         alert.CorrelationID,
+		"version":               alert.Version,
+		"createdAt":             alert.CreatedAt,
+		"updatedAt":             alert.UpdatedAt,
+	}
+}
+
 func (s *protectedStoreServer) handleRefreshDeliverySLAAlerts(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	correlationID := operationalCorrelationID(r, "")
-	result, err := partnerdelivery.RefreshDeliverySLAAlerts(s.db, correlationID, time.Now().UTC())
+	result, err := partnerdelivery.RefreshDeliverySLAAlerts(s.db, actor.OperatorContextID, correlationID, time.Now().UTC())
 	if errors.Is(err, partnerdelivery.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid alert refresh request")
 		return
@@ -30,7 +50,7 @@ func (s *protectedStoreServer) handleRefreshDeliverySLAAlerts(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleListDeliverySLAAlerts(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
@@ -44,12 +64,16 @@ func (s *protectedStoreServer) handleListDeliverySLAAlerts(w http.ResponseWriter
 		limit = parsed
 	}
 	status := partnerdelivery.SLAAlertStatus(strings.TrimSpace(r.URL.Query().Get("status")))
-	alerts, err := partnerdelivery.ListDeliverySLAAlerts(s.db, status, limit)
+	alerts, err := partnerdelivery.ListDeliverySLAAlerts(s.db, actor.OperatorContextID, status, limit)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list delivery SLA alerts")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"alerts": alerts, "total": len(alerts)})
+	items := make([]map[string]any, 0, len(alerts))
+	for i := range alerts {
+		items = append(items, marshalDeliverySLAAlert(alerts[i]))
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"alerts": items, "total": len(items)})
 }
 
 func (s *protectedStoreServer) handleAcknowledgeDeliverySLAAlert(w http.ResponseWriter, r *http.Request) {
@@ -65,9 +89,10 @@ func (s *protectedStoreServer) handleAcknowledgeDeliverySLAAlert(w http.Response
 		return
 	}
 	alert, err := partnerdelivery.AcknowledgeDeliverySLAAlert(s.db, partnerdelivery.AcknowledgeDeliverySLAAlertInput{
-		AlertID:         alertID,
-		ActorID:         actor.ID,
-		ExpectedVersion: body.ExpectedVersion,
+		OperatorContextID: actor.OperatorContextID,
+		AlertID:           alertID,
+		ActorID:           actor.ID,
+		ExpectedVersion:   body.ExpectedVersion,
 	})
 	if errors.Is(err, partnerdelivery.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "alertId and expectedVersion are required")
@@ -81,5 +106,5 @@ func (s *protectedStoreServer) handleAcknowledgeDeliverySLAAlert(w http.Response
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to acknowledge delivery SLA alert")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"alert": alert})
+	store.SendJSON(w, http.StatusOK, map[string]any{"alert": marshalDeliverySLAAlert(*alert)})
 }

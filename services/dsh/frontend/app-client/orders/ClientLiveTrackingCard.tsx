@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Badge, Box, Icon, Surface, Text } from '@bthwani/ui-kit';
+import { Badge, Box, Button, Icon, Surface, Text } from '@bthwani/ui-kit';
 import type { DshLiveTrackingProjection } from '../../shared/dispatch/dispatch-tracking.api';
 import { ClientDeliveryProofPanel } from './ClientDeliveryProofPanel';
 
@@ -39,16 +39,21 @@ function formatDuration(seconds: number): string {
 
 export function ClientLiveTrackingCard({
   tracking,
+  readbackMessage,
+  onRetry,
 }: {
   readonly tracking: DshLiveTrackingProjection | null;
+  readonly readbackMessage?: string | null;
+  readonly onRetry?: (() => void) | undefined;
 }) {
   if (!tracking) {
     return (
       <Surface tone="raised" gap={2}>
         <Text role="titleSm">التتبع الحي</Text>
-        <Text role="bodySm" tone="muted">
-          التتبع الحي سيكون متاحاً فور استلام الكابتن للطلب وبدء التوصيل.
+        <Text role="bodySm" tone={readbackMessage ? "danger" : "muted"}>
+          {readbackMessage ?? "التتبع الحي سيكون متاحاً فور استلام الكابتن للطلب وبدء التوصيل."}
         </Text>
+        {readbackMessage && onRetry ? <Button label="إعادة قراءة التتبع" tone="secondary" onPress={onRetry} /> : null}
       </Surface>
     );
   }

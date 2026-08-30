@@ -1,7 +1,9 @@
 package orders
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -75,6 +77,7 @@ type DecidePreparationIssueInput struct {
 	ExpectedVersion int
 	Decision        PreparationIssueCustomerDecision
 	Note            string
+	IdempotencyKey  string
 	CorrelationID   string
 }
 
@@ -161,6 +164,19 @@ func validPreparationIssueKind(kind PreparationIssueKind) bool {
 
 func validPreparationIssueDecision(decision PreparationIssueCustomerDecision) bool {
 	return decision == PreparationIssueDecisionApproved || decision == PreparationIssueDecisionRejected
+}
+
+func clientPreparationDecisionFingerprint(input DecidePreparationIssueInput) string {
+	payload := strings.Join([]string{
+		strings.TrimSpace(input.IssueID),
+		strings.TrimSpace(input.OrderID),
+		strings.TrimSpace(input.ActorID),
+		fmt.Sprint(input.ExpectedVersion),
+		string(input.Decision),
+		strings.TrimSpace(input.Note),
+	}, "\x00")
+	digest := sha256.Sum256([]byte(payload))
+	return hex.EncodeToString(digest[:])
 }
 
 func normalizeCreatePreparationIssueInput(input CreatePreparationIssueInput) CreatePreparationIssueInput {
@@ -385,12 +401,15 @@ func DecidePreparationIssue(db *sql.DB, input DecidePreparationIssueInput) (*Pre
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.Note = strings.TrimSpace(input.Note)
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
 	if db == nil || input.IssueID == "" || input.OrderID == "" || input.ActorID == "" ||
 		input.ExpectedVersion < 1 || !validPreparationIssueDecision(input.Decision) ||
-		len(input.Note) > 500 || input.CorrelationID == "" {
+		len(input.Note) > 500 || len(input.IdempotencyKey) < 16 || len(input.IdempotencyKey) > 200 ||
+		input.CorrelationID == "" || len(input.CorrelationID) > 200 {
 		return nil, ErrInvalid
 	}
+	fingerprint := clientPreparationDecisionFingerprint(input)
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -410,19 +429,21 @@ func DecidePreparationIssue(db *sql.DB, input DecidePreparationIssueInput) (*Pre
 		return nil, err
 	}
 
-	var replayed bool
+	var storedFingerprint, storedCorrelationID string
 	if err := tx.QueryRow(`
-		SELECT EXISTS(
-			SELECT 1 FROM dsh_order_preparation_issue_events
-			WHERE issue_id=$1::uuid AND correlation_id=$2
-		)`, input.IssueID, input.CorrelationID).Scan(&replayed); err != nil {
-		return nil, err
-	}
-	if replayed {
+		SELECT request_fingerprint, correlation_id
+		FROM dsh_order_preparation_issue_events
+		WHERE issue_id=$1::uuid AND idempotency_key=$2
+		LIMIT 1`, input.IssueID, input.IdempotencyKey).Scan(&storedFingerprint, &storedCorrelationID); err == nil {
+		if storedFingerprint != fingerprint || storedCorrelationID != input.CorrelationID {
+			return nil, ErrIdempotencyConflict
+		}
 		if err := tx.Commit(); err != nil {
 			return nil, err
 		}
 		return GetPreparationIssue(db, input.IssueID, input.OrderID)
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
 	}
 	if current.Kind != PreparationIssueSubstitutionRequired ||
 		current.Status != PreparationIssueOpen ||
@@ -470,8 +491,8 @@ func DecidePreparationIssue(db *sql.DB, input DecidePreparationIssueInput) (*Pre
 	})
 	if _, err := tx.Exec(`
 		INSERT INTO dsh_order_preparation_issue_events(
-			issue_id,order_id,store_id,actor_id,event_type,from_status,to_status,note,payload,correlation_id)
-		VALUES($1::uuid,$2::uuid,$3,$4,'customer_decision','open','open',$5,$6::jsonb,$7)`,
+			issue_id,order_id,store_id,actor_id,event_type,from_status,to_status,note,payload,correlation_id,idempotency_key,request_fingerprint)
+		VALUES($1::uuid,$2::uuid,$3,$4,'customer_decision','open','open',$5,$6::jsonb,$7,$8,$9)`,
 		decided.ID,
 		decided.OrderID,
 		decided.StoreID,
@@ -479,6 +500,8 @@ func DecidePreparationIssue(db *sql.DB, input DecidePreparationIssueInput) (*Pre
 		string(input.Decision),
 		string(payload),
 		input.CorrelationID,
+		input.IdempotencyKey,
+		fingerprint,
 	); err != nil {
 		return nil, err
 	}

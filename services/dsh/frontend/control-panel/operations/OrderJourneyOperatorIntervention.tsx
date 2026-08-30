@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { Badge, Box, Button, Text, TextField } from '@bthwani/ui-kit';
 import {
   FINANCIAL_CLOSURE_LABELS,
@@ -18,6 +19,8 @@ import { PartnerDeliveryStatusCard } from '../../shared/partner-delivery/Partner
 export type OrderJourneyOperatorInterventionProps = {
   readonly order: OperatorOrderWorkboardRow;
   readonly onChanged: () => void | Promise<void>;
+  readonly canManageOperations: boolean;
+  readonly canOverrideIncident: boolean;
 };
 
 function financialTone(status: OperatorOrderWorkboardRow['financialClosureStatus']): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
@@ -45,7 +48,13 @@ const PARTNER_DELIVERY_EXCEPTION_CLOSED_STATUSES = new Set(['completed', 'cancel
  * by acting on a single order (no fabricated store context) through the
  * same control-panel-permission-gated endpoint the backend already exposes.
  */
-function PartnerDeliveryExceptionPanel({ orderId }: { readonly orderId: string }) {
+function PartnerDeliveryExceptionPanel({
+  orderId,
+  canOverrideIncident,
+}: {
+  readonly orderId: string;
+  readonly canOverrideIncident: boolean;
+}) {
   const { detailState, loadDetailByOrder, raiseException } = useOperatorPartnerDeliveriesController({ autoLoad: false });
   const [reason, setReason] = React.useState('');
   const [ticketReference, setTicketReference] = React.useState('');
@@ -83,31 +92,33 @@ function PartnerDeliveryExceptionPanel({ orderId }: { readonly orderId: string }
   return (
     <Box gap={3}>
       <PartnerDeliveryStatusCard task={task} />
-      <Box gap={2} padding={4} background="surfaceInset" radiusToken="md">
-        <Text role="titleSm">تسجيل استثناء توصيل المتجر</Text>
-        <Text role="bodySm" tone="muted">
-          يبقى تعديل فريق المتجر ونطاق الفروع داخل تطبيق الشريك. هذا الإجراء يسجل استثناءً تشغيليًا على المهمة الحالية فقط.
-        </Text>
-        <TextField
-          label="سبب الاستثناء"
-          placeholder="سبب تشغيلي مسجل قبل إغلاق المهمة"
-          value={reason}
-          onChangeText={setReason}
-        />
-        <TextField
-          label="رقم التذكرة/الحادثة"
-          placeholder="مرجع إلزامي يربط الاستثناء بحادثة تشغيلية"
-          value={ticketReference}
-          onChangeText={setTicketReference}
-        />
-        {message ? <Text role="bodySm" tone={message.tone}>{message.text}</Text> : null}
-        <Button
-          label={submitting ? 'جارٍ تسجيل الاستثناء…' : 'تسجيل استثناء'}
-          tone="danger"
-          disabled={submitting || !reason.trim() || !ticketReference.trim()}
-          onPress={() => void submit()}
-        />
-      </Box>
+      {canOverrideIncident ? (
+        <Box gap={2} padding={4} background="surfaceInset" radiusToken="md">
+          <Text role="titleSm">تسجيل استثناء توصيل المتجر</Text>
+          <Text role="bodySm" tone="muted">
+            يبقى تعديل فريق المتجر ونطاق الفروع داخل تطبيق الشريك. هذا الإجراء يسجل استثناءً تشغيليًا على المهمة الحالية فقط.
+          </Text>
+          <TextField
+            label="سبب الاستثناء"
+            placeholder="سبب تشغيلي مسجل قبل إغلاق المهمة"
+            value={reason}
+            onChangeText={setReason}
+          />
+          <TextField
+            label="رقم التذكرة/الحادثة"
+            placeholder="مرجع إلزامي يربط الاستثناء بحادثة تشغيلية"
+            value={ticketReference}
+            onChangeText={setTicketReference}
+          />
+          {message ? <Text role="bodySm" tone={message.tone}>{message.text}</Text> : null}
+          <Button
+            label={submitting ? 'جارٍ تسجيل الاستثناء…' : 'تسجيل استثناء'}
+            tone="danger"
+            disabled={submitting || !reason.trim() || !ticketReference.trim()}
+            onPress={() => void submit()}
+          />
+        </Box>
+      ) : <Text role="caption" tone="muted">قراءة المهمة فقط — تسجيل حادثة override يتطلب صلاحية incident.override.</Text>}
     </Box>
   );
 }
@@ -115,7 +126,11 @@ function PartnerDeliveryExceptionPanel({ orderId }: { readonly orderId: string }
 export function OrderJourneyOperatorIntervention({
   order,
   onChanged,
+  canManageOperations,
+  canOverrideIncident,
 }: OrderJourneyOperatorInterventionProps) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
   const [reasonCode, setReasonCode] = React.useState<OperatorCancellationReasonCode>('operational_failure');
   const [reasonNote, setReasonNote] = React.useState('');
   const [ticketReference, setTicketReference] = React.useState('');
@@ -168,6 +183,16 @@ export function OrderJourneyOperatorIntervention({
   const noteRequired = reasonCode === 'other';
 
   const submit = async () => {
+    if (!canManageOperations) {
+      setState('error');
+      setMessage('هذه الجلسة للقراءة فقط ولا تملك صلاحية إدارة العمليات.');
+      return;
+    }
+    if (!actorId) {
+      setState('error');
+      setMessage('انتهت جلسة العمليات. سجّل الدخول ثم أعد المحاولة.');
+      return;
+    }
     if (noteRequired && !reasonNote.trim()) {
       setState('error');
       setMessage('التوضيح مطلوب عند اختيار سبب آخر.');
@@ -181,7 +206,7 @@ export function OrderJourneyOperatorIntervention({
     setState('loading');
     setMessage('');
     try {
-      await cancelOperatorOrder(order.id, reasonCode, reasonNote, ticketReference.trim());
+      await cancelOperatorOrder(order.id, actorId, reasonCode, reasonNote, ticketReference.trim());
       await onChanged();
       setState('success');
       setReasonNote('');
@@ -192,6 +217,23 @@ export function OrderJourneyOperatorIntervention({
       setMessage(operatorOrderWorkboardErrorMessage(error));
     }
   };
+
+  if (!canManageOperations) {
+    return (
+      <Box gap={3}>
+        <Box gap={2} padding={4} background="surfaceInset" radiusToken="md">
+          <Text role="titleSm">التدخل التشغيلي</Text>
+          <Text role="bodySm" tone="muted">قراءة فقط — إلغاء الطلب وبدء الإغلاق المالي يتطلبان صلاحية operations.manage.</Text>
+        </Box>
+        {order.fulfillmentMode === 'partner_delivery' ? (
+          <PartnerDeliveryExceptionPanel
+            orderId={order.id}
+            canOverrideIncident={canOverrideIncident}
+          />
+        ) : null}
+      </Box>
+    );
+  }
 
   return (
     <Box gap={3}>
@@ -237,7 +279,12 @@ export function OrderJourneyOperatorIntervention({
           onPress={() => void submit()}
         />
       </Box>
-      {order.fulfillmentMode === 'partner_delivery' ? <PartnerDeliveryExceptionPanel orderId={order.id} /> : null}
+      {order.fulfillmentMode === 'partner_delivery' ? (
+        <PartnerDeliveryExceptionPanel
+          orderId={order.id}
+          canOverrideIncident={canOverrideIncident}
+        />
+      ) : null}
     </Box>
   );
 }

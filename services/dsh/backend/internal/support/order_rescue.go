@@ -762,7 +762,7 @@ func ExecuteOrderRescueAction(db *sql.DB, input ExecuteOrderRescueActionInput) (
 		}
 	}
 
-	_, err = tx.Exec(`UPDATE dsh_order_rescue_actions SET status = 'completed', executed_by = $2, execution_result = jsonb_build_object('mode', 'dsh_operational_reference_only', 'correlationId', $3), version = version + 1, updated_at = NOW() WHERE id = $1::uuid AND version = $4`, action.ID, input.ActorID, input.CorrelationID, action.Version)
+	_, err = tx.Exec(`UPDATE dsh_order_rescue_actions SET status = 'completed', executed_by = $2, execution_result = jsonb_build_object('mode', 'dsh_operational_reference_only', 'correlationId', $3::text), version = version + 1, updated_at = NOW() WHERE id = $1::uuid AND version = $4`, action.ID, input.ActorID, input.CorrelationID, action.Version)
 	if err != nil {
 		return OrderRescueAction{}, err
 	}

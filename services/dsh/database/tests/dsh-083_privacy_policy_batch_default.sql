@@ -2,6 +2,23 @@
 
 BEGIN;
 
+-- Clean-install invariant fixture: the geofence binding (dsh-906/dsh-981)
+-- requires every live address to resolve inside an active service-area
+-- version, so the proof seeds its own coverage area before inserting.
+DO $$
+BEGIN
+  INSERT INTO dsh_service_area_versions (
+    service_area_code, version, display_name, polygon, active, priority, srid,
+    overlap_policy, effective_from, expires_at, actor_id, actor_surface, reason,
+    correlation_id, created_at
+  ) VALUES (
+    'sanaa', 1, 'Invariant fixture coverage',
+    ST_SetSRID(ST_GeomFromGeoJSON('{"type":"Polygon","coordinates":[[[44.10,15.25],[44.30,15.25],[44.30,15.45],[44.10,15.45],[44.10,15.25]]]}'), 4326),
+    TRUE, 100, 4326, 'priority_then_code', NOW() - interval '1 day', NULL,
+    'db-invariant-fixture', 'system', 'clean-install invariant fixture area', NULL, NOW()
+  ) ON CONFLICT (service_area_code, version) DO NOTHING;
+END $$;
+
 DO $$
 DECLARE
   v_suffix text := replace(gen_random_uuid()::text, '-', '');
@@ -26,6 +43,8 @@ BEGIN
       phone_e164,
       address_line,
       service_area_code,
+      latitude,
+      longitude,
       create_idempotency_key
     ) VALUES (
       'privacy-batch-client-' || v_suffix || '-' || v_index,
@@ -34,6 +53,8 @@ BEGIN
       '+96775555555' || v_index,
       'Batch policy address ' || v_index,
       'sanaa',
+      15.35,
+      44.20,
       'privacy-batch-' || v_suffix || '-' || v_index
     );
   END LOOP;

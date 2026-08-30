@@ -19,6 +19,7 @@ import type { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { DshFieldNavigation } from '../dsh-field.routes';
 import type { FieldOnboardingController } from '../../shared/field-onboarding';
 import type { useIdentitySession } from '@bthwani/core-identity';
+import { StateView } from '@bthwani/ui-kit';
 
 type FieldSurfaceBinding = ReturnType<typeof useDshFieldSurfaceModel>;
 
@@ -32,6 +33,24 @@ type Props = {
 
 export function DshFieldRouteRenderer({ model, navigation, onboardingController, identity, onOpenAssignment }: Props): React.ReactElement {
   const { route } = model;
+
+  if (route.kind === 'stores') {
+    return (
+      <DshFieldPartnersScreen
+        onOpenPartner={(partnerId, activationStatus) =>
+          navigation.navigate(
+            activationStatus === 'draft'
+              ? { kind: 'onboarding', partnerId }
+              : { kind: 'partner-progress', partnerId }
+          )
+        }
+        onOpenAccount={() => navigation.navigate({ kind: 'account' })}
+        onCreatePartner={() => navigation.navigate({ kind: 'onboarding' })}
+        onOpenWorkQueue={() => navigation.navigate({ kind: 'work-queue' })}
+        onOpenAssignment={(assignment) => onOpenAssignment(assignment.id)}
+      />
+    );
+  }
 
   if (route.kind === 'onboarding') {
     const openProducts = (partnerId: string) => navigation.navigate({ kind: 'products-upload', partnerId });
@@ -179,19 +198,17 @@ export function DshFieldRouteRenderer({ model, navigation, onboardingController,
     );
   }
 
+  // Keep the union exhaustive at compile time. The cast is only for the
+  // runtime boundary: malformed navigation state must stop visibly instead
+  // of being rendered as a different, valid screen.
+  const unreachableRoute: never = route;
   return (
-    <DshFieldPartnersScreen
-      onOpenPartner={(partnerId, activationStatus) =>
-        navigation.navigate(
-          activationStatus === 'draft'
-            ? { kind: 'onboarding', partnerId }
-            : { kind: 'partner-progress', partnerId }
-        )
-      }
-      onOpenAccount={() => navigation.navigate({ kind: 'account' })}
-      onCreatePartner={() => navigation.navigate({ kind: 'onboarding' })}
-      onOpenWorkQueue={() => navigation.navigate({ kind: 'work-queue' })}
-      onOpenAssignment={(assignment) => onOpenAssignment(assignment.id)}
+    <StateView
+      tone="danger"
+      title="مسار ميداني غير معروف"
+      description={`لم يُعرّف renderer صالح للمسار ${(unreachableRoute as { readonly kind: string }).kind}. تم إيقافه لحماية بيانات العمل.`}
+      actionLabel="العودة إلى المتاجر"
+      onActionPress={() => navigation.navigate({ kind: 'stores' }, 'replace')}
     />
   );
 }

@@ -6,6 +6,7 @@ import {
   useStoreCaptainHandoffException,
   type DshDeliveryExceptionReasonCode,
 } from '../../shared/dispatch';
+import type { DshDispatchAssignmentSource } from '../../shared/dispatch';
 import {
   OrderPreparationReadbackCard,
   STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS,
@@ -15,19 +16,25 @@ import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
 } from '../../shared/delivery/use-captain-order-runtime';
+import type { CaptainDeliveryAction } from '../../shared/delivery/captain.surface.types';
 import { DshCaptainMapLayer } from './DshCaptainMapLayer';
 
 export type OperationalCaptainExecutionScreenProps = {
   readonly assignmentId: string;
   readonly orderId: string;
+  readonly workItemId: string;
+  readonly workItemSource: DshDispatchAssignmentSource | '';
   readonly captainId: string;
   readonly currentStageLabel: string;
+  readonly activeDeliveryAction: CaptainDeliveryAction;
+  readonly deliveryActionState: 'idle' | 'loading' | 'success' | 'error';
+  readonly deliveryActionMessage: string | null;
   readonly handoffExceptionEnabled: boolean;
-  readonly podRequired: boolean;
   readonly onBack: () => void;
   readonly onRefresh: () => void | Promise<void>;
-  readonly onConfirmPickup: () => void;
-  readonly onConfirmDelivery: () => void;
+  readonly onConfirmStoreArrival: () => Promise<boolean>;
+  readonly onConfirmPickup: () => Promise<boolean>;
+  readonly onConfirmCustomerArrival: () => Promise<boolean>;
   readonly onOpenPod: () => void;
   readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<unknown>;
 };
@@ -49,27 +56,51 @@ function isQueuedLocationResult(result: unknown): boolean {
 export function OperationalCaptainExecutionScreen({
   assignmentId,
   orderId,
+  workItemId,
+  workItemSource,
   captainId,
   currentStageLabel,
+  activeDeliveryAction,
+  deliveryActionState,
+  deliveryActionMessage,
   handoffExceptionEnabled,
-  podRequired,
   onBack,
   onRefresh,
+  onConfirmStoreArrival,
   onConfirmPickup,
-  onConfirmDelivery,
+  onConfirmCustomerArrival,
   onOpenPod,
   onPushLocation,
 }: OperationalCaptainExecutionScreenProps) {
   const [locationState, setLocationState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [locationMessage, setLocationMessage] = React.useState<string | null>(null);
   const handoffException = useStoreCaptainHandoffException('captain', onRefresh);
-  const preparationReadback = useOrderPreparationReadback(orderId, { pollIntervalMs: 15_000 });
+  const preparationReadback = useOrderPreparationReadback(workItemSource === 'order' ? orderId : '');
+  const workItemLabel = workItemSource === 'special_request'
+    ? `المهمة الخاصة #${workItemId}`
+    : `الطلب #${workItemId || orderId}`;
   const handoffExceptionKind = handoffException.state.kind;
   const handoffReadback = handoffException.readback;
   const cancelHandoffException = handoffException.cancel;
   const loadExistingHandoffException = handoffException.loadExisting;
   const readbackBlocksPickup = handoffExceptionEnabled && handoffReadback.kind !== 'clear';
   const handoffBlocked = handoffExceptionKind !== 'idle' || readbackBlocksPickup;
+  const actionBlocked = deliveryActionState === 'loading'
+    || !activeDeliveryAction.enabled
+    || (activeDeliveryAction.id === 'pickup' && handoffBlocked);
+
+  const runPrimaryAction = () => {
+    if (actionBlocked) return;
+    if (activeDeliveryAction.id === 'arrive_store') {
+      void onConfirmStoreArrival();
+    } else if (activeDeliveryAction.id === 'pickup') {
+      void onConfirmPickup();
+    } else if (activeDeliveryAction.id === 'arrive_customer') {
+      void onConfirmCustomerArrival();
+    } else if (activeDeliveryAction.id === 'open_pod') {
+      onOpenPod();
+    }
+  };
 
   React.useEffect(() => {
     if (!handoffExceptionEnabled || !assignmentId) return undefined;
@@ -133,7 +164,7 @@ export function OperationalCaptainExecutionScreen({
       <TopBar title="تنفيذ المهمة" onBack={onBack} />
       <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.content}>
         <DshCaptainMapLayer
-          orderLabel={`الطلب #${orderId}`}
+          orderLabel={workItemLabel}
           assignmentLabel={`الإسناد: ${assignmentId}`}
           currentStageLabel={currentStageLabel}
           gpsLabel={gpsLabel}
@@ -142,16 +173,24 @@ export function OperationalCaptainExecutionScreen({
         />
 
         <Surface tone="action" gap={3}>
-          <Text role="titleMd" style={styles.inverted}>{`الطلب #${orderId}`}</Text>
+          <Text role="titleMd" style={styles.inverted}>{workItemLabel}</Text>
           <Text role="bodySm" style={styles.inverted}>{currentStageLabel}</Text>
           <Text role="caption" style={styles.inverted}>{`الإسناد: ${assignmentId}`}</Text>
         </Surface>
 
-        <OrderPreparationReadbackCard
-          state={preparationReadback.state}
-          title="جاهزية الطلب لدى المتجر"
-          onRetry={preparationReadback.refresh}
-        />
+        {workItemSource === 'order' ? (
+          <OrderPreparationReadbackCard
+            state={preparationReadback.state}
+            title="جاهزية الطلب لدى المتجر"
+            onRetry={preparationReadback.refresh}
+          />
+        ) : (
+          <StateView
+            title="مهمة خاصة مرتبطة"
+            description="تُدار جاهزية هذه المهمة من حالة الإسناد الخاصة في DSH؛ لا تُستبدل بقراءة طلب تجاري غير موجود."
+            tone="info"
+          />
+        )}
 
         <Surface tone="raised" gap={3}>
           <View style={styles.row}>
@@ -228,11 +267,22 @@ export function OperationalCaptainExecutionScreen({
         <Surface tone="raised" gap={3}>
           <Text role="bodyStrong">إجراءات المهمة</Text>
           <Box gap={2}>
-            <Button
-              label="تأكيد الاستلام"
-              disabled={handoffBlocked}
-              onPress={onConfirmPickup}
-            />
+            {activeDeliveryAction.enabled ? (
+              <>
+                <Text role="bodySm" tone="muted">{activeDeliveryAction.description}</Text>
+                <Button
+                  label={activeDeliveryAction.label}
+                  disabled={actionBlocked}
+                  onPress={runPrimaryAction}
+                />
+              </>
+            ) : (
+              <StateView
+                title={activeDeliveryAction.label}
+                description="لا يوجد إجراء قانوني إضافي من شاشة التنفيذ لهذه الحالة الحالية."
+                tone="info"
+              />
+            )}
             {handoffExceptionEnabled
               && handoffExceptionKind === 'idle'
               && handoffReadback.kind === 'clear' ? (
@@ -242,11 +292,16 @@ export function OperationalCaptainExecutionScreen({
                   onPress={() => handoffException.begin(assignmentId)}
                 />
               ) : null}
-            <Button
-              label={podRequired ? 'فتح إثبات التسليم' : 'تأكيد التسليم'}
-              tone="secondary"
-              onPress={podRequired ? onOpenPod : onConfirmDelivery}
-            />
+            {deliveryActionMessage ? (
+              <StateView
+                title={deliveryActionState === 'success' ? 'تم تحديث المرحلة' : 'تعذر تثبيت المرحلة'}
+                description={deliveryActionMessage}
+                tone={deliveryActionState === 'success' ? 'success' : 'danger'}
+                {...(deliveryActionState === 'error'
+                  ? { actionLabel: 'إعادة المحاولة', onActionPress: runPrimaryAction }
+                  : {})}
+              />
+            ) : null}
           </Box>
         </Surface>
       </MobileScrollView>

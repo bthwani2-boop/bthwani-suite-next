@@ -73,6 +73,8 @@ func writePartnerDeliveryError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 	case errors.Is(err, incident.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	case errors.Is(err, incident.ErrConflict):
+		store.SendError(w, http.StatusConflict, "INCIDENT_IDEMPOTENCY_CONFLICT", "incident command identity was already used with different details")
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "partner delivery action failed")
 	}
@@ -123,7 +125,7 @@ func (s *protectedStoreServer) handleAssignPartnerDelivery(w http.ResponseWriter
 	}
 	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
 	task, err := partnerdelivery.NewService(s.db, s.workforce).AssignCourierCommand(
-		r.Context(), ownedOrder.ID, body.StoreCourierID, actor.ID, actor.Role, correlationID, body.CommandID,
+		r.Context(), actor.OperatorContextID, ownedOrder.ID, body.StoreCourierID, actor.ID, actor.Role, correlationID, body.CommandID,
 	)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
@@ -133,27 +135,27 @@ func (s *protectedStoreServer) handleAssignPartnerDelivery(w http.ResponseWriter
 }
 
 func (s *protectedStoreServer) handlePartnerDeliveryPickup(w http.ResponseWriter, r *http.Request) {
-	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error) {
-		return svc.MarkPickedUpCommand(r.Context(), taskID, version, actorID, actorRole, correlationID, commandID)
+	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, operatorContextID, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error) {
+		return svc.MarkPickedUpCommand(r.Context(), operatorContextID, taskID, version, actorID, actorRole, correlationID, commandID)
 	})
 }
 
 func (s *protectedStoreServer) handlePartnerDeliveryDepart(w http.ResponseWriter, r *http.Request) {
-	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error) {
-		return svc.MarkDepartedCommand(r.Context(), taskID, version, actorID, actorRole, correlationID, commandID)
+	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, operatorContextID, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error) {
+		return svc.MarkDepartedCommand(r.Context(), operatorContextID, taskID, version, actorID, actorRole, correlationID, commandID)
 	})
 }
 
 func (s *protectedStoreServer) handlePartnerDeliveryArrive(w http.ResponseWriter, r *http.Request) {
-	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error) {
-		return svc.MarkArrivedCommand(r.Context(), taskID, version, actorID, actorRole, correlationID, commandID)
+	s.handlePartnerDeliveryTaskTransition(w, r, func(svc *partnerdelivery.Service, operatorContextID, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error) {
+		return svc.MarkArrivedCommand(r.Context(), operatorContextID, taskID, version, actorID, actorRole, correlationID, commandID)
 	})
 }
 
 func (s *protectedStoreServer) handlePartnerDeliveryTaskTransition(
 	w http.ResponseWriter,
 	r *http.Request,
-	call func(svc *partnerdelivery.Service, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error),
+	call func(svc *partnerdelivery.Service, operatorContextID, taskID string, version int, actorID, actorRole, correlationID, commandID string) (*partnerdelivery.PartnerDeliveryTask, error),
 ) {
 	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
@@ -167,13 +169,13 @@ func (s *protectedStoreServer) handlePartnerDeliveryTaskTransition(
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
 		return
 	}
-	task, err := partnerdelivery.GetByOrderID(s.db, ownedOrder.ID)
+	task, err := partnerdelivery.GetByOrderIDForOperatorContext(s.db, actor.OperatorContextID, ownedOrder.ID)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
 	}
 	updated, err := call(
-		partnerdelivery.NewService(s.db, s.workforce), task.ID, body.ExpectedVersion, actor.ID, actor.Role,
+		partnerdelivery.NewService(s.db, s.workforce), actor.OperatorContextID, task.ID, body.ExpectedVersion, actor.ID, actor.Role,
 		partnerDeliveryCorrelationID(r, body.CorrelationID), body.CommandID,
 	)
 	if err != nil {
@@ -196,14 +198,14 @@ func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter,
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
 		return
 	}
-	task, err := partnerdelivery.GetByOrderID(s.db, ownedOrder.ID)
+	task, err := partnerdelivery.GetByOrderIDForOperatorContext(s.db, actor.OperatorContextID, ownedOrder.ID)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
 	}
 	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
 	updated, err := partnerdelivery.NewService(s.db, s.workforce).SubmitProofCommand(
-		r.Context(), task.ID, body.ExpectedVersion, body.ProofMethod, body.ProofReference,
+		r.Context(), actor.OperatorContextID, task.ID, body.ExpectedVersion, body.ProofMethod, body.ProofReference,
 		actor.ID, actor.Role, correlationID, body.CommandID,
 	)
 	if err != nil {
@@ -239,7 +241,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "ticketReference is required")
 		return
 	}
-	task, err := partnerdelivery.GetByOrderID(s.db, orderID)
+	task, err := partnerdelivery.GetByOrderIDForOperatorContext(s.db, actor.OperatorContextID, orderID)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -247,7 +249,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
 	reported, err := incident.NewService(s.db).Report(r.Context(), incident.ReportInput{
 		OrderID:            orderID,
-		OperatorContextID:           actor.OperatorContextID,
+		OperatorContextID:  actor.OperatorContextID,
 		TargetEntityType:   incident.TargetPartnerDeliveryTask,
 		TargetEntityID:     task.ID,
 		IncidentType:       incident.TypeRaiseException,
@@ -264,7 +266,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	updated, err := partnerdelivery.Get(s.db, task.ID)
+	updated, err := partnerdelivery.GetForOperatorContext(s.db, actor.OperatorContextID, task.ID)
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -273,12 +275,12 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 }
 
 func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	limit, offset := parseLimitOffset(r)
-	tasks, err := partnerdelivery.List(s.db, partnerdelivery.ListFilter{
+	tasks, err := partnerdelivery.ListForOperatorContext(s.db, actor.OperatorContextID, partnerdelivery.ListFilter{
 		StoreID: r.URL.Query().Get("storeId"),
 		Status:  r.URL.Query().Get("status"),
 		Limit:   limit,
@@ -296,11 +298,11 @@ func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.Respon
 }
 
 func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	task, err := partnerdelivery.Get(s.db, r.PathValue("taskId"))
+	task, err := partnerdelivery.GetForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("taskId"))
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -309,11 +311,11 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseW
 }
 
 func (s *protectedStoreServer) handleGetOperatorPartnerDeliveryByOrder(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	task, err := partnerdelivery.GetByOrderID(s.db, r.PathValue("orderId"))
+	task, err := partnerdelivery.GetByOrderIDForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("orderId"))
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
@@ -322,11 +324,11 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDeliveryByOrder(w http.Re
 }
 
 func (s *protectedStoreServer) handleGetPartnerReturnToStore(w http.ResponseWriter, r *http.Request) {
-	_, order, ok := s.partnerOrder(w, r)
+	actor, order, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	item, err := dispatch.GetPartnerReturnToStore(s.db, order.ID)
+	item, err := dispatch.GetPartnerReturnToStore(s.db, actor.OperatorContextID, order.ID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -339,7 +341,12 @@ func (s *protectedStoreServer) handleAcceptPartnerReturnToStore(w http.ResponseW
 	if !ok {
 		return
 	}
-	item, err := dispatch.AcceptReturnToStoreByPartner(s.db, order.ID, actor.ID)
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
+	item, err := dispatch.AcceptReturnToStoreByPartner(s.db, actor.OperatorContextID, order.ID, actor.ID, idempotencyKey, correlationID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return

@@ -44,7 +44,7 @@ func TestGetPurchasableClientCatalogUsesCurrentPriceAndInventoryDBIntegration(t 
 		INSERT INTO dsh_store_assortments (
 			id, store_id, master_product_id, unit_price, currency,
 			available, stock_status, publication_status
-		) VALUES ($1,$2,$3,1,'YER',true,'in_stock','client_visible')`, assortmentID, storeID, productID); err != nil {
+		) VALUES ($1,$2,$3,1,'YER',false,'out_of_stock','client_visible')`, assortmentID, storeID, productID); err != nil {
 		t.Fatalf("insert assortment: %v", err)
 	}
 	if _, err := db.ExecContext(ctx, `
@@ -89,5 +89,16 @@ func TestGetPurchasableClientCatalogUsesCurrentPriceAndInventoryDBIntegration(t 
 	}
 	if products[0].ID != productID || products[0].UnitPrice != 25.99 || products[0].Currency != "YER" {
 		t.Fatalf("client catalog must retain canonical product ID and effective price, got %#v", products[0])
+	}
+
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_store_assortments SET paused_at=NOW(), pause_reason='maintenance' WHERE id=$1`, assortmentID); err != nil {
+		t.Fatalf("pause assortment: %v", err)
+	}
+	_, _, products, _, _, err = GetPurchasableClientCatalog(ctx, db, storeID)
+	if err != nil {
+		t.Fatalf("read paused public catalog: %v", err)
+	}
+	if len(products) != 0 {
+		t.Fatalf("paused assortment must not reach the client catalog: %#v", products)
 	}
 }

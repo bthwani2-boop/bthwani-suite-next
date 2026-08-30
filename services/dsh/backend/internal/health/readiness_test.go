@@ -128,7 +128,7 @@ func TestReadinessDoesNotDuplicateMigrationManifestHead(t *testing.T) {
 	}
 	for _, requiredInvariant := range []string{
 		"dsh_admin_canonical_mutation_intents",
-		"uq_dsh_admin_pending_role_change_by_actor_role",
+		"uq_dsh_admin_pending_role_change_by_context_actor_role",
 	} {
 		if !strings.Contains(source, requiredInvariant) {
 			t.Fatalf("runtime readiness is missing required schema invariant %q", requiredInvariant)

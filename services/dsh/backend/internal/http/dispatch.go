@@ -39,7 +39,7 @@ func (s *protectedStoreServer) handlePushDispatchLocation(w http.ResponseWriter,
 		}
 		input.RecordedAt = &parsed
 	}
-	assignment, err := dispatch.PushLocation(s.db, r.PathValue("assignmentId"), actor.ID, input)
+	assignment, err := dispatch.PushLocationForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID, input)
 	s.writeDispatchResult(w, http.StatusOK, assignment, err)
 }
 
@@ -49,6 +49,11 @@ func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWrit
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		ReasonCode    dispatch.DeliveryExceptionReasonCode `json:"reasonCode"`
 		Note          string                               `json:"note"`
@@ -60,10 +65,16 @@ func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWrit
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	if body.CorrelationID != "" && strings.TrimSpace(body.CorrelationID) != correlationID {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_MISMATCH", "body correlationId must match X-Correlation-ID")
+		return
+	}
 	item, err := dispatch.ReportDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID, dispatch.ReportDeliveryExceptionInput{
-		ReasonCode: body.ReasonCode, Note: body.Note,
-		CorrelationID: operationalCorrelationID(r, body.CorrelationID),
-		Latitude:      body.Latitude, Longitude: body.Longitude,
+		OperatorContextID: actor.OperatorContextID,
+		ReasonCode:        body.ReasonCode, Note: body.Note,
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+		Latitude:       body.Latitude, Longitude: body.Longitude,
 		ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
 	})
 	if err != nil {
@@ -79,7 +90,7 @@ func (s *protectedStoreServer) handleGetCaptainDeliveryException(w http.Response
 	if !ok {
 		return
 	}
-	item, err := dispatch.GetCaptainOpenDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID)
+	item, err := dispatch.GetCaptainOpenDeliveryExceptionForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -89,11 +100,11 @@ func (s *protectedStoreServer) handleGetCaptainDeliveryException(w http.Response
 
 // GET /dsh/operator/delivery-exceptions
 func (s *protectedStoreServer) handleListOperatorDeliveryExceptions(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
-	items, err := dispatch.ListOperatorDeliveryExceptions(s.db, dispatch.DeliveryExceptionStatus(r.URL.Query().Get("status")), 100)
+	items, err := dispatch.ListOperatorDeliveryExceptions(s.db, actor.OperatorContextID, dispatch.DeliveryExceptionStatus(r.URL.Query().Get("status")), 100)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -109,6 +120,8 @@ func writeDeliveryExceptionError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, dispatch.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "delivery exception not found")
+	case errors.Is(err, dispatch.ErrIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
 	case errors.Is(err, dispatch.ErrConflict):
 		store.SendError(w, http.StatusConflict, "DELIVERY_EXCEPTION_CONFLICT", err.Error())
 	case errors.Is(err, dispatch.ErrInvalid):
@@ -150,13 +163,21 @@ func (s *protectedStoreServer) handleAcknowledgeDeliveryException(w http.Respons
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireOperatorCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		ExpectedVersion int `json:"expectedVersion"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	item, err := dispatch.AcknowledgeDeliveryException(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, actor.ID)
+	item, err := dispatch.AcknowledgeDeliveryExceptionIdempotentForOperatorContext(
+		s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion,
+		actor.ID, idempotencyKey, correlationID,
+	)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -170,6 +191,11 @@ func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWri
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireOperatorCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 	var body struct {
 		ExpectedVersion int    `json:"expectedVersion"`
 		Action          string `json:"action"`
@@ -183,13 +209,13 @@ func (s *protectedStoreServer) handleResolveDeliveryException(w http.ResponseWri
 	var err error
 	switch body.Action {
 	case "retry_same_captain":
-		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptainIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
 	case "reassign_captain":
-		item, err = dispatch.ResolveDeliveryExceptionReassignCaptain(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionReassignCaptainIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID, idempotencyKey, correlationID)
 	case "return_to_store":
-		item, err = dispatch.ResolveDeliveryExceptionReturnToStore(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionReturnToStoreIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
 	case "cancel_order":
-		item, err = dispatch.ResolveDeliveryExceptionCancelOrder(s.db, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID)
+		item, err = dispatch.ResolveDeliveryExceptionCancelOrderIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
 	default:
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
 		return
@@ -207,7 +233,12 @@ func (s *protectedStoreServer) handleArriveReturnToStore(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	item, err := dispatch.CaptainArriveReturnToStore(s.db, r.PathValue("assignmentId"), actor.ID)
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("X-Correlation-ID", correlationID)
+	item, err := dispatch.CaptainArriveReturnToStoreForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID, idempotencyKey, correlationID)
 	if err != nil {
 		writeDeliveryExceptionError(w, err)
 		return
@@ -235,6 +266,8 @@ func (s *protectedStoreServer) writeDispatchResult(w http.ResponseWriter, status
 		store.SendJSON(w, status, map[string]any{"assignment": marshalDispatchAssignment(*assignment)})
 	case errors.Is(err, dispatch.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "dispatch assignment not found")
+	case errors.Is(err, dispatch.ErrIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used for a different delivery status command")
 	case errors.Is(err, dispatch.ErrConflict):
 		store.SendError(w, http.StatusConflict, "CONFLICT", "dispatch transition is not allowed")
 	case errors.Is(err, dispatch.ErrInvalid):

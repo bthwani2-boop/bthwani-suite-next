@@ -9,10 +9,10 @@ import {
   identitySessionIsBoundToSurface,
   useIdentitySession,
 } from "@bthwani/core-identity";
-
-const DSH_ROUTE_PREFIX = "/" + "dsh";
-const DSH_LOGIN_ROUTE = `${DSH_ROUTE_PREFIX}/login`;
-const DSH_DASHBOARD_ROUTE = `${DSH_ROUTE_PREFIX}/dashboard`;
+import {
+  CONTROL_PANEL_LOGIN_ROUTE,
+  resolveControlPanelReturnTo,
+} from "../control-panel-routes";
 
 function loadingPanel(): ReactNode {
   return (
@@ -32,9 +32,10 @@ function loadingPanel(): ReactNode {
 }
 
 /**
- * Owns the authentication boundary for every /dsh/* route (except /dsh/login).
- * The boundary authenticates the exact control-panel session only; business
- * roles and permissions remain authorization concerns of the protected APIs.
+ * Owns authentication for the governed Control Panel shell, including both
+ * DSH and WLT-owned routes. The boundary authenticates the exact control-panel
+ * session only; business roles and permissions remain authorization concerns
+ * of the protected APIs and capability-specific UI.
  */
 export function ControlPanelAuthBoundary({ children }: { readonly children: ReactNode }) {
   const { state, retryBootstrap } = useIdentitySession();
@@ -47,8 +48,8 @@ export function ControlPanelAuthBoundary({ children }: { readonly children: Reac
 
   useEffect(() => {
     if (state.kind === "signed_out" || state.kind === "error" || wrongSurface) {
-      const returnTo = pathname && pathname.startsWith(DSH_ROUTE_PREFIX) ? pathname : DSH_DASHBOARD_ROUTE;
-      router.replace(`${DSH_LOGIN_ROUTE}?returnTo=${encodeURIComponent(returnTo)}`);
+      const returnTo = resolveControlPanelReturnTo(pathname);
+      router.replace(`${CONTROL_PANEL_LOGIN_ROUTE}?returnTo=${encodeURIComponent(returnTo)}`);
     }
   }, [state.kind, wrongSurface, pathname, router]);
 

@@ -15,19 +15,11 @@ type LedgerEntriesResponse =
   operations["getDshFieldMeLedgerEntries"]["responses"][200]["content"]["application/json"];
 type CommissionsResponse =
   operations["getDshFieldMeCommissions"]["responses"][200]["content"]["application/json"];
-type PayoutRequestsResponse =
-  operations["getDshFieldMePayoutRequests"]["responses"][200]["content"]["application/json"];
-type PayoutRequestCreatedResponse =
-  operations["submitDshFieldMePayoutRequest"]["responses"][201]["content"]["application/json"];
-type SubmitPayoutRequestBody = NonNullable<
-  operations["submitDshFieldMePayoutRequest"]["requestBody"]
->["content"]["application/json"];
 
 // Payload shapes derive from the composed DSH contract; WLT owns their truth.
 export type FieldWallet = WalletResponse["wallet"];
 export type FieldLedgerEntry = LedgerEntriesResponse["ledgerEntries"][number];
 export type FieldCommission = CommissionsResponse["commissions"][number];
-export type FieldPayoutRequest = PayoutRequestsResponse["payoutRequests"][number];
 
 /** Stable reason code for the consuming surface; never a localized sentence. */
 function codeFrom(error: unknown): string {
@@ -76,54 +68,6 @@ export async function fetchFieldMeCommissions(): Promise<
       "/dsh/field/me/finance/commissions",
     );
     return { ok: true, commissions: data.commissions ?? [] };
-  } catch (error) {
-    return { ok: false, message: messageFrom(error), code: codeFrom(error) };
-  }
-}
-
-export async function fetchFieldMePayoutRequests(): Promise<
-  | { ok: true; payoutRequests: FieldPayoutRequest[] }
-  | { ok: false; message: string; code: string }
-> {
-  try {
-    const data = await fieldGet<PayoutRequestsResponse>(
-      "/dsh/field/me/finance/payout-requests",
-    );
-    return { ok: true, payoutRequests: data.payoutRequests ?? [] };
-  } catch (error) {
-    return { ok: false, message: messageFrom(error), code: codeFrom(error) };
-  }
-}
-
-/**
- * Submits a SPECIFIED-amount payout through the governed actor payout route.
- * The live DSH handler requires `amountMode`; FULL_AVAILABLE is reserved for
- * full-balance cash-out flows that do not take a caller amount.
- */
-export async function submitFieldMePayoutRequest(
-  amountMinorUnits: number,
-  currency: string,
-  idempotencyKey: string,
-): Promise<
-  | { ok: true; payoutRequest: FieldPayoutRequest }
-  | { ok: false; message: string; code: string }
-> {
-  try {
-    const body: SubmitPayoutRequestBody = {
-      amountMode: "SPECIFIED",
-      amountMinorUnits,
-      currency,
-      idempotencyKey,
-    };
-    const data = await fieldGet<PayoutRequestCreatedResponse>(
-      "/dsh/field/me/finance/payout-requests",
-      {
-        method: "POST",
-        body,
-        idempotencyKey,
-      },
-    );
-    return { ok: true, payoutRequest: data.payoutRequest };
   } catch (error) {
     return { ok: false, message: messageFrom(error), code: codeFrom(error) };
   }

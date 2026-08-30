@@ -63,3 +63,23 @@ func TestNotificationRecipientSupportsAllGovernedActors(t *testing.T) {
 		t.Fatal("unknown actor type must be rejected")
 	}
 }
+
+func TestNotificationActionURLUsesCanonicalClientRoutes(t *testing.T) {
+	tests := []struct {
+		name  string
+		event Event
+		want  string
+	}{
+		{name: "order", event: Event{EntityType: "order", EntityID: "order-1"}, want: "/orders/order-1"},
+		{name: "pickup order event", event: Event{EventType: "pickup_order_ready", EntityType: "pickup_session", EntityID: "order-1"}, want: "/orders/order-1"},
+		{name: "pickup session event", event: Event{EventType: "pickup_otp_issued", EntityType: "pickup_session", EntityID: "session-1", Payload: []byte(`{"OrderID":"order-1"}`)}, want: "/orders/order-1/pickup"},
+		{name: "legacy pickup without order", event: Event{EventType: "pickup_otp_issued", EntityType: "pickup_session", EntityID: "session-1"}, want: "/orders"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := notificationActionURL(tt.event); got != tt.want {
+				t.Fatalf("expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+}

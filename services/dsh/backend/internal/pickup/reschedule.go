@@ -16,6 +16,7 @@ import (
 // IssueOtp then replaces this invalidation hash with a newly delivered code.
 func (s *Service) RescheduleWindow(
 	ctx context.Context,
+	operatorContextID string,
 	orderID string,
 	newExpiry time.Time,
 	actorID string,
@@ -24,6 +25,10 @@ func (s *Service) RescheduleWindow(
 	correlationID string,
 ) (*PickupSession, error) {
 	reason = strings.TrimSpace(reason)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	if reason == "" {
 		return nil, fmt.Errorf("%w: reason is required", ErrInvalid)
 	}
@@ -42,7 +47,7 @@ func (s *Service) RescheduleWindow(
 	}
 	defer tx.Rollback()
 
-	if _, _, err := lockPickupOrder(tx, orderID, orders.StatusReadyForPickup); err != nil {
+	if _, _, err := lockPickupOrderForOperatorContext(tx, operatorContextID, orderID, orders.StatusReadyForPickup); err != nil {
 		return nil, err
 	}
 	current, err := GetForUpdateByOrderID(tx, orderID)

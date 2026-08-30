@@ -414,13 +414,11 @@ components:
       type: string
       enum:
       - cancel
-      - suspend
       - raise_exception
     OperationalTargetEntityType:
       type: string
       enum:
       - partner_delivery_task
-      - pickup_session
       - order
     ReportOperationalIncidentInput:
       type: object
@@ -432,7 +430,6 @@ components:
       - incidentType
       - reason
       - ticketReference
-      - expectedVersion
       properties:
         orderId:
           type: string
@@ -452,6 +449,15 @@ components:
           type: string
           minLength: 1
           maxLength: 256
+        correlationId:
+          type: string
+          minLength: 1
+          maxLength: 200
+        commandId:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Required for raise_exception and retained in the canonical command envelope.
         expectedVersion:
           type: integer
           minimum: 0
@@ -474,6 +480,7 @@ components:
       required:
       - id
       - orderId
+      - operatorContextId
       - targetEntityType
       - targetEntityId
       - incidentType
@@ -489,6 +496,9 @@ components:
           type: string
         orderId:
           type: string
+        operatorContextId:
+          type: string
+          minLength: 1
         targetEntityType:
           $ref: '#/components/schemas/OperationalTargetEntityType'
         targetEntityId:

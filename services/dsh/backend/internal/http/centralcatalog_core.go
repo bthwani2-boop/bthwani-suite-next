@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/centralcatalog"
 	"dsh-api/internal/store"
@@ -15,7 +16,9 @@ import (
 // from Identity's durable RBAC registry; role membership alone is never a
 // fallback authorization path.
 const (
+	CatalogPermissionTaxonomyRead            = "catalog.taxonomy.read"
 	CatalogPermissionTaxonomyManage          = "catalog.taxonomy.manage"
+	CatalogPermissionProductRead             = "catalog.product.read"
 	CatalogPermissionProductManage           = "catalog.product.manage"
 	CatalogPermissionProposalReview          = "catalog.proposal.review"
 	CatalogPermissionProposalMarketingReview = "catalog.proposal.marketing_review"
@@ -35,6 +38,10 @@ const (
 func (s *protectedStoreServer) writeCentralCatalogError(w http.ResponseWriter, err error) {
 	var conflictErr *centralcatalog.ConflictError
 	switch {
+	case errors.Is(err, centralcatalog.ErrIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", "Idempotency-Key was already used for different catalog inputs")
+	case errors.Is(err, centralcatalog.ErrIdempotencyRequired):
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_REQUIRED", "Idempotency-Key is required for catalog create operations")
 	case errors.As(err, &conflictErr):
 		store.SendJSON(w, http.StatusConflict, map[string]any{
 			"code":            "CONFLICT",
@@ -54,4 +61,13 @@ func (s *protectedStoreServer) writeCentralCatalogError(w http.ResponseWriter, e
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "central catalog operation failed")
 	}
+}
+
+func requireCatalogCreateIdempotency(w http.ResponseWriter, r *http.Request) (string, bool) {
+	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(key) < 8 || len(key) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_REQUIRED", "Idempotency-Key is required for catalog create operations")
+		return "", false
+	}
+	return key, true
 }

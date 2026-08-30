@@ -286,7 +286,9 @@ export function OrderTrackingScreen({
     pendingCustomerDecisionCount,
     assignment,
     liveTracking,
+    liveTrackingReadbackMessage,
     partnerDeliveryTask,
+    partnerDeliveryReadbackMessage,
   } = state;
   const summary = toOrderTruthSummary(order);
   const deliveryStatus = assignment?.delivery?.status;
@@ -470,6 +472,14 @@ export function OrderTrackingScreen({
                   </View>
                 ) : null}
               </>
+            ) : partnerDeliveryReadbackMessage ? (
+              <StateView
+                tone="warning"
+                title="تعذر تحديث توصيل الشريك"
+                description={partnerDeliveryReadbackMessage}
+                actionLabel="إعادة المحاولة"
+                onActionPress={() => void reload()}
+              />
             ) : (
               <View style={styles.emptyDispatch}>
                 <Icon name="time-outline" size={24} tone="muted" />
@@ -501,7 +511,11 @@ export function OrderTrackingScreen({
         </Surface>
 
         {order.fulfillmentMode === "bthwani_delivery" ? (
-          <ClientLiveTrackingCard tracking={liveTracking} />
+          <ClientLiveTrackingCard
+            tracking={liveTracking}
+            readbackMessage={liveTrackingReadbackMessage}
+            onRetry={() => void reload()}
+          />
         ) : null}
 
         <Surface tone="raised" gap={2}>

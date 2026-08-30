@@ -11,10 +11,6 @@ export { DshCaptainSurface } from "./DshCaptainSurface";
 export type {
   DshCaptainRoute,
   DshCaptainSurfaceProps,
-  DshCaptainState,
-  DshCaptainStateGroup,
-  DshCaptainStateMeta,
-  DshCaptainProfileSnapshot,
 } from "./dsh-captain.types";
 
 export {
@@ -49,6 +45,9 @@ export {
   useWorkforceProfile,
 } from "../shared/workforce";
 export {
-  fetchCaptainOperationalReadiness,
-  type CaptainOperationalReadiness,
-} from "./captain-readiness.api";
+  fetchOwnCaptainReadiness as fetchCaptainOperationalReadiness,
+} from "../shared/dispatch";
+export type {
+  DshCaptainReadiness,
+  DshCaptainReadiness as CaptainOperationalReadiness,
+} from "../shared/dispatch";

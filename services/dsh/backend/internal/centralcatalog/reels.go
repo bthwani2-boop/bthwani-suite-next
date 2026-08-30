@@ -191,7 +191,7 @@ func validateReelPosterAsset(ctx context.Context, db reelAssetQuerier, actorID, 
 		return nil
 	}
 	var mimeType, status, uploadedBy string
-	if err := db.QueryRowContext(ctx, `SELECT mime_type, status, uploaded_by FROM dsh_catalog_assets WHERE id=$1`, *posterAssetID).
+	if err := db.QueryRowContext(ctx, `SELECT mime_type, status, uploaded_by FROM dsh_catalog_assets WHERE id=$1 FOR SHARE`, *posterAssetID).
 		Scan(&mimeType, &status, &uploadedBy); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNotFound
@@ -207,14 +207,35 @@ func validateReelPosterAsset(ctx context.Context, db reelAssetQuerier, actorID, 
 	return nil
 }
 
-func CreateReelSubmission(ctx context.Context, db *sql.DB, actorID, actorRole string, input CreateReelSubmissionInput) (Reel, error) {
+func CreateReelSubmission(ctx context.Context, db *sql.DB, actorID, actorRole, idempotencyKey string, input CreateReelSubmissionInput) (Reel, error) {
 	if err := normalizeReelCopy(&input); err != nil {
 		return Reel{}, err
+	}
+	mutationRequest := struct {
+		ActorRole string                    `json:"actorRole"`
+		Input     CreateReelSubmissionInput `json:"input"`
+	}{ActorRole: strings.TrimSpace(actorRole), Input: input}
+	tx, mutation, replay, err := beginCatalogCreateMutation(
+		ctx, db, actorID, "reel_submission.create", idempotencyKey, mutationRequest,
+	)
+	if err != nil {
+		return Reel{}, err
+	}
+	defer tx.Rollback()
+	if replay != nil {
+		reel, err := scanReel(tx.QueryRowContext(ctx, `SELECT `+reelColumns+` FROM dsh_reels WHERE id=$1`, replay.ResourceID))
+		if err != nil {
+			return Reel{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return Reel{}, err
+		}
+		return reel, nil
 	}
 	if input.AssetID == "" || !validReelTarget(input.TargetType) || input.TargetID == "" {
 		return Reel{}, ErrInvalid
 	}
-	asset, err := GetAsset(ctx, db, input.AssetID)
+	asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1 FOR SHARE`, input.AssetID))
 	if err != nil {
 		return Reel{}, err
 	}
@@ -224,14 +245,14 @@ func CreateReelSubmission(ctx context.Context, db *sql.DB, actorID, actorRole st
 	if actorRole != "operator" && asset.UploadedBy != actorID {
 		return Reel{}, ErrForbidden
 	}
-	if err := validateReelPosterAsset(ctx, db, actorID, actorRole, input.PosterAssetID); err != nil {
+	if err := validateReelPosterAsset(ctx, tx, actorID, actorRole, input.PosterAssetID); err != nil {
 		return Reel{}, err
 	}
-	if err := assertReelTargetExists(ctx, db, input.TargetType, input.TargetID); err != nil {
+	if err := assertReelTargetExists(ctx, tx, input.TargetType, input.TargetID); err != nil {
 		return Reel{}, err
 	}
 	id := entityID("reel")
-	_, err = db.ExecContext(ctx, `INSERT INTO dsh_reels
+	_, err = tx.ExecContext(ctx, `INSERT INTO dsh_reels
 		(id, asset_id, poster_asset_id, title_ar, title_en, subtitle_ar, subtitle_en, highlight_ar, highlight_en,
 		 cta_label_ar, cta_label_en, target_type, target_id, sort_order, submitted_by, submitted_by_role, source_store_id)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
@@ -256,7 +277,17 @@ func CreateReelSubmission(ctx context.Context, db *sql.DB, actorID, actorRole st
 	if err != nil {
 		return Reel{}, err
 	}
-	return scanReel(db.QueryRowContext(ctx, `SELECT `+reelColumns+` FROM dsh_reels WHERE id=$1`, id))
+	if err := recordCatalogCreateMutation(ctx, tx, mutation, "reel", id); err != nil {
+		return Reel{}, err
+	}
+	reel, err := scanReel(tx.QueryRowContext(ctx, `SELECT `+reelColumns+` FROM dsh_reels WHERE id=$1`, id))
+	if err != nil {
+		return Reel{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Reel{}, err
+	}
+	return reel, nil
 }
 
 func ReviewReel(ctx context.Context, db *sql.DB, reviewerID, reelID string, input ReviewReelInput) (Reel, error) {

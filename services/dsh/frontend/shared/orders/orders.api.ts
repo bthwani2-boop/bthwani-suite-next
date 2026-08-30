@@ -1,6 +1,7 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { corrId, createDshHttpClient, type DshRequestOptions } from "../_kernel/dsh-http-request";
 import type { DshDeliveryException } from "../dispatch/dispatch.types";
+import type { DshCaptainCommandContext } from "../dispatch/dispatch.api";
 import type {
   DshOrder,
   DshOrderPreparation,
@@ -14,6 +15,7 @@ import type {
   DshResolvePreparationIssueInput,
   DshReportStoreCaptainHandoffExceptionInput,
 } from "./orders.types";
+import type { StoredClientPreparationDecisionAttempt } from "./client-preparation-decision-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "order");
 
@@ -21,6 +23,11 @@ export type PartnerOrderMutationOptions = {
   readonly expectedVersion: number;
   readonly idempotencyKey?: string;
 };
+
+export type ClientPreparationDecisionMutation = Pick<
+  StoredClientPreparationDecisionAttempt,
+  "idempotencyKey" | "correlationId"
+>;
 
 function partnerMutationOptions(options: PartnerOrderMutationOptions): DshRequestOptions {
   return {
@@ -114,12 +121,16 @@ export async function markOrderReady(orderId: string, options: PartnerOrderMutat
 
 export async function confirmStoreCaptainHandoff(
   orderId: string,
+  mutation: DshCaptainCommandContext,
   token?: string,
-  idempotencyKey?: string,
 ): Promise<DshStoreCaptainHandoff> {
   const data = await request<{ handoff: DshStoreCaptainHandoff }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/captain-handoff/confirm`,
-    withOptionalToken({ method: "POST", idempotencyKey: idempotencyKey ?? corrId("partner-handoff-confirm") }, token),
+    withOptionalToken({
+      method: "POST",
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    }, token),
   );
   return data.handoff;
 }
@@ -127,11 +138,17 @@ export async function confirmStoreCaptainHandoff(
 export async function reportPartnerStoreCaptainHandoffException(
   orderId: string,
   input: DshReportStoreCaptainHandoffExceptionInput,
+  mutation: DshCaptainCommandContext,
   token?: string,
 ): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/captain-handoff/exceptions`,
-    withOptionalToken({ method: "POST", body: input, idempotencyKey: input.correlationId }, token),
+    withOptionalToken({
+      method: "POST",
+      body: { ...input, correlationId: mutation.correlationId },
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    }, token),
   );
   return data.exception;
 }
@@ -164,12 +181,26 @@ export async function decideOrderPreparationIssue(
   orderId: string,
   issueId: string,
   input: DshDecidePreparationIssueInput,
+  mutation: ClientPreparationDecisionMutation,
   token?: string,
 ): Promise<DshPreparationIssue> {
-  const data = await request<{ issue: DshPreparationIssue }>(
+  const data = await request<{
+    issue: DshPreparationIssue;
+    mutation: { readonly idempotencyKey: string; readonly correlationId: string };
+  }>(
     `/dsh/client/orders/${encodeURIComponent(orderId)}/preparation-issues/${encodeURIComponent(issueId)}/decision`,
-    withOptionalToken({ method: "POST", body: input }, token),
+    withOptionalToken({
+      method: "POST",
+      body: input,
+      idempotencyKey: mutation.idempotencyKey,
+      correlationId: mutation.correlationId,
+    }, token),
   );
+  if (data.issue.id !== issueId || data.issue.orderId !== orderId || data.issue.customerDecision !== input.decision
+    || data.mutation.idempotencyKey !== mutation.idempotencyKey
+    || data.mutation.correlationId !== mutation.correlationId) {
+    throw new Error("client preparation decision canonical readback did not preserve the mutation");
+  }
   return data.issue;
 }
 

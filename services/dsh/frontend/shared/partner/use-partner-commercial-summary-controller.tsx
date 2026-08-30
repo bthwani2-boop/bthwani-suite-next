@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { fetchPartnerCommercialSummary } from './partner.api';
 import type { DshPartnerCommercialSummary } from './partner.types';
 
@@ -10,23 +10,41 @@ export type PartnerCommercialSummaryState =
 
 export function usePartnerCommercialSummaryController(storeId: string | null) {
   const [state, setState] = useState<PartnerCommercialSummaryState>({ kind: 'idle' });
+  const mountedRef = useRef(true);
+  const requestSeqRef = useRef(0);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestSeqRef.current += 1;
+    };
+  }, []);
+
+  const load = useCallback(async (): Promise<boolean> => {
+    const requestSeq = ++requestSeqRef.current;
     if (!storeId) {
-      setState({ kind: 'idle' });
-      return;
+      if (mountedRef.current) setState({ kind: 'idle' });
+      return false;
     }
     setState({ kind: 'loading' });
     try {
       const summary = await fetchPartnerCommercialSummary(storeId);
+      if (!mountedRef.current || requestSeq !== requestSeqRef.current) return false;
       setState({ kind: 'success', summary });
-    } catch (e: any) {
-      setState({ kind: 'error', message: e.message || 'تعذر تحميل النموذج التجاري' });
+      return true;
+    } catch (error: unknown) {
+      if (!mountedRef.current || requestSeq !== requestSeqRef.current) return false;
+      setState({
+        kind: 'error',
+        message: error instanceof Error ? error.message : 'تعذر تحميل النموذج التجاري',
+      });
+      return false;
     }
   }, [storeId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   return { state, reload: load };

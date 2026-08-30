@@ -3,7 +3,7 @@
   "service": "identity",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "identity-042_support_session_rotation.sql",
+  "cutover": "identity-046_operations_monitoring_permissions.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -303,6 +303,34 @@
       "ordinal": 43,
       "file": "identity-042_support_session_rotation.sql",
       "sha256": "b8daceb40c01ec779782f2a0b2a283c08637b548530676b5cb61d73a97d8d29e",
+      "historicalPrefix": null,
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 44,
+      "file": "identity-043_actor_operator_context_immutability.sql",
+      "sha256": "af27ce5ba8497ff1dcb9c32f4e98bf0ddfa4b1c067616b493e557757e724adc9",
+      "historicalPrefix": null,
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 45,
+      "file": "identity-044_rbac_operator_context_ledger.sql",
+      "sha256": "28d25c44d75d85a07650feccdd675c39fbf1654a12efb8bdb67529cb46770e36",
+      "historicalPrefix": null,
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 46,
+      "file": "identity-045_catalog_approval_permission_vocabulary.sql",
+      "sha256": "942b838a7808a7cd66d788f5362fd9e5adc8d3b095755fb870b1d63c44df502f",
+      "historicalPrefix": null,
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 47,
+      "file": "identity-046_operations_monitoring_permissions.sql",
+      "sha256": "69acd05172b2de4e36318be55d802816dd61f898d02597d2123c3eaec1273cd0",
       "historicalPrefix": null,
       "state": "ACTIVE"
     }

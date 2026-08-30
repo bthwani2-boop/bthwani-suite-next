@@ -1,22 +1,32 @@
 --  database invariant proof for dsh-910.
 BEGIN;
 
+-- Clean-install fixture: create the store this proof consumes instead of
+-- depending on seeds; the trusted OperatorContext comes from the isolated
+-- verification session (dsh-954/dsh-962 contract).
+SELECT set_config('bthwani.operator_context_id', 'wlt-event-receipt-fixture', true);
+
+INSERT INTO dsh_stores (
+  id, slug, display_name, status, city_code, service_area_code,
+  serviceability_status, is_visible
+) VALUES (
+  'wlt-receipt-fixture-store', 'wlt-receipt-fixture-store',
+  'WLT Event Receipt Fixture Store', 'published', 'sana', 'haddah',
+  'serviceable', TRUE
+);
+
 DO $$
 DECLARE
     checkout_id UUID := gen_random_uuid();
-    store_key TEXT;
+    store_key TEXT := 'wlt-receipt-fixture-store';
 BEGIN
-    SELECT id INTO store_key FROM dsh_stores ORDER BY created_at NULLS LAST, id LIMIT 1;
-    IF store_key IS NULL THEN
-        RAISE EXCEPTION ' database test requires an official seeded store';
-    END IF;
 
     INSERT INTO dsh_checkout_intents (
         id, operator_context_id, client_id, cart_id, store_id, fulfillment_mode,
         state, payment_method, wlt_payment_session_id
     ) VALUES (
         checkout_id, 'OperatorContext-test', 'client-test', gen_random_uuid(),
-        store_key, 'pickup', 'payment_pending', 'wallet', 'wlt-session-test'
+        store_key, 'pickup', 'ready', 'wallet', 'wlt-session-test'
     );
 
     INSERT INTO dsh_checkout_wlt_event_receipts (

@@ -51,14 +51,17 @@ export type DshPartnerSurfaceModel = {
 
 export function useDshPartnerSurfaceModel(route: DshPartnerRoute): DshPartnerSurfaceModel {
   const storeScope = useStoreScopeModel();
+  const verifiedStoreId = !storeScope.isLoadingScopes && !storeScope.scopesError
+    ? storeScope.selectedStoreScope?.storeId
+    : undefined;
   const orders = usePartnerOrdersModel({
     route,
-    ...(storeScope.selectedStoreScope?.storeId ? { storeId: storeScope.selectedStoreScope.storeId } : {}),
+    ...(verifiedStoreId ? { storeId: verifiedStoreId } : {}),
   });
   const opsSummary = usePartnerOpsSummaryModel(orders.partnerOrders);
   const team = usePartnerTeamModel({
     route,
-    selectedStoreScopeId: storeScope.selectedStoreScopeId ?? 'all',
+    storeId: verifiedStoreId ?? null,
   });
 
   return {

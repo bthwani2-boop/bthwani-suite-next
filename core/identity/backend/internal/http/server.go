@@ -2,13 +2,11 @@ package http
 
 import (
 	"bytes"
-	"context"
 	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -18,22 +16,13 @@ import (
 	"identity-api/internal/identity"
 )
 
-type otpRepository interface {
-	RequestOtpForOperatorContext(
-		ctx context.Context,
-		operatorContextID string,
-		input identity.OtpInput,
-	) (identity.IssueActivationResult, error)
-}
-
 type server struct {
 	repository *identity.Repository
-	otpRepo    otpRepository
 	db         *sql.DB
 }
 
 func NewRouter(repository *identity.Repository, db *sql.DB) http.Handler {
-	s := &server{repository: repository, otpRepo: repository, db: db}
+	s := &server{repository: repository, db: db}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /auth/login", s.login)
 	mux.HandleFunc("POST /auth/activate", s.activate)
@@ -67,12 +56,12 @@ func NewRouter(repository *identity.Repository, db *sql.DB) http.Handler {
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions/{sessionId}", s.serviceOnly(s.internalActorRevokeSession))
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorRevokeAllSessions))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))
-	mux.HandleFunc("GET /internal/permissions/resolve", s.dshServiceOnly(s.internalPermissionsResolve))
-	mux.HandleFunc("GET /internal/rbac/roles", s.dshServiceOnly(s.internalRbacListRoles))
-	mux.HandleFunc("GET /internal/rbac/staff", s.dshServiceOnly(s.internalRbacListStaff))
-	mux.HandleFunc("GET /internal/rbac/actors/{actorId}/roles", s.dshServiceOnly(s.internalRbacListActorRoles))
-	mux.HandleFunc("POST /internal/rbac/actors/{actorId}/roles", s.dshServiceOnly(s.internalRbacGrantRole))
-	mux.HandleFunc("DELETE /internal/rbac/actors/{actorId}/roles", s.dshServiceOnly(s.internalRbacRevokeRole))
+	mux.HandleFunc("GET /internal/permissions/resolve", s.dshScopedServiceOnly(s.internalPermissionsResolve))
+	mux.HandleFunc("GET /internal/rbac/roles", s.dshScopedServiceOnly(s.internalRbacListRoles))
+	mux.HandleFunc("GET /internal/rbac/staff", s.dshScopedServiceOnly(s.internalRbacListStaff))
+	mux.HandleFunc("GET /internal/rbac/actors/{actorId}/roles", s.dshScopedServiceOnly(s.internalRbacListActorRoles))
+	mux.HandleFunc("POST /internal/rbac/actors/{actorId}/roles", s.dshScopedServiceOnly(s.internalRbacGrantRole))
+	mux.HandleFunc("DELETE /internal/rbac/actors/{actorId}/roles", s.dshScopedServiceOnly(s.internalRbacRevokeRole))
 	mux.HandleFunc("POST /internal/support-sessions", s.dshServiceOnly(s.internalSupportSessionsIssue))
 	mux.HandleFunc("POST /internal/support-sessions/resolve", s.dshServiceOnly(s.internalSupportSessionsResolve))
 	mux.HandleFunc("POST /internal/support-sessions/{requestId}/revoke", s.dshServiceOnly(s.internalSupportSessionsRevoke))
@@ -102,8 +91,8 @@ func (s *server) serviceOnly(next http.HandlerFunc) http.HandlerFunc {
 
 // dshServiceOnly guards internal endpoints that are exclusively called by the
 // DSH backend. It validates X-Service-Caller: dsh and the IDENTITY_DSH_SERVICE_TOKEN
-// bearer credential. No operator-context binding is enforced here; callers must
-// supply their own actorId query parameter as the resolution scope.
+// bearer credential. Actor-scoped RBAC routes add the operator-context check
+// in dshScopedServiceOnly below.
 func (s *server) dshServiceOnly(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if strings.TrimSpace(r.Header.Get("X-Service-Caller")) != "dsh" {
@@ -122,6 +111,17 @@ func (s *server) dshServiceOnly(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	}
+}
+
+func (s *server) dshScopedServiceOnly(next http.HandlerFunc) http.HandlerFunc {
+	return s.dshServiceOnly(func(w http.ResponseWriter, r *http.Request) {
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		if operatorContextID == "" || operatorContextID == "legacy-unscoped" {
+			sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "X-Operator-Context-ID is required")
+			return
+		}
+		next(w, r)
+	})
 }
 
 func allowedCorsOrigins() map[string]bool {
@@ -282,30 +282,11 @@ func (s *server) requestOtp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-	if operatorContextID == "" {
-		sendError(w, http.StatusServiceUnavailable, "OPERATOR_CONTEXT_RUNTIME_CONFIG_INVALID", "BTHWANI_OPERATOR_CONTEXT_ID is required for OTP requests")
-		return
-	}
-
-	result, err := s.otpRepo.RequestOtpForOperatorContext(r.Context(), operatorContextID, input)
-	if err != nil {
-		switch {
-		case errors.Is(err, identity.ErrOperatorContextMismatch):
-			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "phone is already bound to another OperatorContext")
-		case errors.Is(err, identity.ErrActivationRateLimited):
-			sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
-		case errors.Is(err, identity.ErrInvalidActivation):
-			sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid phone or actor type")
-		case errors.Is(err, identity.ErrActivationUnavailable):
-			sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation is not configured")
-		default:
-			log.Printf("[identity-api] unmapped OTP request failure: %v", err)
-			sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
-		}
-		return
-	}
-	sendJSON(w, http.StatusOK, result)
+	// A public OTP request has no authenticated server-derived enrollment
+	// context. Fail closed until an explicit EnrollmentContextResolver is
+	// provided; process-wide configuration and client-provided context are not
+	// valid ownership authorities.
+	sendError(w, http.StatusServiceUnavailable, "ENROLLMENT_CONTEXT_UNRESOLVED", "enrollment context could not be resolved")
 }
 
 func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {
@@ -720,15 +701,16 @@ func writeActivationError(w http.ResponseWriter, err error) {
 }
 
 func (s *server) internalPermissionsResolve(w http.ResponseWriter, r *http.Request) {
+	operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 	actorID := r.URL.Query().Get("actorId")
 	if actorID == "" {
 		sendError(w, http.StatusBadRequest, "BAD_REQUEST", "actorId query parameter is required")
 		return
 	}
 
-	permissions, err := s.repository.Enforcer.GetActorPermissions(r.Context(), actorID)
+	permissions, err := s.repository.Enforcer.GetActorPermissions(r.Context(), operatorContextID, actorID)
 	if err != nil {
-		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not resolve permissions")
+		writeRbacError(w, err)
 		return
 	}
 
@@ -758,9 +740,9 @@ func (s *server) internalRbacListRoles(w http.ResponseWriter, r *http.Request) {
 // durable assignments to inactive roles remain available from the actor-role
 // assignment readback.
 func (s *server) internalRbacListStaff(w http.ResponseWriter, r *http.Request) {
-	staff, err := s.repository.Enforcer.ListStaffActors(r.Context())
+	staff, err := s.repository.Enforcer.ListStaffActors(r.Context(), strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")))
 	if err != nil {
-		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not list staff")
+		writeRbacError(w, err)
 		return
 	}
 	if staff == nil {
@@ -773,9 +755,9 @@ func (s *server) internalRbacListStaff(w http.ResponseWriter, r *http.Request) {
 // filtering inactive roles. It is read-only and therefore requires neither an
 // idempotency key nor a canonical mutation intent.
 func (s *server) internalRbacListActorRoles(w http.ResponseWriter, r *http.Request) {
-	assignments, err := s.repository.Enforcer.ListActorRoleAssignments(r.Context(), r.PathValue("actorId"))
+	assignments, err := s.repository.Enforcer.ListActorRoleAssignments(r.Context(), strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")), r.PathValue("actorId"))
 	if err != nil {
-		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not list actor role assignments")
+		writeRbacError(w, err)
 		return
 	}
 	sendJSON(w, http.StatusOK, map[string]interface{}{"assignments": assignments})
@@ -802,7 +784,7 @@ func (s *server) internalRbacGrantRole(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &request) {
 		return
 	}
-	assignment, created, err := s.repository.Enforcer.GrantRoleWithIdempotency(r.Context(), actorID, request.RoleName, request.RequestedByActorID, request.ExpectedRoleVersion, idempotencyKey, "dsh")
+	assignment, created, err := s.repository.Enforcer.GrantRoleWithIdempotency(r.Context(), strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")), actorID, request.RoleName, request.RequestedByActorID, request.ExpectedRoleVersion, idempotencyKey, "dsh")
 	if err != nil {
 		writeRbacError(w, err)
 		return
@@ -834,7 +816,7 @@ func (s *server) internalRbacRevokeRole(w http.ResponseWriter, r *http.Request) 
 		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "expectedRoleVersion must be a positive integer")
 		return
 	}
-	if err := s.repository.Enforcer.RevokeRoleWithIdempotency(r.Context(), actorID, roleName, requestedByActorID, expectedRoleVersion, idempotencyKey, "dsh"); err != nil {
+	if err := s.repository.Enforcer.RevokeRoleWithIdempotency(r.Context(), strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")), actorID, roleName, requestedByActorID, expectedRoleVersion, idempotencyKey, "dsh"); err != nil {
 		writeRbacError(w, err)
 		return
 	}
@@ -855,6 +837,10 @@ func writeRbacError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusNotFound, "ROLE_NOT_FOUND", err.Error())
 	case errors.Is(err, identity.ErrRoleAlreadyExists):
 		sendError(w, http.StatusConflict, "ROLE_ALREADY_EXISTS", err.Error())
+	case errors.Is(err, identity.ErrOperatorContextRequired):
+		sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", err.Error())
+	case errors.Is(err, identity.ErrActorNotFound):
+		sendError(w, http.StatusNotFound, "ACTOR_NOT_FOUND", "actor was not found")
 	default:
 		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "rbac request failed")
 	}

@@ -145,7 +145,7 @@ func (s *protectedStoreServer) handlePickupMarkReady(w http.ResponseWriter, r *h
 		return
 	}
 	svc := pickup.NewService(s.db)
-	if err := svc.MarkReady(r.Context(), ownedOrder.ID, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID)); err != nil {
+	if err := svc.MarkReady(r.Context(), actor.OperatorContextID, ownedOrder.ID, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID)); err != nil {
 		writePickupError(w, err)
 		return
 	}
@@ -178,6 +178,7 @@ func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http
 	plainOtp, session, issued := s.issuePickupOtpInternal(
 		w,
 		r,
+		actor.OperatorContextID,
 		ownedOrder.ID,
 		ownedOrder.ClientID,
 		actor.ID,
@@ -193,7 +194,7 @@ func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http
 	}
 
 	svc := pickup.NewService(s.db)
-	if err := svc.NotifyCustomer(r.Context(), ownedOrder.ID, actor.ID, actor.Role, correlationID); err != nil {
+	if err := svc.NotifyCustomer(r.Context(), actor.OperatorContextID, ownedOrder.ID, actor.ID, actor.Role, correlationID); err != nil {
 		writePickupError(w, err)
 		return
 	}
@@ -219,7 +220,7 @@ func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter
 		return
 	}
 	svc := pickup.NewService(s.db)
-	if err := svc.CustomerArrived(r.Context(), ownedOrder.ID, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID)); err != nil {
+	if err := svc.CustomerArrived(r.Context(), actor.OperatorContextID, ownedOrder.ID, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID)); err != nil {
 		writePickupError(w, err)
 		return
 	}
@@ -231,9 +232,9 @@ func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter
 	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "customerArrived": true, "session": marshalPickupSession(refreshed)})
 }
 
-func (s *protectedStoreServer) issuePickupOtpInternal(w http.ResponseWriter, r *http.Request, orderID, clientID, actorID, actorRole, correlationID string) (string, *pickup.PickupSession, bool) {
+func (s *protectedStoreServer) issuePickupOtpInternal(w http.ResponseWriter, r *http.Request, operatorContextID, orderID, clientID, actorID, actorRole, correlationID string) (string, *pickup.PickupSession, bool) {
 	svc := pickup.NewService(s.db)
-	plainOtp, session, err := svc.IssueOtp(r.Context(), orderID, clientID, actorID, actorRole, correlationID)
+	plainOtp, session, err := svc.IssueOtp(r.Context(), operatorContextID, orderID, clientID, actorID, actorRole, correlationID)
 	if err != nil {
 		writePickupError(w, err)
 		return "", nil, false
@@ -260,7 +261,7 @@ func (s *protectedStoreServer) handlePickupVerify(w http.ResponseWriter, r *http
 		return
 	}
 	svc := pickup.NewService(s.db)
-	session, err := svc.VerifyOtp(r.Context(), ownedOrder.ID, body.Code, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID))
+	session, err := svc.VerifyOtp(r.Context(), actor.OperatorContextID, ownedOrder.ID, body.Code, actor.ID, actor.Role, operationalCorrelationID(r, body.CorrelationID))
 	if err != nil {
 		writePickupError(w, err)
 		return
@@ -287,7 +288,7 @@ func (s *protectedStoreServer) handlePickupNoShow(w http.ResponseWriter, r *http
 		return
 	}
 	svc := pickup.NewService(s.db)
-	session, err := svc.NoShow(r.Context(), ownedOrder.ID, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
+	session, err := svc.NoShow(r.Context(), actor.OperatorContextID, ownedOrder.ID, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
 	if err != nil {
 		writePickupError(w, err)
 		return
@@ -363,7 +364,7 @@ func (s *protectedStoreServer) handlePartnerExtendPickupWindow(w http.ResponseWr
 		return
 	}
 	svc := pickup.NewService(s.db)
-	session, err := svc.ExtendWindow(r.Context(), ownedOrder.ID, body.NewExpiry, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
+	session, err := svc.ExtendWindow(r.Context(), actor.OperatorContextID, ownedOrder.ID, body.NewExpiry, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
 	if err != nil {
 		writePickupError(w, err)
 		return
@@ -397,7 +398,7 @@ func (s *protectedStoreServer) handlePartnerReschedulePickupWindow(w http.Respon
 		return
 	}
 	svc := pickup.NewService(s.db)
-	session, err := svc.RescheduleWindow(r.Context(), ownedOrder.ID, body.NewExpiry, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
+	session, err := svc.RescheduleWindow(r.Context(), actor.OperatorContextID, ownedOrder.ID, body.NewExpiry, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
 	if err != nil {
 		writePickupError(w, err)
 		return
@@ -433,7 +434,7 @@ func (s *protectedStoreServer) handleExtendPickupWindow(w http.ResponseWriter, r
 		return
 	}
 	svc := pickup.NewService(s.db)
-	session, err := svc.ExtendWindow(r.Context(), orderID, body.NewExpiry, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
+	session, err := svc.ExtendWindow(r.Context(), actor.OperatorContextID, orderID, body.NewExpiry, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
 	if err != nil {
 		writePickupError(w, err)
 		return

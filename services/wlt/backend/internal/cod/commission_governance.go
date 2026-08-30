@@ -526,8 +526,10 @@ func ApplyGovernedCommissionAdjustment(
 		INSERT INTO wlt_commission_adjustments
 		(operator_context_id, commission_id, delta_minor_units, reason, operator_id,
 		 idempotency_key, request_hash)
-		VALUES ($1,$2,$3,$4,$5,$6,$7)
-		ON CONFLICT (operator_context_id, idempotency_key) DO NOTHING
+		VALUES ($1::text,$2::text,$3::bigint,$4::text,$5::text,$6::text,$7::text)
+		ON CONFLICT (operator_context_id, idempotency_key)
+		    WHERE idempotency_key IS NOT NULL AND btrim(idempotency_key) <> ''
+		DO NOTHING
 		RETURNING id`,
 		operatorContextID,
 		commissionID,
@@ -625,9 +627,9 @@ func ApplyGovernedCommissionAdjustment(
 		 reason, correlation_id, metadata)
 		VALUES ($1,'commission_adjustment',$2,$3,$4,'operator',$5,$6,
 		        jsonb_build_object(
-		          'commissionId',$7,
-		          'deltaMinorUnits',$8,
-		          'resultAmountMinorUnits',$9))`,
+		          'commissionId',$7::text,
+		          'deltaMinorUnits',$8::bigint,
+		          'resultAmountMinorUnits',$9::bigint))`,
 		operatorContextID,
 		adjustmentID,
 		eventType,

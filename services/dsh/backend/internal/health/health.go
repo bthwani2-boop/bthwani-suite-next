@@ -42,7 +42,7 @@ func (s sqlRuntimeReadinessStore) Ready(ctx context.Context) (bool, error) {
 			AND to_regclass('public.dsh_admin_approval_requests') IS NOT NULL
 			AND to_regclass('public.dsh_admin_role_definition_requests') IS NOT NULL
 			AND to_regclass('public.dsh_admin_canonical_mutation_intents') IS NOT NULL
-			AND to_regclass('public.uq_dsh_admin_pending_role_change_by_actor_role') IS NOT NULL`,
+			AND to_regclass('public.uq_dsh_admin_pending_role_change_by_context_actor_role') IS NOT NULL`,
 		dshMigrationServiceName,
 	).Scan(&ready)
 	return ready, err

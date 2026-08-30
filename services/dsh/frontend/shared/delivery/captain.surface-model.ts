@@ -20,13 +20,10 @@ import type { useDeliveryLifecycle } from './delivery.lifecycle';
 import type { useCaptainDeliveryActions } from './delivery.actions';
 import type { usePodUploadFlow } from '../media/pod/pod-upload-flow';
 import type { useCaptainOrderModel } from '../orders/captain-order.model';
-import type { useCaptainChatModel } from '../chat';
 import type { useCaptainServiceModeModel } from './captain-service-mode.model';
 import type { useCaptainInboxModel } from './captain-inbox.model';
 
 export type {
-  ActiveOrderPhase,
-  StoreCourierStage,
   DshCaptainSurfaceState,
   DshCaptainSurfaceDerived,
 } from './captain.surface.types';
@@ -42,7 +39,6 @@ export type DshCaptainSurfaceSharedProps = {
   lifecycle: ReturnType<typeof useDeliveryLifecycle>;
   podUpload: ReturnType<typeof usePodUploadFlow>;
   orderModel: ReturnType<typeof useCaptainOrderModel>;
-  chatModel: ReturnType<typeof useCaptainChatModel>;
   serviceModeModel: ReturnType<typeof useCaptainServiceModeModel>;
   deliveryActions: ReturnType<typeof useCaptainDeliveryActions>;
   pushLocation: ReturnType<typeof useCaptainOrderRuntime>['pushLocation'];
@@ -59,7 +55,6 @@ export function useDshCaptainSurfaceModel({
   lifecycle,
   podUpload,
   orderModel,
-  chatModel,
   serviceModeModel,
   deliveryActions,
   pushLocation,
@@ -77,8 +72,6 @@ export function useDshCaptainSurfaceModel({
     if (activeAssignment) return;
 
     orderModel.clearActiveAssignment('ألغيت المهمة بسبب إلغاء الطلب أو إغلاقها من العمليات.');
-    lifecycle.setIsPickupSheetVisible(false);
-    lifecycle.setIsDeliverySheetVisible(false);
     lifecycle.setIsDeclineSheetVisible(false);
     podUpload.resetPodFields();
   }, [activeAssignment, activeAssignmentId, inboxModel.fetchState, lifecycle, orderModel, podUpload]);
@@ -89,26 +82,27 @@ export function useDshCaptainSurfaceModel({
     inboxState: lifecycle.inboxState,
     activeAssignmentId,
     activeOrderId: activeAssignment?.orderId ?? '',
+    activeWorkItemId: activeAssignment?.orderId || activeAssignment?.specialRequestId || '',
+    activeWorkItemSource: activeAssignment?.specialRequestId && !activeAssignment.orderId
+      ? 'special_request'
+      : activeAssignment?.orderId
+        ? 'order'
+        : '',
     activeDeliveryStatus: activeAssignment?.delivery.status ?? '',
     inboxItems: inboxModel.items,
     selectedSupportScreen,
-    isPickupSheetVisible: lifecycle.isPickupSheetVisible,
-    isDeliverySheetVisible: lifecycle.isDeliverySheetVisible,
     captainAvailabilityStatus: availabilityModel.captainAvailabilityStatus,
+    availabilityBusy: availabilityModel.availabilityBusy,
+    availabilityError: availabilityModel.availabilityError,
     gpsStatus: gpsModel.gpsStatus,
-    activeOrderExpanded: orderModel.activeOrderExpanded,
-    activeOrderPhase: lifecycle.activeOrderPhase,
     captainAppMode: profileModel.captainAppMode,
-    activeOrderDraft: chatModel.activeOrderDraft,
-    activeOrderMessages: chatModel.activeOrderMessages,
-    storeCourierStage: lifecycle.storeCourierStage,
     captainPodState: podUpload.captainPodState,
     captainPodPhotoUri: podUpload.captainPodPhotoUri,
-    captainPodMediaKey: podUpload.captainPodMediaKey,
     isDeclineSheetVisible: lifecycle.isDeclineSheetVisible,
     declineSheetState: lifecycle.declineSheetState,
     declineOrderId: lifecycle.declineOrderId,
-    pickupSheetState: lifecycle.pickupSheetState,
+    deliveryActionState: lifecycle.deliveryActionState,
+    deliveryActionMessage: lifecycle.deliveryActionMessage,
   };
 
   const derived: DshCaptainSurfaceDerived = React.useMemo(
@@ -121,21 +115,15 @@ export function useDshCaptainSurfaceModel({
     resetInboxState: () => lifecycle.setInboxState('ready' as const),
     refreshInbox: inboxModel.refresh,
     toggleAvailability: availabilityModel.toggleAvailability,
-    setActiveOrderExpanded: orderModel.setActiveOrderExpanded,
     setCaptainAvailabilityStatus: availabilityModel.setCaptainAvailabilityStatus,
+    refreshAvailability: availabilityModel.refreshAvailability,
     setGpsStatus: gpsModel.setGpsStatus,
-    setIsPickupSheetVisible: lifecycle.setIsPickupSheetVisible,
-    setPickupSheetState: lifecycle.setPickupSheetState,
-    setIsDeliverySheetVisible: lifecycle.setIsDeliverySheetVisible,
+    setDeliveryActionState: lifecycle.setDeliveryActionState,
+    setDeliveryActionMessage: lifecycle.setDeliveryActionMessage,
     setIsDeclineSheetVisible: lifecycle.setIsDeclineSheetVisible,
     setDeclineOrderId: lifecycle.setDeclineOrderId,
-    setStoreCourierStage: lifecycle.setStoreCourierStage,
-    setActiveOrderPhase: lifecycle.setActiveOrderPhase,
     setCaptainPodPhotoUri: podUpload.setCaptainPodPhotoUri,
-    setCaptainPodMediaKey: podUpload.setCaptainPodMediaKey,
     setCaptainPodState: podUpload.setCaptainPodState,
-    sendQuickMessage: chatModel.sendQuickMessage,
-    setActiveOrderDraft: chatModel.setActiveOrderDraft,
     handleSelectServiceType: serviceModeModel.handleSelectServiceType,
     toggleStoreCourierMode: serviceModeModel.toggleStoreCourierMode,
     pushLocation,

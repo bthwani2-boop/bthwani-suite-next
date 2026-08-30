@@ -3,6 +3,7 @@ export * from './order-workboard.api';
 export * from './use-operator-order-workboard';
 export * from './use-dispatch-captain-options';
 export * from './use-dispatch-operations';
+export * from './operator-dispatch-command-attempt';
 export * from './dsh-operational-registry';
 export * from './dsh-operational.contract';
 export * from './operations.types';

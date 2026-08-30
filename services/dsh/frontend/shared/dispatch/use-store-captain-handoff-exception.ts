@@ -1,4 +1,5 @@
 import React from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { reportPartnerStoreCaptainHandoffException } from "../orders/orders.api";
 import type { DshStoreCaptainHandoffExceptionReason } from "../orders/orders.types";
 import {
@@ -7,6 +8,11 @@ import {
   reportCaptainHandoffException,
 } from "./dispatch.api";
 import type { DshDeliveryException } from "./dispatch.types";
+import {
+  clearStoreCaptainHandoffExceptionAttempt,
+  getOrCreateStoreCaptainHandoffExceptionAttempt,
+  type StoreCaptainHandoffExceptionAttemptIntent,
+} from "./store-captain-handoff-exception-attempt";
 
 export type StoreCaptainHandoffExceptionActor = "partner" | "captain";
 
@@ -14,7 +20,6 @@ type StoreCaptainHandoffExceptionDraft = {
   readonly entityId: string;
   readonly reasonCode: DshStoreCaptainHandoffExceptionReason;
   readonly note: string;
-  readonly correlationId: string;
 };
 
 export type StoreCaptainHandoffExceptionState =
@@ -59,6 +64,8 @@ export function useStoreCaptainHandoffException(
   actor: StoreCaptainHandoffExceptionActor,
   refresh: () => void | Promise<void>,
 ) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const [state, setState] = React.useState<StoreCaptainHandoffExceptionState>({ kind: "idle" });
   const [readback, setReadback] = React.useState<StoreCaptainHandoffExceptionReadback>({ kind: "idle" });
 
@@ -69,9 +76,8 @@ export function useStoreCaptainHandoffException(
       entityId,
       reasonCode: "handoff_shortage",
       note: "",
-      correlationId: `${actor}:store-captain-handoff:${entityId}:${Date.now()}`,
     });
-  }, [actor]);
+  }, []);
 
   const setReasonCode = React.useCallback((reasonCode: DshStoreCaptainHandoffExceptionReason) => {
     setState((current) => isEditableState(current)
@@ -124,29 +130,49 @@ export function useStoreCaptainHandoffException(
       setState({ ...draft, kind: "error", message: "اكتب وصفًا واضحًا من خمسة أحرف على الأقل." });
       return false;
     }
+    if (!actorId) {
+      setState({ ...draft, kind: "error", message: "انتهت جلسة الهوية. سجّل الدخول ثم أعد المحاولة." });
+      return false;
+    }
 
     const command = { ...draft, kind: "submitting" as const };
     setState(command);
     try {
+      const attemptIntent: StoreCaptainHandoffExceptionAttemptIntent = {
+        actor,
+        actorId,
+        entityId: command.entityId,
+        reasonCode: command.reasonCode,
+        note: command.note,
+      };
+      const attempt = await getOrCreateStoreCaptainHandoffExceptionAttempt(attemptIntent);
       const input = {
         reasonCode: command.reasonCode,
         note: command.note,
-        correlationId: command.correlationId,
+        correlationId: attempt.correlationId,
       };
       const item = actor === "partner"
-        ? await reportPartnerStoreCaptainHandoffException(command.entityId, input)
-        : await reportCaptainHandoffException(command.entityId, input);
+        ? await reportPartnerStoreCaptainHandoffException(command.entityId, input, attempt.context)
+        : await reportCaptainHandoffException(command.entityId, input, attempt.context);
+      if (item.correlationId !== attempt.correlationId) {
+        throw new Error("handoff exception canonical readback did not preserve the mutation identity");
+      }
       setState({ kind: "success", entityId: command.entityId });
       if (actor === "captain") {
         setReadback({ kind: "blocked", entityId: command.entityId, exception: item });
       }
-      await refresh();
+      await clearStoreCaptainHandoffExceptionAttempt(attemptIntent, attempt.signature);
+      try {
+        await refresh();
+      } catch {
+        // The exact canonical exception response already proves the mutation.
+      }
       return true;
     } catch (error) {
       setState({ ...command, kind: "error", message: exceptionMessage(error) });
       return false;
     }
-  }, [actor, refresh, state]);
+  }, [actor, actorId, refresh, state]);
 
   return {
     state,

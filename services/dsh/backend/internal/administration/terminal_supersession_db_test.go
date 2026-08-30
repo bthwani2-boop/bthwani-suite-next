@@ -42,6 +42,7 @@ func prepareLegacyTerminalSupersessionSchema(t *testing.T, db *sql.DB) {
 
 		CREATE TABLE dsh_admin_role_definition_requests (
 		  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		  operator_context_id TEXT NOT NULL,
 		  role_name TEXT NOT NULL,
 		  description TEXT NOT NULL,
 		  active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -67,6 +68,7 @@ func prepareLegacyTerminalSupersessionSchema(t *testing.T, db *sql.DB) {
 
 		CREATE TABLE dsh_admin_rollback_requests (
 		  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		  operator_context_id TEXT NOT NULL,
 		  source_approval_id UUID NOT NULL REFERENCES dsh_admin_approval_requests(id) ON DELETE RESTRICT,
 		  inverse_action_type TEXT NOT NULL,
 		  target_actor_id TEXT NOT NULL,
@@ -121,43 +123,43 @@ func insertTerminalSupersessionFixtures(t *testing.T, db *sql.DB) {
 	}{
 		{`
 		INSERT INTO dsh_admin_approval_requests
-		  (id, action_type, target_actor_id, role_name, requested_by, reason)
+		  (id, operator_context_id, action_type, target_actor_id, role_name, requested_by, reason)
 		VALUES
-		  ($1, 'staff_role_assignment', 'assignment-beneficiary', 'ops_role', 'assignment-maker', 'initial assignment request')
-	`, []any{terminalAssignmentRequestID}},
+		  ($1, $2, 'staff_role_assignment', 'assignment-beneficiary', 'ops_role', 'assignment-maker', 'initial assignment request')
+	`, []any{terminalAssignmentRequestID, canonicalIntentTestOperatorContextID}},
 		{`
 		INSERT INTO dsh_admin_role_definition_requests
-		  (id, role_name, description, active, expected_role_version, permissions, surfaces, requested_by, reason)
+		  (id, operator_context_id, role_name, description, active, expected_role_version, permissions, surfaces, requested_by, reason)
 		VALUES
-		  ($1, 'ops_role', 'governed operator role', TRUE, 6, '["roles.manage"]'::jsonb,
+		  ($1, $2, 'ops_role', 'governed operator role', TRUE, 6, '["roles.manage"]'::jsonb,
 		   '["control-panel"]'::jsonb, 'definition-maker', 'initial definition request')
-	`, []any{terminalDefinitionRequestID}},
+	`, []any{terminalDefinitionRequestID, canonicalIntentTestOperatorContextID}},
 		{`
 		INSERT INTO dsh_admin_approval_requests
-		  (id, action_type, target_actor_id, role_name, requested_by, reason, status, reviewed_by, reviewed_at)
+		  (id, operator_context_id, action_type, target_actor_id, role_name, requested_by, reason, status, reviewed_by, reviewed_at)
 		VALUES
-		  ($1, 'staff_role_assignment', 'rollback-beneficiary', 'ops_role', 'source-maker',
+		  ($1, $2, 'staff_role_assignment', 'rollback-beneficiary', 'ops_role', 'source-maker',
 		   'approved source request', 'approved', 'source-checker', NOW())
-	`, []any{rollbackSourceApprovalID}},
+	`, []any{rollbackSourceApprovalID, canonicalIntentTestOperatorContextID}},
 		{`
 		INSERT INTO dsh_admin_rollback_requests
-		  (id, source_approval_id, inverse_action_type, target_actor_id, role_name, requested_by, reason)
+		  (id, operator_context_id, source_approval_id, inverse_action_type, target_actor_id, role_name, requested_by, reason)
 		VALUES
-		  ($1, $2, 'staff_role_revocation', 'rollback-beneficiary', 'ops_role',
+		  ($1, $2, $3, 'staff_role_revocation', 'rollback-beneficiary', 'ops_role',
 		   'rollback-maker', 'initial rollback request')
-	`, []any{terminalRollbackRequestID, rollbackSourceApprovalID}},
+	`, []any{terminalRollbackRequestID, canonicalIntentTestOperatorContextID, rollbackSourceApprovalID}},
 		{`
 		INSERT INTO dsh_admin_canonical_mutation_intents
-		  (id, operation_type, request_id, payload, status, attempts, last_error,
+		  (id, operator_context_id, operation_type, request_id, payload, status, attempts, last_error,
 		   next_attempt_at, terminal_failure)
 		VALUES
-		  ('61111111-1111-4111-8111-111111111111', 'role-assignment', $1,
+		  ('61111111-1111-4111-8111-111111111111', 'operator-main', 'role-assignment', $1,
 		   '{"reviewerId":"assignment-checker","immutable":"assignment"}'::jsonb,
 		   'failed', 1, 'terminal assignment failure', NULL, TRUE),
-		  ('62222222-2222-4222-8222-222222222222', 'role-definition-upsert', $2,
+		  ('62222222-2222-4222-8222-222222222222', 'operator-main', 'role-definition-upsert', $2,
 		   '{"reviewerId":"definition-checker","immutable":"definition"}'::jsonb,
 		   'failed', 1, 'terminal definition failure', NULL, TRUE),
-		  ('64444444-4444-4444-8444-444444444444', 'role-rollback', $3,
+		  ('64444444-4444-4444-8444-444444444444', 'operator-main', 'role-rollback', $3,
 		   '{"reviewerId":"rollback-checker","immutable":"rollback"}'::jsonb,
 		   'failed', 1, 'terminal rollback failure', NULL, TRUE)
 	`, []any{terminalAssignmentRequestID, terminalDefinitionRequestID, terminalRollbackRequestID}},
@@ -173,22 +175,22 @@ func insertIntentNormalizationFixtures(t *testing.T, db *sql.DB) {
 	t.Helper()
 	_, err := db.ExecContext(context.Background(), `
 		INSERT INTO dsh_admin_approval_requests
-		  (id, action_type, target_actor_id, role_name, requested_by, reason)
+		  (id, operator_context_id, action_type, target_actor_id, role_name, requested_by, reason)
 		VALUES
-		  ('55555555-5555-4555-8555-555555555551', 'staff_role_assignment', 'pending-target', 'pending-role', 'maker-a', 'pending fixture'),
-		  ('55555555-5555-4555-8555-555555555552', 'staff_role_assignment', 'retry-target', 'retry-role', 'maker-b', 'retry fixture');
+		  ('55555555-5555-4555-8555-555555555551', 'operator-main', 'staff_role_assignment', 'pending-target', 'pending-role', 'maker-a', 'pending fixture'),
+		  ('55555555-5555-4555-8555-555555555552', 'operator-main', 'staff_role_assignment', 'retry-target', 'retry-role', 'maker-b', 'retry fixture');
 		INSERT INTO dsh_admin_approval_requests
-		  (id, action_type, target_actor_id, role_name, requested_by, reason, status, reviewed_by, reviewed_at)
+		  (id, operator_context_id, action_type, target_actor_id, role_name, requested_by, reason, status, reviewed_by, reviewed_at)
 		VALUES
-		  ('55555555-5555-4555-8555-555555555553', 'staff_role_assignment', 'applied-target', 'applied-role', 'maker-c',
+		  ('55555555-5555-4555-8555-555555555553', 'operator-main', 'staff_role_assignment', 'applied-target', 'applied-role', 'maker-c',
 		   'applied fixture', 'approved', 'checker-c', NOW());
 
 		INSERT INTO dsh_admin_canonical_mutation_intents
-		  (id, operation_type, request_id, payload, status, attempts, last_error, next_attempt_at, terminal_failure)
+		  (id, operator_context_id, operation_type, request_id, payload, status, attempts, last_error, next_attempt_at, terminal_failure)
 		VALUES
-		  ('65555555-5555-4555-8555-555555555551', 'role-assignment', '55555555-5555-4555-8555-555555555551', '{}'::jsonb, 'pending', 0, NULL, NOW(), FALSE),
-		  ('65555555-5555-4555-8555-555555555552', 'role-assignment', '55555555-5555-4555-8555-555555555552', '{}'::jsonb, 'failed', 1, 'retry', NOW(), FALSE),
-		  ('65555555-5555-4555-8555-555555555553', 'role-assignment', '55555555-5555-4555-8555-555555555553', '{}'::jsonb, 'applied', 1, NULL, NULL, FALSE);
+		  ('65555555-5555-4555-8555-555555555551', 'operator-main', 'role-assignment', '55555555-5555-4555-8555-555555555551', '{}'::jsonb, 'pending', 0, NULL, NOW(), FALSE),
+		  ('65555555-5555-4555-8555-555555555552', 'operator-main', 'role-assignment', '55555555-5555-4555-8555-555555555552', '{}'::jsonb, 'failed', 1, 'retry', NOW(), FALSE),
+		  ('65555555-5555-4555-8555-555555555553', 'operator-main', 'role-assignment', '55555555-5555-4555-8555-555555555553', '{}'::jsonb, 'applied', 1, NULL, NULL, FALSE);
 	`)
 	if err != nil {
 		t.Fatalf("insert dsh-1040 normalization fixtures: %v", err)
@@ -205,19 +207,19 @@ func insertLegacyAdministrationAuditFixtures(t *testing.T, db *sql.DB) {
 	}
 	_, err := db.ExecContext(context.Background(), `
 		INSERT INTO dsh_admin_audit
-		  (actor_id, action, target_id, detail, sensitivity, correlation_id)
+		  (operator_context_id, actor_id, action, target_id, detail, sensitivity, correlation_id)
 		VALUES
-		  ('audit-actor', 'ROLE_ASSIGNMENT_REQUESTED', $1,
+		  ('operator-main', 'audit-actor', 'ROLE_ASSIGNMENT_REQUESTED', $1,
 		   'Requested ops_role for assignment-beneficiary because secret reason', 'restricted', $1),
-		  ('audit-actor', 'ROLE_DEFINITION_REQUESTED', $2,
+		  ('operator-main', 'audit-actor', 'ROLE_DEFINITION_REQUESTED', $2,
 		   '{"role_name":"ops_role","reason":"secret reason"}', 'restricted', $2),
-		  ('audit-actor', 'ROLLBACK_REQUESTED', $3,
+		  ('operator-main', 'audit-actor', 'ROLLBACK_REQUESTED', $3,
 		   'rollback role=ops_role; actor=rollback-beneficiary', 'restricted', $3),
-		  ('audit-actor', 'CANONICAL_DECISION_RECONCILED', $1,
+		  ('operator-main', 'audit-actor', 'CANONICAL_DECISION_RECONCILED', $1,
 		   'Reconciled invalid rejection for assignment-beneficiary', 'restricted', 'role-assignment:' || $1),
-		  ('audit-actor', 'support_session_requested', 'support-target',
+		  ('operator-main', 'audit-actor', 'support_session_requested', 'support-target',
 		   'request_id=' || $4 || '; reason=raw support reason', 'restricted', $4),
-		  ('audit-actor', 'support_session_approved', 'support-target',
+		  ('operator-main', 'audit-actor', 'support_session_approved', 'support-target',
 		   'request_id=' || $4 || '; note=raw support review note', 'restricted', $4);
 	`, terminalAssignmentRequestID, terminalDefinitionRequestID, terminalRollbackRequestID, supportSessionRequestID)
 	if err != nil {
@@ -357,13 +359,13 @@ func TestTerminalSupersessionMigrationFailsClosedOnDecisionMismatch(t *testing.T
 	prepareLegacyTerminalSupersessionSchema(t, db)
 	if _, err := db.ExecContext(context.Background(), `
 		INSERT INTO dsh_admin_approval_requests
-		  (id, action_type, target_actor_id, role_name, requested_by, reason)
+		  (id, operator_context_id, action_type, target_actor_id, role_name, requested_by, reason)
 		VALUES
-		  ('57777777-7777-4777-8777-777777777777', 'staff_role_assignment', 'mismatch-target', 'ops_role', 'maker', 'mismatch fixture');
+		  ('57777777-7777-4777-8777-777777777777', 'operator-main', 'staff_role_assignment', 'mismatch-target', 'ops_role', 'maker', 'mismatch fixture');
 		INSERT INTO dsh_admin_canonical_mutation_intents
-		  (id, operation_type, request_id, payload, status, attempts, next_attempt_at, terminal_failure)
+		  (id, operator_context_id, operation_type, request_id, payload, status, attempts, next_attempt_at, terminal_failure)
 		VALUES
-		  ('67777777-7777-4777-8777-777777777777', 'role-assignment', '57777777-7777-4777-8777-777777777777',
+		  ('67777777-7777-4777-8777-777777777777', 'operator-main', 'role-assignment', '57777777-7777-4777-8777-777777777777',
 		   '{}'::jsonb, 'applied', 1, NULL, FALSE);
 	`); err != nil {
 		t.Fatalf("prepare decision mismatch fixture: %v", err)
@@ -422,21 +424,22 @@ func TestSupersedeFailedTerminalRequestsCreatesFreshRequestsForEveryFamily(t *te
 	}
 	identityClient, closeIdentity := newTerminalSupersessionIdentity(t, 7)
 	defer closeIdentity()
+	operatorContext := auth.WithOperatorContext(context.Background(), canonicalIntentTestOperatorContextID)
 	params := SupersedeTerminalFailureParams{
 		ExpectedVersion:   1,
 		ReasonCode:        "canonical_version_changed",
 		ReplacementReason: "re-evaluate against current canonical truth",
 	}
 
-	assignment, err := SupersedeFailedRoleAssignmentApproval(context.Background(), db, identityClient, "replacement-maker", terminalAssignmentRequestID, params)
+	assignment, err := SupersedeFailedRoleAssignmentApproval(operatorContext, db, identityClient, "replacement-maker", terminalAssignmentRequestID, params)
 	if err != nil {
 		t.Fatalf("supersede role assignment: %v", err)
 	}
-	definition, err := SupersedeFailedRoleDefinitionRequest(context.Background(), db, identityClient, "replacement-maker", terminalDefinitionRequestID, params)
+	definition, err := SupersedeFailedRoleDefinitionRequest(operatorContext, db, identityClient, "replacement-maker", terminalDefinitionRequestID, params)
 	if err != nil {
 		t.Fatalf("supersede role definition: %v", err)
 	}
-	rollback, err := SupersedeFailedRollbackRequest(context.Background(), db, identityClient, "replacement-maker", terminalRollbackRequestID, params)
+	rollback, err := SupersedeFailedRollbackRequest(operatorContext, db, identityClient, "replacement-maker", terminalRollbackRequestID, params)
 	if err != nil {
 		t.Fatalf("supersede rollback: %v", err)
 	}
@@ -503,7 +506,7 @@ func TestSupersedeFailedTerminalRequestsCreatesFreshRequestsForEveryFamily(t *te
 		}
 	}
 
-	if _, err := SupersedeFailedRoleAssignmentApproval(context.Background(), db, identityClient, "replacement-maker", terminalAssignmentRequestID, params); !errors.Is(err, ErrConflict) {
+	if _, err := SupersedeFailedRoleAssignmentApproval(operatorContext, db, identityClient, "replacement-maker", terminalAssignmentRequestID, params); !errors.Is(err, ErrConflict) {
 		t.Fatalf("duplicate supersession error = %v, want conflict", err)
 	}
 }
@@ -524,7 +527,8 @@ func TestSupersedeFailedTerminalRequestRollsBackSourceAndReplacementWhenAuditFai
 	}
 	identityClient, closeIdentity := newTerminalSupersessionIdentity(t, 7)
 	defer closeIdentity()
-	_, err := SupersedeFailedRoleAssignmentApproval(context.Background(), db, identityClient, "replacement-maker", terminalAssignmentRequestID, SupersedeTerminalFailureParams{
+	operatorContext := auth.WithOperatorContext(context.Background(), canonicalIntentTestOperatorContextID)
+	_, err := SupersedeFailedRoleAssignmentApproval(operatorContext, db, identityClient, "replacement-maker", terminalAssignmentRequestID, SupersedeTerminalFailureParams{
 		ExpectedVersion:   1,
 		ReasonCode:        "canonical_version_changed",
 		ReplacementReason: "re-evaluate against current canonical truth",

@@ -100,7 +100,7 @@ export {
   resolvePartnerOnboardingFailureState,
   resolvePartnerOnboardingVisibleState,
 } from "./partner-onboarding.visible-state";
-export * from "./catalog-approval.api";
 export * from "./partner-fleet.api";
+export * from "./partner-fleet-command-attempt";
 export { usePartnerFleetController } from "./use-partner-fleet-controller";
 export type { PartnerFleetController } from "./use-partner-fleet-controller";

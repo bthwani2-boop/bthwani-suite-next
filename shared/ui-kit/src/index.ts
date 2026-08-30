@@ -16,6 +16,8 @@ export {
 // Appearance tokens — glass recipes, palette helpers, mode utilities
 export {
   bthwaniAppearanceModes,
+  defaultBThwaniAppearanceMode,
+  getBThwaniAppearanceStorageKey,
   isBThwaniAppearanceMode,
   syncBThwaniAppearanceCookie,
   bthwaniAppearancePaletteByMode,

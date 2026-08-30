@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/auth"
 	"dsh-api/internal/media"
@@ -23,6 +24,20 @@ func RegisterProviderRatingRoutes(mux *http.ServeMux, db *sql.DB, identityClient
 	mux.HandleFunc("POST /dsh/client/orders/{orderId}/ratings", s.handleSubmitClientOrderRatings)
 	mux.HandleFunc("GET /dsh/field/me/ratings/summary", s.handleFieldRatingSummary)
 	mux.HandleFunc("GET /dsh/captain/me/ratings/summary", s.handleCaptainRatingSummary)
+}
+
+func requireClientOrderRatingMutationHeaders(w http.ResponseWriter, r *http.Request) (string, string, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if len(idempotencyKey) < 16 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_IDEMPOTENCY_KEY", "Idempotency-Key must be 16 to 200 characters")
+		return "", "", false
+	}
+	if correlationID == "" || len(correlationID) > 200 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_CORRELATION_ID", "X-Correlation-ID is required")
+		return "", "", false
+	}
+	return idempotencyKey, correlationID, true
 }
 
 func (s *protectedStoreServer) handlePartnerFieldRatingPrompt(w http.ResponseWriter, r *http.Request) {
@@ -90,16 +105,34 @@ func (s *protectedStoreServer) handleSubmitClientOrderRatings(w http.ResponseWri
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := requireClientOrderRatingMutationHeaders(w, r)
+	if !ok {
+		return
+	}
 	var input ratings.OrderRatingInput
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	result, err := ratings.SubmitClientOrderRatings(r.Context(), s.db, actor.OperatorContextID, actor.ID, r.PathValue("orderId"), input, correlationID(r))
+	result, err := ratings.SubmitClientOrderRatings(r.Context(), s.db, actor.OperatorContextID, actor.ID, r.PathValue("orderId"), input, ratings.ClientOrderRatingsMutationContext{
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+	})
 	if err != nil {
+		if errors.Is(err, ratings.ErrIdempotencyConflict) {
+			store.SendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", "Idempotency-Key was already used for another rating request")
+			return
+		}
 		writeRatingError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"ratings": result})
+	w.Header().Set("X-Correlation-ID", correlationID)
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"ratings": result,
+		"mutation": map[string]string{
+			"idempotencyKey": idempotencyKey,
+			"correlationId":  correlationID,
+		},
+	})
 }
 
 func (s *protectedStoreServer) handleFieldRatingSummary(w http.ResponseWriter, r *http.Request) {

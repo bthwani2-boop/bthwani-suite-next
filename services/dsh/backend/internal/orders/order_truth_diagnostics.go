@@ -8,7 +8,7 @@ import (
 )
 
 type OrderTruthDiagnostics struct {
-	OperatorContextID                       string     `json:"operatorContextId"`
+	OperatorContextID              string     `json:"operatorContextId"`
 	GeneratedAt                    time.Time  `json:"generatedAt"`
 	OrdersCreatedLastFiveMinutes   int64      `json:"ordersCreatedLastFiveMinutes"`
 	OrdersCreatedLastHour          int64      `json:"ordersCreatedLastHour"`
@@ -34,10 +34,10 @@ func LoadOrderTruthDiagnostics(db *sql.DB, operatorContextID string) (*OrderTrut
 	}
 
 	result := &OrderTruthDiagnostics{
-		OperatorContextID:    operatorContextID,
-		GeneratedAt: time.Now().UTC(),
-		Health:      "healthy",
-		Alerts:      []string{},
+		OperatorContextID: operatorContextID,
+		GeneratedAt:       time.Now().UTC(),
+		Health:            "healthy",
+		Alerts:            []string{},
 	}
 	var oldest sql.NullTime
 	err := db.QueryRow(`

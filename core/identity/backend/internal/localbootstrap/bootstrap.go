@@ -157,7 +157,7 @@ WHERE id = ANY($1)`, pq.Array(fixtureActorIDs()))
 		if err := json.Unmarshal(projectedJSON, &projected); err != nil {
 			return false, err
 		}
-		effective, err := repository.Enforcer.GetActorPermissions(ctx, fixture.id)
+		effective, err := repository.Enforcer.GetActorPermissions(ctx, config.OperatorContextID, fixture.id)
 		if err != nil || !permissionSetEqual(projected, effective) {
 			return false, err
 		}
@@ -305,6 +305,10 @@ func localOperatorDevelopmentPermissions() []identity.Permission {
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.dispatch_financial_eligibility.manage", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "operations.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "operations.manage", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "partner_delivery.read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "partner_delivery.manage", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "pickup.read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "pickup.manage", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "operations.special_requests.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "operations.special_requests.transition", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "operations.special_requests.dispatch", Scope: "all"},

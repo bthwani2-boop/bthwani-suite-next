@@ -96,9 +96,9 @@ func insertCanonicalDecisionSource(t *testing.T, db *sql.DB, tc canonicalDecisio
 	if tc.operationType == "role-assignment" {
 		_, err = db.ExecContext(context.Background(), `
 			INSERT INTO dsh_admin_approval_requests
-				(id, action_type, target_actor_id, role_name, requested_by, status)
-			VALUES ($1, 'staff_role_assignment', 'beneficiary', 'dsh-operator', 'maker', $2)
-		`, tc.sourceID, status)
+				(id, operator_context_id, action_type, target_actor_id, role_name, requested_by, status)
+			VALUES ($1, $2, 'staff_role_assignment', 'beneficiary', 'dsh-operator', 'maker', $3)
+		`, tc.sourceID, canonicalIntentTestOperatorContextID, status)
 	} else {
 		_, err = db.ExecContext(
 			context.Background(),
@@ -116,9 +116,9 @@ func insertCanonicalDecisionIntent(t *testing.T, db *sql.DB, tc canonicalDecisio
 	t.Helper()
 	_, err := db.ExecContext(context.Background(), `
 		INSERT INTO dsh_admin_canonical_mutation_intents
-			(id, operation_type, request_id, payload, status, next_attempt_at)
-		VALUES ($1, $2, $3, $4::jsonb, $5, NOW())
-	`, tc.intentID, tc.operationType, tc.sourceID,
+			(id, operator_context_id, operation_type, request_id, payload, status, next_attempt_at)
+		VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
+	`, tc.intentID, canonicalIntentTestOperatorContextID, tc.operationType, tc.sourceID,
 		`{"reviewerId":"canonical-checker","reviewNote":"canonical approval"}`, status)
 	return err
 }
@@ -202,11 +202,11 @@ func TestCanonicalDecisionFenceReconcilesHistoricalRejectedIntent(t *testing.T) 
 	}
 	if _, err := db.ExecContext(context.Background(), `
 		INSERT INTO dsh_admin_canonical_mutation_intents
-			(id, operation_type, request_id, payload, status, attempts, last_error,
+			(id, operator_context_id, operation_type, request_id, payload, status, attempts, last_error,
 			 next_attempt_at, terminal_failure)
-		VALUES ($1, $2, $3, $4::jsonb, 'failed', 1, 'source request is no longer pending',
+		VALUES ($1, $2, $3, $4, $5::jsonb, 'failed', 1, 'source request is no longer pending',
 		        NULL, TRUE)
-	`, tc.intentID, tc.operationType, tc.sourceID,
+	`, tc.intentID, canonicalIntentTestOperatorContextID, tc.operationType, tc.sourceID,
 		`{"reviewerId":"canonical-checker","reviewNote":"canonical approval"}`); err != nil {
 		t.Fatalf("prepare historically fenced intent: %v", err)
 	}
@@ -264,9 +264,9 @@ func TestCanonicalDecisionFenceRestoresAppliedIntentAsApproved(t *testing.T) {
 	insertCanonicalDecisionSource(t, db, tc, "rejected")
 	if _, err := db.ExecContext(context.Background(), `
 		INSERT INTO dsh_admin_canonical_mutation_intents
-			(id, operation_type, request_id, payload, status, attempts, next_attempt_at, terminal_failure)
-		VALUES ($1, $2, $3, $4::jsonb, 'applied', 1, NULL, FALSE)
-	`, tc.intentID, tc.operationType, tc.sourceID,
+			(id, operator_context_id, operation_type, request_id, payload, status, attempts, next_attempt_at, terminal_failure)
+		VALUES ($1, $2, $3, $4, $5::jsonb, 'applied', 1, NULL, FALSE)
+	`, tc.intentID, canonicalIntentTestOperatorContextID, tc.operationType, tc.sourceID,
 		`{"reviewerId":"canonical-checker","reviewNote":"canonical approval"}`); err != nil {
 		t.Fatalf("prepare applied canonical intent: %v", err)
 	}

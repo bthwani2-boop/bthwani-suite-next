@@ -3,7 +3,6 @@ export * from './analytics';
 export * from './bell';
 export * as cart from './cart';
 export * from './catalog';
-export * from './chat';
 export * from './checkout';
 export * as clientProfile from './client-profile';
 
@@ -11,11 +10,9 @@ export * as clientProfile from './client-profile';
 // capability ownership does not leak through the shared delivery barrel.
 export * from './delivery/delivery.contract';
 export * from './delivery/fulfillment';
-export * from './delivery/delivery.policy';
 export type * from './delivery/delivery.view-model';
 export type * from './delivery/delivery.adapters';
 export * from './delivery/captain.contract';
-export * from './delivery/captain.state';
 export * from './delivery/captain.surface-model';
 export type * from './delivery/captain-surface.binding';
 export * from './delivery/captain-service-mode.model';

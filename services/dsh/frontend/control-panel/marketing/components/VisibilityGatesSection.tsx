@@ -6,7 +6,6 @@ import { CpRetryButton } from "@bthwani/control-panel/components";
 import {
   GOVERNANCE_BRIDGES,
   type DeliverySignalCardViewModel,
-  type MarketingKpiMetrics,
 } from "../../../shared/marketing";
 
 type DeliverySignalsController = {
@@ -16,14 +15,10 @@ type DeliverySignalsController = {
 };
 
 type VisibilityGatesSectionProps = {
-  readonly metrics: MarketingKpiMetrics;
-  readonly reloadMetrics: () => Promise<void>;
   readonly deliverySignals: DeliverySignalsController;
 };
 
 export function VisibilityGatesSection({
-  metrics,
-  reloadMetrics,
   deliverySignals,
 }: VisibilityGatesSectionProps) {
   return (
@@ -42,14 +37,6 @@ export function VisibilityGatesSection({
           ))}
         </div>
       </section>
-
-      {!metrics.isBackedByApi ? (
-        <section role="alert" style={styles.card}>
-          <h3 style={styles.title}>تعذر تحميل الملخص التشغيلي</h3>
-          <p style={styles.description}>{metrics.disclosureReason ?? "تعذر تحميل مؤشرات DSH."}</p>
-          <CpRetryButton onClick={() => void reloadMetrics()}>إعادة المحاولة</CpRetryButton>
-        </section>
-      ) : null}
 
       <section style={styles.card}>
         <div style={styles.sectionHeader}>

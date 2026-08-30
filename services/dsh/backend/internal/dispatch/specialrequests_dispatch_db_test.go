@@ -387,7 +387,7 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
 		}
 
-		if _, err := AcceptAssignment(db, assignment.ID, captainID); err != nil {
+		if _, err := AcceptAssignment(db, testSpecialRequestOperatorContextID, assignment.ID, captainID); err != nil {
 			t.Fatalf("AcceptAssignment failed: %v", err)
 		}
 
@@ -407,7 +407,7 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
 		}
 
-		if _, err := DeclineAssignment(db, assignment.ID, captainID, "captain unavailable"); err != nil {
+		if _, err := DeclineAssignment(db, testSpecialRequestOperatorContextID, assignment.ID, captainID, "captain unavailable"); err != nil {
 			t.Fatalf("DeclineAssignment failed: %v", err)
 		}
 
@@ -435,29 +435,33 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 }
 
 // driveDeliveryToArrivedCustomer accepts the assignment and walks the
-// delivery sub-states forward to arrived_customer, the precondition SubmitPoD
+// delivery sub-states forward to arrived_customer, the precondition for
+// canonical delivery-proof submission.
 // requires. None of these intermediate delivery sub-states change the special
 // request's status (it stays in_progress throughout, per dispatch.go's
 // updateDeliveryProgress comment). It also registers the two governed media
 // references used by the completion subtests for this captain.
-func driveDeliveryToArrivedCustomer(t *testing.T, db *sql.DB, assignmentID, captainID string) {
+func driveDeliveryToArrivedCustomer(t *testing.T, db *sql.DB, operatorContextID, assignmentID, captainID, specialRequestID string) (proofMediaRef, outboxGuardMediaRef string) {
 	t.Helper()
-	if _, err := AcceptAssignment(db, assignmentID, captainID); err != nil {
+	if _, err := AcceptAssignment(db, operatorContextID, assignmentID, captainID); err != nil {
 		t.Fatalf("AcceptAssignment failed: %v", err)
 	}
 	for _, status := range []DeliveryStatus{DeliveryArrivedStore, DeliveryPickedUp, DeliveryArrivedCustomer} {
-		if _, err := UpdateDeliveryStatus(db, assignmentID, captainID, status); err != nil {
+		if _, err := testDeliveryStatusCommandCurrent(db, operatorContextID, assignmentID, captainID, status, "special-request-"+string(status)); err != nil {
 			t.Fatalf("UpdateDeliveryStatus(%s) failed: %v", status, err)
 		}
 	}
-	seedCaptainDeliveryProofMedia(t, db, captainID, "sr-pod-ref", "", "")
-	seedCaptainDeliveryProofMedia(t, db, captainID, "sr-pod-outbox-guard", "", "")
+	proofMediaRef = "sr-pod-ref-" + specialRequestID
+	outboxGuardMediaRef = "sr-pod-outbox-guard-" + specialRequestID
+	seedCaptainDeliveryProofMedia(t, db, captainID, proofMediaRef, "", "", "", specialRequestID)
+	seedCaptainDeliveryProofMedia(t, db, captainID, outboxGuardMediaRef, "", "", "", specialRequestID)
+	return proofMediaRef, outboxGuardMediaRef
 }
 
-func TestSpecialRequestSubmitPoDDBIntegration(t *testing.T) {
+func TestSpecialRequestDeliveryProofDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 
-	t.Run("SubmitPoD completes the special request", func(t *testing.T) {
+	t.Run("canonical proof review completes the special request", func(t *testing.T) {
 		id, _ := newApprovedSpecialRequestFixture(t, db)
 		captainID, actorID := newCaptainAndActor()
 		assignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
@@ -466,18 +470,36 @@ func TestSpecialRequestSubmitPoDDBIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
 		}
-		driveDeliveryToArrivedCustomer(t, db, assignment.ID, captainID)
+		proofMediaRef, _ := driveDeliveryToArrivedCustomer(t, db, testSpecialRequestOperatorContextID, assignment.ID, captainID, id)
 
-		if _, err := SubmitPoD(db, assignment.ID, captainID, PoDInput{Method: "photo", Reference: "sr-pod-ref"}); err != nil {
-			t.Fatalf("SubmitPoD failed: %v", err)
+		proof, err := SubmitDeliveryProof(db, assignment.ID, captainID, SubmitDeliveryProofInput{
+			OperatorContextID: testSpecialRequestOperatorContextID,
+			Method:            DeliveryProofPhoto,
+			PhotoMediaRef:     proofMediaRef,
+			IdempotencyKey:    "special-request-proof-1",
+		})
+		if err != nil {
+			t.Fatalf("SubmitDeliveryProof failed: %v", err)
+		}
+		if proof.SpecialRequestID != id || proof.OrderID != "" || proof.Status != DeliveryProofPendingReview {
+			t.Fatalf("unexpected special-request proof: %+v", proof)
+		}
+		if _, err := ReviewDeliveryProof(db, proof.ID, "operator-1", ReviewDeliveryProofInput{
+			OperatorContextID: testSpecialRequestOperatorContextID,
+			ExpectedVersion:   proof.Version,
+			Reason:            "تمت مراجعة إثبات التسليم",
+			Accept:            true,
+			IdempotencyKey:    "special-request-review-1",
+		}); err != nil {
+			t.Fatalf("ReviewDeliveryProof failed: %v", err)
 		}
 
 		req := getSpecialRequest(t, db, id)
 		if req.Status != specialrequests.StatusCompleted {
-			t.Fatalf("expected special request status completed after SubmitPoD, got %s", req.Status)
+			t.Fatalf("expected special request status completed after delivery proof review, got %s", req.Status)
 		}
 		if req.CompletedAt == nil {
-			t.Fatal("expected completedAt to be set after SubmitPoD")
+			t.Fatal("expected completedAt to be set after delivery proof review")
 		}
 	})
 
@@ -497,15 +519,30 @@ func TestSpecialRequestSubmitPoDDBIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
 		}
-		driveDeliveryToArrivedCustomer(t, db, assignment.ID, captainID)
+		_, outboxGuardMediaRef := driveDeliveryToArrivedCustomer(t, db, testSpecialRequestOperatorContextID, assignment.ID, captainID, id)
 
 		var before int
 		if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_wlt_outbox_events WHERE captain_id = $1`, captainID).Scan(&before); err != nil {
 			t.Fatalf("failed to count outbox rows before PoD: %v", err)
 		}
 
-		if _, err := SubmitPoD(db, assignment.ID, captainID, PoDInput{Method: "photo", Reference: "sr-pod-outbox-guard"}); err != nil {
-			t.Fatalf("SubmitPoD failed: %v", err)
+		proof, err := SubmitDeliveryProof(db, assignment.ID, captainID, SubmitDeliveryProofInput{
+			OperatorContextID: testSpecialRequestOperatorContextID,
+			Method:            DeliveryProofPhoto,
+			PhotoMediaRef:     outboxGuardMediaRef,
+			IdempotencyKey:    "special-request-proof-outbox",
+		})
+		if err != nil {
+			t.Fatalf("SubmitDeliveryProof failed: %v", err)
+		}
+		if _, err := ReviewDeliveryProof(db, proof.ID, "operator-2", ReviewDeliveryProofInput{
+			OperatorContextID: testSpecialRequestOperatorContextID,
+			ExpectedVersion:   proof.Version,
+			Reason:            "تمت مراجعة إثبات التسليم",
+			Accept:            true,
+			IdempotencyKey:    "special-request-review-outbox",
+		}); err != nil {
+			t.Fatalf("ReviewDeliveryProof failed: %v", err)
 		}
 
 		var after int

@@ -38,7 +38,7 @@ func TestCreateProposalRejectsNodeFromWrongDomain(t *testing.T) {
 	domainB := seedPaginationDomain(t, db)
 	nodeInB := seedCreateProposalNode(t, db, domainB)
 
-	_, err := CreateProposal(ctx, db, "actor-test", ProductProposalInput{
+	_, err := CreateProposal(ctx, db, "actor-test", "proposal-wrong-domain", ProductProposalInput{
 		ProposedNameAr: "منتج اختبار",
 		DomainID:       domainA,
 		CategoryNodeID: &nodeInB,
@@ -65,7 +65,7 @@ func TestCreateProposalRejectsUnknownNode(t *testing.T) {
 	domainA := seedPaginationDomain(t, db)
 	missingNode := paginationUniqueID("node-does-not-exist")
 
-	_, err := CreateProposal(ctx, db, "actor-test", ProductProposalInput{
+	_, err := CreateProposal(ctx, db, "actor-test", "proposal-missing-node", ProductProposalInput{
 		ProposedNameAr: "منتج اختبار",
 		DomainID:       domainA,
 		CategoryNodeID: &missingNode,
@@ -92,7 +92,7 @@ func TestCreateProposalAcceptsNodeInSameDomain(t *testing.T) {
 	domainA := seedPaginationDomain(t, db)
 	nodeInA := seedCreateProposalNode(t, db, domainA)
 
-	proposal, err := CreateProposal(ctx, db, "actor-test", ProductProposalInput{
+	proposal, err := CreateProposal(ctx, db, "actor-test", "proposal-same-domain", ProductProposalInput{
 		ProposedNameAr: "منتج اختبار",
 		DomainID:       domainA,
 		CategoryNodeID: &nodeInA,
@@ -119,7 +119,7 @@ func TestCreateProposalAcceptsNilNode(t *testing.T) {
 
 	domainA := seedPaginationDomain(t, db)
 
-	proposal, err := CreateProposal(ctx, db, "actor-test", ProductProposalInput{
+	proposal, err := CreateProposal(ctx, db, "actor-test", "proposal-nil-node", ProductProposalInput{
 		ProposedNameAr: "منتج اختبار",
 		DomainID:       domainA,
 		CategoryNodeID: nil,
@@ -144,7 +144,7 @@ func TestCreateProposalAcceptsEmptyNode(t *testing.T) {
 	domainA := seedPaginationDomain(t, db)
 	empty := ""
 
-	proposal, err := CreateProposal(ctx, db, "actor-test", ProductProposalInput{
+	proposal, err := CreateProposal(ctx, db, "actor-test", "proposal-empty-node", ProductProposalInput{
 		ProposedNameAr: "منتج اختبار",
 		DomainID:       domainA,
 		CategoryNodeID: &empty,

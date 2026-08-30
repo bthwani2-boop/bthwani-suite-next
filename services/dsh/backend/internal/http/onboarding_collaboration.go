@@ -38,6 +38,8 @@ func writeCollaborationError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusConflict, "READ_ONLY", "field onboarding is read-only until changes are requested")
 	case errors.Is(err, partner.ErrVersionConflict):
 		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "partner state changed; reload before requesting changes")
+	case errors.Is(err, partner.ErrCollaborationIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "clientMessageId was already used for a different collaboration message")
 	case errors.Is(err, partner.ErrInvalidTransition), errors.Is(err, partner.ErrCollaborationInvalid), errors.Is(err, partner.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid onboarding collaboration request")
 	default:

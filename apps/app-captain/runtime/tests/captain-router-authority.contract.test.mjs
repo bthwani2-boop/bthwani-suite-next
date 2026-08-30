@@ -31,6 +31,18 @@ test("captain uses Expo Router as the sole navigation authority", () => {
   assert.equal(exists("services/dsh/frontend/shared/delivery/captain-deep-link.ts"), false);
 });
 
+test("captain support deep links cannot re-enter retired lifecycle screens", () => {
+  const navigation = read("services/dsh/frontend/app-captain/captain-navigation.ts");
+  const contract = read("services/dsh/frontend/shared/delivery/captain.contract.ts");
+  const router = read("services/dsh/frontend/app-captain/account/CaptainSupportScreenRouter.tsx");
+
+  for (const retiredRoute of ["order-accept", "order-deliver", "order-details", "order-get", "order-pickup", "orders-list", "orders-offers-list", "profile-get", "proof-upload", "tier-evaluate", "tier-info"]) {
+    assert.doesNotMatch(navigation, new RegExp(`['\"]${retiredRoute}['\"]`), `retired route remains parseable: ${retiredRoute}`);
+    assert.doesNotMatch(contract, new RegExp(`['\"]${retiredRoute}['\"]`), `retired route remains in Captain support contract: ${retiredRoute}`);
+  }
+  assert.doesNotMatch(router, /DshCaptainOrder(?:Pickup|Deliver|Details|Get)Screen|DshCaptainProofUploadScreen/);
+});
+
 test("captain task routes bind assignment identity atomically in the URL", () => {
   const navigation = read("services/dsh/frontend/app-captain/captain-navigation.ts");
   for (const fragment of [

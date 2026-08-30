@@ -10,8 +10,10 @@ import {
 
 export function OrderPreparationAlertsPanel({
   onOpenOrder,
+  canManageOperations,
 }: {
   readonly onOpenOrder: (orderId: string) => void;
+  readonly canManageOperations: boolean;
 }) {
   const controller = useOperatorPreparationAlerts();
   const { state } = controller;
@@ -27,12 +29,14 @@ export function OrderPreparationAlertsPanel({
             تُحفظ التنبيهات في DSH وتغلق تلقائيًا عند زوال سببها.
           </Text>
         </Box>
-        <Button
-          label={submitting && state.action === 'scan' ? 'جارٍ فحص SLA…' : 'فحص SLA الآن'}
-          tone="secondary"
-          disabled={submitting}
-          onPress={() => void controller.scan()}
-        />
+        {canManageOperations ? (
+          <Button
+            label={submitting && state.action === 'scan' ? 'جارٍ فحص SLA…' : 'فحص SLA الآن'}
+            tone="secondary"
+            disabled={submitting}
+            onPress={() => void controller.scan()}
+          />
+        ) : <Text role="caption" tone="muted">قراءة فقط — فحص وإقرار التنبيهات يتطلبان صلاحية إدارة العمليات.</Text>}
       </Box>
 
       {state.kind === 'loading' ? (
@@ -84,7 +88,7 @@ export function OrderPreparationAlertsPanel({
                     disabled={submitting}
                     onPress={() => onOpenOrder(alert.orderId)}
                   />
-                  {alert.status === 'open' ? (
+                  {alert.status === 'open' && canManageOperations ? (
                     <Button
                       label={submitting && state.action === 'acknowledge' ? 'جارٍ الإقرار…' : 'إقرار المراجعة'}
                       tone="brand"

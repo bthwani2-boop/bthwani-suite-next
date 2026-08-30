@@ -24,7 +24,8 @@ import {
   fetchPartnerProductProposals,
   fetchPartnerStoreAssortment,
   fetchPartnerTaxonomy,
-  upsertPartnerStoreAssortmentOCC,
+  createPartnerStoreAssortment,
+  updatePartnerStoreAssortmentMetadataOCC,
   withdrawPartnerProductProposal,
 } from "../../shared/catalog";
 import type {
@@ -35,7 +36,7 @@ import type {
   StoreAssortment,
 } from "../../shared/catalog";
 import { InventoryConfigurationModal } from "./InventoryConfigurationModal";
-import { PriceScheduleModal } from "./PriceScheduleModal";
+import { PriceConfigurationModal } from "./PriceConfigurationModal";
 import { PartnerReelsManagementSection } from "./PartnerReelsManagementSection";
 
 type Props = {
@@ -44,8 +45,25 @@ type Props = {
 
 type CatalogTabId = "assortment" | "master" | "proposals" | "reels";
 
+type CatalogReadback = {
+  readonly domains: readonly CentralCatalogDomain[];
+  readonly nodes: readonly CentralCatalogNode[];
+  readonly masterProducts: readonly MasterProduct[];
+  readonly assortment: readonly StoreAssortment[];
+  readonly proposals: readonly ProductProposal[];
+};
+
 export function PartnerCatalogManagementScreen({ storeId }: Props) {
   const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : "";
+  const normalizedStoreId = storeId.trim();
+  const scopeKey = `${actorId}:${normalizedStoreId}`;
+  const scopeKeyRef = React.useRef(scopeKey);
+  scopeKeyRef.current = scopeKey;
+  const mountedRef = React.useRef(true);
+  const requestSeqRef = React.useRef(0);
+  const mutationBusyRef = React.useRef(false);
+
   const [activeTab, setActiveTab] = React.useState<CatalogTabId>("assortment");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [loading, setLoading] = React.useState(true);
@@ -57,45 +75,140 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
   const [assortment, setAssortment] = React.useState<readonly StoreAssortment[]>([]);
   const [proposals, setProposals] = React.useState<readonly ProductProposal[]>([]);
 
-  // Edit modal state
   const [editingProductId, setEditingProductId] = React.useState<string | null>(null);
-  const [editPrice, setEditPrice] = React.useState("");
+  const [initialPrice, setInitialPrice] = React.useState("");
   const [editNote, setEditNote] = React.useState("");
-
-  // Sub-modals
   const [inventoryModalProductId, setInventoryModalProductId] = React.useState<string | null>(null);
   const [priceModalProductId, setPriceModalProductId] = React.useState<string | null>(null);
 
-  const loadData = React.useCallback(async () => {
-    if (identity.state.kind !== "authenticated") return;
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestSeqRef.current += 1;
+      mutationBusyRef.current = false;
+    };
+  }, []);
+
+  const clearReadback = React.useCallback(() => {
+    setDomains([]);
+    setNodes([]);
+    setMasterProducts([]);
+    setAssortment([]);
+    setProposals([]);
+  }, []);
+
+  const loadData = React.useCallback(async (): Promise<CatalogReadback | null> => {
+    const requestSeq = ++requestSeqRef.current;
+    const requestScopeKey = scopeKey;
+    if (identity.state.kind !== "authenticated" || !normalizedStoreId) {
+      if (mountedRef.current && requestScopeKey === scopeKeyRef.current) {
+        clearReadback();
+        setLoading(false);
+        setError(null);
+      }
+      return null;
+    }
     setLoading(true);
     setError(null);
     try {
       const [taxonomy, products, currentAssortment, proposalPage] = await Promise.all([
         fetchPartnerTaxonomy(),
         fetchPartnerMasterProducts({ limit: 100 }),
-        fetchPartnerStoreAssortment(storeId),
-        fetchPartnerProductProposals(storeId, { limit: 100, offset: 0 }),
+        fetchPartnerStoreAssortment(normalizedStoreId),
+        fetchPartnerProductProposals(normalizedStoreId, { limit: 100, offset: 0 }),
       ]);
-      setDomains(taxonomy.domains);
-      setNodes(taxonomy.nodes);
-      setMasterProducts(products);
-      setAssortment(currentAssortment);
-      setProposals(proposalPage.items);
+      if (
+        !mountedRef.current
+        || requestSeq !== requestSeqRef.current
+        || requestScopeKey !== scopeKeyRef.current
+      ) return null;
+      const readback: CatalogReadback = {
+        domains: taxonomy.domains,
+        nodes: taxonomy.nodes,
+        masterProducts: products,
+        assortment: currentAssortment,
+        proposals: proposalPage.items,
+      };
+      setDomains(readback.domains);
+      setNodes(readback.nodes);
+      setMasterProducts(readback.masterProducts);
+      setAssortment(readback.assortment);
+      setProposals(readback.proposals);
+      return readback;
     } catch (caught) {
+      if (
+        !mountedRef.current
+        || requestSeq !== requestSeqRef.current
+        || requestScopeKey !== scopeKeyRef.current
+      ) return null;
+      clearReadback();
       setError(
         caught instanceof Error
           ? caught.message
           : "فشل تحميل بيانات الكتالوج والمخزون.",
       );
+      return null;
     } finally {
-      setLoading(false);
+      if (
+        mountedRef.current
+        && requestSeq === requestSeqRef.current
+        && requestScopeKey === scopeKeyRef.current
+      ) {
+        setLoading(false);
+      }
     }
-  }, [identity.state.kind, storeId]);
+  }, [clearReadback, identity.state.kind, normalizedStoreId, scopeKey]);
 
   React.useEffect(() => {
-    if (identity.state.kind === "authenticated") void loadData();
-  }, [identity.state.kind, loadData]);
+    void loadData();
+  }, [loadData]);
+
+  const runScopedMutation = React.useCallback(async <T,>(
+    operation: () => Promise<T>,
+    verifyReadback: (readback: CatalogReadback, mutationResult: T) => boolean,
+    failureMessage: string,
+    onVerified?: () => void,
+  ): Promise<boolean> => {
+    if (mutationBusyRef.current) {
+      setError("يوجد تعديل كتالوج قيد التنفيذ. انتظر اكتماله وإعادة القراءة.");
+      return false;
+    }
+    const mutationScopeKey = scopeKey;
+    mutationBusyRef.current = true;
+    setSaving(true);
+    setError(null);
+    try {
+      const mutationResult = await operation();
+      if (!mountedRef.current || mutationScopeKey !== scopeKeyRef.current) return false;
+      const readback = await loadData();
+      if (!readback || !verifyReadback(readback, mutationResult)) {
+        if (mountedRef.current && mutationScopeKey === scopeKeyRef.current) {
+          setError("تم إرسال التغيير، لكن لم تثبت القراءة canonical نفس الإصدار والحالة. أعد التحميل قبل أي تعديل جديد.");
+        }
+        return false;
+      }
+      if (mountedRef.current && mutationScopeKey === scopeKeyRef.current) {
+        onVerified?.();
+      }
+      return true;
+    } catch (caught) {
+      if (mountedRef.current && mutationScopeKey === scopeKeyRef.current) {
+        const readback = await loadData();
+        if (mountedRef.current && mutationScopeKey === scopeKeyRef.current) {
+          setError(
+            `${caught instanceof Error ? caught.message : failureMessage}${
+              readback ? " — تمت إعادة قراءة الحقيقة الحالية من DSH." : ""
+            }`,
+          );
+        }
+      }
+      return false;
+    } finally {
+      mutationBusyRef.current = false;
+      if (mountedRef.current && mutationScopeKey === scopeKeyRef.current) setSaving(false);
+    }
+  }, [loadData, scopeKey]);
 
   const namesByProduct = React.useMemo(() => {
     return new Map(masterProducts.map((p) => [p.id, p.canonicalNameAr]));
@@ -104,92 +217,75 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
   const startEditing = (productId: string) => {
     const current = assortment.find((item) => item.masterProductId === productId);
     setEditingProductId(productId);
-    setEditPrice(current ? String(current.unitPrice) : "");
+    setInitialPrice("");
     setEditNote(current?.localNote ?? "");
   };
 
   const saveAssortment = async () => {
     if (!editingProductId) return;
-    const unitPrice = Number(editPrice.trim());
-    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
-      setError("يرجى إدخال سعر صحيح للمنتج.");
+    const productId = editingProductId;
+    const note = editNote.trim();
+    const current = assortment.find((item) => item.masterProductId === productId);
+    const unitPrice = Number(initialPrice.trim());
+    if (!current && (!Number.isFinite(unitPrice) || unitPrice < 0)) {
+      setError("يرجى إدخال سعر بدء صحيح لإضافة المنتج.");
       return;
     }
-
-    const current = assortment.find((item) => item.masterProductId === editingProductId);
-    setSaving(true);
-    setError(null);
-    try {
-      const saved = await upsertPartnerStoreAssortmentOCC(
-        storeId,
-        editingProductId,
-        {
+    await runScopedMutation(
+      () => current
+        ? updatePartnerStoreAssortmentMetadataOCC(normalizedStoreId, productId, {
+          localNote: note,
+          customImageObjectKey: current.customImageObjectKey,
+          publicationStatus: current.publicationStatus,
+          expectedVersion: current.version,
+        })
+        : createPartnerStoreAssortment(normalizedStoreId, productId, {
           unitPrice,
-          currency: current?.currency ?? "YER",
-          available: current?.available ?? true,
-          stockStatus: current?.stockStatus ?? "in_stock",
-          localNote: editNote.trim(),
-          customImageObjectKey: current?.customImageObjectKey ?? null,
-          publicationStatus: current?.publicationStatus ?? "published",
-          expectedVersion: current?.version,
-        },
-      );
-      setAssortment((items) => [
-        ...items.filter((item) => item.masterProductId !== saved.masterProductId),
-        saved,
-      ]);
-      setEditingProductId(null);
-      setEditPrice("");
-      setEditNote("");
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر حفظ المنتج.");
-      await loadData();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const toggleAvailability = async (item: StoreAssortment) => {
-    setSaving(true);
-    setError(null);
-    try {
-      const nextAvailable = !item.available;
-      const saved = await upsertPartnerStoreAssortmentOCC(
-        storeId,
-        item.masterProductId,
-        {
-          unitPrice: item.unitPrice,
-          currency: item.currency,
-          available: nextAvailable,
-          stockStatus: nextAvailable ? "in_stock" : "out_of_stock",
-          localNote: item.localNote,
-          customImageObjectKey: item.customImageObjectKey,
-          publicationStatus: item.publicationStatus,
-          expectedVersion: item.version,
-        },
-      );
-      setAssortment((items) => [
-        ...items.filter((i) => i.masterProductId !== saved.masterProductId),
-        saved,
-      ]);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر تحديث حالة التوفر.");
-      await loadData();
-    } finally {
-      setSaving(false);
-    }
+          currency: "YER",
+          available: true,
+          stockStatus: "in_stock",
+          localNote: note,
+          customImageObjectKey: null,
+          publicationStatus: "draft",
+        }),
+      (readback, saved) => {
+        const item = readback.assortment.find((candidate) => candidate.masterProductId === productId);
+        if (!item || item.version !== saved.version || item.id !== saved.id) return false;
+        if (current) {
+          return item.localNote === note
+            && item.customImageObjectKey === current.customImageObjectKey
+            && item.publicationStatus === current.publicationStatus
+            && item.unitPrice === current.unitPrice
+            && item.currency === current.currency
+            && item.available === current.available
+            && item.stockStatus === current.stockStatus;
+        }
+        return item.unitPrice === unitPrice
+          && item.currency === "YER"
+          && item.available
+          && item.stockStatus === "in_stock"
+          && item.localNote === note
+          && item.publicationStatus === "draft";
+      },
+      "تعذر حفظ المنتج.",
+      () => {
+        setEditingProductId(null);
+        setInitialPrice("");
+        setEditNote("");
+      },
+    );
   };
 
   const withdrawProposal = async (proposalId: string, expectedVersion: number) => {
-    try {
-      setSaving(true);
-      const withdrawn = await withdrawPartnerProductProposal(proposalId, expectedVersion);
-      setProposals((items) => items.map((p) => p.id === withdrawn.id ? withdrawn : p));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر سحب الاقتراح.");
-    } finally {
-      setSaving(false);
-    }
+    await runScopedMutation(
+      () => withdrawPartnerProductProposal(proposalId, expectedVersion),
+      (readback, withdrawn) => readback.proposals.some((proposal) =>
+        proposal.id === withdrawn.id
+        && proposal.version === withdrawn.version
+        && proposal.status === withdrawn.status,
+      ),
+      "تعذر سحب الاقتراح.",
+    );
   };
 
   if (identity.state.kind !== "authenticated") {
@@ -202,7 +298,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
     );
   }
 
-  if (!storeId) {
+  if (!normalizedStoreId) {
     return (
       <StateView
         title="متجر غير محدد"
@@ -217,7 +313,6 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
   }
 
   const queryNormalized = searchQuery.trim().toLowerCase();
-
   const filteredAssortment = assortment.filter((item) => {
     if (!queryNormalized) return true;
     const name = namesByProduct.get(item.masterProductId) ?? item.masterProductId;
@@ -238,15 +333,17 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
 
   const availableCount = assortment.filter((i) => i.available).length;
   const outOfStockCount = assortment.length - availableCount;
+  const editingCurrent = editingProductId
+    ? assortment.find((item) => item.masterProductId === editingProductId) ?? null
+    : null;
 
   return (
     <MobileScrollView fill padding={4} gap={4}>
-      {/* Header Summary */}
       <Surface tone="raised" padding={4} gap={3} radiusToken="xl">
         <Box layoutDirection="row" justify="space-between" align="center">
           <Box gap={1}>
             <Text role="titleLg">إدارة المخزون والكتالوج</Text>
-            <Text role="caption" tone="muted">تحكم فوري بالأسعار، التوفر، والأصناف المركزية</Text>
+            <Text role="caption" tone="muted">مصدر DSH canonical للأسعار والمخزون وبيانات العرض</Text>
           </Box>
           <Badge label="مباشر DSH" tone="brand" />
         </Box>
@@ -260,14 +357,12 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         </Box>
       </Surface>
 
-      {/* Tabs */}
       <Tabs
         items={tabItems}
         value={activeTab}
         onValueChange={(val) => setActiveTab(val as CatalogTabId)}
       />
 
-      {/* Search Field for items */}
       {activeTab !== "reels" && activeTab !== "proposals" ? (
         <SearchField
           value={searchQuery}
@@ -282,11 +377,10 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
           description={error}
           tone="danger"
           actionLabel="تحديث البيانات"
-          onActionPress={loadData}
+          onActionPress={() => { void loadData(); }}
         />
       ) : null}
 
-      {/* Tab 1: Store Assortment */}
       {activeTab === "assortment" && (
         <Box gap={3}>
           {filteredAssortment.length === 0 ? (
@@ -323,19 +417,11 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
 
                   <Box layoutDirection="row" gap={2} align="center" style={{ flexWrap: "wrap" }}>
                     <Button
-                      label="تعديل السعر"
+                      label="تعديل بيانات العرض"
                       tone="secondary"
                       size="sm"
                       fullWidth={false}
                       onPress={() => startEditing(item.masterProductId)}
-                    />
-                    <Button
-                      label={item.available ? "إيقاف مؤقت" : "تفعيل التوفر"}
-                      tone={item.available ? "secondary" : "primary"}
-                      size="sm"
-                      fullWidth={false}
-                      disabled={saving}
-                      onPress={() => void toggleAvailability(item)}
                     />
                     <Button
                       label="إعدادات المخزون"
@@ -345,7 +431,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
                       onPress={() => setInventoryModalProductId(item.masterProductId)}
                     />
                     <Button
-                      label="جدول الأسعار"
+                      label="إدارة الأسعار"
                       tone="ghost"
                       size="sm"
                       fullWidth={false}
@@ -359,7 +445,6 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         </Box>
       )}
 
-      {/* Tab 2: Master Products (Central Catalog) */}
       {activeTab === "master" && (
         <Box gap={3}>
           {filteredMasterProducts.length === 0 ? (
@@ -387,7 +472,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
 
                   <Box layoutDirection="row" gap={2} align="center">
                     <Button
-                      label={linked ? "تعديل السعر والملاحظة" : "إضافة إلى متجري"}
+                      label={linked ? "تعديل بيانات العرض" : "إضافة إلى متجري"}
                       tone={linked ? "secondary" : "primary"}
                       size="sm"
                       fullWidth={false}
@@ -401,7 +486,6 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         </Box>
       )}
 
-      {/* Tab 3: Proposals */}
       {activeTab === "proposals" && (
         <Box gap={3}>
           {proposals.length === 0 ? (
@@ -439,12 +523,10 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         </Box>
       )}
 
-      {/* Tab 4: Reels */}
       {activeTab === "reels" && (
-        <PartnerReelsManagementSection storeId={storeId} />
+        <PartnerReelsManagementSection storeId={normalizedStoreId} />
       )}
 
-      {/* Edit Assortment Bottom Sheet / Modal */}
       {editingProductId && (
         <Modal
           visible={true}
@@ -456,7 +538,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
             <Pressable style={styles.modalBackdrop} onPress={() => setEditingProductId(null)} />
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
-                <Text role="titleMd">تحديد سعر المنتج في المتجر</Text>
+                <Text role="titleMd">{editingCurrent ? "تعديل بيانات العرض" : "إضافة المنتج إلى المتجر"}</Text>
                 <Pressable onPress={() => setEditingProductId(null)}>
                   <Icon name="close-outline" size={24} tone="muted" />
                 </Pressable>
@@ -466,13 +548,19 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
                 {namesByProduct.get(editingProductId) ?? editingProductId}
               </Text>
 
-              <TextField
-                label="سعر البيع (ريال)"
-                value={editPrice}
-                onChangeText={setEditPrice}
-                placeholder="أدخل سعر الوحدة…"
-                keyboardType="numeric"
-              />
+              {editingCurrent ? (
+                <Text role="bodySm" tone="muted">
+                  السعر والتوفر والمخزون تُدار من مواردها canonical عبر أزرار إدارة السعر والمخزون.
+                </Text>
+              ) : (
+                <TextField
+                  label="سعر البدء (بالوحدة الصغرى)"
+                  value={initialPrice}
+                  onChangeText={setInitialPrice}
+                  placeholder="أدخل سعر bootstrap الأول…"
+                  keyboardType="numeric"
+                />
+              )}
 
               <TextField
                 label="ملاحظة داخلية أو وصف مختصر (اختياري)"
@@ -500,11 +588,10 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         </Modal>
       )}
 
-      {/* Configuration & Price Schedule Sub-Modals */}
       {inventoryModalProductId && (
         <InventoryConfigurationModal
           visible={true}
-          storeId={storeId}
+          storeId={normalizedStoreId}
           masterProductId={inventoryModalProductId}
           onClose={() => setInventoryModalProductId(null)}
           onSave={() => {
@@ -515,9 +602,9 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
       )}
 
       {priceModalProductId && (
-        <PriceScheduleModal
+        <PriceConfigurationModal
           visible={true}
-          storeId={storeId}
+          storeId={normalizedStoreId}
           masterProductId={priceModalProductId}
           onClose={() => setPriceModalProductId(null)}
           onSave={() => {

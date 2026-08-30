@@ -1,5 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { secureCorrelationId } from "../_kernel/secure-random";
 import type { DshPartnerLinkedStore } from "./partner.types";
 import { fetchPartnerStores } from "./partner.api";
 
@@ -43,7 +44,7 @@ export function linkOrTransferPartnerStore(
     });
   }
 
-  const correlationId = `partner-store.${partnerId}.${storeId}.${Date.now().toString(36)}`;
+  const correlationId = secureCorrelationId("partner-store-ownership");
   return ownershipClient.request<GovernedPartnerStoresResponse>(
     `/dsh/operator/partners/${encodeURIComponent(partnerId)}/stores`,
     {
@@ -54,7 +55,6 @@ export function linkOrTransferPartnerStore(
         ...(expectedStoreVersion !== undefined ? { expectedStoreVersion } : {}),
       },
       correlationId,
-      idempotencyKey: correlationId,
     },
   );
 }

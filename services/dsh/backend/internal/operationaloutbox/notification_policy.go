@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -182,14 +183,33 @@ func enqueueNotificationChannels(tx *sql.Tx, notificationID string, channels []s
 func notificationActionURL(event Event) string {
 	switch event.EntityType {
 	case "order":
-		return "/orders/" + event.EntityID
+		return "/orders/" + url.PathEscape(event.EntityID)
 	case "pickup_session":
-		return "/orders/pickup"
+		if orderID := pickupOrderID(event); orderID != "" {
+			return "/orders/" + url.PathEscape(orderID) + "/pickup"
+		}
+		// Mark-ready/notify/customer-arrived events use the order ID as the
+		// entity identifier. Session events carry the order ID in their payload.
+		switch event.EventType {
+		case "pickup_order_ready", "pickup_customer_notified", "pickup_customer_arrived":
+			return "/orders/" + url.PathEscape(event.EntityID)
+		}
+		return "/orders"
 	case "special_request":
-		return "/special-requests/" + event.EntityID
+		return "/special-requests/" + url.PathEscape(event.EntityID)
 	default:
 		return "/orders"
 	}
+}
+
+func pickupOrderID(event Event) string {
+	var payload struct {
+		OrderID string `json:"OrderID"`
+	}
+	if len(event.Payload) == 0 || json.Unmarshal(event.Payload, &payload) != nil {
+		return ""
+	}
+	return strings.TrimSpace(payload.OrderID)
 }
 
 func notificationTemplateValues(event Event) map[string]string {

@@ -69,11 +69,17 @@ func hashOtp(code string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// lockPickupOrder locks the order row and validates it is a pickup-mode
-// order in the expected status.
-func lockPickupOrder(tx *sql.Tx, orderID string, expectedStatus orders.OrderStatus) (storeID, clientID string, err error) {
+// lockPickupOrderForOperatorContext locks the order row inside the trusted
+// operator context and validates it is a pickup-mode order in the expected
+// status. The lock is context-bound: cross-context callers and legacy
+// context-less rows never match (fail closed).
+func lockPickupOrderForOperatorContext(tx *sql.Tx, operatorContextID, orderID string, expectedStatus orders.OrderStatus) (storeID, clientID string, err error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return "", "", fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	var fulfillmentMode, status string
-	err = tx.QueryRow(`SELECT store_id, client_id, fulfillment_mode, status FROM dsh_orders WHERE id = $1::uuid FOR UPDATE`, orderID).
+	err = tx.QueryRow(`SELECT store_id, client_id, fulfillment_mode, status FROM dsh_orders WHERE id = $1::uuid AND operator_context_id = $2 FOR UPDATE`, orderID, operatorContextID).
 		Scan(&storeID, &clientID, &fulfillmentMode, &status)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", "", ErrNotFound
@@ -93,17 +99,17 @@ func lockPickupOrder(tx *sql.Tx, orderID string, expectedStatus orders.OrderStat
 // MarkReady transitions a pickup order from preparing to ready_for_pickup,
 // reusing orders.TransitionDispatchOrder (the same caller-owned-tx status
 // machine dispatch.go uses) rather than duplicating order-status logic.
-func (s *Service) MarkReady(ctx context.Context, orderID, actorID, actorRole, correlationID string) error {
+func (s *Service) MarkReady(ctx context.Context, operatorContextID, orderID, actorID, actorRole, correlationID string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	if _, _, err := lockPickupOrder(tx, orderID, ""); err != nil {
+	if _, _, err := lockPickupOrderForOperatorContext(tx, operatorContextID, orderID, ""); err != nil {
 		return err
 	}
-	if _, err := orders.TransitionDispatchOrder(tx, orderID, actorID, actorRole, []orders.OrderStatus{orders.StatusPreparing}, orders.StatusReadyForPickup, "pickup ready"); err != nil {
+	if _, err := orders.TransitionDispatchOrder(tx, operatorContextID, orderID, actorID, actorRole, []orders.OrderStatus{orders.StatusPreparing}, orders.StatusReadyForPickup, "pickup ready"); err != nil {
 		if errors.Is(err, orders.ErrNotFound) {
 			return ErrNotFound
 		}
@@ -124,14 +130,14 @@ func (s *Service) MarkReady(ctx context.Context, orderID, actorID, actorRole, co
 // NotifyCustomer is a best-effort, audit-only marker recording that the
 // ready-for-pickup notification was dispatched to the customer. It does
 // not mutate any pickup_sessions row.
-func (s *Service) NotifyCustomer(ctx context.Context, orderID, actorID, actorRole, correlationID string) error {
+func (s *Service) NotifyCustomer(ctx context.Context, operatorContextID, orderID, actorID, actorRole, correlationID string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	if _, _, err := lockPickupOrder(tx, orderID, ""); err != nil {
+	if _, _, err := lockPickupOrderForOperatorContext(tx, operatorContextID, orderID, ""); err != nil {
 		return err
 	}
 	if err := WriteAuditEvent(tx, orderID, actorID, actorRole, "notify_customer", "", correlationID, nil, nil); err != nil {
@@ -148,7 +154,7 @@ func (s *Service) NotifyCustomer(ctx context.Context, orderID, actorID, actorRol
 // (push/SMS notification). The plaintext is never stored or logged. Issuing
 // a new OTP for an order that already has a session replaces it (resets
 // attempt_count and any prior used_at/verification state).
-func (s *Service) IssueOtp(ctx context.Context, orderID, clientID, actorID, actorRole, correlationID string) (string, *PickupSession, error) {
+func (s *Service) IssueOtp(ctx context.Context, operatorContextID, orderID, clientID, actorID, actorRole, correlationID string) (string, *PickupSession, error) {
 	plain, hashed, err := generateOtp()
 	if err != nil {
 		return "", nil, err
@@ -160,7 +166,7 @@ func (s *Service) IssueOtp(ctx context.Context, orderID, clientID, actorID, acto
 	}
 	defer tx.Rollback()
 
-	storeID, orderClientID, err := lockPickupOrder(tx, orderID, orders.StatusReadyForPickup)
+	storeID, orderClientID, err := lockPickupOrderForOperatorContext(tx, operatorContextID, orderID, orders.StatusReadyForPickup)
 	if err != nil {
 		return "", nil, err
 	}
@@ -230,14 +236,14 @@ func (s *Service) IssueOtp(ctx context.Context, orderID, clientID, actorID, acto
 // dashboard that the customer has arrived at the store to collect a pickup
 // order. It does not consume the OTP -- VerifyOtp is the state-mutating
 // step.
-func (s *Service) CustomerArrived(ctx context.Context, orderID, actorID, actorRole, correlationID string) error {
+func (s *Service) CustomerArrived(ctx context.Context, operatorContextID, orderID, actorID, actorRole, correlationID string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	if _, _, err := lockPickupOrder(tx, orderID, ""); err != nil {
+	if _, _, err := lockPickupOrderForOperatorContext(tx, operatorContextID, orderID, ""); err != nil {
 		return err
 	}
 	if err := WriteAuditEvent(tx, orderID, actorID, actorRole, "customer_arrived", "", correlationID, nil, nil); err != nil {
@@ -254,9 +260,13 @@ func (s *Service) CustomerArrived(ctx context.Context, orderID, actorID, actorRo
 // and transitions the order to delivered (reusing
 // orders.TransitionDispatchOrder in the same transaction). On mismatch it
 // increments attempt_count and returns ErrInvalidCode.
-func (s *Service) VerifyOtp(ctx context.Context, orderID, submittedOtp, actorID, actorRole, correlationID string) (*PickupSession, error) {
+func (s *Service) VerifyOtp(ctx context.Context, operatorContextID, orderID, submittedOtp, actorID, actorRole, correlationID string) (*PickupSession, error) {
 	if strings.TrimSpace(submittedOtp) == "" {
 		return nil, fmt.Errorf("%w: code is required", ErrInvalid)
+	}
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -312,7 +322,7 @@ func (s *Service) VerifyOtp(ctx context.Context, orderID, submittedOtp, actorID,
 		return nil, ErrVersionConflict
 	}
 
-	if _, err := orders.TransitionDispatchOrder(tx, orderID, actorID, actorRole, []orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDelivered, "pickup verified"); err != nil {
+	if _, err := orders.TransitionDispatchOrder(tx, operatorContextID, orderID, actorID, actorRole, []orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDelivered, "pickup verified"); err != nil {
 		if errors.Is(err, orders.ErrNotFound) {
 			return nil, ErrNotFound
 		}
@@ -341,7 +351,11 @@ func (s *Service) VerifyOtp(ctx context.Context, orderID, submittedOtp, actorID,
 // NoShow marks an issued-but-unused session as consumed via the
 // verification_method "no_show" fallback, without transitioning the order
 // (operators decide separately whether to cancel/re-route a no-show order).
-func (s *Service) NoShow(ctx context.Context, orderID, actorID, actorRole, reason, correlationID string) (*PickupSession, error) {
+func (s *Service) NoShow(ctx context.Context, operatorContextID, orderID, actorID, actorRole, reason, correlationID string) (*PickupSession, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -394,7 +408,10 @@ func (s *Service) NoShow(ctx context.Context, orderID, actorID, actorRole, reaso
 // with actorRole "operator" (the emergency-override surface), the cap is
 // not enforced -- that path exists precisely for when the partner's normal
 // allowance has been exhausted.
-func (s *Service) ExtendWindow(ctx context.Context, orderID string, newExpiry time.Time, actorID, actorRole, reason, correlationID string) (*PickupSession, error) {
+func (s *Service) ExtendWindow(ctx context.Context, operatorContextID, orderID string, newExpiry time.Time, actorID, actorRole, reason, correlationID string) (*PickupSession, error) {
+	if strings.TrimSpace(operatorContextID) == "" {
+		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
+	}
 	if strings.TrimSpace(reason) == "" {
 		return nil, fmt.Errorf("%w: reason is required", ErrInvalid)
 	}

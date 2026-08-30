@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { corrId } from "../_kernel/dsh-http-request";
+import { useCallback, useEffect, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
-  cancelOrder,
   classifyCancellationError,
   fetchOrderCancellation,
 } from "./order-cancellation.api";
+import { executeDurableOrderCancellation } from "./order-cancellation-attempt";
 import type {
   CancelOrderInput,
   DshOrderCancellation,
@@ -27,8 +27,9 @@ export function useOrderCancellationController({
   autoLoad = true,
   onCancelled,
 }: UseOrderCancellationControllerOptions) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const [state, setState] = useState<OrderCancellationState>({ kind: "idle" });
-  const commandIds = useRef<Record<string, string>>({});
 
   const load = useCallback(async () => {
     if (!orderId) {
@@ -72,29 +73,29 @@ export function useOrderCancellationController({
         ? { kind: "submitting", cancellation: previousCancellation }
         : { kind: "submitting" },
     );
-    const commandKey = JSON.stringify({
-      surface,
-      orderId,
-      reasonCode: input.reasonCode,
-      reasonNote: input.reasonNote?.trim() ?? "",
-      ticketReference: input.ticketReference?.trim() ?? "",
-    });
-    const commandId = input.commandId?.trim() || commandIds.current[commandKey] || corrId(`${surface}-order-cancel`);
-    commandIds.current[commandKey] = commandId;
-    const commandInput = input.commandId?.trim()
-      ? input
-      : { ...input, commandId, correlationId: input.correlationId?.trim() || commandId };
+    if (!actorId) {
+      const classified = classifyCancellationError({ kind: "http", status: 401 });
+      setState({ kind: "error", message: classified.message });
+      return { ok: false as const, error: classified };
+    }
     try {
-      const response = await cancelOrder(surface, orderId, commandInput, token);
-      delete commandIds.current[commandKey];
+      const response = await executeDurableOrderCancellation({
+        surface,
+        actorId,
+        orderId,
+        reasonCode: input.reasonCode,
+        reasonNote: input.reasonNote,
+        ticketReference: input.ticketReference,
+      }, token);
       setState({ kind: "ready", cancellation: response.cancellation });
-      await onCancelled?.();
+      try {
+        await onCancelled?.();
+      } catch {
+        // Exact cancellation readback already proves the mutation.
+      }
       return { ok: true as const, response };
     } catch (error) {
       const classified = classifyCancellationError(error);
-      if (classified.kind === "invalid" || classified.kind === "permission_denied" || classified.kind === "not_found") {
-        delete commandIds.current[commandKey];
-      }
       if (classified.kind === "requires_review") {
         setState({ kind: "requires_review", message: classified.message });
       } else {
@@ -102,7 +103,7 @@ export function useOrderCancellationController({
       }
       return { ok: false as const, error: classified };
     }
-  }, [onCancelled, orderId, state, surface, token]);
+  }, [actorId, onCancelled, orderId, state, surface, token]);
 
   return {
     state,

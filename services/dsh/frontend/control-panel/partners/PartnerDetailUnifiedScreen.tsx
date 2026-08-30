@@ -8,6 +8,7 @@ import {
   CpButton,
   CpDescriptionList,
   CpDescriptionRow,
+  CpMutedInline,
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
@@ -20,6 +21,7 @@ import {
 } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import {
   useGovernedPartnerStoresController,
   usePartnerAuditController,
@@ -123,6 +125,9 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
     );
   }
 
+  const canManagePartners = hasServiceControlPanelPermission(sessionState.identity, "dsh", "partners.manage");
+  const canManageOperations = hasServiceControlPanelPermission(sessionState.identity, "dsh", "operations.manage");
+
   if (detail.detailState.kind === "idle" || detail.detailState.kind === "loading") {
     return <DetailPageFrame stateView={<CpStateView kind="loading" title="جاري تحميل ملف الشريك…" />}>{null}</DetailPageFrame>;
   }
@@ -150,7 +155,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
     : null;
 
   async function confirmTransition() {
-    if (!transitionTarget) return;
+    if (!canManagePartners || !transitionTarget) return;
     const reason = transitionReason.trim();
     if (REASON_REQUIRED.has(transitionTarget) && !reason) return;
     const succeeded = await detail.transition({
@@ -165,7 +170,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
   }
 
   async function confirmDocumentReview() {
-    if (!documentDecision || documentReason.trim().length < 5) return;
+    if (!canManagePartners || !documentDecision || documentReason.trim().length < 5) return;
     const succeeded = await documents.review(documentDecision.id, {
       decision: documentDecision.decision,
       reason: documentReason.trim(),
@@ -178,6 +183,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
   }
 
   async function confirmStoreOwnership() {
+    if (!canManagePartners) return;
     const id = storeId.trim();
     if (!id) return;
     const parsedVersion = storeVersion.trim() ? Number(storeVersion.trim()) : undefined;
@@ -233,11 +239,11 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
             ))}
             {section("قرارات دورة الحياة", (
               <div style={{ display: "grid", gap: 10 }}>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {canManagePartners ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {viewModel.allowedNextStatuses.map((status) => (
                     <CpButton key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>{getDshPartnerActivationStatusLabel(status)}</CpButton>
                   ))}
-                </div>
+                </div> : <CpMutedInline tight>قراءة فقط — انتقالات دورة الحياة تتطلب partners.manage.</CpMutedInline>}
                 {transitionTarget ? (
                   <>
                     <CpTextInput value={transitionReason} onChange={setTransitionReason} placeholder="سبب القرار أو الملاحظة التشغيلية" aria-label="سبب انتقال حالة الشريك" />
@@ -281,11 +287,11 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                         <tr key={document.id}>
                           <CpTableCell>{DOCUMENT_TYPE_LABELS[document.documentType as keyof typeof DOCUMENT_TYPE_LABELS] ?? "نوع وثيقة غير معروف"}</CpTableCell>
                           <CpTableCell>{DOCUMENT_REVIEW_STATUS_LABELS[document.reviewStatus] ?? "حالة غير معروفة"}</CpTableCell>
-                          <CpTableCell><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <CpTableCell>{canManagePartners ? <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                             <CpButton disabled={document.reviewStatus === "verified" || documents.actionState.kind === "loading"} onClick={() => { setDocumentDecision({ id: document.id, decision: "approved" }); setDocumentReason(""); }}>اعتماد</CpButton>
                             <CpButton onClick={() => { setDocumentDecision({ id: document.id, decision: "rejected" }); setDocumentReason(""); }}>رفض</CpButton>
                             <CpButton onClick={() => { setDocumentDecision({ id: document.id, decision: "needs_resubmit" }); setDocumentReason(""); }}>إعادة الرفع</CpButton>
-                          </div></CpTableCell>
+                          </div> : <CpMutedInline tight>قراءة فقط — مراجعة الوثائق تتطلب partners.manage.</CpMutedInline>}</CpTableCell>
                         </tr>
                       ))}</tbody>
                     </CpTable>
@@ -312,9 +318,9 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
         {tab === "stores" ? (
           <div style={{ display: "grid", gap: 12 }}>
             <div style={{ display: "grid", gap: 12 }}>
-               <PartnerStoreCreateWizard partnerId={partnerId} onStoreCreated={() => stores.reload()} />
+              {canManagePartners ? <PartnerStoreCreateWizard partnerId={partnerId} onStoreCreated={() => stores.reload()} /> : null}
             </div>
-            {section("إسناد أو نقل ملكية متجر", (
+            {canManagePartners ? section("إسناد أو نقل ملكية متجر", (
               <div style={{ display: "grid", gap: 8 }}>
                 <CpStatePanel role="status" title="النقل محكوم" code="المتجر المملوك يتطلب سببًا وإصدارًا حاليًا، ويُحجب تلقائيًا عن العميل حتى إعادة اعتماد جميع البوابات. العمليات المفتوحة تمنع النقل." />
                 <CpTextInput value={storeId} onChange={setStoreId} placeholder="معرف المتجر" aria-label="معرف المتجر" />
@@ -325,11 +331,11 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 </CpButton>
                 {stores.actionState.kind === "error" ? <CpStateView kind="error" title="تعذر تنفيذ ملكية المتجر" code={stores.actionState.message} /> : null}
               </div>
-            ))}
+            )) : <CpMutedInline tight>قراءة فقط — إسناد أو نقل ملكية المتجر يتطلب partners.manage.</CpMutedInline>}
             {stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل الفروع…" />
               : stores.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد فروع مرتبطة." />
                 : stores.state.kind === "error" ? <CpStateView kind="error" title="تعذر تحميل الفروع" code={stores.state.message} />
-                  : <><CpTable aria-label="فروع الشريك"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell><CpTableHeaderCell>التسعير</CpTableHeaderCell></tr></thead><tbody>{stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell><CpButton onClick={() => setPricingStoreId((current) => current === store.id ? null : store.id)}>{pricingStoreId === store.id ? "إغلاق" : "إدارة التسعير"}</CpButton></CpTableCell></tr>)}</tbody></CpTable>{pricingStoreId ? <OperatorDeliveryPricingPanel storeId={pricingStoreId} /> : null}</>
+                : <><CpTable aria-label="فروع الشريك"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell><CpTableHeaderCell>التسعير</CpTableHeaderCell></tr></thead><tbody>{stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell>{canManageOperations ? <CpButton onClick={() => setPricingStoreId((current) => current === store.id ? null : store.id)}>{pricingStoreId === store.id ? "إغلاق" : "إدارة التسعير"}</CpButton> : <CpMutedInline tight>قراءة فقط</CpMutedInline>}</CpTableCell></tr>)}</tbody></CpTable>{pricingStoreId && canManageOperations ? <OperatorDeliveryPricingPanel storeId={pricingStoreId} /> : null}</>
             }
           </div>
         ) : null}

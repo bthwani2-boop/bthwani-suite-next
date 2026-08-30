@@ -2,7 +2,11 @@ package specialrequests
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,6 +21,13 @@ const (
 	InformationExchangeResponded = "responded"
 	maxInformationLength         = 2000
 )
+
+var ErrInformationResponseIdempotencyConflict = errors.New("special request information response idempotency conflict")
+
+type InformationResponseMutationContext struct {
+	IdempotencyKey string
+	CorrelationID  string
+}
 
 // InformationExchange is the governed conversation required when an operator
 // cannot continue a special request without additional client input. It is a
@@ -183,11 +194,19 @@ func (s *Service) RespondClientInformationInOperatorContext(
 	operatorContextID, requestID, clientID, exchangeID string,
 	expectedVersion int,
 	response string,
+	mutation InformationResponseMutationContext,
 ) (*SpecialRequest, *InformationExchange, error) {
 	response, err := validateInformationText("response", response, 1)
 	if err != nil {
 		return nil, nil, err
 	}
+	mutation.IdempotencyKey = strings.TrimSpace(mutation.IdempotencyKey)
+	mutation.CorrelationID = strings.TrimSpace(mutation.CorrelationID)
+	if len(mutation.IdempotencyKey) < 8 || len(mutation.IdempotencyKey) > 200 ||
+		len(mutation.CorrelationID) < 8 || len(mutation.CorrelationID) > 200 {
+		return nil, nil, fmt.Errorf("%w: idempotency and correlation context is required", ErrInvalid)
+	}
+	fingerprint := informationResponseFingerprint(operatorContextID, requestID, clientID, exchangeID, expectedVersion, response)
 	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, requestID)
 	if err != nil {
 		return nil, nil, err
@@ -195,15 +214,49 @@ func (s *Service) RespondClientInformationInOperatorContext(
 	if current.ClientID != clientID {
 		return nil, nil, ErrNotFound
 	}
-	if current.Status != StatusNeedsCustomerInput || current.WorkflowStage == nil || *current.WorkflowStage != "customer_information" {
-		return nil, nil, fmt.Errorf("%w: no client information response is currently expected", ErrConflict)
-	}
-
 	tx, err := s.repo.DB().BeginTx(ctx, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+		operatorContextID+"|special-request-information-response|"+clientID+"|"+mutation.IdempotencyKey); err != nil {
+		return nil, nil, err
+	}
+
+	var storedRequestID, storedFingerprint, storedExchangeID string
+	receiptErr := tx.QueryRowContext(ctx, `
+		SELECT special_request_id::text, request_fingerprint, exchange_id::text
+		FROM dsh_special_request_information_response_receipts
+		WHERE operator_context_id = $1 AND client_id = $2 AND idempotency_key = $3
+		FOR UPDATE`, operatorContextID, clientID, mutation.IdempotencyKey).Scan(
+		&storedRequestID, &storedFingerprint, &storedExchangeID)
+	if receiptErr == nil {
+		if storedRequestID != requestID || storedFingerprint != fingerprint {
+			return nil, nil, ErrInformationResponseIdempotencyConflict
+		}
+		exchange, err := scanInformationExchange(tx.QueryRowContext(ctx, `SELECT `+informationExchangeColumns+`
+			FROM dsh_special_request_information_exchanges
+			WHERE id = $1 AND operator_context_id = $2 AND special_request_id = $3 AND client_id = $4`,
+			storedExchangeID, operatorContextID, requestID, clientID).Scan)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, fmt.Errorf("%w: committed information exchange is missing", ErrConflict)
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, nil, err
+		}
+		return current, exchange, nil
+	}
+	if !errors.Is(receiptErr, sql.ErrNoRows) {
+		return nil, nil, receiptErr
+	}
+
+	if current.Status != StatusNeedsCustomerInput || current.WorkflowStage == nil || *current.WorkflowStage != "customer_information" {
+		return nil, nil, fmt.Errorf("%w: no client information response is currently expected", ErrConflict)
+	}
 
 	pending, err := scanInformationExchange(tx.QueryRowContext(ctx, `SELECT `+informationExchangeColumns+`
 		FROM dsh_special_request_information_exchanges
@@ -243,11 +296,7 @@ func (s *Service) RespondClientInformationInOperatorContext(
 		return nil, nil, err
 	}
 
-	correlationID := ""
-	if current.CorrelationID != nil {
-		correlationID = *current.CorrelationID
-	}
-	if err := WriteAuditEvent(tx, requestID, clientID, "client", "respond_information", response, correlationID, requestJSON(current), requestJSON(updated)); err != nil {
+	if err := WriteAuditEvent(tx, requestID, clientID, "client", "respond_information", response, mutation.CorrelationID, requestJSON(current), requestJSON(updated)); err != nil {
 		return nil, nil, fmt.Errorf("write audit event: %w", err)
 	}
 	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
@@ -255,12 +304,37 @@ func (s *Service) RespondClientInformationInOperatorContext(
 		EntityType:    "special_request",
 		EntityID:      requestID,
 		Payload:       requestJSON(updated),
-		CorrelationID: correlationID,
+		CorrelationID: mutation.CorrelationID,
 	}); err != nil {
+		return nil, nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO dsh_special_request_information_response_receipts
+		(operator_context_id, client_id, special_request_id, idempotency_key, request_fingerprint,
+		 correlation_id, exchange_id, result_version)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		operatorContextID, clientID, requestID, mutation.IdempotencyKey, fingerprint,
+		mutation.CorrelationID, exchange.ID, updated.Version); err != nil {
 		return nil, nil, err
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, nil, err
 	}
 	return updated, exchange, nil
+}
+
+func informationResponseFingerprint(
+	operatorContextID, requestID, clientID, exchangeID string,
+	expectedVersion int,
+	response string,
+) string {
+	payload, _ := json.Marshal(struct {
+		OperatorContextID string `json:"operatorContextId"`
+		RequestID         string `json:"requestId"`
+		ClientID          string `json:"clientId"`
+		ExchangeID        string `json:"exchangeId"`
+		ExpectedVersion   int    `json:"expectedVersion"`
+		Response          string `json:"response"`
+	}{operatorContextID, requestID, clientID, exchangeID, expectedVersion, response})
+	digest := sha256.Sum256(payload)
+	return hex.EncodeToString(digest[:])
 }

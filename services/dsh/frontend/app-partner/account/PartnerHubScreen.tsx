@@ -19,6 +19,8 @@ import {
   getWltDshPartnerOperationalModeCommission,
   WltDshPartnerBridge,
 } from "@bthwani/dsh/wlt";
+import { useNotificationsController } from "../../shared/notifications";
+import type { DshNotificationPreference } from "../../shared/notifications";
 import { resolveDshStoreClientVisibility } from "../../shared/partner/dsh-client-visibility.model";
 import {
   isDshPartnerActivationComplete,
@@ -30,9 +32,6 @@ import {
   fetchPartnerStoreSettings,
 } from "../../shared/partner";
 import type {
-  BThwaniAppearanceMode,
-  NotificationPreferenceId,
-  NotificationPreferenceState,
   PartnerCoverageZone,
   PartnerOperationalMode,
 } from "../../shared/partner/partner-hub.types";
@@ -55,23 +54,6 @@ import {
 import { OperationsPanel } from "./PartnerOperationsPanel";
 import { AnalyticsInsightsPanel } from "./PartnerAnalyticsInsightsPanel";
 import { PartnerHubSettingsPanel } from "./PartnerHubSettingsPanel";
-
-function useAppPartnerAppearance() {
-  const [mode, setMode] = React.useState<BThwaniAppearanceMode>("lightPremium");
-  return { hydrated: true, mode, setMode };
-}
-
-const failClosedNotificationPreferences: NotificationPreferenceState = {
-  orders: false,
-  operations: false,
-  inventory: false,
-  finance: false,
-  marketing: false,
-  system: false,
-  sound: false,
-  dailyDigest: false,
-  priorityOnly: false,
-};
 
 type PartnerStoreSettingsPayload = {
   readonly deliveryModes: readonly string[];
@@ -163,8 +145,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     onOpenSupportDirectory,
     onOpenWalletHub,
     onOpenBell,
-    onOpenOperationalFlow,
-    onOpenSupportScreen,
+    appearance,
     onOpenStoreCourierSetup,
     onOpenCommercialModel,
     canonicalStoreId,
@@ -181,26 +162,31 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     reload: reloadSelfStatus,
   } = usePartnerSelfController(identity.state.kind, canonicalStoreId);
   const {
-    hydrated: appearanceHydrated,
-    mode: appearanceMode,
-    setMode: setAppearanceMode,
-  } = useAppPartnerAppearance();
+    preferenceState: notificationPreferenceState,
+    busyAction: notificationBusyAction,
+    actionError: notificationActionError,
+    reload: reloadNotifications,
+    savePreference: saveNotificationPreference,
+  } = useNotificationsController(identity.state.kind);
 
   const [internalSection, setInternalSection] =
     React.useState<PartnerHubSection>("hub");
-  const [notificationPreferences, setNotificationPreferences] =
-    React.useState<NotificationPreferenceState>(
-      failClosedNotificationPreferences,
-    );
-  const [notificationError, setNotificationError] = React.useState<string | null>(
-    null,
-  );
   const [showAdvancedNotifications, setShowAdvancedNotifications] =
     React.useState(false);
   const [selectedModeId, setSelectedModeId] = React.useState<string>("");
   const [storeRuntime, setStoreRuntime] = React.useState<StoreRuntimeState>({
     kind: "idle",
   });
+  const mountedRef = React.useRef(true);
+  const storeRuntimeRequestSeqRef = React.useRef(0);
+
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      storeRuntimeRequestSeqRef.current += 1;
+    };
+  }, []);
 
   const resolvedSurfaceState = state ?? (canonicalStoreId ? "ready" : "error");
   const activeSection = section ?? internalSection;
@@ -211,13 +197,22 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   );
 
   const loadStoreRuntime = React.useCallback(async () => {
-    if (!canonicalStoreId || identity.state.kind !== "authenticated") return;
+    const requestSeq = ++storeRuntimeRequestSeqRef.current;
+    if (!canonicalStoreId || identity.state.kind !== "authenticated") {
+      if (mountedRef.current) {
+        setStoreRuntime({ kind: "idle" });
+        setSelectedModeId("");
+      }
+      return false;
+    }
     setStoreRuntime({ kind: "loading" });
+    setSelectedModeId("");
     try {
       const [rawSettings, coverageZones] = await Promise.all([
         fetchPartnerStoreSettings(canonicalStoreId),
         fetchPartnerStoreCoverageZones(canonicalStoreId),
       ]);
+      if (!mountedRef.current || requestSeq !== storeRuntimeRequestSeqRef.current) return false;
       const settings = parseStoreSettings(rawSettings);
       const serviceModes = mapServiceModes(settings.deliveryModes);
       setStoreRuntime({
@@ -228,7 +223,9 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
       });
       const firstEnabled = serviceModes.find((mode) => mode.enabled);
       setSelectedModeId(firstEnabled?.id ?? "");
+      return true;
     } catch (error) {
+      if (!mountedRef.current || requestSeq !== storeRuntimeRequestSeqRef.current) return false;
       setStoreRuntime({
         kind: "error",
         message:
@@ -237,6 +234,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             : "تعذر تحميل إعدادات المتجر ومناطق التغطية.",
       });
       setSelectedModeId("");
+      return false;
     }
   }, [canonicalStoreId, identity.state.kind]);
 
@@ -244,43 +242,18 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     void loadStoreRuntime();
   }, [loadStoreRuntime]);
 
-  const updateNotificationPreference = React.useCallback(
-    (preferenceId: NotificationPreferenceId, nextValue: boolean) => {
-      const previous = notificationPreferences[preferenceId];
-      setNotificationError(null);
-      setNotificationPreferences((current) => ({
-        ...current,
-        [preferenceId]: nextValue,
-      }));
-      void import("../../shared/notifications")
-        .then(({ updateNotificationPreferences }) =>
-          updateNotificationPreferences(preferenceId, nextValue),
-        )
-        .catch((error: unknown) => {
-          setNotificationPreferences((current) => ({
-            ...current,
-            [preferenceId]: previous,
-          }));
-          setNotificationError(
-            error instanceof Error
-              ? error.message
-              : "تعذر حفظ تفضيل الإشعار.",
-          );
-        });
-    },
-    [notificationPreferences],
-  );
+  const notificationPreferences: readonly DshNotificationPreference[] =
+    notificationPreferenceState.kind === "success"
+      ? notificationPreferenceState.preferences
+      : [];
 
   const openOrderAlerts = React.useCallback(() => {
-    onOpenOperationalFlow?.("order-alerts");
     onOpenBell?.();
-  }, [onOpenBell, onOpenOperationalFlow]);
+  }, [onOpenBell]);
 
   const openOperationsDirectory = React.useCallback(() => {
-    onOpenOperationalFlow?.("order-issue-queue");
     onOpenSupportDirectory?.();
-    onOpenSupportScreen?.("order-issue-queue");
-  }, [onOpenOperationalFlow, onOpenSupportDirectory, onOpenSupportScreen]);
+  }, [onOpenSupportDirectory]);
 
   const openOrdersSearch = React.useCallback(() => {
     if (onOpenOrdersSearch) onOpenOrdersSearch();
@@ -371,30 +344,6 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
         title="تعذر تحميل حالة الانضمام"
         description={selfStatusState.message}
         actionLabel="إعادة المحاولة"
-        onActionPress={reloadSelfStatus}
-      />
-    );
-  }
-
-  if (selfStatusState.kind === "not_found") {
-    return (
-      <StateView
-        tone="warning"
-        title="ملف الشريك غير موجود"
-        description="الجلسة الحالية غير مرتبطة بملف شريك صالح في DSH."
-        actionLabel="إعادة التحقق"
-        onActionPress={reloadSelfStatus}
-      />
-    );
-  }
-
-  if (selfStatusState.kind === "forbidden") {
-    return (
-      <StateView
-        tone="danger"
-        title="غير مصرح بعرض ملف الشريك"
-        description="تحقق من هوية الشريك ونطاق المتجر المرتبط بهذه الجلسة."
-        actionLabel="إعادة التحقق"
         onActionPress={reloadSelfStatus}
       />
     );
@@ -545,19 +494,19 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           icon={sectionCopy.settings.icon}
           onBack={() => updateSection("hub")}
         >
-          {notificationError ? (
-            <StateView
-              tone="danger"
-              title="تعذر حفظ تفضيل الإشعار"
-              description={notificationError}
-            />
-          ) : null}
           <PartnerHubSettingsPanel
-            appearanceMode={appearanceMode}
-            appearanceHydrated={appearanceHydrated}
-            setAppearanceMode={setAppearanceMode}
+            appearanceMode={appearance.mode}
+            appearanceHydrated={appearance.hydrated}
+            appearanceError={appearance.error}
+            setAppearanceMode={appearance.setMode}
             notificationPreferences={notificationPreferences}
-            updateNotificationPreference={updateNotificationPreference}
+            notificationPreferenceState={notificationPreferenceState.kind}
+            notificationPreferenceError={notificationPreferenceState.kind === "error"
+              ? notificationPreferenceState.message
+              : notificationActionError}
+            notificationBusy={notificationBusyAction !== null}
+            onSaveNotificationPreference={saveNotificationPreference}
+            onReloadNotificationPreferences={reloadNotifications}
             showAdvancedNotifications={showAdvancedNotifications}
             setShowAdvancedNotifications={setShowAdvancedNotifications}
             resolvedListingEnabled={resolvedListingEnabled}

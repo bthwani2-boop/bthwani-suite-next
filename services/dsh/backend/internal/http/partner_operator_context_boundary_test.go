@@ -27,10 +27,10 @@ func identitySessionServer(t *testing.T, identity auth.Identity) *httptest.Serve
 func TestTrustedPartnerOperatorContextComesFromIdentity(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "OperatorContext-a")
 	identityServer := identitySessionServer(t, auth.Identity{
-		Subject:   "operator-a",
-		OperatorContextID:  "OperatorContext-a",
-		Roles:     []string{"operator"},
-		AuthState: "authenticated",
+		Subject:           "operator-a",
+		OperatorContextID: "OperatorContext-a",
+		Roles:             []string{"operator"},
+		AuthState:         "authenticated",
 	})
 	protected := newProtectedStoreServer(nil, auth.NewClient(identityServer.URL), nil, nil, nil)
 
@@ -90,10 +90,10 @@ func TestTrustedPartnerOperatorContextRejectsIdentityWithoutOperatorContext(t *t
 func TestTrustedPartnerOperatorContextUsesIdentityOperatorContextInsteadOfProcessDefault(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "OperatorContext-a")
 	identityServer := identitySessionServer(t, auth.Identity{
-		Subject:   "operator-b",
-		OperatorContextID:  "OperatorContext-b",
-		Roles:     []string{"operator"},
-		AuthState: "authenticated",
+		Subject:           "operator-b",
+		OperatorContextID: "OperatorContext-b",
+		Roles:             []string{"operator"},
+		AuthState:         "authenticated",
 	})
 	protected := newProtectedStoreServer(nil, auth.NewClient(identityServer.URL), nil, nil, nil)
 

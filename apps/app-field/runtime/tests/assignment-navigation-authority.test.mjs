@@ -40,3 +40,12 @@ test("assignment onboarding re-reads current DSH truth and fails closed", async 
   assert.match(resolver, /resolution\.assignmentId !== assignmentId/);
   assert.match(resolver, /controller\.state\.partnerId \?\? assignment\.draftPartnerId/);
 });
+
+test("field onboarding cannot create durable fake partner identity", async () => {
+  const controller = await source("services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx");
+  const screen = await source("services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx");
+  assert.doesNotMatch(controller, /placeholder\?: boolean|متجر افتراضي|temp-\" \+ Date\.now/);
+  assert.doesNotMatch(screen, /ensureDraftCreated\(false/);
+  assert.match(controller, /validateIdentityStep\(form\)/);
+  assert.match(controller, /validateOwnerStep\(form\)/);
+});

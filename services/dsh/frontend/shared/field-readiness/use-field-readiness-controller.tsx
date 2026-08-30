@@ -57,6 +57,8 @@ async function enqueueIfOffline<P>(
     payload,
     context.idempotencyKey,
     context.correlationId,
+    context.intentFingerprint,
+    context.operationId,
   );
 }
 
@@ -81,8 +83,8 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
   const startVisit = useCallback(async (input: DshCreateVisitInput) => {
     setActionState(visitActionSubmittingState());
     const context = buildFieldMutationContext(
-      "create-visit",
-      [storeId, input.visitType ?? "onboarding", input.startLocation.capturedAt],
+      "create_visit",
+      { storeId, input },
     );
     try {
       const visit = await createFieldVisit(storeId, input, context);
@@ -105,7 +107,7 @@ export function useFieldVisitController(storeId: string, authKind = "unauthentic
 
   const completeVisitAction = useCallback(async (visitId: string, input: DshCompleteVisitInput) => {
     setActionState(visitActionSubmittingState());
-    const context = buildFieldMutationContext("complete-visit", [visitId]);
+    const context = buildFieldMutationContext("complete_visit", { visitId, input });
     try {
       const visit = await completeFieldVisit(visitId, input, context);
       setActionState(visitActionSuccessState(visit));
@@ -175,8 +177,8 @@ export function useFieldChecklistController(
     }
     setCheckActionState(checkActionSubmittingState());
     const context = buildFieldMutationContext(
-      "upsert-check",
-      [visitId, input.checkType, input.status, input.evidenceUrl ?? "", input.notes ?? ""],
+      "upsert_readiness_check",
+      { visitId, input },
     );
     try {
       const check = await upsertReadinessCheck(visitId, input, context);
@@ -225,8 +227,8 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
   const raiseEscalation = useCallback(async (storeId: string, input: DshCreateEscalationInput) => {
     setActionState(escalationActionSubmittingState());
     const context = buildFieldMutationContext(
-      "create-escalation",
-      [storeId, input.visitId ?? "", input.severity, input.category, input.description],
+      "create_escalation",
+      { storeId, input },
     );
     try {
       const escalation = await createReadinessEscalation(storeId, input, context);

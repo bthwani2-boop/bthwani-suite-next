@@ -376,6 +376,7 @@ func (s *protectedStoreServer) handleReschedulePickupWindow(w http.ResponseWrite
 	}
 	session, err := pickup.NewService(s.db).RescheduleWindow(
 		r.Context(),
+		actor.OperatorContextID,
 		r.PathValue("orderId"),
 		body.NewExpiry,
 		actor.ID,

@@ -202,7 +202,7 @@ function activationEvidenceError(form: FormState, kind: IndependentProviderKind)
   return null;
 }
 
-export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actorId: string; readonly kind: IndependentProviderKind }) {
+export function ProviderOperationalCorePanel({ actorId, kind, canUpdate }: { readonly actorId: string; readonly kind: IndependentProviderKind; readonly canUpdate: boolean }) {
   const { state: identityState } = useIdentitySession();
   const operatorContextId = identityState.kind === "authenticated"
     ? identityState.identity.operatorContextId
@@ -323,6 +323,7 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
   };
 
   const save = async () => {
+    if (!canUpdate) return;
     const validationError = activationEvidenceError(form, kind);
     if (validationError) {
       setError(validationError);
@@ -375,6 +376,8 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {!canUpdate ? <CpStatePanel role="status" title="نواة الملف التشغيلي للقراءة فقط" description="لا تملك جلسة لوحة التحكم صلاحية provider:update على Workforce." /> : null}
+      <fieldset disabled={!canUpdate} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <Section title="مصدر الترشيح">
         <select value={form.referralSourceType} onChange={(event) => changeReferralSource(event.target.value as ReferralSourceType)} style={selectStyle} aria-label="مصدر الترشيح">
           {REFERRAL_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -467,6 +470,7 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
       {error ? <CpStatePanel role="alert" title="تعذر الحفظ" description={error} /> : null}
       {success ? <CpStatePanel role="status" title={success} /> : null}
       <CpButton variant="primary" disabled={saving} onClick={() => void save()}>{saving ? "جارٍ الحفظ…" : "حفظ التقدم وإعادة فحص التفعيل"}</CpButton>
+      </fieldset>
     </div>
   );
 }

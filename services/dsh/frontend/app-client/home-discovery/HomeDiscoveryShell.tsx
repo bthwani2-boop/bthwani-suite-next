@@ -22,8 +22,7 @@ import {
   radius,
   spacing,
 } from "@bthwani/ui-kit";
-import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
-import { createClientEphemeralId } from "../../../../../apps/app-client/runtime/src/platform/client-platform-actions";
+import { useDshClientPlatform } from "../client-platform-context";
 import {
   fetchHomePublicReels,
   recordHomeMarketingEvent,
@@ -69,6 +68,7 @@ export function HomeDiscoveryShell({
   onMarketingAction,
   onRetry,
 }: Props) {
+  const { createEphemeralId } = useDshClientPlatform();
   const isRtl = I18nManager.isRTL;
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
@@ -76,12 +76,15 @@ export function HomeDiscoveryShell({
   const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
   const [reelsLoadState, setReelsLoadState] = React.useState<HomeReelsLoadState>("idle");
   const [videoOpenRequest, setVideoOpenRequest] = React.useState(0);
-  const [viewerRef] = React.useState(() => createClientEphemeralId("home"));
+  const [viewerRef] = React.useState(() => createEphemeralId("home"));
   const reelsRequestSequence = React.useRef(0);
+  const discoveryRequestSequence = React.useRef(0);
   const recordedImpressions = React.useRef(new Set<string>());
 
   const [queriedStores, setQueriedStores] = React.useState<readonly HomeStoreCardViewModel[] | null>(null);
   const [isQuerying, setIsQuerying] = React.useState(false);
+  const [queryError, setQueryError] = React.useState<string | null>(null);
+  const [discoveryRetryToken, setDiscoveryRetryToken] = React.useState(0);
 
   const emitMarketingEvent = React.useCallback((
     eventType: "impression" | "click",
@@ -183,6 +186,7 @@ export function HomeDiscoveryShell({
         ? state.data.categories.find((item) => item.id === target || item.destinationTarget === target)
         : undefined;
       if (category) openCategoryDestination(category);
+      else onMarketingAction?.("unsupported", target);
       return;
     }
     onMarketingAction?.(actionType, target);
@@ -212,13 +216,18 @@ export function HomeDiscoveryShell({
   React.useEffect(() => {
     if (state.kind !== "success") return;
 
+    const requestId = discoveryRequestSequence.current + 1;
+    discoveryRequestSequence.current = requestId;
+    setQueriedStores(null);
+    setQueryError(null);
+
     if (!normalizedQuery && activeFilter === 'all' && activeCategoryId === null) {
-      setQueriedStores(null);
+      setIsQuerying(false);
       return;
     }
 
+    setIsQuerying(true);
     const timeoutId = setTimeout(() => {
-      setIsQuerying(true);
       fetchDiscoveryStores({
         ...(state.data.context.cityCode ? { cityCode: state.data.context.cityCode } : {}),
         ...(state.data.context.serviceAreaCode ? { serviceAreaCode: state.data.context.serviceAreaCode } : {}),
@@ -227,16 +236,22 @@ export function HomeDiscoveryShell({
         sort: activeFilter === 'nearest' ? 'distance' : 'rating',
         ...(activeFilter === 'offers' ? { isFreeDelivery: true } : {}),
       }).then((stores) => {
+        if (discoveryRequestSequence.current !== requestId) return;
         setQueriedStores(stores);
       }).catch((e) => {
-         setQueriedStores([]);
+        if (discoveryRequestSequence.current !== requestId) return;
+        setQueriedStores(null);
+        setQueryError(e instanceof Error ? e.message : "تعذر تحديث نتائج المتاجر من DSH.");
       }).finally(() => {
-        setIsQuerying(false);
+        if (discoveryRequestSequence.current === requestId) setIsQuerying(false);
       });
     }, 300);
 
-    return () => clearTimeout(timeoutId);
-  }, [normalizedQuery, activeFilter, activeCategoryId, state.kind, state.kind === "success" ? state.data.context : null]);
+    return () => {
+      clearTimeout(timeoutId);
+      if (discoveryRequestSequence.current === requestId) discoveryRequestSequence.current += 1;
+    };
+  }, [normalizedQuery, activeFilter, activeCategoryId, discoveryRetryToken, state.kind, state.kind === "success" ? state.data.context : null]);
 
   if (state.kind === "loading") {
     return <Screen padded={false}><LoadingState title="جاري التحميل..." /></Screen>;
@@ -305,11 +320,24 @@ export function HomeDiscoveryShell({
           activeFilter={activeFilter}
           onFilterChange={onFilterChange}
         />
-        <HomeStoreFeedSection
-          stores={filteredStores}
-          activeFilter={activeFilter}
-          onStorePress={onStorePress}
-        />
+        {isQuerying ? (
+          <LoadingState title="جاري تحديث نتائج المتاجر…" />
+        ) : queryError ? (
+          <ErrorState
+            title="تعذر تحديث النتائج"
+            description={queryError}
+            actionLabel="إعادة المحاولة"
+            onActionPress={() => {
+              setDiscoveryRetryToken((current) => current + 1);
+            }}
+          />
+        ) : (
+          <HomeStoreFeedSection
+            stores={filteredStores}
+            activeFilter={activeFilter}
+            onStorePress={onStorePress}
+          />
+        )}
       </ScrollView>
 
       <Modal
@@ -377,6 +405,7 @@ function CategoryOption({
   readonly isRtl: boolean;
   readonly onPress: () => void;
 }) {
+  const { RemoteImage } = useDshClientPlatform();
   const iconIsImageUrl = /^https?:\/\//i.test(icon) || icon.startsWith("/");
 
   return (
@@ -398,7 +427,7 @@ function CategoryOption({
       <Text style={[styles.dropdownLabel, selected && styles.dropdownLabelActive]}>{label}</Text>
       <View style={[styles.emojiContainer, selected && styles.emojiContainerActive]}>
         {iconIsImageUrl ? (
-          <ClientRemoteImage
+          <RemoteImage
             uri={icon}
             style={styles.dropdownIconImage}
             contentFit="contain"

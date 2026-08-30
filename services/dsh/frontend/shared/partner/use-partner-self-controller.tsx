@@ -1,6 +1,6 @@
 import { classifyGovernedError } from "../_kernel/governed-problem";
 import type { DshPartnerErrorState } from "./partner.states";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchPartnerSelfStatus, fetchPartnerSelfReadiness } from "./partner.api";
 import type { DshPartnerDetailState, DshPartnerReadinessState } from "./partner.states";
 import { buildPartnerDetailViewModel, buildPartnerReadinessViewModel } from "./partner.view-model";
@@ -25,29 +25,57 @@ export function usePartnerSelfController(authKind: string, storeId?: string) {
   const [statusState, setStatusState] = useState<DshPartnerDetailState>({ kind: "idle" });
   const [readinessState, setReadinessState] = useState<DshPartnerReadinessState>({ kind: "idle" });
   const isAuth = authKind === "authenticated";
+  const mountedRef = useRef(true);
+  const statusRequestSeqRef = useRef(0);
+  const readinessRequestSeqRef = useRef(0);
 
-  const loadStatus = useCallback(async () => {
-    if (!isAuth) return;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      statusRequestSeqRef.current += 1;
+      readinessRequestSeqRef.current += 1;
+    };
+  }, []);
+
+  const loadStatus = useCallback(async (): Promise<boolean> => {
+    const requestSeq = ++statusRequestSeqRef.current;
+    if (!isAuth) {
+      if (mountedRef.current) setStatusState({ kind: "idle" });
+      return false;
+    }
     setStatusState({ kind: "loading" });
     try {
       const partner = await fetchPartnerSelfStatus(storeId);
+      if (!mountedRef.current || requestSeq !== statusRequestSeqRef.current) return false;
       setStatusState({ kind: "success", partner });
+      return true;
     } catch (err) {
+      if (!mountedRef.current || requestSeq !== statusRequestSeqRef.current) return false;
       // app-partner Product Truth exposes one recoverable error state rather
       // than separate operator-facing not-found/forbidden states. Preserve the
       // precise explanation while routing both through the Hub retry boundary.
       setStatusState(partnerSelfErrorState(err));
+      return false;
     }
   }, [isAuth, storeId]);
 
-  const loadReadiness = useCallback(async () => {
-    if (!isAuth) return;
+  const loadReadiness = useCallback(async (): Promise<boolean> => {
+    const requestSeq = ++readinessRequestSeqRef.current;
+    if (!isAuth) {
+      if (mountedRef.current) setReadinessState({ kind: "idle" });
+      return false;
+    }
     setReadinessState({ kind: "loading" });
     try {
       const readiness = await fetchPartnerSelfReadiness(storeId);
+      if (!mountedRef.current || requestSeq !== readinessRequestSeqRef.current) return false;
       setReadinessState({ kind: "success", readiness });
+      return true;
     } catch (err) {
+      if (!mountedRef.current || requestSeq !== readinessRequestSeqRef.current) return false;
       setReadinessState(partnerSelfErrorState(err));
+      return false;
     }
   }, [isAuth, storeId]);
 

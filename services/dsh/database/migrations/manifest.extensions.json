@@ -352,6 +352,188 @@
       "sha256": "0f8fc3b6cc21fe8a4c4b0ab7cf17c3375729eb0c3e5854dd08727beec3cb646d",
       "historicalPrefix": "1049",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 291,
+      "file": "dsh-1050_operational_incident_idempotency.sql",
+      "sha256": "51c972526c237019083ada10acc4b32313400283fae331696fd2fda901bbca09",
+      "historicalPrefix": "1050",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 292,
+      "file": "dsh-1051_operational_incident_canonical_context.sql",
+      "sha256": "5127334eaf578cf0f37b0fd1b66cf5711405f6bd116ab6984210d5f108fa5b70",
+      "historicalPrefix": "1051",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 293,
+      "file": "dsh-1052_aggregate_operator_context_invariants.sql",
+      "sha256": "d8b4ad3790bf74ec3ba3fea3a6e2e2e6ce4d9911a2c5dedc478637d5fc583b8e",
+      "historicalPrefix": "1052",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 294,
+      "file": "dsh-1053_incident_payload_and_delivery_context.sql",
+      "sha256": "f03d8eff1ac9a153019b612a6eea3cd99f552ec5970049a0fc357ad7797a4256",
+      "historicalPrefix": "1053",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 295,
+      "file": "dsh-1054_partner_delivery_command_receipt_context.sql",
+      "sha256": "0888a98fff2557585c669b53cc590f4b4d1960818a602e2b5d0f60bd2d6880a1",
+      "historicalPrefix": "1054",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 296,
+      "file": "dsh-1055_dispatch_assignment_context_integrity.sql",
+      "sha256": "a0032b196944beadef29b0d28a551b20edd55fee44a6d71a3a24c49021437020",
+      "historicalPrefix": "1055",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 297,
+      "file": "dsh-1056_delivery_sla_alert_context.sql",
+      "sha256": "686ac61adbbacb7c6a4b2307d4e54017b158be6535f872d8d9543ca6ec113c1a",
+      "historicalPrefix": "1056",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 298,
+      "file": "dsh-1057_administration_operator_context_scope.sql",
+      "sha256": "bf2d5ff64b578bc4de22dd0368d4e05cc22cc5521fd7cc71d2d7ad947f538f04",
+      "historicalPrefix": "1057",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 299,
+      "file": "dsh-1058_product_duplicate_candidate_identity.sql",
+      "sha256": "3450d0136a605cd2cfcb99e9f6dd1abbf3b5a74b8e6e014e0a318c4c7a02f396",
+      "historicalPrefix": "1058",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 300,
+      "file": "dsh-1059_delivery_proof_special_request_source.sql",
+      "sha256": "2b9dc112623486e77fe23371f1ece7f4f5ad57f4962ff55a17dbc8db9d893092",
+      "historicalPrefix": "1059",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 301,
+      "file": "dsh-1060_provider_rating_mutation_idempotency.sql",
+      "sha256": "0b2e13012fc69f085c410bcfe74421bddbfbe5d3002cb94c36d63c313f5b8115",
+      "historicalPrefix": "1060",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 302,
+      "file": "dsh-1061_preparation_decision_idempotency.sql",
+      "sha256": "9861712fcedda80b8252cdfba53ce7cf9579542a5ad272353910ab8d23040598",
+      "historicalPrefix": "1061",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 303,
+      "file": "dsh-1062_captain_availability_command_receipts.sql",
+      "sha256": "302c855f20b8795444ace34834306e07c90bfd0dc595636f66f9c0ba23c36278",
+      "historicalPrefix": "1062",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 304,
+      "file": "dsh-1063_client_profile_mutation_idempotency.sql",
+      "sha256": "b6efca91596314b7d422400304448edcef95d83b2365e37fe68e0bc76d9b1cd0",
+      "historicalPrefix": "1063",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 305,
+      "file": "dsh-1065_special_request_information_response_idempotency.sql",
+      "sha256": "3ad55910a36aed9546b903d08482f92585491e80cbb4bea74cddbb6732708948",
+      "historicalPrefix": "1065",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 306,
+      "file": "dsh-1064_captain_assignment_command_receipts.sql",
+      "sha256": "ef81531426f9293f9fa4fbafe388f554618f61dfb107b7be11c49fe94556d26e",
+      "historicalPrefix": "1064",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 307,
+      "file": "dsh-1066_captain_delivery_status_command_receipts.sql",
+      "sha256": "72b0ed3743f69f36941851c7240bcb532bd4cc3dd01867930f59fc00a6d6bacd",
+      "historicalPrefix": "1066",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 308,
+      "file": "dsh-1067_delivery_exception_command_identity.sql",
+      "sha256": "ebd6eb36b5e34a05186a2bc5be869d755ccd115e4c0e10788dfc61ff016a4edd",
+      "historicalPrefix": "1067",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 309,
+      "file": "dsh-1068_return_to_store_command_receipts.sql",
+      "sha256": "319773d1cde82be2b7606842e0166ca2d0438e8429dd74f788c97f93da512d7d",
+      "historicalPrefix": "1068",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 310,
+      "file": "dsh-1069_store_captain_handoff_command_receipts.sql",
+      "sha256": "5eff254b7d3e0c5679207a4c0833fc6dbb97fae7bffba9ab8ba044ad112ada33",
+      "historicalPrefix": "1069",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 311,
+      "file": "dsh-1070_store_captain_handoff_order_fk.sql",
+      "sha256": "03c0bd27328998d240ed2b3db6d0823fc1f3fe791b6898f0b79701e5fa35d3bc",
+      "historicalPrefix": "1070",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 312,
+      "file": "dsh-1071_delivery_exception_operation_command_receipts.sql",
+      "sha256": "207e9bb49624b2bbabb577c7f7ca87f950e4ccbd1a564e6e554c0c27cb1c8143",
+      "historicalPrefix": "1071",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 313,
+      "file": "dsh-1072_operator_dispatch_command_receipts.sql",
+      "sha256": "b0236a865cd8bdde791135f209de03dd14d66d84bc7f6ce021ebce921d8fb421",
+      "historicalPrefix": "1072",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 314,
+      "file": "dsh-1073_partner_onboarding_mutation_idempotency.sql",
+      "sha256": "ef765d1e9a57766115a5590a2aa01268fd57a8bbd1e78fe83e18e207b0ab56e5",
+      "historicalPrefix": "1073",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 315,
+      "file": "dsh-1074_partner_document_review_idempotency.sql",
+      "sha256": "da36bd537d0b9e21eb06db8a1716680d9e937aff484ccbd32b2180304adb7a76",
+      "historicalPrefix": "1074",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 316,
+      "file": "dsh-1075_catalog_create_idempotency.sql",
+      "sha256": "15b56fa121906f36077b2e6270def886c07e35909b55bfd6877823b0e2e7c1e7",
+      "historicalPrefix": "1075",
+      "state": "ACTIVE"
     }
   ]
 }

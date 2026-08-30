@@ -11,7 +11,7 @@ test("partner app composes canonical identity, rating, catalog media, push, and 
   assert.match(source, /requiredRole="partner"/);
   assert.match(source, /requiredSurface="app-partner"/);
   assert.match(source, /<PartnerFieldRatingGate>/);
-  assert.match(source, /<DshPartnerSurface route=\{route\} navigation=\{navigation\} \/>/);
+  assert.match(source, /<DshPartnerSurface route=\{route\} navigation=\{navigation\} appearance=\{appearance\} \/>/);
   assert.match(source, /configureCatalogMobileFilePicker\(pickCatalogFile\)/);
   assert.match(source, /DocumentPicker\.getDocumentAsync/);
   assert.match(source, /copyToCacheDirectory: true/);
@@ -21,6 +21,48 @@ test("partner app composes canonical identity, rating, catalog media, push, and 
   assert.match(source, /secureRandomId/);
   assert.doesNotMatch(source, /Crypto\.randomUUID/);
   assert.match(source, /useDshMobilePushRegistration\(identity\.state\.kind, "app-partner", "bthwani-partner-next"\)/);
+});
+
+test("partner runtime owns persisted appearance and reconciles memory to durable readback", async () => {
+  const runtime = await read("apps/app-partner/runtime/src/index.ts");
+  const appearance = await read("apps/app-partner/runtime/src/appearance.tsx");
+  const hub = await read("services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx");
+
+  assert.match(runtime, /PartnerAppearanceProvider/);
+  assert.match(appearance, /getBThwaniAppearanceStorageKey\("app-partner"\)/);
+  assert.match(appearance, /SecureStore\.getItemAsync/);
+  assert.match(appearance, /SecureStore\.setItemAsync/);
+  assert.match(appearance, /window\.localStorage/);
+  assert.match(appearance, /async function persistAndReadBackAppearanceMode/);
+  assert.match(appearance, /await writeStoredAppearanceMode\(mode\);/);
+  assert.match(appearance, /const committedMode = await readStoredAppearanceMode\(\);/);
+  assert.match(appearance, /if \(!isBThwaniAppearanceMode\(committedMode\)\)/);
+  assert.match(appearance, /matchedRequest: committedMode === mode/);
+  assert.match(appearance, /const writeQueueRef = useRef<Promise<void>>\(Promise\.resolve\(\)\);/);
+  assert.match(appearance, /writeQueueRef\.current = writeQueueRef\.current\.then\(async \(\) =>/);
+  assert.match(appearance, /const \{ committedMode, matchedRequest \} = await persistAndReadBackAppearanceMode\(nextMode\);[\s\S]*setModeState\(committedMode\);/);
+  assert.match(appearance, /matchedRequest[\s\S]*تم اعتماد القيمة المحفوظة الفعلية بعد التحقق/);
+  assert.doesNotMatch(appearance, /setModeState\(nextMode\);[\s\S]*writeStoredAppearanceMode\(nextMode\)/);
+  assert.match(appearance, /لم يتم اعتماد التغيير/);
+  assert.match(appearance, /<BThwaniAppearanceProvider mode=\{mode\} syncThemeMode>/);
+  assert.doesNotMatch(hub, /useAppPartnerAppearance|useState<BThwaniAppearanceMode>/);
+});
+
+test("partner self/readiness state is isolated across store, session, and unmount changes", async () => {
+  const controller = await read("services/dsh/frontend/shared/partner/use-partner-self-controller.tsx");
+  const hub = await read("services/dsh/frontend/app-partner/account/PartnerHubScreen.tsx");
+
+  assert.match(controller, /const mountedRef = useRef\(true\)/);
+  assert.match(controller, /const statusRequestSeqRef = useRef\(0\)/);
+  assert.match(controller, /const readinessRequestSeqRef = useRef\(0\)/);
+  assert.match(controller, /const requestSeq = \+\+statusRequestSeqRef\.current/);
+  assert.match(controller, /const requestSeq = \+\+readinessRequestSeqRef\.current/);
+  assert.match(controller, /if \(!isAuth\) \{[\s\S]*setStatusState\(\{ kind: "idle" \}\)/);
+  assert.match(controller, /if \(!isAuth\) \{[\s\S]*setReadinessState\(\{ kind: "idle" \}\)/);
+  assert.match(controller, /requestSeq !== statusRequestSeqRef\.current/);
+  assert.match(controller, /requestSeq !== readinessRequestSeqRef\.current/);
+  assert.doesNotMatch(hub, /selfStatusState\.kind === "not_found"/);
+  assert.doesNotMatch(hub, /selfStatusState\.kind === "forbidden"/);
 });
 
 test("partner native wiring leaves inbound URL navigation to Expo Router", async () => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { StateView } from '@bthwani/ui-kit';
+import { useOperationsCapabilities } from '../../shared/operations';
 import { OperatorSpecialRequestsWorkbench } from '../../shared/special-requests/OperatorSpecialRequestsWorkbench';
 import type { OperationsFocusParams } from './operations.types';
 
@@ -60,6 +61,21 @@ const AWNAK_LABELS: Readonly<Record<string, string>> = {
 
 export function SpecialOpsWorkbenchScreen({ subGroup, focusParams }: SpecialOpsWorkbenchScreenProps) {
   const focusProps = focusParams ? { focusParams } : {};
+  const {
+    canReadSpecialRequests,
+    canTransitionSpecialRequests,
+    canDispatchSpecialRequests,
+  } = useOperationsCapabilities();
+
+  if (!canReadSpecialRequests) {
+    return (
+      <StateView
+        stateId="recoverableError"
+        title="الوصول إلى العمليات الخاصة مرفوض"
+        description="تتطلب قراءة طلبات العمليات الخاصة صلاحية operations.special_requests.read."
+      />
+    );
+  }
 
   if (subGroup === 'shein') {
     return (
@@ -68,6 +84,8 @@ export function SpecialOpsWorkbenchScreen({ subGroup, focusParams }: SpecialOpsW
         title="عمليات شي إن"
         stageOrder={SHEIN_STAGES}
         stageLabels={SHEIN_LABELS}
+        canTransitionSpecialRequests={canTransitionSpecialRequests}
+        canDispatchSpecialRequests={canDispatchSpecialRequests}
         {...focusProps}
       />
     );
@@ -80,6 +98,8 @@ export function SpecialOpsWorkbenchScreen({ subGroup, focusParams }: SpecialOpsW
         title="عمليات عونك"
         stageOrder={AWNAK_STAGES}
         stageLabels={AWNAK_LABELS}
+        canTransitionSpecialRequests={canTransitionSpecialRequests}
+        canDispatchSpecialRequests={canDispatchSpecialRequests}
         {...focusProps}
       />
     );

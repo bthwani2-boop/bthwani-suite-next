@@ -453,6 +453,9 @@ type UploadDocumentInput struct {
 	MediaRef          string `json:"mediaRef"`
 	Notes             string `json:"notes"`
 	UploadedByActorID string `json:"-"`
+	UploadedBySurface string `json:"-"`
+	IdempotencyKey    string `json:"-"`
+	CorrelationID     string `json:"-"`
 }
 
 func (i UploadDocumentInput) Validate() error {
@@ -467,6 +470,7 @@ type ReviewDocumentInput struct {
 	Reason            string `json:"reason"`
 	ReviewedByActorID string `json:"-"`
 	CorrelationID     string `json:"-"`
+	IdempotencyKey    string `json:"-"`
 }
 
 func (i ReviewDocumentInput) Validate() error {
@@ -487,6 +491,9 @@ type CreateFieldVisitInput struct {
 	LocationLongitude *float64 `json:"locationLongitude"`
 	EvidenceMediaRefs []string `json:"evidenceMediaRefs"`
 	FieldActorID      string   `json:"-"`
+	FieldActorSurface string   `json:"-"`
+	IdempotencyKey    string   `json:"-"`
+	CorrelationID     string   `json:"-"`
 }
 
 type PartnerLinkedStore struct {

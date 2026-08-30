@@ -55,7 +55,7 @@ function severityToBadgeTone(severity: DshRecommendationSeverity): CpBadgeTone {
 
 /**
  * Resolves a UI tone from an order's backend runtime status string.
- * Matches status values from DshOrderRecord (dsh-order-lifecycle-client.ts).
+ * Matches status values from the DSH operational runtime order projection.
  */
 export function resolveRuntimeOrderStatusTone(status: string): DshControlPanelTone {
   const normalized = status.toLowerCase();

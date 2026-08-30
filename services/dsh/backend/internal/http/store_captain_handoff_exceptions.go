@@ -23,21 +23,19 @@ func (s *protectedStoreServer) handleReportCaptainStoreCaptainHandoffException(w
 	if !ok {
 		return
 	}
-	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
 		return
 	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 
 	var body storeCaptainHandoffExceptionBody
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
 
-	correlationID := strings.TrimSpace(body.CorrelationID)
-	if correlationID == "" {
-		correlationID = strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
-	}
-	if correlationID == "" {
-		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_REQUIRED", "correlationId or X-Correlation-ID is required")
+	if body.CorrelationID != "" && strings.TrimSpace(body.CorrelationID) != correlationID {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_MISMATCH", "body correlationId must match X-Correlation-ID")
 		return
 	}
 
@@ -46,12 +44,14 @@ func (s *protectedStoreServer) handleReportCaptainStoreCaptainHandoffException(w
 		r.PathValue("assignmentId"),
 		actor.ID,
 		dispatch.ReportDeliveryExceptionInput{
-			ReasonCode:    body.ReasonCode,
-			Note:          body.Note,
-			CorrelationID: correlationID,
-			Latitude:      body.Latitude,
-			Longitude:     body.Longitude,
-			ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
+			OperatorContextID: actor.OperatorContextID,
+			ReasonCode:        body.ReasonCode,
+			Note:              body.Note,
+			IdempotencyKey:    idempotencyKey,
+			CorrelationID:     correlationID,
+			Latitude:          body.Latitude,
+			Longitude:         body.Longitude,
+			ProofMediaRef:     strings.TrimSpace(body.ProofMediaRef),
 		},
 	)
 	if err != nil {
@@ -68,21 +68,19 @@ func (s *protectedStoreServer) handleReportPartnerStoreCaptainHandoffException(w
 	if !ok {
 		return
 	}
-	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
+	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
+	if !ok {
 		return
 	}
+	w.Header().Set("X-Correlation-ID", correlationID)
 
 	var body storeCaptainHandoffExceptionBody
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
 
-	correlationID := strings.TrimSpace(body.CorrelationID)
-	if correlationID == "" {
-		correlationID = strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
-	}
-	if correlationID == "" {
-		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_REQUIRED", "correlationId or X-Correlation-ID is required")
+	if body.CorrelationID != "" && strings.TrimSpace(body.CorrelationID) != correlationID {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_MISMATCH", "body correlationId must match X-Correlation-ID")
 		return
 	}
 
@@ -92,12 +90,14 @@ func (s *protectedStoreServer) handleReportPartnerStoreCaptainHandoffException(w
 		storeID,
 		actor.ID,
 		dispatch.ReportDeliveryExceptionInput{
-			ReasonCode:    body.ReasonCode,
-			Note:          body.Note,
-			CorrelationID: correlationID,
-			Latitude:      body.Latitude,
-			Longitude:     body.Longitude,
-			ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
+			OperatorContextID: actor.OperatorContextID,
+			ReasonCode:        body.ReasonCode,
+			Note:              body.Note,
+			IdempotencyKey:    idempotencyKey,
+			CorrelationID:     correlationID,
+			Latitude:          body.Latitude,
+			Longitude:         body.Longitude,
+			ProofMediaRef:     strings.TrimSpace(body.ProofMediaRef),
 		},
 	)
 	if err != nil {

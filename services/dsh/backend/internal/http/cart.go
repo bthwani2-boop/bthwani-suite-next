@@ -20,6 +20,31 @@ type cartServer struct {
 	protectedStoreServer
 }
 
+func requireCartMutationIdempotency(w http.ResponseWriter, r *http.Request) (string, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_INVALID", "Idempotency-Key must contain between 8 and 200 characters")
+		return "", false
+	}
+	return idempotencyKey, true
+}
+
+// rejectCartMutationReplay closes the check-before-mutate race for all cart
+// mutation verbs. The cart owner join in cart.FindMutationReceipt prevents a
+// client from probing or reusing another actor's key.
+func (s *protectedStoreServer) rejectCartMutationReplay(w http.ResponseWriter, r *http.Request, actorID, idempotencyKey string) bool {
+	_, err := cart.FindMutationReceipt(r.Context(), s.db, actorID, idempotencyKey)
+	if errors.Is(err, cart.ErrMutationReceiptNotFound) {
+		return false
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart mutation receipt could not be checked")
+		return true
+	}
+	store.SendError(w, http.StatusConflict, "IDEMPOTENT_REPLAY", "mutation already applied")
+	return true
+}
+
 // GET /dsh/client/cart/fulfillment-modes
 func (s *protectedStoreServer) handleGetFulfillmentModes(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requireActor(w, r, "client")
@@ -213,10 +238,47 @@ func (s *protectedStoreServer) handleGetCart(w http.ResponseWriter, r *http.Requ
 	})
 }
 
+// GET /dsh/client/cart/mutations/{idempotencyKey}
+// Returns only the authenticated client's committed cart mutation receipt.
+// A missing receipt is an explicit not-committed result for reconciliation.
+func (s *protectedStoreServer) handleGetCartMutationReceipt(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "client")
+	if !ok {
+		return
+	}
+	idempotencyKey := strings.TrimSpace(r.PathValue("idempotencyKey"))
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_INVALID", "idempotencyKey must contain between 8 and 200 characters")
+		return
+	}
+
+	receipt, err := cart.FindMutationReceipt(r.Context(), s.db, actor.ID, idempotencyKey)
+	if errors.Is(err, cart.ErrMutationReceiptNotFound) {
+		store.SendError(w, http.StatusNotFound, "MUTATION_NOT_COMMITTED", "no committed cart mutation receipt exists for this actor and key")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart mutation receipt could not be read")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"mutation": map[string]any{
+			"idempotencyKey": receipt.IdempotencyKey,
+			"cartId":         receipt.CartID,
+			"version":        receipt.Version,
+			"createdAt":      receipt.CreatedAt,
+		},
+	})
+}
+
 // POST /dsh/client/cart/items
 func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok {
+		return
+	}
+	idempotencyKey, ok := requireCartMutationIdempotency(w, r)
+	if !ok || s.rejectCartMutationReplay(w, r, actor.ID, idempotencyKey) {
 		return
 	}
 	var body struct {
@@ -274,21 +336,6 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not resolve cart")
 		return
 	}
-	// Check idempotency early
-	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if idempotencyKey != "" {
-		var idemVersion int
-		err := s.db.QueryRowContext(r.Context(),
-			`SELECT version FROM dsh_cart_idempotency WHERE cart_id = $1 AND idempotency_key = $2`,
-			current.ID, idempotencyKey,
-		).Scan(&idemVersion)
-		if err == nil {
-			// Already processed
-			store.SendError(w, http.StatusConflict, "IDEMPOTENT_REPLAY", "mutation already applied")
-			return
-		}
-	}
-
 	// Use the exact cart readback from the single-cart boundary. This keeps a
 	// mode change performed by this request and the item mutation in one OCC
 	// sequence, while UpsertItem locks again before writing.
@@ -321,7 +368,7 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 	// Record the idempotency key after the mutation succeeded. Best-effort
 	// means logged, never silently discarded: a dropped tracking row would
 	// silently degrade replay protection for this key.
-	if idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key")); idempotencyKey != "" {
+	if idempotencyKey != "" {
 		deviceId := strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id"))
 		sessionId := strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id"))
 		if err := recordCartIdempotency(r.Context(), s.db,
@@ -344,6 +391,10 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok {
+		return
+	}
+	idempotencyKey, ok := requireCartMutationIdempotency(w, r)
+	if !ok || s.rejectCartMutationReplay(w, r, actor.ID, idempotencyKey) {
 		return
 	}
 	cartID := r.URL.Query().Get("cartId")
@@ -374,7 +425,7 @@ func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *ht
 		return
 	}
 
-	if idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key")); idempotencyKey != "" {
+	if idempotencyKey != "" {
 		deviceId := strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id"))
 		sessionId := strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id"))
 		// We use expectedVersion or approximate version 0 for deletion logs
@@ -396,6 +447,10 @@ func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *ht
 func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok {
+		return
+	}
+	idempotencyKey, ok := requireCartMutationIdempotency(w, r)
+	if !ok || s.rejectCartMutationReplay(w, r, actor.ID, idempotencyKey) {
 		return
 	}
 	cartID := r.URL.Query().Get("cartId")
@@ -439,7 +494,7 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key")); idempotencyKey != "" {
+	if idempotencyKey != "" {
 		deviceId := strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id"))
 		sessionId := strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id"))
 		v := 0

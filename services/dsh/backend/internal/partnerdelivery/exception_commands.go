@@ -30,7 +30,7 @@ func sanitizeEvidenceReferences(values []string) ([]string, error) {
 	return result, nil
 }
 
-func (s *Service) RaiseExceptionCommand(ctx context.Context, taskID string, expectedVersion int, reason string, evidenceReferences []string, actorID, actorRole, correlationID, commandID string) (*PartnerDeliveryTask, error) {
+func (s *Service) RaiseExceptionCommand(ctx context.Context, operatorContextID, taskID string, expectedVersion int, reason string, evidenceReferences []string, actorID, actorRole, correlationID, commandID string) (*PartnerDeliveryTask, error) {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		return nil, fmt.Errorf("%w: reason is required", ErrInvalid)
@@ -40,26 +40,26 @@ func (s *Service) RaiseExceptionCommand(ctx context.Context, taskID string, expe
 		return nil, err
 	}
 	evidenceJSON, _ := json.Marshal(evidenceReferences)
-	fingerprint := commandFingerprint("raise_exception", taskID, fmt.Sprint(expectedVersion), reason, string(evidenceJSON))
-	return s.executeCommand(ctx, actorID, commandID, "raise_exception", fingerprint,
+	fingerprint := commandFingerprint("raise_exception", operatorContextID, taskID, fmt.Sprint(expectedVersion), reason, string(evidenceJSON))
+	return s.executeCommand(ctx, operatorContextID, actorID, commandID, "raise_exception", fingerprint,
 		func() (*PartnerDeliveryTask, error) {
-			return s.raiseExceptionWithEvidence(ctx, taskID, expectedVersion, reason, evidenceJSON, actorID, actorRole, correlationID)
+			return s.raiseExceptionWithEvidence(ctx, operatorContextID, taskID, expectedVersion, reason, evidenceJSON, actorID, actorRole, correlationID)
 		},
 		func() (*PartnerDeliveryTask, bool, error) {
-			task, err := Get(s.db, taskID)
+			task, err := GetForOperatorContext(s.db, operatorContextID, taskID)
 			matched := err == nil && task.Status == StatusException && task.ExceptionReason != nil && *task.ExceptionReason == reason
 			return task, matched, err
 		})
 }
 
-func (s *Service) raiseExceptionWithEvidence(ctx context.Context, taskID string, expectedVersion int, reason string, evidenceJSON []byte, actorID, actorRole, correlationID string) (*PartnerDeliveryTask, error) {
+func (s *Service) raiseExceptionWithEvidence(ctx context.Context, operatorContextID, taskID string, expectedVersion int, reason string, evidenceJSON []byte, actorID, actorRole, correlationID string) (*PartnerDeliveryTask, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	current, err := GetForUpdate(tx, taskID)
+	current, err := GetForUpdateForOperatorContext(tx, operatorContextID, taskID)
 	if err != nil {
 		return nil, err
 	}
@@ -78,15 +78,16 @@ func (s *Service) raiseExceptionWithEvidence(ctx context.Context, taskID string,
 		    exception_reported_at = NOW(),
 		    version = version + 1,
 		    updated_at = NOW()
-		WHERE id = $4 AND version = $5`,
-		string(StatusException), reason, string(evidenceJSON), taskID, expectedVersion)
+		WHERE id = $4 AND version = $5
+		  AND EXISTS (SELECT 1 FROM dsh_orders o WHERE o.id = dsh_partner_delivery_tasks.order_id AND o.operator_context_id = $6)`,
+		string(StatusException), reason, string(evidenceJSON), taskID, expectedVersion, operatorContextID)
 	if err != nil {
 		return nil, err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return nil, ErrVersionConflict
 	}
-	updated, err := scanTask(tx.QueryRow(`SELECT `+taskColumns+` FROM dsh_partner_delivery_tasks WHERE id = $1`, taskID).Scan)
+	updated, err := scanTask(tx.QueryRow(`SELECT `+taskColumnsPrefixed+` FROM dsh_partner_delivery_tasks t JOIN dsh_orders o ON o.id=t.order_id WHERE t.id = $1 AND o.operator_context_id = $2`, taskID, operatorContextID).Scan)
 	if err != nil {
 		return nil, err
 	}
@@ -99,5 +100,5 @@ func (s *Service) raiseExceptionWithEvidence(ctx context.Context, taskID string,
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	return Get(s.db, updated.ID)
+	return GetForOperatorContext(s.db, operatorContextID, updated.ID)
 }

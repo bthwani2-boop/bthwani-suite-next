@@ -1,6 +1,7 @@
 import React from 'react';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { acceptPartnerReturnToStore, fetchPartnerReturnToStore } from './dispatch.api';
+import { clearReturnToStoreCommandAttempt, getOrCreateReturnToStoreCommandAttempt } from './return-to-store-command-attempt';
 import type { DshDeliveryException } from './dispatch.types';
 
 export type PartnerReturnToStoreState =
@@ -17,7 +18,6 @@ function isNotFound(error: unknown): boolean {
 export function usePartnerReturnToStoreController(orderId: string) {
   const identity = useIdentitySession();
   const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
-  const commandRef = React.useRef<{ readonly actorId: string; readonly id: string } | null>(null);
   const [state, setState] = React.useState<PartnerReturnToStoreState>({ kind: 'loading' });
 
   const load = React.useCallback(async () => {
@@ -47,13 +47,12 @@ export function usePartnerReturnToStoreController(orderId: string) {
       setState({ kind: 'error', message: 'جلسة الشريك غير جاهزة لتأكيد استلام المرتجع.' });
       return false;
     }
-    const existing = commandRef.current?.actorId === actorId ? commandRef.current : null;
-    const command = existing ?? { actorId, id: `partner-return-accept:${actorId}:${orderId}:${Date.now()}` };
-    commandRef.current = command;
     setState((current) => current.kind === 'ready' ? { ...current, accepting: true } : current);
     try {
-      const item = await acceptPartnerReturnToStore(orderId, command.id);
-      commandRef.current = null;
+      const intent = { actorId, command: 'partner_accept' as const, entityId: orderId };
+      const attempt = await getOrCreateReturnToStoreCommandAttempt(intent);
+      const item = await acceptPartnerReturnToStore(orderId, attempt.context);
+      await clearReturnToStoreCommandAttempt(intent, attempt.signature);
       setState({ kind: 'ready', item, accepting: false });
       return true;
     } catch (error) {

@@ -15,6 +15,8 @@
  *    the platform accepted the write; every set that does not return
  *    successfully throws BthwaniDurableWriteError instead of returning
  *    normally. Every remove that does not return successfully throws.
+ *    Reads reject on platform failure; a failed read is never treated as a
+ *    missing correctness-critical datum.
  *    Acceptable for mutation identity, unknown-remote-outcome, durable
  *    offline command, recovery quarantine — any datum whose absence
  *    could cause a duplicate server mutation, lost command, or
@@ -129,14 +131,15 @@ function browserCacheStorage(): BthwaniCacheStore {
 function browserDurableStorage(): BthwaniDurableStore {
   return {
     getItem: async (key) => {
-      if (typeof window === "undefined") return null;
+      if (typeof window === "undefined") {
+        throw new Error("window is undefined");
+      }
       try {
-        return window.sessionStorage.getItem(key);
-      } catch {
-        // A read failure on a durability-critical path is treated
-        // as missing; mutation identity cannot be reconstructed
-        // from nothing, so callers must not proceed.
-        return null;
+        return window.localStorage.getItem(key);
+      } catch (cause) {
+        // A read failure is not equivalent to an absent mutation. Surface it
+        // so callers cannot reconstruct identity or a queue from false empty.
+        throw cause;
       }
     },
     setItem: async (key, value) => {
@@ -144,7 +147,7 @@ function browserDurableStorage(): BthwaniDurableStore {
         throw new BthwaniDurableWriteError(key, new Error("window is undefined"));
       }
       try {
-        window.sessionStorage.setItem(key, value);
+        window.localStorage.setItem(key, value);
       } catch (cause) {
         throw new BthwaniDurableWriteError(key, cause);
       }
@@ -154,17 +157,19 @@ function browserDurableStorage(): BthwaniDurableStore {
         throw new BthwaniDurableRemoveError(key, new Error("window is undefined"));
       }
       try {
-        window.sessionStorage.removeItem(key);
+        window.localStorage.removeItem(key);
       } catch (cause) {
         throw new BthwaniDurableRemoveError(key, cause);
       }
     },
     getAllKeys: async () => {
-      if (typeof window === "undefined") return [];
+      if (typeof window === "undefined") {
+        throw new Error("window is undefined");
+      }
       try {
-        return Object.keys(window.sessionStorage);
-      } catch {
-        return [];
+        return Object.keys(window.localStorage);
+      } catch (cause) {
+        throw cause;
       }
     },
     multiRemove: async (keys) => {
@@ -173,7 +178,7 @@ function browserDurableStorage(): BthwaniDurableStore {
       }
       for (const key of keys) {
         try {
-          window.sessionStorage.removeItem(key);
+          window.localStorage.removeItem(key);
         } catch (cause) {
           throw new BthwaniDurableRemoveError(key, cause);
         }

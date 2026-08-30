@@ -34,8 +34,8 @@ func TestDeliveryExceptionCancelsOrderBeforePickupDBIntegration(t *testing.T) {
 	}
 	var assignmentID string
 	if err := db.QueryRow(`
-		INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at)
-		VALUES($1::uuid,$2,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, orderID, captainID).Scan(&assignmentID); err != nil {
+		INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at)
+		VALUES($1,$2::uuid,$3,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, operatorContextID, orderID, captainID).Scan(&assignmentID); err != nil {
 		t.Fatalf("insert assignment: %v", err)
 	}
 	if _, err := db.Exec(`INSERT INTO dsh_deliveries(assignment_id,order_id,captain_id,status) VALUES($1::uuid,$2::uuid,$3,'driver_arrived_store')`, assignmentID, orderID, captainID); err != nil {
@@ -49,16 +49,18 @@ func TestDeliveryExceptionCancelsOrderBeforePickupDBIntegration(t *testing.T) {
 	})
 
 	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{
-		ReasonCode:    ExceptionVehicleBreakdown,
-		Note:          "تعطلت المركبة قبل استلام الطلب من المتجر",
-		CorrelationID: "cancel-command-" + suffix,
-		ProofMediaRef: "media://vehicle-breakdown/" + suffix,
+		OperatorContextID: operatorContextID,
+		ReasonCode:        ExceptionVehicleBreakdown,
+		Note:              "تعطلت المركبة قبل استلام الطلب من المتجر",
+		IdempotencyKey:    "cancel-command-key-" + suffix,
+		CorrelationID:     "cancel-command-" + suffix,
+		ProofMediaRef:     "media://vehicle-breakdown/" + suffix,
 	})
 	if err != nil {
 		t.Fatalf("report exception: %v", err)
 	}
 
-	resolved, err := ResolveDeliveryExceptionCancelOrder(db, item.ID, item.Version, "تم تأكيد تعطل المركبة ولا يوجد كابتن بديل متاح", "operator-1")
+	resolved, err := ResolveDeliveryExceptionCancelOrder(db, operatorContextID, item.ID, item.Version, "تم تأكيد تعطل المركبة ولا يوجد كابتن بديل متاح", "operator-1")
 	if err != nil {
 		t.Fatalf("resolve cancel: %v", err)
 	}
@@ -82,7 +84,7 @@ func TestDeliveryExceptionCancelsOrderBeforePickupDBIntegration(t *testing.T) {
 		t.Fatalf("expected exactly one governed cancellation record, got %d", cancellationCount)
 	}
 
-	replayed, err := ResolveDeliveryExceptionCancelOrder(db, item.ID, item.Version, "تم تأكيد تعطل المركبة ولا يوجد كابتن بديل متاح", "operator-1")
+	replayed, err := ResolveDeliveryExceptionCancelOrder(db, operatorContextID, item.ID, item.Version, "تم تأكيد تعطل المركبة ولا يوجد كابتن بديل متاح", "operator-1")
 	if err != nil {
 		t.Fatalf("expected idempotent replay to succeed, got %v", err)
 	}
@@ -118,7 +120,7 @@ func TestDeliveryExceptionRejectsDirectCancelAfterPickupDBIntegration(t *testing
 		t.Fatal(err)
 	}
 	var assignmentID string
-	if err := db.QueryRow(`INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at) VALUES($1::uuid,$2,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, orderID, captainID).Scan(&assignmentID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at) VALUES($1,$2::uuid,$3,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, operatorContextID, orderID, captainID).Scan(&assignmentID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`INSERT INTO dsh_deliveries(assignment_id,order_id,captain_id,status) VALUES($1::uuid,$2::uuid,$3,'picked_up')`, assignmentID, orderID, captainID); err != nil {
@@ -131,15 +133,17 @@ func TestDeliveryExceptionRejectsDirectCancelAfterPickupDBIntegration(t *testing
 	})
 
 	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{
-		ReasonCode:    ExceptionDamagedOrder,
-		Note:          "تضرر الطلب بعد الاستلام",
-		CorrelationID: "cancel-blocked-" + suffix,
-		ProofMediaRef: "media://damaged-order/" + suffix,
+		OperatorContextID: operatorContextID,
+		ReasonCode:        ExceptionDamagedOrder,
+		Note:              "تضرر الطلب بعد الاستلام",
+		IdempotencyKey:    "cancel-blocked-key-" + suffix,
+		CorrelationID:     "cancel-blocked-" + suffix,
+		ProofMediaRef:     "media://damaged-order/" + suffix,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ResolveDeliveryExceptionCancelOrder(db, item.ID, item.Version, "محاولة إلغاء مباشر غير مسموحة بعد الاستلام", "operator-1"); !errors.Is(err, ErrConflict) {
+	if _, err := ResolveDeliveryExceptionCancelOrder(db, operatorContextID, item.ID, item.Version, "محاولة إلغاء مباشر غير مسموحة بعد الاستلام", "operator-1"); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict rejecting direct cancel after pickup, got %v", err)
 	}
 }
@@ -164,7 +168,7 @@ func TestDeliveryExceptionCancelRejectsStaleVersionDBIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	var assignmentID string
-	if err := db.QueryRow(`INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at) VALUES($1::uuid,$2,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, orderID, captainID).Scan(&assignmentID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at) VALUES($1,$2::uuid,$3,'operator-1','accepted',NOW()+INTERVAL '90 seconds',NOW()) RETURNING id::text`, operatorContextID, orderID, captainID).Scan(&assignmentID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`INSERT INTO dsh_deliveries(assignment_id,order_id,captain_id,status) VALUES($1::uuid,$2::uuid,$3,'driver_assigned')`, assignmentID, orderID, captainID); err != nil {
@@ -177,11 +181,11 @@ func TestDeliveryExceptionCancelRejectsStaleVersionDBIntegration(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
 	})
 
-	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{ReasonCode: ExceptionOther, Note: "سبب آخر يستدعي المراجعة", CorrelationID: "cancel-stale-" + suffix})
+	item, err := ReportDeliveryException(db, assignmentID, captainID, ReportDeliveryExceptionInput{OperatorContextID: operatorContextID, ReasonCode: ExceptionOther, Note: "سبب آخر يستدعي المراجعة", IdempotencyKey: "cancel-stale-key-" + suffix, CorrelationID: "cancel-stale-" + suffix})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ResolveDeliveryExceptionCancelOrder(db, item.ID, item.Version+1, "قرار إلغاء برقم إصدار غير صحيح", "operator-1"); !errors.Is(err, ErrConflict) {
+	if _, err := ResolveDeliveryExceptionCancelOrder(db, operatorContextID, item.ID, item.Version+1, "قرار إلغاء برقم إصدار غير صحيح", "operator-1"); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected version conflict, got %v", err)
 	}
 }

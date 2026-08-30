@@ -10,6 +10,7 @@ test('field route contract maps every operational destination to Expo Router pat
   const routeScreen = await read('apps/app-field/runtime/src/navigation/FieldRouteScreen.tsx');
   assert.match(routes, /export type DshFieldNavigation/);
   assert.match(routes, /export function dshFieldRouteToPath/);
+  assert.match(routes, /export const DSH_FIELD_ROUTE_KINDS/);
   for (const marker of [
     "case 'stores': return '/'",
     "case 'work-queue': return '/work-queue'",
@@ -26,6 +27,15 @@ test('field route contract maps every operational destination to Expo Router pat
   assert.match(routeScreen, /useRouter/);
   assert.match(routeScreen, /router\.push/);
   assert.match(routeScreen, /router\.back/);
+});
+
+test('field renderer is explicit for stores and fail-closed for malformed state', async () => {
+  const renderer = await read('services/dsh/frontend/app-field/components/DshFieldRouteRenderer.tsx');
+  assert.match(renderer, /if \(route\.kind === 'stores'\)/);
+  assert.match(renderer, /onCreatePartner=\{\(\) => navigation\.navigate\(\{ kind: 'onboarding' \}\)\}/);
+  assert.match(renderer, /مسار ميداني غير معروف/);
+  assert.match(renderer, /تم إيقافه لحماية بيانات العمل/);
+  assert.match(renderer, /const unreachableRoute: never = route;[\s\S]*return \(\s*<StateView/);
 });
 
 test('field Expo Router tree covers identity-bearing routes and redirects malformed params', async () => {

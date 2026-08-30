@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
+import { corrId } from "../../shared/_kernel/dsh-http-request";
 import {
   Badge,
   Button,
@@ -55,18 +56,39 @@ export function PartnerReelsManagementSection({ storeId }: Props) {
   const [subtitleAr, setSubtitleAr] = React.useState("");
   const [highlightAr, setHighlightAr] = React.useState("");
   const [ctaLabelAr, setCtaLabelAr] = React.useState("فتح المتجر");
+  const mountedRef = React.useRef(true);
+  const requestSeqRef = React.useRef(0);
+  const scopeKey = storeId;
+  const scopeKeyRef = React.useRef(scopeKey);
+  scopeKeyRef.current = scopeKey;
+  const submissionMutationRef = React.useRef<{ readonly key: string; readonly fingerprint: string } | null>(null);
 
-  const load = React.useCallback(async () => {
+  React.useEffect(() => () => {
+    mountedRef.current = false;
+    requestSeqRef.current += 1;
+  }, []);
+
+  const load = React.useCallback(async (options?: { readonly throwOnFailure?: boolean }) => {
+    const requestSeq = ++requestSeqRef.current;
+    const requestScopeKey = scopeKey;
+    const isCurrentRequest = () => mountedRef.current
+      && requestSeq === requestSeqRef.current
+      && requestScopeKey === scopeKeyRef.current;
     setLoading(true);
     setError(null);
     try {
-      setItems(await fetchPartnerReels({ storeId, limit: 50, offset: 0 }));
+      const nextItems = await fetchPartnerReels({ storeId, limit: 50, offset: 0 });
+      if (!isCurrentRequest()) return;
+      setItems(nextItems);
+      return nextItems;
     } catch (caught) {
+      if (!isCurrentRequest()) return;
       setError(caught instanceof Error ? caught.message : "تعذر تحميل فيديوهات المتجر.");
+      if (options?.throwOnFailure) throw caught;
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
-  }, [storeId]);
+  }, [scopeKey, storeId]);
 
   React.useEffect(() => {
     void load();
@@ -109,11 +131,26 @@ export function PartnerReelsManagementSection({ storeId }: Props) {
       setError("اختر فيديو MP4 وأدخل عنوانًا عربيًا قبل الإرسال.");
       return;
     }
+    const operationScopeKey = scopeKey;
     setSubmitting(true);
     setError(null);
     setProgress({ stage: "signing" });
     try {
-      await uploadAndSubmitReel({
+      const fingerprint = JSON.stringify({
+        storeId,
+        video: { name: video.name, type: video.type, size: video.size },
+        poster: poster ? { name: poster.name, type: poster.type, size: poster.size } : null,
+        titleAr: titleAr.trim(),
+        subtitleAr: subtitleAr.trim(),
+        highlightAr: highlightAr.trim(),
+        ctaLabelAr: ctaLabelAr.trim() || "فتح المتجر",
+      });
+      const previous = submissionMutationRef.current;
+      const idempotencyKey = previous?.fingerprint === fingerprint
+        ? previous.key
+        : corrId("catalog-reel-workflow");
+      submissionMutationRef.current = { key: idempotencyKey, fingerprint };
+      const submitted = await uploadAndSubmitReel({
         file: video,
         ...(poster ? { posterFile: poster } : {}),
         targetType: "store",
@@ -123,19 +160,28 @@ export function PartnerReelsManagementSection({ storeId }: Props) {
         subtitleAr: subtitleAr.trim(),
         highlightAr: highlightAr.trim(),
         ctaLabelAr: ctaLabelAr.trim() || "فتح المتجر",
-        onProgress: setProgress,
+        idempotencyKey,
+        onProgress: (nextProgress) => {
+          if (mountedRef.current && operationScopeKey === scopeKeyRef.current) setProgress(nextProgress);
+        },
       });
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
+      const readback = await load({ throwOnFailure: true });
+      if (!readback?.some((item) => item.id === submitted.id && item.status === "pending_review")) {
+        throw new Error("لم تثبت قراءة الريلز اللاحقة ظهور الفيديو في قائمة المراجعة؛ لم يُعتمد الإرسال.");
+      }
+      submissionMutationRef.current = null;
       setVideo(null);
       setPoster(null);
       setTitleAr("");
       setSubtitleAr("");
       setHighlightAr("");
       setCtaLabelAr("فتح المتجر");
-      await load();
     } catch (caught) {
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       setError(caught instanceof Error ? caught.message : "تعذر إرسال الفيديو للمراجعة.");
     } finally {
-      setSubmitting(false);
+      if (mountedRef.current && operationScopeKey === scopeKeyRef.current) setSubmitting(false);
     }
   };
 

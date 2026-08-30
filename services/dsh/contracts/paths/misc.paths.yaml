@@ -772,12 +772,19 @@
         in: path
         required: true
         schema: { type: string }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     responses:
       "200":
         description: OK
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestResponse" }
+      "202":
+        description: Durable cancellation saga accepted for reconciliation.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestSagaResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
@@ -794,6 +801,8 @@
         in: path
         required: true
         schema: { type: string }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -809,6 +818,11 @@
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestResponse" }
+      "202":
+        description: Durable payment-session saga accepted for reconciliation.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestSagaResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
@@ -851,6 +865,8 @@
         in: path
         required: true
         schema: { type: string, format: uuid }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:

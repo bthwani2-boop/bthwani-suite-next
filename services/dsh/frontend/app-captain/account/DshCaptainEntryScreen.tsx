@@ -4,6 +4,7 @@ import {
 	Button,
 	SectionHeader,
 	Surface,
+	StateView,
 	Text,
 } from '@bthwani/ui-kit';
 import { DshOperationScreen } from '../DshOperationScreen';
@@ -13,7 +14,10 @@ export type DshEntryScreenState = 'ready' | 'loading' | 'empty' | 'error';
 export type DshEntryScreenProps = {
 	state?: DshEntryScreenState;
 	isAvailable?: boolean;
+	availabilityBusy?: boolean;
+	availabilityError?: string | null;
 	onToggleAvailability?: (available: boolean) => void;
+	onRetryAvailability?: () => void;
 	onOpenOffersPress?: () => void;
 	onOpenExecutionPress?: () => void;
 	onOpenProofCapturePress?: () => void;
@@ -58,7 +62,10 @@ function renderCompletionSection(onOpenProofCapturePress?: () => void) {
 function DshCaptainEntryScreen({
 	state = 'ready',
 	isAvailable = false,
+	availabilityBusy = false,
+	availabilityError,
 	onToggleAvailability,
+	onRetryAvailability,
 	onOpenOffersPress,
 	onOpenExecutionPress,
 	onOpenProofCapturePress,
@@ -78,12 +85,21 @@ function DshCaptainEntryScreen({
 								: 'فعّل الاستقبال لإظهار العروض الحية عند توفرها.'}
 						</Text>
 						<Button
-							label={isAvailable ? 'إيقاف الاستقبال' : 'بدء الاستقبال'}
+							label={availabilityBusy ? 'جارٍ حفظ التوفر…' : isAvailable ? 'إيقاف الاستقبال' : 'بدء الاستقبال'}
 							tone={isAvailable ? 'danger' : 'primary'}
-							disabled={!onToggleAvailability}
+							disabled={!onToggleAvailability || availabilityBusy}
 							onPress={() => onToggleAvailability?.(!isAvailable)}
 						/>
 					</Surface>
+					{availabilityError ? (
+						<StateView
+							title="تعذر تثبيت التوفر"
+							description={availabilityError}
+							tone="danger"
+							actionLabel="إعادة قراءة التوفر"
+							onActionPress={onRetryAvailability}
+						/>
+					) : null}
 					{renderOffersSection(onOpenOffersPress, onOpenExecutionPress)}
 					{renderCompletionSection(onOpenProofCapturePress)}
 				</Box>

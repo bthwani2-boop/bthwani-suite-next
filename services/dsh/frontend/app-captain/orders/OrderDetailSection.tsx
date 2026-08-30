@@ -17,16 +17,14 @@ import { DshOperationScreen } from '../DshOperationScreen';
 import type { DshCaptainOrderDetailSummary, DshCaptainOrderMessage } from '../../shared/orders';
 
 export const OrderDetailSection = React.memo(function OrderDetailSection({
-	summary,
-	onConfirmPickup,
-	onConfirmDelivery,
+  summary,
+  primaryAction,
 	onOpenNextOrder,
 	onBackToInbox,
 	onRetry,
 }: {
 	summary?: DshCaptainOrderDetailSummary | undefined;
-	onConfirmPickup?: (() => void) | undefined;
-	onConfirmDelivery?: (() => void) | undefined;
+	primaryAction?: { readonly label: string; readonly onPress: () => void; readonly disabled?: boolean } | undefined;
 	onOpenNextOrder?: (() => void) | undefined;
 	onBackToInbox?: (() => void) | undefined;
 	onRetry?: (() => void) | undefined;
@@ -36,20 +34,20 @@ export const OrderDetailSection = React.memo(function OrderDetailSection({
 	const [localMessages, setLocalMessages] = React.useState<DshCaptainOrderMessage[]>([]);
 	const [draftText, setDraftText] = React.useState('');
 
-	const primaryActionLabel = onConfirmPickup ? 'تأكيد الاستلام' : onConfirmDelivery ? 'تأكيد التسليم' : undefined;
-	const primaryAction = onConfirmPickup ?? onConfirmDelivery;
+  const primaryActionLabel = primaryAction?.label;
+  const primaryActionHandler = primaryAction?.onPress;
 	const secondaryActionLabel = onOpenNextOrder ? 'فتح الطلب التالي' : onRetry ? 'إعادة المحاولة' : undefined;
 	const secondaryAction = onOpenNextOrder ?? onRetry;
 
 	return (
 		<DshOperationScreen
-			title="تفاصيل الطلب"
+			title={`تفاصيل ${summary?.workItemLabel ?? 'المهمة'}`}
 			subtitle="مهمة نشطة مع تواصل متكامل وجرس تنبيه ذكي مباشر داخل نفس شاشة الطلب."
 			content={
 				<Box gap={4} style={{ paddingHorizontal: spacing[1] }}>
 					<Box gap={3} style={{ paddingVertical: spacing[1] }}>
 						<Box gap={1} style={{ alignItems: 'flex-end' }}>
-							<Badge label="طلب الكابتن" tone="warning" />
+							<Badge label={summary?.workItemLabel === 'الطلب' ? 'طلب الكابتن' : summary?.workItemLabel ?? 'المهمة'} tone="warning" />
 							<Text role="titleLg" style={{ textAlign: 'right' }}>{summary?.orderId ?? ''}</Text>
 							<Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
 								{summary?.currentStageLabel ?? ''}
@@ -186,7 +184,8 @@ export const OrderDetailSection = React.memo(function OrderDetailSection({
 			primaryActionLabel={primaryActionLabel}
 			secondaryActionLabel={secondaryActionLabel}
 			tertiaryActionLabel={onBackToInbox ? 'العودة إلى الصندوق' : undefined}
-			onPrimaryAction={primaryAction}
+			onPrimaryAction={primaryActionHandler}
+			primaryActionDisabled={primaryAction?.disabled}
 			onSecondaryAction={secondaryAction}
 			onTertiaryAction={onBackToInbox}
 			onRetry={onRetry}

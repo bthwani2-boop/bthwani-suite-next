@@ -41,7 +41,7 @@ func TestChecklistPolicySnapshotIsImmutableAndVersioned(t *testing.T) {
 	registerGovernedStoreLocation(t, db, storeID, partnerID)
 	actor := testFieldActor(t, agentID)
 
-	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
+	visit, err := createTestVisit(t, ctx, db, actor, CreateVisitInput{
 		StoreID: storeID, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
 	})
 	if err != nil {
@@ -73,7 +73,7 @@ func TestChecklistPolicySnapshotIsImmutableAndVersioned(t *testing.T) {
 		t.Fatalf("visit policy snapshot changed after template replacement: %#v", checks)
 	}
 	mediaRef := seedStoreBoundReadinessMedia(t, db, partnerID, storeID, agentID)
-	updatedCheck, err := UpsertGovernedReadinessCheck(ctx, db, actor, visit.ID, UpdateCheckInput{
+	updatedCheck, err := upsertTestCheck(t, ctx, db, actor, visit.ID, UpdateCheckInput{
 		CheckType: "identity_verified", Status: CheckPassed, EvidenceURL: mediaRef,
 	})
 	if err != nil {
@@ -82,7 +82,7 @@ func TestChecklistPolicySnapshotIsImmutableAndVersioned(t *testing.T) {
 	if updatedCheck.LabelAR != "التحقق من الهوية" || !updatedCheck.Required || !updatedCheck.Critical || updatedCheck.DisplayOrder != 10 {
 		t.Fatalf("upsert response lost checklist metadata: %#v", updatedCheck)
 	}
-	if _, err := UpsertGovernedReadinessCheck(ctx, db, actor, visit.ID, UpdateCheckInput{
+	if _, err := upsertTestCheck(t, ctx, db, actor, visit.ID, UpdateCheckInput{
 		CheckType: "premises_verified", Status: CheckPassed,
 	}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected a post-snapshot check type to be rejected, got %v", err)

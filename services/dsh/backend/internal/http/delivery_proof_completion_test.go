@@ -74,6 +74,25 @@ func TestMarshalClientDeliveryProofRedactsSensitiveEvidence(t *testing.T) {
 	}
 }
 
+func TestMarshalDeliveryProofPreservesExclusiveSourceNullability(t *testing.T) {
+	proof := &dispatch.DeliveryProof{
+		ID:               "proof-id",
+		AssignmentID:     "assignment-id",
+		SpecialRequestID: "special-request-id",
+		CaptainID:        "captain-id",
+		Method:           dispatch.DeliveryProofPhoto,
+		Status:           dispatch.DeliveryProofPendingReview,
+	}
+
+	out := marshalDeliveryProof(proof, false)
+	if out["orderId"] != nil {
+		t.Fatalf("special-request proof must marshal a null orderId, got %v", out["orderId"])
+	}
+	if out["specialRequestId"] != proof.SpecialRequestID {
+		t.Fatalf("special-request proof lost its source identity: got %v", out["specialRequestId"])
+	}
+}
+
 func TestDeliveryProofCoordinateAndEvidenceNormalization(t *testing.T) {
 	if normalizeDeliveryEvidenceKind(" SIGNATURE ") != "signature" {
 		t.Fatal("signature evidence must be preserved")

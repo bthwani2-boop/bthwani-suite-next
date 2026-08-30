@@ -15,12 +15,10 @@ export type CaptainPodState =
 export function usePodUploadFlow() {
   const [captainPodState, setCaptainPodState] = React.useState<CaptainPodState>('ready');
   const [captainPodPhotoUri, setCaptainPodPhotoUri] = React.useState<string | undefined>(undefined);
-  const [captainPodMediaKey, setCaptainPodMediaKey] = React.useState<string | undefined>(undefined);
 
   const resetPodFields = React.useCallback(() => {
     setCaptainPodState('ready');
     setCaptainPodPhotoUri(undefined);
-    setCaptainPodMediaKey(undefined);
   }, []);
 
   return {
@@ -28,8 +26,6 @@ export function usePodUploadFlow() {
     setCaptainPodState,
     captainPodPhotoUri,
     setCaptainPodPhotoUri,
-    captainPodMediaKey,
-    setCaptainPodMediaKey,
     resetPodFields,
   };
 }

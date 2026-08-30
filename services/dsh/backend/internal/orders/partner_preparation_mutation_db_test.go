@@ -23,7 +23,8 @@ func TestPartnerPreparationTransitionIsReplaySafeAndStoreScoped(t *testing.T) {
 		t.Fatalf("read initial order version: %v", err)
 	}
 	input := PartnerPreparationTransitionInput{
-		OrderID: order.ID, StoreID: order.StoreID, ActorID: "partner-transition-actor",
+		OperatorContextID: order.OperatorContextID,
+		OrderID:           order.ID, StoreID: order.StoreID, ActorID: "partner-transition-actor",
 		Operation: "prepare", ExpectedVersion: version, IdempotencyKey: "prepare-replay-" + order.ID[:8],
 	}
 	first, err := TransitionPartnerPreparation(db, input)
@@ -56,13 +57,15 @@ func TestPartnerPreparationTransitionIsReplaySafeAndStoreScoped(t *testing.T) {
 	}
 
 	if _, err := TransitionPartnerPreparation(db, PartnerPreparationTransitionInput{
-		OrderID: order.ID, StoreID: order.StoreID, ActorID: input.ActorID,
+		OperatorContextID: order.OperatorContextID,
+		OrderID:           order.ID, StoreID: order.StoreID, ActorID: input.ActorID,
 		Operation: "ready", ExpectedVersion: version, IdempotencyKey: "stale-ready-" + order.ID[:8],
 	}); !errors.Is(err, ErrConflict) {
 		t.Fatalf("stale transition error = %v, want ErrConflict", err)
 	}
 	if _, err := TransitionPartnerPreparation(db, PartnerPreparationTransitionInput{
-		OrderID: order.ID, StoreID: "different-store", ActorID: input.ActorID,
+		OperatorContextID: order.OperatorContextID,
+		OrderID:           order.ID, StoreID: "different-store", ActorID: input.ActorID,
 		Operation: "ready", ExpectedVersion: first.Version, IdempotencyKey: "cross-store-" + order.ID[:8],
 	}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("cross-store transition error = %v, want ErrNotFound", err)
@@ -93,7 +96,8 @@ func TestPartnerReadyTransitionRejectsOpenPreparationIssue(t *testing.T) {
 		t.Fatalf("insert open preparation issue: %v", err)
 	}
 	_, err := TransitionPartnerPreparation(db, PartnerPreparationTransitionInput{
-		OrderID: order.ID, StoreID: order.StoreID, ActorID: "partner-ready-actor",
+		OperatorContextID: order.OperatorContextID,
+		OrderID:           order.ID, StoreID: order.StoreID, ActorID: "partner-ready-actor",
 		Operation: "ready", ExpectedVersion: version, IdempotencyKey: "ready-issue-" + order.ID[:8],
 	})
 	if !errors.Is(err, ErrConflict) {

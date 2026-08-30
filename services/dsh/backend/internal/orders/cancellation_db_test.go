@@ -16,11 +16,12 @@ func TestClientEarlyCancellationCreatesOneGovernedRecordDBIntegration(t *testing
 	})
 
 	input := CreateCancellationCaseInput{
-		OrderID:       order.ID,
-		ActorID:       order.ClientID,
-		ActorRole:     "client",
-		ReasonCode:    "changed_mind",
-		CorrelationID: correlationID,
+		OrderID:           order.ID,
+		OperatorContextID: order.OperatorContextID,
+		ActorID:           order.ClientID,
+		ActorRole:         "client",
+		ReasonCode:        "changed_mind",
+		CorrelationID:     correlationID,
 	}
 	first, err := CancelOrderSync(db, input)
 	if err != nil {
@@ -65,11 +66,12 @@ func TestClientLateCancellationRequiresOperatorReviewDBIntegration(t *testing.T)
 	})
 
 	_, err := CancelOrderSync(db, CreateCancellationCaseInput{
-		OrderID:       order.ID,
-		ActorID:       order.ClientID,
-		ActorRole:     "client",
-		ReasonCode:    "excessive_delay",
-		CorrelationID: fmt.Sprintf("late-client-cancel-%d", time.Now().UnixNano()),
+		OrderID:           order.ID,
+		OperatorContextID: order.OperatorContextID,
+		ActorID:           order.ClientID,
+		ActorRole:         "client",
+		ReasonCode:        "excessive_delay",
+		CorrelationID:     fmt.Sprintf("late-client-cancel-%d", time.Now().UnixNano()),
 	})
 	if !errors.Is(err, ErrCancellationRequiresReview) {
 		t.Fatalf("expected ErrCancellationRequiresReview, got %v", err)
@@ -99,10 +101,14 @@ func TestOperatorCancellationStopsDependentDispatchWorkDBIntegration(t *testing.
 	})
 
 	var assignmentID string
+	var operatorContextID string
+	if err := db.QueryRow(`SELECT operator_context_id FROM dsh_orders WHERE id=$1::uuid`, order.ID).Scan(&operatorContextID); err != nil {
+		t.Fatalf("read order operator context: %v", err)
+	}
 	if err := db.QueryRow(`
-		INSERT INTO dsh_assignments(order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at)
-		VALUES($1::uuid,$2,$3,'accepted',NOW()+INTERVAL '90 seconds',NOW())
-		RETURNING id::text`, order.ID, "captain-cancellation-test", "operator-cancellation-test").Scan(&assignmentID); err != nil {
+		INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at,accepted_at)
+		VALUES($1,$2::uuid,$3,$4,'accepted',NOW()+INTERVAL '90 seconds',NOW())
+		RETURNING id::text`, operatorContextID, order.ID, "captain-cancellation-test", "operator-cancellation-test").Scan(&assignmentID); err != nil {
 		t.Fatalf("insert assignment: %v", err)
 	}
 	if _, err := db.Exec(`
@@ -112,12 +118,13 @@ func TestOperatorCancellationStopsDependentDispatchWorkDBIntegration(t *testing.
 	}
 
 	cancelled, err := CancelOrderSync(db, CreateCancellationCaseInput{
-		OrderID:       order.ID,
-		ActorID:       "operator-cancellation-test",
-		ActorRole:     "operator",
-		ReasonCode:    "operational_failure",
-		ReasonNote:    "dispatch dependency test",
-		CorrelationID: fmt.Sprintf("operator-cancel-%d", time.Now().UnixNano()),
+		OrderID:           order.ID,
+		OperatorContextID: order.OperatorContextID,
+		ActorID:           "operator-cancellation-test",
+		ActorRole:         "operator",
+		ReasonCode:        "operational_failure",
+		ReasonNote:        "dispatch dependency test",
+		CorrelationID:     fmt.Sprintf("operator-cancel-%d", time.Now().UnixNano()),
 	})
 	if err != nil {
 		t.Fatalf("CancelOrderSync failed: %v", err)
@@ -146,11 +153,12 @@ func TestPartnerCannotCancelAfterReadyForPickupDBIntegration(t *testing.T) {
 	})
 
 	_, err := CancelOrderSync(db, CreateCancellationCaseInput{
-		OrderID:       order.ID,
-		ActorID:       "partner-cancellation-test",
-		ActorRole:     "partner",
-		ReasonCode:    "cannot_fulfill",
-		CorrelationID: fmt.Sprintf("partner-late-cancel-%d", time.Now().UnixNano()),
+		OrderID:           order.ID,
+		OperatorContextID: order.OperatorContextID,
+		ActorID:           "partner-cancellation-test",
+		ActorRole:         "partner",
+		ReasonCode:        "cannot_fulfill",
+		CorrelationID:     fmt.Sprintf("partner-late-cancel-%d", time.Now().UnixNano()),
 	})
 	if !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected conflict for late partner cancellation, got %v", err)

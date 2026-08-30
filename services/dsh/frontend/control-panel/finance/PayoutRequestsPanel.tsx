@@ -12,12 +12,12 @@ import {
   type FinancePayoutRequest,
   formatWltMoney,
 } from '@bthwani/dsh/wlt';
-import { GovernedSettlementPanel } from "./GovernedSettlementPanel";
-import { CommissionGovernancePanel } from "./CommissionGovernancePanel";
 
 type PayoutRequestsPanelProps = {
   readonly requests: readonly FinancePayoutRequest[];
   readonly reload: () => Promise<void>;
+  readonly canManage: boolean;
+  readonly beneficiaryActorType?: string;
 };
 
 type PayoutAction = {
@@ -87,13 +87,15 @@ function terminalOrHoldMessage(request: FinancePayoutRequest): string | null {
   }
 }
 
-export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelProps) {
+export function PayoutRequestsPanel({ requests, reload, canManage, beneficiaryActorType }: PayoutRequestsPanelProps) {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const sortedRequests = useMemo(
-    () => [...requests].sort((left, right) => String(right.requestedAt ?? "").localeCompare(String(left.requestedAt ?? ""))),
-    [requests],
+    () => requests
+      .filter((request) => !beneficiaryActorType || request.beneficiaryActorType === beneficiaryActorType)
+      .sort((left, right) => String(right.requestedAt ?? "").localeCompare(String(left.requestedAt ?? ""))),
+    [beneficiaryActorType, requests],
   );
 
   const runAction = useCallback(async (request: FinancePayoutRequest, action: PayoutAction) => {
@@ -113,66 +115,62 @@ export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelPro
   }, [reload]);
 
   return (
-    <>
-      <GovernedSettlementPanel reload={reload} />
-      <CommissionGovernancePanel />
-      <Card style={{ padding: "1.5rem" }}>
-        <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>طلبات الصرف والتسويات الميدانية</Text>
-        <Text role="body" tone="muted" style={{ marginBottom: "1rem" }}>
-          WLT يملك الوجهة والرصيد والحجز ودليل المزود والقيد. كل زر ظاهر فقط عندما تسمح به الحالة، وهوية المشغّل تُحل في DSH ولا تُقبل من المتصفح.
-        </Text>
-        {actionError ? (
-          <Card style={{ padding: "0.75rem", marginBottom: "1rem" }}>
-            <Text role="body" tone="danger">{actionError}</Text>
-          </Card>
-        ) : null}
-        {sortedRequests.length === 0 ? (
-          <Text role="body" tone="muted">لا توجد طلبات صرف مسجلة.</Text>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {sortedRequests.map((request) => {
-              const status = STATUS_META[request.status] ?? { label: request.status, tone: "neutral" as const };
-              const actions = actionsForStatus(request.status);
-              const message = terminalOrHoldMessage(request);
-              return (
-                <Card key={request.id} style={{ padding: "1rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "260px" }}>
-                      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-                        <Text role="body" style={{ fontWeight: "bold" }}>طلب: {request.id}</Text>
-                        <CpBadge tone={status.tone}>{status.label}</CpBadge>
-                      </div>
-                      <Text role="caption" tone="muted">المستفيد: {request.beneficiaryActorId} ({request.beneficiaryActorType})</Text>
-                      <Text role="caption" tone="muted">المبلغ: {formatMoney(request.amountMinorUnits, request.currency)}</Text>
-                      {request.providerReference ? <Text role="caption">مرجع المزود: {request.providerReference}</Text> : null}
-                      {request.providerStatus ? <Text role="caption" tone="muted">حالة المزود: {request.providerStatus}</Text> : null}
-                      {message ? <Text role="caption" tone={request.status === "provider_result_unknown" ? "danger" : "muted"}>{message}</Text> : null}
+    <Card style={{ padding: "1.5rem" }}>
+      <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>طلبات الصرف</Text>
+      <Text role="body" tone="muted" style={{ marginBottom: "1rem" }}>
+        WLT يملك الوجهة والرصيد والحجز ودليل المزود والقيد. كل زر ظاهر فقط عندما تسمح به الحالة، وهوية المشغّل تُحل في DSH ولا تُقبل من المتصفح.
+      </Text>
+      {actionError ? (
+        <Card style={{ padding: "0.75rem", marginBottom: "1rem" }}>
+          <Text role="body" tone="danger">{actionError}</Text>
+        </Card>
+      ) : null}
+      {sortedRequests.length === 0 ? (
+        <Text role="body" tone="muted">لا توجد طلبات صرف مطابقة لهذا النطاق.</Text>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {sortedRequests.map((request) => {
+            const status = STATUS_META[request.status] ?? { label: request.status, tone: "neutral" as const };
+            const actions = actionsForStatus(request.status);
+            const message = terminalOrHoldMessage(request);
+            return (
+              <Card key={request.id} style={{ padding: "1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "260px" }}>
+                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                      <Text role="body" style={{ fontWeight: "bold" }}>طلب: {request.id}</Text>
+                      <CpBadge tone={status.tone}>{status.label}</CpBadge>
                     </div>
-                    {actions.length > 0 ? (
-                      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                        {actions.map((action) => {
-                          const key = `${request.id}:${action.id}`;
-                          const busy = busyKey === key;
-                          return (
-                            <CpButton
-                              key={action.id}
-                              variant={action.tone}
-                              disabled={busyKey !== null}
-                              onClick={() => runAction(request, action)}
-                            >
-                              {busy ? "جارٍ التنفيذ…" : action.label}
-                            </CpButton>
-                          );
-                        })}
-                      </div>
-                    ) : null}
+                    <Text role="caption" tone="muted">المستفيد: {request.beneficiaryActorId} ({request.beneficiaryActorType})</Text>
+                    <Text role="caption" tone="muted">المبلغ: {formatMoney(request.amountMinorUnits, request.currency)}</Text>
+                    {request.providerReference ? <Text role="caption">مرجع المزود: {request.providerReference}</Text> : null}
+                    {request.providerStatus ? <Text role="caption" tone="muted">حالة المزود: {request.providerStatus}</Text> : null}
+                    {message ? <Text role="caption" tone={request.status === "provider_result_unknown" ? "danger" : "muted"}>{message}</Text> : null}
                   </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-    </>
+                  {actions.length > 0 && canManage ? (
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                      {actions.map((action) => {
+                        const key = `${request.id}:${action.id}`;
+                        const busy = busyKey === key;
+                        return (
+                          <CpButton
+                            key={action.id}
+                            variant={action.tone}
+                            disabled={busyKey !== null}
+                            onClick={() => runAction(request, action)}
+                          >
+                            {busy ? "جارٍ التنفيذ…" : action.label}
+                          </CpButton>
+                        );
+                      })}
+                    </div>
+                  ) : actions.length > 0 ? <Text role="caption" tone="muted">قراءة فقط — تنفيذ طلب الصرف يتطلب finance.manage.</Text> : null}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </Card>
   );
 }

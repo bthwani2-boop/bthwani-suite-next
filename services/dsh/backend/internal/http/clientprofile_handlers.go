@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/clientprofile"
 	"dsh-api/internal/store"
@@ -15,7 +16,7 @@ func (s *protectedStoreServer) handleGetClientProfile(w http.ResponseWriter, r *
 		return
 	}
 
-	profile, err := clientprofile.GetClientProfile(s.db, actor.ID)
+	profile, err := clientprofile.GetClientProfile(r.Context(), s.db, actor.ID)
 	if err != nil {
 		if errors.Is(err, clientprofile.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "PROFILE_NOT_FOUND", "Client profile not found")
@@ -33,6 +34,10 @@ func (s *protectedStoreServer) handleUpsertClientProfilePreferences(w http.Respo
 	if !ok {
 		return
 	}
+	mutation, ok := clientProfileMutationContext(w, r)
+	if !ok {
+		return
+	}
 
 	var input clientprofile.ClientProfilePreferencesInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -40,8 +45,12 @@ func (s *protectedStoreServer) handleUpsertClientProfilePreferences(w http.Respo
 		return
 	}
 
-	profile, err := clientprofile.UpsertClientProfilePreferences(s.db, actor.ID, input)
+	profile, err := clientprofile.UpsertClientProfilePreferences(r.Context(), s.db, actor.ID, input, mutation)
 	if err != nil {
+		if errors.Is(err, clientprofile.ErrIdempotencyConflict) {
+			store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different profile mutation")
+			return
+		}
 		if errors.Is(err, clientprofile.ErrConflict) {
 			store.SendError(w, http.StatusConflict, "PROFILE_CONFLICT", "Profile version conflict")
 			return
@@ -58,6 +67,10 @@ func (s *protectedStoreServer) handleUpsertClientProfileConsents(w http.Response
 	if !ok {
 		return
 	}
+	mutation, ok := clientProfileMutationContext(w, r)
+	if !ok {
+		return
+	}
 
 	var input clientprofile.ClientProfileConsentsInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -65,8 +78,12 @@ func (s *protectedStoreServer) handleUpsertClientProfileConsents(w http.Response
 		return
 	}
 
-	profile, err := clientprofile.UpsertClientProfileConsents(s.db, actor.ID, input)
+	profile, err := clientprofile.UpsertClientProfileConsents(r.Context(), s.db, actor.ID, input, mutation)
 	if err != nil {
+		if errors.Is(err, clientprofile.ErrIdempotencyConflict) {
+			store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different profile mutation")
+			return
+		}
 		if errors.Is(err, clientprofile.ErrConflict) {
 			store.SendError(w, http.StatusConflict, "PROFILE_CONFLICT", "Profile version conflict")
 			return
@@ -90,7 +107,7 @@ func (s *protectedStoreServer) handleAdminGetClientProfile(w http.ResponseWriter
 		return
 	}
 
-	profile, err := clientprofile.GetClientProfile(s.db, actorId)
+	profile, err := clientprofile.GetClientProfile(r.Context(), s.db, actorId)
 	if err != nil {
 		if errors.Is(err, clientprofile.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "PROFILE_NOT_FOUND", "Client profile not found")
@@ -101,4 +118,18 @@ func (s *protectedStoreServer) handleAdminGetClientProfile(w http.ResponseWriter
 	}
 
 	store.SendJSON(w, http.StatusOK, map[string]any{"profile": profile})
+}
+
+func clientProfileMutationContext(w http.ResponseWriter, r *http.Request) (clientprofile.MutationContext, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
+		return clientprofile.MutationContext{}, false
+	}
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if len(correlationID) < 8 || len(correlationID) > 200 {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_REQUIRED", "X-Correlation-ID must contain between 8 and 200 characters")
+		return clientprofile.MutationContext{}, false
+	}
+	return clientprofile.MutationContext{IdempotencyKey: idempotencyKey, CorrelationID: correlationID}, true
 }

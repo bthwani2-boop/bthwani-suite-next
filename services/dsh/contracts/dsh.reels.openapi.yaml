@@ -72,6 +72,8 @@ paths:
       - Reels
       security:
       - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -164,6 +166,14 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
     ReelId:
       name: reelId
       in: path

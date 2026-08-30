@@ -1,10 +1,20 @@
-import type { CaptainSupportRoute, CompactOrderChatMessage, CaptainAvailabilityStatus, CaptainGpsStatus, CaptainAppMode, CaptainServiceType, CaptainAvailabilityMeta } from './captain.contract';
+import type { CaptainSupportRoute, CaptainAvailabilityStatus, CaptainGpsStatus, CaptainAppMode, CaptainServiceType, CaptainAvailabilityMeta } from './captain.contract';
 import type { DshCaptainRoute } from './captain.contract';
-import type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
-import type { DshDeliveryStatus } from '../dispatch';
-import type { DshCaptainOrderBellItem, DshCaptainOrderDetailSummary } from '../orders';
+import type { DshDeliveryStatus, DshDispatchAssignmentSource } from '../dispatch';
+import type {
+  DshCaptainDeliveryActionId,
+  DshCaptainOrderBellItem,
+  DshCaptainOrderDetailSummary,
+} from '../orders';
 import type { CaptainPodState } from '../media/pod/pod-upload-flow';
-export type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
+
+export type CaptainDeliveryActionId = DshCaptainDeliveryActionId;
+export type CaptainDeliveryAction = {
+  readonly id: CaptainDeliveryActionId;
+  readonly label: string;
+  readonly description: string;
+  readonly enabled: boolean;
+};
 
 export type CaptainHomeTickerAction =
   | 'toggle-availability'
@@ -18,26 +28,23 @@ export type DshCaptainSurfaceState = {
   inboxState: 'ready' | 'loading' | 'error' | 'empty' | 'delivered' | 'offer-accepting' | 'offer-accepted';
   activeAssignmentId: string;
   activeOrderId: string;
+  activeWorkItemId: string;
+  activeWorkItemSource: DshDispatchAssignmentSource | '';
   activeDeliveryStatus: DshDeliveryStatus | '';
   inboxItems: DshCaptainOrderBellItem[];
   selectedSupportScreen: CaptainSupportRoute;
-  isPickupSheetVisible: boolean;
-  isDeliverySheetVisible: boolean;
   captainAvailabilityStatus: CaptainAvailabilityStatus;
+  availabilityBusy: boolean;
+  availabilityError: string | null;
   gpsStatus: CaptainGpsStatus;
-  activeOrderExpanded: boolean;
-  activeOrderPhase: ActiveOrderPhase;
   captainAppMode: CaptainAppMode;
-  activeOrderDraft: string;
-  activeOrderMessages: CompactOrderChatMessage[];
-  storeCourierStage: StoreCourierStage;
   captainPodState: CaptainPodState;
   captainPodPhotoUri: string | undefined;
-  captainPodMediaKey: string | undefined;
   isDeclineSheetVisible: boolean;
   declineSheetState: 'ready' | 'loading' | 'success' | 'error';
   declineOrderId: string;
-  pickupSheetState: 'ready' | 'loading' | 'success' | 'error';
+  deliveryActionState: 'idle' | 'loading' | 'success' | 'error';
+  deliveryActionMessage: string | null;
 };
 
 export type DshCaptainSurfaceDerived = {
@@ -50,6 +57,7 @@ export type DshCaptainSurfaceDerived = {
   currentAvailabilityMeta: CaptainAvailabilityMeta;
   activeOrderDisplayId: string;
   activeSummary: DshCaptainOrderDetailSummary;
+  activeDeliveryAction: CaptainDeliveryAction;
   homeTicker: {
     statusLabel: string;
     message: string;

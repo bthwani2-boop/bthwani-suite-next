@@ -26,6 +26,8 @@ describe("checkout identity scope regression", () => {
     assert.match(flow, /const actorId = identity\.state\.kind === "authenticated" \? identity\.state\.identity\.subject : ""/);
     assert.match(flow, /getOrCreateCheckoutAttempt\(actorId, input\)/);
     assert.match(flow, /clearCheckoutAttempt\(actorId, fingerprintCheckoutInput\(input\)\)/);
-    assert.match(flow, /\[actorId, submitOrder\]\);/);
+    assert.match(flow, /const clearCurrentCheckoutAttempt = useCallback\([\s\S]*clearCheckoutAttempt\(actorId, fingerprintCheckoutInput\(input\)\)[\s\S]*\}, \[actorId\]\);/);
+    assert.match(flow, /await clearCurrentCheckoutAttempt\(\);/);
+    assert.match(flow, /\}, \[clearCurrentCheckoutAttempt, submitOrder\]\);/);
   });
 });

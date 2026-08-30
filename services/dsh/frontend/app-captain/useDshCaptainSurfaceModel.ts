@@ -4,8 +4,6 @@ import {
 import type { CaptainSupportRoute, DshCaptainRoute } from '../shared/delivery';
 
 export type {
-  ActiveOrderPhase,
-  StoreCourierStage,
   DshCaptainSurfaceState,
   DshCaptainSurfaceDerived,
 } from '../shared/delivery/captain.surface.types';

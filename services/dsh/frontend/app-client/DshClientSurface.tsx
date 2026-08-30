@@ -3,7 +3,7 @@ import { StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "./shell/AppHeader";
 import { BottomNavBar, type BottomNavItem } from "./shell/BottomNavBar";
-import { openClientExternalUrl, performClientSelectionHaptic } from "../../../../apps/app-client/runtime/src/platform/client-platform-actions";
+import { useDshClientPlatform } from "./client-platform-context";
 import { LoadingState, brandScale, colorRoles, Icon, StateView } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "./home-discovery/HomeDiscoveryRoute";
 import { StoreDiscoveryRoute } from "./store/StoreDiscoveryRoute";
@@ -26,7 +26,6 @@ import { TicketDetailScreen } from "./support/TicketDetailScreen";
 import { SheinForm } from "../shared/shein/SheinForm";
 import { AwnakForm } from "../shared/awnak/AwnakForm";
 import { ClientSpecialRequestsScreen, useSpecialRequestsController } from "../shared/special-requests";
-import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
 import type { DshHomeSpecialRequestTarget } from "../shared/home-discovery";
 import { useOrderTruthCollectionController, toOrderTruthSummary, type OrderTruth } from "../shared/order-truth";
 import { fetchActiveCart } from "../shared/cart";
@@ -60,7 +59,15 @@ function routeTab(route: DshClientRoute): ClientTab {
     case "special-request-awnak": return "special";
     case "wallet": return "wallet";
     case "cart": return "cart";
-    default: return "profile";
+    case "profile":
+    case "profile-commercial":
+    case "profile-addresses":
+    case "profile-identity":
+    case "profile-benefits":
+    case "profile-preferences":
+    case "support":
+    case "support-ticket":
+    case "notifications": return "profile";
   }
 }
 
@@ -74,11 +81,13 @@ function isClientTab(value: string): value is ClientTab {
 
 export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
   const insets = useSafeAreaInsets();
+  const { selectionHaptic, openExternalUrl } = useDshClientPlatform();
   const activeTab = routeTab(route);
   const [activeCartDiscovery, setActiveCartDiscovery] = useState<"idle" | "loading" | "empty" | "error">("idle");
   const [cartRetryToken, setCartRetryToken] = useState(0);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [notificationActionError, setNotificationActionError] = useState<string | null>(null);
   const specialRequestController = useSpecialRequestsController();
   const { state: ordersState } = useOrderTruthCollectionController("client");
 
@@ -88,9 +97,9 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
   }, [ordersState]);
 
   const navigate = useCallback((nextRoute: DshClientRoute, mode: "push" | "replace" = "push") => {
-    void performClientSelectionHaptic();
+    void selectionHaptic();
     navigation.navigate(nextRoute, mode);
-  }, [navigation]);
+  }, [navigation, selectionHaptic]);
 
   const cartStoreId = route.kind === "cart" ? route.storeId : undefined;
   useEffect(() => {
@@ -119,13 +128,30 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
   }, [navigate]);
   const openNotificationActionUrl = useCallback((actionUrl: string) => {
     const target = dshClientRouteFromActionUrl(actionUrl);
-    if (target) navigation.navigate(target);
+    if (!target) {
+      setNotificationActionError("هذا الإجراء غير مدعوم في تطبيق العميل. افتح الإشعار من التطبيق أو حدّثه من جديد.");
+      return;
+    }
+    setNotificationActionError(null);
+    navigation.navigate(target);
   }, [navigation]);
   const openHomeMarketingAction = useCallback((actionType: string, actionTarget: string) => {
     const target = actionTarget.trim();
-    if (actionType === "store" && target) navigate({ kind: "store", storeId: target });
-    else if (actionType === "external") void openClientExternalUrl(target);
-  }, [navigate]);
+    setNotificationActionError(null);
+    if (actionType === "store" && target) {
+      navigate({ kind: "store", storeId: target });
+      return;
+    }
+    if (actionType === "external" && target) {
+      void openExternalUrl(target)
+        .then((opened) => {
+          if (!opened) setNotificationActionError("تعذر فتح الرابط التسويقي الآمن. تحقق من الاتصال أو افتح العرض لاحقًا.");
+        })
+        .catch(() => setNotificationActionError("تعذر فتح الرابط التسويقي الآمن. تحقق من الاتصال أو افتح العرض لاحقًا."));
+      return;
+    }
+    setNotificationActionError("هذا الإجراء التسويقي غير مدعوم أو لا يملك وجهة صالحة.");
+  }, [navigate, openExternalUrl]);
   const openSpecialRequestType = useCallback((requestType: DshHomeSpecialRequestTarget) => {
     navigate({ kind: requestType === "SHEIN_ASSISTED_PURCHASE" ? "special-request-shein" : "special-request-awnak" });
   }, [navigate]);
@@ -149,10 +175,10 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
       content = <OrderTrackingScreen orderId={route.orderId} onBack={navigation.back} onOpenPickup={openPickupSession} onOpenOrderSupport={openOrderSupport} onOpenNotifications={() => navigate({ kind: "notifications" })} />;
       break;
     case "special-request-shein":
-      content = <SheinForm onBack={navigation.back} onViewRequests={() => navigate({ kind: "special-requests" }, "replace")} onSubmit={(data) => specialRequestController.submit({ requestType: "SHEIN_ASSISTED_PURCHASE", idempotencyKey: generateSpecialRequestIdempotencyKey(), ...data })} />;
+      content = <SheinForm onBack={navigation.back} onViewRequests={() => navigate({ kind: "special-requests" }, "replace")} onSubmit={(data) => specialRequestController.submit({ requestType: "SHEIN_ASSISTED_PURCHASE", ...data })} />;
       break;
     case "special-request-awnak":
-      content = <AwnakForm onBack={navigation.back} onViewRequests={() => navigate({ kind: "special-requests" }, "replace")} onSubmit={(data) => specialRequestController.submit({ requestType: "AWNAK_ERRAND", idempotencyKey: generateSpecialRequestIdempotencyKey(), ...data })} />;
+      content = <AwnakForm onBack={navigation.back} onViewRequests={() => navigate({ kind: "special-requests" }, "replace")} onSubmit={(data) => specialRequestController.submit({ requestType: "AWNAK_ERRAND", ...data })} />;
       break;
     case "home":
       content = <HomeDiscoveryRoute searchQuery={searchQuery} onStorePress={(storeId) => navigate({ kind: "store", storeId })} onSpecialRequestPress={openSpecialRequestType} onMarketingAction={openHomeMarketingAction} />;
@@ -206,7 +232,6 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
       content = <SupportTicketScreen onBack={navigation.back} onOpenTicket={(ticketId) => navigate({ kind: "support-ticket", ticketId })} {...(route.orderId ? { orderId: route.orderId } : {})} />;
       break;
     case "profile":
-    default:
       content = <MySpaceScreen onOpenOrders={() => navigate({ kind: "orders" })} onOpenAddresses={() => navigate({ kind: "profile-addresses" })} onOpenIdentity={() => navigate({ kind: "profile-identity" })} onOpenBenefits={() => navigate({ kind: "profile-benefits" })} onOpenPreferences={() => navigate({ kind: "profile-preferences" })} onOpenProfile={() => navigate({ kind: "profile-commercial" })} onOpenSupport={() => navigate({ kind: "support" })} />;
       break;
   }
@@ -221,13 +246,24 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
           {...(activeOrder ? { tickerStatusLabel: "طلب نشط", tickerMessage: `طلبك #${activeOrder.orderNumber} · ${toOrderTruthSummary(activeOrder).statusLabel}`, onTickerPress: () => navigate({ kind: "order", orderId: activeOrder.id }) } : {})}
           searchSlot={isSearchActive ? <TextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="ابحث عن متجر أو فئة..." placeholderTextColor={colorRoles.textMuted} style={{ height: 36, backgroundColor: colorRoles.surfaceBase, borderRadius: 18, paddingHorizontal: 16, textAlign: "right", flex: 1, fontSize: 14 }} autoFocus /> : undefined}
           actions={[
-            { icon: <Icon name={isSearchActive ? "close-outline" : "search-outline"} size={20} color={colorRoles.surfaceBase} />, accessibilityLabel: "بحث", onPress: () => { void performClientSelectionHaptic(); if (isSearchActive) setSearchQuery(""); setIsSearchActive((value) => !value); } },
+            { icon: <Icon name={isSearchActive ? "close-outline" : "search-outline"} size={20} color={colorRoles.surfaceBase} />, accessibilityLabel: "بحث", onPress: () => { void selectionHaptic(); if (isSearchActive) setSearchQuery(""); setIsSearchActive((value) => !value); } },
             { icon: <Icon name="notifications-outline" size={20} color={colorRoles.surfaceBase} />, accessibilityLabel: "الإشعارات", onPress: () => navigate({ kind: "notifications" }) },
             { icon: <Icon name="cart-outline" size={20} color={colorRoles.surfaceBase} />, accessibilityLabel: "عربة التسوق", onPress: () => navigate({ kind: "cart" }) },
           ]}
         />
       ) : null}
-      <View style={styles.content}>{content}</View>
+      <View style={styles.content}>
+        {notificationActionError ? (
+          <StateView
+            tone="warning"
+            title="تعذر فتح الإشعار"
+            description={notificationActionError}
+            actionLabel="إغلاق"
+            onActionPress={() => setNotificationActionError(null)}
+          />
+        ) : null}
+        {content}
+      </View>
       {showBottomNav ? (
         <BottomNavBar
           items={NAV_ITEMS}

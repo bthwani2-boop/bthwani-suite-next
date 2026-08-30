@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { TextInput, View } from "react-native";
 import {
   Badge,
@@ -20,6 +20,11 @@ import {
   type PayoutAmountMode,
   type PayoutDestination,
 } from "./payout.api";
+import {
+  clearPayoutAttempt,
+  getOrCreatePayoutAttempt,
+  type PayoutAttemptIntent,
+} from "./payout-attempt";
 import { formatWltMoney, parseWltMajorInputToMinorUnits } from "../finance/wlt-money";
 
 export type PayoutDestinationPanelProps = {
@@ -40,12 +45,6 @@ type PanelState =
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function newAttemptKey(actorType: PayoutActorType): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return `payout:${actorType}:${uuid}`;
-  throw new Error("Secure randomness is unavailable; refusing to create a payout idempotency key");
 }
 
 function statusMeta(status: string): { readonly label: string; readonly tone: "neutral" | "success" | "warning" | "danger" } {
@@ -98,6 +97,14 @@ function DestinationSummary({ destination }: { readonly destination: PayoutDesti
   );
 }
 
+async function fetchPanelReadback(actorType: PayoutActorType): Promise<Extract<PanelState, { readonly kind: "ready" }>> {
+  const [destination, requests] = await Promise.all([
+    fetchOwnPayoutDestination(actorType),
+    fetchOwnPayoutRequests(actorType),
+  ]);
+  return { kind: "ready", destination, requests };
+}
+
 export function PayoutDestinationPanel({
   actorType,
   currency = "YER",
@@ -110,16 +117,11 @@ export function PayoutDestinationPanel({
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const attemptKeyRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
     try {
-      const [destination, requests] = await Promise.all([
-        fetchOwnPayoutDestination(actorType),
-        fetchOwnPayoutRequests(actorType),
-      ]);
-      setState({ kind: "ready", destination, requests });
+      setState(await fetchPanelReadback(actorType));
     } catch (error) {
       setState({ kind: "error", message: errorMessage(error) });
     }
@@ -145,12 +147,37 @@ export function PayoutDestinationPanel({
 
     setActionError(null);
     setBusy(true);
-    if (!attemptKeyRef.current) attemptKeyRef.current = newAttemptKey(actorType);
     try {
-      await createOwnPayoutRequest(actorType, amountMode, amountMinorUnits, currency, attemptKeyRef.current);
-      attemptKeyRef.current = null;
+      if (state.destination.ownerActorType !== actorType) {
+        throw new Error("Payout destination ownership does not match the authenticated surface");
+      }
+      const normalizedCurrency = currency.trim().toUpperCase();
+      const attemptIntent: PayoutAttemptIntent = {
+        actorType,
+        actorId: state.destination.ownerActorId,
+        payoutDestinationId: state.destination.id,
+        payoutDestinationVersion: state.destination.destinationVersion,
+        amountMode,
+        ...(amountMinorUnits === undefined ? {} : { amountMinorUnits }),
+        currency: normalizedCurrency,
+      };
+      const attempt = await getOrCreatePayoutAttempt(attemptIntent);
+      if (!state.requests.some((request) => request.idempotencyKey === attempt.idempotencyKey)) {
+        await createOwnPayoutRequest(
+          actorType,
+          amountMode,
+          amountMinorUnits,
+          normalizedCurrency,
+          attempt.idempotencyKey,
+        );
+      }
+      const readback = await fetchPanelReadback(actorType);
+      if (!readback.requests.some((request) => request.idempotencyKey === attempt.idempotencyKey)) {
+        throw new Error("لم تُثبت القراءة المالية الراجعة طلب الصرف بعد؛ أعد المحاولة بنفس الطلب.");
+      }
+      await clearPayoutAttempt(attemptIntent, attempt.signature);
       setAmount("");
-      await load();
+      setState(readback);
     } catch (error) {
       setActionError(errorMessage(error));
     } finally {
@@ -214,7 +241,7 @@ export function PayoutDestinationPanel({
             label="صرف كامل الرصيد المتاح"
             tone={amountMode === "FULL_AVAILABLE" ? "brand" : "secondary"}
             disabled={busy || !destinationVerified}
-            onPress={() => { setAmountMode("FULL_AVAILABLE"); setAmount(""); attemptKeyRef.current = null; }}
+            onPress={() => { setAmountMode("FULL_AVAILABLE"); setAmount(""); }}
           />
         </View>
         <View style={{ flex: 1 }}>
@@ -222,14 +249,14 @@ export function PayoutDestinationPanel({
             label="صرف مبلغ محدد"
             tone={amountMode === "SPECIFIED" ? "brand" : "secondary"}
             disabled={busy || !destinationVerified}
-            onPress={() => { setAmountMode("SPECIFIED"); attemptKeyRef.current = null; }}
+            onPress={() => { setAmountMode("SPECIFIED"); }}
           />
         </View>
       </View>
       {amountMode === "SPECIFIED" ? (
         <TextInput
           value={amount}
-          onChangeText={(value) => { setAmount(value); attemptKeyRef.current = null; }}
+          onChangeText={setAmount}
           placeholder={`المبلغ بـ ${currency}`}
           placeholderTextColor={theme.textMuted}
           editable={!busy && destinationVerified}

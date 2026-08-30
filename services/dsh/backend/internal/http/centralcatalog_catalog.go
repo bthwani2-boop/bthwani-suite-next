@@ -11,7 +11,7 @@ import (
 // ── Operator: domains (L1) ───────────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListCatalogDomains(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyRead); !ok {
 		return
 	}
 	domains, err := centralcatalog.ListDomains(r.Context(), s.db)
@@ -41,7 +41,7 @@ func (s *protectedStoreServer) handleCreateCatalogDomain(w http.ResponseWriter, 
 // ── Operator: nodes (L2/L3/L4) ──────────────────────────────────────────────
 
 func (s *protectedStoreServer) handleListCatalogNodes(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireActor(w, r, "operator", "partner", "field"); !ok {
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyRead); !ok {
 		return
 	}
 	nodes, err := centralcatalog.ListNodes(r.Context(), s.db, r.URL.Query().Get("domainId"), r.URL.Query().Get("parentId"))
@@ -171,6 +171,11 @@ func (s *protectedStoreServer) handleListMasterProducts(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
+	if actor.Role == "operator" {
+		if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductRead); !ok {
+			return
+		}
+	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	approvalStatus := r.URL.Query().Get("approvalStatus")
@@ -269,7 +274,7 @@ func proposalTransitionPermissionAction(nextStatus string) string {
 	}
 }
 
-func (s *protectedStoreServer) createProductProposal(w http.ResponseWriter, r *http.Request, actorID string, forcedStoreID *string) {
+func (s *protectedStoreServer) createProductProposal(w http.ResponseWriter, r *http.Request, actorID, idempotencyKey string, forcedStoreID *string) {
 	var input centralcatalog.ProductProposalInput
 	if !decodeProtectedJSON(w, r, &input) {
 		return
@@ -277,7 +282,7 @@ func (s *protectedStoreServer) createProductProposal(w http.ResponseWriter, r *h
 	if forcedStoreID != nil {
 		input.SourceStoreID = forcedStoreID
 	}
-	p, err := centralcatalog.CreateProposal(r.Context(), s.db, actorID, input)
+	p, err := centralcatalog.CreateProposal(r.Context(), s.db, actorID, idempotencyKey, input)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
@@ -291,7 +296,11 @@ func (s *protectedStoreServer) handlePartnerCreateProductProposal(w http.Respons
 		return
 	}
 	sid := storeID
-	s.createProductProposal(w, r, actor.ID, &sid)
+	idempotencyKey, ok := requireCatalogCreateIdempotency(w, r)
+	if !ok {
+		return
+	}
+	s.createProductProposal(w, r, actor.ID, idempotencyKey, &sid)
 }
 
 func (s *protectedStoreServer) handleFieldCreateProductProposal(w http.ResponseWriter, r *http.Request) {
@@ -299,5 +308,9 @@ func (s *protectedStoreServer) handleFieldCreateProductProposal(w http.ResponseW
 	if !ok {
 		return
 	}
-	s.createProductProposal(w, r, actor.ID, &storeID)
+	idempotencyKey, ok := requireCatalogCreateIdempotency(w, r)
+	if !ok {
+		return
+	}
+	s.createProductProposal(w, r, actor.ID, idempotencyKey, &storeID)
 }
