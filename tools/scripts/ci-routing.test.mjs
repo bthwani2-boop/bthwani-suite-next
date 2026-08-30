@@ -152,7 +152,7 @@ test("final closure resolves once then collects independent analyzers and experi
   assert.match(workflow, /codeql\.yml[\s\S]*?full_scope: true/u);
   assert.match(workflow, /semgrep\.yml[\s\S]*?full_scope: true/u);
   for (const worker of ["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml"]) {
-    assert.match(workflow, new RegExp(`uses: \\.\\/.github/workflows/${worker.replace(".", "\\\\.")}`, "u"), worker);
+    assert.ok(workflow.includes(`uses: ./.github/workflows/${worker}`), worker);
   }
   for (const job of ["ci", "sonar", "codeql", "semgrep", "security", "semantic-context", "rendered-web-baseline", "mobile-evidence"]) {
     assert.match(workflow, new RegExp(`${job}:[\\s\\S]*?needs: \\[resolve\\]`, "u"), job);
