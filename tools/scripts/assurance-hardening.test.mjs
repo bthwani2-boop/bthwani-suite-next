@@ -71,6 +71,10 @@ test("Remote Security authority, wrappers, installer, and policy come from trust
   assert.match(read("tools/scripts/run-osv-scanner.mjs"), /BTHWANI_TRUSTED_POLICY_ROOT/u);
   assert.match(read("tools/scripts/run-trivy.mjs"), /BTHWANI_TRUSTED_POLICY_ROOT/u);
   assert.match(read("tools/scripts/run-shellcheck.mjs"), /--norc/u);
+  const externalRunner = read("tools/scripts/_external-tool-runner.mjs");
+  assert.doesNotMatch(externalRunner, /execSync/u);
+  assert.match(externalRunner, /shell:\s*false/u);
+  assert.match(externalRunner, /makeArgs/u);
 });
 
 test("Semgrep evidence disposition is loaded from trusted workflow authority", () => {

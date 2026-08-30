@@ -1,4 +1,4 @@
-import { execFileSync, execSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { repoRoot } from "../guards/_guard-utils.mjs";
@@ -107,7 +107,21 @@ export function handleCommandFailure(toolId, required) {
   process.exit(0);
 }
 
-export function runTool({ toolId, binary, command, diagnosticCommand, required = false }) {
+function formatCommand(binary, args) {
+  return [binary, ...args].map((arg) => JSON.stringify(String(arg))).join(" ");
+}
+
+function runProcess(binary, args, toolId, required) {
+  const result = spawnSync(binary, args, {
+    cwd: repoRoot,
+    stdio: "inherit",
+    shell: false,
+    windowsHide: true,
+  });
+  if (result.error || result.status !== 0) handleCommandFailure(toolId, required);
+}
+
+export function runTool({ toolId, binary, args, diagnosticArgs, required = false }) {
   requireRemoteExecution(toolId);
   if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
   const diagnostic = isDiagnosticMode();
@@ -115,29 +129,21 @@ export function runTool({ toolId, binary, command, diagnosticCommand, required =
     ensureDir(".diagnostics/security");
     ensureDir(".diagnostics/toolchain");
   }
-  const cmd = diagnostic && diagnosticCommand ? diagnosticCommand : command;
-  console.log(`Running: ${cmd}`);
-  try {
-    execSync(cmd, { cwd: repoRoot, stdio: "inherit", shell: true });
-  } catch {
-    handleCommandFailure(toolId, required);
-  }
+  const selectedArgs = diagnostic && diagnosticArgs ? diagnosticArgs : args;
+  console.log(`Running: ${formatCommand(binary, selectedArgs)}`);
+  runProcess(binary, selectedArgs, toolId, required);
 }
 
-export function runFilesTool({ toolId, binary, files, makeCommand, noFilesMessage, required = false }) {
+export function runFilesTool({ toolId, binary, files, makeArgs, noFilesMessage, required = false }) {
   requireRemoteExecution(toolId);
   if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
   if (!files.length) {
     console.log(noFilesMessage || "No files found.");
     process.exit(0);
   }
-  const cmd = makeCommand(files);
-  console.log(`Running: ${cmd}`);
-  try {
-    execSync(cmd, { cwd: repoRoot, stdio: "inherit", shell: true });
-  } catch {
-    handleCommandFailure(toolId, required);
-  }
+  const args = makeArgs(files);
+  console.log(`Running: ${formatCommand(binary, args)}`);
+  runProcess(binary, args, toolId, required);
 }
 
 export { repoRoot };
