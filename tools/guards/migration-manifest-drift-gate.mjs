@@ -4,7 +4,8 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-const repositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..", "..");
+const moduleRepositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..", "..");
+const repositoryRoot = path.resolve(process.env.BTHWANI_TARGET_REPO || moduleRepositoryRoot);
 const amendmentsRelative = "tools/verification/migration-amendments.json";
 const servicePaths = {
   dsh: "services/dsh/database/migrations",
@@ -178,14 +179,6 @@ function checkImmutableDigestHistory(service, relativeDirectory, manifest) {
     throw new Error(`unable to read baseline manifest for ${service} at ${baseline}: ${detail}`);
   }
 
-  // A migration published on the baseline trunk may have been applied by any
-  // environment that follows it, regardless of the manifest state label. The
-  // ACTIVE label means "pre-release, still correctable"; it never means
-  // "history may be rewritten without a governed amendment disposition". Both
-  // ACTIVE and HISTORICAL_IMMUTABLE entries therefore obey the same published
-  // history law: a byte change against the baseline digest requires an
-  // amendment whose acceptedHistoricalSha256 covers the baseline digest, and a
-  // published file may not silently disappear from the manifest.
   const published = new Map((baselineManifest.migrations ?? []).filter((entry) => entry?.file && entry.sha256).map((entry) => [entry.file, entry.sha256]));
   const failures = [];
   const currentFiles = new Set((manifest.migrations ?? []).map((entry) => entry.file));
