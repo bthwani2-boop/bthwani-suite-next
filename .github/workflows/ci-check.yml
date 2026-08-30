@@ -21,6 +21,7 @@ permissions:
   actions: read
   contents: read
   pull-requests: read
+  statuses: read
 
 concurrency:
   group: bthwani-ci-${{ inputs.pr_number || inputs.expected_head_sha || github.ref }}
