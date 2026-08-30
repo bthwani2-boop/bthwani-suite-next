@@ -7,8 +7,10 @@ on:
     paths:
       - ".github/**"
       - ".agents/**"
+      - ".opencodereview/**"
       - "tools/scripts/**"
       - "tools/guards/**"
+      - "tools/verification/**"
       - "tools/prompting/**"
       - "package.json"
 
@@ -126,6 +128,27 @@ jobs:
           BTHWANI_TRUSTED_SHA: ${{ github.event.pull_request.head.sha }}
           BTHWANI_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
         run: node "${QUALIFIED_AUTHORITY_DRIFT}"
+
+      - name: Prove current assurance changes are rejected by the previous trust root
+        shell: bash
+        env:
+          BTHWANI_TARGET_REPO: ${{ github.workspace }}
+          BTHWANI_TRUSTED_SHA: ${{ github.event.pull_request.base.sha }}
+          BTHWANI_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set +e
+          output="$(node "${QUALIFIED_AUTHORITY_DRIFT}" 2>&1)"
+          code=$?
+          set -e
+          printf '%s\n' "${output}"
+          [[ "${code}" -ne 0 ]] || {
+            echo "::error::assurance-authority changes unexpectedly passed ordinary trust-root drift gate"
+            exit 1
+          }
+          grep -q 'ASSURANCE_AUTHORITY_CHANGE_REQUIRES_BOOTSTRAP' <<<"${output}" || {
+            echo "::error::drift rejection did not identify bootstrap requirement"
+            exit 1
+          }
 
       - name: Execute qualified migration authority against exact candidate data
         shell: bash
