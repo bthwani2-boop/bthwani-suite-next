@@ -37,6 +37,7 @@
     "go",
     "pwsh",
     "where",
+    "where.exe",
     "graphify",
     "k6",
     "gitleaks",
@@ -44,6 +45,12 @@
     "osv-scanner",
     "taskkill"
   ],
+  "ignoreIssues": {
+    "tools/mobile/runtime-shared/sentry-config.ts": ["files"],
+    "shared/data-runtime/src/BthwaniQueryProvider.native.tsx": ["files"],
+    "tools/mobile/metro.config.factory.cjs": ["unlisted"],
+    "apps/app-*/runtime/fingerprint.config.js": ["unlisted"]
+  },
   "ignoreExportsUsedInFile": true,
   "rules": {
     "duplicates": "off"
@@ -52,6 +59,12 @@
     ".": {
       "entry": [
         "tools/mobile/eas-build-mobile.mjs",
+        "tools/mobile/upgrade-mobile-packages.mjs",
+        "tools/mobile/defineBthwaniExpoApp.js",
+        "tools/mobile/metro.config.factory.cjs",
+        "tools/mobile/verify-eas-provider-inputs.mjs",
+        "tools/mobile/verify-mobile-export.mjs",
+        "tools/mobile/verify-mobile-source.mjs",
         "tools/mobile/mobile-dev-data.mjs",
         "tools/mobile/sentry-env.js",
         "tools/mobile/verify-mobile-native.mjs",
@@ -63,6 +76,11 @@
         "tools/dev/local-dev-session-broker.mjs",
         "tools/dev/verify-local-identity-bootstrap.mjs",
         "plans/diagnose-implementing/*.mjs"
+      ],
+      "project": [
+        "tools/**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}",
+        "plans/diagnose-implementing/**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}",
+        "eslint.config.mjs"
       ],
       "ignoreFiles": [
         "tools/contracts/**/*.mjs",
@@ -82,22 +100,26 @@
     "apps/app-client/runtime": {
       "entry": [
         "fingerprint.config.js"
-      ]
+      ],
+      "ignoreDependencies": ["expo-font"]
     },
     "apps/app-partner/runtime": {
       "entry": [
         "fingerprint.config.js"
-      ]
+      ],
+      "ignoreDependencies": ["expo-font"]
     },
     "apps/app-captain/runtime": {
       "entry": [
         "fingerprint.config.js"
-      ]
+      ],
+      "ignoreDependencies": ["expo-font"]
     },
     "apps/app-field/runtime": {
       "entry": [
         "fingerprint.config.js"
-      ]
+      ],
+      "ignoreDependencies": ["expo-font"]
     },
     "services/dsh": {
       "entry": [

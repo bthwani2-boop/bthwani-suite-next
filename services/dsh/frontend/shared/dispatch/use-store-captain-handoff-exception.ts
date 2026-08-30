@@ -11,10 +11,13 @@ import type { DshDeliveryException } from "./dispatch.types";
 import {
   clearStoreCaptainHandoffExceptionAttempt,
   getOrCreateStoreCaptainHandoffExceptionAttempt,
-  type StoreCaptainHandoffExceptionAttemptIntent,
 } from "./store-captain-handoff-exception-attempt";
+import type {
+  StoreCaptainHandoffExceptionActor,
+  StoreCaptainHandoffExceptionAttemptIntent,
+} from "./store-captain-handoff-exception.types";
 
-export type StoreCaptainHandoffExceptionActor = "partner" | "captain";
+export type { StoreCaptainHandoffExceptionActor } from "./store-captain-handoff-exception.types";
 
 type StoreCaptainHandoffExceptionDraft = {
   readonly entityId: string;

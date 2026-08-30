@@ -79,7 +79,7 @@ function resolveVerificationBase({ repository, pr, headSha }) {
   const closureBase = pr.baseRefOid;
   if (!isAncestor(closureBase, parentSha) || !isAncestor(parentSha, headSha)) return null;
 
-  return hasSuccessfulCiStatus(repository, parentSha, "BThwani CI / PR result") ? parentSha : null;
+  return hasSuccessfulCiStatus(repository, parentSha, "BThwani / Change Verification") ? parentSha : null;
 }
 
 function main() {
@@ -105,7 +105,7 @@ function main() {
 
   // CI is an assurance authority, not candidate-owned product code. Run the
   // protected default-branch workflow definition and pass the development
-  // candidate as immutable input. A previous exact PR candidate may be offered
+  // candidate as immutable input. An earlier exact PR candidate may be offered
   // as an evidence frontier only when it has successful CI status; the trusted
   // workflow independently re-proves that frontier before using it. Otherwise
   // verification stays conservative from the closure base.

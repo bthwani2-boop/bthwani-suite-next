@@ -7,6 +7,43 @@ export const UNKNOWN_ENGINE_ERROR = "UNKNOWN_ENGINE_ERROR";
 
 const workflowPath = (value) => typeof value === "string" && value.startsWith(".github/workflows/");
 const typescriptPath = (value) => typeof value === "string" && /\.(?:ts|tsx|mts|cts)$/.test(value);
+const normalizePath = (value) => String(value ?? "").replaceAll("\\", "/").replace(/^\.\//u, "");
+
+function parseDiffRanges(diffText = "") {
+  const ranges = new Map();
+  let currentPath = "";
+  for (const line of String(diffText).split(/\r?\n/u)) {
+    const headerMatch = /^diff --git a\/(.+) b\/(.+)$/u.exec(line);
+    if (headerMatch) {
+      currentPath = normalizePath(headerMatch[2]);
+      continue;
+    }
+    const fileMatch = /^\+\+\+ b\/(.+)$/u.exec(line);
+    if (fileMatch) {
+      currentPath = normalizePath(fileMatch[1]);
+      continue;
+    }
+    const hunkMatch = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/u.exec(line);
+    if (!hunkMatch || !currentPath) continue;
+    const start = Number(hunkMatch[1]);
+    const count = hunkMatch[2] === undefined ? 1 : Number(hunkMatch[2]);
+    if (count > 0) {
+      const entries = ranges.get(currentPath) ?? [];
+      entries.push({start, end: start + count - 1});
+      ranges.set(currentPath, entries);
+    }
+  }
+  return ranges;
+}
+
+function findingInDiff(finding, ranges) {
+  const file = normalizePath(finding?.path);
+  const start = Number(finding?.start?.line ?? finding?.startLine ?? 0) || 0;
+  const end = Number(finding?.end?.line ?? finding?.endLine ?? start) || start;
+  const fileRanges = ranges.get(file);
+  if (start < 1) return Boolean(fileRanges?.length);
+  return Boolean(fileRanges?.some((range) => start <= range.end && end >= range.start));
+}
 
 const normalizedType = (raw) => {
   if (Array.isArray(raw?.type)) return raw.type[0] ?? "UNSPECIFIED";
@@ -86,26 +123,51 @@ const countBySeverity = (results) => {
 };
 
 export function classifySemgrepEvidence(payload, metadata = {}) {
-  const results = Array.isArray(payload?.results) ? payload.results : [];
+  const payloadValid = Boolean(payload && typeof payload === "object" && !Array.isArray(payload) && Array.isArray(payload.results));
+  const results = payloadValid ? payload.results : [];
   const rawErrors = Array.isArray(payload?.errors) ? payload.errors : [];
   const classifiedErrors = rawErrors.map(classifySemgrepEngineCondition);
   const toolLimitations = classifiedErrors.filter((entry) => entry.classification === TOOL_LIMITATION_PROVEN);
   const unknownErrors = classifiedErrors.filter((entry) => entry.classification === UNKNOWN_ENGINE_ERROR);
+  const mode = metadata.mode ?? "full";
+  const diffRanges = parseDiffRanges(metadata.diffText ?? "");
+  const scopedResults = mode === "full" ? results : results.filter((result) => findingInDiff(result, diffRanges));
+  const scopedErrors = mode === "full"
+    ? classifiedErrors
+    : classifiedErrors.filter((entry) => findingInDiff(entry.raw, diffRanges));
+  const unknownErrorsInEvaluatedCone = mode === "full"
+    ? unknownErrors.length
+    : scopedErrors.filter((entry) => entry.classification === UNKNOWN_ENGINE_ERROR).length;
+  const evidenceComplete = payloadValid && classifiedErrors.length === rawErrors.length && unknownErrorsInEvaluatedCone === 0;
+  const findingsInEvaluatedCone = mode === "full" ? results.length : scopedResults.length;
 
   return {
     classifiedErrors,
+    evaluatedResults: scopedResults,
     summary: {
       schemaVersion: 3,
       headSha: metadata.headSha ?? "",
-      mode: metadata.mode ?? "",
+      mode,
       baseSha: metadata.baseSha ?? "",
       totalFindings: results.length,
+      scopedFindings: scopedResults.length,
+      inheritedFindings: results.length - scopedResults.length,
       engineConditions: rawErrors.length,
       classifiedEngineErrors: classifiedErrors.length,
       toolLimitationsProven: toolLimitations.length,
       unknownEngineErrors: unknownErrors.length,
+      unknownEngineErrorsInChangedCone: scopedErrors.filter((entry) => entry.classification === UNKNOWN_ENGINE_ERROR).length,
+      toolLimitationsInChangedCone: scopedErrors.filter((entry) => entry.classification === TOOL_LIMITATION_PROVEN).length,
       severities: countBySeverity(results),
-      allRawFindingsAccounted: classifiedErrors.length === rawErrors.length,
+      allRawFindingsAccounted: payloadValid && classifiedErrors.length === rawErrors.length,
+      unknownRequiredCoverage: unknownErrorsInEvaluatedCone,
+      executionStatus: payloadValid ? "PASS" : "INCOMPLETE",
+      coverageStatus: evidenceComplete ? "COMPLETE" : "INCOMPLETE",
+      findingStatus: findingsInEvaluatedCone === 0 ? "CLEAN" : "FINDINGS_OPEN",
+      evidenceConsumption: evidenceComplete ? "COMPLETE" : "INCOMPLETE",
+      evidenceDebt: !evidenceComplete,
+      evidenceComplete,
+      closureClaim: false,
     },
   };
 }
@@ -116,28 +178,45 @@ const argumentValue = (args, name) => {
   return args[index + 1];
 };
 
-export function runNormalizer({ input, outputDir, headSha, mode, baseSha }) {
+export function runNormalizer({ input, outputDir, headSha, mode, baseSha, diffText = "" }) {
   const payload = JSON.parse(fs.readFileSync(input, "utf8"));
-  const normalized = classifySemgrepEvidence(payload, { headSha, mode, baseSha });
+  const normalized = classifySemgrepEvidence(payload, { headSha, mode, baseSha, diffText });
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(path.join(outputDir, "semgrep.pretty.json"), `${JSON.stringify(payload, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, "classified-errors.json"), `${JSON.stringify(normalized.classifiedErrors, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, "summary.json"), `${JSON.stringify(normalized.summary, null, 2)}\n`);
+  fs.writeFileSync(path.join(outputDir, "assurance-evidence.json"), `${JSON.stringify({
+    schema: "bthwani-semgrep-evidence/1",
+    tool: "semgrep",
+    headSha,
+    baseSha,
+    mode,
+    // Change Verification consumes only the exact changed cone. The complete
+    // raw scan remains available in semgrep.pretty.json and the summary.
+    results: normalized.evaluatedResults,
+    rawResults: payload.results,
+    errors: payload.errors ?? [],
+    unknownRequiredCoverage: normalized.summary.unknownRequiredCoverage,
+    allRawFindingsAccounted: normalized.summary.allRawFindingsAccounted,
+    evidenceComplete: normalized.summary.evidenceComplete,
+  }, null, 2)}\n`);
   return normalized.summary;
 }
 
 const main = () => {
   const args = process.argv.slice(2);
+  const diffFile = argumentValue(args, "--diff-file", false);
   const summary = runNormalizer({
     input: argumentValue(args, "--input"),
     outputDir: argumentValue(args, "--output-dir"),
     headSha: argumentValue(args, "--head-sha"),
     mode: argumentValue(args, "--mode"),
     baseSha: argumentValue(args, "--base-sha"),
+    diffText: diffFile ? fs.readFileSync(diffFile, "utf8") : "",
   });
 
   console.log(JSON.stringify(summary));
-  if (!summary.allRawFindingsAccounted || summary.unknownEngineErrors !== 0 || summary.totalFindings !== 0) {
+  if (!summary.evidenceComplete) {
     process.exitCode = 1;
   }
 };

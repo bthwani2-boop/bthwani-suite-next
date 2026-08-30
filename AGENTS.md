@@ -29,6 +29,10 @@ Use **wide discovery; narrow complete execution**:
 7. Expand verification only when risk, new evidence, uncertainty, or final closure requires it.
 8. Re-pin after material writes and before every final remote claim.
 
+For authorized execution, keep two evidence tracks in the same root loop: `CURRENT ROOT EXECUTION` for the selected treatment cone and `BASELINE SCOUTING` for independent inherited debt. Baseline scouting may keep the repository health signal red; it must not be relabeled as Change Verification or Change Closure.
+
+Every material tool invocation creates `EVIDENCE_DEBT`: raw output must be retrieved, every finding and limitation accounted for, mapped into the canonical Root Graph, treated at its Source-of-Fix, and reverified. An artifact upload or a zero exit code never closes that debt.
+
 “Deep”, “complete”, and “100%” raise the evidence standard and discovery altitude; they do not justify unrelated mutation, every available tool, or repository-wide verification after every write.
 
 ## Verification

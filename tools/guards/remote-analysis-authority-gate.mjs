@@ -21,12 +21,15 @@ const mustNotMatch = (text, patterns, owner) => {
 
 const workflowDir = path.resolve(".github/workflows");
 const workflowFiles = fs.readdirSync(workflowDir).filter((file) => file.endsWith(".yml"));
-const allWorkflowText = workflowFiles.map((file) => read(path.join(workflowDir, file))).join("\n");
+const workerWorkflowFiles = workflowFiles.filter((file) => file !== "pr-assurance-trigger.yml");
+const workerWorkflowText = workerWorkflowFiles.map((file) => read(path.join(workflowDir, file))).join("\n");
 const ci = read(path.join(workflowDir, "ci-check.yml"));
 const closure = read(path.join(workflowDir, "final-closure.yml"));
 const semanticContext = read(path.join(workflowDir, "open-code-review.yml"));
+const repositoryBaseline = read(path.join(workflowDir, "repository-baseline.yml"));
+const assuranceDispatcher = read(path.join(workflowDir, "pr-assurance-trigger.yml"));
 
-mustContain(ci, ["workflow_call:", "workflow_dispatch:", "Verify exact candidate and resolve affected scope", "git merge-base --is-ancestor"], "single CI controller");
+mustContain(ci, ["workflow_call:", "workflow_dispatch:", "Verify exact candidate and resolve affected scope", "git merge-base --is-ancestor", "BThwani / Change Verification"], "single CI controller");
 mustNotContain(ci, ["pull_request:", "push:", "schedule:", "run_assurance", "verification_tier", "runtime_profile", "previous_head_sha", "github.event.before"], "single CI controller");
 
 mustContain(closure, [
@@ -34,7 +37,7 @@ mustContain(closure, [
   "Resolve exact live PR candidate",
   "git diff --name-only",
   "name: Full CI preflight",
-  "BThwani / Final Closure",
+  "BThwani / Change Closure",
   "statuses/${HEAD_SHA}",
   "semantic-context:",
   "uses: ./.github/workflows/open-code-review.yml",
@@ -43,6 +46,16 @@ mustContain(closure, [
 ], "final closure");
 mustNotContain(closure, ["pull_request:", "SEMANTIC_RESULT", "workflow_run:", "repository_dispatch", "sleep", "poll"], "final closure control plane");
 mustNotMatch(closure, [/\/pulls\/[^\s"']+\/files(?:\?|["'])/u], "final closure changed-file authority");
+
+mustContain(repositoryBaseline, ["workflow_dispatch:", "BThwani / Repository Health", "BASELINE_OPEN", "exact candidate", "uses: ./.github/workflows/codeql.yml", "uses: ./.github/workflows/sonarqube.yml", "CODEQL_RESULT", "SONAR_RESULT"], "repository health");
+mustNotContain(repositoryBaseline, ["BThwani / Change Closure", "BThwani / Change Verification"], "repository baseline status separation");
+mustContain(assuranceDispatcher, [
+  "pull_request_target:",
+  "/actions/workflows/final-closure.yml/dispatches",
+  "/actions/workflows/ci-check.yml/dispatches",
+  "--arg ref \"${DEFAULT_BRANCH}\"",
+], "trusted assurance dispatcher");
+mustNotContain(assuranceDispatcher, ["workflow_run:", "repository_dispatch"], "trusted assurance dispatcher");
 
 mustContain(semanticContext, [
   "workflow_call:",
@@ -59,7 +72,7 @@ mustNotContain(semanticContext, [
   "semanticReviewClaimedByThisWorkflow: true",
 ], "OpenCodeReview deterministic context worker");
 
-mustNotContain(allWorkflowText, ["workflow_run:", "repository_dispatch", "actions/workflows/"], "workflow control plane");
+mustNotContain(workerWorkflowText, ["workflow_run:", "repository_dispatch", "actions/workflows/"], "workflow control plane");
 for (const file of ["codeql.yml", "semgrep.yml", "security-remote.yml", "sonarqube.yml", "dependency-review.yml", "lockfile-integrity.yml", "docker-runtime-hardening.yml"]) {
   const content = read(path.join(workflowDir, file));
   mustContain(content, ["workflow_call:"], file);
@@ -67,9 +80,10 @@ for (const file of ["codeql.yml", "semgrep.yml", "security-remote.yml", "sonarqu
 }
 const sonar = read(path.join(workflowDir, "sonarqube.yml"));
 mustContain(sonar, ["SonarSource/sonarqube-scan-action@", "secrets.SONAR_TOKEN", "sonar.pullrequest.key", "sonar.scm.revision"], "SonarQube authority");
+mustContain(sonar, ["TRUSTED_SONAR_CLASSIFIER", "api/issues/search", "api/hotspots/search", "api/measures/component"], "Sonar evidence authority");
 mustNotContain(sonar, ["SONAR_HOST_URL", "localhost:9000", "vars.SONAR_PROJECT_KEY"], "SonarQube authority");
 const semgrep = read(path.join(workflowDir, "semgrep.yml"));
-mustContain(semgrep, ["classify-semgrep-evidence.mjs", "unknownEngineErrors", "Semgrep findings require diagnosis/disposition before closure"], "Semgrep authority");
+mustContain(semgrep, ["classify-semgrep-evidence.mjs", "compare-assurance-baseline.mjs", "unknownEngineErrors", "Semgrep baseline ratchet rejected new or worsened material findings"], "Semgrep authority");
 const security = read(path.join(workflowDir, "security-remote.yml"));
 mustContain(security, ["gitleaks detect", "run-osv-scanner.mjs", "run-trivy.mjs", "runs-on: ubuntu-24.04"], "security authority");
 mustContain(read(path.join(workflowDir, "codeql.yml")), ["github/codeql-action/init@", "github/codeql-action/analyze@"], "CodeQL authority");

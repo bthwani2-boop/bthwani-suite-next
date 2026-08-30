@@ -8,8 +8,33 @@ updates:
     labels: ["dependencies", "gate:ci-required"]
     commit-message: {prefix: "chore(deps)"}
     groups:
-      production-dependencies: {dependency-type: "production"}
-      development-dependencies: {dependency-type: "development"}
+      observability-non-major:
+        patterns: ["@opentelemetry/*"]
+        update-types: ["minor", "patch"]
+      e2e-and-accessibility-non-major:
+        patterns: ["@playwright/*", "@axe-core/*"]
+        update-types: ["minor", "patch"]
+      quality-tools-non-major:
+        patterns: ["@ast-grep/*", "jscpd", "knip", "markdownlint-cli2", "sherif", "size-limit"]
+        update-types: ["minor", "patch"]
+      typescript-major:
+        patterns: ["typescript"]
+        update-types: ["major"]
+      nx-major:
+        patterns: ["nx"]
+        update-types: ["major"]
+      eslint-major:
+        patterns: ["eslint"]
+        update-types: ["major"]
+      node-types-major:
+        patterns: ["@types/node"]
+        update-types: ["major"]
+      production-non-major:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      development-non-major:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
   - package-ecosystem: "gomod"
     directory: "/services/wlt/backend"
     schedule: {interval: "weekly"}

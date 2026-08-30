@@ -1,4 +1,7 @@
-import { CONTROL_PANEL_SECTION_ROUTES } from '../control-panel-routes.ts';
+import {
+  CONTROL_PANEL_SECTION_ROUTES,
+  type ControlPanelSectionRoute,
+} from '../control-panel-routes.ts';
 import type {
   CanonicalOperationsGroupId,
   NonOperationsSectionRootId,
@@ -79,7 +82,7 @@ export const OPERATIONS_CANONICAL_GROUP_IDS = OPERATIONS_CANONICAL_GROUPS.map(
   (group) => group.id,
 ) as readonly CanonicalOperationsGroupId[];
 
-type NonOperationsSectionRoute = (typeof CONTROL_PANEL_SECTION_ROUTES)[NonOperationsSectionRootId];
+type NonOperationsSectionRoute = ControlPanelSectionRoute;
 
 export const NON_OPERATIONS_SECTION_SHORTCUTS: ReadonlyArray<{
   id: NonOperationsSectionRootId;

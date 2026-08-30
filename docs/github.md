@@ -57,10 +57,10 @@ RESOLVE EXACT LIVE CANDIDATE
   -> if red: stop; no heavy analyzer starts
   -> if green: Sonar, CodeQL, Semgrep, Security, Dependency, Lockfile, and Docker checks in parallel when applicable
   -> aggregate all results
-  -> publish BThwani / Final Closure on the exact HEAD
+  -> publish BThwani / Change Closure on the exact HEAD
 ```
 
-A new commit produces a different exact SHA, so previous evidence cannot satisfy current-head merge protection. The status names remain `BThwani CI / PR result` and `BThwani / Final Closure`.
+A new commit produces a different exact SHA, so earlier evidence cannot satisfy current-head merge protection. The status names are `BThwani / Change Verification`, `BThwani / Change Closure`, and `BThwani / Repository Health`; these statuses do not claim repository-wide closure by presence on `master` alone.
 
 OpenCodeReview is context/delegation preparation only. It is not a semantic review and is not part of the required Final Closure gate. `master-sonar.yml` remains a separate post-merge default-branch analysis authority when its dashboard/trend purpose is required.
 
