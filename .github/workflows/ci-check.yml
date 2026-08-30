@@ -98,14 +98,21 @@ jobs:
             echo "base_sha=${base_sha}"
             echo "pr_number=${PR_NUMBER}"
           } >> "${GITHUB_OUTPUT}"
-      - name: Resolve affected owners from exact Git diff
+      - name: Resolve affected owners from exact Git diff using trusted router
         id: scope
         shell: bash
         env:
           CI_BASE_SHA: ${{ steps.identity.outputs.base_sha }}
           CI_HEAD_SHA: ${{ steps.identity.outputs.head_sha }}
           CI_FULL_SCOPE: ${{ inputs.full_scope }}
-        run: node tools/scripts/detect-ci-context.mjs
+          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          trusted_router="${RUNNER_TEMP}/detect-ci-context.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28'             "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/detect-ci-context.mjs"             -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_router}"
+          [[ -s "${trusted_router}" ]] || { echo "::error::trusted CI router could not be loaded"; exit 1; }
+          node "${trusted_router}"
 
   controls:
     name: CI control-plane verification

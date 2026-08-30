@@ -49,6 +49,8 @@ jobs:
       risk_classes: ${{ steps.classification.outputs.risk_classes }}
       required_jobs: ${{ steps.classification.outputs.required_jobs }}
       changed_count: ${{ steps.classification.outputs.changed_count }}
+      rendered_web_required: ${{ steps.classification.outputs.rendered_web_required }}
+      mobile_evidence_required: ${{ steps.classification.outputs.mobile_evidence_required }}
     steps:
       - name: Resolve live PR identity from trusted workflow definition
         id: identity
@@ -212,10 +214,23 @@ jobs:
       base_ref: ${{ needs.resolve.outputs.base_ref }}
 
 
-  semantic-review:
-    name: Validate exact host semantic review attestation
+  semantic-context:
+    name: Prepare deterministic semantic review context
     needs: [resolve]
     if: ${{ needs.resolve.result == 'success' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/open-code-review.yml
+    with:
+      pr_number: ${{ needs.resolve.outputs.pr_number }}
+      base_ref: ${{ needs.resolve.outputs.base_ref }}
+      head_sha: ${{ needs.resolve.outputs.head_sha }}
+      base_sha: ${{ needs.resolve.outputs.base_sha }}
+
+  semantic-review:
+    name: Validate exact host semantic review attestation
+    needs: [resolve, semantic-context]
+    if: ${{ needs.resolve.result == 'success' && needs.semantic-context.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -223,7 +238,7 @@ jobs:
       pull-requests: read
       issues: read
     steps:
-      - name: Load trusted semantic attestation validator
+      - name: Load trusted evidence validator
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -235,11 +250,84 @@ jobs:
           [[ -s "${validator}" ]]
           echo "EVIDENCE_VALIDATOR=${validator}" >> "${GITHUB_ENV}"
 
-      - name: Validate exact semantic review attestation
+      - name: Validate semantic attestation against exact OCR provenance
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node "${EVIDENCE_VALIDATOR}" semantic "${{ needs.resolve.outputs.pr_number }}" "${{ needs.resolve.outputs.head_sha }}"
+        run: >-
+          node "${EVIDENCE_VALIDATOR}" semantic
+          "${{ needs.resolve.outputs.pr_number }}"
+          "${{ needs.resolve.outputs.head_sha }}"
+          "${{ needs.semantic-context.outputs.context_sha256 }}"
+          "${{ needs.semantic-context.outputs.artifact_identity }}"
+          "${{ needs.semantic-context.outputs.package_integrity }}"
+          "${{ needs.semantic-context.outputs.tool_version }}"
 
+  rendered-web-baseline:
+    name: Rendered Web exact-candidate baseline
+    needs: [resolve]
+    if: ${{ needs.resolve.result == 'success' && needs.resolve.outputs.rendered_web_required == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/rendered-web-evidence.yml
+    with:
+      head_sha: ${{ needs.resolve.outputs.head_sha }}
+      base_sha: ${{ needs.resolve.outputs.base_sha }}
+
+  rendered-web-evidence:
+    name: Validate material rendered-Web host evidence
+    needs: [resolve, rendered-web-baseline]
+    if: ${{ needs.resolve.result == 'success' && needs.resolve.outputs.rendered_web_required == 'true' && needs.rendered-web-baseline.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Load trusted evidence validator
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRUSTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          validator="${RUNNER_TEMP}/verify-pr-evidence-comments.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28'             "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/verify-pr-evidence-comments.mjs"             -f "ref=${TRUSTED_SHA}" --jq '.content' | base64 --decode > "${validator}"
+          [[ -s "${validator}" ]]
+          echo "EVIDENCE_VALIDATOR=${validator}" >> "${GITHUB_ENV}"
+
+      - name: Validate rendered Web attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node "${EVIDENCE_VALIDATOR}" rendered "${{ needs.resolve.outputs.pr_number }}" "${{ needs.resolve.outputs.head_sha }}"
+
+  mobile-evidence:
+    name: Validate material mobile device evidence
+    needs: [resolve]
+    if: ${{ needs.resolve.result == 'success' && needs.resolve.outputs.mobile_evidence_required == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+    steps:
+      - name: Load trusted evidence validator
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRUSTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          validator="${RUNNER_TEMP}/verify-pr-evidence-comments.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28'             "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/verify-pr-evidence-comments.mjs"             -f "ref=${TRUSTED_SHA}" --jq '.content' | base64 --decode > "${validator}"
+          [[ -s "${validator}" ]]
+          echo "EVIDENCE_VALIDATOR=${validator}" >> "${GITHUB_ENV}"
+
+      - name: Validate mobile device attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node "${EVIDENCE_VALIDATOR}" mobile "${{ needs.resolve.outputs.pr_number }}" "${{ needs.resolve.outputs.head_sha }}"
   dependency:
     name: Dependency review when applicable
     needs: [resolve]
@@ -282,7 +370,7 @@ jobs:
 
   final:
     name: BThwani / Final Closure
-    needs: [resolve, ci, sonar, codeql, semgrep, security, semantic-review, dependency, lockfile, docker]
+    needs: [resolve, ci, sonar, codeql, semgrep, security, semantic-review, rendered-web-baseline, rendered-web-evidence, mobile-evidence, dependency, lockfile, docker]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -305,6 +393,11 @@ jobs:
           SEMGREP_RESULT: ${{ needs.semgrep.result }}
           SECURITY_RESULT: ${{ needs.security.result }}
           SEMANTIC_REVIEW_RESULT: ${{ needs.semantic-review.result }}
+          RENDERED_WEB_BASELINE_RESULT: ${{ needs.rendered-web-baseline.result }}
+          RENDERED_WEB_RESULT: ${{ needs.rendered-web-evidence.result }}
+          MOBILE_EVIDENCE_RESULT: ${{ needs.mobile-evidence.result }}
+          RENDERED_WEB_REQUIRED: ${{ needs.resolve.outputs.rendered_web_required }}
+          MOBILE_EVIDENCE_REQUIRED: ${{ needs.resolve.outputs.mobile_evidence_required }}
           DEPENDENCY_RESULT: ${{ needs.dependency.result }}
           DEPENDENCY_CHANGED: ${{ needs.resolve.outputs.dependency_changed }}
           LOCKFILE_RESULT: ${{ needs.lockfile.result }}
@@ -326,6 +419,13 @@ jobs:
             result="${pair#*:}"
             [[ "${result}" == "success" ]] || failures+=("${name}:${result}")
           done
+          if [[ "${RENDERED_WEB_REQUIRED}" == "true" ]]; then
+            [[ "${RENDERED_WEB_BASELINE_RESULT}" == "success" ]] || failures+=("rendered-web-baseline:NOT_COVERED:${RENDERED_WEB_BASELINE_RESULT}")
+            [[ "${RENDERED_WEB_RESULT}" == "success" ]] || failures+=("rendered-web:NOT_COVERED:${RENDERED_WEB_RESULT}")
+          fi
+          if [[ "${MOBILE_EVIDENCE_REQUIRED}" == "true" ]]; then
+            [[ "${MOBILE_EVIDENCE_RESULT}" == "success" ]] || failures+=("mobile-device:NOT_COVERED:${MOBILE_EVIDENCE_RESULT}")
+          fi
           if [[ "${DEPENDENCY_CHANGED}" == "true" ]]; then
             [[ "${DEPENDENCY_RESULT}" == "success" ]] || failures+=("dependency:${DEPENDENCY_RESULT}")
             [[ "${LOCKFILE_RESULT}" == "success" ]] || failures+=("lockfile:${LOCKFILE_RESULT}")
@@ -390,6 +490,12 @@ jobs:
           CODEQL_RESULT: ${{ needs.codeql.result }}
           SEMGREP_RESULT: ${{ needs.semgrep.result }}
           SECURITY_RESULT: ${{ needs.security.result }}
+          SEMANTIC_REVIEW_RESULT: ${{ needs.semantic-review.result }}
+          MANIFEST_RENDERED_WEB_BASELINE_RESULT: ${{ needs.rendered-web-baseline.result }}
+          MANIFEST_RENDERED_WEB_RESULT: ${{ needs.rendered-web-evidence.result }}
+          MANIFEST_MOBILE_EVIDENCE_RESULT: ${{ needs.mobile-evidence.result }}
+          MANIFEST_RENDERED_WEB_REQUIRED: ${{ needs.resolve.outputs.rendered_web_required }}
+          MANIFEST_MOBILE_EVIDENCE_REQUIRED: ${{ needs.resolve.outputs.mobile_evidence_required }}
           DEPENDENCY_RESULT: ${{ needs.dependency.result }}
           LOCKFILE_RESULT: ${{ needs.lockfile.result }}
           DOCKER_RESULT: ${{ needs.docker.result }}
@@ -433,6 +539,12 @@ jobs:
             --arg codeqlResult "${CODEQL_RESULT}" \
             --arg semgrepResult "${SEMGREP_RESULT}" \
             --arg securityResult "${SECURITY_RESULT}" \
+            --arg semanticReviewResult "${SEMANTIC_REVIEW_RESULT}" \
+            --arg renderedWebBaselineResult "${MANIFEST_RENDERED_WEB_BASELINE_RESULT}" \
+            --arg renderedWebResult "${MANIFEST_RENDERED_WEB_RESULT}" \
+            --arg mobileEvidenceResult "${MANIFEST_MOBILE_EVIDENCE_RESULT}" \
+            --arg renderedWebRequired "${MANIFEST_RENDERED_WEB_REQUIRED}" \
+            --arg mobileEvidenceRequired "${MANIFEST_MOBILE_EVIDENCE_REQUIRED}" \
             --arg dependencyResult "${DEPENDENCY_RESULT}" \
             --arg lockfileResult "${LOCKFILE_RESULT}" \
             --arg dockerResult "${DOCKER_RESULT}" \
@@ -448,7 +560,20 @@ jobs:
               candidate: {changedFiles: $changedFiles, files: $files},
               mandatoryProofs: {riskClasses: ($riskClasses | split(",") | map(select(length > 0))), requiredJobs: ($requiredJobs | split(",") | map(select(length > 0)))},
               migrations: {changed: $migrations, manifests: $migrationManifests, amendmentsRegistryTouched: ($amendmentsTouched == "true")},
-              analysis: {ci: $ciResult, sonar: $sonarResult, codeql: $codeqlResult, semgrep: $semgrepResult, security: $securityResult, dependency: $dependencyResult, lockfile: $lockfileResult, docker: $dockerResult},
+              analysis: {ci: $ciResult, sonar: $sonarResult, codeql: $codeqlResult, semgrep: $semgrepResult, security: $securityResult, semanticReview: $semanticReviewResult, dependency: $dependencyResult, lockfile: $lockfileResult, docker: $dockerResult},
+              experienceEvidence: {
+                renderedWeb: {
+                  required: ($renderedWebRequired == "true"),
+                  baselineResult: $renderedWebBaselineResult,
+                  evidenceResult: $renderedWebResult,
+                  disposition: (if $renderedWebRequired == "true" then (if ($renderedWebBaselineResult == "success" and $renderedWebResult == "success") then "PASS" else "NOT_COVERED" end) else "NOT_APPLICABLE" end)
+                },
+                mobileDevice: {
+                  required: ($mobileEvidenceRequired == "true"),
+                  evidenceResult: $mobileEvidenceResult,
+                  disposition: (if $mobileEvidenceRequired == "true" then (if $mobileEvidenceResult == "success" then "PASS" else "NOT_COVERED" end) else "NOT_APPLICABLE" end)
+                }
+              },
               humanReview: {required: ($humanReviewRequired == "true"), approvalsBoundToHead: $approvalsOnHead}
             }' > "${manifest}"
           mkdir -p closure-evidence
