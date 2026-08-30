@@ -14,8 +14,13 @@ test("Final Closure cannot publish success before manifest upload", () => {
 
 test("CI control-plane authorities are loaded from trusted workflow SHA", () => {
   const f = read(".github/workflows/ci-check.yml");
+  assert.match(f, /authoritative definition must run from/u);
+  assert.match(f, /required CI status publication is forbidden outside/u);
   assert.match(f, /Load trusted CI control-plane authorities/u);
   assert.match(f, /TRUSTED_WORKFLOW_SHA/u);
+  assert.match(f, /verify-assurance-authority-drift\.mjs/u);
+  assert.match(f, /TRUSTED_ASSURANCE_AUTHORITY_DRIFT/u);
+  assert.match(f, /ASSURANCE_AUTHORITY/u);
   assert.match(f, /fetch_trusted tools\/scripts\/check-ci-source-immutability\.mjs/u);
   assert.match(f, /fetch_trusted tools\/guards\/migration-manifest-drift-gate\.mjs/u);
   assert.match(f, /fetch_trusted tools\/guards\/sonar-coverage-ownership-gate\.mjs/u);
@@ -24,6 +29,11 @@ test("CI control-plane authorities are loaded from trusted workflow SHA", () => 
   assert.match(f, /TRUSTED_SONAR_OWNERSHIP_GUARD/u);
   assert.doesNotMatch(f, /run:\s*node tools\/guards\/migration-manifest-drift-gate\.mjs/u);
   assert.doesNotMatch(f, /node --test tools\/guards\/sonar-coverage-ownership-gate\.test\.mjs/u);
+
+  const drift = read("tools/scripts/verify-assurance-authority-drift.mjs");
+  assert.match(drift, /ASSURANCE_AUTHORITY_CHANGE_REQUIRES_BOOTSTRAP/u);
+  assert.match(drift, /\.github\/workflows/u);
+  assert.match(drift, /tools\/prompting\/bthwani-orchestrator/u);
 
   const verifier = read("tools/scripts/check-ci-source-immutability.mjs");
   assert.match(verifier, /BTHWANI_TARGET_REPO/u);
