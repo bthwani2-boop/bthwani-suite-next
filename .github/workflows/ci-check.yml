@@ -29,6 +29,10 @@ concurrency:
 
 env:
   GH_TOKEN: ${{ github.token }}
+  # This repository is intentionally maintained by one owner.
+  # This exception is scoped ONLY to assurance bootstrap.
+  BTHWANI_ASSURANCE_BOOTSTRAP_MODE: solo-owner
+  BTHWANI_SOLO_MAINTAINER_LOGIN: bthwani2-boop
 
 jobs:
   context:

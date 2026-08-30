@@ -12,7 +12,10 @@ const required = [
   ["tools/scripts/verify-assurance-authority-drift.mjs", "ASSURANCE_AUTHORITY_CHANGE_REQUIRES_BOOTSTRAP", "Assurance authority changes must fail ordinary trusted CI and require bootstrap"],
   ["tools/scripts/verify-assurance-authority-drift.mjs", "authorityDiffSha256", "Assurance bootstrap must have a deterministic authority-diff fingerprint"],
   ["tools/scripts/verify-pr-evidence-comments.mjs", "BTHWANI_ASSURANCE_BOOTSTRAP:v1", "Canonical evidence validator must understand assurance bootstrap attestations"],
-  ["tools/scripts/verify-pr-evidence-comments.mjs", "external-authorized-assurance-reviewer", "Bootstrap attestation must come from an independent assurance reviewer"],
+  [".github/workflows/ci-check.yml", "BTHWANI_ASSURANCE_BOOTSTRAP_MODE: solo-owner", "Solo-maintainer bootstrap mode must be explicit in the trusted workflow"],
+  [".github/workflows/ci-check.yml", "BTHWANI_SOLO_MAINTAINER_LOGIN: bthwani2-boop", "Solo-maintainer identity must be explicit in the trusted workflow"],
+  ["tools/scripts/verify-pr-evidence-comments.mjs", "solo-owner-maintainer", "Solo-owner bootstrap must have an explicit attestation identity"],
+  ["tools/scripts/verify-pr-evidence-comments.mjs", "external-authorized-assurance-reviewer", "Independent bootstrap mode must remain supported"],
   ["tools/scripts/verify-pr-evidence-comments.mjs", "bootstrap authority diff SHA-256 does not match trusted evidence", "Bootstrap attestation must bind the exact authority diff"],
   ["tools/guards/migration-manifest-drift-gate.mjs", "BTHWANI_TARGET_REPO", "Trusted migration authority must evaluate an explicit candidate workspace"],
   ["tools/guards/_guard-utils.mjs", "BTHWANI_TARGET_REPO", "Trusted shared guard utilities must evaluate an explicit candidate workspace"],
@@ -97,4 +100,4 @@ if (failures.length) {
   process.exit(1);
 }
 console.log("ASSURANCE_BOOTSTRAP_VERIFY: PASS");
-console.log("Structural proof only. The candidate is not the new trust root until independent review and promotion to protected master.");
+console.log("Structural proof only. The candidate is not the new trust root until bootstrap attestation is accepted under the configured trusted mode and the candidate is promoted to protected master.");

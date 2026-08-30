@@ -161,7 +161,7 @@ function materializeTrustedEvidenceValidator(trusted) {
   return validator;
 }
 
-function validateIndependentBootstrapApproval({ candidate, trusted, authorityDiffSha256, changedCount }) {
+function validateBootstrapAttestation({ candidate, trusted, authorityDiffSha256, changedCount }) {
   if (process.env.GITHUB_ACTIONS !== "true") {
     throw new Error("assurance authority bootstrap attestation is accepted only on GitHub Actions");
   }
@@ -224,7 +224,7 @@ if (nameStatus) {
   for (const line of nameStatus.split(/\r?\n/u).filter(Boolean)) console.error(`- ${line}`);
 
   try {
-    const prNumber = validateIndependentBootstrapApproval({
+    const prNumber = validateBootstrapAttestation({
       candidate: resolvedCandidate,
       trusted: trustedSha,
       authorityDiffSha256,
@@ -238,7 +238,7 @@ if (nameStatus) {
       authorityDiffSha256,
       bootstrapAttested: true,
     });
-    console.log(`ASSURANCE_AUTHORITY_DRIFT: PASS independent-bootstrap-review=PR#${prNumber}`);
+    console.log(`ASSURANCE_AUTHORITY_DRIFT: PASS bootstrap-attestation=PR#${prNumber}`);
     process.exit(0);
   } catch (error) {
     console.error(`ASSURANCE_AUTHORITY_DRIFT: FAIL bootstrap-validation=${error instanceof Error ? error.message : String(error)}`);
