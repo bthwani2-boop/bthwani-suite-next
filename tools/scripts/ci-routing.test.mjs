@@ -64,7 +64,7 @@ test("ci-check keeps write permission only on the status publisher job", () => {
 test("CI control-plane checks collect independent failures instead of blocking product verification", () => {
   const workflow = read(".github/workflows/ci-check.yml");
   assert.match(workflow, /controls:[\s\S]*?continue-on-error: true[\s\S]*?continue-on-error: true[\s\S]*?continue-on-error: true/u);
-  assert.match(workflow, /Enforce complete control-plane collection/u);
+  assert.match(workflow, /Enforce complete material control-plane collection/u);
   for (const job of ["diagnostics", "verification", "backends", "runtime"]) {
     assert.match(workflow, new RegExp(`${job}:[\\s\\S]*?needs: \\[context\\]`, "u"), job);
   }
@@ -117,10 +117,12 @@ test("Sonar scope publishes the computed mode to downstream jobs", () => {
   );
 });
 
-test("the affected router is based on the exact current Base-to-Head diff", () => {
+test("the affected router is based on the exact caller-supplied verification window", () => {
   const router = read("tools/scripts/detect-ci-context.mjs");
+  const workflow = read(".github/workflows/ci-check.yml");
   assert.match(router, /\["diff", "--name-only"/u);
   assert.match(router, /baseSha, headSha/u);
+  assert.match(workflow, /CI_BASE_SHA: \$\{\{ steps\.identity\.outputs\.verification_base_sha \}\}/u);
   assert.doesNotMatch(router, /previous|run.?history|semantic|financial|security_scan/u);
 });
 
@@ -140,7 +142,7 @@ test("backend changes cannot become green by skipping backend verification", () 
   assert.doesNotMatch(workflow, /run_assurance/u);
 });
 
-test("final closure resolves once then collects independent analyzers in parallel", () => {
+test("final closure resolves once then collects independent analyzers and experience evidence in parallel", () => {
   const workflow = read(".github/workflows/final-closure.yml");
   assert.match(workflow, /workflow_dispatch:/u);
   assert.doesNotMatch(workflow, /pull_request:/u);
@@ -150,15 +152,21 @@ test("final closure resolves once then collects independent analyzers in paralle
   assert.match(workflow, /codeql\.yml[\s\S]*?full_scope: true/u);
   assert.match(workflow, /semgrep\.yml[\s\S]*?full_scope: true/u);
   for (const worker of ["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml"]) {
-    assert.match(workflow, new RegExp(`uses: \.\/.github/workflows/${worker.replace(".", "\\.")}`, "u"), worker);
+    assert.match(workflow, new RegExp(`uses: \\.\\/.github/workflows/${worker.replace(".", "\\\\.")}`, "u"), worker);
   }
-  for (const job of ["ci", "sonar", "codeql", "semgrep", "security"]) {
+  for (const job of ["ci", "sonar", "codeql", "semgrep", "security", "semantic-context", "rendered-web-baseline", "mobile-evidence"]) {
     assert.match(workflow, new RegExp(`${job}:[\\s\\S]*?needs: \\[resolve\\]`, "u"), job);
   }
+  assert.match(workflow, /semantic-context:[\s\S]*?open-code-review\.yml/u);
+  assert.match(workflow, /semantic-review:[\s\S]*?needs: \[resolve, semantic-context\]/u);
+  assert.match(workflow, /rendered-web-evidence:[\s\S]*?needs: \[resolve, rendered-web-baseline\]/u);
   assert.doesNotMatch(workflow, /needs: \[resolve, ci\]/u);
-  assert.match(workflow, /needs: \[resolve, ci, sonar, codeql, semgrep, security, semantic-review, dependency, lockfile, docker\]/u);
+  assert.match(
+    workflow,
+    /needs: \[resolve, ci, sonar, codeql, semgrep, security, semantic-review, rendered-web-baseline, rendered-web-evidence, mobile-evidence, dependency, lockfile, docker\]/u,
+  );
   assert.match(workflow, /after complete evidence collection/u);
-  assert.doesNotMatch(workflow, /open-code-review\.yml|SEMANTIC_RESULT/u);
+  assert.doesNotMatch(workflow, /SEMANTIC_RESULT/u);
   assert.match(workflow, /BThwani \/ Final Closure/u);
   assert.match(workflow, /target:head-moved/u);
   assert.match(workflow, /target:base-moved/u);
@@ -287,6 +295,7 @@ test("assurance routing includes semantic control-plane authorities", () => {
   for (const path of [".agents/", ".opencodereview/", "tools/prompting/", "governance/"]) {
     assert.ok(router.includes(`"${path}"`), path);
   }
+  assert.ok(router.includes('file === "sonar-project.properties"'));
 });
 
 test("deep discovery utilities are evidence tools, not durable truth registries", () => {
