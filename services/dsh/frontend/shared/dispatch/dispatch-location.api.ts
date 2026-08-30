@@ -1,11 +1,12 @@
 import { resolveDshApiBaseUrl } from '../_kernel/dsh-api-base-url';
 import { createDshHttpClient } from '../_kernel/dsh-http-request';
-import { bthwaniDurableStorage } from '@bthwani/data-runtime/storage-adapter';
+import { bthwaniSensitiveStorage } from '@bthwani/data-runtime/sensitive-storage-adapter';
 import { resolveMutationIdentityScope } from '@bthwani/data-runtime/mutation-identity-scope';
 import type { DshDispatchAssignment } from './dispatch.types';
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), 'dispatch-location');
 const MAX_PENDING_LOCATION_AGE_MS = 9 * 60 * 1000;
+const SENSITIVE_LOCATION_OUTBOX_KEY = 'bthwani.captain.foreground-location.v2';
 
 export type ForegroundDispatchLocation = {
   readonly latitude: number;
@@ -23,16 +24,25 @@ type PendingLocation = {
   readonly sample: ForegroundDispatchLocation;
 };
 
+type StoredPendingLocation = PendingLocation & {
+  readonly scopeKey: string;
+};
+
+type SensitiveLocationOutbox = {
+  readonly schemaVersion: 2;
+  readonly pending: readonly StoredPendingLocation[];
+};
+
 type LocationScope = {
   readonly actorId: string;
   readonly installationId: string;
 };
 
-const PENDING_LOCATION_PREFIX = '@bthwani/captain-foreground-location:v1';
-
-// Delivery transport state only. This is not operational truth: DSH remains the
-// sole owner of the accepted location, timestamp, and delivery lifecycle. The
-// outbox is durable so a process restart cannot silently lose the latest sample.
+// Delivery transport state only. DSH remains the sole owner of accepted
+// location and lifecycle truth. Restart durability is preserved, but precise
+// coordinates are persisted only through the explicitly configured sensitive
+// storage provider (SecureStore in app-captain), never localStorage or plain
+// AsyncStorage.
 function encode(value: string): string {
   return encodeURIComponent(value.trim());
 }
@@ -49,12 +59,8 @@ async function resolveLocationScope(actorId: string, assignmentId: string): Prom
   return { actorId: identity.actorId, installationId: identity.installationId };
 }
 
-function pendingLocationPrefix(scope: LocationScope): string {
-  return `${PENDING_LOCATION_PREFIX}/${encode(scope.actorId)}/${encode(scope.installationId)}/`;
-}
-
-function pendingLocationKey(scope: LocationScope, assignmentId: string): string {
-  return `${pendingLocationPrefix(scope)}${encode(assignmentId)}`;
+function locationScopeKey(scope: LocationScope): string {
+  return `${encode(scope.actorId)}:${encode(scope.installationId)}`;
 }
 
 function sameSample(left: ForegroundDispatchLocation, right: ForegroundDispatchLocation): boolean {
@@ -62,75 +68,6 @@ function sameSample(left: ForegroundDispatchLocation, right: ForegroundDispatchL
     && left.longitude === right.longitude
     && left.accuracyMeters === right.accuracyMeters
     && left.recordedAt === right.recordedAt;
-}
-
-function parsePendingLocation(value: unknown, expectedAssignmentId: string): PendingLocation {
-  if (!value || typeof value !== 'object') {
-    throw new Error('durable foreground location outbox entry is invalid');
-  }
-  const parsed = value as Partial<PendingLocation>;
-  if (parsed.assignmentId !== expectedAssignmentId || !parsed.sample || typeof parsed.sample !== 'object') {
-    throw new Error('durable foreground location outbox identity is invalid');
-  }
-  const sample = parsed.sample as Partial<ForegroundDispatchLocation>;
-  if (typeof sample.latitude !== 'number'
-    || typeof sample.longitude !== 'number'
-    || typeof sample.accuracyMeters !== 'number'
-    || typeof sample.recordedAt !== 'string') {
-    throw new Error('durable foreground location outbox sample is invalid');
-  }
-  const normalized = {
-    latitude: sample.latitude,
-    longitude: sample.longitude,
-    accuracyMeters: sample.accuracyMeters,
-    recordedAt: sample.recordedAt,
-  };
-  validateSample(expectedAssignmentId, normalized);
-  return { assignmentId: expectedAssignmentId, sample: normalized };
-}
-
-async function readPendingLocation(scope: LocationScope, assignmentId: string): Promise<PendingLocation | null> {
-  const raw = await bthwaniDurableStorage.getItem(pendingLocationKey(scope, assignmentId));
-  if (raw === null) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (cause) {
-    throw new Error('durable foreground location outbox entry is corrupt', { cause });
-  }
-  return parsePendingLocation(parsed, assignmentId);
-}
-
-async function writePendingLocation(scope: LocationScope, pending: PendingLocation): Promise<void> {
-  const current = await readPendingLocation(scope, pending.assignmentId);
-  if (current && Date.parse(current.sample.recordedAt) > Date.parse(pending.sample.recordedAt)) return;
-  await bthwaniDurableStorage.setItem(
-    pendingLocationKey(scope, pending.assignmentId),
-    JSON.stringify(pending),
-  );
-}
-
-async function clearPendingLocationIfExact(
-  scope: LocationScope,
-  assignmentId: string,
-  sample: ForegroundDispatchLocation,
-): Promise<void> {
-  const current = await readPendingLocation(scope, assignmentId);
-  if (current && sameSample(current.sample, sample)) {
-    await bthwaniDurableStorage.removeItem(pendingLocationKey(scope, assignmentId));
-  }
-}
-
-async function listPendingLocations(scope: LocationScope): Promise<readonly PendingLocation[]> {
-  const prefix = pendingLocationPrefix(scope);
-  const keys = (await bthwaniDurableStorage.getAllKeys()).filter((key) => key.startsWith(prefix));
-  const pending: PendingLocation[] = [];
-  for (const key of keys) {
-    const assignmentId = decodeURIComponent(key.slice(prefix.length));
-    const item = await readPendingLocation(scope, assignmentId);
-    if (item) pending.push(item);
-  }
-  return pending;
 }
 
 function validateSample(assignmentId: string, sample: ForegroundDispatchLocation): void {
@@ -147,6 +84,117 @@ function validateSample(assignmentId: string, sample: ForegroundDispatchLocation
   if (!sample.recordedAt || Number.isNaN(Date.parse(sample.recordedAt))) {
     throw { kind: 'invalid_request', message: 'recordedAt must be an RFC3339 timestamp' };
   }
+}
+
+function parsePendingLocation(value: unknown, expectedAssignmentId: string): PendingLocation {
+  if (!value || typeof value !== 'object') {
+    throw new Error('sensitive foreground location outbox entry is invalid');
+  }
+  const parsed = value as Partial<PendingLocation>;
+  if (parsed.assignmentId !== expectedAssignmentId || !parsed.sample || typeof parsed.sample !== 'object') {
+    throw new Error('sensitive foreground location outbox identity is invalid');
+  }
+  const sample = parsed.sample as Partial<ForegroundDispatchLocation>;
+  if (typeof sample.latitude !== 'number'
+    || typeof sample.longitude !== 'number'
+    || typeof sample.accuracyMeters !== 'number'
+    || typeof sample.recordedAt !== 'string') {
+    throw new Error('sensitive foreground location outbox sample is invalid');
+  }
+  const normalized = {
+    latitude: sample.latitude,
+    longitude: sample.longitude,
+    accuracyMeters: sample.accuracyMeters,
+    recordedAt: sample.recordedAt,
+  };
+  validateSample(expectedAssignmentId, normalized);
+  return { assignmentId: expectedAssignmentId, sample: normalized };
+}
+
+function parseSensitiveOutbox(raw: string | null): SensitiveLocationOutbox {
+  if (raw === null) return { schemaVersion: 2, pending: [] };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (cause) {
+    throw new Error('sensitive foreground location outbox is corrupt', { cause });
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('sensitive foreground location outbox is invalid');
+  }
+  const value = parsed as { readonly schemaVersion?: unknown; readonly pending?: unknown };
+  if (value.schemaVersion !== 2 || !Array.isArray(value.pending)) {
+    throw new Error('sensitive foreground location outbox schema is invalid');
+  }
+  const pending = value.pending.map((entry) => {
+    if (!entry || typeof entry !== 'object' || typeof (entry as { readonly scopeKey?: unknown }).scopeKey !== 'string') {
+      throw new Error('sensitive foreground location outbox scope is invalid');
+    }
+    const candidate = entry as { readonly scopeKey: string; readonly assignmentId?: unknown };
+    if (typeof candidate.assignmentId !== 'string' || !candidate.scopeKey) {
+      throw new Error('sensitive foreground location outbox key is invalid');
+    }
+    return {
+      scopeKey: candidate.scopeKey,
+      ...parsePendingLocation(entry, candidate.assignmentId),
+    };
+  });
+  return { schemaVersion: 2, pending };
+}
+
+async function readSensitiveOutbox(): Promise<SensitiveLocationOutbox> {
+  return parseSensitiveOutbox(await bthwaniSensitiveStorage.getItem(SENSITIVE_LOCATION_OUTBOX_KEY));
+}
+
+async function writeSensitiveOutbox(pending: readonly StoredPendingLocation[]): Promise<void> {
+  if (pending.length === 0) {
+    await bthwaniSensitiveStorage.removeItem(SENSITIVE_LOCATION_OUTBOX_KEY);
+    return;
+  }
+  await bthwaniSensitiveStorage.setItem(
+    SENSITIVE_LOCATION_OUTBOX_KEY,
+    JSON.stringify({ schemaVersion: 2, pending } satisfies SensitiveLocationOutbox),
+  );
+}
+
+async function readPendingLocation(scope: LocationScope, assignmentId: string): Promise<PendingLocation | null> {
+  const scopeKey = locationScopeKey(scope);
+  const outbox = await readSensitiveOutbox();
+  const stored = outbox.pending.find((entry) => entry.scopeKey === scopeKey && entry.assignmentId === assignmentId);
+  return stored ? { assignmentId: stored.assignmentId, sample: stored.sample } : null;
+}
+
+async function writePendingLocation(scope: LocationScope, pending: PendingLocation): Promise<void> {
+  const scopeKey = locationScopeKey(scope);
+  const outbox = await readSensitiveOutbox();
+  const current = outbox.pending.find((entry) => entry.scopeKey === scopeKey && entry.assignmentId === pending.assignmentId);
+  if (current && Date.parse(current.sample.recordedAt) > Date.parse(pending.sample.recordedAt)) return;
+  const retained = outbox.pending.filter((entry) => !(entry.scopeKey === scopeKey && entry.assignmentId === pending.assignmentId));
+  await writeSensitiveOutbox([...retained, { scopeKey, ...pending }]);
+}
+
+async function clearPendingLocationIfExact(
+  scope: LocationScope,
+  assignmentId: string,
+  sample: ForegroundDispatchLocation,
+): Promise<void> {
+  const scopeKey = locationScopeKey(scope);
+  const outbox = await readSensitiveOutbox();
+  const current = outbox.pending.find((entry) => entry.scopeKey === scopeKey && entry.assignmentId === assignmentId);
+  if (!current || !sameSample(current.sample, sample)) return;
+  await writeSensitiveOutbox(outbox.pending.filter((entry) => entry !== current));
+}
+
+async function listPendingLocations(scope: LocationScope): Promise<readonly PendingLocation[]> {
+  const scopeKey = locationScopeKey(scope);
+  const outbox = await readSensitiveOutbox();
+  return outbox.pending
+    .filter((entry) => entry.scopeKey === scopeKey)
+    .map((entry) => ({ assignmentId: entry.assignmentId, sample: entry.sample }));
+}
+
+export async function clearCaptainForegroundLocationOutbox(): Promise<void> {
+  await bthwaniSensitiveStorage.removeItem(SENSITIVE_LOCATION_OUTBOX_KEY);
 }
 
 function isRetryableLocationError(error: unknown): boolean {
@@ -205,8 +253,7 @@ export async function syncForegroundDispatchLocation(
       },
     );
     await clearPendingLocationIfExact(scope, assignmentId, sample);
-    const assignment = data.assignment;
-    return { kind: 'sent', assignment };
+    return { kind: 'sent', assignment: data.assignment };
   } catch (error) {
     if (!isRetryableLocationError(error)) throw error;
     await writePendingLocation(scope, { assignmentId, sample });
