@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import crypto from "node:crypto";
-import { createWriteStream, lstatSync, mkdirSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
+import { closeSync, constants, createWriteStream, fstatSync, lstatSync, mkdtempSync, openSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -44,10 +44,23 @@ export function captureCandidate(root = process.cwd()) {
     if (!isSafeRelativePath(repositoryRoot, relativePath)) throw new Error(`unsafe untracked candidate path: ${relativePath}`);
     const absolutePath = path.resolve(repositoryRoot, relativePath);
     const stats = lstatSync(absolutePath);
-    digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
-    if (stats.isSymbolicLink()) digest.update(`symlink\0${readlinkSync(absolutePath)}\0`);
-    else if (stats.isFile()) digest.update(readFileSync(absolutePath));
-    else digest.update(`type\0${stats.type}\0`);
+    if (stats.isSymbolicLink()) {
+      digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
+      digest.update(`symlink\0${readlinkSync(absolutePath)}\0`);
+    } else if (stats.isFile()) {
+      const descriptor = openSync(absolutePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      try {
+        const stableStats = fstatSync(descriptor);
+        if (!stableStats.isFile()) throw new Error(`untracked candidate changed type while reading: ${relativePath}`);
+        digest.update(`untracked\0${relativePath}\0mode\0${stableStats.mode}\0size\0${stableStats.size}\0`);
+        digest.update(readFileSync(descriptor));
+      } finally {
+        closeSync(descriptor);
+      }
+    } else {
+      digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
+      digest.update(`type\0${stats.type}\0`);
+    }
   }
   const worktreeSha = digest.digest("hex");
   return {
@@ -258,8 +271,7 @@ async function main() {
   const concurrencyArg = process.argv.find((v) => v.startsWith("--concurrency="));
   const concurrency = Math.max(1, Number(concurrencyArg?.split("=")[1] ?? 3));
   const stamp = new Date().toISOString().replaceAll(":", "-");
-  const evidenceDir = path.join(tmpdir(), "bthwani-deep-discovery", stamp);
-  mkdirSync(evidenceDir, { recursive: true });
+  const evidenceDir = mkdtempSync(path.join(tmpdir(), `bthwani-deep-discovery-${stamp}-`));
   const candidate = captureCandidate();
   const candidateSha = candidate.headSha;
   const pending = [...buildChecks(full)];
@@ -343,8 +355,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
     await main();
   } catch (error) {
     const stamp = new Date().toISOString().replaceAll(":", "-");
-    const evidenceDir = path.join(tmpdir(), "bthwani-deep-discovery", stamp);
-    mkdirSync(evidenceDir, { recursive: true });
+    const evidenceDir = mkdtempSync(path.join(tmpdir(), `bthwani-deep-discovery-fatal-${stamp}-`));
     const fatalPath = path.join(evidenceDir, "collector-fatal.log");
     writeFileSync(fatalPath, `${error?.stack ?? error}\n`);
     process.stderr.write(`COLLECTOR_FATAL=${fatalPath}\n`);

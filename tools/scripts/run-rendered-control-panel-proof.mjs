@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { chromium } from "@playwright/test";
@@ -9,8 +9,7 @@ const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const portArg = process.argv.find((v) => v.startsWith("--port="));
 const port = Number(portArg?.split("=")[1] ?? 13000);
 const baseURL = `http://127.0.0.1:${port}`;
-const evidenceDir = path.join(tmpdir(), "bthwani-rendered-web", new Date().toISOString().replaceAll(":", "-"));
-mkdirSync(evidenceDir, { recursive: true });
+const evidenceDir = mkdtempSync(path.join(tmpdir(), "bthwani-rendered-web-"));
 const candidateSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 
 async function waitForServer(url, timeoutMs = 120000) {

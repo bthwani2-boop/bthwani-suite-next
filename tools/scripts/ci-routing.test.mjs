@@ -149,7 +149,7 @@ test("final closure resolves once then collects independent analyzers and experi
   assert.match(workflow, /name: Full CI preflight/u);
   assert.match(workflow, /full_scope: false/u);
   assert.match(workflow, /trusted_scan: true/u);
-  assert.match(read(".github/workflows/repository-baseline.yml"), /BThwani \/ Repository Health/u);
+  assert.match(read(".github/workflows/repository-baseline.yml"), /BThwani \/ Static Repository Baseline/u);
   for (const worker of ["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml"]) {
     assert.ok(workflow.includes(`uses: ./.github/workflows/${worker}`), worker);
   }

@@ -93,10 +93,30 @@ test("CodeQL trusted upload consumes SARIF findings before publishing", () => {
   assert.match(read("tools/scripts/classify-codeql-evidence.mjs"), /FINDINGS_OPEN/u);
 });
 
+test("CodeQL trusted upload waits for processing and exact analysis binding", () => {
+  const f = read(".github/workflows/codeql.yml");
+  assert.match(f, /processing_status/u);
+  assert.match(f, /analyses_url/u);
+  assert.match(f, /\.commit_sha == \$candidate_sha/u);
+  assert.match(f, /\.ref == \$candidate_ref/u);
+  assert.match(f, /rtrimstr\("\/"\).*\$expected_category/u);
+  assert.match(f, /codeql-upload-lifecycle-/u);
+});
+
 test("Sonar scan waits for the remote quality-gate result", () => {
   const f = read(".github/workflows/sonarqube.yml");
   assert.match(f, /-Dsonar\.qualitygate\.wait=true/u);
   assert.match(f, /-Dsonar\.qualitygate\.timeout=300/u);
+});
+
+test("Sonar evidence retrieval uses endpoint-specific identity and complete pagination", () => {
+  const f = read(".github/workflows/sonarqube.yml");
+  assert.match(f, /componentKeys=\$\{SONAR_PROJECT_KEY\}/u);
+  assert.match(f, /component=\$\{SONAR_PROJECT_KEY\}/u);
+  assert.match(f, /fetch_remaining_pages issues api\/issues\/search/u);
+  assert.match(f, /fetch_remaining_pages hotspots api\/hotspots\/search/u);
+  assert.match(f, /merge_paged_json issues/u);
+  assert.match(f, /merge_paged_json hotspots/u);
 });
 
 test("Sonar raw API output is consumed as explicit evidence", () => {

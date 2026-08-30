@@ -36,7 +36,7 @@ function rotateRight(value: number, amount: number): number {
 }
 
 /** Portable SHA-256 keeps the deterministic identity available in Expo and web runtimes. */
-function sha256Hex(value: string): string {
+export function sha256Hex(value: string): string {
   const bytes = new TextEncoder().encode(value);
   const bitLength = bytes.length * 8;
   const paddedLength = ((bytes.length + 9 + 63) >> 6) << 6;

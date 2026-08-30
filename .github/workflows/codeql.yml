@@ -577,9 +577,13 @@ jobs:
         run: |
           set -euo pipefail
           : > "${RUNNER_TEMP}/codeql-upload-ids.txt"
+          : > "${RUNNER_TEMP}/codeql-upload-metadata.tsv"
+          printf '%s\n' '[]' > "${RUNNER_TEMP}/codeql-upload-status.json"
           while IFS= read -r -d '' sarif; do
             encoded="${RUNNER_TEMP}/$(basename "${sarif}").gz.b64"
             payload="${encoded}.json"
+            category="$(jq -r '.runs[0].automationDetails.id // empty' "${sarif}" | sed -E 's:/+$::')"
+            [[ -n "${category}" ]] || { echo "::error::CodeQL SARIF automation category missing"; exit 1; }
             gzip -c -- "${sarif}" | base64 -w0 > "${encoded}"
             jq -Rs --arg commit_sha "${CANDIDATE_SHA}" --arg ref "${CANDIDATE_REF}" \
             '{commit_sha:$commit_sha,ref:$ref,sarif:.}' "${encoded}" > "${payload}"
@@ -587,13 +591,76 @@ jobs:
             "/repos/${GITHUB_REPOSITORY}/code-scanning/sarifs" --input "${payload}" --jq '.id')"
             [[ -n "${upload_id}" ]] || { echo "::error::CodeQL SARIF upload id missing"; exit 1; }
             echo "${upload_id}" >> "${RUNNER_TEMP}/codeql-upload-ids.txt"
+            printf '%s\t%s\n' "${upload_id}" "${category}" >> "${RUNNER_TEMP}/codeql-upload-metadata.tsv"
           done < "${RUNNER_TEMP}/codeql-sarif-files"
 
           [[ -s "${RUNNER_TEMP}/codeql-upload-ids.txt" ]] || {
             echo "::error::CodeQL SARIF upload ids missing"
             exit 1
           }
-          echo "CodeQL SARIF uploads accepted by GitHub for asynchronous processing"
+          while IFS=$'\t' read -r upload_id expected_category; do
+            [[ -n "${upload_id}" && -n "${expected_category}" ]] || {
+              echo "::error::CodeQL upload lifecycle metadata is incomplete"
+              exit 1
+            }
+            sarif_status_endpoint="/repos/${GITHUB_REPOSITORY}/code-scanning/sarifs/${upload_id}"
+            processing_status=""
+            analyses_url=""
+            for attempt in $(seq 1 60); do
+              sarif_status="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "${sarif_status_endpoint}")"
+              processing_status="$(jq -r '.processing_status // empty' <<<"${sarif_status}")"
+              analyses_url="$(jq -r '.analyses_url // empty' <<<"${sarif_status}")"
+              case "${processing_status}" in
+                complete)
+                  break
+                  ;;
+                pending|processing|working)
+                  sleep 2
+                  ;;
+                failed|error)
+                  echo "::error::CodeQL SARIF processing failed for upload ${upload_id}: ${processing_status}"
+                  exit 1
+                  ;;
+                *)
+                  echo "::error::Unknown CodeQL SARIF processing status for upload ${upload_id}: ${processing_status:-<empty>}"
+                  exit 1
+                  ;;
+              esac
+            done
+            [[ "${processing_status}" == "complete" ]] || {
+              echo "::error::CodeQL SARIF processing did not complete for upload ${upload_id}"
+              exit 1
+            }
+            [[ "${analyses_url}" == https://api.github.com/repos/*/code-scanning/analyses* ]] || {
+              echo "::error::CodeQL analyses URL is not a GitHub API URL for upload ${upload_id}"
+              exit 1
+            }
+            analyses_endpoint="${analyses_url#https://api.github.com}"
+            analyses="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "${analyses_endpoint}")"
+            exact_matches="$(jq --arg upload_id "${upload_id}" --arg candidate_sha "${CANDIDATE_SHA}" \
+              --arg candidate_ref "${CANDIDATE_REF}" --arg expected_category "${expected_category}" \
+              '[.analyses[]? | select((.sarif_id|tostring) == $upload_id and .commit_sha == $candidate_sha and .ref == $candidate_ref and ((.category // "") | rtrimstr("/")) == $expected_category)] | length' \
+              <<<"${analyses}")"
+            [[ "${exact_matches}" == "1" ]] || {
+              echo "::error::CodeQL analysis binding mismatch for upload ${upload_id}: matches=${exact_matches}"
+              exit 1
+            }
+            jq --arg upload_id "${upload_id}" --arg category "${expected_category}" \
+              --arg status "${processing_status}" --arg analyses_url "${analyses_url}" \
+              '. += [{uploadId:$upload_id,category:$category,processingStatus:$status,analysesUrl:$analyses_url,exactBinding:true}]' \
+              "${RUNNER_TEMP}/codeql-upload-status.json" > "${RUNNER_TEMP}/codeql-upload-status.next.json"
+            mv "${RUNNER_TEMP}/codeql-upload-status.next.json" "${RUNNER_TEMP}/codeql-upload-status.json"
+          done < "${RUNNER_TEMP}/codeql-upload-metadata.tsv"
+          echo "CodeQL SARIF uploads processed and bound to the exact candidate"
+
+      - name: Upload CodeQL trusted ingestion lifecycle evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codeql-upload-lifecycle-${{ env.CANDIDATE_SHA }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/codeql-upload-status.json
+          if-no-files-found: error
+          retention-days: 14
 
   result:
     name: >-

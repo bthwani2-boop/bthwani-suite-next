@@ -47,13 +47,23 @@ test("discovery is candidate-pinned and Windows shell-safe", () => {
   assert.match(d, /closureClaim: false/u);
 });
 
-test("repository baseline is a separate exact-SHA health signal", () => {
+test("static repository baseline is a separate exact-SHA signal", () => {
   const workflow = read(".github/workflows/repository-baseline.yml");
-  assert.match(workflow, /BThwani \/ Repository Health/u);
+  assert.match(workflow, /BThwani \/ Static Repository Baseline/u);
   assert.match(workflow, /BASELINE_OPEN/u);
   assert.match(workflow, /statuses\/\$\{HEAD_SHA\}/u);
   assert.doesNotMatch(workflow, /BThwani \/ Change Closure/u);
   assert.doesNotMatch(workflow, /BThwani \/ Change Verification/u);
+});
+
+test("normal product work freezes assurance control-plane maintenance and routine dependency PRs", () => {
+  const scope = read("tools/prompting/bthwani-orchestrator/01-SCOPE-AUTHORITY-RULES.md");
+  assert.match(scope, /HUMAN_ONLY/u);
+  assert.match(scope, /ASSURANCE_CONTROL_PLANE/u);
+  assert.match(scope, /FROZEN_FOR_NORMAL_PRODUCT_WORK/u);
+  assert.match(scope, /NO ASSURANCE RECURSION WITHOUT A UNIQUE MATERIAL CLAIM/u);
+  const dependabot = read(".github/dependabot.yml");
+  assert.doesNotMatch(dependabot, /open-pull-requests-limit:\s*[1-9]/u);
 });
 
 test("baseline ratchet distinguishes inherited findings from regressions", () => {

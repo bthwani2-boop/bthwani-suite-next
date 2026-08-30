@@ -565,7 +565,7 @@ jobs:
               assuranceClaims: {
                 changeVerification: {context: "BThwani / Change Verification", disposition: "EVIDENCE_PASSED"},
                 changeClosure: {context: "BThwani / Change Closure", disposition: "EVIDENCE_PASSED"},
-                repositoryHealth: {context: "BThwani / Repository Health", disposition: "NOT_EVALUATED"},
+                repositoryBaseline: {context: "BThwani / Static Repository Baseline", disposition: "NOT_EVALUATED"},
                 repositoryClosure: {context: "BThwani / Repository Closure", disposition: "NOT_CLAIMED"}
               },
               experienceEvidence: {

@@ -436,7 +436,7 @@ func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *ht
 		if err := recordCartIdempotency(r.Context(), s.db,
 			cartID, idempotencyKey, v, deviceId, sessionId,
 		); err != nil {
-			log.Printf("[cart] idempotency tracking failed (cart_id=%s, error_type %T)", cartID, err)
+			log.Printf("[cart] idempotency tracking failed (error_type %T)", err)
 		}
 	}
 
@@ -504,7 +504,7 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 		if err := recordCartIdempotency(r.Context(), s.db,
 			cartID, idempotencyKey, v, deviceId, sessionId,
 		); err != nil {
-			log.Printf("[cart] idempotency tracking failed (cart_id=%s, error_type %T)", cartID, err)
+			log.Printf("[cart] idempotency tracking failed (error_type %T)", err)
 		}
 	}
 

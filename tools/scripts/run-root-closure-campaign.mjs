@@ -189,7 +189,7 @@ function inspectLocalControlPlane(repoRoot) {
     || /BThwani\s+Code Quality & Security Baseline/u.test(baseline);
   probes.push(narrowBaselineName
     ? makeProbe("repository-baseline-claim-name", "PASS", "baseline claim is bounded to static/quality/security evidence")
-    : makeProbe("repository-baseline-claim-name", "FAIL", "Repository Health overstates CodeQL+Sonar+Semgrep coverage; narrow the claim before treating it as repository-wide health"));
+    : makeProbe("repository-baseline-claim-name", "FAIL", "Static Repository Baseline claim overstates CodeQL+Sonar+Semgrep coverage; narrow the claim before treating it as repository-wide health"));
 
   const timeoutInputsExist = /bthwani_lock_timeout_seconds/u.test(migrationInvoker)
     && /bthwani_statement_timeout_minutes/u.test(migrationInvoker);

@@ -440,3 +440,13 @@ jobs:
         run: >-
           ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action test -Transport url -DatabaseUrl
           $env:DATABASE_URL -TestSuite seed
+      - name: Run DSH database integration tests
+        working-directory: services/dsh/backend
+        shell: bash
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          DSH_REQUIRE_DB_TESTS: "true"
+          DSH_TEST_operator_context_id: ci-dsh
+        run: |
+          set -euo pipefail
+          go test ./... -count=1

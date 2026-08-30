@@ -48,7 +48,7 @@ mustContain(closure, [
 mustNotContain(closure, ["pull_request:", "SEMANTIC_RESULT", "workflow_run:", "repository_dispatch", "sleep", "poll"], "final closure control plane");
 mustNotMatch(closure, [/\/pulls\/[^\s"']+\/files(?:\?|["'])/u], "final closure changed-file authority");
 
-mustContain(repositoryBaseline, ["workflow_dispatch:", "BThwani / Repository Health", "BASELINE_OPEN", "exact candidate", "uses: ./.github/workflows/codeql.yml", "uses: ./.github/workflows/sonarqube.yml", "CODEQL_RESULT", "SONAR_RESULT"], "repository health");
+mustContain(repositoryBaseline, ["workflow_dispatch:", "BThwani / Static Repository Baseline", "BASELINE_OPEN", "exact candidate", "uses: ./.github/workflows/codeql.yml", "uses: ./.github/workflows/sonarqube.yml", "CODEQL_RESULT", "SONAR_RESULT"], "static repository baseline");
 mustNotContain(repositoryBaseline, ["BThwani / Change Closure", "BThwani / Change Verification"], "repository baseline status separation");
 
 const dispatchingWorkflows = workflowEntries
