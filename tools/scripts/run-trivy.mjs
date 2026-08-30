@@ -5,6 +5,18 @@ import { changedFiles, repoRoot, runTool } from "./_external-tool-runner.mjs";
 
 const baseSha = String(process.env.BASE_SHA || "").trim();
 const candidateSha = String(process.env.CANDIDATE_SHA || "").trim();
+const trustedPolicyRoot = path.resolve(process.env.BTHWANI_TRUSTED_POLICY_ROOT || repoRoot);
+const trivyConfig = path.join(trustedPolicyRoot, "trivy.yaml");
+const trivyIgnore = path.join(trustedPolicyRoot, ".trivyignore.yaml");
+
+for (const policyFile of [trivyConfig, trivyIgnore]) {
+  if (!fs.existsSync(policyFile)) {
+    console.error(`[TRIVY FAIL] trusted policy file missing: ${policyFile}`);
+    process.exit(1);
+  }
+}
+
+const policyArgs = `--config ${JSON.stringify(trivyConfig)} --ignorefile ${JSON.stringify(trivyIgnore)}`;
 
 if (baseSha && candidateSha) {
   const files = changedFiles(baseSha, candidateSha, ["."], () => true);
@@ -24,16 +36,16 @@ if (baseSha && candidateSha) {
   runTool({
     toolId: "trivy",
     binary: "trivy",
-    command: `trivy fs --config trivy.yaml ${target}`,
-    diagnosticCommand: `trivy fs --config trivy.yaml --format json --output ${JSON.stringify(path.join(staging, "trivy-report.json"))} ${target}`,
+    command: `trivy fs ${policyArgs} ${target}`,
+    diagnosticCommand: `trivy fs ${policyArgs} --format json --output ${JSON.stringify(path.join(staging, "trivy-report.json"))} ${target}`,
     required: true,
   });
 } else {
   runTool({
     toolId: "trivy",
     binary: "trivy",
-    command: "trivy fs --config trivy.yaml .",
-    diagnosticCommand: "trivy fs --config trivy.yaml --format json --output .diagnostics/security/trivy-report.json .",
+    command: `trivy fs ${policyArgs} .`,
+    diagnosticCommand: `trivy fs ${policyArgs} --format json --output .diagnostics/security/trivy-report.json .`,
     required: true,
   });
 }

@@ -35,9 +35,16 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+
       - name: Materialize contracts
-        run: pnpm exec nx run contracts:materialize
-      - name: Bootstrap runtime and read back catalog
+        id: materialize
+        continue-on-error: true
+        run: pnpm exec nx run contracts:materialize --skip-nx-cache
+
+      - name: Bootstrap full runtime
+        id: bootstrap
+        if: ${{ steps.materialize.outcome == 'success' }}
+        continue-on-error: true
         shell: pwsh
         env:
           SOURCE_SHA: ${{ env.CANDIDATE_SHA }}
@@ -46,15 +53,31 @@ jobs:
           if ((git rev-parse HEAD).Trim() -ne $env:SOURCE_SHA) { throw "Runtime checkout SHA mismatch" }
           & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action bootstrap-dev -Profiles $env:RUNTIME_COMPONENTS -Force
           if ($LASTEXITCODE -ne 0) { throw "runtime bootstrap failed" }
+
+      - name: Read back canonical runtime catalog
+        id: catalog
+        if: ${{ steps.bootstrap.outcome == 'success' }}
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
           & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action catalog-readback -Profiles $env:RUNTIME_COMPONENTS
           if ($LASTEXITCODE -ne 0) { throw "runtime catalog readback failed" }
+
       - name: Execute DSH operator governance preflight
+        id: operator_preflight
+        if: ${{ steps.bootstrap.outcome == 'success' }}
+        continue-on-error: true
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
           if ($LASTEXITCODE -ne 0) { throw "DSH operator governance preflight failed" }
+
       - name: Execute full runtime smoke
+        id: runtime_smoke
+        if: ${{ steps.bootstrap.outcome == 'success' }}
+        continue-on-error: true
         shell: pwsh
         env:
           SOURCE_SHA: ${{ env.CANDIDATE_SHA }}
@@ -63,13 +86,46 @@ jobs:
           if ((git rev-parse HEAD).Trim() -ne $env:SOURCE_SHA) { throw "Runtime checkout SHA mismatch" }
           & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $env:RUNTIME_COMPONENTS
           if ($LASTEXITCODE -ne 0) { throw "runtime smoke failed" }
+
       - name: Capture runtime diagnostics
-        if: ${{ failure() }}
+        if: ${{ always() && (steps.materialize.outcome == 'failure' || steps.bootstrap.outcome == 'failure' || steps.catalog.outcome == 'failure' || steps.operator_preflight.outcome == 'failure' || steps.runtime_smoke.outcome == 'failure') }}
         shell: bash
         run: |
           set +e
           docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
           docker ps -aq | xargs -r -n1 docker logs --tail 100
+
+      - name: Enforce complete runtime evidence collection
+        if: ${{ always() }}
+        shell: bash
+        env:
+          MATERIALIZE: ${{ steps.materialize.outcome }}
+          BOOTSTRAP: ${{ steps.bootstrap.outcome }}
+          CATALOG: ${{ steps.catalog.outcome }}
+          OPERATOR_PREFLIGHT: ${{ steps.operator_preflight.outcome }}
+          RUNTIME_SMOKE: ${{ steps.runtime_smoke.outcome }}
+        run: |
+          set -euo pipefail
+          failures=()
+          [[ "${MATERIALIZE}" == "success" ]] || failures+=("contracts:${MATERIALIZE}")
+          if [[ "${MATERIALIZE}" == "success" ]]; then
+            [[ "${BOOTSTRAP}" == "success" ]] || failures+=("bootstrap:${BOOTSTRAP}")
+          else
+            echo "Runtime bootstrap BLOCKED_BY contracts:${MATERIALIZE}"
+          fi
+          if [[ "${BOOTSTRAP}" == "success" ]]; then
+            [[ "${CATALOG}" == "success" ]] || failures+=("catalog-readback:${CATALOG}")
+            [[ "${OPERATOR_PREFLIGHT}" == "success" ]] || failures+=("operator-preflight:${OPERATOR_PREFLIGHT}")
+            [[ "${RUNTIME_SMOKE}" == "success" ]] || failures+=("runtime-smoke:${RUNTIME_SMOKE}")
+          else
+            echo "Catalog/operator-preflight/runtime-smoke BLOCKED_BY bootstrap:${BOOTSTRAP}"
+          fi
+          if (( ${#failures[@]} )); then
+            echo "::error::Runtime verification failed after collecting all independently executable checks: $(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+          echo "Complete runtime evidence collection passed."
+
       - name: Stop runtime
         if: ${{ always() }}
         shell: pwsh

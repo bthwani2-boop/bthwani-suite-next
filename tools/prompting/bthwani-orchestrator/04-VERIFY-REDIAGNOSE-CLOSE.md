@@ -104,6 +104,40 @@ Passing a tool/gate without dispositioning its material findings is not closure.
 
 Tools do not decide Product/System Truth. Their outputs are evidence and hypotheses subject to root analysis.
 
+### 4.1 Evidence disposition and discovery scheduling
+
+Every materially applicable proof dimension must have an explicit disposition. Green is forbidden as a synonym for absence of evidence.
+
+```text
+PASS            = the exact current claim was executed and falsification did not occur.
+FAIL            = the claim was executed and produced material failure evidence.
+BLOCKED_BY      = execution was impossible because a proven prerequisite failed; never PASS.
+NOT_APPLICABLE  = materiality analysis proves the claim is outside the current cone.
+NOT_COVERED     = the claim is material but no adequate verifier/evidence exists or executed; closure is forbidden.
+STALE           = evidence existed but its candidate/input/environment/freshness was invalidated.
+SUPERSEDED      = newer exact evidence replaces an older item; the older item is not current proof.
+```
+
+`SKIPPED`, missing output, missing tool configuration, missing device/browser/runtime, or a green sibling check MUST NOT be translated to `PASS`. Resolve each to one of the dispositions above.
+
+Discovery is an evidence stream, not an execution barrier:
+
+```text
+PIN ONE EXACT DISCOVERY SNAPSHOT
+-> launch all independently executable applicable collectors with bounded safe parallelism
+-> each collector continues through independent checks and aggregates at its own end
+-> ingest findings as soon as they become available
+-> agent continues repository audit/root proof/treatment while other collectors are still running
+-> do not wait for the entire wave when a root is already proven executable
+-> do not dispatch another broad remote wave merely because a remediation commit was pushed
+-> first close/disposition the known findings/root families from the current wave
+-> compute evidence invalidation from the actual remediation cone
+-> rerun only invalidated/newly-required proof
+-> reserve a fresh broad repository/Level-4 wave for fixed-point proof and the exact final candidate
+```
+
+A collector may stop only when a later check has a real causal prerequisite on the failed step. Such checks are `BLOCKED_BY`; independent checks must continue. Repeated `RED -> tiny fix -> rerun everything` caused by first-failure masking is a verification-system defect and must itself be root-corrected.
+
 ## 5. Required verification dimensions
 
 Verify where material:

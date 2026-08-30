@@ -1,6 +1,6 @@
 # BThwani Root-Cause Orchestrator
 
-PACKAGE_REVISION: 20
+PACKAGE_REVISION: 22
 PACKAGE_CLASS: UNIFIED_ROOT_CAUSE_EXECUTION_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -66,13 +66,17 @@ Preferred invocation inputs are intentionally small:
 ```text
 REPOSITORY: <owner/repo>
 BRANCH: <exact existing branch/ref when target is branch-bound>
+TARGET_APP: <NONE | AUTO | exact live application/surface audit-execution anchor>
 OBJECTIVE: <explicit objective | AUTO/NEXT>
+COMPLETION_LEVEL: <AUTO | LEVEL_1 | LEVEL_2 | LEVEL_3 | LEVEL_4>
 ACTIVE_WORKSET: <NONE | complete human-known active objective snapshot>
 PRIMARY_FOCUS: <AUTO | explicit focus>
 SCOPE: <AUTO | REPOSITORY | DOMAIN | SERVICE | SURFACE | FEATURE | JOURNEY | PATH | SEMANTIC_SCOPE>
 RESEARCH: <AUTO | INTERNAL_ONLY | EXTERNAL_ALLOWED>
 EXECUTION_LOCATION: DIRECT_ON_TARGET
 ```
+
+`TARGET_APP` and `COMPLETION_LEVEL` are optional intent-disambiguation inputs, not new Product/System authorities. When omitted or `AUTO`, resolve them from the explicit current human intent plus live scope evidence; never silently downgrade an explicitly requested broader completion horizon.
 
 There is **one normal root-closure operating loop**, not separate audit/preparation and execution phases.
 
@@ -98,6 +102,41 @@ mutation authority not established
 ```
 
 Read-only selection/audit are **intent boundaries**, not lifecycle phases and not prerequisites for later execution. A later execution invocation re-resolves live truth and does not require a separate preparation cycle.
+
+### App-centric systemic completion intent binding
+
+This subsection owns only the **invocation binding**. Scope/materiality remains owned by `01`; root proof by `02`; mutation/migration/cutover/cleanup by `03`; final proof by `04`; and objective/traversal/parallel scheduling by `05`. Do not duplicate those laws here or in another package file.
+
+```text
+TARGET_APP = NONE/AUTO
+-> no app-specific anchor is implied; resolve the objective/scope normally
+
+TARGET_APP = exact live application/surface
+-> resolve that live application/surface under 01
+-> treat it as AUDIT/EXECUTION ANCHOR ONLY
+-> TARGET_APP != Product/System authority
+-> TARGET_APP != canonical data/state writer merely by being the target
+-> TARGET_APP != filesystem boundary
+-> TARGET_APP != independent closure boundary
+
+TARGET_APP + COMPLETION_LEVEL = LEVEL_4
+OR explicit equivalent App-Centric Systemic Level-4 Completion Campaign intent
+-> APP_CENTRIC_SYSTEMIC_LEVEL_4_CAMPAIGN
+-> CLAIMED_LEVEL_4_SCOPE = complete materially connected system cone of TARGET_APP proven under 01
+-> filesystem/application boundaries MUST NOT truncate a proven material dependency/consumer/authority/handoff
+-> independent regions may be excluded only through an applicable proven disposition such as N/A_PROVEN under 01/04
+-> invoke the Systemic Completeness Engine in §14 across successive causally complete Closure Units
+-> each Closure Unit is an execution/checkpoint boundary, NOT the campaign-completion boundary
+-> after every coherent Closure Unit use §11 to commit/push/re-pin, ingest evidence, re-diagnose/reconcile the Root Graph and re-rank before continuing
+-> LEVEL_1 / LEVEL_2 / LEVEL_3 are non-terminal checkpoints while LEVEL_4 remains claimed
+-> first known Root Queue exhaustion is non-terminal; it transitions into the mandatory Level-4 baseline and fresh adversarial proof owned by §14/04
+-> any new material root/gap/unknown discovered by that proof reopens the campaign
+-> terminate only when 04 proves LEVEL_4_REPOSITORY_SYSTEM_BASELINE for CLAIMED_LEVEL_4_SCOPE or a legitimate §9 stop state applies
+```
+
+Execution ordering for this campaign remains causal, never mechanically single-threaded or mechanically parallel: dependencies, shared canonical authorities, migrations, cutovers and ref movement serialize under `01`/`05`; independently proven `PARALLEL_SAFE` Closure Units may use maximum useful safe parallelism under the same single coordinator/integration authority.
+
+An app-centric Level-4 campaign MUST NOT be downgraded into local app completion merely because the target app builds, renders or its immediately visible symptoms disappear. Conversely, Level-4 intent does not authorize arbitrary repository-wide mutation: discover broadly, mutate only the proven material cone, and verify the claimed cone completely under `01`–`05`.
 
 ### 3.1 Unified close loop
 
@@ -310,7 +349,7 @@ Only:
 
 The following are **not** stop states by themselves:
 
-`CI failed | Sonar failed | scanner failed | many findings | large scope | no persisted plan | no plans/diagnose-implementing directory | work is complex | green checks`.
+`CI failed | Sonar failed | scanner failed | many findings | large scope | no persisted plan | no plans/diagnose-implementing directory | work is complex | green checks | a lower closure level was reached while a higher completion level remains claimed | first Root Queue exhaustion before required higher-level baseline/re-audit`.
 
 ## 10. Closure invariant
 
@@ -406,7 +445,7 @@ LEVEL_4_REPOSITORY_SYSTEM_BASELINE
 
 `LEVEL_4_REPOSITORY_SYSTEM_BASELINE` is the only level that may support a repository/system-baseline cleanliness claim. Levels 1–3 must never be promoted linguistically into repository-wide completeness.
 
-When the human gives a broad `START`/`AUTO` execution intent, broad discovery may continue until the Level-4 fixed point is reached, but mutation remains incremental by Closure Unit. Discovery breadth never authorizes a repository-wide rewrite or brute-force execution of every tool/component.
+When the human gives a broad `START`/`AUTO` execution intent, explicitly requests `COMPLETION_LEVEL: LEVEL_4`, or invokes equivalent Level-4 systemic completion intent, broad discovery may continue until the Level-4 fixed point is reached, but mutation remains incremental by Closure Unit. Discovery breadth never authorizes a repository-wide rewrite or brute-force execution of every tool/component.
 
 ## 13. Human-experience and design closure invariant
 
@@ -435,7 +474,7 @@ Human-experience closure is evidence-bounded. Do not claim mathematically unknow
 
 ## 14. Systemic Completeness Engine
 
-For repository/system-wide `AUTO`, `START`, or equivalent broad execution, local root closure is necessary but not sufficient. The coordinator must operate a **systemic campaign** until the evidence-bounded Level-4 fixed point is proven or a legitimate `00` stop state blocks a dependent cone.
+For repository/system-wide `AUTO`, `START`, explicit `COMPLETION_LEVEL: LEVEL_4`, equivalent broad Level-4 execution, or an app-centric Level-4 campaign bound under §3, local root closure is necessary but not sufficient. The coordinator must operate a **systemic campaign** until the evidence-bounded Level-4 fixed point is proven for the claimed material scope or a legitimate `00` stop state blocks a dependent cone.
 
 The campaign kernel is:
 

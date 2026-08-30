@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { resolvePackageManagerInvocation } from "./package-manager-invocation.mjs";
 
 test("Windows pnpm invocation uses a fixed PowerShell argv bridge", () => {
@@ -19,6 +21,32 @@ test("Windows pnpm invocation uses a fixed PowerShell argv bridge", () => {
   assert.match(invocation.args[fileIndex + 1], /invoke-package-manager\.ps1$/i);
   assert.equal(invocation.args[fileIndex + 2], "pnpm");
   assert.equal(invocation.args.at(-1), "--version");
+});
+
+test("Windows bridge forwards TypeScript project flags to the executable package manager", { skip: process.platform !== "win32" }, () => {
+  const bridgePath = fileURLToPath(new URL("./invoke-package-manager.ps1", import.meta.url));
+  const workspaceRoot = fileURLToPath(new URL("../../../", import.meta.url));
+  const result = spawnSync("pwsh", [
+    "-NoProfile",
+    "-NonInteractive",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    bridgePath,
+    "pnpm",
+    "exec",
+    "tsc",
+    "--noEmit",
+    "-p",
+    "shared/data-runtime/tsconfig.json",
+  ], {
+    cwd: workspaceRoot,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
 });
 
 test("non-Windows package-manager invocation is direct argv execution", () => {

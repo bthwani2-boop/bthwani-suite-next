@@ -215,7 +215,13 @@ $visitBody = @{
   evidenceMediaRefs = @([string]$visitEvidenceUpload.mediaRef)
 } | ConvertTo-Json
 
-$visit = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/visits" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $visitBody -TimeoutSec 10
+$visitHeaders = @{}
+foreach ($key in $fieldHeaders.Keys) {
+  $visitHeaders[$key] = $fieldHeaders[$key]
+}
+$visitHeaders["X-Correlation-ID"] = "smoke-partner-visit-$([guid]::NewGuid())"
+$visitHeaders["Idempotency-Key"] = "smoke-partner-visit-$($partnerDraft.id)-$([guid]::NewGuid())"
+$visit = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/visits" -Method Post -Headers $visitHeaders -ContentType "application/json" -Body $visitBody -TimeoutSec 10
 if ($visit.visitStatus -ne "submitted") { throw "Partner Onboarding & Store Publication field visit was not submitted" }
 
 $documentEvidencePath = Join-Path $smokeTempPath ("dsh-partner-document-" + [guid]::NewGuid().ToString("N") + ".png")
@@ -236,11 +242,23 @@ $docBody = @{
   mediaRef = [string]$documentEvidenceUpload.mediaRef
   notes = "commercial register smoke document"
 } | ConvertTo-Json
-$doc = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/documents" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $docBody -TimeoutSec 10
+$documentHeaders = @{}
+foreach ($key in $fieldHeaders.Keys) {
+  $documentHeaders[$key] = $fieldHeaders[$key]
+}
+$documentHeaders["X-Correlation-ID"] = "smoke-partner-document-$([guid]::NewGuid())"
+$documentHeaders["Idempotency-Key"] = "smoke-partner-document-$($partnerDraft.id)-$([guid]::NewGuid())"
+$doc = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/documents" -Method Post -Headers $documentHeaders -ContentType "application/json" -Body $docBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($doc.id)) { throw "Partner Onboarding & Store Publication document upload did not return document id" }
 
 $submitBody = @{ reason = "field submitted Partner Onboarding & Store Publication smoke partner" } | ConvertTo-Json
-$submitted = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/submit" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $submitBody -TimeoutSec 10
+$submitHeaders = @{}
+foreach ($key in $fieldHeaders.Keys) {
+  $submitHeaders[$key] = $fieldHeaders[$key]
+}
+$submitHeaders["X-Correlation-ID"] = "smoke-partner-submit-$([guid]::NewGuid())"
+$submitHeaders["Idempotency-Key"] = "smoke-partner-submit-$($partnerDraft.id)-$([guid]::NewGuid())"
+$submitted = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/submit" -Method Post -Headers $submitHeaders -ContentType "application/json" -Body $submitBody -TimeoutSec 10
 if ($submitted.partner.activationStatus -ne "submitted") { throw "Partner Onboarding & Store Publication submit did not reach submitted" }
 
 $partnerStores = Invoke-RestMethod "http://localhost:18080/dsh/operator/partners/$($partnerDraft.id)/stores" -Headers $operatorHeaders -TimeoutSec 10
@@ -275,7 +293,13 @@ $reviewBody = @{
   decision = "approved"
   reason = "Partner Onboarding & Store Publication smoke review approved"
 } | ConvertTo-Json
-$review = Invoke-RestMethod "http://localhost:18080/dsh/operator/partners/$($partnerDraft.id)/documents/$($doc.id)/review" -Method Patch -Headers $operatorHeaders -ContentType "application/json" -Body $reviewBody -TimeoutSec 10
+$reviewHeaders = @{}
+foreach ($key in $operatorHeaders.Keys) {
+  $reviewHeaders[$key] = $operatorHeaders[$key]
+}
+$reviewHeaders["X-Correlation-ID"] = "smoke-partner-document-review-$([guid]::NewGuid())"
+$reviewHeaders["Idempotency-Key"] = "smoke-partner-document-review-$($partnerDraft.id)-$([guid]::NewGuid())"
+$review = Invoke-RestMethod "http://localhost:18080/dsh/operator/partners/$($partnerDraft.id)/documents/$($doc.id)/review" -Method Patch -Headers $reviewHeaders -ContentType "application/json" -Body $reviewBody -TimeoutSec 10
 if ($review.document.documentStatus -ne "approved") { throw "Partner Onboarding & Store Publication document review did not approve document" }
 
 foreach ($toStatus in @("documents_verified", "ops_review", "ops_approved", "partner_active")) {

@@ -3,9 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Anchor root to this file's location (tools/guards/ → repo root) so guards work
-// correctly whether invoked from the repo root or from a package subdirectory.
-export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const moduleRepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+export const repoRoot = path.resolve(process.env.BTHWANI_TARGET_REPO || moduleRepoRoot);
 
 const EXCLUDED_DIRS = new Set([
   ".git", ".diagnostics", "node_modules", ".pnpm-store", ".next", ".expo", ".turbo", ".nx", ".cache",
@@ -134,9 +133,6 @@ export function fail(guardId, violations) {
   for (const violation of violations) {
     console.error(`- ${violation.file}${violation.line ? `:${violation.line}` : ""} ${violation.message}`);
   }
-  // Guards report through their process exit code. CI/workflow orchestration owns
-  // repository-platform status/check publication; guards never publish hidden
-  // commit statuses or mutate GitHub state directly.
   process.exit(1);
 }
 
@@ -192,9 +188,6 @@ export function loadTsconfigAliases() {
   return new Map(aliases);
 }
 
-// Compatibility helper for optional local tools. Required tools must enforce
-// their requirement at the caller; repository-wide activation registries are
-// intentionally not a second source of truth.
 export function assertActiveOrWarn(toolId, binaryName) {
   console.log(`\n[${toolId.toUpperCase()} SKIP] optional binary '${binaryName}' is not installed.\n`);
   process.exit(0);
