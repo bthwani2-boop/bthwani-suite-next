@@ -31,8 +31,17 @@ test("CI control-plane authorities are loaded from trusted workflow SHA", () => 
   assert.doesNotMatch(f, /node --test tools\/guards\/sonar-coverage-ownership-gate\.test\.mjs/u);
 
   const drift = read("tools/scripts/verify-assurance-authority-drift.mjs");
+  for (const protectedAuthority of [
+    '".github/workflows"',
+    '".github/actions"',
+    '".opencodereview"',
+    '"tools/guards"',
+    '"tools/verification"',
+    '"tools/scripts/invoke-runtime-phase.ps1"',
+    '"tools/scripts/run-guard-suite.mjs"',
+    '"infra/docker/scripts/runtime-dispatch.ps1"',
+  ]) assert.ok(drift.includes(protectedAuthority), `missing drift authority ${protectedAuthority}`);
   assert.match(drift, /ASSURANCE_AUTHORITY_CHANGE_REQUIRES_BOOTSTRAP/u);
-  assert.match(drift, /\.github\/workflows/u);
   assert.match(drift, /tools\/prompting\/bthwani-orchestrator/u);
 
   const verifier = read("tools/scripts/check-ci-source-immutability.mjs");
