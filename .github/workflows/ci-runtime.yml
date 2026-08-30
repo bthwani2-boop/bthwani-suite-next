@@ -87,6 +87,28 @@ jobs:
           & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $env:RUNTIME_COMPONENTS
           if ($LASTEXITCODE -ne 0) { throw "runtime smoke failed" }
 
+      - name: Execute non-destructive DSH API property checks with pinned Schemathesis
+        id: schemathesis
+        if: ${{ steps.bootstrap.outcome == 'success' && steps.materialize.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          venv="${RUNNER_TEMP}/schemathesis-venv"
+          python3 -m venv "${venv}"
+          "${venv}/bin/python" -m pip install \
+            --disable-pip-version-check \
+            --no-input \
+            -r tools/verification/schemathesis-requirements.txt
+          "${venv}/bin/schemathesis" --version
+
+          "${venv}/bin/schemathesis" run \
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+            --url http://127.0.0.1:18080 \
+            --include-method GET \
+            --include-path-regex '^/dsh/(health|readiness|stores)(/.*)?$' \
+            --workers 1
+
       - name: Capture runtime diagnostics
         if: ${{ always() && (steps.materialize.outcome == 'failure' || steps.bootstrap.outcome == 'failure' || steps.catalog.outcome == 'failure' || steps.operator_preflight.outcome == 'failure' || steps.runtime_smoke.outcome == 'failure') }}
         shell: bash
@@ -104,6 +126,7 @@ jobs:
           CATALOG: ${{ steps.catalog.outcome }}
           OPERATOR_PREFLIGHT: ${{ steps.operator_preflight.outcome }}
           RUNTIME_SMOKE: ${{ steps.runtime_smoke.outcome }}
+          SCHEMATHESIS: ${{ steps.schemathesis.outcome }}
         run: |
           set -euo pipefail
           failures=()
@@ -117,6 +140,7 @@ jobs:
             [[ "${CATALOG}" == "success" ]] || failures+=("catalog-readback:${CATALOG}")
             [[ "${OPERATOR_PREFLIGHT}" == "success" ]] || failures+=("operator-preflight:${OPERATOR_PREFLIGHT}")
             [[ "${RUNTIME_SMOKE}" == "success" ]] || failures+=("runtime-smoke:${RUNTIME_SMOKE}")
+            [[ "${SCHEMATHESIS}" == "success" ]] || failures+=("schemathesis:${SCHEMATHESIS}")
           else
             echo "Catalog/operator-preflight/runtime-smoke BLOCKED_BY bootstrap:${BOOTSTRAP}"
           fi

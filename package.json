@@ -188,7 +188,9 @@
     "ocr:verify": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode Verify",
     "ocr:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode Full",
     "ocr:setup": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode Setup",
-    "ocr:audit": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode DelegateAudit"
+    "ocr:audit": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode DelegateAudit",
+    "lint:typed": "eslint --config eslint.typed.config.mjs \"{apps,core,services,shared}/**/*.{ts,tsx,mts,cts}\"",
+    "test:property": "node --test tools/scripts/detect-ci-context.property.test.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

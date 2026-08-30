@@ -60,6 +60,60 @@ jobs:
           fi
           pnpm exec nx "${args[@]}"
 
+      - name: Verify OpenAPI compatibility against exact base with pinned oasdiff
+        id: oasdiff
+        if: ${{ steps.materialize.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        env:
+          BASE_SHA: ${{ inputs.base_sha }}
+        run: |
+          set -euo pipefail
+          version="1.29.1"
+          archive="${RUNNER_TEMP}/oasdiff_${version}_linux_amd64.tar.gz"
+          bin_dir="${RUNNER_TEMP}/oasdiff-${version}"
+          mkdir -p "${bin_dir}"
+
+          curl -fsSL \
+            "https://github.com/oasdiff/oasdiff/releases/download/v${version}/oasdiff_${version}_linux_amd64.tar.gz" \
+            -o "${archive}"
+          echo "541f7c66c933495fceef24eaf5c48aa66c19069f366f7bd0a60a6a4820c5e533  ${archive}" | sha256sum -c -
+          tar -xzf "${archive}" -C "${bin_dir}"
+          oasdiff_bin="$(find "${bin_dir}" -type f -name oasdiff -print -quit)"
+          [[ -x "${oasdiff_bin}" ]] || { echo "::error::oasdiff binary missing"; exit 1; }
+
+          specs=(
+            "core/identity/contracts/generated/identity.bundle.openapi.yaml"
+            "core/workforce/contracts/generated/workforce.bundle.openapi.yaml"
+            "core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml"
+            "core/providers/contracts/generated/providers.bundle.openapi.yaml"
+            "services/dsh/contracts/generated/dsh.bundle.openapi.yaml"
+            "services/wlt/contracts/generated/wlt.bundle.openapi.yaml"
+          )
+
+          failures=()
+          for spec in "${specs[@]}"; do
+            [[ -f "${spec}" ]] || continue
+            if ! git cat-file -e "${BASE_SHA}:${spec}" 2>/dev/null; then
+              echo "oasdiff: ${spec} is new relative to exact base; no backwards-compatibility baseline exists."
+              continue
+            fi
+
+            base_spec="${RUNNER_TEMP}/base-$(echo "${spec}" | tr '/\\' '__')"
+            git show "${BASE_SHA}:${spec}" > "${base_spec}"
+            echo "===== oasdiff breaking ${spec} ====="
+            set +e
+            "${oasdiff_bin}" breaking --fail-on ERR "${base_spec}" "${spec}"
+            code=$?
+            set -e
+            (( code == 0 )) || failures+=("${spec}:${code}")
+          done
+
+          if (( ${#failures[@]} )); then
+            echo "::error::OpenAPI breaking changes detected: $(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+
       - name: Lint materialized contracts
         id: contract_lint
         if: ${{ steps.materialize.outcome == 'success' }}
@@ -103,6 +157,7 @@ jobs:
         env:
           MATERIALIZE: ${{ steps.materialize.outcome }}
           CONTRACT_LINT: ${{ steps.contract_lint.outcome }}
+          OASDIFF: ${{ steps.oasdiff.outcome }}
           GUARD_TESTS: ${{ steps.guard_tests.outcome }}
           BINDING_GUARDS: ${{ steps.binding_guards.outcome }}
           FULL_SCOPE: ${{ inputs.full_scope }}
@@ -113,6 +168,7 @@ jobs:
           [[ "${MATERIALIZE}" == "success" ]] || failures+=("materialize:${MATERIALIZE}")
           if [[ "${MATERIALIZE}" == "success" ]]; then
             [[ "${CONTRACT_LINT}" == "success" ]] || failures+=("contract-lint:${CONTRACT_LINT}")
+            [[ "${OASDIFF}" == "success" ]] || failures+=("oasdiff:${OASDIFF}")
             [[ "${GUARD_TESTS}" == "success" ]] || failures+=("guard-tests:${GUARD_TESTS}")
             [[ "${BINDING_GUARDS}" == "success" ]] || failures+=("binding-guards:${BINDING_GUARDS}")
             if [[ "${FULL_SCOPE}" == "true" ]]; then
