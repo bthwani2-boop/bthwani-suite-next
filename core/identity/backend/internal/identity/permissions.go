@@ -270,7 +270,7 @@ RETURNING request_hash, status, result`, operatorContextID, caller, idempotencyK
 	if _, err := mutateActorRoleTx(ctx, tx, targetActorID, roleName, roleID, requestedByActorID, false); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE identity_rbac_operation_ledger SET status = 'succeeded', result = jsonb_build_object('revoked', true, 'actorId', $4), updated_at = now() WHERE operator_context_id = $1 AND caller = $2 AND operation = 'role-revoke' AND idempotency_key = $3 AND request_hash = $5`, operatorContextID, caller, idempotencyKey, targetActorID, requestHash); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE identity_rbac_operation_ledger SET status = 'succeeded', result = jsonb_build_object('revoked', true, 'actorId', $4::text), updated_at = now() WHERE operator_context_id = $1 AND caller = $2 AND operation = 'role-revoke' AND idempotency_key = $3 AND request_hash = $5`, operatorContextID, caller, idempotencyKey, targetActorID, requestHash); err != nil {
 		return err
 	}
 	return tx.Commit()
