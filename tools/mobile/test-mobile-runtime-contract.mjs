@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeToolEvidence } from "../scripts/capture-tool-evidence.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const appIndex = process.argv.indexOf("--app");
@@ -18,6 +19,19 @@ const app = manifest.apps?.[appKey];
 const appDir = path.join(repoRoot, "apps", appKey, "runtime");
 
 function fail(message) {
+  try {
+    writeToolEvidence({
+      toolId: "mobile-runtime-contract-" + (appKey || "unknown"),
+      status: "FAIL",
+      exitCode: 1,
+      rawText: message,
+      rawPath: appDir,
+      claim: "Mobile runtime contract evidence",
+      scope: appKey || "mobile runtime",
+    });
+  } catch (error) {
+    console.error("mobile-runtime-contract: evidence capture failed: " + error.message);
+  }
   console.error(`mobile-runtime-contract: ${message}`);
   process.exit(1);
 }
@@ -178,6 +192,16 @@ if (result.status !== 0) {
 const jsonStart = (result.stdout ?? "").indexOf("{");
 if (jsonStart < 0) fail(`${appKey}: Expo config returned no JSON`);
 const config = JSON.parse(result.stdout.slice(jsonStart));
+writeToolEvidence({
+  toolId: "mobile-runtime-contract-" + appKey,
+  status: "PASS",
+  exitCode: 0,
+  rawText: result.stdout ?? "",
+  nativePayload: config,
+  rawPath: path.join(appDir, "package.json"),
+  claim: "Mobile runtime contract evidence",
+  scope: appKey,
+});
 if (config.extra?.appKey !== appKey) fail(`${appKey}: extra.appKey mismatch`);
 if (config.android?.package !== app.androidPackage) fail(`${appKey}: Android package mismatch`);
 if (config.ios?.bundleIdentifier !== app.iosBundleIdentifier) fail(`${appKey}: iOS bundle identifier mismatch`);

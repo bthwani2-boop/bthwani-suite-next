@@ -93,3 +93,16 @@ test("consumes native jscpd output and preserves explicit baseline disposition",
   assert.equal(result.summary.rootQueue, 0);
   assert.equal(result.closed, true);
 });
+
+test("infers tool identity from native runner markers in completed job logs", () => {
+  const inputDir = temporaryDirectory();
+  const outputDir = temporaryDirectory();
+  fs.writeFileSync(path.join(inputDir, "job-1.log"), "[SHELLCHECK FAIL] command failed\nEXIT_CODE: 1\n");
+
+  const result = consumeEvidenceArtifacts({inputDir, outputDir, headSha, baseSha});
+
+  assert.equal(result.envelopes.length, 1);
+  assert.equal(result.envelopes[0].tool.id, "shellcheck");
+  assert.equal(result.envelopes[0].execution.status, "FAIL");
+  assert.equal(result.summary.allToolEvidenceConsumed, true);
+});

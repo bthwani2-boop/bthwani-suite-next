@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const portArg = process.argv.find((v) => v.startsWith("--port="));
@@ -130,6 +131,16 @@ async function main() {
     const manifestPath = path.join(evidenceDir, "manifest.json");
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
     process.stdout.write(`${JSON.stringify(manifest, null, 2)}\nEVIDENCE_MANIFEST=${manifestPath}\n`);
+    writeToolEvidence({
+      toolId: "rendered-web",
+      status: violations.length === 0 ? "PASS" : "FAIL",
+      exitCode: violations.length === 0 ? 0 : 1,
+      rawText: JSON.stringify(manifest),
+      nativePayload: manifest,
+      rawPath: manifestPath,
+      claim: "Rendered Web and Axe evidence",
+      scope: "exact candidate login journey",
+    });
     if (violations.length > 0) process.exitCode = 1;
   } finally {
     if (browser) await browser.close().catch(() => {});

@@ -62,6 +62,20 @@ test("ignores ANSI-prefixed informational runner summaries while preserving find
   assert.equal(envelope.accounting.unparsedMaterialOutput, 0);
 });
 
+test("ignores generated asset size listings even when a filename contains error", () => {
+  const envelope = buildEvidenceEnvelope({
+    toolId: "nx-build",
+    candidate,
+    status: "PASS",
+    exitCode: 0,
+    rawText: "app-captain: ..\\..\\..\\node_modules\\.pnpm\\expo-router@57\\node_modules\\expo-router\\assets\\error.png (469B)\n",
+  });
+
+  assert.equal(envelope.findings.length, 0);
+  assert.equal(envelope.accounting.rawFindingCount, 0);
+  assert.equal(envelope.accounting.evidenceComplete, true);
+});
+
 test("adapts existing classified evidence into the universal envelope", () => {
   const envelope = buildEvidenceEnvelope({
     toolId: "codeql",

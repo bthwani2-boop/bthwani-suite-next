@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { requireRemoteExecution } from "./_external-tool-runner.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 requireRemoteExecution("pinact");
@@ -40,6 +41,16 @@ if (!fs.existsSync(workflowRoot)) {
   process.exit(1);
 }
 visit(workflowRoot);
+
+writeToolEvidence({
+  toolId: "pinact",
+  status: mutable.length > 0 && verify ? "FAIL" : "PASS",
+  exitCode: mutable.length > 0 && verify ? 1 : 0,
+  rawText: mutable.map((item) => item.file + ":" + item.line + " mutable action reference: " + item.reference).join("\n"),
+  rawPath: workflowRoot,
+  claim: "GitHub Actions pin integrity evidence",
+  scope: "all workflow files",
+});
 
 if (mutable.length > 0) {
   for (const item of mutable) {

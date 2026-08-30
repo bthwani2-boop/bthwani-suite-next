@@ -56,6 +56,9 @@ function isUniversalPayload(payload) {
     || Array.isArray(payload?.issues)
     || Array.isArray(payload?.findings)
     || Array.isArray(payload?.violations)
+    || Array.isArray(payload?.problems)
+    || Array.isArray(payload?.messages)
+    || Array.isArray(payload?.failures)
     || Array.isArray(payload?.circularDependencies);
   return normalized || nativeAnalyzer;
 }
@@ -106,8 +109,9 @@ function logEnvelope(file, candidate) {
   const rawText = fs.readFileSync(file, "utf8");
   const exitCode = Number(rawText.match(/(?:^|\n)EXIT_CODE:\s*(-?\d+)/u)?.[1] ?? 0);
   const failed = exitCode !== 0 || /(?:^|\b)(?:FAIL|FAILED|BLOCKED)(?:\b|\])/u.test(rawText);
+  const markerTool = rawText.match(/^\[([A-Z][A-Z0-9_-]+)\s+(?:PASS|FAIL|WARN|WARNING|BLOCKED|SKIP)/mu)?.[1]?.toLowerCase();
   return buildEvidenceEnvelope({
-    toolId: path.basename(file, path.extname(file)),
+    toolId: markerTool || path.basename(file, path.extname(file)),
     candidate,
     status: failed ? "FAIL" : "PASS",
     exitCode,

@@ -11,6 +11,7 @@ import {
   walkFiles
 } from "./_external-tool-runner.mjs";
 import { adjudicateOsvReport, scopedGoImports } from "./lib/osv-go-reachability.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const toolId = "osv-scanner";
 requireRemoteExecution(toolId);
@@ -62,6 +63,18 @@ if (reportJson.trim()) {
 }
 
 if (scan.status === 0) {
+  let cleanReport = null;
+  try { cleanReport = JSON.parse(reportJson); } catch { cleanReport = null; }
+  writeToolEvidence({
+    toolId,
+    status: "PASS",
+    exitCode: 0,
+    rawText: reportJson,
+    nativePayload: cleanReport,
+    rawPath: reportPath,
+    claim: "OSV dependency reachability evidence",
+    scope: "all supported lockfiles and Go modules",
+  });
   console.log("[OSV-SCANNER PASS] no known vulnerabilities in scanned dependencies.");
   process.exit(0);
 }
@@ -152,6 +165,23 @@ fs.writeFileSync(evidencePath, `${JSON.stringify({
   evidenceComplete: true,
 }, null, 2)}\n`, {encoding: "utf8", mode: 0o600});
 
+let adjudicationEvidence = null;
+try {
+  adjudicationEvidence = JSON.parse(fs.readFileSync(evidencePath, "utf8"));
+} catch {
+  adjudicationEvidence = null;
+}
+writeToolEvidence({
+  toolId,
+  status: blocking.length > 0 ? "FAIL" : "PASS",
+  exitCode: blocking.length > 0 ? 1 : 0,
+  rawText: reportJson,
+  nativePayload: adjudicationEvidence,
+  rawPath: evidencePath,
+  claim: "OSV dependency reachability evidence",
+  scope: "all supported lockfiles and Go modules",
+});
+
 for (const finding of unreachable) {
   console.log(
     `[OSV-SCANNER UNREACHABLE] ${finding.id} ${finding.name}@${finding.version} (${finding.source}): ` +
@@ -165,12 +195,12 @@ if (blocking.length > 0) {
       `[OSV-SCANNER FAIL] ${finding.id} ${finding.name}@${finding.version} (${finding.source}): ${finding.reason}`
     );
   }
-  handleCommandFailure(toolId, true);
+  process.exit(1);
 }
 
 if (unreachable.length === 0) {
   console.error("[OSV-SCANNER FAIL] findings were reported but none could be adjudicated");
-  handleCommandFailure(toolId, true);
+  process.exit(1);
 }
 
 console.log(

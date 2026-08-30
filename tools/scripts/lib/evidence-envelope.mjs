@@ -221,7 +221,15 @@ function findingsFromStructured(toolId, payload) {
       disposition: baselineOnly ? "BASELINE" : "MAPPED_TO_FINDING",
     }));
   }
-  const collections = [payload.findings, payload.issues, payload.violations, payload.results];
+  const collections = [
+    payload.findings,
+    payload.issues,
+    payload.violations,
+    payload.results,
+    payload.problems,
+    payload.messages,
+    payload.failures,
+  ];
   const collection = collections.find(Array.isArray);
   if (collection) return collection;
   if (toolId === "actionlint" && (payload.filepath || payload.message)) return [payload];
@@ -274,6 +282,7 @@ function materialDiagnosticLines(lines, consumedLines) {
       && !/^\(Use .*--trace-deprecation/iu.test(line)
       && !/\bDeprecationWarning\b/iu.test(line)
       && !/NO_COLOR.*FORCE_COLOR|trace-warnings/iu.test(line)
+      && !/node_modules[\\/].*assets[\\/].+\s+\(\d+(?:\.\d+)?\s*(?:B|KB|MB)\)$/iu.test(line)
       && /(?:^|\b)(?:error|fail(?:ed|ure)?|warning|warn|missing|unresolved|skipped|blocked|incomplete|vulnerab)(?:\b|$)/iu.test(line)
       && !/^(?:exit_code|command|started):/iu.test(line));
 }

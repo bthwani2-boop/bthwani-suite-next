@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "../..");
@@ -112,8 +113,21 @@ try {
     cwd: backendDir,
     env: process.env,
     shell: false,
-    stdio: "inherit",
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
   });
+  const rawText = [result.stdout, result.stderr].filter(Boolean).join("\n");
+  writeToolEvidence({
+    toolId: "go-build-" + path.basename(path.dirname(backendDir)),
+    status: result.error || result.status !== 0 ? "FAIL" : "PASS",
+    exitCode: result.error ? 1 : result.status,
+    rawText,
+    rawPath: goModPath,
+    claim: "Go backend build evidence",
+    scope: path.relative(repoRoot, backendDir),
+  });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
 
   if (result.error) {
     console.error(`verify-go-build: failed to start Go compiler: ${result.error.message}`);

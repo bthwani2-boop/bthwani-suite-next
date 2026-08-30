@@ -116,6 +116,27 @@ test("all assurance outputs converge through one evidence contract and Root Grap
   assert.match(campaign, /closureClaim: false/u);
 });
 
+test("every shared tool entrypoint emits the universal evidence envelope", () => {
+  for (const p of [
+    "tools/scripts/_external-tool-runner.mjs",
+    "tools/scripts/run-command-check.mjs",
+    "tools/scripts/run-guard-suite.mjs",
+    "tools/scripts/run-actionlint.mjs",
+    "tools/scripts/run-zizmor.mjs",
+    "tools/scripts/run-pinact.mjs",
+    "tools/scripts/run-osv-scanner.mjs",
+    "tools/scripts/run-affected-verification.mjs",
+    "tools/scripts/run-tsc-check.mjs",
+    "tools/scripts/verify-go-build.mjs",
+    "tools/scripts/run-rendered-control-panel-proof.mjs",
+    "tools/mobile/test-mobile-runtime-contract.mjs",
+  ]) {
+    assert.match(read(p), /writeToolEvidence/u, p);
+  }
+  assert.match(read("tools/scripts/capture-tool-evidence.mjs"), /resolveCandidateFromEnvironment/u);
+  assert.match(read("tools/scripts/capture-tool-evidence.mjs"), /BTHWANI_EVIDENCE_DIR/u);
+});
+
 test("machine router exposes rendered and mobile materiality", () => {
   const r = read("tools/scripts/detect-ci-context.mjs");
   assert.match(r, /rendered_web_required/u);
