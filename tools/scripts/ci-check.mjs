@@ -71,16 +71,15 @@ function trustedWorkflowSupportsVerificationBase(repository, defaultBranch) {
 }
 
 function resolveVerificationBase({ repository, pr, headSha }) {
+  if (!pr) return null;
+
   const parentSha = tryRun("git", ["rev-parse", `${headSha}^`]);
   if (!/^[0-9a-f]{40}$/iu.test(parentSha)) return null;
 
-  const closureBase = pr?.baseRefOid ?? null;
-  if (closureBase && (!isAncestor(closureBase, parentSha) || !isAncestor(parentSha, headSha))) {
-    return null;
-  }
+  const closureBase = pr.baseRefOid;
+  if (!isAncestor(closureBase, parentSha) || !isAncestor(parentSha, headSha)) return null;
 
-  const statusContext = pr ? "BThwani CI / PR result" : "BThwani CI / check result";
-  return hasSuccessfulCiStatus(repository, parentSha, statusContext) ? parentSha : null;
+  return hasSuccessfulCiStatus(repository, parentSha, "BThwani CI / PR result") ? parentSha : null;
 }
 
 function main() {
@@ -106,9 +105,10 @@ function main() {
 
   // CI is an assurance authority, not candidate-owned product code. Run the
   // protected default-branch workflow definition and pass the development
-  // candidate as immutable input. When the immediately preceding candidate has
-  // exact successful CI evidence, it becomes the incremental verification base.
-  // Otherwise the workflow falls back to the closure base and stays fail-safe.
+  // candidate as immutable input. A previous exact PR candidate may be offered
+  // as an evidence frontier only when it has successful CI status; the trusted
+  // workflow independently re-proves that frontier before using it. Otherwise
+  // verification stays conservative from the closure base.
   const args = ["workflow", "run", "ci-check.yml", "--repo", repository, "--ref", defaultBranch,
     "-f", `expected_head_sha=${headSha}`];
   if (pr) args.push("-f", `pr_number=${pr.number}`, "-f", `expected_base_sha=${pr.baseRefOid}`);
