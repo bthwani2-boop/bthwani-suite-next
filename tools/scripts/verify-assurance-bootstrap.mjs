@@ -3,6 +3,11 @@ import { readFileSync } from "node:fs";
 const required = [
   [".github/workflows/ci-check.yml", "TRUSTED_WORKFLOW_SHA", "CI router must come from trusted workflow SHA"],
   [".github/workflows/ci-check.yml", "trusted_router", "CI router must not execute candidate router as authority"],
+  [".github/workflows/ci-check.yml", "TRUSTED_MIGRATION_MANIFEST_GUARD", "Migration history authority must come from trusted workflow SHA"],
+  [".github/workflows/ci-check.yml", "TRUSTED_SONAR_OWNERSHIP_GUARD", "Sonar coverage ownership authority must come from trusted workflow SHA"],
+  [".github/workflows/ci-check.yml", "fetch_trusted tools/verification/ownership.manifest.json", "Sonar ownership policy must come from trusted workflow SHA"],
+  ["tools/guards/migration-manifest-drift-gate.mjs", "BTHWANI_TARGET_REPO", "Trusted migration authority must evaluate an explicit candidate workspace"],
+  ["tools/guards/_guard-utils.mjs", "BTHWANI_TARGET_REPO", "Trusted shared guard utilities must evaluate an explicit candidate workspace"],
   [".github/workflows/final-closure.yml", "TRUSTED_WORKFLOW_SHA", "Final Closure classifier must be trusted"],
   [".github/workflows/final-closure.yml", "trusted_router", "Final Closure router must be trusted"],
   [".github/workflows/final-closure.yml", "verify-pr-evidence-comments.mjs", "Final Closure must load trusted evidence validator"],
@@ -25,6 +30,14 @@ for (const [file, marker, reason] of required) {
   try { text = readFileSync(file, "utf8"); }
   catch { failures.push(`${file}: missing — ${reason}`); continue; }
   if (!text.includes(marker)) failures.push(`${file}: missing marker '${marker}' — ${reason}`);
+}
+
+const ci = readFileSync(".github/workflows/ci-check.yml", "utf8");
+for (const [pattern, reason] of [
+  [/run:\s*node tools\/guards\/migration-manifest-drift-gate\.mjs/u, "candidate migration guard must not be the CI authority"],
+  [/node --test tools\/guards\/sonar-coverage-ownership-gate\.test\.mjs/u, "candidate Sonar guard test must not establish CI authority"],
+]) {
+  if (pattern.test(ci)) failures.push(reason);
 }
 
 const final = readFileSync(".github/workflows/final-closure.yml", "utf8");
