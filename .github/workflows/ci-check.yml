@@ -307,8 +307,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export BTHWANI_TARGET_REPO="${GITHUB_WORKSPACE}"
           node --test "${TRUSTED_SONAR_OWNERSHIP_TEST}"
-          BTHWANI_TARGET_REPO="${GITHUB_WORKSPACE}" node "${TRUSTED_SONAR_OWNERSHIP_GUARD}"
+          node "${TRUSTED_SONAR_OWNERSHIP_GUARD}"
       - name: Enforce complete material control-plane collection
         if: ${{ always() }}
         shell: bash
