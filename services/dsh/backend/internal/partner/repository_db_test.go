@@ -176,6 +176,7 @@ func registerPartnerFixtureCleanup(t *testing.T, db *sql.DB, partnerID, storeID 
 			{"field visit media", `DELETE FROM dsh_partner_field_visit_media WHERE partner_id = $1`, []any{partnerID}},
 			{"field visits", `DELETE FROM dsh_partner_field_visits WHERE partner_id = $1`, []any{partnerID}},
 			{"activation events", `DELETE FROM dsh_partner_activation_events WHERE partner_id = $1`, []any{partnerID}},
+			{"WLT reconciliation cases", `DELETE FROM dsh_partner_wlt_reconciliation_cases WHERE partner_id = $1`, []any{partnerID}},
 			{"store transfer audit", `DELETE FROM dsh_partner_store_transfer_audit WHERE from_partner_id = $1 OR to_partner_id = $1 OR store_id = $2`, []any{partnerID, storeID}},
 			{"transferred stores", `DELETE FROM dsh_stores WHERE partner_id = $1 AND id <> $2`, []any{partnerID, storeID}},
 			{"media refs", `DELETE FROM dsh_media_refs WHERE partner_id = $1`, []any{partnerID}},
