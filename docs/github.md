@@ -62,7 +62,7 @@ RESOLVE EXACT LIVE CANDIDATE
 
 A new commit produces a different exact SHA, so earlier evidence cannot satisfy current-head merge protection. The status names are `BThwani / Change Verification`, `BThwani / Change Closure`, and `BThwani / Static Repository Baseline`; these statuses do not claim repository-wide closure by presence on `master` alone.
 
-OpenCodeReview is context/delegation preparation only. It is not a semantic review and is not part of the required Final Closure gate. `master-sonar.yml` remains a separate post-merge default-branch analysis authority when its dashboard/trend purpose is required.
+OpenCodeReview is the canonical deterministic inspection authority for Final Closure through the reusable `.github/workflows/open-code-review.yml` workflow. It binds its scope, resolved rules, reviewable files, exact diff, hashes, and evidence envelope to the exact candidate, and Final Closure consumes its required outputs. It does not claim semantic reasoning or human approval. `master-sonar.yml` remains a separate post-merge default-branch analysis authority when its dashboard/trend purpose is required.
 
 ## Verification discipline
 
