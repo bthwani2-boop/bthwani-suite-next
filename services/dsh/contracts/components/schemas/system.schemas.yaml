@@ -49,17 +49,19 @@ DshReadinessResponse:
     status:
       type: string
       enum:
-        - ready
-        - not_ready
+        - HEALTHY
+        - DEGRADED
+        - NOT_READY
     dependencies:
       type: object
       additionalProperties:
         type: string
         enum:
-          - ready
-          - degraded
-          - down
-          - not_configured
+          - HEALTHY
+          - DEGRADED
+          - NOT_READY
+          - configured
+          - missing
     checkedAt:
       type: string
       format: date-time

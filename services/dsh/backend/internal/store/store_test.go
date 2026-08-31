@@ -164,6 +164,11 @@ func TestValidateListQuery(t *testing.T) {
 			wantErr: "invalid status: bogus",
 		},
 		{
+			name:    "unknown sort rejected",
+			query:   url.Values{"sort": {"bogus"}},
+			wantErr: "invalid sort: bogus",
+		},
+		{
 			name:      "status active accepted",
 			query:     url.Values{"status": {"published"}},
 			wantLimit: 20,
@@ -233,6 +238,26 @@ func TestValidateListQuery(t *testing.T) {
 				if got.IsVisible == nil || *got.IsVisible != *tc.wantVis {
 					t.Errorf("expected isVisible %v, got %v", *tc.wantVis, got.IsVisible)
 				}
+			}
+		})
+	}
+}
+
+func TestParseListQueryRejectsInvalidBooleanAndUnsafeText(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		query   url.Values
+		wantErr string
+	}{
+		{name: "invalid visibility", query: url.Values{"isVisible": {"1"}}, wantErr: "invalid isVisible: must be true or false"},
+		{name: "invalid free delivery", query: url.Values{"isFreeDelivery": {"1"}}, wantErr: "invalid isFreeDelivery: must be true or false"},
+		{name: "nul city code", query: url.Values{"cityCode": {"sana\x00"}}, wantErr: "invalid cityCode"},
+		{name: "invalid utf8 search", query: url.Values{"search": {string([]byte{0xff})}}, wantErr: "invalid search"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, errMsg := validateListQuery(tc.query)
+			if errMsg != tc.wantErr {
+				t.Fatalf("expected error %q, got %q", tc.wantErr, errMsg)
 			}
 		})
 	}
