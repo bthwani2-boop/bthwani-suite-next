@@ -20,7 +20,7 @@ The canonical delegation path must not depend on:
 - an OpenAI/Anthropic API key solely for OpenCodeReview;
 - a model-specific CLI embedded inside the OCR wrapper.
 
-The reusable `.github/workflows/open-code-review.yml` workflow invokes `tools/scripts/invoke-open-code-review-toolchain.ps1`, verifies the pinned package, and publishes exact-candidate context, resolved rules, reviewable files, diff, hashes, and a consumed evidence envelope. Final Closure requires that workflow and consumes its `opencodereview` evidence; it is not an orphan artifact or a second reviewer authority.
+The reusable `.github/workflows/open-code-review.yml` workflow invokes `tools/scripts/invoke-open-code-review-toolchain.ps1`, verifies the pinned package, and publishes exact-candidate context, resolved rules, reviewable files, diff, hashes, and a consumed evidence envelope. Final Closure requires that workflow and consumes its `opencodereview-context` evidence; it is not an orphan artifact or a second reviewer authority. This context claim cannot satisfy `analysis:opencodereview-semantic`.
 
 ## Use when
 

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildEvidenceEnvelope,
   buildUnifiedRootGraph,
+  evidenceConsumptionClosed,
   summarizeEvidenceConsumption,
 } from "./evidence-envelope.mjs";
 
@@ -231,6 +232,35 @@ test("proven non-root dispositions remain accounted without opening duplicate Ro
     assert.equal(envelope.accounting.allRawFindingsAccounted, true, disposition);
     assert.equal(graph.rootQueue.length, 0, disposition);
   }
+});
+
+test("N/A_PROVEN is an explicit non-execution disposition and NOT_APPLICABLE cannot close", () => {
+  const proven = buildEvidenceEnvelope({
+    toolId: "optional-codeql",
+    candidate,
+    status: "N/A_PROVEN",
+    exitCode: 0,
+    nativePayload: {evidenceComplete: true, findings: [], errors: []},
+  });
+  const provenGraph = buildUnifiedRootGraph([proven], candidate.identity);
+  const provenSummary = summarizeEvidenceConsumption([proven], provenGraph);
+  assert.equal(proven.execution.status, "N/A_PROVEN");
+  assert.equal(provenSummary.notApplicableExecution, 0);
+  assert.equal(evidenceConsumptionClosed(provenSummary), true);
+
+  const collapsed = buildEvidenceEnvelope({
+    toolId: "optional-codeql",
+    candidate,
+    status: "NOT_APPLICABLE",
+    exitCode: 0,
+    nativePayload: {evidenceComplete: true, findings: [], errors: []},
+  });
+  const collapsedGraph = buildUnifiedRootGraph([collapsed], candidate.identity);
+  const collapsedSummary = summarizeEvidenceConsumption([collapsed], collapsedGraph);
+  assert.equal(collapsed.execution.status, "NOT_APPLICABLE");
+  assert.equal(collapsedSummary.notApplicableExecution, 1);
+  assert.equal(collapsedSummary.nonPassingExecution, 1);
+  assert.equal(evidenceConsumptionClosed(collapsedSummary), false);
 });
 
 test("BLOCKED_BY remains an open root until the blocker relationship is actually resolved", () => {

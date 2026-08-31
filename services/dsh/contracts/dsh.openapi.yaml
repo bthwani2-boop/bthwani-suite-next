@@ -918,7 +918,7 @@ paths:
   /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}:
     $ref: "./dsh.partner-commercial-closure.openapi.yaml#/paths/~1dsh~1operator~1stores~1{storeId}~1delivery-pricing~1{fulfillmentMode}"
   /dsh/storefront/{storeId}:
-    $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1storefront~1{storeId}"
+    $ref: "./paths/discovery.paths.yaml#/~1dsh~1storefront~1{storeId}"
   /dsh/client/me/profile/consents:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1client~1me~1profile~1consents"
   /dsh/client/me/profile/preferences:

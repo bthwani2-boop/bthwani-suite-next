@@ -489,6 +489,10 @@ jobs:
             job_id="$(jq -r '.id' <<<"${job}")"
             job_name="$(jq -r '.name' <<<"${job}")"
             conclusion="$(jq -r '.conclusion // "unknown"' <<<"${job}")"
+            if [[ "${conclusion}" == "skipped" ]]; then
+              echo "Skipping non-executed optional job ${job_name}; applicability is dispositioned by the trusted diff classification."
+              continue
+            fi
             log="${evidence_root}/jobs/job-${job_id}.log"
             if ! gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/actions/jobs/${job_id}/logs" > "${log}"; then
@@ -498,8 +502,6 @@ jobs:
             outcome='FAIL'
             if [[ "${conclusion}" == "success" ]]; then
               outcome='PASS'
-            elif [[ "${conclusion}" == "skipped" ]]; then
-              outcome='NOT_APPLICABLE'
             fi
             jq -n \
               --arg analyzer "github-job-${job_id}" \
@@ -606,6 +608,23 @@ jobs:
             echo "::error::universal evidence consumption outputs are missing"
             exit 1
           }
+          computed_disposition="$(jq -r --arg headSha "${HEAD_SHA}" '
+            if .closed == true
+              and .allToolEvidenceConsumed == true
+              and .nonPassingExecution == 0
+              and .notApplicableExecution == 0
+              and .rootGraphPresent == true
+              and .rootGraphCandidateIdentity == $headSha
+              and .rootQueue == 0
+              and .sourceOfFixUnresolved == 0
+              and .requiredCleanup == 0
+              and .invalidatedProofsPending == 0
+            then "PASS" else "NOT_COVERED" end
+          ' closure-evidence/evidence-consumption.json)"
+          [[ "${computed_disposition}" == "PASS" ]] || {
+            echo "::error::exact-candidate evidence did not prove a PASS disposition"
+            exit 1
+          }
           manifest="$(mktemp -d)/closure-manifest.json"
           jq -n \
             --arg schema "bthwani-closure-manifest/3" \
@@ -636,6 +655,7 @@ jobs:
             --arg ocrArtifactIdentity "${OPENCODEREVIEW_ARTIFACT_IDENTITY}" \
             --arg ocrPackageIntegrity "${OPENCODEREVIEW_PACKAGE_INTEGRITY}" \
             --arg ocrToolVersion "${OPENCODEREVIEW_TOOL_VERSION}" \
+            --arg changeDisposition "${computed_disposition}" \
             --arg renderedWebBaselineResult "${MANIFEST_RENDERED_WEB_BASELINE_RESULT}" \
             --arg renderedWebResult "${MANIFEST_RENDERED_WEB_RESULT}" \
             --arg mobileEvidenceResult "${MANIFEST_MOBILE_EVIDENCE_RESULT}" \
@@ -657,12 +677,12 @@ jobs:
               candidate: {changedFiles: $changedFiles, files: $files},
               mandatoryProofs: {riskClasses: ($riskClasses | split(",") | map(select(length > 0))), requiredJobs: ($requiredJobs | split(",") | map(select(length > 0))), requiredClaims: ($requiredClaims | split(",") | map(select(length > 0)))},
               migrations: {changed: $migrations, manifests: $migrationManifests, amendmentsRegistryTouched: ($amendmentsTouched == "true")},
-              analysis: {ci: $ciResult, sonar: $sonarResult, codeql: $codeqlResult, semgrep: $semgrepResult, security: $securityResult, opencodereview: {result: $opencodereviewResult, contextSha256: $ocrContextSha256, artifactIdentity: $ocrArtifactIdentity, packageIntegrity: $ocrPackageIntegrity, toolVersion: $ocrToolVersion}, dependency: $dependencyResult, lockfile: $lockfileResult, docker: $dockerResult},
+              analysis: {ci: $ciResult, sonar: $sonarResult, codeql: $codeqlResult, semgrep: $semgrepResult, security: $securityResult, opencodereviewContext: {claim: "analysis:opencodereview-context", result: $opencodereviewResult, contextSha256: $ocrContextSha256, artifactIdentity: $ocrArtifactIdentity, packageIntegrity: $ocrPackageIntegrity, toolVersion: $ocrToolVersion}, dependency: $dependencyResult, lockfile: $lockfileResult, docker: $dockerResult},
               evidenceConsumption: $evidenceConsumption[0],
               rootGraph: $rootGraph[0],
               assuranceClaims: {
-                changeVerification: {context: "BThwani / Change Verification", disposition: "EVIDENCE_PASSED"},
-                changeClosure: {context: "BThwani / Change Closure", disposition: "EVIDENCE_PASSED"},
+                changeVerification: {context: "BThwani / Change Verification", disposition: $changeDisposition},
+                changeClosure: {context: "BThwani / Change Closure", disposition: $changeDisposition},
                 repositoryBaseline: {context: "BThwani / Static Repository Baseline", disposition: "NOT_EVALUATED"},
                 repositoryClosure: {context: "BThwani / Repository Closure", disposition: "NOT_CLAIMED"}
               },
@@ -671,12 +691,12 @@ jobs:
                   required: ($renderedWebRequired == "true"),
                   baselineResult: $renderedWebBaselineResult,
                   evidenceResult: $renderedWebResult,
-                  disposition: (if $renderedWebRequired == "true" then (if ($renderedWebBaselineResult == "success" and $renderedWebResult == "success") then "PASS" else "NOT_COVERED" end) else "NOT_APPLICABLE" end)
+                  disposition: (if $renderedWebRequired == "true" then (if ($renderedWebBaselineResult == "success" and $renderedWebResult == "success") then "PASS" else "NOT_COVERED" end) else "N/A_PROVEN" end)
                 },
                 mobileDevice: {
                   required: ($mobileEvidenceRequired == "true"),
                   evidenceResult: $mobileEvidenceResult,
-                  disposition: (if $mobileEvidenceRequired == "true" then (if $mobileEvidenceResult == "success" then "PASS" else "NOT_COVERED" end) else "NOT_APPLICABLE" end)
+                  disposition: (if $mobileEvidenceRequired == "true" then (if $mobileEvidenceResult == "success" then "PASS" else "NOT_COVERED" end) else "N/A_PROVEN" end)
                 }
                }
             }' > "${manifest}"

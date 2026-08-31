@@ -18,6 +18,7 @@ const normalizeSeverity = (value) => {
 };
 const sha256 = (value) => crypto.createHash("sha256").update(String(value ?? "")).digest("hex");
 const unique = (entries) => [...new Set(entries.filter(Boolean))];
+const PASSING_EXECUTION_STATUSES = new Set(["PASS", "SUCCESS", "COMPLETED", "N/A_PROVEN"]);
 
 function categoryForTool(toolId, message = "") {
   const value = `${toolId} ${message}`.toLowerCase();
@@ -350,7 +351,7 @@ export function buildEvidenceEnvelope({
       category: categoryForTool(toolId, line),
     }, findings.length));
   }
-  if (normalizeStatus(status) !== "PASS" && findings.length === 0 && engineConditions.length === 0) {
+  if (!PASSING_EXECUTION_STATUSES.has(normalizeStatus(status)) && findings.length === 0 && engineConditions.length === 0) {
     const message = String(rawText).trim() || `${toolId} exited ${exitCode ?? "without a result"}`;
     findings.push(normalizedFinding(toolId, {
       ruleId: "TOOL_EXECUTION_FINDING",
@@ -464,6 +465,7 @@ export function buildUnifiedRootGraph(envelopes, candidateIdentity = "") {
 
 export function summarizeEvidenceConsumption(envelopes, rootGraph = buildUnifiedRootGraph(envelopes)) {
   const sum = (selector) => envelopes.reduce((total, envelope) => total + selector(envelope), 0);
+  const nonPassingExecution = envelopes.filter((envelope) => !PASSING_EXECUTION_STATUSES.has(envelope.execution?.status)).length;
   return {
     schema: "bthwani-evidence-consumption-summary/1",
     allToolEvidenceConsumed: envelopes.length > 0 && envelopes.every((envelope) => envelope.accounting.allRawFindingsAccounted && envelope.accounting.evidenceComplete),
@@ -474,6 +476,8 @@ export function summarizeEvidenceConsumption(envelopes, rootGraph = buildUnified
     unmappedMaterialFindings: sum((envelope) => envelope.accounting.unmappedMaterialFindings),
     unknownRequiredCoverage: sum((envelope) => envelope.accounting.unknownRequiredCoverage),
     incompleteEnvelopes: envelopes.filter((envelope) => envelope.accounting.evidenceComplete !== true).length,
+    notApplicableExecution: envelopes.filter((envelope) => envelope.execution?.status === "NOT_APPLICABLE").length,
+    nonPassingExecution,
     rootGraphPresent: rootGraph?.schema === ROOT_GRAPH_SCHEMA,
     rootGraphCandidateIdentity: rootGraph?.candidateIdentity ?? "",
     rootQueue: rootGraph?.rootQueue?.length ?? 0,
@@ -485,6 +489,8 @@ export function summarizeEvidenceConsumption(envelopes, rootGraph = buildUnified
 
 export function evidenceConsumptionClosed(summary) {
   return summary.allToolEvidenceConsumed
+    && summary.nonPassingExecution === 0
+    && summary.notApplicableExecution === 0
     && summary.unaccountedRawFindings === 0
     && summary.unparsedMaterialOutput === 0
     && summary.unmappedMaterialFindings === 0

@@ -452,9 +452,9 @@ jobs:
             jq -n \
               --arg headSha "${CANDIDATE_SHA}" \
               --arg baseSha "${BASE_SHA}" \
-              '{schema:"bthwani-codeql-evidence/1",candidate:{headSha:$headSha,baseSha:$baseSha},mode:"not-applicable",status:"NOT_APPLICABLE",executionStatus:"NOT_APPLICABLE",coverageStatus:"NOT_APPLICABLE",findingStatus:"NOT_APPLICABLE",evidenceConsumption:"NOT_APPLICABLE",evidenceComplete:true,closureClaim:false,counts:{documents:0,categories:0,findings:0,materialFindings:0,scopedFindings:0,scopedMaterialFindings:0,inheritedFindings:0,errors:0}}' \
+              '{schema:"bthwani-codeql-evidence/1",candidate:{headSha:$headSha,baseSha:$baseSha},mode:"not-applicable",status:"N/A_PROVEN",executionStatus:"N/A_PROVEN",coverageStatus:"N/A_PROVEN",findingStatus:"N/A_PROVEN",evidenceConsumption:"N/A_PROVEN",evidenceComplete:true,closureClaim:false,counts:{documents:0,categories:0,findings:0,materialFindings:0,scopedFindings:0,scopedMaterialFindings:0,inheritedFindings:0,errors:0}}' \
               > "${output_dir}/summary.json"
-            echo "status=NOT_APPLICABLE" >> "${GITHUB_OUTPUT}"
+            echo "status=N/A_PROVEN" >> "${GITHUB_OUTPUT}"
             cat "${output_dir}/summary.json"
             exit 0
           fi
@@ -725,7 +725,7 @@ jobs:
             exit 0
           fi
           if [[ "${LANGUAGES}" == "[]" && "${ACTIONS_REQUIRED}" != "true" ]]; then
-            [[ "${DISPOSITION_RESULT}" == "success" && "${DISPOSITION_STATUS}" == "NOT_APPLICABLE" ]] || {
+            [[ "${DISPOSITION_RESULT}" == "success" && "${DISPOSITION_STATUS}" == "N/A_PROVEN" ]] || {
               echo "::error title=CodeQL applicability unresolved::no analyzer was applicable but disposition was not explicit"
               exit 1
             }

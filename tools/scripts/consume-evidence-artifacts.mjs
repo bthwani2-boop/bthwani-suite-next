@@ -60,12 +60,13 @@ function payloadStatus(payload, {allowImplicitPass = false} = {}) {
   const explicit = explicitRaw === undefined || explicitRaw === null || String(explicitRaw).trim() === ""
     ? ""
     : String(explicitRaw).toUpperCase();
-  const passing = ["PASS", "SUCCESS", "COMPLETED", "NOT_APPLICABLE"];
+  const passing = ["PASS", "SUCCESS", "COMPLETED", "N/A_PROVEN"];
 
   if (explicit && !passing.includes(explicit)) return explicit;
   if (payload?.evidenceComplete === false || String(payload?.coverageStatus ?? "").toUpperCase() === "INCOMPLETE") {
     return "INCOMPLETE";
   }
+  if (explicit === "N/A_PROVEN") return "N/A_PROVEN";
   if (explicit) return "PASS";
   return allowImplicitPass ? "PASS" : "INCOMPLETE";
 }

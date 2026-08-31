@@ -38,6 +38,11 @@ test("conditional non-tool claims do not manufacture global tool requirements", 
   ]), []);
 });
 
+test("deterministic OCR context and semantic review are distinct claims", () => {
+  assert.deepEqual(requiredToolsForClaims(["analysis:opencodereview-context"]), ["opencodereview-context"]);
+  assert.deepEqual(requiredToolsForClaims(["analysis:opencodereview-semantic"]), ["opencodereview-semantic"]);
+});
+
 test("unknown required closure claims fail closed", () => {
   assert.throws(
     () => requiredToolsForClaims(["analysis:unknown"]),

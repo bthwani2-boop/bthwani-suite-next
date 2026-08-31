@@ -43,6 +43,6 @@ test("rendered baseline is candidate-bound and Windows-safe", () => {
 test("closure manifest exposes material human-experience dispositions", () => {
   const final = read(".github/workflows/final-closure.yml");
   assert.match(final, /experienceEvidence:/u);
-  assert.match(final, /NOT_APPLICABLE/u);
+  assert.match(final, /N\/A_PROVEN/u);
   assert.match(final, /NOT_COVERED/u);
 });

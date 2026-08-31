@@ -110,7 +110,9 @@ test("all assurance outputs converge through one evidence contract and Root Grap
   assert.match(closureClaims, /UNKNOWN_REQUIRED_CLOSURE_CLAIM/u);
   assert.match(closureClaims, /security:remote/u);
   assert.match(final, /conclusion.*skipped/u);
-  assert.match(final, /outcome='NOT_APPLICABLE'/u);
+  assert.match(final, /N\/A_PROVEN/u);
+  assert.match(final, /computed_disposition/u);
+  assert.doesNotMatch(final, /outcome='NOT_APPLICABLE'/u);
   assert.match(final, /evidenceConsumption: \$evidenceConsumption\[0\]/u);
   assert.match(final, /rootGraph: \$rootGraph\[0\]/u);
   assert.match(envelope, /bthwani-evidence-envelope\/1/u);
