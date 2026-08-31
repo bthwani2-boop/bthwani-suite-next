@@ -61,14 +61,6 @@ type PartnerDeliveryTask struct {
 	UpdatedAt                   time.Time
 }
 
-const taskColumns = `
-        id, order_id::text, store_id, branch_id, store_courier_id, status,
-        assigned_at, picked_up_at, departed_at, arrived_at,
-        proof_method, proof_reference, completed_at,
-        exception_reason, exception_evidence_references, exception_reported_at,
-        version, created_at, updated_at
-`
-
 const taskColumnsPrefixed = `
         t.id, t.order_id::text, t.store_id, t.branch_id, t.store_courier_id, t.status,
         t.assigned_at, t.picked_up_at, t.departed_at, t.arrived_at,

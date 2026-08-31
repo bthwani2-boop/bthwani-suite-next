@@ -120,12 +120,6 @@ func partnerReadinessForActivationStatus(status ActivationStatus) (string, bool)
 
 // â”€â”€â”€ Documents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const partnerDocumentReadColumns = `id, partner_id, document_type, upload_status, review_status, document_status,
-	uploaded_by_actor_id, media_ref, notes, rejection_reason,
-	COALESCE(reviewed_by_actor_id,''),
-	reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
-	version, created_at, updated_at`
-
 const insertPartnerDocumentSQL = `
 	INSERT INTO dsh_partner_documents
 		(partner_id, document_type, media_ref, notes, uploaded_by_actor_id, upload_status,
@@ -482,13 +476,6 @@ func validateLegalDocumentType(tx *sql.Tx, documentType string) error {
 }
 
 // â”€â”€â”€ Field visits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-const partnerFieldVisitReadColumns = `id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
-	visit_notes, location_latitude, location_longitude,
-	COALESCE((SELECT array_agg(media_ref ORDER BY created_at ASC)
-	          FROM dsh_partner_field_visit_media vm
-	          WHERE vm.visit_id = v.id AND vm.status = 'uploaded'), ARRAY[]::TEXT[]),
-	version, created_at, submitted_at`
 
 const selectPartnerFieldVisitSQL = `SELECT id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
 	visit_notes, location_latitude, location_longitude,
