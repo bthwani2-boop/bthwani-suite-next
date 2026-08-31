@@ -54,12 +54,45 @@ func TestGetPurchasableClientCatalogUsesCurrentPriceAndInventoryDBIntegration(t 
 		) VALUES ($1,'signal',0,0,1,100,1)`, assortmentID); err != nil {
 		t.Fatalf("insert inventory: %v", err)
 	}
-	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_store_assortment_prices (
-			id, store_assortment_id, amount_minor, currency,
-			prep_time_min, prep_time_max, effective_from
-		) VALUES ($1,$2,2599,'YER',15,30,NOW())`, "client-catalog-truth-price-"+suffix, assortmentID); err != nil {
-		t.Fatalf("insert effective price: %v", err)
+	now := time.Now().UTC()
+	effectiveUntil := now.Add(time.Hour)
+	priceInput := StoreAssortmentPriceInput{
+		AmountMinor:    2599,
+		Currency:       "YER",
+		PrepTimeMin:    15,
+		PrepTimeMax:    30,
+		EffectiveFrom:  now,
+		EffectiveUntil: &effectiveUntil,
+	}
+	price, err := CreateAssortmentPriceAtomic(ctx, db, storeID, productID, "operator-test", "client-catalog-truth-price-"+suffix, priceInput)
+	if err != nil {
+		t.Fatalf("create effective price through governed command: %v", err)
+	}
+	if price.AmountMinor != priceInput.AmountMinor || price.Currency != priceInput.Currency || price.EffectiveUntil == nil {
+		t.Fatalf("unexpected governed effective price: %#v", price)
+	}
+	replayedPrice, err := CreateAssortmentPriceAtomic(ctx, db, storeID, productID, "operator-test", "client-catalog-truth-price-"+suffix, priceInput)
+	if err != nil {
+		t.Fatalf("replay effective price command: %v", err)
+	}
+	if replayedPrice.ID != price.ID {
+		t.Fatalf("price replay must return the original resource: first=%#v replay=%#v", price, replayedPrice)
+	}
+
+	futurePriceInput := priceInput
+	futurePriceInput.AmountMinor = 2699
+	futurePriceInput.EffectiveFrom = effectiveUntil.Add(time.Hour)
+	futurePriceInput.EffectiveUntil = nil
+	if _, err := CreateAssortmentPriceAtomic(ctx, db, storeID, productID, "operator-test", "client-catalog-truth-future-price-"+suffix, futurePriceInput); err != nil {
+		t.Fatalf("create open-ended future price: %v", err)
+	}
+	overlappingPriceInput := priceInput
+	overlappingPriceInput.AmountMinor = 2799
+	overlappingPriceInput.EffectiveFrom = now.Add(30 * time.Minute)
+	overlappingPriceUntil := now.Add(45 * time.Minute)
+	overlappingPriceInput.EffectiveUntil = &overlappingPriceUntil
+	if _, err := CreateAssortmentPriceAtomic(ctx, db, storeID, productID, "operator-test", "client-catalog-truth-overlap-price-"+suffix, overlappingPriceInput); err == nil {
+		t.Fatal("overlapping effective price must be rejected")
 	}
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortments WHERE id=$1`, assortmentID)
