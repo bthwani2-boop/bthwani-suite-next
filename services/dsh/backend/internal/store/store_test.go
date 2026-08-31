@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"net/url"
 	"testing"
 	"time"
@@ -71,6 +72,25 @@ func TestRowToSummary(t *testing.T) {
 	}
 	if summary.PublicationDecision != PublicationPublished || len(summary.BlockingReasons) != 0 {
 		t.Fatalf("expected store with all publication gates to be published, got decision=%s reasons=%v", summary.PublicationDecision, summary.BlockingReasons)
+	}
+}
+
+func TestRowToSummaryNormalizesRequiredArrayFields(t *testing.T) {
+	summary := RowToSummary(DshStoreRow{PublicationDecision: PublicationPublished})
+
+	payload, err := json.Marshal(summary)
+	if err != nil {
+		t.Fatalf("marshal summary: %v", err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &fields); err != nil {
+		t.Fatalf("decode summary: %v", err)
+	}
+	if got := string(fields["deliveryModes"]); got != "[]" {
+		t.Fatalf("expected deliveryModes to serialize as [], got %s", got)
+	}
+	if got := string(fields["blockingReasons"]); got != "[]" {
+		t.Fatalf("expected blockingReasons to serialize as [], got %s", got)
 	}
 }
 
