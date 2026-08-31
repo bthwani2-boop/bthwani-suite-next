@@ -31,6 +31,7 @@ import {
 } from "../../shared/session/control-panel-permissions";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { PlatformChangeWorkflowPanel } from "./PlatformChangeWorkflowPanel";
+import { DshPlatformVarsWorkspace } from "./DshPlatformVarsWorkspace";
 import { PlatformGovernanceVisual } from "./PlatformGovernanceVisual";
 import { PlatformPoliciesContent } from "./PlatformPoliciesScreen";
 import { PlatformRolloutPanel } from "./PlatformRolloutPanel";
@@ -167,43 +168,23 @@ function OverviewTab({ data }: { readonly data: PlatformControlReadModel }) {
   );
 }
 
-function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
+function VariablesTab({
+  data,
+  onChanged,
+}: {
+  readonly data: PlatformControlReadModel;
+  readonly onChanged: () => Promise<void>;
+}) {
   const variablesFailure = resourceFailure(data, "variables");
   const flagsFailure = resourceFailure(data, "feature-flags");
 
   return (
     <View style={styles.stack}>
-      <Text role="titleSm">المتغيرات السيادية المطبقة</Text>
-      {variablesFailure ? (
-        <CpStateView kind="error" title="تعذر تحميل المتغيرات" code={variablesFailure} />
-      ) : data.variables.length === 0 ? (
-        <EmptyRuntimeState title="لا توجد متغيرات مطبقة" state={data.snapshot.variablesState} />
-      ) : (
-        <CpTable aria-label="المتغيرات السيادية المطبقة">
-          <thead>
-            <tr>
-              <CpTableHeaderCell>المفتاح</CpTableHeaderCell>
-              <CpTableHeaderCell>المالك</CpTableHeaderCell>
-              <CpTableHeaderCell>النطاق</CpTableHeaderCell>
-              <CpTableHeaderCell>نوع القيمة</CpTableHeaderCell>
-              <CpTableHeaderCell>المراجعة</CpTableHeaderCell>
-              <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-            </tr>
-          </thead>
-          <tbody>
-            {data.variables.map((variable) => (
-              <tr key={`${variable.key}:${variable.scopeType}:${variable.scopeId ?? "global"}`}>
-                <CpTableCell>{variable.key}</CpTableCell>
-                <CpTableCell>{variable.ownerService}</CpTableCell>
-                <CpTableCell>{variable.scopeType}{variable.scopeId ? ` / ${variable.scopeId}` : ""}</CpTableCell>
-                <CpTableCell>{variable.valueType}</CpTableCell>
-                <CpTableCell>{variable.revision}</CpTableCell>
-                <CpTableCell><CpBadge tone={statusTone(variable.status)}>{variable.status}</CpBadge></CpTableCell>
-              </tr>
-            ))}
-          </tbody>
-        </CpTable>
-      )}
+      <DshPlatformVarsWorkspace
+        variables={data.variables}
+        variablesFailure={variablesFailure}
+        onChanged={onChanged}
+      />
 
       <Text role="titleSm">أعلام الميزات المطبقة</Text>
       {flagsFailure ? (
@@ -463,7 +444,7 @@ export function PlatformDashboardScreen({
         ) : runtime.state.kind === "success" ? (
           <>
             {mainTab === "overview" ? <OverviewTab data={runtime.state.data} /> : null}
-            {mainTab === "variables" ? <VariablesTab data={runtime.state.data} /> : null}
+            {mainTab === "variables" ? <VariablesTab data={runtime.state.data} onChanged={runtime.reload} /> : null}
             {mainTab === "services" ? <ServicesTab data={runtime.state.data} /> : null}
             {mainTab === "providers" ? <ProviderRegistryPanel /> : null}
             {mainTab === "canary" ? (
