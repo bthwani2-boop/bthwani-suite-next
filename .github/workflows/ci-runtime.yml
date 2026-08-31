@@ -105,7 +105,11 @@ jobs:
           "${venv}/bin/schemathesis" run \
             services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
             --url http://127.0.0.1:18080 \
-            --include-path-regex '^/dsh/(health|readiness|stores)(/.*)?$' \
+            --include-name 'GET /dsh/health' \
+            --include-name 'GET /dsh/readiness' \
+            --include-name 'GET /dsh/stores' \
+            --include-name 'GET /dsh/stores/{storeId}' \
+            --include-name 'GET /dsh/storefront/{storeId}' \
             --workers 1
 
       - name: Capture runtime diagnostics
