@@ -59,6 +59,22 @@ const storeCaptainHandoffSelect = `
                version, created_at, updated_at
         FROM dsh_store_captain_handoffs`
 
+const storeCaptainHandoffByIDAndOrderSQL = `
+	SELECT id::text, order_id::text, assignment_id::text, store_id, captain_id, status,
+	       partner_confirmed_at, COALESCE(partner_confirmed_by_actor_id, ''),
+	       captain_confirmed_at, COALESCE(captain_confirmed_by_actor_id, ''),
+	       version, created_at, updated_at
+	FROM dsh_store_captain_handoffs
+	WHERE id=$1::uuid AND order_id=$2::uuid`
+
+const storeCaptainHandoffByAssignmentSQL = `
+	SELECT id::text, order_id::text, assignment_id::text, store_id, captain_id, status,
+	       partner_confirmed_at, COALESCE(partner_confirmed_by_actor_id, ''),
+	       captain_confirmed_at, COALESCE(captain_confirmed_by_actor_id, ''),
+	       version, created_at, updated_at
+	FROM dsh_store_captain_handoffs
+	WHERE assignment_id=$1::uuid`
+
 func ensureStoreCaptainHandoff(tx *sql.Tx, current *Assignment) error {
 	if current.OrderID == "" {
 		return nil
@@ -287,9 +303,7 @@ func confirmStoreCaptainHandoff(db *sql.DB, command storeCaptainHandoffConfirmat
 	if handoffID, found, err := beginStoreCaptainHandoffConfirmationCommand(tx, command); err != nil {
 		return nil, err
 	} else if found {
-		item, err := scanStoreCaptainHandoff(tx.QueryRow(
-			storeCaptainHandoffSelect+` WHERE id=$1::uuid AND order_id=$2::uuid`, handoffID, command.OrderID,
-		))
+		item, err := scanStoreCaptainHandoff(tx.QueryRow(storeCaptainHandoffByIDAndOrderSQL, handoffID, command.OrderID))
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil, ErrNotFound
@@ -358,9 +372,7 @@ func confirmStoreCaptainHandoff(db *sql.DB, command storeCaptainHandoffConfirmat
 	if err = ensureStoreCaptainHandoff(tx, current); err != nil {
 		return nil, err
 	}
-	currentHandoff, err := scanStoreCaptainHandoff(tx.QueryRow(
-		storeCaptainHandoffSelect+` WHERE assignment_id = $1::uuid`, assignmentID,
-	))
+	currentHandoff, err := scanStoreCaptainHandoff(tx.QueryRow(storeCaptainHandoffByAssignmentSQL, assignmentID))
 	if err != nil {
 		return nil, err
 	}

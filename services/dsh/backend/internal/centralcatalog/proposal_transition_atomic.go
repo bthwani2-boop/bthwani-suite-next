@@ -269,7 +269,9 @@ func TransitionProposalAtomicExpected(
 					return ProductProposal{}, insertErr
 				}
 				assortment, assortmentErr := scanAssortment(tx.QueryRowContext(ctx,
-					`SELECT `+assortmentColumns+` FROM dsh_store_assortments
+					`SELECT id, store_id, master_product_id, unit_price, currency, available, stock_status,
+						local_note, custom_image_object_key, publication_status, submitted_by, approved_by, created_at, updated_at, version
+					 FROM dsh_store_assortments
 					 WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`,
 					*proposal.SourceStoreID, *proposal.AdoptedMasterProductID))
 				if assortmentErr != nil {

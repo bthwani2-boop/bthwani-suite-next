@@ -396,8 +396,7 @@ func GetCaptainAssignmentForOperatorContext(db *sql.DB, operatorContextID, assig
 	if operatorContextID == "" || strings.TrimSpace(assignmentID) == "" || strings.TrimSpace(captainID) == "" {
 		return nil, fmt.Errorf("%w: operator context, assignment, and captain are required", ErrInvalid)
 	}
-	row := db.QueryRow(assignmentSelectSQL()+`
-                WHERE a.id = $1::uuid AND a.captain_id = $2 AND a.operator_context_id = $3`, assignmentID, captainID, operatorContextID)
+	row := db.QueryRow(assignmentForCaptainAndContextSQL, assignmentID, captainID, operatorContextID)
 	assignment, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound

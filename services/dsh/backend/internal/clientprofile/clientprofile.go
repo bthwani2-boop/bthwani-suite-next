@@ -58,13 +58,41 @@ type mutationReceipt struct {
 const profileColumns = `client_id, locale, currency_preference, marketing_consent_email,
 	marketing_consent_sms, marketing_consent_push, version, created_at, updated_at`
 
+const clientProfileSelectSQL = `SELECT client_id, locale, currency_preference, marketing_consent_email,
+	marketing_consent_sms, marketing_consent_push, version, created_at, updated_at
+	FROM dsh_client_profiles WHERE client_id = $1`
+
+const updateClientProfilePreferencesSQL = `UPDATE dsh_client_profiles
+	SET locale = $2, currency_preference = $3, version = version + 1, updated_at = NOW()
+	WHERE client_id = $1
+	RETURNING client_id, locale, currency_preference, marketing_consent_email,
+		marketing_consent_sms, marketing_consent_push, version, created_at, updated_at`
+
+const insertClientProfilePreferencesSQL = `INSERT INTO dsh_client_profiles (client_id, locale, currency_preference, version, created_at, updated_at)
+	VALUES ($1, $2, $3, 1, NOW(), NOW())
+	RETURNING client_id, locale, currency_preference, marketing_consent_email,
+		marketing_consent_sms, marketing_consent_push, version, created_at, updated_at`
+
+const updateClientProfileConsentsSQL = `UPDATE dsh_client_profiles
+	SET marketing_consent_email = $2, marketing_consent_sms = $3,
+		marketing_consent_push = $4, version = version + 1, updated_at = NOW()
+	WHERE client_id = $1
+	RETURNING client_id, locale, currency_preference, marketing_consent_email,
+		marketing_consent_sms, marketing_consent_push, version, created_at, updated_at`
+
+const insertClientProfileConsentsSQL = `INSERT INTO dsh_client_profiles (
+	client_id, marketing_consent_email, marketing_consent_sms, marketing_consent_push,
+	version, created_at, updated_at
+) VALUES ($1, $2, $3, $4, 1, NOW(), NOW())
+	RETURNING client_id, locale, currency_preference, marketing_consent_email,
+		marketing_consent_sms, marketing_consent_push, version, created_at, updated_at`
+
 func GetClientProfile(ctx context.Context, db *sql.DB, clientID string) (ClientProfile, error) {
 	clientID = strings.TrimSpace(clientID)
 	if clientID == "" {
 		return ClientProfile{}, ErrInvalid
 	}
-	return scanProfile(db.QueryRowContext(ctx, `SELECT `+profileColumns+`
-		FROM dsh_client_profiles WHERE client_id = $1`, clientID))
+	return scanProfile(db.QueryRowContext(ctx, clientProfileSelectSQL, clientID))
 }
 
 func UpsertClientProfilePreferences(
@@ -80,17 +108,10 @@ func UpsertClientProfilePreferences(
 	}
 	return upsert(ctx, db, clientID, "preferences", input.ExpectedVersion, fingerprint, mutation, func(tx *sql.Tx, profileExists bool) (ClientProfile, error) {
 		if profileExists {
-			return scanProfile(tx.QueryRowContext(ctx, `
-				UPDATE dsh_client_profiles
-				SET locale = $2, currency_preference = $3, version = version + 1, updated_at = NOW()
-				WHERE client_id = $1
-				RETURNING `+profileColumns,
+			return scanProfile(tx.QueryRowContext(ctx, updateClientProfilePreferencesSQL,
 				clientID, input.Locale, input.CurrencyPreference))
 		}
-		return scanProfile(tx.QueryRowContext(ctx, `
-			INSERT INTO dsh_client_profiles (client_id, locale, currency_preference, version, created_at, updated_at)
-			VALUES ($1, $2, $3, 1, NOW(), NOW())
-			RETURNING `+profileColumns,
+		return scanProfile(tx.QueryRowContext(ctx, insertClientProfilePreferencesSQL,
 			clientID, input.Locale, input.CurrencyPreference))
 	}, input)
 }
@@ -108,20 +129,10 @@ func UpsertClientProfileConsents(
 	}
 	return upsert(ctx, db, clientID, "consents", input.ExpectedVersion, fingerprint, mutation, func(tx *sql.Tx, profileExists bool) (ClientProfile, error) {
 		if profileExists {
-			return scanProfile(tx.QueryRowContext(ctx, `
-				UPDATE dsh_client_profiles
-				SET marketing_consent_email = $2, marketing_consent_sms = $3,
-					marketing_consent_push = $4, version = version + 1, updated_at = NOW()
-				WHERE client_id = $1
-				RETURNING `+profileColumns,
+			return scanProfile(tx.QueryRowContext(ctx, updateClientProfileConsentsSQL,
 				clientID, input.MarketingConsentEmail, input.MarketingConsentSms, input.MarketingConsentPush))
 		}
-		return scanProfile(tx.QueryRowContext(ctx, `
-			INSERT INTO dsh_client_profiles (
-				client_id, marketing_consent_email, marketing_consent_sms, marketing_consent_push,
-				version, created_at, updated_at
-			) VALUES ($1, $2, $3, $4, 1, NOW(), NOW())
-			RETURNING `+profileColumns,
+		return scanProfile(tx.QueryRowContext(ctx, insertClientProfileConsentsSQL,
 			clientID, input.MarketingConsentEmail, input.MarketingConsentSms, input.MarketingConsentPush))
 	}, input)
 }
@@ -162,8 +173,7 @@ func upsert(
 		if receipt.Operation != operation || receipt.RequestFingerprint != fingerprint {
 			return ClientProfile{}, ErrIdempotencyConflict
 		}
-		profile, err := scanProfile(tx.QueryRowContext(ctx, `SELECT `+profileColumns+`
-			FROM dsh_client_profiles WHERE client_id = $1`, clientID))
+		profile, err := scanProfile(tx.QueryRowContext(ctx, clientProfileSelectSQL, clientID))
 		if err != nil {
 			return ClientProfile{}, err
 		}

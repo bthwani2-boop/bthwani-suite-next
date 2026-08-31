@@ -95,6 +95,21 @@ const reelColumns = `id, asset_id, poster_asset_id, title_ar, title_en, subtitle
 	highlight_ar, highlight_en, cta_label_ar, cta_label_en, target_type, target_id, status, sort_order,
 	submitted_by, submitted_by_role, source_store_id, reviewed_by, review_note, created_at, updated_at`
 
+const reelByIDSQL = `SELECT id, asset_id, poster_asset_id, title_ar, title_en, subtitle_ar, subtitle_en,
+	highlight_ar, highlight_en, cta_label_ar, cta_label_en, target_type, target_id, status, sort_order,
+	submitted_by, submitted_by_role, source_store_id, reviewed_by, review_note, created_at, updated_at
+	FROM dsh_reels WHERE id=$1`
+
+const reelByIDForUpdateSQL = `SELECT id, asset_id, poster_asset_id, title_ar, title_en, subtitle_ar, subtitle_en,
+	highlight_ar, highlight_en, cta_label_ar, cta_label_en, target_type, target_id, status, sort_order,
+	submitted_by, submitted_by_role, source_store_id, reviewed_by, review_note, created_at, updated_at
+	FROM dsh_reels WHERE id=$1 FOR UPDATE`
+
+const assetByIDForShareSQL = `SELECT id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
+	checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by, reviewed_by,
+	review_note, intended_entity_type, intended_entity_id, intended_role, created_at, updated_at, version
+	FROM dsh_catalog_assets WHERE id=$1 FOR SHARE`
+
 func scanReel(scanner interface{ Scan(...any) error }) (Reel, error) {
 	var r Reel
 	err := scanner.Scan(
@@ -223,7 +238,7 @@ func CreateReelSubmission(ctx context.Context, db *sql.DB, actorID, actorRole, i
 	}
 	defer tx.Rollback()
 	if replay != nil {
-		reel, err := scanReel(tx.QueryRowContext(ctx, `SELECT `+reelColumns+` FROM dsh_reels WHERE id=$1`, replay.ResourceID))
+		reel, err := scanReel(tx.QueryRowContext(ctx, reelByIDSQL, replay.ResourceID))
 		if err != nil {
 			return Reel{}, err
 		}
@@ -235,7 +250,7 @@ func CreateReelSubmission(ctx context.Context, db *sql.DB, actorID, actorRole, i
 	if input.AssetID == "" || !validReelTarget(input.TargetType) || input.TargetID == "" {
 		return Reel{}, ErrInvalid
 	}
-	asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1 FOR SHARE`, input.AssetID))
+	asset, err := scanAsset(tx.QueryRowContext(ctx, assetByIDForShareSQL, input.AssetID))
 	if err != nil {
 		return Reel{}, err
 	}
@@ -280,7 +295,7 @@ func CreateReelSubmission(ctx context.Context, db *sql.DB, actorID, actorRole, i
 	if err := recordCatalogCreateMutation(ctx, tx, mutation, "reel", id); err != nil {
 		return Reel{}, err
 	}
-	reel, err := scanReel(tx.QueryRowContext(ctx, `SELECT `+reelColumns+` FROM dsh_reels WHERE id=$1`, id))
+	reel, err := scanReel(tx.QueryRowContext(ctx, reelByIDSQL, id))
 	if err != nil {
 		return Reel{}, err
 	}

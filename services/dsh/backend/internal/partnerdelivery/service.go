@@ -142,9 +142,9 @@ func (s *Service) assignCourier(ctx context.Context, operatorContextID, orderID,
 
 	var updated *PartnerDeliveryTask
 	if operatorContextID != "" {
-		updated, err = scanTask(tx.QueryRow(`SELECT `+taskColumnsPrefixed+` FROM dsh_partner_delivery_tasks t JOIN dsh_orders o ON o.id = t.order_id WHERE t.id = $1 AND o.operator_context_id = $2`, taskID, operatorContextID).Scan)
+		updated, err = scanTask(tx.QueryRow(taskByIDForOperatorContextSQL, taskID, operatorContextID).Scan)
 	} else {
-		updated, err = scanTask(tx.QueryRow(`SELECT `+taskColumns+` FROM dsh_partner_delivery_tasks WHERE id = $1`, taskID).Scan)
+		updated, err = scanTask(tx.QueryRow(taskByIDSQL, taskID).Scan)
 	}
 	if err != nil {
 		return nil, err
@@ -226,7 +226,7 @@ func (s *Service) submitProofForContext(ctx context.Context, operatorContextID, 
 		return nil, mapOrderError(err)
 	}
 
-	updated, err := scanTask(tx.QueryRow(`SELECT `+taskColumnsPrefixed+` FROM dsh_partner_delivery_tasks t JOIN dsh_orders o ON o.id = t.order_id WHERE t.id = $1 AND o.operator_context_id = $2`, taskID, operatorContextID).Scan)
+	updated, err := scanTask(tx.QueryRow(taskByIDForOperatorContextSQL, taskID, operatorContextID).Scan)
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +319,7 @@ func (s *Service) transitionForContext(ctx context.Context, operatorContextID, t
 		}
 	}
 
-	updated, err := scanTask(tx.QueryRow(`SELECT `+taskColumnsPrefixed+` FROM dsh_partner_delivery_tasks t JOIN dsh_orders o ON o.id=t.order_id WHERE t.id = $1 AND o.operator_context_id = $2`, taskID, operatorContextID).Scan)
+	updated, err := scanTask(tx.QueryRow(taskByIDForOperatorContextSQL, taskID, operatorContextID).Scan)
 	if err != nil {
 		return nil, err
 	}

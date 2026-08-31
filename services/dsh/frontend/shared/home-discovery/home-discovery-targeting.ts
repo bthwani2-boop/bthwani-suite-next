@@ -87,7 +87,7 @@ function normalizeAudienceTargets(values: readonly string[]): DshHomeAudienceTar
 }
 
 export function normalizeTargeting(targeting: RawDshHomeAdminTargeting): DshHomeAdminTargeting {
-  const unique = (values: readonly string[]) => [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort();
+  const unique = (values: readonly string[]) => [...new Set(values.map((value) => value.trim()).filter(Boolean))].sort((left, right) => left.localeCompare(right));
   return {
     cityCodes: unique(targeting.cityCodes),
     serviceAreaCodes: unique(targeting.serviceAreaCodes),
@@ -96,7 +96,7 @@ export function normalizeTargeting(targeting: RawDshHomeAdminTargeting): DshHome
 }
 
 export function parseTargetList(value: string): readonly string[] {
-  return [...new Set(value.split(/[\s,،]+/).map((part) => part.trim()).filter(Boolean))].sort();
+  return [...new Set(value.split(/[\s,،]+/).map((part) => part.trim()).filter(Boolean))].sort((left, right) => left.localeCompare(right));
 }
 
 export function formatTargetList(values: readonly string[]): string {

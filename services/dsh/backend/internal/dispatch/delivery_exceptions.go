@@ -976,7 +976,7 @@ func getDeliveryExceptionForUpdate(tx *sql.Tx, id string) (*DeliveryException, e
 }
 
 func getDeliveryExceptionForUpdateForContext(tx *sql.Tx, operatorContextID, id string) (*DeliveryException, error) {
-	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.id=$1::uuid AND e.operator_context_id=$2 FOR UPDATE`, id, operatorContextID)
+	row := tx.QueryRow(deliveryExceptionByIDAndContextForUpdateSQL, id, operatorContextID)
 	item, err := scanDeliveryException(row.Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -1037,7 +1037,7 @@ func GetDeliveryExceptionForContext(db *sql.DB, operatorContextID, id string) (*
 	if operatorContextID == "" || strings.TrimSpace(id) == "" {
 		return nil, ErrInvalid
 	}
-	row := db.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.id=$1::uuid AND e.operator_context_id=$2`, id, operatorContextID)
+	row := db.QueryRow(deliveryExceptionByIDAndContextSQL, id, operatorContextID)
 	item, err := scanDeliveryException(row.Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -1088,6 +1088,37 @@ const deliveryExceptionColumns = `
         e.resolution_note, e.replacement_assignment_id::text, e.replacement_captain_id, e.return_started_at, e.return_arrived_at, e.returned_at, e.return_accepted_by_actor_id, e.version, e.created_at, e.updated_at,
         e.proof_media_ref, e.policy_next_action`
 
+const deliveryExceptionByIDAndContextForUpdateSQL = `
+	SELECT e.id::text, e.operator_context_id, e.assignment_id::text, COALESCE(e.order_id::text, ''), COALESCE(e.special_request_id::text, ''), e.captain_id,
+	       e.reason_code, e.note, e.delivery_status_at_report, e.severity, e.status,
+	       e.correlation_id, e.reported_latitude, e.reported_longitude, e.reported_at,
+	       e.acknowledged_at, e.acknowledged_by_actor_id, e.resolved_at, e.resolved_by_actor_id, e.resolution_action,
+	       e.resolution_note, e.replacement_assignment_id::text, e.replacement_captain_id, e.return_started_at, e.return_arrived_at, e.returned_at, e.return_accepted_by_actor_id, e.version, e.created_at, e.updated_at,
+	       e.proof_media_ref, e.policy_next_action
+	FROM dsh_delivery_exceptions e
+	WHERE e.id=$1::uuid AND e.operator_context_id=$2
+	FOR UPDATE`
+
+const deliveryExceptionByIDAndContextSQL = `
+	SELECT e.id::text, e.operator_context_id, e.assignment_id::text, COALESCE(e.order_id::text, ''), COALESCE(e.special_request_id::text, ''), e.captain_id,
+	       e.reason_code, e.note, e.delivery_status_at_report, e.severity, e.status,
+	       e.correlation_id, e.reported_latitude, e.reported_longitude, e.reported_at,
+	       e.acknowledged_at, e.acknowledged_by_actor_id, e.resolved_at, e.resolved_by_actor_id, e.resolution_action,
+	       e.resolution_note, e.replacement_assignment_id::text, e.replacement_captain_id, e.return_started_at, e.return_arrived_at, e.returned_at, e.return_accepted_by_actor_id, e.version, e.created_at, e.updated_at,
+	       e.proof_media_ref, e.policy_next_action
+	FROM dsh_delivery_exceptions e
+	WHERE e.id=$1::uuid AND e.operator_context_id=$2`
+
+const deliveryExceptionByContextAndIdempotencySQL = `
+	SELECT e.id::text, e.operator_context_id, e.assignment_id::text, COALESCE(e.order_id::text, ''), COALESCE(e.special_request_id::text, ''), e.captain_id,
+	       e.reason_code, e.note, e.delivery_status_at_report, e.severity, e.status,
+	       e.correlation_id, e.reported_latitude, e.reported_longitude, e.reported_at,
+	       e.acknowledged_at, e.acknowledged_by_actor_id, e.resolved_at, e.resolved_by_actor_id, e.resolution_action,
+	       e.resolution_note, e.replacement_assignment_id::text, e.replacement_captain_id, e.return_started_at, e.return_arrived_at, e.returned_at, e.return_accepted_by_actor_id, e.version, e.created_at, e.updated_at,
+	       e.proof_media_ref, e.policy_next_action
+	FROM dsh_delivery_exceptions e
+	WHERE e.operator_context_id=$1 AND e.idempotency_key=$2`
+
 type deliveryExceptionScanner func(dest ...any) error
 
 func scanDeliveryException(scan deliveryExceptionScanner) (*DeliveryException, error) {
@@ -1109,7 +1140,7 @@ func getDeliveryExceptionByCorrelationTx(tx *sql.Tx, operatorContextID, correlat
 }
 
 func getDeliveryExceptionByIdempotencyKeyTx(tx *sql.Tx, operatorContextID, idempotencyKey string) (*DeliveryException, error) {
-	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.operator_context_id=$1 AND e.idempotency_key=$2`, operatorContextID, idempotencyKey)
+	row := tx.QueryRow(deliveryExceptionByContextAndIdempotencySQL, operatorContextID, idempotencyKey)
 	return scanDeliveryException(row.Scan)
 }
 

@@ -126,6 +126,38 @@ const partnerDocumentReadColumns = `id, partner_id, document_type, upload_status
 	reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
 	version, created_at, updated_at`
 
+const insertPartnerDocumentSQL = `
+	INSERT INTO dsh_partner_documents
+		(partner_id, document_type, media_ref, notes, uploaded_by_actor_id, upload_status,
+		 review_status, supersedes_document_id, idempotency_key, request_hash, correlation_id)
+	VALUES ($1,$2,$3,$4,$5,'uploaded','pending',$6,$7,$8,$9)
+	RETURNING id, partner_id, document_type, upload_status, review_status, document_status,
+		uploaded_by_actor_id, media_ref, notes, rejection_reason,
+		COALESCE(reviewed_by_actor_id,''), reviewed_at, last_review_reason,
+		COALESCE(supersedes_document_id,''), version, created_at, updated_at`
+
+const selectPartnerDocumentSQL = `SELECT id, partner_id, document_type, upload_status, review_status, document_status,
+	uploaded_by_actor_id, media_ref, notes, rejection_reason,
+	COALESCE(reviewed_by_actor_id,''), reviewed_at, last_review_reason,
+	COALESCE(supersedes_document_id,''), version, created_at, updated_at
+FROM dsh_partner_documents WHERE partner_id = $1 AND id = $2`
+
+const reviewPartnerDocumentSQL = `
+	UPDATE dsh_partner_documents SET
+		document_status  = $3,
+		review_status    = $4,
+		rejection_reason = CASE WHEN $3='approved' THEN '' ELSE $6 END,
+		reviewed_by_actor_id = $5,
+		reviewed_at      = NOW(),
+		last_review_reason = $6,
+		version          = version + 1,
+		updated_at       = NOW()
+	WHERE id = $1 AND partner_id = $2
+	RETURNING id, partner_id, document_type, upload_status, review_status, document_status,
+		uploaded_by_actor_id, media_ref, notes, rejection_reason,
+		COALESCE(reviewed_by_actor_id,''), reviewed_at, last_review_reason,
+		COALESCE(supersedes_document_id,''), version, created_at, updated_at`
+
 func UploadDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID string, input UploadDocumentInput) (Document, error) {
 	partnerID = strings.TrimSpace(partnerID)
 	input.DocumentType = strings.TrimSpace(input.DocumentType)
@@ -209,12 +241,7 @@ func UploadDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID string,
 		ORDER BY created_at DESC LIMIT 1`, partnerID, input.DocumentType).Scan(&supersedesID)
 
 	var d Document
-	err = tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_partner_documents
-			(partner_id, document_type, media_ref, notes, uploaded_by_actor_id, upload_status,
-			 review_status, supersedes_document_id, idempotency_key, request_hash, correlation_id)
-		VALUES ($1,$2,$3,$4,$5,'uploaded','pending',$6,$7,$8,$9)
-		RETURNING `+partnerDocumentReadColumns,
+	err = tx.QueryRowContext(ctx, insertPartnerDocumentSQL,
 		partnerID, input.DocumentType, input.MediaRef, input.Notes, input.UploadedByActorID, supersedesID,
 		key, requestHash, correlationID,
 	).Scan(documentScanArgs(&d)...)
@@ -236,7 +263,7 @@ func UploadDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID string,
 
 func loadDocumentTx(ctx context.Context, tx *sql.Tx, partnerID, documentID string) (Document, error) {
 	var document Document
-	err := tx.QueryRowContext(ctx, `SELECT `+partnerDocumentReadColumns+` FROM dsh_partner_documents WHERE partner_id = $1 AND id = $2`, partnerID, documentID).Scan(documentScanArgs(&document)...)
+	err := tx.QueryRowContext(ctx, selectPartnerDocumentSQL, partnerID, documentID).Scan(documentScanArgs(&document)...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Document{}, ErrNotFound
 	}
@@ -358,18 +385,7 @@ func ReviewDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID, docume
 	}
 
 	var d Document
-	err = tx.QueryRowContext(ctx, `
-		UPDATE dsh_partner_documents SET
-			document_status  = $3,
-			review_status    = $4,
-			rejection_reason = CASE WHEN $3='approved' THEN '' ELSE $6 END,
-			reviewed_by_actor_id = $5,
-			reviewed_at      = NOW(),
-			last_review_reason = $6,
-			version          = version + 1,
-			updated_at       = NOW()
-		WHERE id = $1 AND partner_id = $2
-		RETURNING `+partnerDocumentReadColumns,
+	err = tx.QueryRowContext(ctx, reviewPartnerDocumentSQL,
 		documentID, partnerID, newDocStatus, newReviewStatus, input.ReviewedByActorID, input.Reason,
 	).Scan(documentScanArgs(&d)...)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -470,6 +486,14 @@ const partnerFieldVisitReadColumns = `id, partner_id, COALESCE(store_id,''), fie
 	          FROM dsh_partner_field_visit_media vm
 	          WHERE vm.visit_id = v.id AND vm.status = 'uploaded'), ARRAY[]::TEXT[]),
 	version, created_at, submitted_at`
+
+const selectPartnerFieldVisitSQL = `SELECT id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
+	visit_notes, location_latitude, location_longitude,
+	COALESCE((SELECT array_agg(media_ref ORDER BY created_at ASC)
+	          FROM dsh_partner_field_visit_media vm
+	          WHERE vm.visit_id = v.id AND vm.status = 'uploaded'), ARRAY[]::TEXT[]),
+	version, created_at, submitted_at
+FROM dsh_partner_field_visits v WHERE v.partner_id = $1 AND v.id = $2`
 
 func CreateFieldVisitIdempotent(ctx context.Context, db *sql.DB, input CreateFieldVisitInput) (FieldVisit, error) {
 	input.PartnerID = strings.TrimSpace(input.PartnerID)
@@ -614,7 +638,7 @@ func loadFieldVisitTx(ctx context.Context, tx *sql.Tx, partnerID, visitID string
 	var lat, lon sql.NullFloat64
 	var submittedAt sql.NullTime
 	var storeIDOut sql.NullString
-	err := tx.QueryRowContext(ctx, `SELECT `+partnerFieldVisitReadColumns+` FROM dsh_partner_field_visits v WHERE v.partner_id = $1 AND v.id = $2`, partnerID, visitID).Scan(
+	err := tx.QueryRowContext(ctx, selectPartnerFieldVisitSQL, partnerID, visitID).Scan(
 		&visit.ID, &visit.PartnerID, &storeIDOut, &visit.FieldActorID, &visit.VisitStatus,
 		&visit.VisitNotes, &lat, &lon, pq.Array(&visit.EvidenceMediaRefs),
 		&visit.Version, &visit.CreatedAt, &submittedAt)

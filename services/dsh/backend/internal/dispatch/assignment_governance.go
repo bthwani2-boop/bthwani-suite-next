@@ -894,7 +894,7 @@ func cancelGovernedAssignment(
 			return tx.Commit()
 		}
 	}
-	row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid AND a.operator_context_id=$2 FOR UPDATE OF a,d`, assignmentID, operatorContextID)
+	row := tx.QueryRow(assignmentForOperatorContextForUpdateSQL, assignmentID, operatorContextID)
 	current, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
@@ -981,7 +981,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 		if replayCaptainID != input.CaptainID || replaySupersedesID != input.AssignmentID {
 			return nil, fmt.Errorf("%w: idempotency key belongs to another reassignment", ErrConflict)
 		}
-		row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid AND a.captain_id=$2 AND a.operator_context_id=$3`, replayID, replayCaptainID, input.OperatorContextID)
+		row := tx.QueryRow(assignmentForCaptainAndContextSQL, replayID, replayCaptainID, input.OperatorContextID)
 		item, readErr := scanAssignmentRowWithDelivery(row)
 		if readErr != nil {
 			return nil, readErr
@@ -995,7 +995,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 		return nil, err
 	}
 
-	row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid AND a.operator_context_id=$2 FOR UPDATE OF a,d`, input.AssignmentID, input.OperatorContextID)
+	row := tx.QueryRow(assignmentForOperatorContextForUpdateSQL, input.AssignmentID, input.OperatorContextID)
 	current, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound

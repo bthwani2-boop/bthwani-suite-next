@@ -205,7 +205,7 @@ export function StoreProfileScreen({
   const onSave = React.useCallback(async () => {
     if (!canonicalStoreId || loadState.kind !== 'success') return;
     const normalizedReason = saveReason.trim();
-    const backendModes = [...new Set(selectedModes.map(toBackendMode))].sort();
+    const backendModes = [...new Set(selectedModes.map(toBackendMode))].sort((left, right) => left.localeCompare(right));
     if (normalizedReason.length < 3 || backendModes.length === 0) {
       setSaveState({ kind: 'error', message: 'حدد وسيلة خدمة واحدة واكتب سببًا واضحًا للحفظ.' });
       return;

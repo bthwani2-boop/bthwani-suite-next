@@ -30,7 +30,7 @@ export function resolveOrderTruthPollingMs(input: {
   readonly terminal?: boolean;
 }): number {
   if (input.networkClass === "offline" || input.foreground === false || input.terminal) return 0;
-  const actorFloor = input.actor === "operator" ? 8000 : input.actor === "partner" ? 5000 : 5000;
+  const actorFloor = input.actor === "operator" ? 8000 : 5000;
   const constrainedFloor = input.networkClass === "constrained" ? 15000 : actorFloor;
   const requested = Number.isFinite(input.requestedMs) ? Math.trunc(input.requestedMs ?? actorFloor) : actorFloor;
   return Math.min(60000, Math.max(constrainedFloor, requested));

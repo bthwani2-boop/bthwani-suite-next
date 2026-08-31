@@ -166,10 +166,7 @@ func (s *Service) Report(ctx context.Context, input ReportInput) (*Incident, err
 }
 
 func (s *Service) findCommand(ctx context.Context, input ReportInput) (*Incident, error) {
-	return scanIncident(s.db.QueryRowContext(ctx, `
-		SELECT `+incidentColumns+`
-			FROM dsh_operational_incidents
-			WHERE operator_context_id=$1 AND order_id=$2::uuid AND actor_id=$3 AND correlation_id=$4`,
+	return scanIncident(s.db.QueryRowContext(ctx, incidentByCommandSQL,
 		input.OperatorContextID, input.OrderID, input.ActorID, input.CorrelationID).Scan)
 }
 

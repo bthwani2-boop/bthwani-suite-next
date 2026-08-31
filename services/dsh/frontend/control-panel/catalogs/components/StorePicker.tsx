@@ -54,9 +54,18 @@ export function StorePicker({ value, onChange, label = "اختر المتجر" }
           {isLoading && <Box padding={8}><Text tone="secondary">جاري البحث...</Text></Box>}
           {!isLoading && stores.length === 0 && query && <Box padding={8}><Text tone="secondary">لم يتم العثور على نتائج</Text></Box>}
           {stores.map(store => (
-            <div
+            <button
+              type="button"
               key={store.id}
-              style={{ padding: 8, cursor: "pointer" }}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: 8,
+                border: "none",
+                background: "transparent",
+                textAlign: "start",
+                cursor: "pointer",
+              }}
               onClick={() => {
                 onChange(store.id);
                 setQuery("");
@@ -64,7 +73,7 @@ export function StorePicker({ value, onChange, label = "اختر المتجر" }
               }}
             >
               <Text>{store.nameAr} ({store.id})</Text>
-            </div>
+            </button>
           ))}
         </Box>
       )}

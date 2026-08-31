@@ -814,6 +814,14 @@ const proposalColumns = `id, proposed_name_ar, proposed_name_en, domain_id, cate
 	audit_required, blocked_reason, resubmission_count, linked_store_id,
 	target_master_product_id, base_version, duplicate_candidates`
 
+const proposalByIDSQL = `SELECT id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode,
+	image_object_key, source_surface, source_actor_id, source_store_id, status, review_note,
+	adopted_master_product_id, created_at, updated_at, version, review_stage, partner_reviewed_by,
+	marketing_reviewed_by, catalog_adopted_by, catalog_approved_by, client_visible_at,
+	audit_required, blocked_reason, resubmission_count, linked_store_id,
+	target_master_product_id, base_version, duplicate_candidates
+	FROM dsh_product_proposals WHERE id=$1`
+
 func scanProposal(scanner interface{ Scan(...any) error }) (ProductProposal, error) {
 	var p ProductProposal
 	err := scanner.Scan(&p.ID, &p.ProposedNameAr, &p.ProposedNameEn, &p.DomainID, &p.CategoryNodeID, &p.Brand,
@@ -925,7 +933,7 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID, idempotencyKey str
 	}
 	defer tx.Rollback()
 	if replay != nil {
-		proposal, err := scanProposal(tx.QueryRowContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1`, replay.ResourceID))
+		proposal, err := scanProposal(tx.QueryRowContext(ctx, proposalByIDSQL, replay.ResourceID))
 		if err != nil {
 			return ProductProposal{}, err
 		}
@@ -1006,7 +1014,7 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID, idempotencyKey str
 	if err := recordCatalogCreateMutation(ctx, tx, mutation, "product_proposal", id); err != nil {
 		return ProductProposal{}, err
 	}
-	proposal, err := scanProposal(tx.QueryRowContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1`, id))
+	proposal, err := scanProposal(tx.QueryRowContext(ctx, proposalByIDSQL, id))
 	if err != nil {
 		return ProductProposal{}, err
 	}
@@ -1652,6 +1660,16 @@ const assetColumns = `id, object_key, public_url, original_file_name, mime_type,
 	checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by, reviewed_by,
 	review_note, intended_entity_type, intended_entity_id, intended_role, created_at, updated_at, version`
 
+const assetByIDSQL = `SELECT id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
+	checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by, reviewed_by,
+	review_note, intended_entity_type, intended_entity_id, intended_role, created_at, updated_at, version
+	FROM dsh_catalog_assets WHERE id=$1`
+
+const assetByIDForUpdateSQL = `SELECT id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
+	checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by, reviewed_by,
+	review_note, intended_entity_type, intended_entity_id, intended_role, created_at, updated_at, version
+	FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`
+
 func scanAsset(scanner interface{ Scan(...any) error }) (CatalogAsset, error) {
 	var a CatalogAsset
 	err := scanner.Scan(&a.ID, &a.ObjectKey, &a.PublicURL, &a.OriginalFileName, &a.MimeType, &a.SizeBytes,
@@ -1770,7 +1788,7 @@ func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media
 	}
 	defer tx.Rollback()
 	if replay != nil {
-		asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, replay.ResourceID))
+		asset, err := scanAsset(tx.QueryRowContext(ctx, assetByIDSQL, replay.ResourceID))
 		if err != nil {
 			return AssetUploadIntent{}, err
 		}
@@ -1927,7 +1945,7 @@ func CompleteAssetUpload(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "dsh-catalog-asset-complete:"+id); err != nil {
 		return CatalogAsset{}, err
 	}
-	asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id))
+	asset, err := scanAsset(tx.QueryRowContext(ctx, assetByIDForUpdateSQL, id))
 	if err != nil {
 		return CatalogAsset{}, err
 	}

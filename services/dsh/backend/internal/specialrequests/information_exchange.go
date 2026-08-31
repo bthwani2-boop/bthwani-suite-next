@@ -35,7 +35,7 @@ type InformationResponseMutationContext struct {
 // misuse rejection_reason.
 type InformationExchange struct {
 	ID                       string
-	OperatorContextID                 string
+	OperatorContextID        string
 	SpecialRequestID         string
 	ClientID                 string
 	RequestedByOperatorID    string
@@ -76,6 +76,13 @@ const informationExchangeColumns = `
 	question, response, status, request_version_at_request,
 	request_version_at_response, requested_at, responded_at, updated_at
 `
+
+const informationExchangeByIDSQL = `SELECT
+	id, operator_context_id, special_request_id, client_id, requested_by_operator_id,
+	question, response, status, request_version_at_request,
+	request_version_at_response, requested_at, responded_at, updated_at
+FROM dsh_special_request_information_exchanges
+WHERE id = $1 AND operator_context_id = $2 AND special_request_id = $3 AND client_id = $4`
 
 func (s *Service) LatestInformationExchangeInOperatorContext(ctx context.Context, operatorContextID, requestID string) (*InformationExchange, error) {
 	row := s.repo.DB().QueryRowContext(ctx, `SELECT `+informationExchangeColumns+`
@@ -235,9 +242,7 @@ func (s *Service) RespondClientInformationInOperatorContext(
 		if storedRequestID != requestID || storedFingerprint != fingerprint {
 			return nil, nil, ErrInformationResponseIdempotencyConflict
 		}
-		exchange, err := scanInformationExchange(tx.QueryRowContext(ctx, `SELECT `+informationExchangeColumns+`
-			FROM dsh_special_request_information_exchanges
-			WHERE id = $1 AND operator_context_id = $2 AND special_request_id = $3 AND client_id = $4`,
+		exchange, err := scanInformationExchange(tx.QueryRowContext(ctx, informationExchangeByIDSQL,
 			storedExchangeID, operatorContextID, requestID, clientID).Scan)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil, fmt.Errorf("%w: committed information exchange is missing", ErrConflict)

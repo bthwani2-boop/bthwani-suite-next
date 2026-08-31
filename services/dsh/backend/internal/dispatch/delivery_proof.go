@@ -382,7 +382,7 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 		return nil, receiptErr
 	}
 
-	proof, _, err := scanDeliveryProofRow(tx.QueryRow(deliveryProofSelectSQL()+` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE p.id=$1::uuid AND a.operator_context_id=$2 FOR UPDATE OF p`, proofID, input.OperatorContextID))
+	proof, _, err := scanDeliveryProofRow(tx.QueryRow(deliveryProofForOperatorContextUpdateSQL, proofID, input.OperatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -557,9 +557,8 @@ func getOperatorDeliveryProof(db *sql.DB, operatorContextID, proofID string) (*D
 	if operatorContextID == "" {
 		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
-	query := deliveryProofSelectSQL() + ` JOIN dsh_assignments a ON a.id=p.assignment_id WHERE p.id=$1::uuid AND a.operator_context_id=$2`
 	args := []any{proofID, operatorContextID}
-	proof, _, err := scanDeliveryProofRow(db.QueryRow(query, args...))
+	proof, _, err := scanDeliveryProofRow(db.QueryRow(deliveryProofForOperatorContextSQL, args...))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -901,6 +900,29 @@ func deliveryProofSelectSQL() string {
                 p.idempotency_key,p.request_fingerprint,p.version,p.created_at,p.updated_at
         FROM dsh_delivery_proofs p`
 }
+
+const deliveryProofForOperatorContextUpdateSQL = `SELECT p.id::text,p.assignment_id::text,COALESCE(p.order_id::text,''),COALESCE(p.special_request_id::text,''),p.captain_id,
+	COALESCE(p.verification_challenge_id::text,''),p.method,p.status,
+	COALESCE(p.photo_media_ref,''),COALESCE(p.signature_media_ref,''),
+	p.recipient_relationship,COALESCE(p.recipient_name,''),
+	p.captured_latitude,p.captured_longitude,p.captured_at,p.submitted_at,p.reviewed_at,
+	COALESCE(p.reviewed_by_actor_id,''),COALESCE(p.review_reason,''),p.accepted_at,p.rejected_at,
+	p.idempotency_key,p.request_fingerprint,p.version,p.created_at,p.updated_at
+FROM dsh_delivery_proofs p
+JOIN dsh_assignments a ON a.id=p.assignment_id
+WHERE p.id=$1::uuid AND a.operator_context_id=$2
+FOR UPDATE OF p`
+
+const deliveryProofForOperatorContextSQL = `SELECT p.id::text,p.assignment_id::text,COALESCE(p.order_id::text,''),COALESCE(p.special_request_id::text,''),p.captain_id,
+	COALESCE(p.verification_challenge_id::text,''),p.method,p.status,
+	COALESCE(p.photo_media_ref,''),COALESCE(p.signature_media_ref,''),
+	p.recipient_relationship,COALESCE(p.recipient_name,''),
+	p.captured_latitude,p.captured_longitude,p.captured_at,p.submitted_at,p.reviewed_at,
+	COALESCE(p.reviewed_by_actor_id,''),COALESCE(p.review_reason,''),p.accepted_at,p.rejected_at,
+	p.idempotency_key,p.request_fingerprint,p.version,p.created_at,p.updated_at
+FROM dsh_delivery_proofs p
+JOIN dsh_assignments a ON a.id=p.assignment_id
+WHERE p.id=$1::uuid AND a.operator_context_id=$2`
 
 type deliveryProofScanner interface {
 	Scan(dest ...any) error

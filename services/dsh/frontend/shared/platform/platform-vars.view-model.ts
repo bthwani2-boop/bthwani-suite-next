@@ -6,7 +6,6 @@ import type {
   DshPlatformAuditEntry,
   DshPlatformPolicyScenario,
   DshPlatformProviderControlRecord,
-  DshPlatformScopeLayer,
   DshPlatformVarRecord,
   DshPlatformVarScope,
   DshPlatformVarStatus,
@@ -20,7 +19,6 @@ export type VarsDomainId = 'dsh' | 'wlt' | 'provider' | 'policy' | 'design';
 export const DSH_PLATFORM_AUDIT_LOG: DshPlatformAuditEntry[] = [];
 export const DSH_PLATFORM_OPERATIONAL_VARS: DshPlatformVarRecord[] = [];
 export const DSH_PLATFORM_PROVIDER_CONTROL_VARS: DshPlatformProviderControlRecord[] = [];
-export const DSH_PLATFORM_SCOPE_PRECEDENCE: DshPlatformScopeLayer[] = [];
 export const DSH_PLATFORM_POLICY_SCENARIOS: DshPlatformPolicyScenario[] = [];
 export const DSH_PLATFORM_WLT_FINANCIAL_BRIDGE_VARS: DshPlatformVarRecord[] = [];
 export const DSH_PLATFORM_DESIGN_POLICY_VARS: DshPlatformVarRecord[] = [];
@@ -34,24 +32,17 @@ export function resolvePlatformVarsDomainRecords(domain: VarsDomainId): readonly
 }
 
 export function sortPlatformVarsByScope(records: readonly DshPlatformVarRecord[]): DshPlatformVarRecord[] {
-  const scopeOrder: Record<string, number> = {};
-  for (const l of DSH_PLATFORM_SCOPE_PRECEDENCE) {
-    scopeOrder[l.scope] = l.order;
-  }
   return [...records].sort((a, b) => {
-    const ao = scopeOrder[a.scope] ?? 999;
-    const bo = scopeOrder[b.scope] ?? 999;
-    return ao !== bo ? ao - bo : a.label.localeCompare(b.label, 'ar');
+    return a.label.localeCompare(b.label, 'ar');
   });
 }
 
 type PlatformVarKpi = { id: string; label: string; value: string; cls: string };
 
 export function resolvePlatformVarsFilteredScopes(
-  records: readonly DshPlatformVarRecord[],
+  _records: readonly DshPlatformVarRecord[],
 ): DshPlatformVarScope[] {
-  const scopes = Array.from(new Set(records.map((r) => r.scope)));
-  return DSH_PLATFORM_SCOPE_PRECEDENCE.map((l) => l.scope).filter((s) => scopes.includes(s));
+  return [];
 }
 
 export type { DshPlatformVarRecord, DshPlatformVarStatus, DshPlatformVarScope };

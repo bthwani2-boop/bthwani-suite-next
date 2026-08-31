@@ -58,9 +58,18 @@ export function ProductPicker({ value, onChange, label = "اختر المنتج 
           {isLoading && <Box padding={8}><Text tone="secondary">جاري البحث...</Text></Box>}
           {!isLoading && products.length === 0 && query && <Box padding={8}><Text tone="secondary">لا يوجد نتائج</Text></Box>}
           {products.map(p => (
-            <div
+            <button
+              type="button"
               key={p.id}
-              style={{ padding: 8, cursor: "pointer" }}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: 8,
+                border: "none",
+                background: "transparent",
+                textAlign: "start",
+                cursor: "pointer",
+              }}
               onClick={() => {
                 onChange(p.id);
                 setQuery("");
@@ -69,7 +78,7 @@ export function ProductPicker({ value, onChange, label = "اختر المنتج 
             >
               <Text>{p.canonicalNameAr}</Text>
               <Text tone="secondary" role="bodySm">{p.barcode ? `باركود: ${p.barcode}` : "بدون باركود"} | {p.id}</Text>
-            </div>
+            </button>
           ))}
         </Box>
       )}
