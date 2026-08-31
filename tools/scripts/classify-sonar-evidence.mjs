@@ -135,9 +135,9 @@ const argumentValue = (args, name, required = true) => {
   return args[index + 1];
 };
 
-export function runSonarClassifier({input, outputDir, headSha, baseSha, mode, executionStatus}) {
+export function runSonarClassifier({input, outputDir, headSha, baseSha, mode, analysisId, prNumber, executionStatus}) {
   const payload = JSON.parse(fs.readFileSync(input, "utf8"));
-  const result = classifySonarEvidence(payload, {headSha, baseSha, mode, executionStatus});
+  const result = classifySonarEvidence(payload, {headSha, baseSha, mode, analysisId, prNumber, executionStatus});
   fs.mkdirSync(outputDir, {recursive: true});
   fs.writeFileSync(path.join(outputDir, "summary.json"), `${JSON.stringify(result, null, 2)}\n`);
   fs.writeFileSync(path.join(outputDir, "assurance-evidence.json"), `${JSON.stringify({

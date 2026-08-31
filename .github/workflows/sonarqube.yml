@@ -1072,20 +1072,65 @@ jobs:
           }
           analysis_id="$(jq -r '.task.analysisId' "${evidence}/raw/ce-task.json")"
           revision="${HEAD_SHA}"
+          analysis_entries='[]'
           if [[ -n "${PR_NUMBER}" ]]; then
-            fetch_json pull-request api/project_pull_requests/list \
-              --data-urlencode "project=${SONAR_PROJECT_KEY}"
-            jq -e \
-              --arg pr "${PR_NUMBER}" \
-              --arg head "${HEAD_SHA}" \
-              '(.pullRequests // []) as $all |
-               [$all[] | select((.key | tostring) == $pr)] as $matches |
-               if ($matches | length) != 1 then error("exact PR record missing or ambiguous")
-               elif ($matches[0].commit.sha // "") != $head then error("PR commit does not match candidate")
-               else $matches[0] end' \
-              "${evidence}/raw/pull-request.json" > "${evidence}/raw/pull-request-selected.json"
+            selected=false
+            attempt=1
+            max_attempts=60
+            rm -f "${evidence}/raw/pull-request-selected.json" "${evidence}/raw/analysis-selected.json"
+            while (( attempt <= max_attempts )); do
+              fetch_json pull-request api/project_pull_requests/list \
+                --data-urlencode "project=${SONAR_PROJECT_KEY}"
+              if jq -e \
+                --arg pr "${PR_NUMBER}" \
+                --arg head "${HEAD_SHA}" \
+                '(.pullRequests // []) as $all |
+                 [$all[] | select((.key | tostring) == $pr)] as $matches |
+                 ($matches | length) == 1 and ($matches[0].commit.sha // "") == $head' \
+                "${evidence}/raw/pull-request.json" >/dev/null; then
+                jq -e \
+                  --arg pr "${PR_NUMBER}" \
+                  --arg head "${HEAD_SHA}" \
+                  '(.pullRequests // []) |
+                   map(select((.key | tostring) == $pr and (.commit.sha // "") == $head)) |
+                   if length == 1 then .[0] else empty end' \
+                  "${evidence}/raw/pull-request.json" > "${evidence}/raw/pull-request-selected.json"
+                fetch_json analysis-search api/project_analyses/search \
+                  --data-urlencode "project=${SONAR_PROJECT_KEY}" \
+                  --data-urlencode "pullRequest=${PR_NUMBER}" \
+                  --data-urlencode "ps=100"
+                if jq -e \
+                  --arg analysis_id "${analysis_id}" \
+                  --arg head "${HEAD_SHA}" \
+                  '(.analyses // []) |
+                   map(select((.key // "") == $analysis_id and (.revision // "") == $head)) |
+                   length == 1' \
+                  "${evidence}/raw/analysis-search.json" >/dev/null; then
+                  jq -e \
+                    --arg analysis_id "${analysis_id}" \
+                    --arg head "${HEAD_SHA}" \
+                    '{analyses: [(.analyses // [])[] |
+                      select((.key // "") == $analysis_id and (.revision // "") == $head)]}' \
+                    "${evidence}/raw/analysis-search.json" > "${evidence}/raw/analysis-selected.json"
+                  analysis_entries="$(jq -c '.analyses' "${evidence}/raw/analysis-selected.json")"
+                  selected=true
+                  break
+                fi
+              fi
+              if (( attempt == max_attempts )); then
+                break
+              fi
+              sleep 5
+              attempt=$((attempt + 1))
+            done
+            if [[ "${selected}" != "true" ]]; then
+              echo "::error::Sonar PR and analysis records did not converge to the exact candidate after ${max_attempts} attempts"
+              exit 1
+            fi
           else
             printf '%s\n' '{}' > "${evidence}/raw/pull-request-selected.json"
+            analysis_entries="$(jq -cn --arg key "${analysis_id}" --arg revision "${revision}" \
+              '[{key:$key,revision:$revision}]')"
           fi
           quality_gate_args=(--data-urlencode "analysisId=${analysis_id}")
           echo "SONAR_ANALYSIS_ID=${analysis_id}" >> "${GITHUB_ENV}"
@@ -1095,8 +1140,9 @@ jobs:
             --arg revision "${revision}" \
             --arg ceTaskId "${ce_task_id}" \
             --arg projectKey "${SONAR_PROJECT_KEY}" \
+            --argjson analyses "${analysis_entries}" \
             --slurpfile pullRequest "${evidence}/raw/pull-request-selected.json" \
-            '{analysisId:$analysisId,analyses:[{key:$analysisId,revision:$revision}],ceTaskId:$ceTaskId,projectKey:$projectKey,pullRequest:$pullRequest[0]}' \
+            '{analysisId:$analysisId,analyses:$analyses,ceTaskId:$ceTaskId,projectKey:$projectKey,pullRequest:$pullRequest[0]}' \
             > "${evidence}/raw/analysis.json"
 
           fetch_json quality-gate api/qualitygates/project_status "${quality_gate_args[@]}"

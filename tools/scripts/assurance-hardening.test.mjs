@@ -103,6 +103,9 @@ test("Sonar evidence retrieval uses endpoint-specific identity and complete pagi
   assert.match(f, /fetch_remaining_pages hotspots api\/hotspots\/search/u);
   assert.match(f, /merge_paged_json issues/u);
   assert.match(f, /merge_paged_json hotspots/u);
+  assert.match(f, /Sonar PR and analysis records did not converge/u);
+  assert.match(f, /api\/project_analyses\/search/u);
+  assert.match(f, /\.key \/\/ ""\) == \$analysis_id/u);
 });
 
 test("Sonar raw API output is consumed as explicit evidence", () => {

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import {mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
+import {tmpdir} from "node:os";
+import path from "node:path";
 import test from "node:test";
 
-import {classifySonarEvidence} from "./classify-sonar-evidence.mjs";
+import {classifySonarEvidence, runSonarClassifier} from "./classify-sonar-evidence.mjs";
 
 const validPayload = (overrides = {}) => ({
   analysis: {analyses: [{key: "analysis-1", revision: "head"}]},
@@ -64,4 +67,41 @@ test("Sonar execution failure cannot be relabeled as complete evidence", () => {
   assert.equal(result.status, "INCOMPLETE");
   assert.equal(result.executionStatus, "FAILURE");
   assert.equal(result.evidenceComplete, false);
+});
+
+test("Sonar file runner forwards exact analysis and pull-request identity", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "sonar-classifier-"));
+  const input = path.join(directory, "input.json");
+  const outputDir = path.join(directory, "classified");
+  const payload = validPayload({
+    issues: {issues: [], paging: {total: 0}},
+    pullRequest: {key: "349", commit: {sha: "head"}},
+  });
+  writeFileSync(input, `${JSON.stringify(payload)}\n`);
+  try {
+    const mismatch = runSonarClassifier({
+      input,
+      outputDir,
+      headSha: "head",
+      analysisId: "different-analysis",
+      prNumber: "350",
+      executionStatus: "success",
+    });
+    assert.equal(mismatch.evidenceComplete, false);
+    assert.match(mismatch.errors.join("\n"), /analysis: id analysis-1 does not match different-analysis/u);
+    assert.match(mismatch.errors.join("\n"), /exact PR 350 is missing/u);
+
+    const exact = runSonarClassifier({
+      input,
+      outputDir,
+      headSha: "head",
+      analysisId: "analysis-1",
+      prNumber: "349",
+      executionStatus: "success",
+    });
+    assert.equal(exact.status, "PASS");
+    assert.equal(JSON.parse(readFileSync(path.join(outputDir, "summary.json"), "utf8")).evidenceComplete, true);
+  } finally {
+    rmSync(directory, {recursive: true, force: true});
+  }
 });
