@@ -128,6 +128,14 @@ test("experience evidence records are exact-candidate, provenance-bound, and pro
   assert.doesNotMatch(v, new RegExp("bootstrap|candidateAuthors|APPROVED PR review|reviewIdentity|reviewProvenance|semantic|" + retiredReviewer + "|" + retiredSoloOwner, "iu"));
 });
 
+test("OpenCodeReview trusted-source retrieval is authenticated in its reusable worker", () => {
+  const o = read(".github/workflows/open-code-review.yml");
+  assert.match(o, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
+  assert.match(o, /gh api --method GET/u);
+  assert.match(o, /tools\/scripts\/invoke-open-code-review-toolchain\.ps1/u);
+  assert.match(o, /tools\/scripts\/capture-tool-evidence\.mjs/u);
+});
+
 
 test("Node aggregate references a real typed-lint producer", () => {
   const f = read(".github/workflows/ci-node-verification.yml");
