@@ -23,15 +23,13 @@ test("Final Closure requires rendered and mobile proof only when material", () =
   assert.match(final, /mobile-device:NOT_COVERED/u);
 });
 
-test("semantic attestation is bound to exact trusted OCR provenance", () => {
-  const ocr = read(".github/workflows/open-code-review.yml");
+test("Final Closure has no second-person attestation gate around OpenCodeReview", () => {
+  const final = read(".github/workflows/final-closure.yml");
   const validator = read("tools/scripts/verify-pr-evidence-comments.mjs");
-  assert.match(ocr, /context_sha256:/u);
-  assert.match(ocr, /artifact_identity:/u);
-  assert.match(ocr, /package_integrity:/u);
-  assert.match(ocr, /tool_version:/u);
-  assert.match(ocr, /opencodereview-delegation-\$\{HEAD_SHA\}-\$\{context_sha256\}/u);
-  assert.match(validator, /does not match trusted OCR context/u);
+  assert.match(final, /opencodereview:/u);
+  assert.doesNotMatch(final, /semantic-context|semantic-review|SEMANTIC_REVIEW/iu);
+  assert.doesNotMatch(validator, /semantic|reviewIdentity|reviewProvenance|reviewer/iu);
+  assert.match(validator, /producerIdentity/u);
 });
 
 test("rendered baseline is candidate-bound and Windows-safe", () => {

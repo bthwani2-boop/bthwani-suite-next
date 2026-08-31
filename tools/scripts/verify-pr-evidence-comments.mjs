@@ -1,6 +1,6 @@
 import {execFileSync} from "node:child_process";
 
-const [kind, prNumber, candidateSha, expectedPrimary = "", expectedSecondary = "", expectedTertiary = "", expectedQuaternary = ""] = process.argv.slice(2);
+const [kind, prNumber, candidateSha] = process.argv.slice(2);
 
 const fail = (message) => {
   process.stderr.write(`evidence-comment: ${message}\n`);
@@ -24,7 +24,7 @@ const validInstant = (value) => Number.isFinite(Date.parse(nonEmpty(value)));
 
 if (!/^[1-9][0-9]*$/u.test(prNumber ?? "")) fail("positive PR number required");
 if (!exactSha(candidateSha)) fail("exact candidate SHA required");
-if (!["semantic", "rendered", "mobile"].includes(kind)) fail("kind must be semantic, rendered, or mobile");
+if (!["rendered", "mobile"].includes(kind)) fail("kind must be rendered or mobile");
 
 const repository = process.env.GITHUB_REPOSITORY;
 if (!repository) fail("GITHUB_REPOSITORY is required");
@@ -34,7 +34,6 @@ if (pr.state !== "open") fail("PR is not open");
 if (pr.head?.sha !== candidateSha) fail("PR head moved");
 
 const markers = {
-  semantic: "BTHWANI_SEMANTIC_REVIEW:v1",
   rendered: "BTHWANI_RENDERED_WEB_EVIDENCE:v1",
   mobile: "BTHWANI_MOBILE_EVIDENCE:v1",
 };
@@ -61,26 +60,9 @@ if (payload.verdict !== "PASS") fail("evidence verdict is not PASS");
 if (!validInstant(payload.capturedAt)) fail("capturedAt must be an ISO-compatible timestamp");
 if (!sha256(payload.evidenceSha256)) fail("evidenceSha256 must be a 64-hex SHA-256 digest");
 
-if (kind === "semantic") {
-  if (payload.schema !== "BTHWANI_SEMANTIC_REVIEW" || payload.version !== 1) fail("semantic schema/version mismatch");
-  if (payload.reviewIdentity?.kind !== "external-authorized-host-agent") fail("semantic reviewer identity kind mismatch");
-  for (const [name, value] of [
-    ["expected context SHA-256", expectedPrimary],
-    ["expected artifact identity", expectedSecondary],
-    ["expected package integrity", expectedTertiary],
-    ["expected tool version", expectedQuaternary],
-  ]) if (!nonEmpty(value)) fail(`${name} was not supplied by trusted OCR context`);
-
-  const provenance = payload.reviewProvenance ?? {};
-  if (provenance.contextSha256 !== expectedPrimary) fail("semantic context SHA-256 does not match trusted OCR context");
-  if (provenance.artifactIdentity !== expectedSecondary) fail("semantic artifact identity does not match trusted OCR context");
-  if (provenance.packageIntegrity !== expectedTertiary) fail("semantic package integrity does not match trusted OCR context");
-  if (provenance.toolVersion !== expectedQuaternary) fail("semantic tool version does not match trusted OCR context");
-}
-
 if (kind === "rendered") {
   if (payload.schema !== "BTHWANI_RENDERED_WEB_EVIDENCE" || payload.version !== 1) fail("rendered schema/version mismatch");
-  if (payload.reviewIdentity?.kind !== "external-authorized-host-agent") fail("rendered reviewer identity kind mismatch");
+  if (payload.producerIdentity?.kind !== "authorized-host-runner") fail("rendered evidence producer identity kind mismatch");
   if (payload.surface !== "control-panel") fail("rendered surface must be control-panel");
   if (!nonEmpty(payload.runner)) fail("rendered runner identity required");
   if (!Array.isArray(payload.scenarios) || payload.scenarios.length === 0 || payload.scenarios.some((x) => !nonEmpty(x))) fail("rendered evidence requires non-empty material scenarios");
@@ -91,7 +73,7 @@ if (kind === "rendered") {
 
 if (kind === "mobile") {
   if (payload.schema !== "BTHWANI_MOBILE_EVIDENCE" || payload.version !== 1) fail("mobile schema/version mismatch");
-  if (payload.reviewIdentity?.kind !== "external-device-runner") fail("mobile reviewer identity kind mismatch");
+  if (payload.producerIdentity?.kind !== "external-device-runner") fail("mobile evidence producer identity kind mismatch");
   if (!["android", "ios"].includes(payload.platform)) fail("mobile platform mismatch");
   if (!nonEmpty(payload.runner)) fail("mobile runner identity required");
   if (!nonEmpty(payload.device?.model) || !nonEmpty(payload.device?.osVersion) || !nonEmpty(payload.device?.appBuild)) fail("mobile device model/osVersion/appBuild are required");

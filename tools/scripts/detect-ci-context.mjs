@@ -92,7 +92,7 @@ export function deriveClosureRequiredClaims(classification) {
     "analysis:codeql",
     "analysis:semgrep",
     "security:remote",
-    "semantic:review",
+    "analysis:opencodereview",
     classification.rendered_web_required === true ? "experience:rendered-web-baseline" : "",
     classification.rendered_web_required === true ? "experience:rendered-web-attestation" : "",
     classification.mobile_evidence_required === true ? "experience:mobile-device" : "",
@@ -169,6 +169,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const frontend = fullScope || hasPath(files, (file) =>
     startsWithAny(file, ["apps/", "shared/"]) || /(^|\/)(services\/[^/]+\/frontend)\//u.test(file),
   );
+  const typedLintRequired = fullScope || hasPath(files, (file) => /\.(?:ts|tsx|mts|cts)$/u.test(file));
   const contracts = fullScope || hasPath(files, (file) =>
     file.startsWith("contracts/") || file.endsWith(".openapi.yaml") || file.includes("/contracts/") || file.includes("/clients/generated/"),
   );
@@ -267,6 +268,7 @@ export function classifyFiles(inputFiles, options = {}) {
     node_ci_control_plane: ciControlPlane,
     node_dependency_changed: dependencyChanged,
     node_platform: platform,
+    node_typed_lint_required: typedLintRequired,
     migration_authority: migrationAuthority,
     risk_classes: riskClasses,
     verification_required: verificationRequired,

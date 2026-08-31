@@ -115,18 +115,18 @@ test("Sonar raw API output is consumed as explicit evidence", () => {
   assert.match(classifier, /QUALITY_GATE_OPEN/u);
 });
 
-test("evidence records are exact-candidate, provenance-bound, and OWNER-authorized", () => {
+test("experience evidence records are exact-candidate, provenance-bound, and producer-identified", () => {
   const v = read("tools/scripts/verify-pr-evidence-comments.mjs");
   assert.match(v, /OWNER association/u);
   assert.match(v, /evidenceSha256/u);
   assert.match(v, /capturedAt/u);
-  assert.match(v, /external-authorized-host-agent/u);
-   assert.match(v, /external-device-runner/u);
-   assert.match(v, /does not match trusted OCR context/u);
-   const retiredReviewer = ["external-authorized-", "assurance-reviewer"].join("");
-   const retiredSoloOwner = ["solo-", "owner"].join("");
-   assert.doesNotMatch(v, new RegExp("bootstrap|candidateAuthors|APPROVED PR review|" + retiredReviewer + "|" + retiredSoloOwner, "iu"));
- });
+  assert.match(v, /authorized-host-runner/u);
+  assert.match(v, /external-device-runner/u);
+  assert.match(v, /producerIdentity/u);
+  const retiredReviewer = ["external-authorized-", "assurance-reviewer"].join("");
+  const retiredSoloOwner = ["solo-", "owner"].join("");
+  assert.doesNotMatch(v, new RegExp("bootstrap|candidateAuthors|APPROVED PR review|reviewIdentity|reviewProvenance|semantic|" + retiredReviewer + "|" + retiredSoloOwner, "iu"));
+});
 
 
 test("Node aggregate references a real typed-lint producer", () => {

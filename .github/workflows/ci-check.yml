@@ -62,6 +62,7 @@ jobs:
       node_ci_control_plane: ${{ steps.scope.outputs.node_ci_control_plane }}
       node_dependency_changed: ${{ steps.scope.outputs.node_dependency_changed }}
       node_platform: ${{ steps.scope.outputs.node_platform }}
+      node_typed_lint_required: ${{ steps.scope.outputs.node_typed_lint_required }}
       required_claims: ${{ steps.scope.outputs.required_claims }}
       reused_pass_claims: ${{ steps.scope.outputs.reused_pass_claims }}
       replayed_failed_claims: ${{ steps.scope.outputs.replayed_failed_claims }}
@@ -282,7 +283,7 @@ jobs:
             full_scope dependency_changed platform infrastructure ci_control_plane contracts \
             dsh wlt identity workforce providers database_changed backend_database_changed \
             runtime_required diagnostics_required verification_required backend_required \
-            node_contracts node_ci_control_plane node_dependency_changed node_platform \
+            node_contracts node_ci_control_plane node_dependency_changed node_platform node_typed_lint_required \
             required_claims reused_pass_claims replayed_failed_claims; do
             emit_output "${key}"
           done
@@ -449,6 +450,7 @@ jobs:
       ci_control_plane: ${{ needs.context.outputs.node_ci_control_plane }}
       dependency_changed: ${{ needs.context.outputs.node_dependency_changed }}
       platform: ${{ needs.context.outputs.node_platform }}
+      typed_lint_required: ${{ needs.context.outputs.node_typed_lint_required }}
 
   backends:
     name: Backend verification

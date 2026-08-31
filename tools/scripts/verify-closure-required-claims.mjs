@@ -3,8 +3,8 @@ const KNOWN_CLAIMS = new Set([
   "analysis:sonar",
   "analysis:codeql",
   "analysis:semgrep",
+  "analysis:opencodereview",
   "security:remote",
-  "semantic:review",
   "experience:rendered-web-baseline",
   "experience:rendered-web-attestation",
   "experience:mobile-device",
@@ -17,6 +17,7 @@ const TOOL_REQUIREMENTS = new Map([
   ["analysis:sonar", ["sonar"]],
   ["analysis:codeql", ["codeql"]],
   ["analysis:semgrep", ["semgrep"]],
+  ["analysis:opencodereview", ["opencodereview"]],
   ["security:remote", [
     "gitleaks",
     "osv-scanner",

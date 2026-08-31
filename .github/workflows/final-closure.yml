@@ -225,8 +225,8 @@ jobs:
       base_ref: ${{ needs.resolve.outputs.base_ref }}
 
 
-  semantic-context:
-    name: Prepare deterministic semantic review context
+  opencodereview:
+    name: OpenCodeReview exact-candidate inspection
     needs: [resolve]
     if: ${{ needs.resolve.result == 'success' }}
     permissions:
@@ -237,41 +237,6 @@ jobs:
       base_ref: ${{ needs.resolve.outputs.base_ref }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
-
-  semantic-review:
-    name: Validate exact host semantic review attestation
-    needs: [resolve, semantic-context]
-    if: ${{ needs.resolve.result == 'success' && needs.semantic-context.result == 'success' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pull-requests: read
-      issues: read
-    steps:
-      - name: Load trusted evidence validator
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TRUSTED_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          validator="${RUNNER_TEMP}/verify-pr-evidence-comments.mjs"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28'             "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/verify-pr-evidence-comments.mjs"             -f "ref=${TRUSTED_SHA}" --jq '.content' | base64 --decode > "${validator}"
-          [[ -s "${validator}" ]]
-          echo "EVIDENCE_VALIDATOR=${validator}" >> "${GITHUB_ENV}"
-
-      - name: Validate semantic attestation against exact OCR provenance
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          node "${EVIDENCE_VALIDATOR}" semantic
-          "${{ needs.resolve.outputs.pr_number }}"
-          "${{ needs.resolve.outputs.head_sha }}"
-          "${{ needs.semantic-context.outputs.context_sha256 }}"
-          "${{ needs.semantic-context.outputs.artifact_identity }}"
-          "${{ needs.semantic-context.outputs.package_integrity }}"
-          "${{ needs.semantic-context.outputs.tool_version }}"
 
   rendered-web-baseline:
     name: Rendered Web exact-candidate baseline
@@ -381,7 +346,7 @@ jobs:
 
   final:
     name: BThwani / Change Closure
-    needs: [resolve, ci, sonar, codeql, semgrep, security, semantic-review, rendered-web-baseline, rendered-web-evidence, mobile-evidence, dependency, lockfile, docker]
+    needs: [resolve, ci, sonar, codeql, semgrep, security, opencodereview, rendered-web-baseline, rendered-web-evidence, mobile-evidence, dependency, lockfile, docker]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -403,7 +368,11 @@ jobs:
           CODEQL_RESULT: ${{ needs.codeql.result }}
           SEMGREP_RESULT: ${{ needs.semgrep.result }}
           SECURITY_RESULT: ${{ needs.security.result }}
-          SEMANTIC_REVIEW_RESULT: ${{ needs.semantic-review.result }}
+          OPENCODEREVIEW_RESULT: ${{ needs.opencodereview.result }}
+          OPENCODEREVIEW_CONTEXT_SHA256: ${{ needs.opencodereview.outputs.context_sha256 }}
+          OPENCODEREVIEW_ARTIFACT_IDENTITY: ${{ needs.opencodereview.outputs.artifact_identity }}
+          OPENCODEREVIEW_PACKAGE_INTEGRITY: ${{ needs.opencodereview.outputs.package_integrity }}
+          OPENCODEREVIEW_TOOL_VERSION: ${{ needs.opencodereview.outputs.tool_version }}
           RENDERED_WEB_BASELINE_RESULT: ${{ needs.rendered-web-baseline.result }}
           RENDERED_WEB_RESULT: ${{ needs.rendered-web-evidence.result }}
           MOBILE_EVIDENCE_RESULT: ${{ needs.mobile-evidence.result }}
@@ -424,11 +393,17 @@ jobs:
             "codeql:${CODEQL_RESULT}" \
             "semgrep:${SEMGREP_RESULT}" \
             "security:${SECURITY_RESULT}" \
-            "semantic-review:${SEMANTIC_REVIEW_RESULT}"; do
+            "opencodereview:${OPENCODEREVIEW_RESULT}"; do
             name="${pair%%:*}"
             result="${pair#*:}"
             [[ "${result}" == "success" ]] || failures+=("${name}:${result}")
           done
+          if (( ${#failures[@]} == 0 )); then
+            [[ "${OPENCODEREVIEW_CONTEXT_SHA256}" =~ ^[0-9a-fA-F]{64}$ ]] || failures+=("opencodereview:context_sha256-missing")
+            [[ -n "${OPENCODEREVIEW_ARTIFACT_IDENTITY}" ]] || failures+=("opencodereview:artifact_identity-missing")
+            [[ -n "${OPENCODEREVIEW_PACKAGE_INTEGRITY}" ]] || failures+=("opencodereview:package_integrity-missing")
+            [[ "${OPENCODEREVIEW_TOOL_VERSION}" == "1.9.9" ]] || failures+=("opencodereview:tool_version-mismatch")
+          fi
           if [[ "${RENDERED_WEB_REQUIRED}" == "true" ]]; then
             [[ "${RENDERED_WEB_BASELINE_RESULT}" == "success" ]] || failures+=("rendered-web-baseline:NOT_COVERED:${RENDERED_WEB_BASELINE_RESULT}")
             [[ "${RENDERED_WEB_RESULT}" == "success" ]] || failures+=("rendered-web:NOT_COVERED:${RENDERED_WEB_RESULT}")
@@ -604,7 +579,11 @@ jobs:
           CODEQL_RESULT: ${{ needs.codeql.result }}
           SEMGREP_RESULT: ${{ needs.semgrep.result }}
           SECURITY_RESULT: ${{ needs.security.result }}
-          SEMANTIC_REVIEW_RESULT: ${{ needs.semantic-review.result }}
+          OPENCODEREVIEW_RESULT: ${{ needs.opencodereview.result }}
+          OPENCODEREVIEW_CONTEXT_SHA256: ${{ needs.opencodereview.outputs.context_sha256 }}
+          OPENCODEREVIEW_ARTIFACT_IDENTITY: ${{ needs.opencodereview.outputs.artifact_identity }}
+          OPENCODEREVIEW_PACKAGE_INTEGRITY: ${{ needs.opencodereview.outputs.package_integrity }}
+          OPENCODEREVIEW_TOOL_VERSION: ${{ needs.opencodereview.outputs.tool_version }}
           MANIFEST_RENDERED_WEB_BASELINE_RESULT: ${{ needs.rendered-web-baseline.result }}
           MANIFEST_RENDERED_WEB_RESULT: ${{ needs.rendered-web-evidence.result }}
           MANIFEST_MOBILE_EVIDENCE_RESULT: ${{ needs.mobile-evidence.result }}
@@ -652,7 +631,11 @@ jobs:
             --arg codeqlResult "${CODEQL_RESULT}" \
             --arg semgrepResult "${SEMGREP_RESULT}" \
             --arg securityResult "${SECURITY_RESULT}" \
-            --arg semanticReviewResult "${SEMANTIC_REVIEW_RESULT}" \
+            --arg opencodereviewResult "${OPENCODEREVIEW_RESULT}" \
+            --arg ocrContextSha256 "${OPENCODEREVIEW_CONTEXT_SHA256}" \
+            --arg ocrArtifactIdentity "${OPENCODEREVIEW_ARTIFACT_IDENTITY}" \
+            --arg ocrPackageIntegrity "${OPENCODEREVIEW_PACKAGE_INTEGRITY}" \
+            --arg ocrToolVersion "${OPENCODEREVIEW_TOOL_VERSION}" \
             --arg renderedWebBaselineResult "${MANIFEST_RENDERED_WEB_BASELINE_RESULT}" \
             --arg renderedWebResult "${MANIFEST_RENDERED_WEB_RESULT}" \
             --arg mobileEvidenceResult "${MANIFEST_MOBILE_EVIDENCE_RESULT}" \
@@ -674,7 +657,7 @@ jobs:
               candidate: {changedFiles: $changedFiles, files: $files},
               mandatoryProofs: {riskClasses: ($riskClasses | split(",") | map(select(length > 0))), requiredJobs: ($requiredJobs | split(",") | map(select(length > 0))), requiredClaims: ($requiredClaims | split(",") | map(select(length > 0)))},
               migrations: {changed: $migrations, manifests: $migrationManifests, amendmentsRegistryTouched: ($amendmentsTouched == "true")},
-              analysis: {ci: $ciResult, sonar: $sonarResult, codeql: $codeqlResult, semgrep: $semgrepResult, security: $securityResult, semanticReview: $semanticReviewResult, dependency: $dependencyResult, lockfile: $lockfileResult, docker: $dockerResult},
+              analysis: {ci: $ciResult, sonar: $sonarResult, codeql: $codeqlResult, semgrep: $semgrepResult, security: $securityResult, opencodereview: {result: $opencodereviewResult, contextSha256: $ocrContextSha256, artifactIdentity: $ocrArtifactIdentity, packageIntegrity: $ocrPackageIntegrity, toolVersion: $ocrToolVersion}, dependency: $dependencyResult, lockfile: $lockfileResult, docker: $dockerResult},
               evidenceConsumption: $evidenceConsumption[0],
               rootGraph: $rootGraph[0],
               assuranceClaims: {

@@ -173,17 +173,12 @@ test("material rendered and mobile evidence are closure inputs", () => {
   assert.match(f, /experienceEvidence:/u);
 });
 
-test("semantic review is bound to deterministic trusted OCR provenance", () => {
+test("Final Closure uses OpenCodeReview without a reviewer-attestation authority", () => {
   const f = read(".github/workflows/final-closure.yml");
-  assert.match(f, /semantic-review:/u);
-  assert.match(f, /SEMANTIC_REVIEW_RESULT/u);
-  assert.match(f, /verify-pr-evidence-comments\.mjs/u);
-  const o = read(".github/workflows/open-code-review.yml");
-  assert.match(o, /opencodereview-delegation-\$\{HEAD_SHA\}-\$\{context_sha256\}/u);
-  const v = read("tools/scripts/verify-pr-evidence-comments.mjs");
-  assert.match(v, /does not match trusted OCR context/u);
-  assert.match(v, /evidence is stale or cross-SHA/u);
-  assert.match(v, /OWNER association/u);
+  assert.match(f, /opencodereview:/u);
+  assert.doesNotMatch(f, /semantic-context|semantic-review|SEMANTIC_REVIEW/iu);
+  assert.match(f, /rendered-web-evidence:/u);
+  assert.match(f, /mobile-evidence:/u);
 });
 
 test("assurance-critical routers and validators are loaded from trusted workflow authority", () => {

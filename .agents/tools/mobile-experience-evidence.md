@@ -7,11 +7,11 @@ Mobile source/static checks are not device interaction proof.
 
 When mobile experience is materially affected, the active host agent must execute a real Android/iOS device or emulator scenario using an available device-capable harness and bind the result to the exact candidate SHA.
 
-Required attestation contract for Final Closure:
+Required technical evidence contract for Final Closure:
 
 ```text
 BTHWANI_MOBILE_EVIDENCE:v1
-{"schema":"BTHWANI_MOBILE_EVIDENCE","version":1,"candidateSha":"<40 sha>","verdict":"PASS","platform":"android|ios","runner":"<device/emulator identity>","scenarios":["<non-empty scenario>"],"evidenceIdentity":"<artifact/log/session identity>"}
+{"schema":"BTHWANI_MOBILE_EVIDENCE","version":1,"candidateSha":"<40 sha>","verdict":"PASS","producerIdentity":{"kind":"external-device-runner"},"platform":"android|ios","runner":"<device/emulator identity>","device":{"model":"<model>","osVersion":"<version>","appBuild":"<build>"},"scenarios":["<non-empty scenario>"],"evidenceIdentity":"<artifact/log/session identity>"}
 ```
 
 Rules:
@@ -20,6 +20,6 @@ Rules:
 - stale SHA evidence is rejected;
 - an empty scenario list is rejected;
 - failure/retry/permission/lifecycle behavior must be included when material;
-- the attestation is evidence, not Product Truth or closure authority.
+- the record is technical device evidence, not Product Truth, a review, or approval authority.
 
-Required attestation fields additionally include `capturedAt`, `evidenceSha256` (64-hex SHA-256), `reviewIdentity.kind=external-device-runner`, `reviewIdentity.login` matching the GitHub comment author, and `device.model`, `device.osVersion`, `device.appBuild`. The attester must not be the PR creator or any GitHub-linked candidate author/committer.
+Required evidence fields additionally include `capturedAt`, `evidenceSha256` (64-hex SHA-256), `producerIdentity.kind=external-device-runner`, and `device.model`, `device.osVersion`, `device.appBuild`. Candidate authorship neither satisfies nor disqualifies the proof; the real device/emulator execution and exact-candidate provenance do.

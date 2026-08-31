@@ -10,6 +10,7 @@ on:
       ci_control_plane: {type: string, required: true}
       dependency_changed: {type: string, required: true}
       platform: {type: string, required: true}
+      typed_lint_required: {type: string, required: true}
 
 permissions:
   contents: read
@@ -57,6 +58,7 @@ jobs:
         uses: ./.github/actions/setup-node-workspace
       - name: Run typed ESLint through Project Service
         id: typed_lint
+        if: ${{ inputs.typed_lint_required == 'true' }}
         continue-on-error: true
         run: pnpm run lint:typed
 
@@ -155,6 +157,7 @@ jobs:
           MATERIALIZE: ${{ steps.materialize.outcome }}
           NODE_GRAPH: ${{ steps.node_graph.outcome }}
           TYPED_LINT: ${{ steps.typed_lint.outcome }}
+          TYPED_LINT_REQUIRED: ${{ inputs.typed_lint_required }}
           CI_CONTROL_REQUIRED: ${{ inputs.ci_control_plane }}
           CI_CONTROL: ${{ steps.ci_control.outcome }}
           PLATFORM_REQUIRED: ${{ inputs.platform }}
@@ -165,7 +168,11 @@ jobs:
           set -euo pipefail
           failures=()
           [[ "${WHITESPACE}" == "success" ]] || failures+=("whitespace:${WHITESPACE}")
-          [[ "${TYPED_LINT}" == "success" ]] || failures+=("typed-lint:${TYPED_LINT}")
+          if [[ "${TYPED_LINT_REQUIRED}" == "true" ]]; then
+            [[ "${TYPED_LINT}" == "success" ]] || failures+=("typed-lint:${TYPED_LINT}")
+          else
+            [[ "${TYPED_LINT}" == "skipped" ]] || failures+=("typed-lint-unexpected:${TYPED_LINT}")
+          fi
           if [[ "${CONTRACTS_REQUIRED}" == "true" ]]; then
             [[ "${MATERIALIZE}" == "success" ]] || failures+=("contract-materialization:${MATERIALIZE}")
             if [[ "${MATERIALIZE}" == "success" ]]; then

@@ -26,7 +26,7 @@ const workerWorkflowFiles = workflowFiles.filter((file) => file !== "pr-assuranc
 const workerWorkflowText = workerWorkflowFiles.map((file) => read(path.join(workflowDir, file))).join("\n");
 const ci = read(path.join(workflowDir, "ci-check.yml"));
 const closure = read(path.join(workflowDir, "final-closure.yml"));
-const semanticContext = read(path.join(workflowDir, "open-code-review.yml"));
+const openCodeReview = read(path.join(workflowDir, "open-code-review.yml"));
 const repositoryBaseline = read(path.join(workflowDir, "repository-baseline.yml"));
 const assuranceDispatcher = read(path.join(workflowDir, "pr-assurance-trigger.yml"));
 
@@ -40,12 +40,13 @@ mustContain(closure, [
   "name: Full CI preflight",
   "BThwani / Change Closure",
   "statuses/${HEAD_SHA}",
-  "semantic-context:",
+  "opencodereview:",
   "uses: ./.github/workflows/open-code-review.yml",
-  "semantic-review:",
+  "rendered-web-evidence:",
+  "mobile-evidence:",
   "verify-pr-evidence-comments.mjs",
 ], "final closure");
-mustNotContain(closure, ["pull_request:", "SEMANTIC_RESULT", "workflow_run:", "repository_dispatch", "sleep", "poll"], "final closure control plane");
+mustNotContain(closure, ["pull_request:", "SEMANTIC_RESULT", "semantic-context", "semantic-review", "SEMANTIC_REVIEW", "workflow_run:", "repository_dispatch", "sleep", "poll"], "final closure control plane");
 mustNotMatch(closure, [/\/pulls\/[^\s"']+\/files(?:\?|["'])/u], "final closure changed-file authority");
 
 mustContain(repositoryBaseline, ["workflow_dispatch:", "BThwani / Static Repository Baseline", "BASELINE_OPEN", "exact candidate", "uses: ./.github/workflows/codeql.yml", "uses: ./.github/workflows/sonarqube.yml", "CODEQL_RESULT", "SONAR_RESULT"], "static repository baseline");
@@ -75,22 +76,28 @@ mustNotContain(assuranceDispatcher, [
   "\n  schedule:",
 ], "trusted assurance dispatcher");
 
-mustContain(semanticContext, [
-  "workflow_call:",
-  "deterministic-delegation-context",
-  "hostAgentRequired: true",
-  "hostAgentExecutedByThisWorkflow: false",
-  "semanticReviewClaimedByThisWorkflow: false",
-], "OpenCodeReview deterministic context worker");
-mustNotContain(semanticContext, [
-  "\n  pull_request:",
-  "\n  push:",
-  "\n  schedule:",
-  "hostAgentExecutedByThisWorkflow: true",
-  "semanticReviewClaimedByThisWorkflow: true",
-], "OpenCodeReview deterministic context worker");
-
 mustNotContain(workerWorkflowText, ["workflow_run:", "repository_dispatch", "actions/workflows/"], "workflow control plane");
+mustContain(openCodeReview, [
+  "workflow_call:",
+  "tools/scripts/invoke-open-code-review-toolchain.ps1",
+  "-Mode Verify",
+  "-Mode DelegateAudit",
+  "context_sha256",
+  "artifact_identity",
+  "package_integrity",
+  "tool_version",
+  "deterministic-delegation-context",
+  "exact candidate",
+  "capture-tool-evidence.mjs",
+], "OpenCodeReview canonical worker");
+mustNotContain(openCodeReview, [
+  "\n  pull_request:",
+  "hostAgentRequired",
+  "external-authorized-host-agent",
+  "BTHWANI_SEMANTIC_REVIEW",
+  "human_review_required",
+  "BOOTSTRAP_REQUIRED",
+], "OpenCodeReview canonical worker");
 for (const file of ["codeql.yml", "semgrep.yml", "security-remote.yml", "sonarqube.yml", "dependency-review.yml", "lockfile-integrity.yml", "docker-runtime-hardening.yml"]) {
   const content = read(path.join(workflowDir, file));
   mustContain(content, ["workflow_call:"], file);
