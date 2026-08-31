@@ -98,6 +98,7 @@ export function auditSonarConfiguration({
   const expectedTsconfigs = [...new Set((tsconfigFiles ?? []).map(normalizePath).filter(Boolean))]
     .filter((file) => model.governedRoots.some((prefix) => isUnderPrefix(file, prefix)))
     .filter((file) => /^tsconfig(?:\.[^/]+)?\.json$/iu.test(path.posix.basename(file)))
+    .filter((file) => !model.tsconfigExclusions.includes(file))
     .sort();
   const lines = activePropertyLines(sonarProperties);
   const configuredTsconfigs = (propertyValue(lines, "sonar.typescript.tsconfigPaths") ?? "")
@@ -115,6 +116,11 @@ export function auditSonarConfiguration({
   for (const file of configuredTsconfigs) {
     if (!expectedSet.has(file)) {
       violations.push({file: SONAR_PROPERTIES, message: `TypeScript project is not a governed repository project: ${file}`});
+    }
+  }
+  for (const file of model.tsconfigExclusions) {
+    if (configuredSet.has(file)) {
+      violations.push({file: SONAR_PROPERTIES, message: `excluded TypeScript project must not be configured: ${file}`});
     }
   }
   if (configuredTsconfigs.length !== configuredSet.size) {

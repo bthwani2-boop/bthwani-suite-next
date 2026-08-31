@@ -621,7 +621,8 @@ jobs:
             sarif_status_endpoint="/repos/${GITHUB_REPOSITORY}/code-scanning/sarifs/${upload_id}"
             processing_status=""
             analyses_url=""
-            for attempt in $(seq 1 60); do
+            attempt=1
+            while (( attempt <= 60 )); do
               sarif_status="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "${sarif_status_endpoint}")"
               processing_status="$(jq -r '.processing_status // empty' <<<"${sarif_status}")"
               analyses_url="$(jq -r '.analyses_url // empty' <<<"${sarif_status}")"
@@ -641,6 +642,7 @@ jobs:
                   exit 1
                   ;;
               esac
+              ((attempt += 1))
             done
             [[ "${processing_status}" == "complete" ]] || {
               echo "::error::CodeQL SARIF processing did not complete for upload ${upload_id}"

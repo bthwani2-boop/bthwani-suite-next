@@ -11,7 +11,7 @@
     "ci:check": "node tools/scripts/ci-check.mjs",
     "ci:close": "node tools/scripts/ci-close.mjs",
     "assurance:discover": "node tools/scripts/run-deep-discovery.mjs",
-    "assurance:self-test": "node --test tools/scripts/assurance-system.test.mjs tools/scripts/assurance-experience-binding.test.mjs tools/scripts/assurance-hardening.test.mjs tools/scripts/run-deep-discovery.test.mjs tools/scripts/lib/evidence-envelope.test.mjs tools/scripts/consume-evidence-artifacts.test.mjs tools/scripts/classify-codeql-evidence.test.mjs tools/scripts/validate-codeql-analysis-binding.test.mjs tools/scripts/classify-semgrep-evidence.test.mjs tools/scripts/classify-sonar-evidence.test.mjs tools/scripts/compare-assurance-baseline.test.mjs",
+    "assurance:self-test": "node --test tools/scripts/assurance-system.test.mjs tools/scripts/assurance-experience-binding.test.mjs tools/scripts/assurance-hardening.test.mjs tools/scripts/run-deep-discovery.test.mjs tools/scripts/lib/evidence-envelope.test.mjs tools/scripts/consume-evidence-artifacts.test.mjs tools/scripts/classify-codeql-evidence.test.mjs tools/scripts/validate-codeql-analysis-binding.test.mjs tools/scripts/validate-sonar-analysis-task.test.mjs tools/scripts/classify-semgrep-evidence.test.mjs tools/scripts/classify-sonar-evidence.test.mjs tools/scripts/compare-assurance-baseline.test.mjs",
     "contracts:redocly": "node tools/scripts/contracts/typecheck.mjs",
     "contracts:lint": "pnpm run contracts:redocly && pnpm run guard:contract-registry-drift",
     "typecheck": "pnpm run affected:typecheck",

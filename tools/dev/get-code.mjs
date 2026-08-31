@@ -6,7 +6,7 @@ import {
   authorization,
   getPasswordToken,
   getProvider,
-  readGeneratedRegistry,
+  resolveExistingProvider,
   requestJson,
 } from './local-workforce-provisioning.mjs';
 
@@ -19,7 +19,7 @@ function usage() {
     'By default the activation code is not printed. Pass --reveal-code only in an interactive',
     'local development terminal when the plaintext code is explicitly required.',
     '',
-    'When --actor-id is omitted, the actor is resolved from the generated local workforce registry.',
+    'When --actor-id is omitted, the actor is resolved from the canonical Workforce profile.',
   ].join('\n');
 }
 
@@ -63,23 +63,16 @@ function endpointFor(role) {
   return role === 'field' ? 'field-agents' : 'captains';
 }
 
-function registryActorId(role) {
-  const registry = readGeneratedRegistry();
-  if (!registry) return '';
-  if (role === 'field') return String(registry.FIELD_ACTOR_ID || registry.actors?.field?.actorId || '').trim();
-  return String(registry.CAPTAIN_ACTOR_ID || registry.actors?.captain?.actorId || '').trim();
-}
-
 async function issueCode({ role, actorId, revealCode }) {
-  const resolvedActorId = actorId || registryActorId(role);
+  const operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
+  const canonicalProvider = actorId ? null : await resolveExistingProvider(operatorToken, role);
+  const resolvedActorId = actorId || canonicalProvider?.actorId || '';
   if (!resolvedActorId) {
     throw new Error(
-      `no ${role} actor id was supplied and the generated local workforce registry has no ${role} actor; ` +
+      `no ${role} canonical Workforce profile was found; ` +
         'run the governed local workforce provisioning flow first or pass --actor-id explicitly',
     );
   }
-
-  const operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
   const detail = await getProvider(operatorToken, role, resolvedActorId);
   if (!Number.isInteger(detail?.version) || detail.version < 0) {
     throw new Error(`workforce:get-${role} returned an invalid version for actor ${resolvedActorId}`);

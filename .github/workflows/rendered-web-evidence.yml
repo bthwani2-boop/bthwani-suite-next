@@ -75,13 +75,21 @@ jobs:
           trusted_dir="${GITHUB_WORKSPACE}/.bthwani-trusted-rendered"
           mkdir -p "${trusted_dir}"
           trusted="${trusted_dir}/run-rendered-control-panel-proof.mjs"
+          capture_tool="${trusted_dir}/capture-tool-evidence.mjs"
           gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
             "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/run-rendered-control-panel-proof.mjs" \
             -f "ref=${TRUSTED_SHA}" --jq '.content' | base64 --decode > "${trusted}"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/capture-tool-evidence.mjs" \
+            -f "ref=${TRUSTED_SHA}" --jq '.content' | base64 --decode > "${capture_tool}"
           [[ -s "${trusted}" ]]
+          [[ -s "${capture_tool}" ]]
           echo "TRUSTED_RENDERED_VERIFIER=${trusted}" >> "${GITHUB_ENV}"
 
       - name: Execute rendered proof against candidate
+        env:
+          BTHWANI_RENDERED_EVIDENCE_DIR: ${{ runner.temp }}/bthwani-rendered-web
+          BTHWANI_EVIDENCE_DIR: ${{ runner.temp }}/bthwani-rendered-web
         run: node "${TRUSTED_RENDERED_VERIFIER}"
 
       - name: Upload rendered evidence

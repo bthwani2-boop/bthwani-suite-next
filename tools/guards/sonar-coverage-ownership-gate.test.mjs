@@ -34,6 +34,30 @@ test("new product TypeScript projects fail until Sonar lists their tsconfig", ()
   assert.equal(violations.some(({message}) => message.includes("apps/new-runtime/tsconfig.json")), true);
 });
 
+test("generated-only TypeScript projects are excluded only through canonical ownership", () => {
+  const violations = auditSonarConfiguration({
+    files: codeFiles,
+    tsconfigFiles: [...tsconfigFiles, "core/workforce/tsconfig.json"],
+    model,
+    sonarProperties,
+  });
+  assert.deepEqual(violations, []);
+  assert.equal(model.tsconfigExclusions.includes("core/workforce/tsconfig.json"), true);
+});
+
+test("an excluded TypeScript project cannot be reintroduced into Sonar", () => {
+  const violations = auditSonarConfiguration({
+    files: codeFiles,
+    tsconfigFiles,
+    model,
+    sonarProperties: sonarProperties.replace(
+      "sonar.typescript.tsconfigPaths=",
+      "sonar.typescript.tsconfigPaths=core/workforce/tsconfig.json,",
+    ),
+  });
+  assert.equal(violations.some(({message}) => message.includes("excluded TypeScript project must not be configured")), true);
+});
+
 test("SQL exclusion without its canonical authority and disabled Quality Gate waiting fail closed", () => {
   const withoutSqlAuthority = sonarProperties
     .replace(/# SQL exclusion authority:[\s\S]*?# The S2077 entries below/u, "# The S2077 entries below")

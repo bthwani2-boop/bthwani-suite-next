@@ -17,6 +17,7 @@ import {
   readGeneratedRegistry,
   requestJson,
   stableToken,
+  resolveExistingProvider,
 } from '../../tools/dev/local-workforce-provisioning.mjs';
 import { LOCAL_ACTORS, LOCAL_WORKFORCE_PROVIDERS } from '../../tools/dev/local-actors.mjs';
 
@@ -111,9 +112,18 @@ async function collectReadOnlyReadinessFailures() {
     if (!provisioned?.actorId) continue;
 
     try {
-      const detail = await getProvider(operatorToken, role, provisioned.actorId);
-      if (detail?.actorId !== provisioned.actorId) {
+      const canonicalProvider = await resolveExistingProvider(operatorToken, role);
+      const actorId = canonicalProvider?.actorId;
+      if (!actorId) {
+        failures.push(`app-${role}: no canonical Workforce provider profile was found`);
+        continue;
+      }
+      if (actorId !== provisioned.actorId) {
         failures.push(`app-${role}: Workforce provider actor binding does not match the generated registry`);
+      }
+      const detail = await getProvider(operatorToken, role, actorId);
+      if (detail?.actorId !== actorId) {
+        failures.push(`app-${role}: canonical Workforce provider read returned a divergent actorId`);
       }
       if (detail?.workforceKind !== role) {
         failures.push(`app-${role}: Workforce provider kind does not match the mobile surface`);
@@ -124,12 +134,12 @@ async function collectReadOnlyReadinessFailures() {
       if (role === 'captain') {
         const dispatchReadiness = await requestJson(
           'dsh:captain-dispatch-readiness-read',
-          `${DSH_API_BASE}/dsh/operator/dispatch/captains/${encodeURIComponent(provisioned.actorId)}/readiness`,
+          `${DSH_API_BASE}/dsh/operator/dispatch/captains/${encodeURIComponent(actorId)}/readiness`,
           {
             headers: {
               ...authorization(operatorToken),
               'X-Operator-Context-ID': LOCAL_OPERATOR_CONTEXT_ID,
-              'X-Correlation-ID': `mobile-dev-captain-dispatch-readiness-${stableToken(provisioned.actorId)}`,
+              'X-Correlation-ID': `mobile-dev-captain-dispatch-readiness-${stableToken(actorId)}`,
             },
           },
         );
@@ -140,7 +150,7 @@ async function collectReadOnlyReadinessFailures() {
         }
         const eligibility = await requestJson(
           'dsh:captain-financial-eligibility-read',
-          `${DSH_API_BASE}/dsh/operator/dispatch/captains/${encodeURIComponent(provisioned.actorId)}/financial-eligibility`,
+          `${DSH_API_BASE}/dsh/operator/dispatch/captains/${encodeURIComponent(actorId)}/financial-eligibility`,
           {
             headers: {
               ...authorization(operatorToken),
@@ -186,16 +196,22 @@ async function collectProviderFailures(operatorToken, providerTokens = {}) {
     const provisioned = registry.actors[role];
     try {
       if (!provisioned?.actorId) throw new Error('missing from the generated actor registry');
+      const canonicalProvider = await resolveExistingProvider(operatorToken, role);
+      const actorId = canonicalProvider?.actorId;
+      if (!actorId) throw new Error('canonical Workforce provider profile not found');
+      if (actorId !== provisioned.actorId) {
+        failures.push(`app-${role}: Workforce provider actor binding does not match the generated registry`);
+      }
       const token = providerTokens[role] ?? await issueProviderToken(
-          operatorToken,
-          role,
-          provisioned.actorId,
-          LOCAL_WORKFORCE_PROVIDERS[role].phoneE164,
-        );
+        operatorToken,
+        role,
+        actorId,
+        LOCAL_WORKFORCE_PROVIDERS[role].phoneE164,
+      );
       const me = await requestJson(`workforce:${role}:me`, `${WORKFORCE_API_BASE}/workforce/me`, {
         headers: authorization(token),
       });
-      if (me?.actorId !== provisioned.actorId) failures.push(`app-${role}: unexpected Workforce actor binding`);
+      if (me?.actorId !== actorId) failures.push(`app-${role}: unexpected Workforce actor binding`);
       if (me?.workforceKind !== role) failures.push(`app-${role}: unexpected Workforce kind`);
       if (me?.profileComplete !== true) failures.push(`app-${role}: Workforce self profile is incomplete`);
       if (me?.engagementStatus !== 'active') failures.push(`app-${role}: Workforce engagement is not active`);

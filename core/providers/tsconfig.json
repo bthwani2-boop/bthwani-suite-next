@@ -4,5 +4,5 @@
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["clients/**/*.ts"]
+  "include": ["clients/**/*.ts", "service.manifest.ts"]
 }

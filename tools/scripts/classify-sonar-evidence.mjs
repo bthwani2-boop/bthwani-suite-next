@@ -76,6 +76,17 @@ export function classifySonarEvidence(payload, metadata = {}) {
   const revision = normalizeText(analysis?.analyses?.[0]?.revision ?? analysis?.revision);
   if (!revision) errors.push("analysis: latest revision is missing");
   else if (metadata.headSha && revision !== metadata.headSha) errors.push(`analysis: revision ${revision} does not match candidate ${metadata.headSha}`);
+  const analysisId = normalizeText(analysis?.analysisId ?? analysis?.analyses?.[0]?.key ?? analysis?.key);
+  if (metadata.analysisId && !analysisId) errors.push("analysis: exact analysis id is missing");
+  else if (metadata.analysisId && analysisId !== metadata.analysisId) errors.push(`analysis: id ${analysisId} does not match ${metadata.analysisId}`);
+  if (metadata.prNumber) {
+    const pullRequest = payload?.pullRequest;
+    if (!pullRequest || String(pullRequest.key ?? "") !== String(metadata.prNumber)) {
+      errors.push(`pull request: exact PR ${metadata.prNumber} is missing`);
+    } else if (normalizeText(pullRequest?.commit?.sha) !== normalizeText(metadata.headSha)) {
+      errors.push(`pull request: commit does not match candidate ${metadata.headSha}`);
+    }
+  }
   const findings = [...issues, ...hotspots];
   const materialFindings = findings.filter((finding) => finding.material);
   const evidenceComplete = errors.length === 0;
@@ -89,7 +100,7 @@ export function classifySonarEvidence(payload, metadata = {}) {
     mode: metadata.mode ?? "affected",
     executionStatus,
     coverageStatus: evidenceComplete ? "COMPLETE" : "INCOMPLETE",
-    analysis: {key: normalizeText(analysis?.analyses?.[0]?.key), revision},
+    analysis: {key: normalizeText(analysis?.analyses?.[0]?.key), analysisId, revision},
     qualityGate: {status: qualityGateStatus, conditions: qualityGate?.conditions ?? []},
     findings,
     issues,
@@ -148,6 +159,8 @@ function main() {
     headSha: argumentValue(args, "--head-sha"),
     baseSha: argumentValue(args, "--base-sha", false),
     mode: argumentValue(args, "--mode", false) || "affected",
+    analysisId: argumentValue(args, "--analysis-id", false),
+    prNumber: argumentValue(args, "--pr-number", false),
     executionStatus: argumentValue(args, "--execution-status", false) || "PASS",
   });
   console.log(JSON.stringify(result));

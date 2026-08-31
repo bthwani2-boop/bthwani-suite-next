@@ -300,8 +300,10 @@ function endpointFor(kind) {
 
 /**
  * Workforce list search matches names and workforce codes, not phones. Prefer
- * the actor recorded in the generated registry so DSH/WLT local fixtures keep
- * the same sovereign cross-service key after a partial Identity rebuild.
+ * the canonical Workforce profile so DSH/WLT local fixtures keep the same
+ * sovereign cross-service key after a partial Identity rebuild. The generated
+ * registry remains a seed/readback artifact; it is not an input to this HTTP
+ * request path.
  */
 async function findExistingProvider(operatorToken, kind) {
   const fullNameAr = LOCAL_WORKFORCE_PROVIDERS[kind].fullNameAr;
@@ -314,12 +316,7 @@ async function findExistingProvider(operatorToken, kind) {
     .concat(list(result?.captains))
     .filter((person) => person?.fullNameAr === fullNameAr);
 
-  const preferredActorId = readGeneratedRegistry()?.actors?.[kind]?.actorId;
-  const preferredPerson = exact.find((person) => person?.actorId === preferredActorId);
-
-  const peopleToCheck = preferredPerson ? [preferredPerson, ...exact.filter(p => p.actorId !== preferredActorId)] : exact;
-
-  for (const person of peopleToCheck) {
+  for (const person of exact) {
     const identityActor = await getIdentityActor(person.actorId);
     if (!identityActor) {
       console.warn(`[dev-provision] Ignoring orphaned Workforce profile ${person.actorId}`);
@@ -329,6 +326,10 @@ async function findExistingProvider(operatorToken, kind) {
     return person;
   }
   return null;
+}
+
+export async function resolveExistingProvider(operatorToken, kind) {
+  return findExistingProvider(operatorToken, kind);
 }
 
 async function createProvider(operatorToken, kind, payload) {

@@ -114,6 +114,11 @@ export function loadCoverageOwnershipModel(manifestPath = path.resolve(repoRoot,
     "sonar.generatedPrefixes",
     { allowEmpty: true },
   );
+  const tsconfigExclusions = requireStringArray(
+    sonar.tsconfigExclusions ?? [],
+    "sonar.tsconfigExclusions",
+    { allowEmpty: true },
+  );
 
   return {
     manifest,
@@ -124,6 +129,7 @@ export function loadCoverageOwnershipModel(manifestPath = path.resolve(repoRoot,
     governedRoots,
     verificationPrefixes,
     generatedPrefixes,
+    tsconfigExclusions,
   };
 }
 

@@ -128,6 +128,7 @@
       "shared/data-runtime/tests/",
       "shared/ui-kit/tests/"
     ],
-    "generatedPrefixes": ["services/dsh/clients/generated/", "services/wlt/clients/generated/"]
+    "generatedPrefixes": ["services/dsh/clients/generated/", "services/wlt/clients/generated/"],
+    "tsconfigExclusions": ["core/workforce/tsconfig.json"]
   }
 }

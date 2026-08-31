@@ -99,7 +99,9 @@ jobs:
               continue
             fi
 
-            base_spec="${RUNNER_TEMP}/base-$(echo "${spec}" | tr '/\\' '__')"
+            base_name="${spec//\//_}"
+            base_name="${base_name//\\/_}"
+            base_spec="${RUNNER_TEMP}/base-${base_name}"
             git show "${BASE_SHA}:${spec}" > "${base_spec}"
             echo "===== oasdiff breaking ${spec} ====="
             set +e
