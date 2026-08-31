@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const ALLOWED_TARGETS = new Set(["typecheck", "lint", "test", "build"]);
 const DEFAULT_TARGETS = ["typecheck", "lint", "test"];
@@ -47,10 +48,23 @@ export function executeAffectedPlan(plan, environment = process.env) {
   const result = spawnSync(invocation.executable, invocation.args, {
     cwd: process.cwd(),
     env: environment,
-    stdio: "inherit",
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
     shell: false,
     windowsHide: true,
   });
+  const rawText = [result.stdout, result.stderr].filter(Boolean).join("\n");
+  writeToolEvidence({
+    toolId: "nx-affected-" + plan.targets.join("-"),
+    status: result.error || result.signal || result.status !== 0 ? "FAIL" : "PASS",
+    exitCode: result.error || result.signal ? 1 : result.status,
+    rawText,
+    rawPath: [invocation.executable, ...invocation.args].join(" "),
+    claim: "Nx affected verification evidence",
+    scope: "exact base-to-head affected graph",
+  });
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
   if (result.error) throw new Error(`Affected verification could not start: ${result.error.message}`);
   if (result.signal) throw new Error(`Affected verification terminated by signal ${result.signal}`);
   if (result.status !== 0) process.exit(result.status ?? 1);

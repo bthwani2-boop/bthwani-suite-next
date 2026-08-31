@@ -11,6 +11,7 @@ import {
   walkFiles
 } from "./_external-tool-runner.mjs";
 import { adjudicateOsvReport, scopedGoImports } from "./lib/osv-go-reachability.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const toolId = "osv-scanner";
 requireRemoteExecution(toolId);
@@ -41,6 +42,7 @@ const baseArgs = [
 ];
 const reportRel = ".diagnostics/security/osv-report.json";
 const reportPath = path.join(repoRoot, reportRel);
+const evidencePath = path.resolve(repoRoot, process.env.BTHWANI_OSV_EVIDENCE ?? ".diagnostics/security/osv-evidence.json");
 fs.mkdirSync(path.dirname(reportPath), { recursive: true });
 
 console.log(`Running: osv-scanner ${baseArgs.map((arg) => JSON.stringify(arg)).join(" ")} --format json`);
@@ -61,6 +63,18 @@ if (reportJson.trim()) {
 }
 
 if (scan.status === 0) {
+  let cleanReport = null;
+  try { cleanReport = JSON.parse(reportJson); } catch { cleanReport = null; }
+  writeToolEvidence({
+    toolId,
+    status: "PASS",
+    exitCode: 0,
+    rawText: reportJson,
+    nativePayload: cleanReport,
+    rawPath: reportPath,
+    claim: "OSV dependency reachability evidence",
+    scope: "all supported lockfiles and Go modules",
+  });
   console.log("[OSV-SCANNER PASS] no known vulnerabilities in scanned dependencies.");
   process.exit(0);
 }
@@ -122,6 +136,52 @@ const { blocking, unreachable } = await adjudicateOsvReport({
   importGraph: moduleImportGraph
 });
 
+fs.mkdirSync(path.dirname(evidencePath), {recursive: true});
+fs.writeFileSync(evidencePath, `${JSON.stringify({
+  schema: "bthwani-osv-adjudication/1",
+  findings: [
+    ...blocking.map((finding) => ({
+      fingerprint: `${finding.id}:${finding.name}:${finding.version}`,
+      ruleId: finding.id,
+      severity: "ERROR",
+      path: finding.source,
+      message: `${finding.name}@${finding.version}: ${finding.reason}`,
+      material: true,
+      disposition: "MAPPED_TO_FINDING",
+      category: "SECURITY_OR_SUPPLY_CHAIN",
+    })),
+    ...unreachable.map((finding) => ({
+      fingerprint: `${finding.id}:${finding.name}:${finding.version}`,
+      ruleId: finding.id,
+      severity: "INFO",
+      path: finding.source,
+      message: `${finding.name}@${finding.version}: import graph excludes ${finding.vulnerableImports.join(", ")}`,
+      material: false,
+      disposition: "N/A_PROVEN",
+      category: "SECURITY_OR_SUPPLY_CHAIN",
+    })),
+  ],
+  counts: {blocking: blocking.length, unreachable: unreachable.length},
+  evidenceComplete: true,
+}, null, 2)}\n`, {encoding: "utf8", mode: 0o600});
+
+let adjudicationEvidence = null;
+try {
+  adjudicationEvidence = JSON.parse(fs.readFileSync(evidencePath, "utf8"));
+} catch {
+  adjudicationEvidence = null;
+}
+writeToolEvidence({
+  toolId,
+  status: blocking.length > 0 ? "FAIL" : "PASS",
+  exitCode: blocking.length > 0 ? 1 : 0,
+  rawText: reportJson,
+  nativePayload: adjudicationEvidence,
+  rawPath: evidencePath,
+  claim: "OSV dependency reachability evidence",
+  scope: "all supported lockfiles and Go modules",
+});
+
 for (const finding of unreachable) {
   console.log(
     `[OSV-SCANNER UNREACHABLE] ${finding.id} ${finding.name}@${finding.version} (${finding.source}): ` +
@@ -135,12 +195,12 @@ if (blocking.length > 0) {
       `[OSV-SCANNER FAIL] ${finding.id} ${finding.name}@${finding.version} (${finding.source}): ${finding.reason}`
     );
   }
-  handleCommandFailure(toolId, true);
+  process.exit(1);
 }
 
 if (unreachable.length === 0) {
   console.error("[OSV-SCANNER FAIL] findings were reported but none could be adjudicated");
-  handleCommandFailure(toolId, true);
+  process.exit(1);
 }
 
 console.log(

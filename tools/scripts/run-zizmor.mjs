@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { hasBinary, repoRoot, requireRemoteExecution } from "./_external-tool-runner.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 requireRemoteExecution("zizmor");
 
@@ -120,6 +121,22 @@ function normalizeReport(stdout, stderr) {
 const result = runPinned();
 fs.mkdirSync(path.dirname(reportPath), { recursive: true });
 fs.writeFileSync(reportPath, normalizeReport(result.stdout, result.stderr), "utf8");
+let nativePayload = null;
+try {
+  nativePayload = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+} catch {
+  nativePayload = null;
+}
+writeToolEvidence({
+  toolId: "zizmor",
+  status: result.error || result.status !== 0 ? "FAIL" : "PASS",
+  exitCode: result.error ? 1 : result.status ?? 0,
+  rawText: [result.stdout, result.stderr].filter(Boolean).join("\n"),
+  nativePayload,
+  rawPath: reportPath,
+  claim: "Workflow security analysis evidence",
+  scope: "all workflow files",
+});
 
 if (result.error || result.status !== 0) {
   let findings = [];

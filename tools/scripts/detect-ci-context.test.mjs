@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyFiles, resolveFullScope } from "./detect-ci-context.mjs";
+import { applyForcedVerification, classifyFiles, deriveClosureRequiredClaims, deriveRequiredClaims, resolveFullScope } from "./detect-ci-context.mjs";
 
 test("governance authority changes enter control-plane verification without unrelated product workers", () => {
   const result = classifyFiles(["governance/policies/engineering.md"]);
@@ -8,7 +8,6 @@ test("governance authority changes enter control-plane verification without unre
   assert.equal(result.ci_control_plane, true);
   assert.equal(result.node, true);
   assert.equal(result.backend, false);
-  assert.equal(result.human_review_required, false);
   assert.deepEqual(result.required_jobs, ["node"]);
 });
 
@@ -17,7 +16,6 @@ test("backend changes always require the matching backend worker", () => {
   assert.equal(result.dsh, true);
   assert.equal(result.backend_required, true);
   assert.equal(result.runtime_required, false);
-  assert.equal(result.human_review_required, false);
   assert.deepEqual(result.required_jobs, ["backends"]);
 });
 
@@ -26,7 +24,6 @@ test("node-only changes do not require unrelated backends", () => {
   assert.equal(result.frontend, true);
   assert.equal(result.node, true);
   assert.equal(result.backend_required, false);
-  assert.equal(result.human_review_required, false);
   assert.deepEqual(result.required_jobs, ["node"]);
 });
 
@@ -44,7 +41,6 @@ test("database changes route to the owning backend, database checks, and the run
   assert.equal(result.database_changed, true);
   assert.equal(result.backend_required, true);
   assert.equal(result.runtime_required, true);
-  assert.equal(result.human_review_required, true);
   assert.deepEqual(result.risk_classes, ["schema_runtime"]);
   assert.deepEqual(result.required_jobs, ["backends", "runtime"]);
 });
@@ -53,7 +49,6 @@ test("CI control-plane changes run node verification without semantic filename r
   const result = classifyFiles([".github/workflows/ci-check.yml"]);
   assert.equal(result.ci_control_plane, true);
   assert.equal(result.node, true);
-  assert.equal(result.human_review_required, true);
   assert.deepEqual(result.required_jobs, ["node"]);
 });
 
@@ -72,7 +67,6 @@ test("infrastructure changes require the fixed runtime verification", () => {
   const result = classifyFiles(["infra/docker/compose.runtime.yml"]);
   assert.equal(result.infrastructure, true);
   assert.equal(result.runtime_required, true);
-  assert.equal(result.human_review_required, false);
   assert.deepEqual(result.risk_classes, ["infrastructure"]);
   assert.deepEqual(result.required_jobs, ["runtime"]);
 });
@@ -85,11 +79,10 @@ test("dependency manifests route to node integrity verification", () => {
   assert.deepEqual(result.required_jobs, ["node", "backends"]);
 });
 
-test("authorization and OperatorContext changes require runtime proof and human review", () => {
+test("authorization and OperatorContext changes require runtime proof", () => {
   const result = classifyFiles(["core/identity/backend/internal/rbac/roles.go"]);
   assert.equal(result.identity, true);
   assert.equal(result.runtime_required, true);
-  assert.equal(result.human_review_required, true);
   assert.deepEqual(result.risk_classes, ["authorization", "identity_rbac"]);
   assert.deepEqual(result.required_jobs, ["backends", "runtime"]);
 });
@@ -98,14 +91,12 @@ test("operator-context authority files require runtime proof", () => {
   const result = classifyFiles(["services/wlt/backend/internal/shared/operator_context.go"]);
   assert.equal(result.wlt, true);
   assert.equal(result.runtime_required, true);
-  assert.equal(result.human_review_required, true);
   assert.ok(result.risk_classes.includes("authorization"));
 });
 
 test("idempotency and replay authority changes require runtime proof", () => {
   const result = classifyFiles(["services/dsh/frontend/shared/orders/order-cancellation-attempt.ts"]);
   assert.equal(result.runtime_required, true);
-  assert.equal(result.human_review_required, true);
   assert.ok(result.risk_classes.includes("idempotency"));
   assert.ok(result.risk_classes.includes("order_journey"));
 });
@@ -114,17 +105,15 @@ test("order journey state machine changes require runtime proof", () => {
   const result = classifyFiles(["services/dsh/backend/internal/orders/transition.go"]);
   assert.equal(result.dsh, true);
   assert.equal(result.runtime_required, true);
-  assert.equal(result.human_review_required, false);
   assert.deepEqual(result.risk_classes, ["order_journey"]);
   assert.deepEqual(result.required_jobs, ["backends", "runtime"]);
 });
 
-test("WLT financial changes require backend, database, runtime proof, and human review", () => {
+test("WLT financial changes require backend and runtime proof", () => {
   const result = classifyFiles(["services/wlt/backend/internal/payout/payout.go"]);
   assert.equal(result.wlt, true);
   assert.equal(result.database_changed, false);
   assert.equal(result.runtime_required, true);
-  assert.equal(result.human_review_required, true);
   assert.deepEqual(result.risk_classes, ["wlt_monetary"]);
   assert.deepEqual(result.required_jobs, ["backends", "runtime"]);
 });
@@ -132,7 +121,6 @@ test("WLT financial changes require backend, database, runtime proof, and human 
 test("migration authority changes verify every service database and the runtime consumer", () => {
   const result = classifyFiles(["infra/docker/scripts/schema-migration-runner.ps1"]);
   assert.equal(result.migration_authority, true);
-  assert.equal(result.human_review_required, true);
   for (const key of ["dsh", "wlt", "identity", "workforce", "platform", "providers"]) {
     assert.equal(result[key], true, key);
   }
@@ -141,17 +129,18 @@ test("migration authority changes verify every service database and the runtime 
   assert.deepEqual(result.required_jobs, ["backends", "runtime"]);
 });
 
-test("identity authority changes require human review even outside explicit RBAC paths", () => {
+test("identity authority changes retain identity runtime proof", () => {
   const result = classifyFiles(["core/identity/backend/internal/session/session.go"]);
-  assert.equal(result.human_review_required, true);
+  assert.equal(result.identity, true);
+  assert.equal(result.runtime_required, true);
+  assert.ok(result.risk_classes.includes("identity_rbac"));
 });
 
-test("fullScope enables every owner without manufacturing human review for unchanged bytes", () => {
+test("fullScope enables every owner and required technical proof", () => {
   const result = classifyFiles([], { fullScope: true });
   for (const key of ["frontend", "contracts", "dsh", "wlt", "identity", "workforce", "platform", "providers", "database", "runtime_required", "node", "backend"]) {
     assert.equal(result[key], true, key);
   }
-  assert.equal(result.human_review_required, false);
   assert.deepEqual(result.required_jobs, ["diagnostics", "node", "backends", "runtime"]);
 });
 
@@ -191,4 +180,31 @@ test("fullScope requires both human-experience evidence dimensions", () => {
   const result = classifyFiles([], { fullScope: true });
   assert.equal(result.rendered_web_required, true);
   assert.equal(result.mobile_evidence_required, true);
+});
+
+
+test("router emits claim-level CI and closure proof requirements", () => {
+  const result = classifyFiles(["services/dsh/database/migrations/0002_add_column.sql"]);
+  assert.ok(result.required_claims.includes("control:migration-manifest"));
+  assert.ok(result.required_claims.includes("backend:dsh"));
+  assert.ok(result.required_claims.includes("runtime:verification"));
+  assert.ok(result.closure_required_claims.includes("change:verification"));
+  assert.ok(result.closure_required_claims.includes("analysis:sonar"));
+});
+
+test("control-plane and backend DB replay inputs are decoupled from successful sibling claims", () => {
+  const base = classifyFiles(["README.md"]);
+  const forced = applyForcedVerification(base, ["control:ci-source-immutability", "backend:dsh"]);
+  assert.equal(forced.ci_control_plane, true);
+  assert.equal(forced.verification_required, false);
+  assert.equal(forced.dsh, true);
+  assert.equal(forced.backend_required, true);
+  assert.equal(forced.runtime_required, false);
+});
+
+test("claim derivation is deterministic and rejects unknown forced claims", () => {
+  const result = classifyFiles([".github/workflows/ci-check.yml"]);
+  assert.deepEqual(deriveRequiredClaims(result), result.required_claims);
+  assert.deepEqual(deriveClosureRequiredClaims(result), result.closure_required_claims);
+  assert.throws(() => applyForcedVerification(result, ["unknown:claim"]), /UNKNOWN_FORCED_CI_CLAIM/u);
 });

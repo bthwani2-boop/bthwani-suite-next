@@ -1,9 +1,14 @@
 import { execFileSync, spawn } from "node:child_process";
 import crypto from "node:crypto";
-import { createWriteStream, lstatSync, mkdirSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
+import { closeSync, constants, createWriteStream, fstatSync, lstatSync, mkdtempSync, openSync, readFileSync, readlinkSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import {
+  buildEvidenceEnvelope,
+  buildUnifiedRootGraph,
+  summarizeEvidenceConsumption,
+} from "./lib/evidence-envelope.mjs";
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
@@ -44,10 +49,23 @@ export function captureCandidate(root = process.cwd()) {
     if (!isSafeRelativePath(repositoryRoot, relativePath)) throw new Error(`unsafe untracked candidate path: ${relativePath}`);
     const absolutePath = path.resolve(repositoryRoot, relativePath);
     const stats = lstatSync(absolutePath);
-    digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
-    if (stats.isSymbolicLink()) digest.update(`symlink\0${readlinkSync(absolutePath)}\0`);
-    else if (stats.isFile()) digest.update(readFileSync(absolutePath));
-    else digest.update(`type\0${stats.type}\0`);
+    if (stats.isSymbolicLink()) {
+      digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
+      digest.update(`symlink\0${readlinkSync(absolutePath)}\0`);
+    } else if (stats.isFile()) {
+      const descriptor = openSync(absolutePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      try {
+        const stableStats = fstatSync(descriptor);
+        if (!stableStats.isFile()) throw new Error(`untracked candidate changed type while reading: ${relativePath}`);
+        digest.update(`untracked\0${relativePath}\0mode\0${stableStats.mode}\0size\0${stableStats.size}\0`);
+        digest.update(readFileSync(descriptor));
+      } finally {
+        closeSync(descriptor);
+      }
+    } else {
+      digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
+      digest.update(`type\0${stats.type}\0`);
+    }
   }
   const worktreeSha = digest.digest("hex");
   return {
@@ -70,7 +88,7 @@ const baseChecks = [
   ["control-panel-architecture", pnpm, ["run", "guard:control-panel-architecture"]],
   ["ast-grep-rules", pnpm, ["run", "guard:ast-grep-rules"]],
   ["knip", pnpm, ["run", "diagnostics:knip"]],
-  ["jscpd", pnpm, ["run", "diagnostics:jscpd"]],
+  ["jscpd", pnpm, ["run", "diagnostics:jscpd"], [".diagnostics/operational-journey-factory/tool-evidence/jscpd/jscpd-report.json"]],
   ["madge", pnpm, ["run", "diagnostics:madge"]],
 ];
 
@@ -87,7 +105,7 @@ function buildChecks(full) {
   return checks;
 }
 
-function runCheck([id, command, commandArgs], evidenceDir) {
+function runCheck([id, command, commandArgs, nativeEvidencePaths = []], evidenceDir) {
   return new Promise((resolve) => {
     const logPath = path.join(evidenceDir, `${id}.log`);
     const log = createWriteStream(logPath, { flags: "w" });
@@ -130,6 +148,7 @@ function runCheck([id, command, commandArgs], evidenceDir) {
           startedAt,
           endedAt: new Date().toISOString(),
           error: error.message,
+          nativeEvidencePaths,
         },
         `\nSPAWN_ERROR: ${error.stack ?? error.message}\n`,
       );
@@ -144,6 +163,7 @@ function runCheck([id, command, commandArgs], evidenceDir) {
           logPath,
           startedAt,
           endedAt: new Date().toISOString(),
+          nativeEvidencePaths,
         },
         `\nEXIT_CODE: ${code}\n`,
       );
@@ -160,28 +180,71 @@ function parseJsonLine(logText, predicate) {
   return null;
 }
 
-export function classifyDiscoveryResult(result, logText = "") {
+export function classifyDiscoveryResult(result, logText = "", candidate = {}, nativePayload = null) {
+  const envelope = buildEvidenceEnvelope({
+    toolId: result.id,
+    candidate: {
+      headSha: candidate.headSha ?? "",
+      baseSha: candidate.baseSha ?? "",
+      identity: candidate.candidateIdentity ?? candidate.identity ?? "",
+    },
+    status: result.status,
+    exitCode: result.exitCode,
+    rawText: logText,
+    nativePayload,
+    rawPath: result.logPath,
+    claim: `Deep discovery check: ${result.id}`,
+    scope: "repository working candidate",
+  });
   const item = {
     kind: "check",
     id: result.id,
     status: result.status,
     exitCode: result.exitCode,
     logPath: result.logPath,
-    disposition: result.status === "PASS" ? "EXECUTION_PASS" : "ROOT_ANALYSIS_REQUIRED",
+    disposition: envelope.findings.some((finding) => finding.material) || envelope.engineConditions.some((condition) => condition.material)
+      ? "ROOT_ANALYSIS_REQUIRED"
+      : envelope.accounting.evidenceComplete ? "EVIDENCE_ACCOUNTED" : "EVIDENCE_INCOMPLETE",
     rootCandidates: [],
     evidence: {
       logBytes: Buffer.byteLength(logText, "utf8"),
       logSha256: crypto.createHash("sha256").update(logText).digest("hex"),
     },
+    envelope,
   };
 
-  if (result.status === "PASS") return item;
+  const candidates = [...envelope.findings, ...envelope.engineConditions]
+    .filter((entry) => entry.material !== false && entry.rootCandidate?.rootKey);
+  const groupedCandidates = new Map();
+  for (const entry of candidates) {
+    const root = entry.rootCandidate;
+    const current = groupedCandidates.get(root.rootKey) ?? {
+      root: root.rootKey,
+      rootFamily: root.rootFamily,
+      canonicalOwnerHint: root.canonicalOwnerHint,
+      source: result.id,
+      findingCount: 0,
+      files: [],
+      rules: [],
+    };
+    current.findingCount += 1;
+    current.files.push(entry.location?.path ?? "");
+    current.rules.push(entry.ruleId ?? "");
+    groupedCandidates.set(root.rootKey, current);
+  }
+  item.rootCandidates = [...groupedCandidates.values()].map((candidateRoot) => ({
+    ...candidateRoot,
+    files: [...new Set(candidateRoot.files.filter(Boolean))],
+    rules: [...new Set(candidateRoot.rules.filter(Boolean))],
+  }));
+
+  if (result.status === "PASS" && item.rootCandidates.length === 0) return item;
 
   if (result.id === "knip") {
     const payload = parseJsonLine(logText, (line) => line.startsWith("{\"issues\":"));
     const issues = Array.isArray(payload?.issues) ? payload.issues : [];
     item.failureClass = "STRUCTURAL_UNUSED_OR_OWNERLESS_ARTIFACT";
-    item.rootCandidates.push({
+    item.specializedEvidence = {
       root: "unused-or-ownerless-artifacts",
       source: "knip",
       issueCount: issues.length,
@@ -189,7 +252,7 @@ export function classifyDiscoveryResult(result, logText = "") {
       dependencyCount: issues.reduce((count, issue) => count + Object.values(issue)
         .filter(Array.isArray)
         .reduce((total, entries) => total + entries.length, 0), 0),
-    });
+    };
   } else if (result.id === "madge") {
     const cycles = [...logText.matchAll(/^\s*\d+\)\s+(.+)$/gmu)].map((match) => match[1]);
     const skipped = Number(logText.match(/Skipped (\d+) files/u)?.[1] ?? 0);
@@ -204,15 +267,17 @@ export function classifyDiscoveryResult(result, logText = "") {
         : skippedImports.length > 0
           ? "STRUCTURAL_UNRESOLVED_IMPORT"
           : "STRUCTURAL_CYCLE_OR_UNRESOLVED_IMPORT";
-    item.rootCandidates.push({
+    item.specializedEvidence = {
       root: "frontend-dependency-graph-integrity",
       source: "madge",
       circularDependencies: cycles,
       skippedFiles: skipped,
       skippedImports,
-    });
+    };
   } else {
-    item.failureClass = "CHECK_OR_TOOL_EXECUTION_FAILURE";
+    item.failureClass = item.rootCandidates.length > 0
+      ? [...new Set(item.rootCandidates.map((candidateRoot) => candidateRoot.rootFamily))].join("+")
+      : "TOOL_EVIDENCE_INCOMPLETE";
     item.evidence.errorLines = logText.split(/\r?\n/u)
       .map((line) => line.trim())
       .filter((line) => /error|fail|missing|skipped|unresolved|warning/iu.test(line))
@@ -222,34 +287,11 @@ export function classifyDiscoveryResult(result, logText = "") {
 }
 
 export function buildEphemeralRootGraph(evidenceItems, candidateIdentity) {
-  const roots = new Map();
-  for (const item of evidenceItems) {
-    for (const candidate of item.rootCandidates ?? []) {
-      const key = `${candidate.root ?? "UNSPECIFIED"}:${candidate.source ?? item.id}`;
-      const current = roots.get(key) ?? {
-        rootId: key,
-        root: candidate.root ?? "UNSPECIFIED",
-        sources: [],
-        checks: [],
-        evidence: [],
-        disposition: "ROOT_MAPPED",
-        sourceOfFix: null,
-        treatment: "REQUIRED",
-        invalidatedProofs: [],
-      };
-      if (candidate.source && !current.sources.includes(candidate.source)) current.sources.push(candidate.source);
-      if (!current.checks.includes(item.id)) current.checks.push(item.id);
-      current.evidence.push({candidate, logPath: item.logPath, candidateIdentity: item.candidateIdentity ?? candidateIdentity});
-      roots.set(key, current);
-    }
-  }
-  return {
-    schema: "bthwani-ephemeral-root-graph/1",
-    candidateIdentity,
-    authority: "discovery-evidence-only",
-    roots: [...roots.values()].sort((left, right) => left.rootId.localeCompare(right.rootId)),
-    closureClaim: false,
-  };
+  const envelopes = evidenceItems.map((item) => ({
+    ...item.envelope,
+    candidate: {...item.envelope.candidate, identity: item.candidateIdentity ?? candidateIdentity},
+  }));
+  return buildUnifiedRootGraph(envelopes, candidateIdentity);
 }
 
 async function main() {
@@ -258,8 +300,7 @@ async function main() {
   const concurrencyArg = process.argv.find((v) => v.startsWith("--concurrency="));
   const concurrency = Math.max(1, Number(concurrencyArg?.split("=")[1] ?? 3));
   const stamp = new Date().toISOString().replaceAll(":", "-");
-  const evidenceDir = path.join(tmpdir(), "bthwani-deep-discovery", stamp);
-  mkdirSync(evidenceDir, { recursive: true });
+  const evidenceDir = mkdtempSync(path.join(tmpdir(), `bthwani-deep-discovery-${stamp}-`));
   const candidate = captureCandidate();
   const candidateSha = candidate.headSha;
   const pending = [...buildChecks(full)];
@@ -293,13 +334,26 @@ async function main() {
   results.sort((a, b) => a.id.localeCompare(b.id));
   const evidenceItems = results.map((result) => {
     const logText = result.logPath ? readFileSync(result.logPath, "utf8") : result.error ?? "";
+    let nativePayload = null;
+    if (result.nativeEvidencePaths?.length) {
+      const nativePath = result.nativeEvidencePaths.map((relative) => path.resolve(relative)).find((file) => {
+        try { return lstatSync(file).isFile(); } catch { return false; }
+      });
+      if (nativePath) {
+        try { nativePayload = JSON.parse(readFileSync(nativePath, "utf8")); }
+        catch (error) { nativePayload = {evidenceComplete: false, errors: [`${nativePath}: invalid JSON: ${error.message}`]}; }
+      } else {
+        nativePayload = {evidenceComplete: false, errors: [`${result.id}: required native evidence output is missing`]};
+      }
+    }
     return {
-      ...classifyDiscoveryResult(result, logText),
+      ...classifyDiscoveryResult(result, logText, candidate, nativePayload),
       candidateIdentity: candidate.candidateIdentity,
     };
   });
-  const rootAnalysisRequired = evidenceItems.filter((item) => item.status !== "PASS").length;
+  const rootAnalysisRequired = evidenceItems.filter((item) => item.rootCandidates.length > 0).length;
   const rootGraph = buildEphemeralRootGraph(evidenceItems, candidate.candidateIdentity);
+  const evidenceConsumption = summarizeEvidenceConsumption(evidenceItems.map((item) => item.envelope), rootGraph);
   const manifest = {
     schemaVersion: 2,
     mode: full ? "FULL_FRESH_DISCOVERY" : "DIAGNOSTIC_DISCOVERY",
@@ -319,6 +373,7 @@ async function main() {
       closureClaim: false,
     },
     evidenceItems,
+    evidenceConsumption,
     rootGraph,
     counts: {
       pass: results.filter((r) => r.status === "PASS").length,
@@ -335,7 +390,7 @@ async function main() {
     process.stdout.write(`FAILED ${result.id}: ${result.logPath}\n`);
   }
 
-  process.exitCode = manifest.counts.fail > 0 ? 1 : 0;
+  process.exitCode = manifest.counts.fail > 0 || !evidenceConsumption.allToolEvidenceConsumed || rootGraph.rootQueue.length > 0 ? 1 : 0;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
@@ -343,8 +398,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
     await main();
   } catch (error) {
     const stamp = new Date().toISOString().replaceAll(":", "-");
-    const evidenceDir = path.join(tmpdir(), "bthwani-deep-discovery", stamp);
-    mkdirSync(evidenceDir, { recursive: true });
+    const evidenceDir = mkdtempSync(path.join(tmpdir(), `bthwani-deep-discovery-fatal-${stamp}-`));
     const fatalPath = path.join(evidenceDir, "collector-fatal.log");
     writeFileSync(fatalPath, `${error?.stack ?? error}\n`);
     process.stderr.write(`COLLECTOR_FATAL=${fatalPath}\n`);

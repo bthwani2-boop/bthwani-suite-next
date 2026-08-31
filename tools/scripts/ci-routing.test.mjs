@@ -123,16 +123,22 @@ test("the affected router is based on the exact caller-supplied verification win
   assert.match(router, /\["diff", "--name-only"/u);
   assert.match(router, /baseSha, headSha/u);
   assert.match(workflow, /verification_base_sha: \$\{\{ steps\.scope\.outputs\.verification_base_sha \}\}/u);
-  assert.doesNotMatch(router, /previous|run.?history|semantic|financial|security_scan/u);
+  assert.doesNotMatch(router, /previous|run.?history|security_scan/u);
 });
 
-test("human review is one centralized changed-candidate risk decision", () => {
+test("risk routing relies on technical proof rather than a second-account approval gate", () => {
   const router = read("tools/scripts/detect-ci-context.mjs");
   const closure = read(".github/workflows/final-closure.yml");
-  assert.match(router, /human_review_required/u);
-  assert.match(closure, /human_review_required: \$\{\{ steps\.classification\.outputs\.human_review_required \}\}/u);
-  assert.match(closure, /HUMAN_REVIEW_REQUIRED/u);
-  assert.doesNotMatch(closure, /catastrophic domains|always require.*approval/iu);
+  const retiredHumanReview = ["human_review_", "required"].join("");
+  const retiredClosureGates = [
+    ["HUMAN_", "REVIEW_", "REQUIRED"].join(""),
+    ["approvals_", "on_head"].join(""),
+    ["human-review:", "0-approvals"].join(""),
+  ].join("|");
+  assert.doesNotMatch(router, new RegExp(retiredHumanReview, "u"));
+  assert.doesNotMatch(closure, new RegExp(retiredClosureGates, "u"));
+  assert.match(router, /risk_classes/u);
+  assert.match(closure, /risk_classes/u);
 });
 
 test("backend changes cannot become green by skipping backend verification", () => {
@@ -149,20 +155,20 @@ test("final closure resolves once then collects independent analyzers and experi
   assert.match(workflow, /name: Full CI preflight/u);
   assert.match(workflow, /full_scope: false/u);
   assert.match(workflow, /trusted_scan: true/u);
-  assert.match(read(".github/workflows/repository-baseline.yml"), /BThwani \/ Repository Health/u);
+  assert.match(read(".github/workflows/repository-baseline.yml"), /BThwani \/ Static Repository Baseline/u);
   for (const worker of ["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml"]) {
     assert.ok(workflow.includes(`uses: ./.github/workflows/${worker}`), worker);
   }
-  for (const job of ["ci", "sonar", "codeql", "semgrep", "security", "semantic-context", "rendered-web-baseline", "mobile-evidence"]) {
+  for (const job of ["ci", "sonar", "codeql", "semgrep", "security", "opencodereview", "rendered-web-baseline", "mobile-evidence"]) {
     assert.match(workflow, new RegExp(`${job}:[\\s\\S]*?needs: \\[resolve\\]`, "u"), job);
   }
-  assert.match(workflow, /semantic-context:[\s\S]*?open-code-review\.yml/u);
-  assert.match(workflow, /semantic-review:[\s\S]*?needs: \[resolve, semantic-context\]/u);
+  assert.match(workflow, /opencodereview:[\s\S]*?uses: \.\/\.github\/workflows\/open-code-review\.yml/u);
+  assert.doesNotMatch(workflow, /semantic-context|semantic-review|SEMANTIC_REVIEW/iu);
   assert.match(workflow, /rendered-web-evidence:[\s\S]*?needs: \[resolve, rendered-web-baseline\]/u);
   assert.doesNotMatch(workflow, /needs: \[resolve, ci\]/u);
   assert.match(
     workflow,
-    /needs: \[resolve, ci, sonar, codeql, semgrep, security, semantic-review, rendered-web-baseline, rendered-web-evidence, mobile-evidence, dependency, lockfile, docker\]/u,
+    /needs: \[resolve, ci, sonar, codeql, semgrep, security, opencodereview, rendered-web-baseline, rendered-web-evidence, mobile-evidence, dependency, lockfile, docker\]/u,
   );
   assert.match(workflow, /after complete evidence collection/u);
   assert.doesNotMatch(workflow, /SEMANTIC_RESULT/u);
@@ -307,7 +313,7 @@ test("orchestrator forbids false green and broad rerun churn", () => {
   assert.match(verify, /rerun only invalidated\/newly-required proof/u);
 });
 
-test("assurance routing includes semantic control-plane authorities", () => {
+test("assurance routing includes OpenCodeReview control-plane authority", () => {
   const router = read("tools/scripts/detect-ci-context.mjs");
   for (const path of [".agents/", ".opencodereview/", "tools/prompting/", "governance/"]) {
     assert.ok(router.includes(`"${path}"`), path);

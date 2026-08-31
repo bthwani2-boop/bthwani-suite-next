@@ -384,7 +384,7 @@ function Invoke-DelegateAudit {
     )
   }
 
-  Write-Output "delegation_contract=HOST_AGENT_MUST_REVIEW_DIFF_WITH_RESOLVED_RULES"
+  Write-Output "delegation_contract=EXACT_CANDIDATE_DETERMINISTIC_TOOL_EVIDENCE"
   Write-Output "review_target_count=$($targets.Count)"
 }
 

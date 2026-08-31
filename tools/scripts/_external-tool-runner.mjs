@@ -1,7 +1,8 @@
-import { execFileSync, execSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { repoRoot } from "../guards/_guard-utils.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 export function hasBinary(binary) {
   const locator = process.platform === "win32" ? "where.exe" : "which";
@@ -11,6 +12,17 @@ export function hasBinary(binary) {
 
 export function requireRemoteExecution(toolId) {
   if (process.env.GITHUB_ACTIONS === "true") return;
+  try {
+    writeToolEvidence({
+      toolId,
+      status: "BLOCKED",
+      exitCode: 1,
+      rawText: "remote-only analyzer invoked outside GitHub Actions",
+      rawPath: "remote-only",
+    });
+  } catch (error) {
+    console.error("[" + toolId.toUpperCase() + " EVIDENCE ERROR] " + error.message);
+  }
   console.error(`[${toolId.toUpperCase()} BLOCKED] this analyzer is Remote-only and must run on a GitHub Actions runner.`);
   process.exit(1);
 }
@@ -87,6 +99,17 @@ export function changedFiles(baseSha, candidateSha, rootDirs, predicate = () => 
 
 export function handleMissingBinary(toolId, binary, required) {
   const diagnostic = isDiagnosticMode();
+  try {
+    writeToolEvidence({
+      toolId,
+      status: required && !diagnostic ? "FAIL" : "NOT_APPLICABLE",
+      exitCode: required && !diagnostic ? 1 : 0,
+      rawText: "required binary missing: " + binary,
+      rawPath: binary,
+    });
+  } catch (error) {
+    console.error("[" + toolId.toUpperCase() + " EVIDENCE ERROR] " + error.message);
+  }
   if (required && !diagnostic) {
     console.error(`[${toolId.toUpperCase()} FAIL] required binary missing: ${binary} decision=FIX_REQUIRED`);
     process.exit(1);
@@ -96,8 +119,21 @@ export function handleMissingBinary(toolId, binary, required) {
   process.exit(0);
 }
 
-export function handleCommandFailure(toolId, required) {
+export function handleCommandFailure(toolId, required, {skipEvidence = false} = {}) {
   const diagnostic = isDiagnosticMode();
+  if (!skipEvidence) {
+    try {
+      writeToolEvidence({
+        toolId,
+        status: required && !diagnostic ? "FAIL" : "WARNING",
+        exitCode: 1,
+        rawText: "command failed",
+        rawPath: toolId,
+      });
+    } catch (error) {
+      console.error("[" + toolId.toUpperCase() + " EVIDENCE ERROR] " + error.message);
+    }
+  }
   if (required && !diagnostic) {
     console.error(`[${toolId.toUpperCase()} FAIL] command failed. decision=FIX_REQUIRED`);
     process.exit(1);
@@ -107,7 +143,37 @@ export function handleCommandFailure(toolId, required) {
   process.exit(0);
 }
 
-export function runTool({ toolId, binary, command, diagnosticCommand, required = false }) {
+function formatCommand(binary, args) {
+  return [binary, ...args].map((arg) => JSON.stringify(String(arg))).join(" ");
+}
+
+function runProcess(binary, args, toolId, required) {
+  const result = spawnSync(binary, args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    shell: false,
+    windowsHide: true,
+  });
+  const rawText = [result.stdout, result.stderr].filter(Boolean).join("\n");
+  try {
+    writeToolEvidence({
+      toolId,
+      status: result.error || result.status !== 0 ? "FAIL" : "PASS",
+      exitCode: result.error ? 1 : result.status,
+      rawText,
+      rawPath: binary + " " + args.join(" "),
+    });
+  } catch (error) {
+    console.error("[" + toolId.toUpperCase() + " EVIDENCE ERROR] " + error.message);
+  }
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+  if (result.error || result.status !== 0) handleCommandFailure(toolId, required, {skipEvidence: true});
+  return result;
+}
+
+export function runTool({ toolId, binary, args, diagnosticArgs, required = false }) {
   requireRemoteExecution(toolId);
   if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
   const diagnostic = isDiagnosticMode();
@@ -115,29 +181,27 @@ export function runTool({ toolId, binary, command, diagnosticCommand, required =
     ensureDir(".diagnostics/security");
     ensureDir(".diagnostics/toolchain");
   }
-  const cmd = diagnostic && diagnosticCommand ? diagnosticCommand : command;
-  console.log(`Running: ${cmd}`);
-  try {
-    execSync(cmd, { cwd: repoRoot, stdio: "inherit", shell: true });
-  } catch {
-    handleCommandFailure(toolId, required);
-  }
+  const selectedArgs = diagnostic && diagnosticArgs ? diagnosticArgs : args;
+  console.log(`Running: ${formatCommand(binary, selectedArgs)}`);
+  runProcess(binary, selectedArgs, toolId, required);
 }
 
-export function runFilesTool({ toolId, binary, files, makeCommand, noFilesMessage, required = false }) {
+export function runFilesTool({ toolId, binary, files, makeArgs, noFilesMessage, required = false }) {
   requireRemoteExecution(toolId);
   if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
   if (!files.length) {
-    console.log(noFilesMessage || "No files found.");
+    const message = noFilesMessage || "No files found.";
+    try {
+      writeToolEvidence({toolId, status: "PASS", exitCode: 0, rawText: message, rawPath: toolId});
+    } catch (error) {
+      console.error("[" + toolId.toUpperCase() + " EVIDENCE ERROR] " + error.message);
+    }
+    console.log(message);
     process.exit(0);
   }
-  const cmd = makeCommand(files);
-  console.log(`Running: ${cmd}`);
-  try {
-    execSync(cmd, { cwd: repoRoot, stdio: "inherit", shell: true });
-  } catch {
-    handleCommandFailure(toolId, required);
-  }
+  const args = makeArgs(files);
+  console.log(`Running: ${formatCommand(binary, args)}`);
+  runProcess(binary, args, toolId, required);
 }
 
 export { repoRoot };

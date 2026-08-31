@@ -1,5 +1,5 @@
 ---
-name: OpenCodeReview Delegation Context
+name: OpenCodeReview Exact-Candidate Inspection
 
 run-name: >-
   ${{ github.event_name == 'pull_request' && format('OpenCodeReview PR {0}', github.event.pull_request.number)
@@ -167,7 +167,12 @@ jobs:
           fi
 
           merge_base="$(git -C "${OCR_REPO}" merge-base "${base}" "${HEAD_SHA}")"
-          git -C "${OCR_REPO}" show "${base}:.opencodereview/rule.json" > "${RUNNER_TEMP}/ocr-rule.json"
+          git -C "${OCR_REPO}" switch --detach --quiet "${HEAD_SHA}"
+          mkdir -p "${OCR_REPO}/tools/scripts"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/invoke-open-code-review-toolchain.ps1" \
+            -f "ref=${GITHUB_SHA}" --jq '.content' | base64 --decode > "${OCR_REPO}/tools/scripts/invoke-open-code-review-toolchain.ps1"
+          git -C "${OCR_REPO}" show "${base}:.opencodereview/rule.json" > "${OCR_REPO}/.opencodereview/rule.json"
 
           {
             echo "base_sha=${base}"
@@ -196,27 +201,27 @@ jobs:
             --format json \
             --from "${MERGE_BASE}" \
             --to "${HEAD_SHA}" \
-            --rule "${RUNNER_TEMP}/ocr-rule.json" \
-            > "${evidence}/preview.json"
+            --rule "${OCR_REPO}/.opencodereview/rule.json" \
+            > "${evidence}/preview.txt"
 
-          jq . "${evidence}/preview.json" > "${evidence}/preview.pretty.json"
+          jq . "${evidence}/preview.txt" > "${evidence}/preview.pretty.txt"
 
-          mapfile -t files < <(jq -r '.reviewable_files[]?.path // empty' "${evidence}/preview.json")
+          mapfile -t files < <(jq -r '.reviewable_files[]?.path // empty' "${evidence}/preview.txt")
           count="${#files[@]}"
 
           printf '%s\n' "${files[@]}" | sed '/^$/d' > "${evidence}/reviewable-files.txt"
 
           if ((count == 0)); then
-            printf '{}\n' > "${evidence}/rules.json"
+            printf '{}\n' > "${evidence}/rules.txt"
             : > "${evidence}/diff.patch"
           else
             ocr delegate rule \
               --format json \
-              --rule "${RUNNER_TEMP}/ocr-rule.json" \
+              --rule "${OCR_REPO}/.opencodereview/rule.json" \
               "${files[@]}" \
-              > "${evidence}/rules.json"
+              > "${evidence}/rules.txt"
 
-            jq . "${evidence}/rules.json" > "${evidence}/rules.pretty.json"
+            jq . "${evidence}/rules.txt" > "${evidence}/rules.pretty.txt"
 
             git diff \
               --no-ext-diff \
@@ -229,13 +234,20 @@ jobs:
               > "${evidence}/diff.patch"
           fi
 
+          {
+            echo "===== OpenCodeReview toolchain verification ====="
+            pwsh -NoProfile -ExecutionPolicy Bypass -File "${OCR_REPO}/tools/scripts/invoke-open-code-review-toolchain.ps1" -Mode Verify -From "${MERGE_BASE}" -To "${HEAD_SHA}" -SkipInstall
+            echo "===== OpenCodeReview deterministic audit ====="
+            pwsh -NoProfile -ExecutionPolicy Bypass -File "${OCR_REPO}/tools/scripts/invoke-open-code-review-toolchain.ps1" -Mode DelegateAudit -From "${MERGE_BASE}" -To "${HEAD_SHA}" -SkipInstall
+          } > "${evidence}/toolchain.log" 2>&1
+
           (
             cd "${evidence}"
-            sha256sum preview.json rules.json diff.patch reviewable-files.txt > context-files.sha256
+            sha256sum preview.txt rules.txt diff.patch reviewable-files.txt toolchain.log > context-files.sha256
           )
-          rule_source_sha256="$(sha256sum "${RUNNER_TEMP}/ocr-rule.json" | awk '{print $1}')"
-          preview_sha256="$(sha256sum "${evidence}/preview.json" | awk '{print $1}')"
-          rules_sha256="$(sha256sum "${evidence}/rules.json" | awk '{print $1}')"
+          rule_source_sha256="$(sha256sum "${OCR_REPO}/.opencodereview/rule.json" | awk '{print $1}')"
+          preview_sha256="$(sha256sum "${evidence}/preview.txt" | awk '{print $1}')"
+          rules_sha256="$(sha256sum "${evidence}/rules.txt" | awk '{print $1}')"
           diff_sha256="$(sha256sum "${evidence}/diff.patch" | awk '{print $1}')"
           files_sha256="$(sha256sum "${evidence}/reviewable-files.txt" | awk '{print $1}')"
           context_sha256="$(sha256sum "${evidence}/context-files.sha256" | awk '{print $1}')"
@@ -279,10 +291,28 @@ jobs:
               artifactIdentity: $artifactIdentity,
               toolVersion: $toolVersion,
               packageIntegrity: $packageIntegrity,
-              hostAgentRequired: true,
-              hostAgentExecutedByThisWorkflow: false,
-              semanticReviewClaimedByThisWorkflow: false
+              analyzer: "opencodereview",
+              candidateSha: $head,
+              outcome: "PASS",
+              log: "toolchain.log",
+              deterministicOnly: true
             }' > "${evidence}/delegation-contract.json"
+
+          capture_dir="${RUNNER_TEMP}/ocr-capture"
+          mkdir -p "${capture_dir}/lib"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/capture-tool-evidence.mjs" \
+            -f "ref=${GITHUB_SHA}" --jq '.content' | base64 --decode > "${capture_dir}/capture-tool-evidence.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/lib/evidence-envelope.mjs" \
+            -f "ref=${GITHUB_SHA}" --jq '.content' | base64 --decode > "${capture_dir}/lib/evidence-envelope.mjs"
+          node "${capture_dir}/capture-tool-evidence.mjs" \
+            --tool-id opencodereview --status PASS --exit-code 0 \
+            --raw-file "${evidence}/toolchain.log" \
+            --native-file "${evidence}/delegation-contract.json" \
+            --output "${evidence}/opencodereview.evidence.json" \
+            --head-sha "${HEAD_SHA}" --base-sha "${BASE_SHA}" \
+            --scope "exact candidate deterministic OpenCodeReview scope/rules/diff"
 
           {
             echo "# OpenCodeReview delegation context"
@@ -294,17 +324,9 @@ jobs:
             echo "- context SHA-256: \`${context_sha256}\`"
             echo "- workflow run: \`${GITHUB_RUN_ID}\`"
             echo
-            echo "This workflow performs deterministic OpenCodeReview scope/rule/diff preparation only."
-            echo "It intentionally does not call Copilot, OpenAI, Anthropic, or any OCR LLM endpoint."
-            echo \
-            "Semantic reasoning belongs to the external host agent (for example Codex/ChatGPT) that consum\
-            es this context."
-            echo "This workflow therefore does not claim an AI semantic review pass/fail."
-            echo
-            echo "Closure semantic review is attested by one write-authorized external host identity."
-            echo "The comment body must be exactly BTHWANI_SEMANTIC_REVIEW:v1 followed by one canonical JSON contract."
-            echo "Required contract fields: schema, version, candidateSha, verdict, reviewIdentity, reviewProvenance."
-            echo "The closure consumer rejects free-form, malformed, stale, duplicated, conflicting, or candidate-authored text."
+            echo "This workflow executes only the pinned deterministic OpenCodeReview scope/rule/diff toolchain."
+            echo "It does not claim semantic reasoning or a synthetic semantic PASS."
+            echo "The captured toolchain output and cryptographic context are consumed by Final Closure."
           } > "${evidence}/README.md"
 
           {

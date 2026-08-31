@@ -2,6 +2,7 @@ import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
 import { resolveMutationIdentityScope } from "@bthwani/data-runtime/mutation-identity-scope";
 import type { DshAddressMutationContext, DshClientAddressDraft } from "./client-address.types";
 import { secureRandomId } from "../_kernel/secure-random.ts";
+import { sha256Hex } from "../field-readiness/field-intent-identity.ts";
 import {
   getOrCreateDurableMutationAttempt,
   purgeExactDurableMutationAttempt,
@@ -24,7 +25,7 @@ function uniquePart(): string {
 }
 
 export function fingerprintClientAddressDraft(input: DshClientAddressDraft): string {
-  return JSON.stringify({
+  const canonicalDraft = JSON.stringify({
     label: input.label.trim(),
     recipientName: input.recipientName.trim(),
     phoneE164: input.phoneE164.trim(),
@@ -38,6 +39,7 @@ export function fingerprintClientAddressDraft(input: DshClientAddressDraft): str
     longitude: input.longitude ?? null,
     makeDefault: input.makeDefault === true,
   });
+  return `sha256:${sha256Hex(canonicalDraft)}`;
 }
 
 function newAttempt(

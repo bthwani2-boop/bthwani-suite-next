@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { requireRemoteExecution } from "./_external-tool-runner.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const lockedVersion = "v1.7.12";
 requireRemoteExecution("actionlint");
@@ -44,6 +45,17 @@ fs.writeFileSync(
   "utf8",
 );
 if (output) process.stdout.write(`${output}\n`);
+
+writeToolEvidence({
+  toolId: "actionlint",
+  status: result.error || result.status !== 0 ? "FAIL" : "PASS",
+  exitCode: result.error ? 1 : result.status ?? 0,
+  rawText: output,
+  nativeFile: diagnosticPath,
+  rawPath: diagnosticPath,
+  claim: "GitHub Actions workflow lint evidence",
+  scope: "all workflow files",
+});
 
 if (result.error) {
   console.error(`[ACTIONLINT FAIL] unable to execute validator: ${result.error.message}`);

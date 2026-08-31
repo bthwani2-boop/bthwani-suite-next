@@ -328,6 +328,18 @@ function New-BthwaniGovernedMigrationBatch {
 
   [void]$builder.AppendLine('\set ON_ERROR_STOP on')
   [void]$builder.AppendLine(@"
+\if :{?bthwani_lock_timeout_ms}
+\else
+\set bthwani_lock_timeout_ms 30000
+\endif
+\if :{?bthwani_statement_timeout_ms}
+\else
+\set bthwani_statement_timeout_ms 900000
+\endif
+SET lock_timeout = :'bthwani_lock_timeout_ms';
+SET statement_timeout = :'bthwani_statement_timeout_ms';
+"@)
+  [void]$builder.AppendLine(@"
 CREATE TABLE IF NOT EXISTS schema_migrations (
   service_name      TEXT        NOT NULL,
   migration_id      TEXT        NOT NULL,

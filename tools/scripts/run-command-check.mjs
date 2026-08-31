@@ -2,6 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 function fail(message, exitCode = 2) {
   process.stderr.write(`${message}\n`);
@@ -37,10 +38,27 @@ process.stdout.write(`[${label}] ${[command, ...commandArgs].join(" ")}\n`);
 const result = spawnSync(invocation.executable, invocation.args, {
   cwd: process.cwd(),
   env: process.env,
-  stdio: "inherit",
+  encoding: "utf8",
+  stdio: ["ignore", "pipe", "pipe"],
   shell: false,
   windowsHide: true,
 });
+const rawText = [result.stdout, result.stderr].filter(Boolean).join("\n");
+try {
+  writeToolEvidence({
+    toolId: label,
+    status: result.error || result.signal || result.status !== 0 ? "FAIL" : "PASS",
+    exitCode: result.error || result.signal ? 1 : result.status,
+    rawText,
+    rawPath: [invocation.executable, ...invocation.args].join(" "),
+    claim: "Command check evidence: " + label,
+    scope: "exact candidate command",
+  });
+} catch (error) {
+  process.stderr.write("[" + label + "] evidence capture failed: " + error.message + "\n");
+}
+if (result.stdout) process.stdout.write(result.stdout);
+if (result.stderr) process.stderr.write(result.stderr);
 
 if (result.error) {
   process.stderr.write(`[${label}] failed to start: ${result.error.message}\n`);

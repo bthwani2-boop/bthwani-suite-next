@@ -2,14 +2,14 @@
 
 ## Purpose
 
-OpenCodeReview (`ocr`) owns deterministic review preparation only:
+OpenCodeReview (`ocr`) is the canonical deterministic inspection authority for CI and Final Closure. It owns:
 
 - select the bounded review scope;
 - apply project include/exclude rules;
 - resolve file-specific review rules;
 - expose the exact diff/context for the pinned candidate.
 
-The host agent owns semantic reasoning. In an interactive ChatGPT or Codex session, that current host agent performs the review. OpenCodeReview itself does not own an LLM provider, model credential, approval, or repository authority.
+OpenCodeReview does not claim semantic reasoning, approval, or human review. It does not own an LLM provider, model credential, or repository authority beyond its deterministic inspection contract.
 
 ## Credential boundary
 
@@ -20,18 +20,7 @@ The canonical delegation path must not depend on:
 - an OpenAI/Anthropic API key solely for OpenCodeReview;
 - a model-specific CLI embedded inside the OCR wrapper.
 
-A GitHub Actions workflow may prepare and publish deterministic delegation context, but it must not claim that an AI semantic review occurred unless a separately authenticated host reviewer actually performed one.
-
-The only accepted semantic attestation is one comment whose body is exactly one marker line followed by one canonical JSON line:
-
-```text
-BTHWANI_SEMANTIC_REVIEW:v1
-{"schema":"BTHWANI_SEMANTIC_REVIEW","version":1,"candidateSha":"<exact 40-character head SHA>","verdict":"PASS","reviewIdentity":{"kind":"external-authorized-host-agent","provider":"<host provider>"},"reviewProvenance":{"artifactIdentity":"<exact OCR artifact name>","contextSha256":"<64 lowercase hex characters>","packageIntegrity":"<exact pinned package integrity>","toolVersion":"<pinned semantic-review tool version>"}}
-```
-
-The closure consumer validates the exact structured contract, the exact candidate SHA, the OCR artifact hashes and package provenance, and the live GitHub permission of the comment author. Malformed, partial, stale, duplicated, conflicting, candidate-authored, or free-form substring imitations fail closed. The comment author is the authority identity; no username embedded in the comment body is trusted.
-
-Automatic GitHub PR AI review belongs to the platform-native host reviewer (for example Codex Code Review) and is separate from the deterministic OpenCodeReview context workflow.
+The reusable `.github/workflows/open-code-review.yml` workflow invokes `tools/scripts/invoke-open-code-review-toolchain.ps1`, verifies the pinned package, and publishes exact-candidate context, resolved rules, reviewable files, diff, hashes, and a consumed evidence envelope. Final Closure requires that workflow and consumes its `opencodereview` evidence; it is not an orphan artifact or a second reviewer authority.
 
 ## Use when
 
@@ -43,8 +32,7 @@ Automatic GitHub PR AI review belongs to the platform-native host reviewer (for 
 
 - no code review is requested;
 - the CLI is unavailable and installation is outside scope;
-- formal product, finance, governance, CI, QA, security, release, risk, or final approval is required;
-- the same author is presenting the result as independent approval.
+- formal product, finance, governance, CI, QA, security, release, risk, or final approval is required.
 
 ## Workflow
 
@@ -53,8 +41,7 @@ Automatic GitHub PR AI review belongs to the platform-native host reviewer (for 
 3. Record included and excluded paths.
 4. Run `ocr delegate rule` for the reviewable paths.
 5. Inspect the exact diff and only necessary surrounding context.
-6. The current host agent performs the semantic review using those resolved rules.
-7. Report grounded Critical, High, and Medium findings.
-8. Keep tests, runtime proof, security scanners, and independent approval separate.
+6. Preserve the tool output and cryptographic identity as required CI evidence.
+7. Keep tests, runtime proof, security scanners, and product decisions separate.
 
-OpenCodeReview may not mutate source during review and may not self-promote its output into final approval.
+OpenCodeReview may not mutate source during inspection and may not self-promote its output into semantic approval.

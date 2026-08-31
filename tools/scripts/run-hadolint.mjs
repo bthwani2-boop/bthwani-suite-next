@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { quoteRel, repoRoot, runFilesTool, walkFiles } from "./_external-tool-runner.mjs";
+import { repoRoot, runFilesTool, walkFiles } from "./_external-tool-runner.mjs";
 
 const trustedPolicyRoot = path.resolve(process.env.BTHWANI_TRUSTED_POLICY_ROOT || repoRoot);
 const files = walkFiles(["apps", "services", "shared", "tools", "infra", "core"], (_full, name) =>
@@ -12,9 +12,8 @@ runFilesTool({
   binary: "hadolint",
   files,
   noFilesMessage: "No Dockerfiles found.",
-  makeCommand: (items) => {
+  makeArgs: (items) => {
     const trustedConfig = path.join(trustedPolicyRoot, ".hadolint.yaml");
-    const config = fs.existsSync(trustedConfig) ? `--config ${JSON.stringify(trustedConfig)} ` : "";
-    return "hadolint " + config + items.map(quoteRel).join(" ");
+    return [...(fs.existsSync(trustedConfig) ? ["--config", trustedConfig] : []), ...items];
   }
 });

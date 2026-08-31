@@ -3,6 +3,7 @@
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 function fail(message, exitCode = 2) {
   process.stderr.write(`${message}\n`);
@@ -41,10 +42,23 @@ process.stdout.write(`[${label}] pnpm exec tsc --noEmit -p ${project}\n`);
 const result = spawnSync(invocation.executable, invocation.args, {
   cwd: process.cwd(),
   env: process.env,
-  stdio: "inherit",
+  encoding: "utf8",
+  stdio: ["ignore", "pipe", "pipe"],
   shell: false,
   windowsHide: true,
 });
+const rawText = [result.stdout, result.stderr].filter(Boolean).join("\n");
+writeToolEvidence({
+  toolId: label,
+  status: result.error || result.signal || result.status !== 0 ? "FAIL" : "PASS",
+  exitCode: result.error || result.signal ? 1 : result.status,
+  rawText,
+  rawPath: project,
+  claim: "TypeScript compiler evidence",
+  scope: "exact TypeScript project",
+});
+if (result.stdout) process.stdout.write(result.stdout);
+if (result.stderr) process.stderr.write(result.stderr);
 
 if (result.error) {
   process.stderr.write(`[${label}] failed to start TypeScript: ${result.error.message}\n`);

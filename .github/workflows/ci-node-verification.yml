@@ -10,6 +10,7 @@ on:
       ci_control_plane: {type: string, required: true}
       dependency_changed: {type: string, required: true}
       platform: {type: string, required: true}
+      typed_lint_required: {type: string, required: true}
 
 permissions:
   contents: read
@@ -55,6 +56,12 @@ jobs:
         run: git diff --check "${BASE_SHA}" "${HEAD_SHA}"
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Run typed ESLint through Project Service
+        id: typed_lint
+        if: ${{ inputs.typed_lint_required == 'true' }}
+        continue-on-error: true
+        run: pnpm run lint:typed
+
       - name: Restore Nx computation cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
@@ -115,6 +122,7 @@ jobs:
           node --test tools/scripts/ci-routing.test.mjs
           node --test tools/scripts/ci-verification-window.test.mjs
           node --test tools/scripts/ci-runtime-bootstrap-policy.test.mjs
+          node --test tools/scripts/detect-ci-context.property.test.mjs
       - name: Verify Platform contract and generated client when affected
         id: platform_contract
         if: ${{ inputs.platform == 'true' }}
@@ -148,6 +156,8 @@ jobs:
           CONTRACTS_REQUIRED: ${{ inputs.contracts }}
           MATERIALIZE: ${{ steps.materialize.outcome }}
           NODE_GRAPH: ${{ steps.node_graph.outcome }}
+          TYPED_LINT: ${{ steps.typed_lint.outcome }}
+          TYPED_LINT_REQUIRED: ${{ inputs.typed_lint_required }}
           CI_CONTROL_REQUIRED: ${{ inputs.ci_control_plane }}
           CI_CONTROL: ${{ steps.ci_control.outcome }}
           PLATFORM_REQUIRED: ${{ inputs.platform }}
@@ -158,6 +168,11 @@ jobs:
           set -euo pipefail
           failures=()
           [[ "${WHITESPACE}" == "success" ]] || failures+=("whitespace:${WHITESPACE}")
+          if [[ "${TYPED_LINT_REQUIRED}" == "true" ]]; then
+            [[ "${TYPED_LINT}" == "success" ]] || failures+=("typed-lint:${TYPED_LINT}")
+          else
+            [[ "${TYPED_LINT}" == "skipped" ]] || failures+=("typed-lint-unexpected:${TYPED_LINT}")
+          fi
           if [[ "${CONTRACTS_REQUIRED}" == "true" ]]; then
             [[ "${MATERIALIZE}" == "success" ]] || failures+=("contract-materialization:${MATERIALIZE}")
             if [[ "${MATERIALIZE}" == "success" ]]; then

@@ -5,11 +5,10 @@
 //
 // The real runner (tools/scripts/invoke-service-migrations.ps1) sorts with
 // `Sort-Object { $_.Name.ToLowerInvariant() }, Name`, which is .NET's
-// culture-aware string comparison, not ASCII/ordinal order (verified: it
-// disagrees with a plain lowercase JS sort on names like
-// Historical migrations use several immutable filename conventions. To guarantee this manifest
-// matches the real execution order exactly, the ordering is obtained by
-// shelling out to the same Sort-Object call rather than approximating it.
+// culture-aware string comparison, not ASCII/ordinal order. Historical
+// migrations use several immutable filename conventions. To guarantee this
+// manifest matches the real execution order exactly, the ordering is obtained
+// by shelling out to the same Sort-Object call rather than approximating it.
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -51,17 +50,17 @@ if (!fs.existsSync(migrationsDir)) {
 }
 
 const manifestPath = path.join(migrationsDir, "manifest.json");
-const existingManifest = fs.existsSync(manifestPath)
-  ? JSON.parse(fs.readFileSync(manifestPath, "utf8"))
-  : null;
+let existingManifest = null;
+try {
+  existingManifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+} catch (error) {
+  if (error?.code !== "ENOENT") throw error;
+}
 const existingStates = loadExistingMigrationStates(existingManifest, service);
 
 function canonicalSqlBuffer(buffer) {
   const text = buffer.toString("utf8");
-  return Buffer.from(
-    text.replace(/\r\n?/g, "\n"),
-    "utf8",
-  );
+  return Buffer.from(text.replace(/\r\n?/g, "\n"), "utf8");
 }
 
 function sortedFileNamesViaPowerShell(dir) {
@@ -76,21 +75,44 @@ function sortedFileNamesViaPowerShell(dir) {
   return result.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
-const files = sortedFileNamesViaPowerShell(migrationsDir);
+function readStableRegularFile(fullPath, relativePath) {
+  let descriptor;
+  try {
+    const noFollow = process.platform === "win32" ? 0 : (fs.constants.O_NOFOLLOW ?? 0);
+    descriptor = fs.openSync(fullPath, fs.constants.O_RDONLY | noFollow);
+    const before = fs.fstatSync(descriptor);
+    if (!before.isFile()) throw new Error(`Migration is not a regular file: ${relativePath}`);
+    const data = fs.readFileSync(descriptor);
+    const after = fs.fstatSync(descriptor);
+    if (
+      before.dev !== after.dev ||
+      before.ino !== after.ino ||
+      before.size !== after.size ||
+      before.mtimeMs !== after.mtimeMs
+    ) {
+      throw new Error(`Migration changed while being read: ${relativePath}`);
+    }
+    return data;
+  } catch (error) {
+    if (["ENOENT", "ENOTDIR", "ELOOP"].includes(error?.code)) {
+      throw new Error(`Migration disappeared or became unsafe while being read: ${relativePath}`, { cause: error });
+    }
+    throw error;
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
+}
 
+const files = sortedFileNamesViaPowerShell(migrationsDir);
 if (files.length === 0) {
   console.error(`No .sql migrations found in ${relativeDir}`);
   process.exit(1);
 }
 
-const onDisk = new Set(fs.readdirSync(migrationsDir).filter((name) => name.toLowerCase().endsWith(".sql")));
-if (onDisk.size !== files.length || [...onDisk].some((name) => !files.includes(name))) {
-  throw new Error("PowerShell sort output does not match the on-disk .sql file set; refusing to write a manifest.");
-}
-
 const migrations = files.map((file, index) => {
   const fullPath = path.join(migrationsDir, file);
-  const sha256 = crypto.createHash("sha256").update(canonicalSqlBuffer(fs.readFileSync(fullPath))).digest("hex");
+  const source = readStableRegularFile(fullPath, `${relativeDir}/${file}`);
+  const sha256 = crypto.createHash("sha256").update(canonicalSqlBuffer(source)).digest("hex");
   const prefixMatch = file.match(/^[a-z]+-([0-9]+[a-z]?)_/i);
   return {
     ordinal: index + 1,
@@ -100,6 +122,14 @@ const migrations = files.map((file, index) => {
     state: resolveMigrationState(file, existingStates, existingManifest !== null),
   };
 });
+
+// Re-resolve the canonical execution order after all file reads. This makes
+// directory membership/order changes during hashing a hard failure instead of
+// allowing a manifest assembled from a mixed filesystem snapshot.
+const filesAfterRead = sortedFileNamesViaPowerShell(migrationsDir);
+if (filesAfterRead.length !== files.length || filesAfterRead.some((file, index) => file !== files[index])) {
+  throw new Error("Migration file set/order changed while generating the manifest; refusing to write a mixed snapshot.");
+}
 
 const manifest = {
   schemaVersion: 1,

@@ -47,6 +47,9 @@ export {
 export {
   fetchOwnCaptainReadiness as fetchCaptainOperationalReadiness,
 } from "../shared/dispatch";
+export {
+  clearCaptainForegroundLocationOutbox,
+} from "../shared/dispatch/dispatch-location.api";
 export type {
   DshCaptainReadiness,
   DshCaptainReadiness as CaptainOperationalReadiness,

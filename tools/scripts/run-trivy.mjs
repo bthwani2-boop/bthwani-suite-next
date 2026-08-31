@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { changedFiles, repoRoot, runTool } from "./_external-tool-runner.mjs";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const baseSha = String(process.env.BASE_SHA || "").trim();
 const candidateSha = String(process.env.CANDIDATE_SHA || "").trim();
@@ -16,11 +17,23 @@ for (const policyFile of [trivyConfig, trivyIgnore]) {
   }
 }
 
-const policyArgs = `--config ${JSON.stringify(trivyConfig)} --ignorefile ${JSON.stringify(trivyIgnore)}`;
+const policyArgs = ["--config", trivyConfig, "--ignorefile", trivyIgnore];
+const reportPath = path.resolve(repoRoot, process.env.BTHWANI_TRIVY_REPORT ?? ".diagnostics/security/trivy-report.json");
+fs.mkdirSync(path.dirname(reportPath), {recursive: true});
+const reportArgs = ["--format", "json", "--output", reportPath];
 
 if (baseSha && candidateSha) {
   const files = changedFiles(baseSha, candidateSha, ["."], () => true);
   if (!files.length) {
+    writeToolEvidence({
+      toolId: "trivy",
+      status: "PASS",
+      exitCode: 0,
+      rawText: "No changed files found for Trivy.",
+      rawPath: "trivy changed-file scope",
+      claim: "Trivy exact changed-file evidence",
+      scope: `base ${baseSha} to candidate ${candidateSha}`,
+    });
     console.log("No changed files found for Trivy.");
     process.exit(0);
   }
@@ -32,20 +45,19 @@ if (baseSha && candidateSha) {
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     fs.copyFileSync(file, destination);
   }
-  const target = JSON.stringify(staging);
   runTool({
     toolId: "trivy",
     binary: "trivy",
-    command: `trivy fs ${policyArgs} ${target}`,
-    diagnosticCommand: `trivy fs ${policyArgs} --format json --output ${JSON.stringify(path.join(staging, "trivy-report.json"))} ${target}`,
+    args: ["fs", ...policyArgs, ...reportArgs, staging],
+    diagnosticArgs: ["fs", ...policyArgs, ...reportArgs, staging],
     required: true,
   });
 } else {
   runTool({
     toolId: "trivy",
     binary: "trivy",
-    command: `trivy fs ${policyArgs} .`,
-    diagnosticCommand: `trivy fs ${policyArgs} --format json --output .diagnostics/security/trivy-report.json .`,
+    args: ["fs", ...policyArgs, ...reportArgs, "."],
+    diagnosticArgs: ["fs", ...policyArgs, ...reportArgs, "."],
     required: true,
   });
 }

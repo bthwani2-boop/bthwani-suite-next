@@ -200,18 +200,26 @@ WHERE service_name = '$ProbeServiceSql' AND migration_id = '$ProbeFileNameSql';
   @"
 CREATE TABLE $ProbeTable (
   id INTEGER PRIMARY KEY,
-  payload TEXT NOT NULL
+  payload TEXT NOT NULL,
+  lock_timeout_ms INTEGER NOT NULL,
+  statement_timeout_ms INTEGER NOT NULL
 );
-INSERT INTO $ProbeTable (id, payload) VALUES (1, 'recovered');
+INSERT INTO $ProbeTable (id, payload, lock_timeout_ms, statement_timeout_ms)
+VALUES (
+  1,
+  'recovered',
+  round(extract(epoch FROM current_setting('lock_timeout')::interval) * 1000)::INTEGER,
+  round(extract(epoch FROM current_setting('statement_timeout')::interval) * 1000)::INTEGER
+);
 "@ | Set-Content -LiteralPath $ProbePath -Encoding utf8NoBOM
   Write-ProbeManifest -Directory $TemporaryRoot -ServiceName $ProbeService -MigrationFile (Get-Item -LiteralPath $ProbePath)
 
   Invoke-RunnerProcess `
     -RunnerPath $ServiceRunner `
-    -Arguments @("-ServiceKey", $ProbeService, "-MigrationDirectory", $TemporaryRoot, "-DatabaseUrl", $DatabaseUrl) `
+    -Arguments @("-ServiceKey", $ProbeService, "-MigrationDirectory", $TemporaryRoot, "-DatabaseUrl", $DatabaseUrl, "-LockTimeoutSeconds", "7", "-StatementTimeoutMinutes", "2") `
     -ExpectSuccess $true | Out-Null
 
-  $recoveredData = Invoke-ProbePsql "SELECT count(*) FROM $ProbeTable WHERE id = 1 AND payload = 'recovered';"
+  $recoveredData = Invoke-ProbePsql "SELECT count(*) FROM $ProbeTable WHERE id = 1 AND payload = 'recovered' AND lock_timeout_ms = 7000 AND statement_timeout_ms = 120000;"
   $recoveredLedger = Invoke-ProbePsql @"
 SELECT count(*)
 FROM schema_migrations
@@ -231,6 +239,7 @@ DELETE FROM schema_migrations WHERE service_name = '$ProbeServiceSql';
 "@ | Out-Null
 }
 Write-Host "Atomic migration rollback and roll-forward: PASS"
+Write-Host "Migration lock/statement timeout session settings: PASS"
 
 Invoke-RunnerProcess `
   -RunnerPath $DshRunner `

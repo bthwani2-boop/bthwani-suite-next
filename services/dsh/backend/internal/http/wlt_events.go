@@ -181,7 +181,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		// redelivers it, instead of committing an accepted event whose order
 		// projection silently diverges with no replay source.
 		if err := applyOrderPaymentProjection(r.Context(), tx, body.OrderID, body.OperatorContextID, body.PaymentSessionID, body.PaymentMethod, body.Status, body.CorrelationID); err != nil {
-			log.Printf("[wlt-events] order payment projection rejected event orderID=%s sessionID=%s correlationID=%s: %v", body.OrderID, body.PaymentSessionID, body.CorrelationID, err)
+			log.Printf("[wlt-events] order payment projection rejected event (error_type %T)", err)
 			store.SendError(w, http.StatusInternalServerError, "ORDER_PROJECTION_FAILED", "WLT event was not applied because the order payment projection failed")
 			return
 		}

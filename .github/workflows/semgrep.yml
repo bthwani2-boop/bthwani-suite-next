@@ -210,7 +210,7 @@ jobs:
             echo "- Baseline ratchet: \`$(jq -r '.changeVerification.state' "${ratchet}")\`"
             echo "- New material findings: \`${new_material}\`"
             echo "- Worsened material findings: \`${worsened_material}\`"
-            echo "- Inherited findings remain Repository Health debt"
+            echo "- Inherited findings remain Static Repository Baseline debt"
           } >> "${GITHUB_STEP_SUMMARY}"
           [[ "${new_material}" == "0" && "${worsened_material}" == "0" ]] || {
             echo "::error::Semgrep baseline ratchet rejected new or worsened material findings"

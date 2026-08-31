@@ -18,7 +18,7 @@ test("development CI separates closure identity from a trusted verification fron
   assert.match(workflow, /expected_title="BThwani CI PR \$\{PR_NUMBER\} \$\{INPUT_VERIFY_FROM_SHA\} @ \$\{base_sha\}"/u);
   assert.match(workflow, /verify_from_sha has no trusted exact PR\/base-bound successful CI evidence/u);
   assert.match(workflow, /CI_BASE_SHA="\$\{effective_base\}"/u);
-  assert.match(workflow, /ci_control_plane' "\$\{probe\}"\)" == "true"/u);
+  assert.match(workflow, /CI_BASE_SHA="\$\{effective_base\}"[\s\S]*node "\$\{trusted_router\}"/u);
   assert.match(workflow, /effective_base="\$\{CLOSURE_BASE_SHA\}"/u);
   assert.match(workflow, /diagnostics:[\s\S]*?base_sha: \$\{\{ needs\.context\.outputs\.verification_base_sha \}\}/u);
   assert.match(workflow, /verification:[\s\S]*?base_sha: \$\{\{ needs\.context\.outputs\.verification_base_sha \}\}/u);
@@ -31,6 +31,7 @@ test("Final Closure remains full exact-candidate proof from the PR closure base"
   assert.match(workflow, /expected_base_sha: \$\{\{ needs\.resolve\.outputs\.base_sha \}\}/u);
   assert.match(workflow, /full_scope: false/u);
   assert.doesNotMatch(workflow, /verify_from_sha:/u);
+  assert.match(workflow, /uses: \.\/\.github\/workflows\/open-code-review\.yml/u);
 });
 
 test("development control-plane verification is materiality routed", () => {
@@ -40,7 +41,9 @@ test("development control-plane verification is materiality routed", () => {
     /controls:[\s\S]*?if: \$\{\{ needs\.context\.result == 'success' && \(needs\.context\.outputs\.full_scope == 'true' \|\| needs\.context\.outputs\.ci_control_plane == 'true' \|\| needs\.context\.outputs\.database_changed == 'true'\) \}\}/u,
   );
   assert.match(workflow, /id: migrations[\s\S]*?database_changed == 'true'/u);
-  assert.match(workflow, /id: assurance_authority[\s\S]*?ci_control_plane == 'true'/u);
+  assert.match(workflow, /id: source_immutability[\s\S]*?ci_control_plane == 'true'/u);
+  assert.match(workflow, /id: sonar_ownership[\s\S]*?ci_control_plane == 'true'/u);
+  assert.doesNotMatch(workflow, /assurance_authority|authority-drift|bootstrap/iu);
   assert.match(workflow, /Enforce complete material control-plane collection/u);
   assert.match(workflow, /check_result controls "\$\{CONTROLS_RESULT\}" "\$\{CONTROLS_REQUIRED\}"/u);
 });

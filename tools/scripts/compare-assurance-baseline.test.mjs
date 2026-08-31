@@ -21,7 +21,7 @@ test("baseline ratchet allows inherited debt while blocking new material finding
   assert.deepEqual(result.dispositionCounts, {BASELINE: 2, CANDIDATE: 1, NEW: 0, FIXED: 1, UNCHANGED: 1, WORSENED: 0});
   assert.equal(result.changeVerification.state, "PASS");
   assert.equal(result.changeClosure.state, "PASS");
-  assert.equal(result.repositoryHealth.state, "BASELINE_OPEN");
+  assert.equal(result.repositoryBaseline.state, "BASELINE_OPEN");
   assert.equal(result.repositoryClosure.state, "NOT_CLOSED");
 });
 
@@ -43,7 +43,7 @@ test("unknown coverage and bypass fail closed", () => {
     candidatePayload: {results: [], errors: [{message: "unknown"}]},
     metadata: {bypassUsed: true},
   });
-  assert.equal(result.repositoryHealth.state, "BASELINE_OPEN");
+  assert.equal(result.repositoryBaseline.state, "BASELINE_OPEN");
   assert.equal(result.counts.unknownRequiredCoverage, 1);
   assert.equal(result.repositoryClosure.state, "NOT_CLOSED");
   assert.match(result.repositoryClosure.reasons.join(";"), /bypass used/u);
@@ -69,7 +69,7 @@ test("scanner findings do not count as execution failure when baseline is unchan
   assert.equal(result.policy.evidenceComplete, true);
   assert.equal(result.counts.newMaterial, 0);
   assert.equal(result.changeVerification.state, "PASS");
-  assert.equal(result.repositoryHealth.state, "BASELINE_OPEN");
+  assert.equal(result.repositoryBaseline.state, "BASELINE_OPEN");
 });
 
 test("scanner success cannot override incomplete evidence", () => {
@@ -80,5 +80,5 @@ test("scanner success cannot override incomplete evidence", () => {
   assert.equal(result.policy.candidateExecutionComplete, false);
   assert.equal(result.policy.evidenceComplete, false);
   assert.equal(result.changeVerification.state, "OPEN");
-  assert.equal(result.repositoryHealth.state, "BLOCKED");
+  assert.equal(result.repositoryBaseline.state, "BLOCKED");
 });

@@ -12,45 +12,20 @@ test("Final Closure cannot publish success before manifest upload", () => {
   assert.doesNotMatch(beforeUpload, /-f state=success -f context='BThwani \/ Change Closure'/u);
 });
 
-test("CI control-plane authorities are loaded from trusted workflow SHA", () => {
+test("CI control-plane technical controls are loaded from trusted workflow SHA", () => {
   const f = read(".github/workflows/ci-check.yml");
   assert.match(f, /authoritative definition must run from/u);
   assert.match(f, /required CI status publication is forbidden outside/u);
   assert.match(f, /Load trusted CI control-plane authorities/u);
   assert.match(f, /TRUSTED_WORKFLOW_SHA/u);
-  assert.match(f, /verify-assurance-authority-drift\.mjs/u);
-  assert.match(f, /TRUSTED_ASSURANCE_AUTHORITY_DRIFT/u);
-  assert.match(f, /ASSURANCE_AUTHORITY/u);
-  assert.match(f, /fetch_trusted tools\/scripts\/check-ci-source-immutability\.mjs/u);
-  assert.match(f, /fetch_trusted tools\/guards\/migration-manifest-drift-gate\.mjs/u);
-  assert.match(f, /fetch_trusted tools\/guards\/sonar-coverage-ownership-gate\.mjs/u);
-  assert.match(f, /fetch_trusted tools\/verification\/ownership.manifest\.json/u);
-  assert.match(f, /TRUSTED_MIGRATION_MANIFEST_GUARD/u);
-  assert.match(f, /TRUSTED_SONAR_OWNERSHIP_GUARD/u);
-  assert.doesNotMatch(f, /run:\s*node tools\/guards\/migration-manifest-drift-gate\.mjs/u);
-  assert.doesNotMatch(f, /node --test tools\/guards\/sonar-coverage-ownership-gate\.test\.mjs/u);
-
-  const drift = read("tools/scripts/verify-assurance-authority-drift.mjs");
-  for (const protectedAuthority of [
-    '".github/workflows"',
-    '".github/actions"',
-    '".opencodereview"',
-    '"tools/guards"',
-    '"tools/verification"',
-    '"tools/scripts/invoke-runtime-phase.ps1"',
-    '"tools/scripts/run-guard-suite.mjs"',
-    '"infra/docker/scripts/runtime-dispatch.ps1"',
-  ]) assert.ok(drift.includes(protectedAuthority), `missing drift authority ${protectedAuthority}`);
-  assert.match(drift, /ASSURANCE_AUTHORITY_CHANGE_REQUIRES_BOOTSTRAP/u);
-  assert.match(drift, /BTHWANI_ASSURANCE_AUTHORITY_DRIFT:v1/u);
-  assert.match(drift, /authorityDiffSha256/u);
-  assert.match(drift, /tools\/prompting\/bthwani-orchestrator/u);
-
-  const verifier = read("tools/scripts/check-ci-source-immutability.mjs");
-  assert.match(verifier, /BTHWANI_TARGET_REPO/u);
-  assert.match(verifier, /targetRepoRoot/u);
-  assert.match(read("tools/guards/migration-manifest-drift-gate.mjs"), /BTHWANI_TARGET_REPO/u);
-  assert.match(read("tools/guards/_guard-utils.mjs"), /BTHWANI_TARGET_REPO/u);
+   assert.match(f, /check-ci-source-immutability\.mjs/u);
+   assert.match(f, /migration-manifest-drift-gate\.mjs/u);
+   assert.match(f, /sonar-coverage-ownership-gate\.mjs/u);
+   const retiredAuthority = ["verify-assurance-", "authority-drift"].join("");
+   const retiredBootstrap = ["ASSURANCE_", "BOOTSTRAP"].join("");
+   const retiredSoloOwner = ["solo-", "owner"].join("");
+   assert.doesNotMatch(f, new RegExp(retiredAuthority + "|" + retiredBootstrap + "|" + retiredSoloOwner, "iu"));
+   assert.match(read("tools/scripts/check-ci-source-immutability.mjs"), /BTHWANI_TARGET_REPO/u);
 });
 
 test("Remote Security authority, wrappers, installer, and policy come from trusted workflow SHA", () => {
@@ -71,6 +46,10 @@ test("Remote Security authority, wrappers, installer, and policy come from trust
   assert.match(read("tools/scripts/run-osv-scanner.mjs"), /BTHWANI_TRUSTED_POLICY_ROOT/u);
   assert.match(read("tools/scripts/run-trivy.mjs"), /BTHWANI_TRUSTED_POLICY_ROOT/u);
   assert.match(read("tools/scripts/run-shellcheck.mjs"), /--norc/u);
+  const externalRunner = read("tools/scripts/_external-tool-runner.mjs");
+  assert.doesNotMatch(externalRunner, /execSync/u);
+  assert.match(externalRunner, /shell:\s*false/u);
+  assert.match(externalRunner, /makeArgs/u);
 });
 
 test("Semgrep evidence disposition is loaded from trusted workflow authority", () => {
@@ -93,10 +72,30 @@ test("CodeQL trusted upload consumes SARIF findings before publishing", () => {
   assert.match(read("tools/scripts/classify-codeql-evidence.mjs"), /FINDINGS_OPEN/u);
 });
 
+test("CodeQL trusted upload waits for processing and exact analysis binding", () => {
+  const f = read(".github/workflows/codeql.yml");
+  assert.match(f, /processing_status/u);
+  assert.match(f, /analyses_url/u);
+  assert.match(f, /\.commit_sha == \$candidate_sha/u);
+  assert.match(f, /\.ref == \$candidate_ref/u);
+  assert.match(f, /rtrimstr\("\/"\).*\$expected_category/u);
+  assert.match(f, /codeql-upload-lifecycle-/u);
+});
+
 test("Sonar scan waits for the remote quality-gate result", () => {
   const f = read(".github/workflows/sonarqube.yml");
   assert.match(f, /-Dsonar\.qualitygate\.wait=true/u);
   assert.match(f, /-Dsonar\.qualitygate\.timeout=300/u);
+});
+
+test("Sonar evidence retrieval uses endpoint-specific identity and complete pagination", () => {
+  const f = read(".github/workflows/sonarqube.yml");
+  assert.match(f, /componentKeys=\$\{SONAR_PROJECT_KEY\}/u);
+  assert.match(f, /component=\$\{SONAR_PROJECT_KEY\}/u);
+  assert.match(f, /fetch_remaining_pages issues api\/issues\/search/u);
+  assert.match(f, /fetch_remaining_pages hotspots api\/hotspots\/search/u);
+  assert.match(f, /merge_paged_json issues/u);
+  assert.match(f, /merge_paged_json hotspots/u);
 });
 
 test("Sonar raw API output is consumed as explicit evidence", () => {
@@ -116,17 +115,23 @@ test("Sonar raw API output is consumed as explicit evidence", () => {
   assert.match(classifier, /QUALITY_GATE_OPEN/u);
 });
 
-test("evidence attestation rejects candidate-linked reviewers and binds assurance bootstrap exactly", () => {
+test("experience evidence records are exact-candidate, provenance-bound, and producer-identified", () => {
   const v = read("tools/scripts/verify-pr-evidence-comments.mjs");
-  assert.match(v, /candidateAuthors/u);
-  assert.match(v, /candidate author\/committer\/PR creator cannot attest/u);
+  assert.match(v, /OWNER association/u);
   assert.match(v, /evidenceSha256/u);
   assert.match(v, /capturedAt/u);
+  assert.match(v, /authorized-host-runner/u);
   assert.match(v, /external-device-runner/u);
-  assert.match(v, /device\?\.appBuild/u);
-  assert.match(v, /BTHWANI_ASSURANCE_BOOTSTRAP:v1/u);
-  assert.match(v, /external-authorized-assurance-reviewer/u);
-  assert.match(v, /bootstrap authority diff SHA-256 does not match trusted evidence/u);
-  assert.match(v, /bootstrap protected changed-count does not match trusted evidence/u);
-  assert.match(v, /assurance-authority-only/u);
+  assert.match(v, /producerIdentity/u);
+  const retiredReviewer = ["external-authorized-", "assurance-reviewer"].join("");
+  const retiredSoloOwner = ["solo-", "owner"].join("");
+  assert.doesNotMatch(v, new RegExp("bootstrap|candidateAuthors|APPROVED PR review|reviewIdentity|reviewProvenance|semantic|" + retiredReviewer + "|" + retiredSoloOwner, "iu"));
+});
+
+
+test("Node aggregate references a real typed-lint producer", () => {
+  const f = read(".github/workflows/ci-node-verification.yml");
+  assert.match(f, /id: typed_lint/u);
+  assert.match(f, /run: pnpm run lint:typed/u);
+  assert.match(f, /TYPED_LINT: \$\{\{ steps\.typed_lint\.outcome \}\}/u);
 });

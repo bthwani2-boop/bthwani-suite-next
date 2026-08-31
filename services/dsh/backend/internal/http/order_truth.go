@@ -81,7 +81,7 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 		}); err != nil {
 			// Best-effort means logged, never silently discarded: this row is the
 			// only record of WHY a financial request was rejected.
-			log.Printf("[order-truth] audit write failed for order.idempotency_conflict (checkout_intent_id=%s, error_type %T)", body.CheckoutIntentID, err)
+			log.Printf("[order-truth] audit write failed for order.idempotency_conflict (error_type %T)", err)
 		}
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_KEY_REUSED", "Idempotency-Key was already used for another order request")
 		return
@@ -99,7 +99,7 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 		}); err != nil {
 			// Best-effort means logged, never silently discarded: this row is the
 			// only record of WHY a financial request was rejected.
-			log.Printf("[order-truth] audit write failed for order.create_conflict (checkout_intent_id=%s, error_type %T)", body.CheckoutIntentID, err)
+			log.Printf("[order-truth] audit write failed for order.create_conflict (error_type %T)", err)
 		}
 		store.SendError(w, http.StatusConflict, "ORDER_CREATE_CONFLICT", err.Error())
 		return
@@ -136,7 +136,7 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 		// The order is already committed; failing the response now would tell
 		// the client "error" for an order that exists. Best-effort means logged,
 		// never silently discarded.
-		log.Printf("[order-truth] audit write failed for %s (order_id=%s, error_type %T)", eventType, truth.ID, err)
+		log.Printf("[order-truth] audit write failed (error_type %T)", err)
 	}
 	w.Header().Set("X-Correlation-ID", truth.CorrelationID)
 	store.SendJSON(w, status, map[string]any{"order": truth})

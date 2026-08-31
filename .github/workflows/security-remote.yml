@@ -391,8 +391,10 @@ jobs:
                   if [[ "${BASE_SHA}" =~ ^[0-9a-fA-F]{40}$ && "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
                     log_opts="${BASE_SHA}..${CANDIDATE_SHA}"
                   fi
+                  gitleaks_report="${RUNNER_TEMP}/remote-security-evidence/gitleaks-report.json"
                   gitleaks detect --gitleaks-ignore-path "${TRUSTED_SECURITY_ROOT}/.gitleaksignore" \
-                    --log-opts="${log_opts}" --source . --no-banner --redact --verbose >"${log}" 2>&1
+                    --log-opts="${log_opts}" --source . --no-banner --redact --verbose \
+                    --report-format=json --report-path="${gitleaks_report}" >"${log}" 2>&1
                   status=$?
                 fi
                 ;;
@@ -423,6 +425,25 @@ jobs:
               outcome=FAIL
             fi
           fi
+          native_file=''
+          case "${ANALYZER}" in
+            gitleaks) native_file="${RUNNER_TEMP}/remote-security-evidence/gitleaks-report.json" ;;
+            osv-scanner) native_file="${GITHUB_WORKSPACE}/.diagnostics/security/osv-evidence.json" ;;
+            trivy) native_file="${GITHUB_WORKSPACE}/.diagnostics/security/trivy-report.json" ;;
+            zizmor) native_file="${GITHUB_WORKSPACE}/.diagnostics/workflow-security/zizmor.json" ;;
+          esac
+          capture_args=(
+            --tool-id "${ANALYZER}"
+            --status "${outcome}"
+            --exit-code "${status}"
+            --raw-file "${log}"
+            --output "${RUNNER_TEMP}/remote-security-evidence/${ANALYZER}.evidence.json"
+            --head-sha "${CANDIDATE_SHA}"
+            --base-sha "${BASE_SHA}"
+            --scope "repository candidate ${CANDIDATE_SHA}"
+          )
+          [[ -z "${native_file}" || ! -f "${native_file}" ]] || capture_args+=(--native-file "${native_file}")
+          node "${TRUSTED_SECURITY_ROOT}/tools/scripts/capture-tool-evidence.mjs" "${capture_args[@]}"
           jq -n \
             --arg analyzer "${ANALYZER}" \
             --arg candidateSha "${CANDIDATE_SHA}" \

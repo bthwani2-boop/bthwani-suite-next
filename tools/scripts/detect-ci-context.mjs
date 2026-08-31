@@ -55,6 +55,111 @@ export function resolveFullScope({ fullScope = process.env.CI_FULL_SCOPE, mode =
     String(mode ?? "").trim().toLowerCase() === "full";
 }
 
+
+const BACKEND_CLAIM_KEYS = [
+  ["dsh", "backend:dsh"],
+  ["wlt", "backend:wlt"],
+  ["identity", "backend:identity"],
+  ["workforce", "backend:workforce"],
+  ["platform", "backend:platform-control"],
+  ["providers", "backend:providers"],
+];
+
+export function deriveRequiredClaims(classification) {
+  const claims = [];
+  if (classification.full_scope === true || classification.ci_control_plane === true) {
+    claims.push(
+      "control:ci-source-immutability",
+      "control:sonar-coverage-ownership",
+    );
+  }
+  if (classification.full_scope === true || classification.database_changed === true) {
+    claims.push("control:migration-manifest");
+  }
+  if (classification.diagnostics_required === true) claims.push("contracts:diagnostics");
+  if (classification.verification_required === true) claims.push("node:verification");
+  for (const [key, claimId] of BACKEND_CLAIM_KEYS) {
+    if (classification[key] === true && classification.backend_required === true) claims.push(claimId);
+  }
+  if (classification.runtime_required === true) claims.push("runtime:verification");
+  return [...new Set(claims)];
+}
+
+export function deriveClosureRequiredClaims(classification) {
+  return [...new Set([
+    "change:verification",
+    "analysis:sonar",
+    "analysis:codeql",
+    "analysis:semgrep",
+    "security:remote",
+    "analysis:opencodereview",
+    classification.rendered_web_required === true ? "experience:rendered-web-baseline" : "",
+    classification.rendered_web_required === true ? "experience:rendered-web-attestation" : "",
+    classification.mobile_evidence_required === true ? "experience:mobile-device" : "",
+    classification.dependency_changed === true ? "dependency:review" : "",
+    classification.dependency_changed === true ? "dependency:lockfile" : "",
+    classification.infrastructure === true ? "docker:policy" : "",
+  ].filter(Boolean))];
+}
+
+export function applyForcedVerification(classification, forcedClaims = []) {
+  const next = {...classification};
+  for (const claimId of [...new Set(forcedClaims.map((value) => String(value).trim()).filter(Boolean))]) {
+    switch (claimId) {
+      case "control:ci-source-immutability":
+      case "control:sonar-coverage-ownership":
+        next.ci_control_plane = true;
+        break;
+      case "control:migration-manifest":
+        next.database_changed = true;
+        break;
+      case "contracts:diagnostics":
+        next.contracts = true;
+        next.diagnostics_required = true;
+        break;
+      case "node:verification":
+        next.node = true;
+        next.verification_required = true;
+        break;
+      case "backend:dsh":
+        next.dsh = true;
+        break;
+      case "backend:wlt":
+        next.wlt = true;
+        break;
+      case "backend:identity":
+        next.identity = true;
+        break;
+      case "backend:workforce":
+        next.workforce = true;
+        break;
+      case "backend:platform-control":
+        next.platform = true;
+        break;
+      case "backend:providers":
+        next.providers = true;
+        break;
+      case "runtime:verification":
+        next.runtime_required = true;
+        break;
+      default:
+        throw new Error(`UNKNOWN_FORCED_CI_CLAIM:${claimId}`);
+    }
+  }
+
+  next.backend = ["dsh", "wlt", "identity", "workforce", "platform", "providers"].some((key) => next[key] === true);
+  next.backend_required = next.backend;
+  next.required_jobs = [
+    next.diagnostics_required === true ? "diagnostics" : "",
+    next.verification_required === true ? "node" : "",
+    next.backend_required === true ? "backends" : "",
+    next.runtime_required === true ? "runtime" : "",
+  ].filter(Boolean);
+  next.required_claims = deriveRequiredClaims(next);
+  next.closure_required_claims = deriveClosureRequiredClaims(next);
+  return next;
+}
+
 export function classifyFiles(inputFiles, options = {}) {
   const files = sorted(inputFiles);
   const fullScope = options.fullScope === true;
@@ -64,6 +169,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const frontend = fullScope || hasPath(files, (file) =>
     startsWithAny(file, ["apps/", "shared/"]) || /(^|\/)(services\/[^/]+\/frontend)\//u.test(file),
   );
+  const typedLintRequired = fullScope || hasPath(files, (file) => /\.(?:ts|tsx|mts|cts)$/u.test(file));
   const contracts = fullScope || hasPath(files, (file) =>
     file.startsWith("contracts/") || file.endsWith(".openapi.yaml") || file.includes("/contracts/") || file.includes("/clients/generated/"),
   );
@@ -126,20 +232,6 @@ export function classifyFiles(inputFiles, options = {}) {
     infrastructure ? "infrastructure" : "",
   ].filter(Boolean);
 
-  // Human review is a changed-candidate risk decision, not a verification-mode
-  // side effect. Full-scope verification must therefore not manufacture a human
-  // approval requirement for unrelated bytes. Keep this policy centralized here
-  // so Final Closure consumes the same changed-file truth as every other caller.
-  const humanReviewRequired = hasPath(files, (file) =>
-    isAuthorizationPath(file) ||
-    isWltFinancialPath(file) ||
-    isIdentityPath(file) ||
-    isMigrationPath(file) ||
-    isMigrationAuthorityPath(file) ||
-    isWorkflowAuthorityPath(file) ||
-    /cancellation/iu.test(file),
-  );
-
   const diagnosticsRequired = contracts;
   const verificationRequired = node;
   const backendRequired = backend;
@@ -151,7 +243,7 @@ export function classifyFiles(inputFiles, options = {}) {
     runtimeRequired ? "runtime" : "",
   ].filter(Boolean);
 
-  return {
+  const classification = {
     changed_count: files.length,
     full_scope: fullScope,
     dependency_changed: dependencyChanged,
@@ -170,10 +262,15 @@ export function classifyFiles(inputFiles, options = {}) {
     backend,
     database_changed: databaseChanged,
     database: databaseChanged,
+    backend_database_changed: databaseChanged,
     node,
+    node_contracts: contracts,
+    node_ci_control_plane: ciControlPlane,
+    node_dependency_changed: dependencyChanged,
+    node_platform: platform,
+    node_typed_lint_required: typedLintRequired,
     migration_authority: migrationAuthority,
     risk_classes: riskClasses,
-    human_review_required: humanReviewRequired,
     verification_required: verificationRequired,
     backend_required: backendRequired,
     diagnostics_required: diagnosticsRequired,
@@ -181,6 +278,9 @@ export function classifyFiles(inputFiles, options = {}) {
     sonar_required: sonarRequired,
     required_jobs: requiredJobs,
   };
+  classification.required_claims = deriveRequiredClaims(classification);
+  classification.closure_required_claims = deriveClosureRequiredClaims(classification);
+  return classification;
 }
 
 function readChangedFiles(baseSha, headSha) {

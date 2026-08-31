@@ -83,7 +83,9 @@ function Invoke-DatabaseSql {
     "-X",
     "-v", "ON_ERROR_STOP=1",
     "-v", "bthwani_lock_timeout_seconds=$LockTimeoutSeconds",
-    "-v", "bthwani_statement_timeout_minutes=$StatementTimeoutMinutes"
+    "-v", "bthwani_statement_timeout_minutes=$StatementTimeoutMinutes",
+    "-v", "bthwani_lock_timeout_ms=$($LockTimeoutSeconds * 1000)",
+    "-v", "bthwani_statement_timeout_ms=$($StatementTimeoutMinutes * 60 * 1000)"
   )
   if ($Quiet) { $arguments += "-q" }
 

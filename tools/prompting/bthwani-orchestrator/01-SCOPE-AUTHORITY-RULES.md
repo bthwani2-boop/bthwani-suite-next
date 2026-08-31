@@ -130,6 +130,25 @@ If correct execution requires a branch that does not exist or was not human-auth
 
 Never force-push, blindly hard-reset newer work, discard foreign changes or overwrite concurrent truth.
 
+## 6.1 Assurance control-plane boundary
+
+Normal product work operates under this boundary:
+
+```text
+TOOLCHAIN_PLATFORM_VERSION_MIGRATION = HUMAN_ONLY
+ASSURANCE_CONTROL_PLANE = FROZEN_FOR_NORMAL_PRODUCT_WORK
+NO ASSURANCE RECURSION WITHOUT A UNIQUE MATERIAL CLAIM
+SIDE_PROJECT_OR_AGENT_SELF_IMPROVEMENT = OUT_OF_SCOPE
+```
+
+An agent may consume and report assurance evidence during ordinary product work,
+but may not autonomously upgrade the toolchain, platform, dependency policy or
+assurance control plane. Control-plane maintenance requires an explicit current
+human objective, a proven material root, and a bounded Closure Unit. Work whose
+primary outcome is improving the agent, creating a side project, or recursively
+qualifying the assurance machinery is outside the product objective unless that
+same explicit objective establishes a unique material claim and its Source of Fix.
+
 ## 7. Capability-to-evidence discipline
 
 For every material claim:

@@ -2,6 +2,7 @@
 
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { writeToolEvidence } from "./capture-tool-evidence.mjs";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 const MAX_CONCURRENCY = 8;
@@ -41,15 +42,44 @@ function parseArguments(argv) {
 function runGuard(guard) {
   return new Promise((resolve) => {
     const startedAt = Date.now();
+    const stdout = [];
+    const stderr = [];
     const child = spawn(process.execPath, [guard], {
       cwd: repositoryRoot,
-      stdio: "inherit",
+      stdio: ["ignore", "pipe", "pipe"],
       shell: false,
       windowsHide: true,
     });
+    child.stdout?.on("data", (chunk) => stdout.push(String(chunk)));
+    child.stderr?.on("data", (chunk) => stderr.push(String(chunk)));
 
-    child.once("error", (error) => resolve({ guard, status: 1, error, elapsedMs: Date.now() - startedAt }));
-    child.once("close", (status, signal) => resolve({ guard, status: status ?? 1, signal, elapsedMs: Date.now() - startedAt }));
+    child.once("error", (error) => {
+      const rawText = [...stdout, ...stderr, error.message].join("");
+      try {
+        writeToolEvidence({toolId: path.basename(guard, ".mjs"), status: "FAIL", exitCode: 1, rawText, rawPath: guard, scope: "guard invocation"});
+      } catch (captureError) {
+        stderr.push("evidence capture failed: " + captureError.message);
+      }
+      resolve({ guard, status: 1, error, elapsedMs: Date.now() - startedAt });
+    });
+    child.once("close", (status, signal) => {
+      const rawText = [...stdout, ...stderr].join("");
+      try {
+        writeToolEvidence({
+          toolId: path.basename(guard, ".mjs"),
+          status: status === 0 ? "PASS" : "FAIL",
+          exitCode: status ?? 1,
+          rawText,
+          rawPath: guard,
+          scope: "guard invocation",
+        });
+      } catch (error) {
+        stderr.push("evidence capture failed: " + error.message);
+      }
+      if (stdout.length) process.stdout.write(stdout.join(""));
+      if (stderr.length) process.stderr.write(stderr.join(""));
+      resolve({ guard, status: status ?? 1, signal, elapsedMs: Date.now() - startedAt });
+    });
   });
 }
 

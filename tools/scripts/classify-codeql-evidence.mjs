@@ -96,7 +96,7 @@ function findingFingerprint({category, result, ruleId, uri, line, message}) {
 export function classifyCodeqlEvidence({documents, headSha = "", baseSha = "", mode = "full", diffText = ""}) {
   const errors = [];
   const categories = [];
-  const findings = [];
+  const rawFindings = [];
   const diffRanges = parseDiffRanges(diffText);
 
   for (const {file, document} of documents) {
@@ -124,7 +124,7 @@ export function classifyCodeqlEvidence({documents, headSha = "", baseSha = "", m
         const message = String(result?.message?.text ?? "").trim();
         const rule = run?.tool?.driver?.rules?.find((candidate) => candidate?.id === result?.ruleId);
         const securitySeverity = Number(rule?.properties?.["security-severity"] ?? 0);
-        findings.push({
+        rawFindings.push({
           fingerprint: findingFingerprint({category, result, ruleId, uri, line, message}),
           category,
           ruleId,
@@ -141,6 +141,19 @@ export function classifyCodeqlEvidence({documents, headSha = "", baseSha = "", m
     }
   }
 
+  const findingByIdentity = new Map();
+  for (const finding of rawFindings) {
+    const identity = JSON.stringify([
+      finding.category,
+      finding.ruleId,
+      finding.fingerprint,
+      finding.path,
+      finding.startLine,
+    ]);
+    if (!findingByIdentity.has(identity)) findingByIdentity.set(identity, finding);
+  }
+  const findings = [...findingByIdentity.values()];
+  const duplicateFindings = rawFindings.length - findings.length;
   const scopedFindings = findings.filter((finding) => finding.inChangedCone);
   const inheritedFindings = findings.filter((finding) => !finding.inChangedCone);
   const evidenceComplete = errors.length === 0;
@@ -150,6 +163,8 @@ export function classifyCodeqlEvidence({documents, headSha = "", baseSha = "", m
     candidate: {headSha, baseSha},
     categories: [...new Set(categories)].sort(),
     findings,
+    rawFindingCount: rawFindings.length,
+    duplicateFindings,
     errors,
     status: errors.length ? "INCOMPLETE" : scopedFindings.some((finding) => finding.material) ? "FINDINGS_OPEN" : "PASS",
     mode,
@@ -168,6 +183,8 @@ export function classifyCodeqlEvidence({documents, headSha = "", baseSha = "", m
       documents: documents.length,
       categories: new Set(categories).size,
       findings: findings.length,
+      rawFindings: rawFindings.length,
+      duplicateFindings,
       materialFindings: findings.filter((finding) => finding.material).length,
       scopedFindings: findings.filter((finding) => finding.inChangedCone).length,
       scopedMaterialFindings: findings.filter((finding) => finding.inChangedCone && finding.material).length,
