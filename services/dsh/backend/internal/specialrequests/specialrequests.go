@@ -834,7 +834,7 @@ func (r *PostgresRepository) ListForOperatorInOperatorContext(ctx context.Contex
 	limit = clampLimit(limit)
 
 	whereClause := "WHERE operator_context_id = $1"
-	var args []interface{} = []interface{}{operatorContextID}
+	var args = []interface{}{operatorContextID}
 	argIdx := 2
 	if reqType != nil && *reqType != "" {
 		whereClause += fmt.Sprintf(" AND request_type = $%d", argIdx)

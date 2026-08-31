@@ -892,7 +892,7 @@ func computeCheckoutSnapshotFromItems(cartID string, items []CartItem) (*CartSna
 		}
 		unitMinorUnits := item.UnitPriceMinorUnits
 		totalMinorUnits += unitMinorUnits * int64(item.Quantity)
-		hasher.Write([]byte(fmt.Sprintf("|%s:%d:%d:%s", item.ProductID, item.Quantity, unitMinorUnits, item.Currency)))
+		fmt.Fprintf(hasher, "|%s:%d:%d:%s", item.ProductID, item.Quantity, unitMinorUnits, item.Currency)
 	}
 
 	return &CartSnapshot{

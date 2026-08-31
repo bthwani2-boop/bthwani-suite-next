@@ -57,10 +57,11 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 
 	var isVisible *bool
 	isVisibleStr := q.Get("isVisible")
-	if isVisibleStr == "true" {
+	switch isVisibleStr {
+	case "true":
 		v := true
 		isVisible = &v
-	} else if isVisibleStr == "false" {
+	case "false":
 		v := false
 		isVisible = &v
 	}
@@ -81,20 +82,22 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 
 	var isFreeDelivery *bool
 	isFreeDeliveryStr := q.Get("isFreeDelivery")
-	if isFreeDeliveryStr == "true" {
+	switch isFreeDeliveryStr {
+	case "true":
 		v := true
 		isFreeDelivery = &v
-	} else if isFreeDeliveryStr == "false" {
+	case "false":
 		v := false
 		isFreeDelivery = &v
 	}
 
 	var hasProBadge *bool
 	hasProBadgeStr := q.Get("hasProBadge")
-	if hasProBadgeStr == "true" {
+	switch hasProBadgeStr {
+	case "true":
 		v := true
 		hasProBadge = &v
-	} else if hasProBadgeStr == "false" {
+	case "false":
 		v := false
 		hasProBadge = &v
 	}

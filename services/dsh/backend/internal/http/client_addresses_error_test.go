@@ -9,6 +9,7 @@ import (
 	"dsh-api/internal/clientaddress"
 	"dsh-api/internal/store"
 	"github.com/lib/pq"
+	"github.com/lib/pq/pqerror"
 )
 
 func decodeAddressAPIError(t *testing.T, response *httptest.ResponseRecorder) store.ApiError {
@@ -25,7 +26,7 @@ func TestAddressErrorMapsLogicalDuplicate(t *testing.T) {
 
 	response := httptest.NewRecorder()
 	addressError(response, &pq.Error{
-		Code:       pq.ErrorCode("23505"),
+		Code:       pqerror.Code("23505"),
 		Constraint: "uq_dsh_client_addresses_active_fingerprint",
 	})
 

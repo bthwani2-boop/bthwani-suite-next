@@ -385,7 +385,8 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 	}
 
 	// State machine enforcement
-	if action.ActionType == CancellationActionApprove {
+	switch action.ActionType {
+	case CancellationActionApprove:
 		if caseItem.Status != CancellationReview {
 			return OrderCancellationAction{}, ErrConflict
 		}
@@ -401,7 +402,7 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 			return OrderCancellationAction{}, err
 		}
 
-	} else if action.ActionType == CancellationActionReject {
+	case CancellationActionReject:
 		if caseItem.Status != CancellationReview {
 			return OrderCancellationAction{}, ErrConflict
 		}
@@ -409,7 +410,7 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 			return OrderCancellationAction{}, err
 		}
 
-	} else if action.ActionType == CancellationActionExecuteCancel {
+	case CancellationActionExecuteCancel:
 		if caseItem.Status != CancellationApproved && caseItem.Status != CancellationCancelling {
 			return OrderCancellationAction{}, ErrConflict
 		}
@@ -515,7 +516,8 @@ func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, err
 	if operatorContextID == "" {
 		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
-	if c.Status == CancellationApproved {
+	switch c.Status {
+	case CancellationApproved:
 		act, err := CreateCancellationAction(db, CreateCancellationActionInput{
 			OperatorContextID: operatorContextID,
 			OrderID:           input.OrderID,
@@ -539,9 +541,9 @@ func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, err
 		if err != nil {
 			return nil, err
 		}
-	} else if c.Status == CancellationReview {
+	case CancellationReview:
 		return nil, ErrCancellationRequiresReview
-	} else if c.Status == CancellationRejected || c.Status == CancellationConflict || c.Status == CancellationUnknown {
+	case CancellationRejected, CancellationConflict, CancellationUnknown:
 		return nil, ErrConflict
 	}
 	return GetOrderForContext(db, operatorContextID, input.OrderID)

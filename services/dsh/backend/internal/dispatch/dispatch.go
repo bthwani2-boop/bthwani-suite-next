@@ -434,13 +434,14 @@ func updateAssignmentStatus(db *sql.DB, operatorContextID, assignmentID, captain
 		if contextErr != nil {
 			return nil, mapSpecialRequestError(contextErr)
 		}
-		if status == AssignmentAccepted {
+		switch status {
+		case AssignmentAccepted:
 			if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, operatorContextID, current.SpecialRequestID,
 				[]specialrequests.RequestStatus{specialrequests.StatusAssigned}, specialrequests.StatusInProgress,
 				specialrequests.DispatchTransitionMetadata{ActorID: captainID, ActorRole: "captain", Action: "captain_accept", Reason: "captain accepted assignment"}); err != nil {
 				return nil, mapSpecialRequestError(err)
 			}
-		} else if status == AssignmentDeclined {
+		case AssignmentDeclined:
 			if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, operatorContextID, current.SpecialRequestID,
 				[]specialrequests.RequestStatus{specialrequests.StatusAssigned}, specialrequests.StatusApproved,
 				specialrequests.DispatchTransitionMetadata{ActorID: captainID, ActorRole: "captain", Action: "captain_decline", Reason: note}); err != nil {

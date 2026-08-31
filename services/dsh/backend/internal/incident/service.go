@@ -86,7 +86,7 @@ func normalizeReportInput(input ReportInput) ReportInput {
 }
 
 func commandEnvelope(input ReportInput) incidentCommandEnvelope {
-	return incidentCommandEnvelope{input.OrderID, input.OperatorContextID, input.TargetEntityType, input.TargetEntityID, input.IncidentType, input.Reason, input.TicketReference, input.ActorID, input.ActorRole, input.CorrelationID, input.ExpectedVersion, input.EvidenceReferences, input.CommandID, input.ReasonCode, input.ReasonNote}
+	return incidentCommandEnvelope(input)
 }
 
 func (i *Incident) commandInput() (ReportInput, bool) {

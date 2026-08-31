@@ -30,16 +30,17 @@ func (s *protectedStoreServer) getCaptainAggregatedReadiness(r *http.Request, op
 
 	// 2. DSH Dispatch Profile
 	profile, err := dispatch.GetCaptainDispatchProfile(s.db, operatorContextID, captainID)
-	if err == nil {
+	switch err {
+	case nil:
 		if profile.AccreditationStatus != "approved" {
 			missing = append(missing, "DISPATCH_ACCREDITATION_REQUIRED")
 		}
 		if profile.AvailabilityStatus == "suspended" {
 			missing = append(missing, "DISPATCH_SUSPENDED")
 		}
-	} else if err == dispatch.ErrCaptainProfileNotFound {
+	case dispatch.ErrCaptainProfileNotFound:
 		missing = append(missing, "DISPATCH_PROFILE_REQUIRED")
-	} else {
+	default:
 		return AggregatedCaptainReadiness{}, err
 	}
 

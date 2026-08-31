@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/lib/pq"
+	"github.com/lib/pq/pqerror"
 )
 
 func TestIsDuplicateError(t *testing.T) {
@@ -23,7 +24,7 @@ func TestIsDuplicateError(t *testing.T) {
 		{
 			name: "database fingerprint constraint",
 			err: &pq.Error{
-				Code:       pq.ErrorCode("23505"),
+				Code:       pqerror.Code("23505"),
 				Constraint: activeAddressFingerprintConstraint,
 			},
 			want: true,
@@ -31,7 +32,7 @@ func TestIsDuplicateError(t *testing.T) {
 		{
 			name: "other unique constraint",
 			err: &pq.Error{
-				Code:       pq.ErrorCode("23505"),
+				Code:       pqerror.Code("23505"),
 				Constraint: "uq_other_constraint",
 			},
 			want: false,

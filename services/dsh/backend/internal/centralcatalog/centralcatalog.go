@@ -2198,7 +2198,8 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 	if n, _ := result.RowsAffected(); n != 1 {
 		return CatalogAsset{}, NewConflictError(tx, ctx, "dsh_catalog_assets", id, input.ExpectedVersion)
 	}
-	if input.Decision == "approved" {
+	switch input.Decision {
+	case "approved":
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
 			status='approved', updated_at=now(), version = version + 1 WHERE asset_id=$1 AND status='pending_review'`, id); err != nil {
 			return CatalogAsset{}, err
@@ -2209,7 +2210,7 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 		if err := syncProductImageProjectionsForAsset(ctx, tx, id); err != nil {
 			return CatalogAsset{}, err
 		}
-	} else if input.Decision == "rejected" || input.Decision == "archived" {
+	case "rejected", "archived":
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
 			status=$1, is_primary=false, updated_at=now(), version = version + 1 WHERE asset_id=$2 AND status <> 'archived'`, input.Decision, id); err != nil {
 			return CatalogAsset{}, err
@@ -2378,11 +2379,12 @@ func ReplacePrimaryAssetLink(ctx context.Context, tx *sql.Tx, input AssetLinkInp
 		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder); err != nil {
 		return CatalogAssetLink{}, err
 	}
-	if input.EntityType == "store" {
+	switch input.EntityType {
+	case "store":
 		if err := syncStoreImageProjection(ctx, tx, input.EntityID, input.Role); err != nil {
 			return CatalogAssetLink{}, err
 		}
-	} else if input.EntityType == "master_product" {
+	case "master_product":
 		if err := syncProductImageProjection(ctx, tx, input.EntityID); err != nil {
 			return CatalogAssetLink{}, err
 		}
@@ -2427,11 +2429,12 @@ func UnlinkAsset(ctx context.Context, db *sql.DB, entityType, entityID, linkID s
 	if role == "" {
 		return ErrNotFound
 	}
-	if entityType == "store" {
+	switch entityType {
+	case "store":
 		if err := syncStoreImageProjection(ctx, tx, entityID, role); err != nil {
 			return err
 		}
-	} else if entityType == "master_product" {
+	case "master_product":
 		if err := syncProductImageProjection(ctx, tx, entityID); err != nil {
 			return err
 		}
