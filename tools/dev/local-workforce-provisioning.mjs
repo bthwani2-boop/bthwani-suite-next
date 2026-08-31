@@ -169,7 +169,6 @@ export async function requestJson(operation, url, options = {}) {
   const response = await fetch(assertLocalApiUrl(url), options);
   const text = await response.text();
   if (!response.ok) {
-    if (options.body) console.error(`Payload failed: ${options.body}`);
     throw new HttpError(operation, response.status, text);
   }
   if (!text.trim()) return null;
