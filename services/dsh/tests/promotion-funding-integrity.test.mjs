@@ -14,6 +14,7 @@ const wltFundingContract = read("services/wlt/contracts/wlt.promotion-funding.op
 const dshMarketingContract = read("services/dsh/contracts/dsh.marketing-commercial.openapi.yaml");
 const dshReadback = read("services/dsh/backend/internal/wlt/promotion_funding_read.go");
 const diagnostics = read("services/dsh/backend/internal/coupons/funding_diagnostics.go");
+const fundingOutbox = read("services/dsh/backend/internal/promotionfundingoutbox/worker.go");
 const couponsHTTP = read("services/dsh/backend/internal/http/coupons.go");
 const lifecycleHTTP = read("services/dsh/backend/internal/http/coupon_funding_lifecycle.go");
 const couponTypes = read("services/dsh/frontend/shared/marketing/coupons.types.ts");
@@ -36,9 +37,10 @@ const cases = [
     assert.match(wltServer, /\/release"[\s\S]*HandleRelease/);
     assert.match(wltServer, /\/reverse"[\s\S]*HandleReverse/);
     assert.match(lifecycleHTTP, /reserveCouponFunding/);
-    assert.match(lifecycleHTTP, /commitCouponFunding/);
     assert.match(lifecycleHTTP, /releaseCouponFunding/);
-    assert.match(lifecycleHTTP, /reverseCouponFunding/);
+    assert.match(fundingOutbox, /case EventCommit:[\s\S]*CommitPromotionFunding/);
+    assert.match(fundingOutbox, /case EventRelease:[\s\S]*ReleasePromotionFunding/);
+    assert.match(fundingOutbox, /case EventReverse:[\s\S]*ReversePromotionFunding/);
   }],
   ["Promotion Funding transition, monetary, delegated financial scope, idempotency, and concurrency integrity", () => {
     assert.match(wltMigration, /DEFERRABLE INITIALLY DEFERRED/);

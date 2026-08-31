@@ -46,14 +46,16 @@ describe("subscriptions and commercial benefits", () => {
 
 describe("promotion funding boundary", () => {
   const lifecycle = source("../backend/internal/http/coupon_funding_lifecycle.go");
+  const fundingWorker = source("../backend/internal/promotionfundingoutbox/worker.go");
   const wltContract = source("../../wlt/contracts/wlt.promotion-funding.openapi.yaml");
   const outbox = source("../backend/internal/promotionfundingoutbox/outbox.go");
 
   it("keeps reserve, commit, release, and reverse in WLT", () => {
     assert.match(lifecycle, /ReservePromotionFunding/);
-    assert.match(lifecycle, /CommitPromotionFunding/);
     assert.match(lifecycle, /ReleasePromotionFunding/);
-    assert.match(lifecycle, /ReversePromotionFunding/);
+    assert.match(fundingWorker, /case EventCommit:[\s\S]*CommitPromotionFunding/);
+    assert.match(fundingWorker, /case EventRelease:[\s\S]*ReleasePromotionFunding/);
+    assert.match(fundingWorker, /case EventReverse:[\s\S]*ReversePromotionFunding/);
     assert.match(wltContract, /promotion-funding/);
   });
 

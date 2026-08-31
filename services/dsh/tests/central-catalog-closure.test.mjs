@@ -119,9 +119,12 @@ test("central verification fails hard instead of only printing results", () => {
 });
 
 test("partner and field catalog writes cannot bypass central approval", () => {
-  const handlers = read("backend/internal/http/centralcatalog.go");
+  const handlers = [
+    read("backend/internal/http/catalog_occ_write_handlers.go"),
+    read("backend/internal/http/centralcatalog_catalog.go"),
+  ].join("\n");
 
-  assert.match(handlers, /mp\.ApprovalStatus != "approved" \|\| !mp\.IsActive/);
+  assert.match(handlers, /masterProduct\.ApprovalStatus != "approved" \|\| !masterProduct\.IsActive/);
   assert.match(handlers, /input\.PublicationStatus = "submitted"/);
   assert.match(handlers, /approvalStatus = "approved"/);
   assert.match(handlers, /activeOnly = true/);
