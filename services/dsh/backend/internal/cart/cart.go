@@ -73,13 +73,15 @@ type Cart struct {
 }
 
 // MutationReceipt is durable server-side proof that a cart mutation was
-// committed for the authenticated client. The cart-owner join in
-// FindMutationReceipt is the authorization boundary; the idempotency table is
-// never queried by key alone.
+// committed for the authenticated client. Reads are always scoped by client_id
+// and the idempotency key; the receipt table is never queried by key alone.
 type MutationReceipt struct {
 	IdempotencyKey string
-	CartID         string
+	Operation      string
+	CartID         *string
+	ItemID         *string
 	Version        int
+	ResultDeleted  bool
 	CreatedAt      time.Time
 }
 
@@ -89,16 +91,21 @@ func FindMutationReceipt(ctx context.Context, db *sql.DB, clientID, idempotencyK
 	}
 
 	receipt := &MutationReceipt{}
+	var cartID sql.NullString
+	var itemID sql.NullString
 	err := db.QueryRowContext(ctx, `
-		SELECT i.idempotency_key, i.cart_id, i.version, i.created_at
-		FROM dsh_cart_idempotency AS i
-		JOIN dsh_carts AS c ON c.id = i.cart_id
-		WHERE c.client_id = $1 AND i.idempotency_key = $2
+		SELECT idempotency_key, operation, cart_id::text, item_id::text,
+		       result_version, result_deleted, created_at
+		FROM dsh_cart_mutation_receipts
+		WHERE client_id = $1 AND idempotency_key = $2
 		LIMIT 1
 	`, clientID, idempotencyKey).Scan(
 		&receipt.IdempotencyKey,
-		&receipt.CartID,
+		&receipt.Operation,
+		&cartID,
+		&itemID,
 		&receipt.Version,
+		&receipt.ResultDeleted,
 		&receipt.CreatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -106,6 +113,14 @@ func FindMutationReceipt(ctx context.Context, db *sql.DB, clientID, idempotencyK
 	}
 	if err != nil {
 		return nil, err
+	}
+	if cartID.Valid {
+		value := cartID.String
+		receipt.CartID = &value
+	}
+	if itemID.Valid {
+		value := itemID.String
+		receipt.ItemID = &value
 	}
 	return receipt, nil
 }
@@ -366,150 +381,23 @@ func GetActiveCartForClient(ctx context.Context, db *sql.DB, wc wltQuoter, clien
 }
 
 func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input UpsertItemInput) (*CartItem, error) {
-	if input.MasterProductID == "" || input.Quantity < 1 {
-		return nil, ErrInvalid
+	if err := validateUpsertItemInput(input); err != nil {
+		return nil, err
 	}
-	if len(input.Note) > 500 {
-		return nil, ErrInvalid
-	}
-	if input.FulfillmentMode != nil &&
-		*input.FulfillmentMode != ModeBthwaniDelivery &&
-		*input.FulfillmentMode != ModePartnerDelivery &&
-		*input.FulfillmentMode != ModePickup {
-		return nil, ErrInvalid
-	}
-
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-
-	// Lock the cart before checking its version and resolving the assortment
-	// snapshot. A pre-check on db followed by a later transaction lets two
-	// concurrent mutations pass the same expected version.
-	var currentVersion int
-	err = tx.QueryRowContext(ctx, `
-		SELECT version
-		FROM dsh_carts
-		WHERE id = $1 AND store_id = $2 AND state = 'active'
-		FOR UPDATE`, cartID, storeID).Scan(&currentVersion)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
+	item, err := upsertItemTx(ctx, tx, storeID, cartID, input)
 	if err != nil {
 		return nil, err
 	}
-	if input.ExpectedVersion != nil && currentVersion != *input.ExpectedVersion {
-		return nil, ErrConflict
-	}
-
-	// Resolve one deterministic current assortment snapshot. The primitive is
-	// fail-closed itself: it verifies the active cart belongs to the store,
-	// storefront publication/approval, effective price, and the full inventory
-	// quantity policy. Callers cannot bypass these rules by skipping an HTTP
-	// handler-level precheck.
-	var assortmentID, name, currency string
-	var unitPriceMinorUnits int64
-	var available bool
-	err = tx.QueryRowContext(ctx, `
-		SELECT
-			a.id,
-			mp.canonical_name_ar,
-			COALESCE(p.amount_minor, 0),
-			COALESCE(p.currency, ''),
-			CASE
-				WHEN c.id IS NULL THEN FALSE
-				WHEN a.publication_status <> 'client_visible' OR a.available IS NOT TRUE THEN FALSE
-				WHEN mp.approval_status <> 'approved' OR mp.is_active IS NOT TRUE THEN FALSE
-				WHEN p.amount_minor IS NULL OR p.amount_minor <= 0 OR length(trim(p.currency)) <> 3 THEN FALSE
-				WHEN i.store_assortment_id IS NULL OR i.step_quantity < 1 THEN FALSE
-				WHEN $3 < i.min_order_quantity OR $3 > i.max_order_quantity THEN FALSE
-				WHEN MOD($3 - i.min_order_quantity, i.step_quantity) <> 0 THEN FALSE
-				WHEN i.policy_type = 'signal' AND i.quantity > 0 THEN TRUE
-				WHEN i.policy_type = 'quantity' AND (i.quantity - i.reserved_quantity) >= $3 THEN TRUE
-				WHEN i.policy_type = 'infinite' THEN TRUE
-				ELSE FALSE
-			END AS available
-		FROM dsh_store_assortments a
-		JOIN dsh_master_products mp ON mp.id = a.master_product_id
-		LEFT JOIN dsh_carts c
-		  ON c.id = $4::uuid
-		 AND c.store_id = a.store_id
-		 AND c.state = 'active'
-		LEFT JOIN LATERAL (
-			SELECT price.amount_minor, price.currency
-			FROM dsh_store_assortment_prices price
-			WHERE price.store_assortment_id = a.id
-			  AND price.effective_from <= NOW()
-			  AND (price.effective_until IS NULL OR price.effective_until > NOW())
-			ORDER BY price.effective_from DESC, price.version DESC, price.id DESC
-			LIMIT 1
-		) p ON TRUE
-		LEFT JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
-		WHERE a.store_id = $1
-		  AND a.master_product_id = $2
-		LIMIT 1`,
-		storeID, input.MasterProductID, input.Quantity, cartID,
-	).Scan(&assortmentID, &name, &unitPriceMinorUnits, &currency, &available)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrInvalid
-	}
-	if err != nil {
-		return nil, err
-	}
-	if !available || unitPriceMinorUnits <= 0 || currency == "" {
-		return nil, ErrInvalid
-	}
-	optionsHash := hashOptions(input.Options)
-	optionsJSON, _ := json.Marshal(input.Options)
-	if input.Options == nil {
-		optionsJSON = []byte("[]")
-	}
-
-	var item CartItem
-	var optsBytes []byte
-	err = tx.QueryRowContext(ctx,
-		`INSERT INTO dsh_cart_items (cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price_minor, currency, quantity, options, note, options_hash)
-		 VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		 ON CONFLICT (cart_id, master_product_id, options_hash) DO UPDATE
-		   SET quantity            = EXCLUDED.quantity,
-		       store_assortment_id = EXCLUDED.store_assortment_id,
-		       product_name        = EXCLUDED.product_name,
-		       price_reference     = EXCLUDED.price_reference,
-		       unit_price_minor    = EXCLUDED.unit_price_minor,
-		       currency            = EXCLUDED.currency,
-		       note                = EXCLUDED.note,
-		       version             = dsh_cart_items.version + 1,
-		       updated_at          = NOW()
-		 RETURNING id, cart_id, product_id, master_product_id, store_assortment_id, product_name, price_reference, unit_price_minor, currency, quantity, options, note, version, created_at, updated_at`,
-		cartID, input.MasterProductID, assortmentID, name, "catalog", unitPriceMinorUnits, currency, input.Quantity, optionsJSON, input.Note, optionsHash,
-	).Scan(&item.ID, &item.CartID, &item.ProductID, &item.MasterProductID, &item.StoreAssortmentID, &item.ProductName, &item.PriceReference, &item.UnitPriceMinorUnits, &item.Currency, &item.Quantity, &optsBytes, &item.Note, &item.Version, &item.CreatedAt, &item.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	_ = json.Unmarshal(optsBytes, &item.Options)
-	if item.Options == nil {
-		item.Options = []string{}
-	}
-
-	if input.FulfillmentMode != nil {
-		_, err = tx.ExecContext(ctx, `
-			UPDATE dsh_carts
-			SET fulfillment_mode = $1, version = version + 1, updated_at = NOW()
-			WHERE id = $2`, *input.FulfillmentMode, cartID)
-	} else {
-		_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
-	}
-	if err != nil {
-		return nil, err
-	}
-
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
-	return &item, nil
+	return item, nil
 }
 
 func RemoveItem(ctx context.Context, db *sql.DB, cartID, itemID string, expectedVersion *int) error {

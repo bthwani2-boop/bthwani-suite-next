@@ -87,8 +87,11 @@ export async function clearCart(
 
 export type DshCartMutationReceipt = {
   readonly idempotencyKey: string;
-  readonly cartId: string;
+  readonly operation: "add_item" | "remove_item" | "clear_cart";
+  readonly cartId: string | null;
+  readonly itemId: string | null;
   readonly version: number;
+  readonly resultDeleted: boolean;
   readonly createdAt: string;
 };
 

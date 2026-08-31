@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
 	"dsh-api/internal/centralcatalog"
@@ -63,5 +64,17 @@ func (s *protectedStoreServer) handleFieldGetStoreAssortment(w http.ResponseWrit
 		s.writeCentralCatalogError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"storeId": storeID, "assortment": items})
+	commercial := make(map[string]centralcatalog.StoreAssortmentCommercialReadback, len(items))
+	for _, item := range items {
+		readback, readbackErr := centralcatalog.GetAssortmentCommercialReadback(r.Context(), s.db, storeID, item.MasterProductID)
+		if errors.Is(readbackErr, centralcatalog.ErrNotFound) {
+			continue
+		}
+		if readbackErr != nil {
+			s.writeCentralCatalogError(w, readbackErr)
+			return
+		}
+		commercial[item.MasterProductID] = readback
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"storeId": storeID, "assortment": items, "commercial": commercial})
 }

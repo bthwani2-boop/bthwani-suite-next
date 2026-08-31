@@ -6,6 +6,10 @@ import type {
   CentralCatalogNode,
   MasterProduct,
   ProductProposal,
+  StoreAssortmentCommercialReadback,
+  StoreAssortmentCreateInput,
+  StoreAssortmentInventoryInput,
+  StoreAssortmentPriceInput,
   StoreAssortment,
 } from "./central-catalog.types";
 
@@ -26,7 +30,17 @@ export type CatalogMasterProductUpdateInput = Omit<
   Parameters<typeof occApi.updateMasterProductOCC>[1],
   "expectedVersion"
 >;
+export type CatalogProposalTransitionInput = Omit<
+  Parameters<typeof api.transitionProductProposal>[1],
+  "expectedVersion"
+>;
 export type CatalogMasterProductsQuery = Parameters<typeof api.fetchMasterProductsPage>[0];
+export type CatalogAssortmentMutationInput = {
+  readonly metadata: StoreAssortmentCreateInput;
+  readonly inventory: Omit<StoreAssortmentInventoryInput, "expectedVersion">;
+  readonly price: StoreAssortmentPriceInput;
+  readonly idempotencyKey?: string | undefined;
+};
 
 export type CatalogMasterProductBulkMutationFailure = {
   readonly productId: string;
@@ -114,9 +128,10 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
 
   const [assortment, setAssortment] = useState<{
     readonly items: readonly StoreAssortment[];
+    readonly commercial: ReadonlyMap<string, StoreAssortmentCommercialReadback>;
     readonly loading: boolean;
     readonly error: string | null;
-  }>({ items: [], loading: false, error: null });
+  }>({ items: [], commercial: new Map(), loading: false, error: null });
 
   const isAuthed = ["authenticated", "operator", "partner", "field"].includes(authKind);
 
@@ -181,13 +196,15 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
   }, []);
 
   const loadStoreAssortment = useCallback(async (storeId: string) => {
-    setAssortment({ items: [], loading: true, error: null });
+    setAssortment((current) => ({ ...current, items: [], commercial: new Map(), loading: true, error: null }));
     try {
       const items = await api.fetchOperatorStoreAssortment(storeId);
-      setAssortment({ items, loading: false, error: null });
+      const commercial = await api.fetchOperatorStoreAssortmentsCommercial(storeId, items);
+      setAssortment({ items, commercial, loading: false, error: null });
     } catch (error) {
       setAssortment({
         items: [],
+        commercial: new Map(),
         loading: false,
         error: resolveCatalogError(error, "Failed to load assortment"),
       });
@@ -297,7 +314,7 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
       };
     },
 
-    transitionProposal: async (proposalId: string, input: Parameters<typeof api.transitionProductProposal>[1]) => {
+    transitionProposal: async (proposalId: string, input: CatalogProposalTransitionInput) => {
       const expectedVersion = requireCatalogVersion(state.proposals.items, proposalId, "proposal");
       return runMutationWithReadback(
         () => occApi.transitionProductProposalOCC(proposalId, { ...input, expectedVersion }),
@@ -308,15 +325,26 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
     upsertAssortment: async (
       storeId: string,
       masterProductId: string,
-      input: Parameters<typeof api.upsertOperatorStoreAssortment>[2],
+      input: CatalogAssortmentMutationInput,
     ) => {
       const current = assortment.items.find((item) => item.masterProductId === masterProductId);
-      return runMutationWithReadback(
-        () => occApi.upsertOperatorStoreAssortmentOCC(storeId, masterProductId, {
-          ...input,
-          currency: current?.currency ?? "",
-          expectedVersion: current?.version,
-        }),
+      return runMutationWithReadback(async () => {
+        if (!current) {
+          return occApi.createOperatorStoreAssortmentWithCommercialTruth(storeId, masterProductId, input);
+        }
+        const assortmentResult = await occApi.upsertOperatorStoreAssortmentMetadataOCC(
+          storeId,
+          masterProductId,
+          { ...input.metadata, expectedVersion: current.version },
+        );
+        const price = await api.createOperatorStoreAssortmentPrice(
+          storeId,
+          masterProductId,
+          input.price,
+          input.idempotencyKey,
+        );
+        return { assortment: assortmentResult, price };
+      },
         () => loadStoreAssortment(storeId),
       );
     },

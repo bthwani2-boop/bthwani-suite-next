@@ -5,7 +5,6 @@ modules:
   - dsh.analytics-extensions.openapi.yaml
   - dsh.captain-financial-eligibility.openapi.yaml
   - dsh.catalog-governance.openapi.yaml
-  - dsh.catalog.openapi.yaml
   - dsh.checkout.openapi.yaml
   - dsh.client-address-privacy.openapi.yaml
   - dsh.client-address.openapi.yaml

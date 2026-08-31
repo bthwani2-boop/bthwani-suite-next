@@ -157,11 +157,16 @@ DshUpsertCartItemResponse:
 
 DshCartMutationReceipt:
   type: object
-  required: [idempotencyKey, cartId, version, createdAt]
+  required: [idempotencyKey, operation, cartId, itemId, version, resultDeleted, createdAt]
   properties:
     idempotencyKey: { type: string, minLength: 8, maxLength: 200 }
-    cartId: { type: string }
-    version: { type: integer, minimum: 0 }
+    operation:
+      type: string
+      enum: [add_item, remove_item, clear_cart]
+    cartId: { type: [string, "null"] }
+    itemId: { type: [string, "null"] }
+    version: { type: integer, minimum: 1 }
+    resultDeleted: { type: boolean }
     createdAt: { type: string, format: date-time }
 
 DshCartMutationReceiptResponse:

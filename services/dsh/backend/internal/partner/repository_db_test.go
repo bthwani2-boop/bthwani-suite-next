@@ -137,11 +137,20 @@ func seedPartnerPublicationGates(t *testing.T, db *sql.DB, storeID string) {
 	}
 	if _, err := db.Exec(`
 		INSERT INTO dsh_store_assortments
-			(id, store_id, master_product_id, unit_price, currency, available,
-			 stock_status, publication_status, approved_by)
-		VALUES ($1, $2, $3, 100, 'YER', TRUE, 'in_stock', 'client_visible', 'operator-local-001')`,
+			(id, store_id, master_product_id, publication_status, approved_by)
+		VALUES ($1, $2, $3, 'client_visible', 'operator-local-001')`,
 		assortmentID, storeID, productID); err != nil {
 		t.Fatalf("insert partner publication assortment: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO dsh_store_assortment_prices (id, store_assortment_id, amount_minor, currency, effective_from)
+		VALUES ($1,$2,10000,'YER',NOW())`, "partner-publication-price-"+suffix, assortmentID); err != nil {
+		t.Fatalf("insert normalized partner assortment price: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO dsh_store_assortment_inventory (store_assortment_id, policy_type, quantity, min_order_quantity, max_order_quantity, step_quantity)
+		VALUES ($1,'quantity',100,1,100,1)`, assortmentID); err != nil {
+		t.Fatalf("insert normalized partner assortment inventory: %v", err)
 	}
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM dsh_store_assortments WHERE id = $1`, assortmentID)

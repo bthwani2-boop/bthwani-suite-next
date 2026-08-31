@@ -31,7 +31,7 @@ func openAssortmentRuntimeTruthDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testing.T) {
+func TestInventoryMutationUsesNormalizedTruthDBIntegration(t *testing.T) {
 	db := openAssortmentRuntimeTruthDB(t)
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -66,10 +66,14 @@ func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testi
 	}
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_store_assortments (
-			id, store_id, master_product_id, unit_price, currency,
-			available, stock_status, publication_status
-		) VALUES ($1,$2,$3,10,'YER',false,'out_of_stock','approved')`, assortmentID, storeID, productID); err != nil {
+			id, store_id, master_product_id, publication_status
+		) VALUES ($1,$2,$3,'approved')`, assortmentID, storeID, productID); err != nil {
 		t.Fatalf("insert assortment: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_assortment_prices (id, store_assortment_id, amount_minor, currency, effective_from)
+		VALUES ($1,$2,1000,'YER',NOW())`, "inventory-truth-price-"+suffix, assortmentID); err != nil {
+		t.Fatalf("insert normalized price: %v", err)
 	}
 
 	t.Cleanup(func() {
@@ -95,19 +99,25 @@ func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testi
 		t.Fatalf("expected inventory version >=1, got %d", inv.Version)
 	}
 
-	assertProjection := func(wantAvailable bool, wantStockStatus string) {
+	assertRuntimeTruth := func(wantQuantity int, wantAvailable bool, wantStockStatus string) {
 		t.Helper()
-		var available bool
-		var stockStatus string
-		if err := db.QueryRowContext(ctx, `SELECT available, stock_status FROM dsh_store_assortments WHERE id=$1`, assortmentID).Scan(&available, &stockStatus); err != nil {
-			t.Fatalf("read projection: %v", err)
+		inventory, err := GetAssortmentInventoryRuntimeTruth(ctx, db, storeID, productID)
+		if err != nil {
+			t.Fatalf("read normalized inventory: %v", err)
 		}
-		if available != wantAvailable || stockStatus != wantStockStatus {
-			t.Fatalf("projection drift: got available=%v stock=%q, want available=%v stock=%q", available, stockStatus, wantAvailable, wantStockStatus)
+		if inventory.Quantity != wantQuantity {
+			t.Fatalf("normalized inventory quantity=%d, want %d", inventory.Quantity, wantQuantity)
+		}
+		truth := assortmentInventoryTruth{
+			PolicyType: inventory.PolicyType, Quantity: inventory.Quantity, ReservedQuantity: inventory.ReservedQuantity,
+			MinOrderQuantity: inventory.MinOrderQuantity, MaxOrderQuantity: inventory.MaxOrderQuantity, StepQuantity: inventory.StepQuantity,
+		}
+		if assortmentInventoryAvailable(truth) != wantAvailable || assortmentInventoryStockStatus(truth) != wantStockStatus {
+			t.Fatalf("normalized runtime truth: available=%v stock=%q, want available=%v stock=%q", assortmentInventoryAvailable(truth), assortmentInventoryStockStatus(truth), wantAvailable, wantStockStatus)
 		}
 	}
 
-	assertProjection(true, "in_stock")
+	assertRuntimeTruth(7, true, "in_stock")
 	updated, err := UpsertAssortmentInventoryWithRuntimeTruthAtomic(ctx, db, storeID, productID, "operator-test", StoreAssortmentInventoryInput{
 		PolicyType:       "signal",
 		Quantity:         0,
@@ -122,7 +132,7 @@ func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testi
 	if updated.Version <= inv.Version {
 		t.Fatalf("expected inventory version to advance: before=%d after=%d", inv.Version, updated.Version)
 	}
-	assertProjection(false, "out_of_stock")
+	assertRuntimeTruth(0, false, "out_of_stock")
 
 	_, err = UpsertAssortmentInventoryWithRuntimeTruthAtomic(ctx, db, storeID, productID, "operator-test", StoreAssortmentInventoryInput{
 		PolicyType:       "signal",
@@ -135,7 +145,7 @@ func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testi
 	if err != ErrConflict {
 		t.Fatalf("stale inventory expectedVersion must conflict, got %v", err)
 	}
-	assertProjection(false, "out_of_stock")
+	assertRuntimeTruth(0, false, "out_of_stock")
 }
 
 func TestAssortmentMetadataUsesNormalizedRuntimeTruthAndImageGateDBIntegration(t *testing.T) {
@@ -181,34 +191,53 @@ func TestAssortmentMetadataUsesNormalizedRuntimeTruthAndImageGateDBIntegration(t
 	})
 
 	_, err := UpsertStoreAssortmentWithRuntimeTruth(ctx, db, storeID, productID, "operator-test", StoreAssortmentInput{
-		UnitPrice: 12.50, Currency: "yer", Available: true, StockStatus: "in_stock", PublicationStatus: "client_visible",
+		PublicationStatus: "client_visible",
 	}, false)
 	if err == nil {
 		t.Fatal("client-visible assortment without an approved image was accepted")
 	}
 
 	created, err := UpsertStoreAssortmentWithRuntimeTruth(ctx, db, storeID, productID, "operator-test", StoreAssortmentInput{
-		UnitPrice: 12.50, Currency: "yer", Available: true, StockStatus: "in_stock", LocalNote: "initial metadata", PublicationStatus: "draft",
+		LocalNote: "initial metadata", PublicationStatus: "draft",
 	}, false)
 	if err != nil {
 		t.Fatalf("create assortment metadata: %v", err)
 	}
-	if created.ID == "" || created.Version != 1 || created.UnitPrice != 12.50 || created.Currency != "YER" || !created.Available || created.StockStatus != "in_stock" {
-		t.Fatalf("unexpected normalized assortment creation: %+v", created)
+	if created.ID == "" || created.Version != 1 || created.LocalNote != "initial metadata" {
+		t.Fatalf("unexpected metadata-only assortment creation: %+v", created)
+	}
+	price, err := CreateAssortmentPriceAtomic(ctx, db, storeID, productID, "operator-test", "metadata-truth-price-"+suffix, StoreAssortmentPriceInput{
+		AmountMinor: 1250, Currency: "YER", PrepTimeMin: 15, PrepTimeMax: 30, EffectiveFrom: time.Now().UTC(),
+	})
+	if err != nil || price.AmountMinor != 1250 {
+		t.Fatalf("create normalized price: price=%+v err=%v", price, err)
+	}
+	inventory, err := UpsertAssortmentInventoryWithRuntimeTruthAtomic(ctx, db, storeID, productID, "operator-test", StoreAssortmentInventoryInput{
+		PolicyType: "signal", Quantity: 20, MinOrderQuantity: 1, MaxOrderQuantity: 100, StepQuantity: 1,
+	})
+	if err != nil || inventory.Quantity != 20 {
+		t.Fatalf("create normalized inventory: inventory=%+v err=%v", inventory, err)
+	}
+	created, err = GetStoreAssortmentByKey(ctx, db, storeID, productID)
+	if err != nil {
+		t.Fatalf("read normalized assortment: %v", err)
+	}
+	commercial, err := GetAssortmentCommercialReadback(ctx, db, storeID, productID)
+	if err != nil || len(commercial.Prices) != 1 || commercial.Prices[0].AmountMinor != 1250 || commercial.Prices[0].Currency != "YER" || commercial.Inventory.Quantity != 20 {
+		t.Fatalf("unexpected normalized runtime readback: commercial=%+v err=%v", commercial, err)
 	}
 
-	staleCommercialPayload := 999.99
 	updated, err := UpsertStoreAssortmentWithRuntimeTruth(ctx, db, storeID, productID, "operator-test", StoreAssortmentInput{
-		UnitPrice: staleCommercialPayload, Currency: "USD", Available: false, StockStatus: "out_of_stock", LocalNote: "metadata-only edit", PublicationStatus: "draft", ExpectedVersion: &created.Version,
+		LocalNote: "metadata-only edit", PublicationStatus: "draft", ExpectedVersion: &created.Version,
 	}, false)
 	if err != nil {
 		t.Fatalf("metadata-only edit: %v", err)
 	}
-	if updated.Version != 2 || updated.UnitPrice != 12.50 || updated.Currency != "YER" || !updated.Available || updated.StockStatus != "in_stock" {
+	if updated.Version != 2 || updated.LocalNote != "metadata-only edit" {
 		t.Fatalf("metadata edit overwrote normalized runtime truth: %+v", updated)
 	}
 	if _, err := UpsertStoreAssortmentWithRuntimeTruth(ctx, db, storeID, productID, "operator-test", StoreAssortmentInput{
-		UnitPrice: 12.50, Currency: "YER", Available: true, StockStatus: "in_stock", PublicationStatus: "draft",
+		PublicationStatus: "draft",
 	}, false); err == nil {
 		t.Fatal("existing assortment update without expectedVersion was accepted")
 	}
@@ -217,12 +246,12 @@ func TestAssortmentMetadataUsesNormalizedRuntimeTruthAndImageGateDBIntegration(t
 		t.Fatalf("approve canonical image: %v", err)
 	}
 	visible, err := UpsertStoreAssortmentWithRuntimeTruth(ctx, db, storeID, productID, "operator-test", StoreAssortmentInput{
-		UnitPrice: 1, Currency: "YER", Available: false, StockStatus: "out_of_stock", PublicationStatus: "client_visible", ExpectedVersion: &updated.Version,
+		PublicationStatus: "client_visible", ExpectedVersion: &updated.Version,
 	}, false)
 	if err != nil {
 		t.Fatalf("publish assortment with canonical image: %v", err)
 	}
-	if visible.PublicationStatus != "client_visible" || visible.UnitPrice != 12.50 || visible.Currency != "YER" || !visible.Available {
+	if visible.PublicationStatus != "client_visible" || visible.Version != 3 {
 		t.Fatalf("client-visible projection drifted from runtime truth: %+v", visible)
 	}
 }

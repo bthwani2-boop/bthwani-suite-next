@@ -7,7 +7,418 @@ DshStoreCategory:
   pattern: ^domain-[a-z0-9-]+$
 
 DshCatalogAsset:
-  $ref: "../../dsh.catalog.openapi.yaml#/components/schemas/Asset"
+  type: object
+  required: [id, version, objectKey, mimeType, sizeBytes, originalFileName, altAr, altEn, status, sourceSurface, uploadedBy, reviewNote, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    version: { type: integer, minimum: 1 }
+    objectKey: { type: string }
+    publicUrl: { type: [string, "null"] }
+    originalFileName: { type: string }
+    mimeType: { type: string }
+    sizeBytes: { type: integer, minimum: 0 }
+    width: { type: [integer, "null"] }
+    height: { type: [integer, "null"] }
+    checksumSha256: { type: [string, "null"] }
+    altAr: { type: string }
+    altEn: { type: string }
+    dominantColor: { type: [string, "null"] }
+    status: { type: string, enum: [draft, uploaded, pending_review, approved, rejected, archived, scanning, quarantined] }
+    sourceSurface: { type: string, enum: [control-panel-catalog, control-panel-platform, app-partner, app-field, system] }
+    uploadedBy: { type: string }
+    reviewedBy: { type: [string, "null"] }
+    reviewNote: { type: string }
+    intendedEntityType: { type: [string, "null"] }
+    intendedEntityId: { type: [string, "null"] }
+    intendedRole: { type: [string, "null"] }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCentralCatalogDomain:
+  type: object
+  required: [id, version, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    version: { type: integer, minimum: 1 }
+    slug: { type: string }
+    nameAr: { type: string }
+    nameEn: { type: string }
+    icon: { type: string }
+    sortOrder: { type: integer }
+    isActive: { type: boolean }
+    isClientVisible: { type: boolean }
+    requiresProductCatalog: { type: boolean }
+    isManualRequest: { type: boolean }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCentralCatalogNode:
+  type: object
+  required: [id, version, domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresBarcode, allowsProductProposal, allowsStoreProductCustomImage, requiresCatalogReview, requiresProductCatalog, lifecycleStatus, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    version: { type: integer, minimum: 1 }
+    domainId: { type: string }
+    parentId: { type: [string, "null"] }
+    level: { type: string }
+    slug: { type: string }
+    nameAr: { type: string }
+    nameEn: { type: string }
+    icon: { type: string }
+    sortOrder: { type: integer }
+    isActive: { type: boolean }
+    isClientVisible: { type: boolean }
+    requiresBarcode: { type: boolean }
+    allowsProductProposal: { type: boolean }
+    allowsStoreProductCustomImage: { type: boolean }
+    requiresCatalogReview: { type: boolean }
+    requiresProductCatalog: { type: boolean }
+    lifecycleStatus: { type: string, enum: [active, deprecated, merged] }
+    mergedIntoId: { type: [string, "null"] }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshMasterProduct:
+  type: object
+  required: [id, version, domainId, categoryNodeId, canonicalNameAr, canonicalNameEn, brand, barcode, gtin, sku, unit, measurementType, canonicalImageObjectKey, approvalStatus, isActive, duplicateGroupId, createdSource, parentId, isStandalone, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    version: { type: integer, minimum: 1 }
+    domainId: { type: string }
+    categoryNodeId: { type: [string, "null"] }
+    canonicalNameAr: { type: string }
+    canonicalNameEn: { type: string }
+    brand: { type: string }
+    barcode: { type: [string, "null"] }
+    gtin: { type: [string, "null"] }
+    sku: { type: [string, "null"] }
+    unit: { type: string }
+    measurementType: { type: string }
+    canonicalImageObjectKey: { type: [string, "null"] }
+    approvalStatus: { type: string, enum: [draft, pending_review, approved, rejected, archived] }
+    isActive: { type: boolean }
+    duplicateGroupId: { type: [string, "null"] }
+    createdSource: { type: string }
+    parentId: { type: [string, "null"] }
+    isStandalone: { type: boolean }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshProductProposal:
+  type: object
+  required: [id, version, proposedNameAr, proposedNameEn, domainId, categoryNodeId, brand, barcode, imageObjectKey, sourceSurface, sourceActorId, sourceStoreId, status, reviewNote, adoptedMasterProductId, reviewStage, partnerReviewedBy, marketingReviewedBy, catalogAdoptedBy, catalogApprovedBy, clientVisibleAt, auditRequired, blockedReason, resubmissionCount, linkedStoreId, targetMasterProductId, baseVersion, duplicateCandidates, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    version: { type: integer, minimum: 1 }
+    proposedNameAr: { type: string }
+    proposedNameEn: { type: string }
+    domainId: { type: string }
+    categoryNodeId: { type: [string, "null"] }
+    brand: { type: string }
+    barcode: { type: [string, "null"] }
+    imageObjectKey: { type: [string, "null"] }
+    sourceSurface: { type: string, enum: [app-field, app-partner, control-panel-catalog, control-panel-platform] }
+    sourceActorId: { type: string }
+    sourceStoreId: { type: [string, "null"] }
+    status: { type: string, enum: [catalog-draft, partner-proposed, partner-review, marketing-review, catalog-adopted, catalog-approved, client-visible, needs-fix, rejected, conflict, withdrawn] }
+    reviewNote: { type: string }
+    adoptedMasterProductId: { type: [string, "null"] }
+    reviewStage: { type: string }
+    partnerReviewedBy: { type: [string, "null"] }
+    marketingReviewedBy: { type: [string, "null"] }
+    catalogAdoptedBy: { type: [string, "null"] }
+    catalogApprovedBy: { type: [string, "null"] }
+    clientVisibleAt: { type: [string, "null"], format: date-time }
+    auditRequired: { type: boolean }
+    blockedReason: { type: [string, "null"] }
+    resubmissionCount: { type: integer }
+    linkedStoreId: { type: [string, "null"] }
+    targetMasterProductId: { type: [string, "null"] }
+    baseVersion: { type: [integer, "null"] }
+    duplicateCandidates: { type: array, items: { type: string } }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshDomainCreateInput:
+  type: object
+  additionalProperties: false
+  required: [slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest]
+  properties:
+    slug: { type: string, minLength: 1 }
+    nameAr: { type: string, minLength: 1 }
+    nameEn: { type: string }
+    icon: { type: string }
+    sortOrder: { type: integer }
+    isActive: { type: boolean }
+    isClientVisible: { type: boolean }
+    requiresProductCatalog: { type: boolean }
+    isManualRequest: { type: boolean }
+
+DshDomainUpdateInput:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    nameAr: { type: string, minLength: 1 }
+    nameEn: { type: string }
+    icon: { type: string }
+    sortOrder: { type: integer }
+    isActive: { type: boolean }
+    isClientVisible: { type: boolean }
+    requiresProductCatalog: { type: boolean }
+    isManualRequest: { type: boolean }
+
+DshNodeCreateInput:
+  type: object
+  additionalProperties: false
+  required: [domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresBarcode, allowsProductProposal, allowsStoreProductCustomImage, requiresCatalogReview, requiresProductCatalog]
+  properties:
+    domainId: { type: string }
+    parentId: { type: [string, "null"] }
+    level: { type: string, enum: [BUSINESS_SUBDOMAIN, PRODUCT_MAIN_CLASS, PRODUCT_SUB_CLASS] }
+    slug: { type: string, minLength: 1 }
+    nameAr: { type: string, minLength: 1 }
+    nameEn: { type: string }
+    icon: { type: string }
+    sortOrder: { type: integer }
+    isActive: { type: boolean }
+    isClientVisible: { type: boolean }
+    requiresBarcode: { type: boolean }
+    allowsProductProposal: { type: boolean }
+    allowsStoreProductCustomImage: { type: boolean }
+    requiresCatalogReview: { type: boolean }
+    requiresProductCatalog: { type: boolean }
+
+DshNodeUpdateInput:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    nameAr: { type: string, minLength: 1 }
+    nameEn: { type: string }
+    icon: { type: string }
+    sortOrder: { type: integer }
+    isActive: { type: boolean }
+    isClientVisible: { type: boolean }
+    requiresBarcode: { type: boolean }
+    allowsProductProposal: { type: boolean }
+    allowsStoreProductCustomImage: { type: boolean }
+    requiresCatalogReview: { type: boolean }
+    requiresProductCatalog: { type: boolean }
+
+DshMasterProductCreateInput:
+  type: object
+  additionalProperties: false
+  required: [domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive]
+  properties:
+    domainId: { type: string }
+    categoryNodeId: { type: [string, "null"] }
+    canonicalNameAr: { type: string, minLength: 1 }
+    canonicalNameEn: { type: string }
+    brand: { type: string }
+    barcode: { type: [string, "null"] }
+    gtin: { type: [string, "null"] }
+    sku: { type: [string, "null"] }
+    unit: { type: string }
+    measurementType: { type: string }
+    canonicalImageObjectKey: { type: [string, "null"], deprecated: true }
+    approvalStatus: { type: string, enum: [draft, pending_review, approved, rejected, archived] }
+    isActive: { type: boolean }
+    createdSource: { type: string }
+    parentId: { type: [string, "null"] }
+    isStandalone: { type: boolean }
+
+DshMasterProductUpdateInput:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    categoryNodeId: { type: [string, "null"] }
+    canonicalNameAr: { type: string, minLength: 1 }
+    canonicalNameEn: { type: string }
+    brand: { type: string }
+    barcode: { type: [string, "null"] }
+    gtin: { type: [string, "null"] }
+    sku: { type: [string, "null"] }
+    unit: { type: string }
+    measurementType: { type: string }
+    approvalStatus: { type: string, enum: [draft, pending_review, approved, rejected, archived] }
+    isActive: { type: boolean }
+
+DshProductProposalCreateInput:
+  type: object
+  additionalProperties: false
+  required: [proposedNameAr, domainId, sourceSurface]
+  properties:
+    proposedNameAr: { type: string, minLength: 1 }
+    proposedNameEn: { type: string }
+    domainId: { type: string }
+    categoryNodeId: { type: [string, "null"] }
+    brand: { type: string }
+    barcode: { type: [string, "null"] }
+    imageObjectKey: { type: [string, "null"] }
+    sourceSurface: { type: string, enum: [app-field, app-partner, control-panel-catalog, control-panel-platform] }
+    sourceStoreId: { type: [string, "null"] }
+    targetMasterProductId: { type: [string, "null"] }
+    baseVersion: { type: [integer, "null"], minimum: 1 }
+    duplicateCandidates:
+      type: array
+      items: { type: string }
+
+DshProductProposalUpdateInput:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    proposedNameAr: { type: string, minLength: 1 }
+    proposedNameEn: { type: string }
+    brand: { type: string }
+    barcode: { type: [string, "null"] }
+    imageObjectKey: { type: [string, "null"] }
+
+DshProductProposalTransitionInput:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion, nextStatus, note]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    nextStatus: { type: string, enum: [catalog-draft, partner-proposed, partner-review, marketing-review, catalog-adopted, catalog-approved, client-visible, needs-fix, rejected, conflict, withdrawn] }
+    note: { type: string }
+    adoptedMasterProductId: { type: [string, "null"] }
+    createMasterProduct: { type: boolean }
+    mergeData: { type: boolean }
+
+DshProductProposalWithdrawInput:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+
+DshCatalogAssetUpdateInput:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    altAr: { type: string }
+    altEn: { type: string }
+    dominantColor: { type: [string, "null"] }
+
+DshCatalogAssetResponse:
+  type: object
+  required: [asset]
+  properties:
+    asset: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogAsset" }
+
+DshCatalogAssetUploadIntentInput:
+  type: object
+  additionalProperties: false
+  required: [fileName, mimeType, sizeBytes]
+  properties:
+    fileName: { type: string, minLength: 1 }
+    mimeType: { type: string, minLength: 1 }
+    sizeBytes: { type: integer, minimum: 1 }
+    altAr: { type: string }
+    altEn: { type: string }
+    intendedEntityType: { type: string }
+    intendedEntityId: { type: string }
+    intendedRole: { type: string }
+
+DshCatalogAssetUploadIntentResponse:
+  type: object
+  required: [asset, uploadUrl, expiresAt]
+  properties:
+    asset: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogAsset" }
+    uploadUrl: { type: string, format: uri }
+    expiresAt: { type: string, format: date-time }
+
+DshCatalogAssetReviewInput:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion, decision]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    decision: { type: string, enum: [approved, rejected, archived] }
+    reviewNote: { type: string }
+
+DshCatalogAssetLinkInput:
+  type: object
+  additionalProperties: false
+  required: [entityType, entityId, role]
+  properties:
+    entityType: { type: string, enum: [domain, node, master_product, product_proposal, store_assortment, collection, campaign, store] }
+    entityId: { type: string, minLength: 1 }
+    role: { type: string, minLength: 1 }
+    sortOrder: { type: integer, default: 0 }
+    isPrimary:
+      type: boolean
+      default: false
+      description: Replaces the current primary link atomically when true.
+
+DshCatalogAssetLinkResponse:
+  type: object
+  required: [link]
+  properties:
+    link: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogAssetLink" }
+
+DshCatalogAssetLinkListResponse:
+  type: object
+  required: [links]
+  properties:
+    links:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogAssetLink" }
+
+DshCatalogAssetUnlinkResponse:
+  type: object
+  required: [unlinked]
+  properties:
+    unlinked: { type: boolean, const: true }
+
+DshDomainResponse:
+  type: object
+  required: [domain]
+  properties:
+    domain: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCentralCatalogDomain" }
+
+DshDomainListResponse:
+  type: object
+  required: [domains]
+  properties:
+    domains:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCentralCatalogDomain" }
+
+DshNodeResponse:
+  type: object
+  required: [node]
+  properties:
+    node: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCentralCatalogNode" }
+
+DshNodeListResponse:
+  type: object
+  required: [nodes]
+  properties:
+    nodes:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCentralCatalogNode" }
+
+DshMasterProductResponse:
+  type: object
+  required: [masterProduct]
+  properties:
+    masterProduct: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMasterProduct" }
+
+DshProductProposalResponse:
+  type: object
+  required: [proposal]
+  properties:
+    proposal: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshProductProposal" }
 
 DshCatalogAssetListResponse:
   type: object
@@ -49,7 +460,7 @@ DshMasterProductListResponse:
   properties:
     masterProducts:
       type: array
-      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/MasterProductSummary" }
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshMasterProduct" }
     total: { type: integer }
     limit: { type: integer }
     offset: { type: integer }
@@ -60,16 +471,17 @@ DshProductProposalListResponse:
   properties:
     proposals:
       type: array
-      items: { $ref: "../../dsh.catalog.openapi.yaml#/components/schemas/Proposal" }
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshProductProposal" }
     total: { type: integer }
     limit: { type: integer }
     offset: { type: integer }
 
 DshClientCatalogProduct:
   type: object
-  required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, unitPrice, currency, stockStatus, imageObjectKey]
+  required: [id, version, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, unitPrice, currency, stockStatus, imageObjectKey]
   properties:
     id: { type: string }
+    version: { type: integer, minimum: 1 }
     domainId: { type: string }
     categoryNodeId: { type: ["string", "null"] }
     canonicalNameAr: { type: string }
@@ -93,6 +505,7 @@ DshClientCatalogProduct:
         DAM-computed effective product image. Priority: approved store-assortment
         partner_custom_product_image (when policy allows) > approved master-product
         canonical_product_image > null.
+      required: [url, altAr, source]
       properties:
         url: { type: string }
         altAr: { type: string }
@@ -100,16 +513,12 @@ DshClientCatalogProduct:
 
 DshStoreAssortment:
   type: object
-  required: [id, version, storeId, masterProductId, unitPrice, currency, available, stockStatus, localNote, customImageObjectKey, publicationStatus, submittedBy, approvedBy, createdAt, updatedAt]
+  required: [id, version, storeId, masterProductId, localNote, customImageObjectKey, publicationStatus, submittedBy, approvedBy, createdAt, updatedAt]
   properties:
     id: { type: string }
     version: { type: integer, minimum: 1 }
     storeId: { type: string }
     masterProductId: { type: string }
-    unitPrice: { type: number, format: double, minimum: 0, description: Compatibility projection of the canonical price resource. }
-    currency: { type: string, description: Compatibility projection of the canonical price resource. }
-    available: { type: boolean, description: Compatibility projection of the canonical inventory resource. }
-    stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock], description: Compatibility projection of the canonical inventory resource. }
     localNote: { type: string }
     customImageObjectKey: { type: [string, "null"] }
     publicationStatus: { type: string, enum: [draft, submitted, approved, client_visible, rejected, hidden] }
@@ -149,12 +558,8 @@ DshStoreAssortmentPrice:
 DshStoreAssortmentInput:
   type: object
   additionalProperties: false
-  required: [unitPrice, currency, available, stockStatus, localNote, customImageObjectKey, publicationStatus]
+  required: [localNote, customImageObjectKey, publicationStatus]
   properties:
-    unitPrice: { type: number, format: double, minimum: 0, description: Bootstrap-only compatibility projection; existing rows use canonical price resources. }
-    currency: { type: string }
-    available: { type: boolean, description: Bootstrap-only compatibility projection; existing rows use canonical inventory resources. }
-    stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock], description: Bootstrap-only compatibility projection; existing rows use canonical inventory resources. }
     localNote: { type: string }
     customImageObjectKey: { type: [string, "null"] }
     publicationStatus: { type: string, enum: [draft, submitted, approved, client_visible, rejected, hidden] }
@@ -169,6 +574,18 @@ DshStoreAssortmentMetadataUpdateInput:
     customImageObjectKey: { type: [string, "null"] }
     publicationStatus: { type: string, enum: [draft, submitted, approved, client_visible, rejected, hidden] }
     expectedVersion: { type: integer, minimum: 1 }
+
+DshFieldStoreAssortmentInput:
+  type: object
+  additionalProperties: false
+  required: [localNote, customImageObjectKey, publicationStatus, inventory, price]
+  properties:
+    localNote: { type: string }
+    customImageObjectKey: { type: [string, "null"] }
+    publicationStatus: { type: string, enum: [draft, submitted] }
+    expectedVersion: { type: integer, minimum: 1, description: Required when updating an existing assortment; omitted during bootstrap creation. }
+    inventory: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInventoryInput" }
+    price: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPriceInput" }
 
 DshStoreAssortmentInventoryInput:
   type: object
@@ -220,11 +637,21 @@ DshStoreAssortmentPricesResponse:
       type: array
       items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPrice" }
 
+DshStoreAssortmentCommercialReadback:
+  type: object
+  required: [inventory, prices]
+  properties:
+    inventory: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentInventory" }
+    prices:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAssortmentPrice" }
+
 DshCatalogAssetLink:
   type: object
-  required: [id, assetId, entityType, entityId, role, sortOrder, isPrimary, status]
+  required: [id, version, assetId, entityType, entityId, role, sortOrder, isPrimary, status, createdAt, updatedAt]
   properties:
     id: { type: string }
+    version: { type: integer, minimum: 1 }
     assetId: { type: string }
     entityType: { type: string }
     entityId: { type: string }
@@ -232,6 +659,111 @@ DshCatalogAssetLink:
     sortOrder: { type: integer }
     isPrimary: { type: boolean }
     status: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCatalogAssetLinkWithAsset:
+  allOf:
+    - $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogAssetLink"
+    - type: object
+      required: [objectKey, publicUrl, altAr, altEn, mimeType]
+      properties:
+        objectKey: { type: string }
+        publicUrl: { type: string }
+        altAr: { type: string }
+        altEn: { type: string }
+        mimeType: { type: string }
+
+DshCatalogPlatformPolicy:
+  type: object
+  required: [id, version, policyScope, platformCommissionRate, fieldPartnerOnboardingCommissionAmount, fieldPartnerOnboardingCommissionCurrency, storeOnboardingFeeAmount, storeOnboardingFeeCurrency, allowsStoreProductCustomImage, allowsProductProposal, requiresBarcode, requiresCatalogReview, requiresMarketingReview, requiresProductImage, requiresCategoryImage, requiresDescription, requiresBrand, requiresUnit, productDataQualityMinimumScore, maxGalleryImages, manualRequestMode, isActive, effectiveFrom, notes, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    version: { type: integer, minimum: 1 }
+    domainId: { type: [string, "null"] }
+    nodeId: { type: [string, "null"] }
+    policyScope: { type: string, enum: [default, domain, node] }
+    platformCommissionRate: { type: number, minimum: 0, maximum: 1 }
+    fieldPartnerOnboardingCommissionAmount: { type: number, minimum: 0 }
+    fieldPartnerOnboardingCommissionCurrency: { type: string }
+    storeOnboardingFeeAmount: { type: number, minimum: 0 }
+    storeOnboardingFeeCurrency: { type: string }
+    allowsStoreProductCustomImage: { type: boolean }
+    allowsProductProposal: { type: boolean }
+    requiresBarcode: { type: boolean }
+    requiresCatalogReview: { type: boolean }
+    requiresMarketingReview: { type: boolean }
+    requiresProductImage: { type: boolean }
+    requiresCategoryImage: { type: boolean }
+    requiresDescription: { type: boolean }
+    requiresBrand: { type: boolean }
+    requiresUnit: { type: boolean }
+    productDataQualityMinimumScore: { type: number, minimum: 0, maximum: 1 }
+    maxGalleryImages: { type: integer, minimum: 0 }
+    manualRequestMode: { type: boolean }
+    isActive: { type: boolean }
+    effectiveFrom: { type: string, format: date-time }
+    notes: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshCatalogPlatformPolicyUpdateInput:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion]
+  properties:
+    expectedVersion: { type: integer, minimum: 1 }
+    platformCommissionRate: { type: number, minimum: 0, maximum: 1 }
+    fieldPartnerOnboardingCommissionAmount: { type: number, minimum: 0 }
+    fieldPartnerOnboardingCommissionCurrency: { type: string }
+    storeOnboardingFeeAmount: { type: number, minimum: 0 }
+    storeOnboardingFeeCurrency: { type: string }
+    allowsStoreProductCustomImage: { type: boolean }
+    allowsProductProposal: { type: boolean }
+    requiresBarcode: { type: boolean }
+    requiresCatalogReview: { type: boolean }
+    requiresMarketingReview: { type: boolean }
+    requiresProductImage: { type: boolean }
+    requiresCategoryImage: { type: boolean }
+    requiresDescription: { type: boolean }
+    requiresBrand: { type: boolean }
+    requiresUnit: { type: boolean }
+    productDataQualityMinimumScore: { type: number, minimum: 0, maximum: 1 }
+    maxGalleryImages: { type: integer, minimum: 0 }
+    manualRequestMode: { type: boolean }
+    isActive: { type: boolean }
+    effectiveFrom: { type: string, format: date-time }
+    notes: { type: string }
+
+DshCatalogPlatformPolicyResponse:
+  type: object
+  required: [policy]
+  properties:
+    policy: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogPlatformPolicy" }
+
+DshCatalogPlatformPolicyListResponse:
+  type: object
+  required: [policies]
+  properties:
+    policies:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogPlatformPolicy" }
+
+DshCatalogSeedStatus:
+  type: object
+  required: [domainsCount, nodesCount, masterProductsCount, assortmentsCount, manualRequestExists, shayInExists, awnakExists, seedVersion, missingSeeds]
+  properties:
+    domainsCount: { type: integer, minimum: 0 }
+    nodesCount: { type: integer, minimum: 0 }
+    masterProductsCount: { type: integer, minimum: 0 }
+    assortmentsCount: { type: integer, minimum: 0 }
+    manualRequestExists: { type: boolean }
+    shayInExists: { type: boolean }
+    awnakExists: { type: boolean }
+    seedVersion: { type: string }
+    missingSeeds:
+      type: array
+      items: { type: string }
 
 DshCatalogPolicySnapshot:
   type: object
@@ -255,19 +787,19 @@ DshCatalogResponse:
   properties:
     domains:
       type: array
-      items: { $ref: "../../dsh.catalog.openapi.yaml#/components/schemas/Domain" }
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCentralCatalogDomain" }
     nodes:
       type: array
-      items: { $ref: "../../dsh.catalog.openapi.yaml#/components/schemas/Node" }
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCentralCatalogNode" }
     products:
       type: array
       items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshClientCatalogProduct" }
     media:
       type: array
-      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogAssetLink" }
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogAssetLinkWithAsset" }
     policySnapshot:
       type: array
-      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogPolicySnapshot" }
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCatalogPlatformPolicy" }
 
 DshHomeCategory:
   type: object

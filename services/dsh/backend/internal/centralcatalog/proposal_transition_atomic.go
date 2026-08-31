@@ -260,25 +260,12 @@ func TransitionProposalAtomicExpected(
 			if proposal.SourceStoreID != nil {
 				assortmentID := entityID("assort")
 				_, insertErr := tx.ExecContext(ctx, `INSERT INTO dsh_store_assortments
-					(id, store_id, master_product_id, unit_price, currency, available, stock_status,
-					 publication_status, submitted_by)
-					VALUES ($1,$2,$3,0.00,'YER',true,'in_stock','approved',$4)
+					(id, store_id, master_product_id, publication_status, submitted_by)
+					VALUES ($1,$2,$3,'approved',$4)
 					ON CONFLICT (store_id, master_product_id) DO NOTHING`,
 					assortmentID, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID, actorID)
 				if insertErr != nil {
 					return ProductProposal{}, insertErr
-				}
-				assortment, assortmentErr := scanAssortment(tx.QueryRowContext(ctx,
-					`SELECT id, store_id, master_product_id, unit_price, currency, available, stock_status,
-						local_note, custom_image_object_key, publication_status, submitted_by, approved_by, created_at, updated_at, version
-					 FROM dsh_store_assortments
-					 WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`,
-					*proposal.SourceStoreID, *proposal.AdoptedMasterProductID))
-				if assortmentErr != nil {
-					return ProductProposal{}, assortmentErr
-				}
-				if err := bootstrapAssortmentRuntimeTruth(ctx, tx, assortment); err != nil {
-					return ProductProposal{}, err
 				}
 			}
 		}

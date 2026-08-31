@@ -5,7 +5,7 @@ info:
   description: Governed catalog contract for PIM attributes, product relationships,
     temporary assortment pauses, catalog audit readback and guarded rollback.
 x-bthwani-owner: services/dsh
-x-bthwani-parent-contract: contracts/dsh.catalog.openapi.yaml
+x-bthwani-parent-contract: contracts/dsh.openapi.yaml
 x-bthwani-contract-role: executable-fragment
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED

@@ -534,6 +534,20 @@
       "sha256": "15b56fa121906f36077b2e6270def886c07e35909b55bfd6877823b0e2e7c1e7",
       "historicalPrefix": "1075",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 317,
+      "file": "dsh-1076_cart_mutation_receipts_atomicity.sql",
+      "sha256": "ec8b4a57919b87c68a67e2f1f7ce0a4b6aba52b97146290fddb49f2ef9e10b9e",
+      "historicalPrefix": "1076",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 318,
+      "file": "dsh-1077_catalog_commercial_cutover.sql",
+      "sha256": "d38dc0d23b42a1f883347e819746d79f8dd046e8992a7b9ea58b603606456686",
+      "historicalPrefix": "1077",
+      "state": "ACTIVE"
     }
   ]
 }

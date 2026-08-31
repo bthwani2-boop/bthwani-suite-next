@@ -16,6 +16,10 @@ const partnerSchemasPath = path.join(
   contractsDirectory,
   "components/schemas/partner.schemas.yaml",
 );
+const catalogSchemasPath = path.join(
+  contractsDirectory,
+  "components/schemas/catalog.schemas.yaml",
+);
 const catalogPathsPath = path.join(contractsDirectory, "paths/catalog.paths.yaml");
 
 function read(filePath) {
@@ -75,14 +79,23 @@ test("partner draft request matches domain identity and server-owned metadata", 
 
 test("catalog asset link contract exposes atomic primary store media binding", () => {
   const catalogPaths = read(catalogPathsPath);
+  const catalogSchemas = read(catalogSchemasPath);
   const linkPath = catalogPaths.match(
     /\/dsh\/operator\/catalog\/assets\/\{assetId\}\/link:[\s\S]*?\n\/dsh\/operator\/catalog\/assets\/\{assetId\}\/links\/\{linkId\}:/,
   );
   assert.ok(linkPath, "catalog asset link path is missing");
-  assert.match(linkPath[0], /required: \[entityType, entityId, role\]/);
-  assert.match(linkPath[0], /isPrimary:[\s\S]*type: boolean/);
-  assert.match(linkPath[0], /Replaces the current primary link atomically/);
-  assert.match(linkPath[0], /additionalProperties: false/);
+  assert.match(
+    linkPath[0],
+    /\$ref: ["']\.\.\/dsh\.openapi\.yaml#\/components\/schemas\/DshCatalogAssetLinkInput["']?/,
+  );
+  const linkInputSchema = catalogSchemas.match(
+    /DshCatalogAssetLinkInput:[\s\S]*?\n\nDshCatalogAssetLinkResponse:/,
+  );
+  assert.ok(linkInputSchema, "catalog asset link input schema is missing");
+  assert.match(linkInputSchema[0], /required: \[entityType, entityId, role\]/);
+  assert.match(linkInputSchema[0], /isPrimary:[\s\S]*type: boolean/);
+  assert.match(linkInputSchema[0], /Replaces the current primary link atomically/);
+  assert.match(linkInputSchema[0], /additionalProperties: false/);
 });
 
 test("composition integrity fails closed on unresolved local references", () => {

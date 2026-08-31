@@ -26,6 +26,7 @@ import type {
   CentralCatalogNode,
   MasterProduct,
   StoreAssortment,
+  StoreAssortmentCommercialReadback,
   ProductProposal,
 } from "../catalog/central-catalog.types";
 import type { DshFieldPartnerStoreDraft } from "./partner.types";
@@ -73,8 +74,7 @@ export type FieldCatalogActionState =
   | FieldCatalogErrorState;
 
 export type FieldStoreAssortmentInput = {
-  readonly unitPrice: number;
-  readonly available: boolean;
+  readonly price: number;
   readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
   readonly localNote: string;
 };
@@ -102,14 +102,32 @@ export type FieldProductProposalInput = {
   readonly baseVersion?: number;
 };
 
-function mergeSavedAssortments(
-  current: readonly StoreAssortment[],
-  results: readonly FieldStoreAssortmentBatchResult[],
-): readonly StoreAssortment[] {
-  const saved = results.flatMap((result) => result.status === "saved" && result.assortment ? [result.assortment] : []);
-  if (saved.length === 0) return current;
-  const savedIds = new Set(saved.map((item) => item.masterProductId));
-  return [...current.filter((item) => !savedIds.has(item.masterProductId)), ...saved];
+function quantityForStockStatus(status: FieldStoreAssortmentInput["stockStatus"]): number {
+  if (status === "out_of_stock") return 0;
+  if (status === "low_stock") return 5;
+  return 100;
+}
+
+function buildNormalizedInventory(status: FieldStoreAssortmentInput["stockStatus"], expectedVersion: number) {
+  return {
+    policyType: "signal" as const,
+    quantity: quantityForStockStatus(status),
+    minOrderQuantity: 1,
+    maxOrderQuantity: 100,
+    stepQuantity: 1,
+    expectedVersion,
+  };
+}
+
+function buildNormalizedPrice(price: number) {
+  return {
+    amountMinor: Math.round(price * 100),
+    currency: "YER",
+    prepTimeMin: 15,
+    prepTimeMax: 30,
+    effectiveFrom: new Date().toISOString(),
+    effectiveUntil: null,
+  };
 }
 
 export function useFieldCatalogController(partnerId: string) {
@@ -119,6 +137,7 @@ export function useFieldCatalogController(partnerId: string) {
   const [actionState, setActionState] = useState<FieldCatalogActionState>({ kind: "idle" });
 
   const [assortmentItems, setAssortmentItems] = useState<readonly StoreAssortment[]>([]);
+  const [assortmentCommercial, setAssortmentCommercial] = useState<ReadonlyMap<string, StoreAssortmentCommercialReadback>>(new Map());
   const [proposals, setProposals] = useState<readonly ProductProposal[]>([]);
   const proposalMutationRef = useRef<{ key: string; fingerprint: string } | null>(null);
 
@@ -135,6 +154,7 @@ export function useFieldCatalogController(partnerId: string) {
         throw new Error("field catalog store scope mismatch");
       }
       setAssortmentItems(currentAssortment.assortment);
+      setAssortmentCommercial(currentAssortment.commercial);
       setProposals(proposalPage.items);
       setStoreState({ kind: "success", storeId, store });
     } catch (error) {
@@ -174,20 +194,20 @@ export function useFieldCatalogController(partnerId: string) {
       setActionState({ kind: "submitting" });
       try {
         const existing = assortmentItems.find((item) => item.masterProductId === masterProductId);
+        const currentCommercial = assortmentCommercial.get(masterProductId);
         const assortment = await upsertFieldStoreAssortmentOCC(partnerId, storeState.storeId, masterProductId, {
-          unitPrice: input.unitPrice,
-          currency: existing?.currency ?? "",
-          available: input.available,
-          stockStatus: input.stockStatus,
           localNote: input.localNote,
           customImageObjectKey: null,
           publicationStatus: existing?.publicationStatus ?? "draft",
+          inventory: buildNormalizedInventory(input.stockStatus, currentCommercial?.inventory.version ?? 0),
+          price: buildNormalizedPrice(input.price),
           ...(existing ? { expectedVersion: existing.version } : {}),
         });
         setAssortmentItems((previous) => {
           const withoutExisting = previous.filter((item) => item.masterProductId !== masterProductId);
           return [...withoutExisting, assortment];
         });
+        await loadStore();
         setActionState({ kind: "idle" });
         return true;
       } catch (error) {
@@ -196,7 +216,7 @@ export function useFieldCatalogController(partnerId: string) {
         return false;
       }
     },
-    [partnerId, storeState, assortmentItems, loadStore],
+    [partnerId, storeState, assortmentItems, assortmentCommercial, loadStore],
   );
 
   const linkMasterProductsBatch = useCallback(
@@ -211,20 +231,19 @@ export function useFieldCatalogController(partnerId: string) {
           storeState.storeId,
           items.map(({ masterProductId, input }) => {
             const existing = assortmentItems.find((item) => item.masterProductId === masterProductId);
+            const currentCommercial = assortmentCommercial.get(masterProductId);
             return {
               masterProductId,
-              unitPrice: input.unitPrice,
-              currency: existing?.currency ?? "",
-              available: input.available,
-              stockStatus: input.stockStatus,
               localNote: input.localNote,
               customImageObjectKey: null,
               publicationStatus: existing?.publicationStatus ?? "draft",
+              inventory: buildNormalizedInventory(input.stockStatus, currentCommercial?.inventory.version ?? 0),
+              price: buildNormalizedPrice(input.price),
               ...(existing ? { expectedVersion: existing.version } : {}),
             };
           }),
         );
-        setAssortmentItems((previous) => mergeSavedAssortments(previous, response.results));
+        await loadStore();
         if (response.failed > 0) {
           await loadStore();
           // Partial batch failure is a distinct outcome, not a transport error:
@@ -246,7 +265,7 @@ export function useFieldCatalogController(partnerId: string) {
         return { succeeded: 0, failed: items.length, results: [] };
       }
     },
-    [partnerId, storeState, assortmentItems, loadStore],
+    [partnerId, storeState, assortmentItems, assortmentCommercial, loadStore],
   );
 
   const proposeNewProduct = useCallback(
@@ -267,8 +286,8 @@ export function useFieldCatalogController(partnerId: string) {
           brand: input.brand,
           barcode: input.barcode,
           imageObjectKey: input.imageObjectKey || null,
-          targetMasterProductId: input.targetMasterProductId,
-          baseVersion: input.baseVersion,
+          ...(input.targetMasterProductId !== undefined ? { targetMasterProductId: input.targetMasterProductId } : {}),
+          ...(input.baseVersion !== undefined ? { baseVersion: input.baseVersion } : {}),
           sourceSurface: "app-field",
         }, idempotencyKey);
         const readback = await fetchFieldProductProposals(partnerId, { limit: 100, offset: 0 });
@@ -314,6 +333,7 @@ export function useFieldCatalogController(partnerId: string) {
     masterProductsState,
     actionState,
     assortmentItems,
+    assortmentCommercial,
     proposals,
     reloadStore: loadStore,
     withdrawProposal,

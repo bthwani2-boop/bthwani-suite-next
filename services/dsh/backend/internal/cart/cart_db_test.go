@@ -135,8 +135,8 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 		t.Fatalf("failed to approve test store domain: %v", err)
 	}
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_store_assortments (id, store_id, master_product_id, unit_price, currency, available, stock_status, publication_status)
-		VALUES ($1, $2, $3, 25.50, 'USD', true, 'in_stock', 'client_visible')`, assortmentID, storeID, productID); err != nil {
+		INSERT INTO dsh_store_assortments (id, store_id, master_product_id, publication_status)
+		VALUES ($1, $2, $3, 'client_visible')`, assortmentID, storeID, productID); err != nil {
 		t.Fatalf("failed to insert test store assortment: %v", err)
 	}
 	if _, err := db.ExecContext(ctx, `
@@ -255,6 +255,144 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	}
 }
 
+func TestCartMutationIdempotencyIsAtomicAndFingerprintBoundDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	storeID := "cart-idempotency-store-" + suffix
+	clientID := "cart-idempotency-client-" + suffix
+	domainID := "cart-idempotency-domain-" + suffix
+	productID := "cart-idempotency-product-" + suffix
+	assortmentID := "cart-idempotency-assortment-" + suffix
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
+		VALUES ($1, $1, 'Cart Idempotency Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`, storeID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO dsh_catalog_domains (id, slug, name_ar) VALUES ($1, $1, 'Cart Idempotency Domain')`, domainID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_master_products (id, domain_id, canonical_name_ar, approval_status, is_active)
+		VALUES ($1, $2, 'Idempotency Product', 'approved', true)`, productID, domainID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO dsh_store_catalog_domains (store_id, domain_id, status, approved_at) VALUES ($1, $2, 'approved', NOW())`, storeID, domainID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_assortments (id, store_id, master_product_id, publication_status)
+		VALUES ($1, $2, $3, 'client_visible')`, assortmentID, storeID, productID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO dsh_store_assortment_prices (id, store_assortment_id, amount_minor, currency, effective_from) VALUES ($1, $2, 1000, 'YER', NOW())`, "idempotency-price-"+suffix, assortmentID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_assortment_inventory (store_assortment_id, policy_type, quantity, reserved_quantity, min_order_quantity, max_order_quantity, step_quantity)
+		VALUES ($1, 'quantity', 100, 0, 1, 100, 1)`, assortmentID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_cart_mutation_receipts WHERE client_id = $1`, clientID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id IN (SELECT id FROM dsh_carts WHERE client_id = $1)`, clientID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_carts WHERE client_id = $1`, clientID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortments WHERE id = $1`, assortmentID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_master_products WHERE id = $1`, productID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_catalog_domains WHERE store_id = $1`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_catalog_domains WHERE id = $1`, domainID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
+	})
+
+	mutation := MutationContext{IdempotencyKey: "cart-add-" + suffix, CorrelationID: "cart-correlation-" + suffix}
+	input := UpsertItemInput{MasterProductID: productID, Quantity: 3}
+	start := make(chan struct{})
+	results := make(chan *MutationResult, 2)
+	errorsCh := make(chan error, 2)
+	var group sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			<-start
+			result, err := UpsertItemIdempotent(ctx, db, clientID, storeID, ModeBthwaniDelivery, input, mutation)
+			results <- result
+			errorsCh <- err
+		}()
+	}
+	close(start)
+	group.Wait()
+	close(results)
+	close(errorsCh)
+
+	replayed := 0
+	for err := range errorsCh {
+		if err != nil {
+			t.Fatalf("same-key concurrent mutation failed: %v", err)
+		}
+	}
+	for result := range results {
+		if result == nil || result.Item == nil {
+			t.Fatalf("same-key mutation returned incomplete result: %#v", result)
+		}
+		if result.Replayed {
+			replayed++
+		}
+	}
+	if replayed != 1 {
+		t.Fatalf("expected exactly one replay after concurrent same-key mutation, got %d", replayed)
+	}
+
+	var cartCount, itemCount, receiptCount, cartVersion, quantity int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(MAX(version), 0) FROM dsh_carts WHERE client_id = $1`, clientID).Scan(&cartCount, &cartVersion); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*), COALESCE(MAX(quantity), 0) FROM dsh_cart_items WHERE cart_id IN (SELECT id FROM dsh_carts WHERE client_id = $1)`, clientID).Scan(&itemCount, &quantity); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_cart_mutation_receipts WHERE client_id = $1 AND idempotency_key = $2`, clientID, mutation.IdempotencyKey).Scan(&receiptCount); err != nil {
+		t.Fatal(err)
+	}
+	if cartCount != 1 || itemCount != 1 || quantity != 3 || cartVersion != 2 || receiptCount != 1 {
+		t.Fatalf("same-key mutation was not single-commit: carts=%d items=%d quantity=%d cartVersion=%d receipts=%d", cartCount, itemCount, quantity, cartVersion, receiptCount)
+	}
+
+	changedInput := input
+	changedInput.Quantity = 4
+	if _, err := UpsertItemIdempotent(ctx, db, clientID, storeID, ModeBthwaniDelivery, changedInput, mutation); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("expected changed payload to be rejected as idempotency conflict, got %v", err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT version FROM dsh_carts WHERE client_id = $1`, clientID).Scan(&cartVersion); err != nil {
+		t.Fatal(err)
+	}
+	if cartVersion != 2 {
+		t.Fatalf("idempotency conflict changed cart version: %d", cartVersion)
+	}
+
+	removeMutation := MutationContext{IdempotencyKey: "cart-remove-" + suffix, CorrelationID: "cart-remove-correlation-" + suffix}
+	var cartID, itemID string
+	if err := db.QueryRowContext(ctx, `
+		SELECT c.id::text, i.id::text FROM dsh_carts c JOIN dsh_cart_items i ON i.cart_id = c.id
+		WHERE c.client_id = $1`, clientID).Scan(&cartID, &itemID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RemoveItemIdempotent(ctx, db, clientID, cartID, itemID, func() *int { value := 2; return &value }(), removeMutation); err != nil {
+		t.Fatalf("remove mutation failed: %v", err)
+	}
+	removeReplay, err := RemoveItemIdempotent(ctx, db, clientID, cartID, itemID, func() *int { value := 2; return &value }(), removeMutation)
+	if err != nil || removeReplay == nil || !removeReplay.Replayed {
+		t.Fatalf("remove replay did not return committed receipt: result=%#v err=%v", removeReplay, err)
+	}
+	var itemReceiptID sql.NullString
+	if err := db.QueryRowContext(ctx, `SELECT item_id::text FROM dsh_cart_mutation_receipts WHERE client_id = $1 AND idempotency_key = $2`, clientID, removeMutation.IdempotencyKey).Scan(&itemReceiptID); err != nil {
+		t.Fatal(err)
+	}
+	if itemReceiptID.Valid {
+		t.Fatalf("deleted item remained in mutation receipt FK: %s", itemReceiptID.String)
+	}
+}
+
 func TestUpsertItemRejectsPublicationApprovalAndInventoryPolicyViolationsDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
@@ -277,7 +415,7 @@ func TestUpsertItemRejectsPublicationApprovalAndInventoryPolicyViolationsDBInteg
 	if _, err := db.ExecContext(ctx, `INSERT INTO dsh_store_catalog_domains (store_id,domain_id,status,approved_at) VALUES ($1,$2,'approved',NOW())`, storeID, domainID); err != nil {
 		t.Fatalf("failed to approve policy test store domain: %v", err)
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO dsh_store_assortments (id,store_id,master_product_id,unit_price,currency,available,stock_status,publication_status) VALUES ($1,$2,$3,10,'YER',true,'in_stock','hidden')`, assortmentID, storeID, productID); err != nil {
+	if _, err := db.ExecContext(ctx, `INSERT INTO dsh_store_assortments (id,store_id,master_product_id,publication_status) VALUES ($1,$2,$3,'hidden')`, assortmentID, storeID, productID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO dsh_store_assortment_prices (id,store_assortment_id,amount_minor,currency,effective_from) VALUES ($1,$2,1000,'YER',NOW())`, "policy-price-"+suffix, assortmentID); err != nil {
@@ -318,11 +456,11 @@ func TestUpsertItemRejectsPublicationApprovalAndInventoryPolicyViolationsDBInteg
 	if err != nil || item == nil || item.Quantity != 6 {
 		t.Fatalf("valid policy quantity should succeed, item=%#v err=%v", item, err)
 	}
-	if _, err := db.ExecContext(ctx, `UPDATE dsh_store_assortments SET available=false WHERE id=$1`, assortmentID); err != nil {
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_store_assortment_inventory SET quantity=0 WHERE store_assortment_id=$1`, assortmentID); err != nil {
 		t.Fatal(err)
 	}
 	assertInvalid(2, "assortment unavailable")
-	if _, err := db.ExecContext(ctx, `UPDATE dsh_store_assortments SET available=true WHERE id=$1`, assortmentID); err != nil {
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_store_assortment_inventory SET quantity=10 WHERE store_assortment_id=$1`, assortmentID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.ExecContext(ctx, `UPDATE dsh_master_products SET approval_status='rejected' WHERE id=$1`, productID); err != nil {

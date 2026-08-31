@@ -27,105 +27,6 @@ func (err *StoreConflictError) Error() string {
 
 func (err *StoreConflictError) Unwrap() error { return ErrStoreConflict }
 
-// GetOrCreateSingleStoreCart enforces the Product Truth decision that a client
-// may own at most one active cart across the whole OperatorContext. The advisory lock and
-// the database partial unique index close both application and concurrent-write
-// paths. Switching stores is explicit; the server never silently destroys a
-// different store's active cart.
-func GetOrCreateSingleStoreCart(
-	ctx context.Context,
-	db *sql.DB,
-	clientID string,
-	storeID string,
-	mode FulfillmentMode,
-	expectedVersion *int,
-) (*Cart, error) {
-	clientID = strings.TrimSpace(clientID)
-	storeID = strings.TrimSpace(storeID)
-	if clientID == "" || storeID == "" {
-		return nil, ErrInvalid
-	}
-	if mode == "" {
-		mode = ModeBthwaniDelivery
-	}
-	if mode != ModeBthwaniDelivery && mode != ModePartnerDelivery && mode != ModePickup {
-		return nil, ErrInvalid
-	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "dsh-active-cart:"+clientID); err != nil {
-		return nil, err
-	}
-
-	var current Cart
-	err = tx.QueryRowContext(ctx, `
-		SELECT id::text, client_id, store_id, fulfillment_mode, state, note, version, created_at, updated_at
-		FROM dsh_carts
-		WHERE client_id = $1 AND state = 'active'
-		ORDER BY updated_at DESC, id DESC
-		LIMIT 1
-		FOR UPDATE`, clientID).Scan(
-		&current.ID,
-		&current.ClientID,
-		&current.StoreID,
-		&current.FulfillmentMode,
-		&current.State,
-		&current.Note,
-		&current.Version,
-		&current.CreatedAt,
-		&current.UpdatedAt,
-	)
-	if err == nil {
-		if current.StoreID != storeID {
-			return nil, &StoreConflictError{ActiveCartID: current.ID, ActiveStoreID: current.StoreID}
-		}
-		if expectedVersion != nil && current.Version != *expectedVersion {
-			return nil, ErrConflict
-		}
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
-		items, err := listItems(ctx, db, current.ID)
-		if err != nil {
-			return nil, err
-		}
-		current.Items = items
-		return &current, nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return nil, err
-	}
-
-	var created Cart
-	err = tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode)
-		VALUES ($1, $2, $3)
-		RETURNING id::text, client_id, store_id, fulfillment_mode, state, note, version, created_at, updated_at`,
-		clientID, storeID, mode).Scan(
-		&created.ID,
-		&created.ClientID,
-		&created.StoreID,
-		&created.FulfillmentMode,
-		&created.State,
-		&created.Note,
-		&created.Version,
-		&created.CreatedAt,
-		&created.UpdatedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	created.Items = []CartItem{}
-	return &created, nil
-}
-
 type CartItemValidation struct {
 	ItemID                      string  `json:"itemId"`
 	MasterProductID             string  `json:"masterProductId"`
@@ -176,7 +77,7 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 			p.currency,
 			CASE
 				WHEN a.id IS NULL THEN FALSE
-				WHEN a.publication_status <> 'client_visible' OR a.available IS NOT TRUE THEN FALSE
+				WHEN a.publication_status <> 'client_visible' OR a.paused_at IS NOT NULL THEN FALSE
 				WHEN mp.approval_status <> 'approved' OR mp.is_active IS NOT TRUE THEN FALSE
 				WHEN p.amount_minor IS NULL OR p.amount_minor <= 0 OR length(trim(p.currency)) <> 3 THEN FALSE
 				WHEN i.store_assortment_id IS NULL OR i.step_quantity < 1 THEN FALSE

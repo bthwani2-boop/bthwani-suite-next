@@ -23,8 +23,9 @@ import {
   fetchPartnerMasterProducts,
   fetchPartnerProductProposals,
   fetchPartnerStoreAssortment,
+  fetchPartnerStoreAssortmentsCommercial,
   fetchPartnerTaxonomy,
-  createPartnerStoreAssortment,
+  createPartnerStoreAssortmentWithCommercialTruth,
   updatePartnerStoreAssortmentMetadataOCC,
   withdrawPartnerProductProposal,
 } from "../../shared/catalog";
@@ -33,7 +34,13 @@ import type {
   CentralCatalogNode,
   MasterProduct,
   ProductProposal,
+  StoreAssortmentCommercialReadback,
   StoreAssortment,
+} from "../../shared/catalog";
+import {
+  getCurrentStoreAssortmentPrice,
+  getStoreAssortmentStockStatus,
+  isStoreAssortmentAvailable,
 } from "../../shared/catalog";
 import { InventoryConfigurationModal } from "./InventoryConfigurationModal";
 import { PriceConfigurationModal } from "./PriceConfigurationModal";
@@ -50,6 +57,7 @@ type CatalogReadback = {
   readonly nodes: readonly CentralCatalogNode[];
   readonly masterProducts: readonly MasterProduct[];
   readonly assortment: readonly StoreAssortment[];
+  readonly commercial: ReadonlyMap<string, StoreAssortmentCommercialReadback>;
   readonly proposals: readonly ProductProposal[];
 };
 
@@ -73,6 +81,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
   const [nodes, setNodes] = React.useState<readonly CentralCatalogNode[]>([]);
   const [masterProducts, setMasterProducts] = React.useState<readonly MasterProduct[]>([]);
   const [assortment, setAssortment] = React.useState<readonly StoreAssortment[]>([]);
+  const [commercial, setCommercial] = React.useState<ReadonlyMap<string, StoreAssortmentCommercialReadback>>(new Map());
   const [proposals, setProposals] = React.useState<readonly ProductProposal[]>([]);
 
   const [editingProductId, setEditingProductId] = React.useState<string | null>(null);
@@ -95,6 +104,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
     setNodes([]);
     setMasterProducts([]);
     setAssortment([]);
+    setCommercial(new Map());
     setProposals([]);
   }, []);
 
@@ -118,6 +128,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         fetchPartnerStoreAssortment(normalizedStoreId),
         fetchPartnerProductProposals(normalizedStoreId, { limit: 100, offset: 0 }),
       ]);
+      const currentCommercial = await fetchPartnerStoreAssortmentsCommercial(normalizedStoreId, currentAssortment);
       if (
         !mountedRef.current
         || requestSeq !== requestSeqRef.current
@@ -128,12 +139,14 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         nodes: taxonomy.nodes,
         masterProducts: products,
         assortment: currentAssortment,
+        commercial: currentCommercial,
         proposals: proposalPage.items,
       };
       setDomains(readback.domains);
       setNodes(readback.nodes);
       setMasterProducts(readback.masterProducts);
       setAssortment(readback.assortment);
+      setCommercial(readback.commercial);
       setProposals(readback.proposals);
       return readback;
     } catch (caught) {
@@ -226,44 +239,59 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
     const productId = editingProductId;
     const note = editNote.trim();
     const current = assortment.find((item) => item.masterProductId === productId);
-    const unitPrice = Number(initialPrice.trim());
-    if (!current && (!Number.isFinite(unitPrice) || unitPrice < 0)) {
+    const amountMinor = Number(initialPrice.trim());
+    if (!current && (!Number.isInteger(amountMinor) || amountMinor < 0)) {
       setError("يرجى إدخال سعر بدء صحيح لإضافة المنتج.");
       return;
     }
     await runScopedMutation(
-      () => current
-        ? updatePartnerStoreAssortmentMetadataOCC(normalizedStoreId, productId, {
-          localNote: note,
-          customImageObjectKey: current.customImageObjectKey,
-          publicationStatus: current.publicationStatus,
-          expectedVersion: current.version,
-        })
-        : createPartnerStoreAssortment(normalizedStoreId, productId, {
-          unitPrice,
-          currency: "YER",
-          available: true,
-          stockStatus: "in_stock",
-          localNote: note,
-          customImageObjectKey: null,
-          publicationStatus: "draft",
-        }),
+      async () => ({
+        assortment: current
+          ? await updatePartnerStoreAssortmentMetadataOCC(normalizedStoreId, productId, {
+            localNote: note,
+            customImageObjectKey: current.customImageObjectKey,
+            publicationStatus: current.publicationStatus,
+            expectedVersion: current.version,
+          })
+          : (await createPartnerStoreAssortmentWithCommercialTruth(normalizedStoreId, productId, {
+            metadata: {
+              localNote: note,
+              customImageObjectKey: null,
+              publicationStatus: "draft",
+            },
+            inventory: {
+              policyType: "quantity",
+              quantity: 100,
+              minOrderQuantity: 1,
+              maxOrderQuantity: 100,
+              stepQuantity: 1,
+            },
+            price: {
+              amountMinor,
+              currency: "YER",
+              prepTimeMin: 15,
+              prepTimeMax: 30,
+              effectiveFrom: new Date().toISOString(),
+              effectiveUntil: null,
+            },
+          })).assortment,
+      }),
       (readback, saved) => {
         const item = readback.assortment.find((candidate) => candidate.masterProductId === productId);
-        if (!item || item.version !== saved.version || item.id !== saved.id) return false;
+        if (!item || item.version !== saved.assortment.version || item.id !== saved.assortment.id) return false;
         if (current) {
           return item.localNote === note
             && item.customImageObjectKey === current.customImageObjectKey
             && item.publicationStatus === current.publicationStatus
-            && item.unitPrice === current.unitPrice
-            && item.currency === current.currency
-            && item.available === current.available
-            && item.stockStatus === current.stockStatus;
+            && readback.commercial.has(productId);
         }
-        return item.unitPrice === unitPrice
-          && item.currency === "YER"
-          && item.available
-          && item.stockStatus === "in_stock"
+        const commercialReadback = readback.commercial.get(productId);
+        const currentPrice = getCurrentStoreAssortmentPrice(commercialReadback);
+        return commercialReadback !== undefined
+          && currentPrice?.amountMinor === amountMinor
+          && currentPrice.currency === "YER"
+          && isStoreAssortmentAvailable(commercialReadback.inventory)
+          && getStoreAssortmentStockStatus(commercialReadback.inventory) === "in_stock"
           && item.localNote === note
           && item.publicationStatus === "draft";
       },
@@ -331,7 +359,10 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
     { id: "reels", label: "الريلز" },
   ];
 
-  const availableCount = assortment.filter((i) => i.available).length;
+  const availableCount = assortment.filter((item) => {
+    const commercialReadback = commercial.get(item.masterProductId);
+    return commercialReadback ? isStoreAssortmentAvailable(commercialReadback.inventory) : false;
+  }).length;
   const outOfStockCount = assortment.length - availableCount;
   const editingCurrent = editingProductId
     ? assortment.find((item) => item.masterProductId === editingProductId) ?? null
@@ -392,6 +423,14 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
           ) : (
             filteredAssortment.map((item) => {
               const name = namesByProduct.get(item.masterProductId) ?? "منتج بدون اسم مركزي";
+              const commercialReadback = commercial.get(item.masterProductId);
+              const currentPrice = getCurrentStoreAssortmentPrice(commercialReadback);
+              const available = commercialReadback
+                ? isStoreAssortmentAvailable(commercialReadback.inventory)
+                : false;
+              const stockStatus = commercialReadback
+                ? getStoreAssortmentStockStatus(commercialReadback.inventory)
+                : null;
               return (
                 <Surface key={item.id} tone="raised" padding={4} gap={3} radiusToken="lg">
                   <Box layoutDirection="row" justify="space-between" align="flex-start">
@@ -403,12 +442,16 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
                     </Box>
                     <Box align="flex-end" gap={1}>
                       <Badge
-                        label={`${item.unitPrice} ${item.currency || 'YER'}`}
+                        label={currentPrice ? `${currentPrice.amountMinor} ${currentPrice.currency}` : "السعر غير متاح"}
                         tone="brand"
                       />
                       <Badge
-                        label={item.available ? "متوفر للطلب" : "غير متوفر"}
-                        tone={item.available ? "success" : "warning"}
+                        label={!commercialReadback
+                          ? "بيانات تجارية ناقصة"
+                          : available
+                            ? stockStatus === "low_stock" ? "مخزون منخفض" : "متوفر للطلب"
+                            : "غير متوفر"}
+                        tone={!commercialReadback || !available ? "warning" : "success"}
                       />
                     </Box>
                   </Box>
@@ -455,13 +498,20 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
           ) : (
             filteredMasterProducts.map((product) => {
               const linked = assortment.find((i) => i.masterProductId === product.id);
+              const linkedPrice = linked
+                ? getCurrentStoreAssortmentPrice(commercial.get(linked.masterProductId))
+                : undefined;
               return (
                 <Surface key={product.id} tone="raised" padding={4} gap={3} radiusToken="lg">
                   <Box layoutDirection="row" justify="space-between" align="center">
                     <Box gap={1} style={{ flex: 1 }}>
                       <Text role="titleSm">{product.canonicalNameAr}</Text>
                       <Text role="caption" tone="muted">
-                        {linked ? `مضاف لمتجرك بسعر ${linked.unitPrice} ${linked.currency}` : "غير مضاف بعد"}
+                        {linked
+                          ? linkedPrice
+                            ? `مضاف لمتجرك بسعر ${linkedPrice.amountMinor} ${linkedPrice.currency}`
+                            : "مضاف لمتجرك — السعر غير متاح"
+                          : "غير مضاف بعد"}
                       </Text>
                     </Box>
                     <Badge

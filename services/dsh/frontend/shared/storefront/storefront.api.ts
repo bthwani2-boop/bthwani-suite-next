@@ -57,9 +57,6 @@ function toClientStorefront(storeId: string, response: DshStorefrontResponse): C
   const categories = [...nodeCategories, ...domainCategories].sort((a, b) => a.sortOrder - b.sortOrder);
 
   const products: CatalogProduct[] = rawCatalog.products?.map((product: any) => {
-    const effectiveMediaLink = product.effectiveImage
-      ? rawCatalog.media?.find((link: any) => link.publicUrl === product.effectiveImage?.url)
-      : undefined;
     const media: CatalogMedia[] = product.effectiveImage
       ? [{
           state: "complete",

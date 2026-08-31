@@ -1,12 +1,7 @@
 -- Local-only convergence of seeded assortments onto the normalized runtime
--- inventory/pricing authority introduced by dsh-980. Migrations execute before
--- local fixture seeds, so the historical migration backfill cannot see rows
--- inserted later by dsh-032/dsh-960. This seed closes that ordering boundary
--- explicitly; product code continues to fail closed when normalized truth is
--- absent.
+-- inventory and price authorities. This file is intentionally independent of
+-- the metadata link: no commercial field is written to dsh_store_assortments.
 
--- Seed-owned inventory is deterministic. Runtime/operator-created assortment
--- inventory is never touched here.
 INSERT INTO dsh_store_assortment_inventory (
   store_assortment_id,
   policy_type,
@@ -19,59 +14,65 @@ INSERT INTO dsh_store_assortment_inventory (
   created_at,
   updated_at
 )
-SELECT
-  a.id,
-  'signal',
-  CASE
-    WHEN a.available IS NOT TRUE OR a.stock_status = 'out_of_stock' THEN 0
-    WHEN a.stock_status = 'low_stock' THEN 5
-    ELSE 100
-  END,
-  0,
-  1,
-  100,
-  1,
-  1,
-  NOW(),
-  NOW()
-FROM dsh_store_assortments a
-WHERE a.submitted_by = 'system-seed'
+VALUES
+  ('assortment-store-test-grocery-rice', 'signal', 100, 0, 1, 100, 1, 1, NOW(), NOW()),
+  ('assortment-store-1005-meal', 'signal', 100, 0, 1, 100, 1, 1, NOW(), NOW()),
+  ('assortment-store-1002-croissant', 'signal', 100, 0, 1, 100, 1, 1, NOW(), NOW()),
+  ('assortment-store-1002-wheatbread', 'signal', 100, 0, 1, 100, 1, 1, NOW(), NOW()),
+  ('assortment-store-test-grocery-milk', 'signal', 100, 0, 1, 100, 1, 1, NOW(), NOW()),
+  ('assortment-store-test-grocery-apple', 'signal', 100, 0, 1, 100, 1, 1, NOW(), NOW()),
+  ('assortment-store-1003-rice', 'signal', 100, 0, 1, 100, 1, 1, NOW(), NOW()),
+  ('assortment-store-1006-pain-relief', 'signal', 100, 0, 1, 100, 1, 1, NOW(), NOW()),
+  ('assortment-store-electronics-phone', 'signal', 100, 0, 1, 100, 1, 1, NOW(), NOW())
 ON CONFLICT (store_assortment_id) DO UPDATE SET
-  policy_type = 'signal',
+  policy_type = EXCLUDED.policy_type,
   quantity = EXCLUDED.quantity,
-  reserved_quantity = 0,
-  min_order_quantity = 1,
-  max_order_quantity = 100,
-  step_quantity = 1,
+  reserved_quantity = EXCLUDED.reserved_quantity,
+  min_order_quantity = EXCLUDED.min_order_quantity,
+  max_order_quantity = EXCLUDED.max_order_quantity,
+  step_quantity = EXCLUDED.step_quantity,
   version = CASE
-    WHEN dsh_store_assortment_inventory.policy_type IS DISTINCT FROM 'signal'
+    WHEN dsh_store_assortment_inventory.policy_type IS DISTINCT FROM EXCLUDED.policy_type
       OR dsh_store_assortment_inventory.quantity IS DISTINCT FROM EXCLUDED.quantity
-      OR dsh_store_assortment_inventory.reserved_quantity IS DISTINCT FROM 0
-      OR dsh_store_assortment_inventory.min_order_quantity IS DISTINCT FROM 1
-      OR dsh_store_assortment_inventory.max_order_quantity IS DISTINCT FROM 100
-      OR dsh_store_assortment_inventory.step_quantity IS DISTINCT FROM 1
+      OR dsh_store_assortment_inventory.reserved_quantity IS DISTINCT FROM EXCLUDED.reserved_quantity
+      OR dsh_store_assortment_inventory.min_order_quantity IS DISTINCT FROM EXCLUDED.min_order_quantity
+      OR dsh_store_assortment_inventory.max_order_quantity IS DISTINCT FROM EXCLUDED.max_order_quantity
+      OR dsh_store_assortment_inventory.step_quantity IS DISTINCT FROM EXCLUDED.step_quantity
     THEN dsh_store_assortment_inventory.version + 1
     ELSE dsh_store_assortment_inventory.version
   END,
   updated_at = CASE
-    WHEN dsh_store_assortment_inventory.policy_type IS DISTINCT FROM 'signal'
+    WHEN dsh_store_assortment_inventory.policy_type IS DISTINCT FROM EXCLUDED.policy_type
       OR dsh_store_assortment_inventory.quantity IS DISTINCT FROM EXCLUDED.quantity
-      OR dsh_store_assortment_inventory.reserved_quantity IS DISTINCT FROM 0
-      OR dsh_store_assortment_inventory.min_order_quantity IS DISTINCT FROM 1
-      OR dsh_store_assortment_inventory.max_order_quantity IS DISTINCT FROM 100
-      OR dsh_store_assortment_inventory.step_quantity IS DISTINCT FROM 1
+      OR dsh_store_assortment_inventory.reserved_quantity IS DISTINCT FROM EXCLUDED.reserved_quantity
+      OR dsh_store_assortment_inventory.min_order_quantity IS DISTINCT FROM EXCLUDED.min_order_quantity
+      OR dsh_store_assortment_inventory.max_order_quantity IS DISTINCT FROM EXCLUDED.max_order_quantity
+      OR dsh_store_assortment_inventory.step_quantity IS DISTINCT FROM EXCLUDED.step_quantity
     THEN NOW()
     ELSE dsh_store_assortment_inventory.updated_at
   END;
 
--- Fixture pricing is one non-overlapping current schedule per seed-owned
--- assortment. Remove only seed/migration bootstrap schedules for these fixture
--- rows; never touch actor-created assortments or their schedules.
-DELETE FROM dsh_store_assortment_prices p
-USING dsh_store_assortments a
-WHERE p.store_assortment_id = a.id
-  AND a.submitted_by = 'system-seed'
-  AND (p.id = 'price-' || a.id OR p.id = 'local-price-' || a.id);
+DELETE FROM dsh_store_assortment_prices
+WHERE id IN (
+  'price-assortment-store-test-grocery-rice',
+  'price-assortment-store-1005-meal',
+  'price-assortment-store-1002-croissant',
+  'price-assortment-store-1002-wheatbread',
+  'price-assortment-store-test-grocery-milk',
+  'price-assortment-store-test-grocery-apple',
+  'price-assortment-store-1003-rice',
+  'price-assortment-store-1006-pain-relief',
+  'price-assortment-store-electronics-phone',
+  'local-price-assortment-store-test-grocery-rice',
+  'local-price-assortment-store-1005-meal',
+  'local-price-assortment-store-1002-croissant',
+  'local-price-assortment-store-1002-wheatbread',
+  'local-price-assortment-store-test-grocery-milk',
+  'local-price-assortment-store-test-grocery-apple',
+  'local-price-assortment-store-1003-rice',
+  'local-price-assortment-store-1006-pain-relief',
+  'local-price-assortment-store-electronics-phone'
+);
 
 INSERT INTO dsh_store_assortment_prices (
   id,
@@ -86,22 +87,25 @@ INSERT INTO dsh_store_assortment_prices (
   created_at,
   updated_at
 )
-SELECT
-  'local-price-' || a.id,
-  a.id,
-  ROUND(a.unit_price * 100)::INTEGER,
-  UPPER(a.currency),
-  15,
-  30,
-  a.created_at,
-  NULL,
-  1,
-  NOW(),
-  NOW()
-FROM dsh_store_assortments a
-WHERE a.submitted_by = 'system-seed'
-  AND a.unit_price > 0
-  AND length(trim(a.currency)) = 3;
+VALUES
+  ('local-price-assortment-store-test-grocery-rice', 'assortment-store-test-grocery-rice', 1800000, 'YER', 15, 30, NOW(), NULL, 1, NOW(), NOW()),
+  ('local-price-assortment-store-1005-meal', 'assortment-store-1005-meal', 180000, 'YER', 15, 30, NOW(), NULL, 1, NOW(), NOW()),
+  ('local-price-assortment-store-1002-croissant', 'assortment-store-1002-croissant', 50000, 'YER', 15, 30, NOW(), NULL, 1, NOW(), NOW()),
+  ('local-price-assortment-store-1002-wheatbread', 'assortment-store-1002-wheatbread', 30000, 'YER', 15, 30, NOW(), NULL, 1, NOW(), NOW()),
+  ('local-price-assortment-store-test-grocery-milk', 'assortment-store-test-grocery-milk', 110000, 'YER', 15, 30, NOW(), NULL, 1, NOW(), NOW()),
+  ('local-price-assortment-store-test-grocery-apple', 'assortment-store-test-grocery-apple', 180000, 'YER', 15, 30, NOW(), NULL, 1, NOW(), NOW()),
+  ('local-price-assortment-store-1003-rice', 'assortment-store-1003-rice', 1820000, 'YER', 15, 30, NOW(), NULL, 1, NOW(), NOW()),
+  ('local-price-assortment-store-1006-pain-relief', 'assortment-store-1006-pain-relief', 150000, 'YER', 15, 30, NOW(), NULL, 1, NOW(), NOW()),
+  ('local-price-assortment-store-electronics-phone', 'assortment-store-electronics-phone', 12500000, 'YER', 15, 30, NOW(), NULL, 1, NOW(), NOW())
+ON CONFLICT (id) DO UPDATE SET
+  amount_minor = EXCLUDED.amount_minor,
+  currency = EXCLUDED.currency,
+  prep_time_min = EXCLUDED.prep_time_min,
+  prep_time_max = EXCLUDED.prep_time_max,
+  effective_from = EXCLUDED.effective_from,
+  effective_until = EXCLUDED.effective_until,
+  version = dsh_store_assortment_prices.version + 1,
+  updated_at = NOW();
 
 DO $$
 DECLARE
@@ -109,39 +113,57 @@ DECLARE
 BEGIN
   SELECT COUNT(*)
   INTO invalid_count
-  FROM dsh_store_assortments a
-  WHERE a.submitted_by = 'system-seed'
-    AND a.publication_status = 'client_visible'
-    AND a.available = TRUE
-    AND NOT EXISTS (
-      SELECT 1
-      FROM dsh_store_assortment_inventory i
-      JOIN LATERAL (
-        SELECT p.amount_minor, p.currency
-        FROM dsh_store_assortment_prices p
-        WHERE p.store_assortment_id = i.store_assortment_id
-          AND p.effective_from <= NOW()
-          AND (p.effective_until IS NULL OR p.effective_until > NOW())
-        ORDER BY p.effective_from DESC, p.version DESC, p.id DESC
-        LIMIT 1
-      ) current_price ON TRUE
-      WHERE i.store_assortment_id = a.id
-        AND current_price.amount_minor > 0
-        AND length(trim(current_price.currency)) = 3
-        AND (
-          i.policy_type = 'infinite'
-          OR (i.policy_type = 'signal' AND i.quantity > 0)
-          OR (
-            i.policy_type = 'quantity'
-            AND (i.quantity - i.reserved_quantity) >= GREATEST(i.min_order_quantity, 1)
-            AND i.max_order_quantity >= GREATEST(i.min_order_quantity, 1)
-            AND i.step_quantity >= 1
-          )
-        )
+  FROM dsh_store_assortment_inventory i
+  WHERE i.store_assortment_id IN (
+      'assortment-store-test-grocery-rice',
+      'assortment-store-1005-meal',
+      'assortment-store-1002-croissant',
+      'assortment-store-1002-wheatbread',
+      'assortment-store-test-grocery-milk',
+      'assortment-store-test-grocery-apple',
+      'assortment-store-1003-rice',
+      'assortment-store-1006-pain-relief',
+      'assortment-store-electronics-phone'
+    )
+    AND (
+      i.policy_type NOT IN ('signal', 'quantity', 'infinite')
+      OR i.quantity < 0
+      OR i.reserved_quantity < 0
+      OR i.reserved_quantity > i.quantity
+      OR i.min_order_quantity < 1
+      OR i.max_order_quantity < i.min_order_quantity
+      OR i.step_quantity < 1
     );
 
   IF invalid_count <> 0 THEN
-    RAISE EXCEPTION 'DSH_LOCAL_ASSORTMENT_RUNTIME_TRUTH_INVALID: % client-visible seed assortments are not purchasable', invalid_count;
+    RAISE EXCEPTION 'DSH_LOCAL_NORMALIZED_INVENTORY_INVALID: % seeded rows failed validation', invalid_count;
+  END IF;
+
+  SELECT COUNT(*)
+  INTO invalid_count
+  FROM (
+    VALUES
+      ('assortment-store-test-grocery-rice', 1800000),
+      ('assortment-store-1005-meal', 180000),
+      ('assortment-store-1002-croissant', 50000),
+      ('assortment-store-1002-wheatbread', 30000),
+      ('assortment-store-test-grocery-milk', 110000),
+      ('assortment-store-test-grocery-apple', 180000),
+      ('assortment-store-1003-rice', 1820000),
+      ('assortment-store-1006-pain-relief', 150000),
+      ('assortment-store-electronics-phone', 12500000)
+  ) AS expected(store_assortment_id, amount_minor)
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM dsh_store_assortment_prices p
+    WHERE p.store_assortment_id = expected.store_assortment_id
+      AND p.amount_minor = expected.amount_minor
+      AND p.currency = 'YER'
+      AND p.effective_from IS NOT NULL
+  );
+
+  IF invalid_count <> 0 THEN
+    RAISE EXCEPTION 'DSH_LOCAL_NORMALIZED_PRICE_INVALID: % seeded rows failed validation', invalid_count;
   END IF;
 END;
 $$;

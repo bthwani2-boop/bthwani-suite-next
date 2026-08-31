@@ -19,7 +19,6 @@ x-bthwani-contracts:
   administration: ./dsh.administration.openapi.yaml
   analyticsExtensions: ./dsh.analytics-extensions.openapi.yaml
   captainFinancialEligibility: ./dsh.captain-financial-eligibility.openapi.yaml
-  catalog: ./dsh.catalog.openapi.yaml
   catalogGovernance: ./dsh.catalog-governance.openapi.yaml
   checkout: ./dsh.checkout.openapi.yaml
   clientAddress: ./dsh.client-address.openapi.yaml
@@ -132,7 +131,7 @@ paths:
   /dsh/operator/catalog/master-products:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1master-products"
   /dsh/operator/catalog/master-products/{productId}:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1operator~1catalog~1master-products~1{productId}"
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1master-products~1{productId}"
   /dsh/operator/catalog/master-products/{productId}/relationships:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1operator~1catalog~1master-products~1{productId}~1relationships"
   /dsh/operator/catalog/product-proposals:
@@ -152,7 +151,7 @@ paths:
   /dsh/operator/catalog/assets/{assetId}/complete:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1assets~1{assetId}~1complete"
   /dsh/operator/catalog/assets/{assetId}:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1operator~1catalog~1assets~1{assetId}"
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1assets~1{assetId}"
   /dsh/operator/catalog/assets/{assetId}/review:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1assets~1{assetId}~1review"
   /dsh/operator/catalog/assets/{assetId}/link:
@@ -198,9 +197,9 @@ paths:
   /dsh/partner/stores/{storeId}/assortment/{masterProductId}/prices:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1assortment~1{masterProductId}~1prices"
   /dsh/partner/catalog/product-proposals:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1product-proposals"
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1catalog~1product-proposals"
   /dsh/partner/catalog/product-proposals/{proposalId}:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1product-proposals~1{proposalId}"
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1catalog~1product-proposals~1{proposalId}"
   /dsh/field/catalog/taxonomy:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1field~1catalog~1taxonomy"
   /dsh/field/catalog/master-products:
@@ -212,9 +211,9 @@ paths:
   /dsh/field/partners/{partnerId}/assortment:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1assortment"
   /dsh/field/partners/{partnerId}/catalog/product-proposals:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals"
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals"
   /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals~1{proposalId}"
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1catalog~1product-proposals~1{proposalId}"
   /dsh/client/cart:
     $ref: "./paths/cart-serviceability.paths.yaml#/~1dsh~1client~1cart"
   /dsh/client/cart/mutations/{idempotencyKey}:
@@ -882,7 +881,7 @@ paths:
   /dsh/partner/catalog/master-products/{productId}/relationships:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1partner~1catalog~1master-products~1{productId}~1relationships"
   /dsh/partner/catalog/product-proposals/{proposalId}/withdraw:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1product-proposals~1{proposalId}~1withdraw"
+    $ref: "./paths/catalog.paths.yaml#/~1dsh~1partner~1catalog~1product-proposals~1{proposalId}~1withdraw"
   /dsh/field/me/ratings/summary:
     $ref: "./dsh.incident-governance.openapi.yaml#/paths/~1dsh~1field~1me~1ratings~1summary"
   /dsh/operator/stores/{storeId}/assortment-pauses:
@@ -1231,17 +1230,59 @@ components:
     DshStoreAuditResponse:
       $ref: "./components/schemas/store.schemas.yaml#/DshStoreAuditResponse"
     DshCatalogAsset:
-      $ref: "./dsh.catalog.openapi.yaml#/components/schemas/Asset"
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAsset"
+    DshCatalogAssetResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetResponse"
+    DshCatalogAssetUpdateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetUpdateInput"
+    DshCatalogAssetUploadIntentInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetUploadIntentInput"
+    DshCatalogAssetUploadIntentResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetUploadIntentResponse"
+    DshCatalogAssetReviewInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetReviewInput"
     DshCatalogAssetListResponse:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetListResponse"
+    DshDomainCreateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshDomainCreateInput"
+    DshDomainUpdateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshDomainUpdateInput"
+    DshDomainResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshDomainResponse"
+    DshDomainListResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshDomainListResponse"
+    DshNodeCreateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshNodeCreateInput"
+    DshNodeUpdateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshNodeUpdateInput"
+    DshNodeResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshNodeResponse"
+    DshNodeListResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshNodeListResponse"
     DshMasterProduct:
-      $ref: "./dsh.catalog.openapi.yaml#/components/schemas/MasterProduct"
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshMasterProduct"
+    DshMasterProductCreateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshMasterProductCreateInput"
+    DshMasterProductUpdateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshMasterProductUpdateInput"
+    DshMasterProductResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshMasterProductResponse"
     MasterProductSummary:
       $ref: "./components/schemas/catalog.schemas.yaml#/MasterProductSummary"
     DshMasterProductListResponse:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshMasterProductListResponse"
     DshProductProposal:
-      $ref: "./dsh.catalog.openapi.yaml#/components/schemas/Proposal"
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshProductProposal"
+    DshProductProposalCreateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshProductProposalCreateInput"
+    DshProductProposalUpdateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshProductProposalUpdateInput"
+    DshProductProposalTransitionInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshProductProposalTransitionInput"
+    DshProductProposalWithdrawInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshProductProposalWithdrawInput"
+    DshProductProposalResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshProductProposalResponse"
     DshProductProposalListResponse:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshProductProposalListResponse"
     DshReel:
@@ -1249,15 +1290,35 @@ components:
     DshPublicReel:
       $ref: "./components/schemas/common.schemas.yaml#/DshPublicReel"
     DshCentralCatalogDomain:
-      $ref: "./dsh.catalog.openapi.yaml#/components/schemas/Domain"
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCentralCatalogDomain"
     DshCentralCatalogNode:
-      $ref: "./dsh.catalog.openapi.yaml#/components/schemas/Node"
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCentralCatalogNode"
     DshClientCatalogProduct:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshClientCatalogProduct"
     DshCatalogAssetLink:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetLink"
+    DshCatalogAssetLinkWithAsset:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetLinkWithAsset"
+    DshCatalogAssetLinkInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetLinkInput"
+    DshCatalogAssetLinkResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetLinkResponse"
+    DshCatalogAssetLinkListResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetLinkListResponse"
+    DshCatalogAssetUnlinkResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetUnlinkResponse"
     DshCatalogPolicySnapshot:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogPolicySnapshot"
+    DshCatalogPlatformPolicy:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogPlatformPolicy"
+    DshCatalogPlatformPolicyUpdateInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogPlatformPolicyUpdateInput"
+    DshCatalogPlatformPolicyResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogPlatformPolicyResponse"
+    DshCatalogPlatformPolicyListResponse:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogPlatformPolicyListResponse"
+    DshCatalogSeedStatus:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogSeedStatus"
     DshStoreAssortment:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortment"
     DshStoreAssortmentInventory:
@@ -1268,6 +1329,8 @@ components:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentInput"
     DshStoreAssortmentMetadataUpdateInput:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentMetadataUpdateInput"
+    DshFieldStoreAssortmentInput:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshFieldStoreAssortmentInput"
     DshStoreAssortmentInventoryInput:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentInventoryInput"
     DshStoreAssortmentPriceInput:
@@ -1280,6 +1343,8 @@ components:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentPriceResponse"
     DshStoreAssortmentPricesResponse:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentPricesResponse"
+    DshStoreAssortmentCommercialReadback:
+      $ref: "./components/schemas/catalog.schemas.yaml#/DshStoreAssortmentCommercialReadback"
     DshCatalogResponse:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogResponse"
     DshHealthResponse:

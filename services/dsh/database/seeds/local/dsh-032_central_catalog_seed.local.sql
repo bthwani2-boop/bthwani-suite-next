@@ -151,32 +151,28 @@ ON CONFLICT (id) DO UPDATE SET
   updated_at = NOW();
 
 INSERT INTO dsh_store_assortments
-  (id, store_id, master_product_id, unit_price, currency, available,
-   stock_status, local_note, publication_status, submitted_by, approved_by)
+  (id, store_id, master_product_id, local_note, publication_status,
+   submitted_by, approved_by)
 VALUES
   ('assortment-store-test-grocery-rice', 'store-test-grocery', 'product-1001-rice',
-   18000, 'YER', TRUE, 'in_stock', 'عبوة 5 كجم', 'client_visible',
+   'عبوة 5 كجم', 'client_visible',
    'system-seed', 'system-seed'),
   ('assortment-store-1005-meal', 'store-1005', 'product-1005-meal',
-   1800, 'YER', TRUE, 'in_stock', 'وجبة رئيسية', 'client_visible',
+   'وجبة رئيسية', 'client_visible',
    'system-seed', 'system-seed'),
   ('assortment-store-1002-croissant', 'store-1002', 'product-1002-croissant',
-   500, 'YER', TRUE, 'in_stock', 'طازج يومياً', 'client_visible',
+   'طازج يومياً', 'client_visible',
    'system-seed', 'system-seed'),
   ('assortment-store-1002-wheatbread', 'store-1002', 'product-1002-wheatbread',
-   300, 'YER', TRUE, 'in_stock', 'خبز قمح كامل', 'client_visible',
+   'خبز قمح كامل', 'client_visible',
    'system-seed', 'system-seed'),
   ('assortment-store-test-grocery-milk', 'store-test-grocery', 'product-1001-milk',
-   1100, 'YER', TRUE, 'in_stock', 'حليب طازج', 'client_visible',
+   'حليب طازج', 'client_visible',
    'system-seed', 'system-seed'),
   ('assortment-store-test-grocery-apple', 'store-test-grocery', 'product-1001-apple',
-   1800, 'YER', TRUE, 'in_stock', 'تفاح طازج', 'client_visible',
+   'تفاح طازج', 'client_visible',
    'system-seed', 'system-seed')
 ON CONFLICT (store_id, master_product_id) DO UPDATE SET
-  unit_price = EXCLUDED.unit_price,
-  currency = EXCLUDED.currency,
-  available = TRUE,
-  stock_status = EXCLUDED.stock_status,
   local_note = EXCLUDED.local_note,
   publication_status = 'client_visible',
   submitted_by = EXCLUDED.submitted_by,

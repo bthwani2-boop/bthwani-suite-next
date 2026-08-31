@@ -15,16 +15,18 @@ type fieldAssortmentBatchRequest struct {
 	Items []fieldAssortmentBatchItem `json:"items"`
 }
 
+type fieldStoreAssortmentMutationInput struct {
+	LocalNote            string                                 `json:"localNote"`
+	CustomImageObjectKey *string                                `json:"customImageObjectKey"`
+	PublicationStatus    string                                 `json:"publicationStatus"`
+	ExpectedVersion      *int                                   `json:"expectedVersion"`
+	Inventory            centralcatalog.StoreAssortmentInventoryInput `json:"inventory"`
+	Price                centralcatalog.StoreAssortmentPriceInput     `json:"price"`
+}
+
 type fieldAssortmentBatchItem struct {
-	MasterProductID      string  `json:"masterProductId"`
-	UnitPrice            float64 `json:"unitPrice"`
-	Currency             string  `json:"currency"`
-	Available            bool    `json:"available"`
-	StockStatus          string  `json:"stockStatus"`
-	LocalNote            string  `json:"localNote"`
-	CustomImageObjectKey *string `json:"customImageObjectKey"`
-	PublicationStatus    string  `json:"publicationStatus"`
-	ExpectedVersion      *int    `json:"expectedVersion"`
+	MasterProductID string `json:"masterProductId"`
+	fieldStoreAssortmentMutationInput
 }
 
 type fieldAssortmentBatchResult struct {
@@ -75,6 +77,55 @@ func failedFieldBatchResult(index int, masterProductID string, err error) fieldA
 	}
 }
 
+func (s *protectedStoreServer) upsertFieldStoreAssortmentWithCommercialTruth(
+	r *http.Request,
+	actorID string,
+	storeID string,
+	masterProductID string,
+	input fieldStoreAssortmentMutationInput,
+	allowCustomImage bool,
+	priceIdempotencyKey string,
+) (centralcatalog.StoreAssortment, error) {
+	currentInventory, inventoryErr := centralcatalog.GetAssortmentInventoryRuntimeTruth(
+		r.Context(), s.db, storeID, masterProductID,
+	)
+	if inventoryErr == nil {
+		if input.Inventory.ExpectedVersion <= 0 || input.Inventory.ExpectedVersion != currentInventory.Version {
+			return centralcatalog.StoreAssortment{}, centralcatalog.ErrConflict
+		}
+	}
+	if errors.Is(inventoryErr, centralcatalog.ErrNotFound) && input.Inventory.ExpectedVersion > 0 {
+		return centralcatalog.StoreAssortment{}, centralcatalog.ErrNotFound
+	}
+	if inventoryErr != nil && !errors.Is(inventoryErr, centralcatalog.ErrNotFound) {
+		return centralcatalog.StoreAssortment{}, inventoryErr
+	}
+
+	metadataInput := centralcatalog.StoreAssortmentInput{
+		LocalNote:            input.LocalNote,
+		CustomImageObjectKey: input.CustomImageObjectKey,
+		PublicationStatus:    "submitted",
+		ExpectedVersion:      input.ExpectedVersion,
+	}
+	assortment, err := centralcatalog.UpsertStoreAssortmentAtomic(
+		r.Context(), s.db, storeID, masterProductID, actorID, metadataInput, allowCustomImage,
+	)
+	if err != nil {
+		return centralcatalog.StoreAssortment{}, err
+	}
+	if _, err := centralcatalog.UpsertAssortmentInventoryWithRuntimeTruthAtomic(
+		r.Context(), s.db, storeID, masterProductID, actorID, input.Inventory,
+	); err != nil {
+		return centralcatalog.StoreAssortment{}, err
+	}
+	if _, err := centralcatalog.ReplaceAssortmentPriceAtomic(
+		r.Context(), s.db, storeID, masterProductID, actorID, priceIdempotencyKey, input.Price,
+	); err != nil {
+		return centralcatalog.StoreAssortment{}, err
+	}
+	return assortment, nil
+}
+
 // POST /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/batch
 //
 // Saves a field-onboarded store's central-catalog links in one request. Every
@@ -96,6 +147,10 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentBatch(w http.Resp
 	}
 	if len(request.Items) == 0 || len(request.Items) > maxFieldAssortmentBatchItems {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "items must contain between 1 and 100 products")
+		return
+	}
+	batchIdempotencyKey, ok := requireCatalogCreateIdempotency(w, r)
+	if !ok {
 		return
 	}
 
@@ -144,21 +199,14 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentBatch(w http.Resp
 			continue
 		}
 
-		input := centralcatalog.StoreAssortmentInput{
-			UnitPrice:            item.UnitPrice,
-			Currency:             item.Currency,
-			Available:            item.Available,
-			StockStatus:          item.StockStatus,
-			LocalNote:            item.LocalNote,
-			CustomImageObjectKey: item.CustomImageObjectKey,
-			// Field intake may request draft/submitted, but the server never
-			// trusts a client-supplied publication transition. Every batch row
-			// enters the governed submitted state for downstream review.
-			PublicationStatus: "submitted",
-			ExpectedVersion:   item.ExpectedVersion,
+		if !policy.AllowsStoreProductCustomImage {
+			item.CustomImageObjectKey = nil
 		}
-		assortment, err := centralcatalog.UpsertStoreAssortmentAtomic(
-			r.Context(), s.db, resolvedStoreID, masterProductID, actor.ID, input, policy.AllowsStoreProductCustomImage,
+		item.PublicationStatus = "submitted"
+		assortment, err := s.upsertFieldStoreAssortmentWithCommercialTruth(
+			r, actor.ID, resolvedStoreID, masterProductID, item,
+			policy.AllowsStoreProductCustomImage,
+			batchIdempotencyKey+":"+masterProductID,
 		)
 		if err != nil {
 			response.Results = append(response.Results, failedFieldBatchResult(index, masterProductID, err))

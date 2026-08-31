@@ -39,9 +39,6 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
       // Use server-resolved effectiveImage (DAM-gated, review-approved).
       // Priority: store-assortment partner_custom > master-product canonical > null.
       // Never reconstruct URLs from objectKey; never use /dsh/media?mediaRef= fallback.
-      const effectiveMediaLink = product.effectiveImage
-        ? response.media.find((link) => link.publicUrl === product.effectiveImage?.url)
-        : undefined;
       const media: CatalogMedia[] = product.effectiveImage
         ? [{
             state: "complete",

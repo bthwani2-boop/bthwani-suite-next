@@ -32,7 +32,31 @@ const storeColumns = `id,
 		 AND store_domain.domain_id = product.domain_id
 		WHERE assortment.store_id = dsh_stores.id
 		  AND assortment.publication_status = 'client_visible'
-		  AND assortment.available = true
+		  AND assortment.paused_at IS NULL
+		  AND EXISTS (
+			SELECT 1
+			FROM dsh_store_assortment_inventory inventory
+			JOIN LATERAL (
+				SELECT amount_minor, currency
+				FROM dsh_store_assortment_prices price
+				WHERE price.store_assortment_id = assortment.id
+				  AND price.effective_from <= NOW()
+				  AND (price.effective_until IS NULL OR price.effective_until > NOW())
+				ORDER BY price.effective_from DESC, price.version DESC, price.id DESC
+				LIMIT 1
+			) current_price ON TRUE
+			WHERE inventory.store_assortment_id = assortment.id
+			  AND current_price.amount_minor > 0
+			  AND char_length(trim(current_price.currency)) = 3
+			  AND inventory.min_order_quantity >= 1
+			  AND inventory.max_order_quantity >= inventory.min_order_quantity
+			  AND inventory.step_quantity >= 1
+			  AND (
+					inventory.policy_type = 'infinite'
+					OR (inventory.policy_type = 'signal' AND inventory.quantity > 0)
+					OR (inventory.policy_type = 'quantity' AND inventory.quantity - inventory.reserved_quantity >= inventory.min_order_quantity)
+				  )
+		  )
 		  AND product.approval_status = 'approved'
 		  AND product.is_active = true
 		  AND domain.is_active = true

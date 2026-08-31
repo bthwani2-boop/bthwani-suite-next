@@ -43,9 +43,8 @@ func TestGetPurchasableClientCatalogUsesCurrentPriceAndInventoryDBIntegration(t 
 	}
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_store_assortments (
-			id, store_id, master_product_id, unit_price, currency,
-			available, stock_status, publication_status
-		) VALUES ($1,$2,$3,1,'YER',false,'out_of_stock','client_visible')`, assortmentID, storeID, productID); err != nil {
+			id, store_id, master_product_id, publication_status
+		) VALUES ($1,$2,$3,'client_visible')`, assortmentID, storeID, productID); err != nil {
 		t.Fatalf("insert assortment: %v", err)
 	}
 	if _, err := db.ExecContext(ctx, `

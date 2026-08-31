@@ -1024,16 +1024,12 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID, idempotencyKey str
 	return proposal, nil
 }
 
-// ── Store assortment (store-local truth: price/availability/stock/note/image) ─
+// ── Store assortment metadata (commercial truth lives in normalized resources) ─
 
 type StoreAssortment struct {
 	ID                   string    `json:"id"`
 	StoreID              string    `json:"storeId"`
 	MasterProductID      string    `json:"masterProductId"`
-	UnitPrice            float64   `json:"unitPrice"`
-	Currency             string    `json:"currency"`
-	Available            bool      `json:"available"`
-	StockStatus          string    `json:"stockStatus"`
 	LocalNote            string    `json:"localNote"`
 	CustomImageObjectKey *string   `json:"customImageObjectKey"`
 	PublicationStatus    string    `json:"publicationStatus"`
@@ -1068,7 +1064,6 @@ type StoreAssortmentPrice struct {
 	Version           int        `json:"version"`
 }
 
-var validStockStatus = map[string]bool{"in_stock": true, "low_stock": true, "out_of_stock": true}
 var validPublicationStatus = map[string]bool{
 	"draft": true, "submitted": true, "approved": true, "client_visible": true, "rejected": true, "hidden": true,
 }
@@ -1093,24 +1088,24 @@ type StoreAssortmentPriceInput struct {
 }
 
 type StoreAssortmentInput struct {
-	UnitPrice            float64 `json:"unitPrice"`
-	Currency             string  `json:"currency"`
-	Available            bool    `json:"available"`
-	StockStatus          string  `json:"stockStatus"`
 	LocalNote            string  `json:"localNote"`
 	CustomImageObjectKey *string `json:"customImageObjectKey"`
 	PublicationStatus    string  `json:"publicationStatus"`
 	ExpectedVersion      *int    `json:"expectedVersion"`
 }
 
-const assortmentColumns = `id, store_id, master_product_id, unit_price, currency, available, stock_status,
-	local_note, custom_image_object_key, publication_status, submitted_by, approved_by, created_at, updated_at, version`
+// assortmentMetadataColumns deliberately excludes the retired commercial
+// columns from dsh_store_assortments. Price and inventory are normalized
+// authorities and are hydrated separately from their own tables.
+const assortmentMetadataColumns = `id, store_id, master_product_id,
+	local_note, custom_image_object_key, publication_status, submitted_by, approved_by,
+	created_at, updated_at, version`
 
 func scanAssortment(scanner interface{ Scan(...any) error }) (StoreAssortment, error) {
 	var a StoreAssortment
-	err := scanner.Scan(&a.ID, &a.StoreID, &a.MasterProductID, &a.UnitPrice, &a.Currency, &a.Available,
-		&a.StockStatus, &a.LocalNote, &a.CustomImageObjectKey, &a.PublicationStatus, &a.SubmittedBy,
-		&a.ApprovedBy, &a.CreatedAt, &a.UpdatedAt, &a.Version)
+	err := scanner.Scan(&a.ID, &a.StoreID, &a.MasterProductID, &a.LocalNote,
+		&a.CustomImageObjectKey, &a.PublicationStatus, &a.SubmittedBy, &a.ApprovedBy,
+		&a.CreatedAt, &a.UpdatedAt, &a.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return a, ErrNotFound
 	}
@@ -1121,11 +1116,15 @@ func scanAssortment(scanner interface{ Scan(...any) error }) (StoreAssortment, e
 // store, so callers can resolve which store owns it (e.g. for DAM asset-link
 // ownership checks) before knowing the store ID.
 func GetStoreAssortmentByID(ctx context.Context, db *sql.DB, id string) (StoreAssortment, error) {
-	return scanAssortment(db.QueryRowContext(ctx, `SELECT `+assortmentColumns+` FROM dsh_store_assortments WHERE id=$1`, id))
+	a, err := scanAssortment(db.QueryRowContext(ctx, `SELECT `+assortmentMetadataColumns+` FROM dsh_store_assortments WHERE id=$1`, id))
+	if err != nil {
+		return StoreAssortment{}, err
+	}
+	return a, nil
 }
 
 func ListStoreAssortment(ctx context.Context, db *sql.DB, storeID string) ([]StoreAssortment, error) {
-	rows, err := db.QueryContext(ctx, `SELECT `+assortmentColumns+` FROM dsh_store_assortments
+	rows, err := db.QueryContext(ctx, `SELECT `+assortmentMetadataColumns+` FROM dsh_store_assortments
 		WHERE store_id=$1 ORDER BY updated_at DESC`, storeID)
 	if err != nil {
 		return nil, err
@@ -1334,10 +1333,9 @@ type EffectiveImage struct {
 	Source string `json:"source"`
 }
 
-// GetClientCatalog returns the structural candidates allowed by rule 4 of the
-// sovereignty decision. Commercial eligibility is applied by
-// GetPurchasableClientCatalog from normalized price/inventory truth; legacy
-// assortment projections must not filter candidates before that gate runs.
+// GetClientCatalog returns only structural candidates with a current,
+// purchasable normalized price and inventory row. Commercial eligibility is
+// therefore established before any client-facing projection is assembled.
 func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain, []Node, []ClientCatalogEntry, []CatalogAssetLinkWithAsset, []CatalogPolicy, error) {
 	var storePublished bool
 	err := db.QueryRowContext(ctx, `SELECT EXISTS (
@@ -1422,14 +1420,42 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 	// 3. Fetch candidate products
 	rows, err := db.QueryContext(ctx, `
 		SELECT `+prefixColumns("mp", masterProductColumns)+`, a.id,
-		       0::double precision, ''::text, 'out_of_stock'::text,
+		       p.amount_minor::double precision / 100, p.currency,
+		       CASE
+			       WHEN a.paused_at IS NOT NULL THEN 'out_of_stock'
+			       WHEN i.policy_type = 'infinite' THEN 'in_stock'
+			       WHEN i.policy_type = 'signal' AND i.quantity <= 5 THEN 'low_stock'
+			       WHEN i.policy_type = 'quantity' AND i.quantity - i.reserved_quantity <= 5 THEN 'low_stock'
+			       ELSE 'in_stock'
+		       END,
 		       COALESCE(a.custom_image_object_key, mp.canonical_image_object_key, '')
 		FROM dsh_store_assortments a
+		JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
+		JOIN LATERAL (
+		    SELECT amount_minor, currency
+		    FROM dsh_store_assortment_prices
+		    WHERE store_assortment_id = a.id
+		      AND effective_from <= NOW()
+		      AND (effective_until IS NULL OR effective_until > NOW())
+		    ORDER BY effective_from DESC, version DESC, id DESC
+		    LIMIT 1
+		) p ON TRUE
 		JOIN dsh_master_products mp ON mp.id = a.master_product_id
 		JOIN dsh_catalog_domains d ON d.id = mp.domain_id
 		LEFT JOIN dsh_catalog_nodes n ON n.id = mp.category_node_id
 		WHERE a.store_id = $1
 		  AND a.publication_status = 'client_visible'
+		  AND a.paused_at IS NULL
+		  AND p.amount_minor > 0
+		  AND char_length(trim(p.currency)) = 3
+		  AND i.min_order_quantity >= 1
+		  AND i.max_order_quantity >= i.min_order_quantity
+		  AND i.step_quantity >= 1
+		  AND (
+				 i.policy_type = 'infinite'
+				 OR (i.policy_type = 'signal' AND i.quantity > 0)
+				 OR (i.policy_type = 'quantity' AND i.quantity - i.reserved_quantity >= i.min_order_quantity)
+		  )
 		  AND mp.approval_status = 'approved' AND mp.is_active = true
 		  AND d.is_active = true AND d.is_client_visible = true AND d.is_manual_request = false
 		  AND (n.id IS NULL OR (n.is_active = true AND n.is_client_visible = true))
@@ -2722,6 +2748,71 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 		return StoreAssortmentPrice{}, err
 	}
 
+	if err := ensureAssortmentPriceScheduleDoesNotOverlap(ctx, tx, assortmentID, input); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+
+	id := entityID("price")
+	price, err := insertAssortmentPriceTx(ctx, tx, id, assortmentID, input)
+	if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	if err := recordCatalogCreateMutation(ctx, tx, mutation, "assortment_price", id); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	return price, nil
+}
+
+// ReplaceAssortmentPriceAtomic closes the current effective schedule row and
+// creates the requested normalized price under one idempotent command. It is
+// used by field onboarding, where a single form edits the current price rather
+// than appending a future schedule entry. The legacy assortment row is never
+// written.
+func ReplaceAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID, idempotencyKey string, input StoreAssortmentPriceInput) (StoreAssortmentPrice, error) {
+	storeID = strings.TrimSpace(storeID)
+	masterProductID = strings.TrimSpace(masterProductID)
+	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
+	mutationRequest := struct {
+		StoreID         string                    `json:"storeId"`
+		MasterProductID string                    `json:"masterProductId"`
+		Input           StoreAssortmentPriceInput `json:"input"`
+	}{StoreID: storeID, MasterProductID: masterProductID, Input: input}
+	tx, mutation, replay, err := beginCatalogCreateMutation(
+		ctx, db, actorID, "assortment_price.replace", idempotencyKey, mutationRequest,
+	)
+	if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if replay != nil {
+		price, err := readAssortmentPriceTx(ctx, tx, replay.ResourceID)
+		if err != nil {
+			return StoreAssortmentPrice{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return StoreAssortmentPrice{}, err
+		}
+		return price, nil
+	}
+
+	if err := validateAssortmentPriceInput(input); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	assortmentID, err := findAssortmentForPriceTx(ctx, tx, storeID, masterProductID)
+	if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE dsh_store_assortment_prices
+		SET effective_until=$2, version=version+1, updated_at=NOW()
+		WHERE store_assortment_id=$1
+		  AND effective_until IS NULL
+		  AND effective_from < $2`, assortmentID, input.EffectiveFrom); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
 	if err := ensureAssortmentPriceScheduleDoesNotOverlap(ctx, tx, assortmentID, input); err != nil {
 		return StoreAssortmentPrice{}, err
 	}
