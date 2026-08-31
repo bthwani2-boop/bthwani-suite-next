@@ -2773,17 +2773,24 @@ func findAssortmentForPriceTx(ctx context.Context, tx *sql.Tx, storeID, masterPr
 	return assortmentID, err
 }
 
-func ensureAssortmentPriceScheduleDoesNotOverlap(ctx context.Context, tx *sql.Tx, assortmentID string, input StoreAssortmentPriceInput) error {
-	const overlapQuery = `
+const assortmentPriceOverlapSQL = `
 		SELECT COUNT(*) FROM dsh_store_assortment_prices
 		WHERE store_assortment_id = $1
 		AND (effective_until IS NULL OR effective_until > $2)`
+
+const assortmentPriceBoundedOverlapSQL = `
+		SELECT COUNT(*) FROM dsh_store_assortment_prices
+		WHERE store_assortment_id = $1
+		AND (effective_until IS NULL OR effective_until > $2)
+		AND effective_from < $3`
+
+func ensureAssortmentPriceScheduleDoesNotOverlap(ctx context.Context, tx *sql.Tx, assortmentID string, input StoreAssortmentPriceInput) error {
 	var overlapCount int
 	var err error
 	if input.EffectiveUntil != nil {
-		err = tx.QueryRowContext(ctx, overlapQuery+` AND effective_from < $3`, assortmentID, input.EffectiveFrom, *input.EffectiveUntil).Scan(&overlapCount)
+		err = tx.QueryRowContext(ctx, assortmentPriceBoundedOverlapSQL, assortmentID, input.EffectiveFrom, *input.EffectiveUntil).Scan(&overlapCount)
 	} else {
-		err = tx.QueryRowContext(ctx, overlapQuery, assortmentID, input.EffectiveFrom).Scan(&overlapCount)
+		err = tx.QueryRowContext(ctx, assortmentPriceOverlapSQL, assortmentID, input.EffectiveFrom).Scan(&overlapCount)
 	}
 	if err != nil {
 		return err

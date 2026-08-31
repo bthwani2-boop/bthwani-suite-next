@@ -572,10 +572,11 @@ func AcceptGovernedAssignmentForOperatorContext(
 }
 
 func acceptGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmentID, captainID, idempotencyKey, correlationID string) (*Assignment, error) {
-	tx, command, current, replayed, err := prepareCaptainAssignmentAction(
-		db, requestedOperatorContextID, assignmentID, captainID, "accept", idempotencyKey, correlationID,
-		"captain responded after deadline",
-	)
+	tx, command, current, replayed, err := prepareCaptainAssignmentAction(captainAssignmentActionInput{
+		db: db, requestedOperatorContextID: requestedOperatorContextID, assignmentID: assignmentID, captainID: captainID,
+		operation: "accept", idempotencyKey: idempotencyKey, correlationID: correlationID,
+		expiryReason: "captain responded after deadline",
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -639,11 +640,11 @@ func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmen
 	if strings.TrimSpace(assignmentID) == "" || strings.TrimSpace(captainID) == "" || reasonCode == "" || reason == "" {
 		return nil, fmt.Errorf("%w: assignmentId, captainId, reasonCode, and reason are required", ErrInvalid)
 	}
-	tx, command, current, replayed, err := prepareCaptainAssignmentAction(
-		db, requestedOperatorContextID, assignmentID, captainID, "decline", idempotencyKey, correlationID,
-		reason,
-		reasonCode, reason,
-	)
+	tx, command, current, replayed, err := prepareCaptainAssignmentAction(captainAssignmentActionInput{
+		db: db, requestedOperatorContextID: requestedOperatorContextID, assignmentID: assignmentID, captainID: captainID,
+		operation: "decline", idempotencyKey: idempotencyKey, correlationID: correlationID,
+		expiryReason: reason, fields: []string{reasonCode, reason},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -689,23 +690,31 @@ func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmen
 	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
 }
 
-func prepareCaptainAssignmentAction(
-	db *sql.DB,
-	requestedOperatorContextID, assignmentID, captainID, operation, idempotencyKey, correlationID, expiryReason string,
-	fields ...string,
-) (tx *sql.Tx, command captainAssignmentCommand, current *Assignment, replayed bool, err error) {
-	assignmentID = strings.TrimSpace(assignmentID)
-	captainID = strings.TrimSpace(captainID)
+type captainAssignmentActionInput struct {
+	db                         *sql.DB
+	requestedOperatorContextID string
+	assignmentID               string
+	captainID                  string
+	operation                  string
+	idempotencyKey             string
+	correlationID              string
+	expiryReason               string
+	fields                     []string
+}
+
+func prepareCaptainAssignmentAction(input captainAssignmentActionInput) (tx *sql.Tx, command captainAssignmentCommand, current *Assignment, replayed bool, err error) {
+	assignmentID := strings.TrimSpace(input.assignmentID)
+	captainID := strings.TrimSpace(input.captainID)
 	if assignmentID == "" || captainID == "" {
 		return nil, captainAssignmentCommand{}, nil, false, fmt.Errorf("%w: assignmentId and captainId are required", ErrInvalid)
 	}
 	command, err = newCaptainAssignmentCommand(
-		requestedOperatorContextID, captainID, assignmentID, operation, idempotencyKey, correlationID, fields...,
+		input.requestedOperatorContextID, captainID, assignmentID, input.operation, input.idempotencyKey, input.correlationID, input.fields...,
 	)
 	if err != nil {
 		return nil, captainAssignmentCommand{}, nil, false, err
 	}
-	tx, err = db.Begin()
+	tx, err = input.db.Begin()
 	if err != nil {
 		return nil, captainAssignmentCommand{}, nil, false, err
 	}
@@ -728,7 +737,7 @@ func prepareCaptainAssignmentAction(
 	if current.ResponseDeadlineAt.After(time.Now().UTC()) {
 		return tx, command, current, false, nil
 	}
-	if err = expireAssignmentTx(tx, command.OperatorContextID, current, "captain", command.ActorID, "OFFER_TIMEOUT", expiryReason); err != nil {
+	if err = expireAssignmentTx(tx, command.OperatorContextID, current, "captain", command.ActorID, "OFFER_TIMEOUT", input.expiryReason); err != nil {
 		return tx, command, nil, false, err
 	}
 	if err = tx.Commit(); err != nil {

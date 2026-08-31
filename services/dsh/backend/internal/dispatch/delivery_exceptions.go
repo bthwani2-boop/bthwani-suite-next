@@ -458,7 +458,10 @@ func resolveDeliveryExceptionReassignCaptainTx(
 		return current, nil
 	}
 	if current.SpecialRequestID != "" {
-		return resolveSpecialRequestReassignmentTx(tx, current, operatorContextID, id, expectedVersion, newCaptainID, note, actorID)
+		return resolveSpecialRequestReassignmentTx(specialRequestReassignmentInput{
+			tx: tx, current: current, operatorContextID: operatorContextID, id: id, expectedVersion: expectedVersion,
+			newCaptainID: newCaptainID, note: note, actorID: actorID,
+		})
 	}
 
 	assignmentStatus, deliveryStatus, orderStatus, err := loadReassignmentDeliveryState(tx, current)
@@ -478,7 +481,10 @@ func resolveDeliveryExceptionReassignCaptainTx(
 	if err != nil {
 		return nil, err
 	}
-	if err := markReassignedExceptionTx(tx, id, expectedVersion, operatorContextID, actorID, note, replacementAssignmentID, newCaptainID); err != nil {
+	if err := markReassignedExceptionTx(reassignedExceptionMarkInput{
+		tx: tx, id: id, expectedVersion: expectedVersion, operatorContextID: operatorContextID, actorID: actorID,
+		note: note, replacementAssignmentID: replacementAssignmentID, newCaptainID: newCaptainID,
+	}); err != nil {
 		return nil, err
 	}
 	return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
@@ -505,11 +511,22 @@ func validateReassignmentState(current *DeliveryException, expectedVersion int, 
 	return false, nil
 }
 
-func resolveSpecialRequestReassignmentTx(tx *sql.Tx, current *DeliveryException, operatorContextID, id string, expectedVersion int, newCaptainID, note, actorID string) (*DeliveryException, error) {
-	if _, err := resolveSpecialRequestExceptionReassignCaptainTx(tx, current, expectedVersion, newCaptainID, note, actorID); err != nil {
+type specialRequestReassignmentInput struct {
+	tx                *sql.Tx
+	current           *DeliveryException
+	operatorContextID string
+	id                string
+	expectedVersion   int
+	newCaptainID      string
+	note              string
+	actorID           string
+}
+
+func resolveSpecialRequestReassignmentTx(input specialRequestReassignmentInput) (*DeliveryException, error) {
+	if _, err := resolveSpecialRequestExceptionReassignCaptainTx(input.tx, input.current, input.expectedVersion, input.newCaptainID, input.note, input.actorID); err != nil {
 		return nil, err
 	}
-	return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
+	return getDeliveryExceptionForUpdateForContext(input.tx, input.operatorContextID, input.id)
 }
 
 func loadReassignmentDeliveryState(tx *sql.Tx, current *DeliveryException) (AssignmentStatus, DeliveryStatus, string, error) {
@@ -577,15 +594,26 @@ func createReplacementAssignmentTx(tx *sql.Tx, operatorContextID, orderID, newCa
 	return replacementAssignmentID, nil
 }
 
-func markReassignedExceptionTx(tx *sql.Tx, id string, expectedVersion int, operatorContextID, actorID, note, replacementAssignmentID, newCaptainID string) error {
-	res, err := tx.Exec(`
+type reassignedExceptionMarkInput struct {
+	tx                      *sql.Tx
+	id                      string
+	expectedVersion         int
+	operatorContextID       string
+	actorID                 string
+	note                    string
+	replacementAssignmentID string
+	newCaptainID            string
+}
+
+func markReassignedExceptionTx(input reassignedExceptionMarkInput) error {
+	res, err := input.tx.Exec(`
                 UPDATE dsh_delivery_exceptions
                 SET status='resolved', resolved_at=NOW(), resolved_by_actor_id=$1,
                     resolution_action='reassign_captain', resolution_note=$2,
                     replacement_assignment_id=$3::uuid, replacement_captain_id=$4,
                     version=version+1, updated_at=NOW()
                 WHERE id=$5::uuid AND operator_context_id=$7 AND version=$6 AND status IN ('open','acknowledged')`,
-		actorID, note, replacementAssignmentID, newCaptainID, id, expectedVersion, operatorContextID)
+		input.actorID, input.note, input.replacementAssignmentID, input.newCaptainID, input.id, input.expectedVersion, input.operatorContextID)
 	if err != nil {
 		return err
 	}

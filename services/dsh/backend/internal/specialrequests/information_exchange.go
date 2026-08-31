@@ -239,8 +239,11 @@ func (s *Service) RespondClientInformationInOperatorContext(
 		FOR UPDATE`, operatorContextID, clientID, mutation.IdempotencyKey).Scan(
 		&storedRequestID, &storedFingerprint, &storedExchangeID)
 	if receiptErr == nil {
-		exchange, err := replayInformationResponse(ctx, tx, requestID, clientID, operatorContextID,
-			storedRequestID, storedFingerprint, storedExchangeID, fingerprint)
+		exchange, err := replayInformationResponse(informationResponseReplayInput{
+			ctx: ctx, tx: tx, requestID: requestID, clientID: clientID, operatorContextID: operatorContextID,
+			storedRequestID: storedRequestID, storedFingerprint: storedFingerprint, storedExchangeID: storedExchangeID,
+			fingerprint: fingerprint,
+		})
 		if err != nil {
 			return nil, nil, err
 		}
@@ -265,49 +268,65 @@ func (s *Service) RespondClientInformationInOperatorContext(
 		return nil, nil, err
 	}
 
-	return persistInformationResponse(ctx, tx, s, current, operatorContextID, requestID, clientID,
-		expectedVersion, response, mutation, fingerprint, pending.ID)
+	return persistInformationResponse(informationResponsePersistenceInput{
+		ctx: ctx, tx: tx, service: s, current: current, operatorContextID: operatorContextID,
+		requestID: requestID, clientID: clientID, expectedVersion: expectedVersion, response: response,
+		mutation: mutation, fingerprint: fingerprint, exchangeID: pending.ID,
+	})
 }
 
-func replayInformationResponse(
-	ctx context.Context,
-	tx *sql.Tx,
-	requestID, clientID, operatorContextID, storedRequestID, storedFingerprint, storedExchangeID, fingerprint string,
-) (*InformationExchange, error) {
-	if storedRequestID != requestID || storedFingerprint != fingerprint {
+type informationResponseReplayInput struct {
+	ctx               context.Context
+	tx                *sql.Tx
+	requestID         string
+	clientID          string
+	operatorContextID string
+	storedRequestID   string
+	storedFingerprint string
+	storedExchangeID  string
+	fingerprint       string
+}
+
+func replayInformationResponse(input informationResponseReplayInput) (*InformationExchange, error) {
+	if input.storedRequestID != input.requestID || input.storedFingerprint != input.fingerprint {
 		return nil, ErrInformationResponseIdempotencyConflict
 	}
-	exchange, err := scanInformationExchange(tx.QueryRowContext(ctx, informationExchangeByIDSQL,
-		storedExchangeID, operatorContextID, requestID, clientID).Scan)
+	exchange, err := scanInformationExchange(input.tx.QueryRowContext(input.ctx, informationExchangeByIDSQL,
+		input.storedExchangeID, input.operatorContextID, input.requestID, input.clientID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: committed information exchange is missing", ErrConflict)
 	}
 	if err != nil {
 		return nil, err
 	}
-	if err := tx.Commit(); err != nil {
+	if err := input.tx.Commit(); err != nil {
 		return nil, err
 	}
 	return exchange, nil
 }
 
-func persistInformationResponse(
-	ctx context.Context,
-	tx *sql.Tx,
-	service *Service,
-	current *SpecialRequest,
-	operatorContextID, requestID, clientID string,
-	expectedVersion int,
-	response string,
-	mutation InformationResponseMutationContext,
-	fingerprint, exchangeID string,
-) (*SpecialRequest, *InformationExchange, error) {
+type informationResponsePersistenceInput struct {
+	ctx               context.Context
+	tx                *sql.Tx
+	service           *Service
+	current           *SpecialRequest
+	operatorContextID string
+	requestID         string
+	clientID          string
+	expectedVersion   int
+	response          string
+	mutation          InformationResponseMutationContext
+	fingerprint       string
+	exchangeID        string
+}
+
+func persistInformationResponse(input informationResponsePersistenceInput) (*SpecialRequest, *InformationExchange, error) {
 	status := StatusUnderReview
 	stage := "quote_pending"
-	if current.RequestType == TypeAwnakErrand {
+	if input.current.RequestType == TypeAwnakErrand {
 		stage = "quote_review"
 	}
-	updated, err := service.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, requestID, expectedVersion, UpdateInput{
+	updated, err := input.service.repo.UpdateInOperatorContextTx(input.ctx, input.tx, input.operatorContextID, input.requestID, input.expectedVersion, UpdateInput{
 		Status:        &status,
 		WorkflowStage: &stage,
 	})
@@ -315,7 +334,7 @@ func persistInformationResponse(
 		return nil, nil, err
 	}
 
-	exchange, err := scanInformationExchange(tx.QueryRowContext(ctx, `
+	exchange, err := scanInformationExchange(input.tx.QueryRowContext(input.ctx, `
 		UPDATE dsh_special_request_information_exchanges
 		SET response = $1,
 			status = 'responded',
@@ -324,31 +343,31 @@ func persistInformationResponse(
 			updated_at = now()
 		WHERE id = $3 AND status = 'pending'
 		RETURNING `+informationExchangeColumns,
-		response, updated.Version, exchangeID).Scan)
+		input.response, updated.Version, input.exchangeID).Scan)
 	if err != nil {
 		return nil, nil, err
 	}
-	if err := WriteAuditEvent(tx, requestID, clientID, "client", "respond_information", response, mutation.CorrelationID, requestJSON(current), requestJSON(updated)); err != nil {
+	if err := WriteAuditEvent(input.tx, input.requestID, input.clientID, "client", "respond_information", input.response, input.mutation.CorrelationID, requestJSON(input.current), requestJSON(updated)); err != nil {
 		return nil, nil, fmt.Errorf("write audit event: %w", err)
 	}
-	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
+	if err := operationaloutbox.Enqueue(input.tx, operationaloutbox.EnqueueInput{
 		EventType:     "special_request_information_responded",
 		EntityType:    "special_request",
-		EntityID:      requestID,
+		EntityID:      input.requestID,
 		Payload:       requestJSON(updated),
-		CorrelationID: mutation.CorrelationID,
+		CorrelationID: input.mutation.CorrelationID,
 	}); err != nil {
 		return nil, nil, err
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO dsh_special_request_information_response_receipts
+	if _, err := input.tx.ExecContext(input.ctx, `INSERT INTO dsh_special_request_information_response_receipts
 		(operator_context_id, client_id, special_request_id, idempotency_key, request_fingerprint,
 		 correlation_id, exchange_id, result_version)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		operatorContextID, clientID, requestID, mutation.IdempotencyKey, fingerprint,
-		mutation.CorrelationID, exchange.ID, updated.Version); err != nil {
+		input.operatorContextID, input.clientID, input.requestID, input.mutation.IdempotencyKey, input.fingerprint,
+		input.mutation.CorrelationID, exchange.ID, updated.Version); err != nil {
 		return nil, nil, err
 	}
-	if err := tx.Commit(); err != nil {
+	if err := input.tx.Commit(); err != nil {
 		return nil, nil, err
 	}
 	return updated, exchange, nil
