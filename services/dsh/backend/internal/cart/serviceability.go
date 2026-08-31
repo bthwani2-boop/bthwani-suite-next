@@ -56,7 +56,7 @@ func GetOrCreateSingleStoreCart(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "dsh-active-cart:"+clientID); err != nil {
 		return nil, err
 	}
@@ -208,7 +208,7 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 	if err != nil {
 		return result, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var item CartItemValidation

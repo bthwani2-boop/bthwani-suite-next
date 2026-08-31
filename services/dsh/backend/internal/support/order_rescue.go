@@ -303,7 +303,7 @@ func CreateOrderRescueCase(db *sql.DB, input CreateOrderRescueInput) (OrderRescu
 	if err != nil {
 		return OrderRescueCase{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.OrderID, idempotencyKey); err != nil {
 		return OrderRescueCase{}, err
 	}
@@ -407,7 +407,7 @@ func ListOrderRescueCases(db *sql.DB, statusFilter string, limit int) ([]OrderRe
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]OrderRescueCase, 0)
 	for rows.Next() {
 		item, err := scanOrderRescueCase(rows)
@@ -459,7 +459,7 @@ func UpdateOrderRescueCase(db *sql.DB, input UpdateOrderRescueInput) (OrderRescu
 	if err != nil {
 		return OrderRescueCase{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.CaseID, idempotencyKey); err != nil {
 		return OrderRescueCase{}, err
 	}
@@ -564,7 +564,7 @@ func ListOrderRescueEvents(db *sql.DB, caseID string, limit int) ([]OrderRescueE
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]OrderRescueEvent, 0)
 	for rows.Next() {
 		var item OrderRescueEvent
@@ -631,7 +631,7 @@ func CreateOrderRescueAction(db *sql.DB, input CreateOrderRescueActionInput) (Or
 	if err != nil {
 		return OrderRescueAction{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.CaseID, idempotencyKey); err != nil {
 		return OrderRescueAction{}, err
@@ -713,7 +713,7 @@ func ExecuteOrderRescueAction(db *sql.DB, input ExecuteOrderRescueActionInput) (
 	if err != nil {
 		return OrderRescueAction{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), 0)`, "rescue-action|"+input.ActionID); err != nil {
 		return OrderRescueAction{}, err

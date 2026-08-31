@@ -48,7 +48,7 @@ func (c *Client) ListPermissionVocabulary(ctx context.Context, service, surface 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrIdentityUnavailable
 	}
@@ -67,7 +67,7 @@ func (c *Client) GetRoleDefinition(ctx context.Context, roleName string) (RbacRo
 	if err != nil {
 		return RbacRoleDefinition{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	switch resp.StatusCode {
 	case http.StatusOK:
 		var role RbacRoleDefinition
@@ -95,7 +95,7 @@ func (c *Client) UpsertRoleDefinition(ctx context.Context, roleName, description
 	if err != nil {
 		return RbacRoleDefinition{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	switch resp.StatusCode {
 	case http.StatusOK:
 		var role RbacRoleDefinition

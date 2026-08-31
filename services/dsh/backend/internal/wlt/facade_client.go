@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"dsh-api/internal/auth"
 )
 
 func (c *Client) ExecuteFinanceRead(ctx context.Context, opID string, params map[string]string, query url.Values, correlationID, operatorContextID string) (int, []byte, error) {
@@ -30,7 +32,7 @@ func (c *Client) executeFinance(ctx context.Context, opID string, params map[str
 	if err != nil {
 		return 0, nil, err
 	}
-	if authorized, ok := ctx.Value("authorized_action").(string); ok && strings.TrimSpace(authorized) != "" && strings.TrimSpace(authorized) != op.RequiredPermission {
+	if authorized, ok := auth.AuthorizationActionFromContext(ctx); ok && authorized != op.RequiredPermission {
 		return 0, nil, fmt.Errorf("operation %s requires permission %q", opID, op.RequiredPermission)
 	}
 	if op.Type == OperationTypeRead && body != nil {
@@ -40,7 +42,7 @@ func (c *Client) executeFinance(ctx context.Context, opID string, params map[str
 		return 0, nil, fmt.Errorf("operation %s is a write operation", opID)
 	}
 	if op.RequiresDelegatedActor && strings.TrimSpace(delegatedPrincipalID) == "" {
-		return 0, nil, fmt.Errorf("Identity-authenticated delegated finance principal is required")
+		return 0, nil, fmt.Errorf("identity-authenticated delegated finance principal is required")
 	}
 	correlationID = strings.TrimSpace(correlationID)
 	if op.Type == OperationTypeWrite && correlationID == "" {
@@ -88,7 +90,7 @@ func (c *Client) executeFinance(ctx context.Context, opID string, params map[str
 	if err != nil {
 		return 0, nil, fmt.Errorf("call WLT finance operation: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes+1))
 	if err != nil {
 		return 0, nil, fmt.Errorf("read WLT finance response: %w", err)

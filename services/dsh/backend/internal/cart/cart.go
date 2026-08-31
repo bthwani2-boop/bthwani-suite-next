@@ -517,7 +517,7 @@ func RemoveItem(ctx context.Context, db *sql.DB, cartID, itemID string, expected
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if expectedVersion != nil {
 		var currentVersion int
@@ -555,7 +555,7 @@ func ClearCart(ctx context.Context, db *sql.DB, cartID string, expectedVersion *
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if expectedVersion != nil {
 		var currentVersion int
@@ -778,7 +778,7 @@ func ListOperatorCarts(ctx context.Context, db *sql.DB, state string) ([]Cart, e
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var carts []Cart
 	for rows.Next() {
 		var c Cart
@@ -817,7 +817,7 @@ func listItems(ctx context.Context, db *sql.DB, cartID string) ([]CartItem, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var items []CartItem
 	for rows.Next() {
 		var item CartItem
@@ -892,7 +892,7 @@ func computeCheckoutSnapshotFromItems(cartID string, items []CartItem) (*CartSna
 		}
 		unitMinorUnits := item.UnitPriceMinorUnits
 		totalMinorUnits += unitMinorUnits * int64(item.Quantity)
-		fmt.Fprintf(hasher, "|%s:%d:%d:%s", item.ProductID, item.Quantity, unitMinorUnits, item.Currency)
+		_, _ = fmt.Fprintf(hasher, "|%s:%d:%d:%s", item.ProductID, item.Quantity, unitMinorUnits, item.Currency)
 	}
 
 	return &CartSnapshot{

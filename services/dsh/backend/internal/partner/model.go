@@ -282,12 +282,12 @@ func ComputeReadiness(
 
 	partnerActivationBlockedReason := ""
 	if !docsDone {
-		partnerActivationBlockedReason = "ÙˆØ«Ø§Ø¦Ù‚ Ù…Ø·Ù„ÙˆØ¨Ø© ØºØ§Ø¦Ø¨Ø© Ø£Ùˆ ØºÙŠØ± Ù…Ø¹ØªÙ…Ø¯Ø©"
+		partnerActivationBlockedReason = "وثائق مطلوبة غائبة أو غير معتمدة"
 	} else if !hasStore {
-		partnerActivationBlockedReason = "Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ"
+		partnerActivationBlockedReason = "لا يوجد فرع مربوط بالشريك"
 	} else if !canActivatePartner {
 		if p.ActivationStatus != StatusPartnerActive && p.ActivationStatus != StatusClientVisible && p.ActivationStatus != StatusClientHidden {
-			partnerActivationBlockedReason = "Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ© Ù„Ø§ ØªØ³Ù…Ø­ Ø¨Ø§Ù„ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù…Ø¨Ø§Ø´Ø± â€” Ø£ÙƒÙ…Ù„ Ø§Ù„Ù…Ø±Ø§Ø­Ù„ Ø§Ù„Ø³Ø§Ø¨Ù‚Ø© Ø£ÙˆÙ„Ø§Ù‹"
+			partnerActivationBlockedReason = "الحالة الحالية لا تسمح بالتفعيل المباشر — أكمل المراحل السابقة أولاً"
 		}
 	}
 
@@ -314,27 +314,27 @@ func ComputeReadiness(
 		Checklist: []ReadinessItem{
 			{
 				ID:            "documents",
-				Label:         "Ø§Ù„ÙˆØ«Ø§Ø¦Ù‚ Ù…Ø¹ØªÙ…Ø¯Ø©",
+				Label:         "الوثائق معتمدة",
 				Satisfied:     docsDone,
-				BlockedReason: map[bool]string{false: "Ø§Ù„ÙˆØ«Ø§Ø¦Ù‚ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø© Ø£Ùˆ Ù„Ù… ÙŠØªÙ… Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù†Ù‡Ø§"}[docsDone],
+				BlockedReason: map[bool]string{false: "الوثائق غير مكتملة أو لم يتم التحقق منها"}[docsDone],
 			},
 			{
 				ID:            "linked_store",
-				Label:         "ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ",
+				Label:         "فرع مربوط بالشريك",
 				Satisfied:     hasStore,
-				BlockedReason: map[bool]string{false: "Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ"}[hasStore],
+				BlockedReason: map[bool]string{false: "لا يوجد فرع مربوط بالشريك"}[hasStore],
 			},
 			{
 				ID:            "ops_approved",
-				Label:         "Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª",
+				Label:         "اعتماد العمليات",
 				Satisfied:     opsApprovedDone,
-				BlockedReason: map[bool]string{false: "Ø¨Ø§Ù†ØªØ¸Ø§Ø± Ø§Ø¹ØªÙ…Ø§Ø¯ Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª"}[opsApprovedDone],
+				BlockedReason: map[bool]string{false: "بانتظار اعتماد العمليات"}[opsApprovedDone],
 			},
 			{
 				ID:            "partner_active",
-				Label:         "Ø§Ù„Ø´Ø±ÙŠÙƒ Ù†Ø´Ø·",
+				Label:         "الشريك نشط",
 				Satisfied:     partnerActiveDone,
-				BlockedReason: map[bool]string{false: "Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù†Ø´Ø·"}[partnerActiveDone],
+				BlockedReason: map[bool]string{false: "الشريك غير نشط"}[partnerActiveDone],
 			},
 			{
 				ID:            "store_status_published",
@@ -344,33 +344,33 @@ func ComputeReadiness(
 			},
 			{
 				ID:            "store_serviceability",
-				Label:         "ØªØºØ·ÙŠØ© Ø§Ù„Ø®Ø¯Ù…Ø© Ù„Ù„ÙØ±Ø¹",
+				Label:         "تغطية الخدمة للفرع",
 				Satisfied:     storeServiceable,
-				BlockedReason: map[bool]string{false: "Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ØºØ·Ù‰ Ø¨Ø§Ù„Ø®Ø¯Ù…Ø© Ø­Ø§Ù„ÙŠØ§Ù‹"}[storeServiceable],
+				BlockedReason: map[bool]string{false: "الفرع غير مغطى بالخدمة حالياً"}[storeServiceable],
 			},
 			{
 				ID:            "partner_readiness_ready",
-				Label:         "Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø´Ø±ÙŠÙƒ Ù„Ù„ÙØ±Ø¹",
+				Label:         "جاهزية الشريك للفرع",
 				Satisfied:     storePartnerReadinessReady,
-				BlockedReason: map[bool]string{false: "Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø© Ù„Ù„ÙØ±Ø¹"}[storePartnerReadinessReady],
+				BlockedReason: map[bool]string{false: "جاهزية الشريك غير مكتملة للفرع"}[storePartnerReadinessReady],
 			},
 			{
 				ID:            "catalog_approved",
-				Label:         "ÙƒØªØ§Ù„ÙˆØ¬ Ø§Ù„ÙØ±Ø¹ Ù…Ø¹ØªÙ…Ø¯",
+				Label:         "كتالوج الفرع معتمد",
 				Satisfied:     storeCatalogApproved,
-				BlockedReason: map[bool]string{false: "ÙƒØªØ§Ù„ÙˆØ¬ Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…Ø¹ØªÙ…Ø¯"}[storeCatalogApproved],
+				BlockedReason: map[bool]string{false: "كتالوج الفرع غير معتمد"}[storeCatalogApproved],
 			},
 			{
 				ID:            "marketing_visible",
-				Label:         "Ø§Ù„Ø¸Ù‡ÙˆØ± Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ Ù„Ù„ÙØ±Ø¹",
+				Label:         "الظهور التسويقي للفرع",
 				Satisfied:     storeMarketingVisible,
-				BlockedReason: map[bool]string{false: "Ø§Ù„Ø¸Ù‡ÙˆØ± Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ Ù„Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ÙØ¹Ù„"}[storeMarketingVisible],
+				BlockedReason: map[bool]string{false: "الظهور التسويقي للفرع غير مفعل"}[storeMarketingVisible],
 			},
 			{
 				ID:            "is_visible",
-				Label:         "Ø§Ù„ÙØ±Ø¹ Ù…Ø±Ø¦ÙŠ",
+				Label:         "الفرع مرئي",
 				Satisfied:     storeIsVisible,
-				BlockedReason: map[bool]string{false: "Ø§Ù„ÙØ±Ø¹ Ù…Ø®ÙÙŠ"}[storeIsVisible],
+				BlockedReason: map[bool]string{false: "الفرع مخفي"}[storeIsVisible],
 			},
 		},
 	}

@@ -147,7 +147,7 @@ func (s *Service) RequestClientInformationInOperatorContext(
 	if err != nil {
 		return nil, nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var pendingCount int
 	if err := tx.QueryRowContext(ctx, `SELECT count(*)
@@ -236,7 +236,7 @@ func (s *Service) RespondClientInformationInOperatorContext(
 	if err != nil {
 		return nil, nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
 		operatorContextID+"|special-request-information-response|"+clientID+"|"+mutation.IdempotencyKey); err != nil {
 		return nil, nil, err

@@ -69,7 +69,7 @@ func (c *Client) readJSON(ctx context.Context, path string, target any) (int, er
 	if err != nil {
 		return 0, fmt.Errorf("%w: %v", ErrCanonicalReadbackUnavailable, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusNotFound {
 		return resp.StatusCode, nil
 	}

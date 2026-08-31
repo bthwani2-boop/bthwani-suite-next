@@ -95,7 +95,7 @@ func List(ctx context.Context, db *sql.DB, storeID string) ([]partner.StoreTeamM
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	members := make([]partner.StoreTeamMember, 0)
 	for rows.Next() {
 		member, err := scanMember(rows)

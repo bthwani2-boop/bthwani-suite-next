@@ -58,7 +58,7 @@ func (s *Service) assignCourier(ctx context.Context, operatorContextID, orderID,
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var storeID, fulfillmentMode, orderStatus string
 	orderQuery := `SELECT store_id, fulfillment_mode, status FROM dsh_orders WHERE id = $1::uuid AND operator_context_id = $2 FOR UPDATE`
@@ -184,7 +184,7 @@ func (s *Service) submitProofForContext(ctx context.Context, operatorContextID, 
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := GetForUpdateForOperatorContext(tx, operatorContextID, taskID)
 	if err != nil {
@@ -264,7 +264,7 @@ func (s *Service) transitionForContext(ctx context.Context, operatorContextID, t
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := GetForUpdateForOperatorContext(tx, operatorContextID, taskID)
 	if err != nil {

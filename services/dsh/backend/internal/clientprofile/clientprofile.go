@@ -157,7 +157,7 @@ func upsert(
 	if err != nil {
 		return ClientProfile{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "dsh-client-profile:"+clientID); err != nil {
 		return ClientProfile{}, err
 	}

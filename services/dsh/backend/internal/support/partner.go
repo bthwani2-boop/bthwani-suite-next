@@ -127,7 +127,7 @@ func CreatePartnerTicket(db *sql.DB, input PartnerCreateTicketInput) (Ticket, er
 	if err != nil {
 		return Ticket{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.ActorID, input.IdempotencyKey); err != nil {
 		return Ticket{}, err
@@ -196,7 +196,7 @@ func ListPartnerTickets(db *sql.DB, actorID string, limit int) ([]Ticket, error)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanTickets(rows)
 }
 
@@ -227,7 +227,7 @@ func AddPartnerMessage(db *sql.DB, input PartnerAddMessageInput) (Message, error
 	if err != nil {
 		return Message{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.ActorID, input.IdempotencyKey); err != nil {
 		return Message{}, err
@@ -297,7 +297,7 @@ func ListPartnerMessages(db *sql.DB, actorID, ticketID string) ([]Message, error
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	messages := []Message{}
 	for rows.Next() {
 		var message Message

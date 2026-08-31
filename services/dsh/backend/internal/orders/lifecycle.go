@@ -107,7 +107,7 @@ func listOrderItems(db *sql.DB, orderID string) ([]OrderItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]OrderItem, 0)
 	for rows.Next() {
 		var item OrderItem
@@ -148,32 +148,6 @@ func scanOrderRow(row *sql.Row) (*Order, error) {
 		return nil, err
 	}
 	return &order, nil
-}
-
-func scanOrders(rows *sql.Rows) ([]Order, error) {
-	result := make([]Order, 0)
-	for rows.Next() {
-		var order Order
-		if err := rows.Scan(
-			&order.ID,
-			&order.OperatorContextID,
-			&order.CheckoutIntentID,
-			&order.StoreID,
-			&order.FulfillmentMode,
-			&order.ClientID,
-			&order.Status,
-			&order.Version,
-			&order.RejectionReason,
-			&order.WltPaymentRefID,
-			&order.Currency,
-			&order.CreatedAt,
-			&order.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		result = append(result, order)
-	}
-	return result, rows.Err()
 }
 
 type DeliveryCompletionContext struct {

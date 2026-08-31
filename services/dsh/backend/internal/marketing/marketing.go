@@ -148,7 +148,7 @@ func ListCampaigns(db *sql.DB) ([]Campaign, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var out []Campaign
 	for rows.Next() {
 		c, err := scanCampaign(rows)

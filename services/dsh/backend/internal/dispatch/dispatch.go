@@ -102,7 +102,7 @@ func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, err
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var fulfillmentMode string
 	err = tx.QueryRow(`SELECT fulfillment_mode FROM dsh_orders WHERE id = $1::uuid AND operator_context_id = $2`, input.OrderID, input.OperatorContextID).Scan(&fulfillmentMode)
@@ -166,7 +166,7 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var existingAssignmentID, existingCaptainID string
 	err = tx.QueryRow(`
@@ -278,7 +278,7 @@ func ListCaptainAssignments(db *sql.DB, captainID string, limit int) ([]Assignme
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanAssignments(rows)
 }
 
@@ -353,7 +353,7 @@ func pushLocation(db *sql.DB, operatorContextID, assignmentID, captainID string,
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := lockAssignmentForOperatorContext(tx, operatorContextID, assignmentID, captainID)
 	if err != nil {
@@ -413,7 +413,7 @@ func updateAssignmentStatus(db *sql.DB, operatorContextID, assignmentID, captain
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	current, err := lockAssignmentForOperatorContext(tx, operatorContextID, assignmentID, captainID)
 	if err != nil {
 		return nil, err
@@ -497,7 +497,7 @@ func updateDeliveryProgressVersionedForContext(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	replayed, err := beginCaptainDeliveryStatusCommand(tx, command)
 	if err != nil {
 		return nil, err

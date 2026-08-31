@@ -192,7 +192,7 @@ func updateDeliveryProgressWithStoreHandoffVersioned(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	replayed, err := beginCaptainDeliveryStatusCommand(tx, command)
 	if err != nil {
 		return nil, err
@@ -299,7 +299,7 @@ func confirmStoreCaptainHandoff(db *sql.DB, command storeCaptainHandoffConfirmat
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if handoffID, found, err := beginStoreCaptainHandoffConfirmationCommand(tx, command); err != nil {
 		return nil, err
 	} else if found {

@@ -74,7 +74,7 @@ func ListTickers(db *sql.DB) ([]Ticker, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	tickers := []Ticker{}
 	for rows.Next() {
 		t, err := scanTicker(rows)

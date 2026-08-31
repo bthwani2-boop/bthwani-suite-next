@@ -125,7 +125,7 @@ func listOrderTruthByScope(db *sql.DB, operatorContextID, viewerRole, scopeID, s
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	ids := make([]string, 0)
 	for rows.Next() {

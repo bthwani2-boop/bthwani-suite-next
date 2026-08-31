@@ -37,7 +37,7 @@ func AnonymizeExpiredIdempotent(
 	if err != nil {
 		return AnonymizationResult{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	lockKey := mutation.ActorID + "|" + operation + "|" + mutation.IdempotencyKey
 	if _, err := tx.ExecContext(

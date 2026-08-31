@@ -95,7 +95,7 @@ func ListBanners(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQu
 	if err != nil {
 		return nil, fmt.Errorf("failed to query banners: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	banners := []HomeBanner{}
 	for rows.Next() {
@@ -159,7 +159,7 @@ func ListPromos(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQue
 	if err != nil {
 		return nil, fmt.Errorf("failed to query promos: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	promos := []HomePromo{}
 	for rows.Next() {
@@ -203,7 +203,7 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]HomeCategory, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query categories: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	categories := []HomeCategory{}
 	for rows.Next() {
@@ -281,7 +281,7 @@ func ListHomeStores(ctx context.Context, db *sql.DB, query HomeDiscoveryQuery) (
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query home stores: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	stores := []HomeStore{}
 	for rows.Next() {

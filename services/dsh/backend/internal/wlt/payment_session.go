@@ -58,7 +58,7 @@ func (c *Client) GetPaymentSession(ctx context.Context, sessionID string) (*Paym
         if err != nil {
                 return nil, fmt.Errorf("%w: call WLT payment session: %v", ErrPaymentSessionOutcomeUnknown, err)
         }
-        defer response.Body.Close()
+        defer func() { _ = response.Body.Close() }()
         if response.StatusCode < 200 || response.StatusCode >= 300 {
                 if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
                         return nil, fmt.Errorf("%w: HTTP %d", ErrPaymentSessionOutcomeUnknown, response.StatusCode)

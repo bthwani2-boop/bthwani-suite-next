@@ -96,7 +96,7 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var req RoleAssignmentApproval
 	err = tx.QueryRowContext(ctx, `
@@ -170,7 +170,7 @@ func ListRoleAssignmentApprovals(ctx context.Context, db *sql.DB, status string)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	out := make([]RoleAssignmentApproval, 0)
 	for rows.Next() {
@@ -234,7 +234,7 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	if err != nil {
 		return nil, nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var req RoleAssignmentApproval
 	err = tx.QueryRowContext(ctx, `

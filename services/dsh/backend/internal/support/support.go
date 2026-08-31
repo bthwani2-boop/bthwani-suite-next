@@ -221,7 +221,7 @@ func ListReporterTickets(db *sql.DB, reporterID string, limit int) ([]Ticket, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanTickets(rows)
 }
 
@@ -239,7 +239,7 @@ func ListOperatorTickets(db *sql.DB, statusFilter string, limit int) ([]Ticket, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanTickets(rows)
 }
 
@@ -293,7 +293,7 @@ func ListTicketMessages(db *sql.DB, ticketID string, includeInternal bool) ([]Me
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []Message
 	for rows.Next() {
 		var m Message
@@ -336,7 +336,7 @@ func ListIncidents(db *sql.DB, statusFilter string, limit int) ([]Incident, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []Incident
 	for rows.Next() {
 		i, err := scanIncidentRow(rows)
@@ -481,7 +481,7 @@ func ListCannedResponses(db *sql.DB, categoryFilter string) ([]CannedResponse, e
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []CannedResponse
 	for rows.Next() {
 		var c CannedResponse

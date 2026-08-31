@@ -35,41 +35,6 @@ func (s *protectedStoreServer) handleOperatorGetStoreAssortment(w http.ResponseW
 	store.SendJSON(w, http.StatusOK, map[string]any{"assortment": items})
 }
 
-func (s *protectedStoreServer) upsertStoreAssortment(w http.ResponseWriter, r *http.Request, actorID, actorRole, storeID string) {
-	masterProductID := r.PathValue("masterProductId")
-	var input centralcatalog.StoreAssortmentInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	mp, err := centralcatalog.GetMasterProduct(r.Context(), s.db, masterProductID)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	if actorRole != "operator" {
-		if mp.ApprovalStatus != "approved" || !mp.IsActive {
-			s.writeCentralCatalogError(w, centralcatalog.ErrForbidden)
-			return
-		}
-		input.PublicationStatus = "submitted"
-	}
-	nodeID := ""
-	if mp.CategoryNodeID != nil {
-		nodeID = *mp.CategoryNodeID
-	}
-	policy, err := centralcatalog.ResolveEffectivePolicy(r.Context(), s.db, mp.DomainID, nodeID)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	a, err := centralcatalog.UpsertStoreAssortmentWithRuntimeTruth(r.Context(), s.db, storeID, masterProductID, actorID, input, policy.AllowsStoreProductCustomImage)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"assortment": a})
-}
-
 func (s *protectedStoreServer) handlePartnerGetStoreAssortment(w http.ResponseWriter, r *http.Request) {
 	actor, storeID, ok := s.partnerStore(w, r)
 	if !ok {

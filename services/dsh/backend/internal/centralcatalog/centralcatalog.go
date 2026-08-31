@@ -124,7 +124,7 @@ func ListDomains(ctx context.Context, db *sql.DB) ([]Domain, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []Domain{}
 	for rows.Next() {
 		d, err := scanDomain(rows)
@@ -284,7 +284,7 @@ func ListNodes(ctx context.Context, db *sql.DB, domainID, parentID string) ([]No
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []Node{}
 	for rows.Next() {
 		n, err := scanNode(rows)
@@ -597,7 +597,7 @@ func ListMasterProducts(ctx context.Context, db *sql.DB, filter MasterProductFil
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []MasterProduct{}
 	for rows.Next() {
 		m, err := scanMasterProduct(rows)
@@ -861,7 +861,7 @@ func ListProposals(ctx context.Context, db *sql.DB, filter ProposalFilter) ([]Pr
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []ProductProposal{}
 	for rows.Next() {
 		p, err := scanProposal(rows)
@@ -931,7 +931,7 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID, idempotencyKey str
 	if err != nil {
 		return ProductProposal{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if replay != nil {
 		proposal, err := scanProposal(tx.QueryRowContext(ctx, proposalByIDSQL, replay.ResourceID))
 		if err != nil {
@@ -1130,7 +1130,7 @@ func ListStoreAssortment(ctx context.Context, db *sql.DB, storeID string) ([]Sto
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []StoreAssortment{}
 	for rows.Next() {
 		a, err := scanAssortment(rows)
@@ -1204,7 +1204,7 @@ func ListCatalogPolicies(ctx context.Context, db *sql.DB) ([]CatalogPolicy, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []CatalogPolicy{}
 	for rows.Next() {
 		p, err := scanPolicy(rows)
@@ -1393,7 +1393,7 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
-	defer linkRows.Close()
+	defer func() { _ = linkRows.Close() }()
 	allLinks := []CatalogAssetLinkWithAsset{}
 	for linkRows.Next() {
 		l, err := scanAssetLinkWithAsset(linkRows)
@@ -1442,7 +1442,7 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	entries := []ClientCatalogEntry{}
 	domainIDs := map[string]bool{}
@@ -1597,12 +1597,6 @@ var validAssetStatus = map[string]bool{
 }
 var validAssetSourceSurface = map[string]bool{
 	"control-panel-catalog": true, "control-panel-platform": true, "app-partner": true, "app-field": true, "system": true,
-}
-var validAssetRole = map[string]bool{
-	"icon": true, "cover": true, "thumbnail": true, "gallery": true, "canonical_product_image": true,
-	"partner_custom_product_image": true, "marketing_banner": true, "document": true,
-	"store_logo": true, "store_cover": true, "storefront_photo": true, "interior_photo": true, "signage_photo": true,
-	"reel_video": true, "reel_poster": true,
 }
 var validAssetEntityType = map[string]bool{
 	"domain": true, "node": true, "master_product": true, "product_proposal": true,
@@ -1786,7 +1780,7 @@ func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media
 	if err != nil {
 		return AssetUploadIntent{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if replay != nil {
 		asset, err := scanAsset(tx.QueryRowContext(ctx, assetByIDSQL, replay.ResourceID))
 		if err != nil {
@@ -1872,7 +1866,7 @@ func verifyAndNormalizeUploadedAsset(ctx context.Context, mediaClient *media.Cli
 	if err != nil {
 		return uploadedAssetFacts{}, fmt.Errorf("%w: uploaded object not found in storage: %v", ErrInvalid, err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	data, err := io.ReadAll(io.LimitReader(reader, maxSize+1))
 	if err != nil {
 		return uploadedAssetFacts{}, err
@@ -1941,7 +1935,7 @@ func CompleteAssetUpload(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	if err != nil {
 		return CatalogAsset{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "dsh-catalog-asset-complete:"+id); err != nil {
 		return CatalogAsset{}, err
 	}
@@ -2012,7 +2006,7 @@ func ListAssets(ctx context.Context, db *sql.DB, status string, limit, offset in
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []CatalogAsset{}
 	for rows.Next() {
 		a, err := scanAsset(rows)
@@ -2102,7 +2096,7 @@ func syncStoreImageProjectionsForAsset(ctx context.Context, tx *sql.Tx, assetID 
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	type storeLink struct{ storeID, role string }
 	var links []storeLink
 	for rows.Next() {
@@ -2148,7 +2142,7 @@ func syncProductImageProjectionsForAsset(ctx context.Context, tx *sql.Tx, assetI
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var productIDs []string
 	for rows.Next() {
 		var id string
@@ -2176,7 +2170,7 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 	if err != nil {
 		return CatalogAsset{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var currentStatus string
 	if err := tx.QueryRowContext(ctx, `SELECT status FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id).Scan(&currentStatus); err != nil {
@@ -2400,7 +2394,7 @@ func ListAssetLinks(ctx context.Context, db *sql.DB, entityType, entityID string
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []CatalogAssetLink{}
 	for rows.Next() {
 		l, err := scanAssetLink(rows)
@@ -2417,7 +2411,7 @@ func UnlinkAsset(ctx context.Context, db *sql.DB, entityType, entityID, linkID s
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var role string
 	if err := tx.QueryRowContext(ctx, `DELETE FROM dsh_catalog_asset_links
 		WHERE id=$1 AND entity_type=$2 AND entity_id=$3 RETURNING role`, linkID, entityType, entityID).Scan(&role); err != nil {
@@ -2450,7 +2444,7 @@ func DeleteUnlinkedAsset(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var status, objectKey string
 	if err := tx.QueryRowContext(ctx, `SELECT status, object_key FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id).Scan(&status, &objectKey); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -2594,7 +2588,7 @@ func CleanupOrphanCatalogAssets(ctx context.Context, db *sql.DB, mediaClient *me
 	if err != nil {
 		return 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var deletedCount int
 	var failures []string
@@ -2707,7 +2701,7 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 	if err != nil {
 		return StoreAssortmentPrice{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if replay != nil {
 		price, err := readAssortmentPriceTx(ctx, tx, replay.ResourceID)
 		if err != nil {

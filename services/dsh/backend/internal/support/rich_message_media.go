@@ -161,7 +161,7 @@ func listRichAttachmentsTx(tx *sql.Tx, ticketID string, includeInternal bool) (m
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	result := map[string][]RichMessageAttachment{}
 	for rows.Next() {
 		item, scanErr := scanRichAttachment(rows)
@@ -232,7 +232,7 @@ func addRichMessage(
 	if err != nil {
 		return RichMessage{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.ActorID, idempotencyKey); err != nil {
 		return RichMessage{}, err
 	}
@@ -325,7 +325,7 @@ func listRichMessages(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var exists bool
 	if operatorWide {
 		err = tx.QueryRow(`SELECT EXISTS (SELECT 1 FROM dsh_support_tickets WHERE id = $1::uuid)`, ticketID).Scan(&exists)
@@ -354,7 +354,7 @@ func listRichMessages(
 	for rows.Next() {
 		var message Message
 		if scanErr := rows.Scan(&message.ID, &message.TicketID, &message.SenderID, &message.SenderRole, &message.Body, &message.IsInternal, &message.CreatedAt, &message.ClientMessageID, &message.SequenceNum); scanErr != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, scanErr
 		}
 		messages = append(messages, RichMessage{Message: message, Attachments: []RichMessageAttachment{}})

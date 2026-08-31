@@ -11,8 +11,6 @@ const (
 	StatusCancelledNoDriver   OrderStatus = "cancelled_no_driver"
 	StatusFailedPayment       OrderStatus = "failed_payment"
 	StatusFailedDispatch      OrderStatus = "failed_dispatch"
-
-	maxCancellationReasonNoteLength = 1000
 )
 
 var ErrCancellationRequiresReview = errors.New("order cancellation requires operator review")
@@ -34,27 +32,6 @@ func cancellationTarget(role, reasonCode string) OrderStatus {
 		}
 	}
 	return StatusCancelledByOperator
-}
-
-func validCancellationReason(role, code string) bool {
-	allowed := map[string]map[string]bool{
-		"client": {
-			"changed_mind": true, "duplicate_order": true, "address_error": true,
-			"payment_issue": true, "excessive_delay": true, "other": true,
-		},
-		"partner": {
-			"out_of_stock": true, "store_closed": true, "capacity": true,
-			"pricing_issue": true, "cannot_fulfill": true, "other": true,
-		},
-		"operator": {
-			"customer_request": true, "partner_request": true, "no_driver": true,
-			"fraud_risk": true, "safety": true, "operational_failure": true, "other": true,
-		},
-		"system": {
-			"no_driver": true, "payment_issue": true, "operational_failure": true,
-		},
-	}
-	return allowed[role][code]
 }
 
 func cancellableStatuses(role string) []OrderStatus {

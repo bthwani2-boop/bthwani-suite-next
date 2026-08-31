@@ -181,7 +181,7 @@ func CancelIntent(db *sql.DB, intentID, operatorContextID, clientID string) (*In
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	const q = `
 		UPDATE dsh_checkout_intents
@@ -246,7 +246,7 @@ func ListOperatorIntents(db *sql.DB, stateFilter string, limit int) ([]Intent, e
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	intents := make([]Intent, 0)
 	for rows.Next() {
@@ -373,7 +373,7 @@ func ApplyWltPaymentEvent(db *sql.DB, operatorContextID, intentID, paymentSessio
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := scanIntent(tx.QueryRow(`
 		SELECT id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,

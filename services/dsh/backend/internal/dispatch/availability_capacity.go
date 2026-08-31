@@ -226,7 +226,7 @@ func ApplyWorkforceAvailability(ctx context.Context, db *sql.DB, operatorContext
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	blocked := make(map[string]struct{})
 	for rows.Next() {
 		var actorID string
@@ -505,7 +505,7 @@ func GetOperationsHeatmap(ctx context.Context, db *sql.DB, operatorContextID, se
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	cells := make(map[string]*heatmapAccumulator)
 	for rows.Next() {
 		var captainID string

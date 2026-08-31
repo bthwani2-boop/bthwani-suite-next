@@ -88,7 +88,7 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var list []PartnerSummary
 	for rows.Next() {
@@ -278,7 +278,7 @@ func ListDocuments(db *sql.DB, partnerID string) ([]Document, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []Document
 	for rows.Next() {
 		var d Document
@@ -667,7 +667,7 @@ func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerLinkedStore, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	stores := []PartnerLinkedStore{}
 	for rows.Next() {
@@ -694,7 +694,7 @@ func ListFieldVisits(db *sql.DB, partnerID string) ([]FieldVisit, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []FieldVisit
 	for rows.Next() {
 		var v FieldVisit
@@ -800,7 +800,7 @@ func ListActivationEvents(db *sql.DB, partnerID string) ([]ActivationEvent, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []ActivationEvent
 	for rows.Next() {
 		var e ActivationEvent
@@ -910,7 +910,7 @@ func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	zones := []StoreCoverageZone{}
 	for rows.Next() {

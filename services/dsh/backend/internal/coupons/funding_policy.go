@@ -120,7 +120,7 @@ func ListFundingPolicies(ctx context.Context, db *sql.DB) (map[string]FundingPol
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	result := map[string]FundingPolicy{}
 	for rows.Next() {
 		policy, err := scanFundingPolicy(rows)

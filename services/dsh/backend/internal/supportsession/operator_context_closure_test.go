@@ -64,7 +64,7 @@ func supportSessionTestDB(t *testing.T) *sql.DB {
 
 func TestSupportRequestsAreTenantLocalInDB(t *testing.T) {
 	db := supportSessionTestDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	token := fmt.Sprintf("objective3-%d", time.Now().UnixNano())
 	targetID := "objective3-shared-target-" + token
 	requesterID := "objective3-shared-requester-" + token

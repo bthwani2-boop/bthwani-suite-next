@@ -67,7 +67,7 @@ func ListCatalogAttributes(ctx context.Context, db *sql.DB) ([]CatalogAttribute,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []CatalogAttribute{}
 	for rows.Next() {
 		item, err := scanCatalogAttribute(rows)
@@ -122,7 +122,7 @@ func ListCatalogAttributeOptions(ctx context.Context, db *sql.DB, attributeID st
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []CatalogAttributeOption{}
 	for rows.Next() {
 		var item CatalogAttributeOption
@@ -243,7 +243,7 @@ func ListMasterProductAttributeValues(ctx context.Context, db *sql.DB, productID
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []MasterProductAttributeValue{}
 	for rows.Next() {
 		var item MasterProductAttributeValue
@@ -405,7 +405,7 @@ func ListMasterProductRelationships(ctx context.Context, db *sql.DB, productID s
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []MasterProductRelationship{}
 	for rows.Next() {
 		item, err := scanRelationship(rows)
@@ -616,7 +616,7 @@ func ListCatalogAudit(ctx context.Context, db *sql.DB, filter CatalogAuditFilter
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []CatalogAuditEntry{}
 	for rows.Next() {
 		var item CatalogAuditEntry

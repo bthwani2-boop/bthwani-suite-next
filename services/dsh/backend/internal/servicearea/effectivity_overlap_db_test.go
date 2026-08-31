@@ -23,7 +23,7 @@ func openServiceAreaDBIntegration(t *testing.T) *sql.DB {
 		t.Fatal(err)
 	}
 	if err := db.PingContext(t.Context()); err != nil {
-		db.Close()
+		_ = db.Close()
 		t.Skipf("DSH database unavailable: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })

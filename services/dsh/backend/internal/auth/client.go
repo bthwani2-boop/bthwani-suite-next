@@ -89,12 +89,12 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 		}
 
 		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			return Identity{}, ErrUnauthenticated
 		}
 		if resp.StatusCode != http.StatusOK {
 			_, _ = io.Copy(io.Discard, resp.Body)
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if attempt < identityResolveAttempts && (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= http.StatusInternalServerError) {
 				continue
 			}
@@ -103,7 +103,7 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 
 		var identity Identity
 		decodeErr := json.NewDecoder(resp.Body).Decode(&identity)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if decodeErr != nil {
 			if attempt < identityResolveAttempts && ctx.Err() == nil {
 				continue
@@ -182,7 +182,7 @@ func (c *Client) FetchPartnerPermissionBundles(ctx context.Context) ([]PartnerPe
 	if err != nil {
 		return nil, ErrIdentityUnavailable
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrIdentityUnavailable
 	}
@@ -209,7 +209,7 @@ func (c *Client) CheckHealth(ctx context.Context) string {
 	if err != nil {
 		return "NOT_READY"
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusOK {
 		var healthResp struct {
@@ -257,7 +257,7 @@ func (c *Client) IsSessionValid(ctx context.Context, actorID, sessionID string) 
 	if err != nil {
 		return false, ErrIdentityUnavailable
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return false, nil
@@ -317,7 +317,7 @@ func (c *Client) ResolvePermissions(ctx context.Context, actorID string) ([]Perm
 	if err != nil {
 		return nil, ErrIdentityUnavailable
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrIdentityUnavailable
@@ -420,7 +420,7 @@ func (c *Client) ListRoles(ctx context.Context) ([]RbacRole, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrIdentityUnavailable
 	}
@@ -450,7 +450,7 @@ func (c *Client) ListStaff(ctx context.Context) ([]RbacStaffActor, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrIdentityUnavailable
 	}
@@ -476,7 +476,7 @@ func (c *Client) ListActorRoleAssignments(ctx context.Context, actorID string) (
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrIdentityUnavailable
 	}
@@ -498,7 +498,7 @@ func (c *Client) GrantRoleWithIdempotency(ctx context.Context, targetActorID, ro
 	if err != nil {
 		return RbacActorRoleAssignment{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	switch resp.StatusCode {
 	case http.StatusOK, http.StatusCreated:
 		var assignment RbacActorRoleAssignment
@@ -526,7 +526,7 @@ func (c *Client) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, r
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	switch resp.StatusCode {
 	case http.StatusNoContent:
 		return nil

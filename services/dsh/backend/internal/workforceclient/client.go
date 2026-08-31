@@ -92,7 +92,7 @@ func (c *Client) getReadiness(ctx context.Context, operatorContextID, endpoint s
 	if err != nil {
 		return GovernedActivationReadiness{}, fmt.Errorf("call workforce readiness: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return GovernedActivationReadiness{}, fmt.Errorf("workforce readiness returned HTTP %d", resp.StatusCode)
@@ -128,7 +128,7 @@ func (c *Client) GetActorScopes(ctx context.Context, actorID, operatorContextID,
 	if err != nil {
 		return nil, fmt.Errorf("call workforce scopes: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusForbidden {
 		return nil, ErrActorContextForbidden

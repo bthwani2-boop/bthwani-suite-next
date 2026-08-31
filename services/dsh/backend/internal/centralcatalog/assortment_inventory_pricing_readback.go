@@ -83,7 +83,7 @@ func ListAssortmentPriceRuntimeTruth(ctx context.Context, db *sql.DB, storeID, m
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	out := make([]StoreAssortmentPrice, 0)
 	for rows.Next() {

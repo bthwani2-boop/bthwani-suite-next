@@ -94,7 +94,7 @@ func (p *HTTPPushProvider) Send(ctx context.Context, message PushMessage) (strin
 	if err != nil {
 		return "", fmt.Errorf("send push request: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, readErr := io.ReadAll(io.LimitReader(response.Body, 64*1024))
 	if readErr != nil {
 		return "", fmt.Errorf("read push response: %w", readErr)
@@ -211,7 +211,7 @@ func claimPushBatch(db *sql.DB, limit int, lease time.Duration) ([]PushDelivery,
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	rows, err := tx.Query(`
 		SELECT d.id::text,
 		       n.id::text,
@@ -233,7 +233,7 @@ func claimPushBatch(db *sql.DB, limit int, lease time.Duration) ([]PushDelivery,
 	if err != nil {
 		return nil, fmt.Errorf("claim push delivery batch: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var deliveries []PushDelivery
 	for rows.Next() {
 		var delivery PushDelivery
@@ -288,7 +288,7 @@ func listActivePushEndpoints(ctx context.Context, db *sql.DB, actorID, actorType
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var endpoints []pushEndpoint
 	for rows.Next() {
 		var ep pushEndpoint

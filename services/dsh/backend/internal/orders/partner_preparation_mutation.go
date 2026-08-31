@@ -62,7 +62,7 @@ func TransitionPartnerPreparation(db *sql.DB, input PartnerPreparationTransition
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Serialize the idempotency identity before checking or creating its receipt.
 	lockIdentity := input.StoreID + "|partner-order-preparation|" + input.IdempotencyKey

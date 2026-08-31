@@ -161,7 +161,7 @@ func loadOrCreateSaga(ctx context.Context, db *sql.DB, operatorContextID, reques
 	if err != nil {
 		return nil, false, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var id string
 	err = tx.QueryRowContext(ctx, `
@@ -240,7 +240,7 @@ func claimSaga(ctx context.Context, db *sql.DB, sagaID string) (*SpecialRequestS
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var saga *SpecialRequestSaga
 	row := tx.QueryRowContext(ctx, sagaSelect+` WHERE id = $1::uuid FOR UPDATE`, sagaID)
 	saga, err = scanSaga(row.Scan)
@@ -368,7 +368,7 @@ func executeQuoteSaga(ctx context.Context, db *sql.DB, client *wlt.Client, saga 
 		// back first; only issue again when the authoritative readback is absent.
 		quote, err = client.GetActiveSpecialRequestQuote(wltCtx, input.SpecialRequestID)
 		if err != nil || !quoteMatches(input, quote) {
-			quote, err = client.IssueSpecialRequestQuote(wltCtx, wlt.SpecialRequestQuoteInput{
+			_, err = client.IssueSpecialRequestQuote(wltCtx, wlt.SpecialRequestQuoteInput{
 				SpecialRequestID: input.SpecialRequestID, ClientID: input.ClientID, PolicyID: input.PolicyID,
 				ProposedAmountMinorUnits: input.ProposedAmountMinorUnits, ProposedCurrency: input.ProposedCurrency,
 				ProposalReason: input.ProposalReason, CorrelationID: input.CorrelationID, IdempotencyKey: input.CommandID,
@@ -557,7 +557,7 @@ func applyCancellationLocally(ctx context.Context, db *sql.DB, operatorContextID
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	updated, err := repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, requestID, version, UpdateInput{Status: &status, setCancelledAt: true})
 	if err != nil {
 		return nil, err
@@ -602,7 +602,7 @@ func RunSpecialRequestSagaWorker(ctx context.Context, db *sql.DB, client *wlt.Cl
 				ids = append(ids, id)
 			}
 		}
-		rows.Close()
+		_ = rows.Close()
 		for _, id := range ids {
 			if _, err := DispatchSpecialRequestSaga(ctx, db, client, id); err != nil && !errors.Is(err, ErrSagaBusy) {
 				// markSagaFailure is the recovery write: losing it leaves an

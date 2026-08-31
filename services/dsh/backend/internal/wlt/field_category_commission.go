@@ -83,7 +83,7 @@ func (c *Client) DeliverFieldCategoryCommission(ctx context.Context, input Deliv
 	if err != nil {
 		return fmt.Errorf("call WLT field category commission: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return fmt.Errorf("WLT field category commission returned HTTP %d", response.StatusCode)
 	}

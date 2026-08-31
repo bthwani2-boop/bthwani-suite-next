@@ -236,7 +236,7 @@ func CreateReelSubmission(ctx context.Context, db *sql.DB, actorID, actorRole, i
 	if err != nil {
 		return Reel{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if replay != nil {
 		reel, err := scanReel(tx.QueryRowContext(ctx, reelByIDSQL, replay.ResourceID))
 		if err != nil {
@@ -313,7 +313,7 @@ func ReviewReel(ctx context.Context, db *sql.DB, reviewerID, reelID string, inpu
 	if err != nil {
 		return Reel{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	reel, err := scanReel(tx.QueryRowContext(ctx, reelByIDForUpdateSQL, reelID))
 	if err != nil {
@@ -458,7 +458,7 @@ func ListReels(ctx context.Context, db *sql.DB, status string, limit, offset int
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []Reel{}
 	for rows.Next() {
 		reel, err := scanReel(rows)
@@ -486,7 +486,7 @@ func ListApprovedReels(ctx context.Context, db *sql.DB, limit int) ([]PublicReel
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []PublicReel{}
 	for rows.Next() {
 		var videoAssetID, posterAssetID string

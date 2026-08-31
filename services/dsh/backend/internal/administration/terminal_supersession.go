@@ -140,7 +140,7 @@ func SupersedeFailedRoleAssignmentApproval(ctx context.Context, db *sql.DB, iden
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var old RoleAssignmentApproval
 	if err := tx.QueryRowContext(ctx, `
@@ -263,7 +263,7 @@ func SupersedeFailedRoleDefinitionRequest(ctx context.Context, db *sql.DB, ident
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var old RoleDefinitionRequest
 	var lockedPermissions, lockedSurfaces []byte
@@ -362,7 +362,7 @@ func SupersedeFailedRollbackRequest(ctx context.Context, db *sql.DB, identityCli
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var old RollbackRequest
 	var sourceStatus string

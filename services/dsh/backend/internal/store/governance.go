@@ -118,7 +118,7 @@ func resolveStoreIDsForActor(ctx context.Context, db queryer, actorID, operatorC
 			WHERE actor_id = $1 AND actor_role = $2 AND active = true AND operator_context_id = $3
 			ORDER BY created_at ASC`, actorID, role, operatorContextID)
 		if err == nil {
-			defer rows.Close()
+			defer func() { _ = rows.Close() }()
 			for rows.Next() {
 				var sid string
 				if err := rows.Scan(&sid); err == nil && sid != "" {
@@ -218,7 +218,7 @@ func ResolveActorPartnerID(ctx context.Context, db *sql.DB, actor StoreActor) (s
 	if err != nil {
 		return "", err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	partnerIDs := make([]string, 0, 1)
 	for rows.Next() {
@@ -414,7 +414,7 @@ func buildFieldVerificationSnapshots(ctx context.Context, tx *sql.Tx, visitID st
 	if err != nil {
 		return "", "", "", err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	snapshots := []checkSnapshot{}
 	anyEvidence := false
@@ -716,7 +716,7 @@ func ListStoreAudit(ctx context.Context, db *sql.DB, storeID string, limit int) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	events := []StoreAuditEvent{}
 	for rows.Next() {
 		event, err := scanAudit(rows)
@@ -761,7 +761,7 @@ func runMutation(
 	if err != nil {
 		return StoreActionResponse{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := lockStoreMutationIdempotency(ctx, tx, actor.ID, operation, key); err != nil {
 		return StoreActionResponse{}, err
 	}

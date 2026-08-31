@@ -156,7 +156,7 @@ func reserveDeliveryExceptionOperationCommand(
 	if err != nil {
 		return "", false, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	exceptionID, found, status, err := beginDeliveryExceptionOperationCommandWithStatus(tx, command)
 	if err != nil {
 		return "", false, err
@@ -194,7 +194,7 @@ func completeDeliveryExceptionOperationCommand(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	exceptionID, found, status, err := beginDeliveryExceptionOperationCommandWithStatus(tx, command)
 	if err != nil {
 		return nil, err
@@ -230,7 +230,7 @@ func executeDeliveryExceptionOperationCommand(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	exceptionID, found, err := beginDeliveryExceptionOperationCommand(tx, command)
 	if err != nil {

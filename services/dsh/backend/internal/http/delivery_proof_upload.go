@@ -44,7 +44,7 @@ func (s *protectedStoreServer) uploadDeliveryProofObject(
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file field is required")
 		return uploadedDeliveryProof{}, false
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	uploadBody, contentType, err := prepareMediaUploadBody(file, header.Header.Get("Content-Type"))
 	if err != nil {

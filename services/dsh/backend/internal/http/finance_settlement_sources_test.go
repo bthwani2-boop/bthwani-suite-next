@@ -140,7 +140,7 @@ func TestHandleCreateFinanceSettlementFromDeliveredOrdersFailsClosedWithoutEligi
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	if err := db.Ping(); err != nil {
 		t.Fatal(err)
 	}

@@ -22,7 +22,7 @@ func TestPostgresLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	if err := db.Ping(); err != nil {
 		t.Fatalf("ping database: %v", err)
 	}

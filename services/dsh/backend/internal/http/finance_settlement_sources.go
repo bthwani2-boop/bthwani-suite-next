@@ -132,7 +132,7 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to derive delivered order sources")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	orderSources := make([]financeSettlementOrderSource, 0)
 	for rows.Next() {
 		var source financeSettlementOrderSource

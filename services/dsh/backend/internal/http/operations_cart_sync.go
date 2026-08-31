@@ -65,7 +65,7 @@ func (s *protectedStoreServer) handleOperatorCartSyncDiagnostics(w http.Response
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to query idempotency history")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	resp.History = []CartIdempotencyRecord{}
 	for rows.Next() {
@@ -78,5 +78,7 @@ func (s *protectedStoreServer) handleOperatorCartSyncDiagnostics(w http.Response
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		return
+	}
 }

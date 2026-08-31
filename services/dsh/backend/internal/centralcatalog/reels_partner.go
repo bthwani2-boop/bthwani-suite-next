@@ -32,7 +32,7 @@ func ListPartnerReels(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	items := []Reel{}
 	for rows.Next() {

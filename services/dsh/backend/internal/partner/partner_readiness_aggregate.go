@@ -62,7 +62,7 @@ func LoadAggregatedPartnerReadiness(db *sql.DB, partnerID string) (AggregatedPar
 	if err != nil {
 		return AggregatedPartnerReadiness{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	stores := make([]StorePublicationReadiness, 0)
 	readyCount := 0

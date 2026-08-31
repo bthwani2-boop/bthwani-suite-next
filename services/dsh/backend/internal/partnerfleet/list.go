@@ -7,14 +7,6 @@ import (
 	"strings"
 )
 
-type expiredConnectionProjection struct {
-	ConnectionID     string
-	TeamMemberID     string
-	CreatedByActorID string
-	CourierName      string
-	MemberStatus     string
-}
-
 func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -34,16 +26,16 @@ func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) er
 	for rows.Next() {
 		var code expiredCode
 		if err := rows.Scan(&code.id, &code.teamMemberID, &code.actorID); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return err
 		}
 		expired = append(expired, code)
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return err
 	}
-	rows.Close()
+	_ = rows.Close()
 	for _, code := range expired {
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE dsh_partner_courier_connection_codes
@@ -78,7 +70,7 @@ func ListStoreConnections(ctx context.Context, db *sql.DB, storeID string) ([]Co
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	connections := make([]ConnectionCode, 0)
 	for rows.Next() {
@@ -108,7 +100,7 @@ func ListCaptainMemberships(ctx context.Context, db *sql.DB, captainActorID stri
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	memberships := make([]CaptainFleetMembership, 0)
 	for rows.Next() {

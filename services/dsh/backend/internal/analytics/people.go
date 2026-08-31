@@ -50,7 +50,7 @@ func GetCaptainPerformance(db *sql.DB, window Window, limit int) (CaptainPerform
 	if err != nil {
 		return out, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var row CaptainPerformanceRow
 		if err := rows.Scan(
@@ -114,7 +114,7 @@ func GetFieldPerformance(db *sql.DB, window Window, limit int) (FieldPerformance
 	if err != nil {
 		return out, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var row FieldPerformanceRow
 		if err := rows.Scan(

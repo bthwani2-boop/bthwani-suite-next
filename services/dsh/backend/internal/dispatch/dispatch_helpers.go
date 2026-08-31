@@ -56,17 +56,6 @@ const assignmentForOperatorContextForUpdateSQL = `
 	WHERE a.id = $1::uuid AND a.operator_context_id = $2
 	FOR UPDATE OF a, d`
 
-func lockAssignment(tx *sql.Tx, assignmentID, captainID string) (*Assignment, error) {
-	row := tx.QueryRow(assignmentSelectSQL()+`
-		WHERE a.id = $1::uuid AND a.captain_id = $2
-		FOR UPDATE OF a, d`, assignmentID, captainID)
-	assignment, err := scanAssignmentRowWithDelivery(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	return assignment, err
-}
-
 func lockAssignmentForOperatorContext(tx *sql.Tx, operatorContextID, assignmentID, captainID string) (*Assignment, error) {
 	if strings.TrimSpace(operatorContextID) == "" {
 		return nil, ErrInvalid

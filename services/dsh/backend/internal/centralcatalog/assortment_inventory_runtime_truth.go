@@ -30,7 +30,7 @@ func UpsertAssortmentInventoryWithRuntimeTruthAtomic(
 	if err != nil {
 		return StoreAssortmentInventory{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.ExecContext(
 		ctx,

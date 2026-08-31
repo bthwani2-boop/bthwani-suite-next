@@ -271,7 +271,7 @@ func (s *protectedStoreServer) handlePartnerOrderWorkboard(w http.ResponseWriter
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner order workboard")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	now := time.Now()
 	workboardOrders := make([]partnerOrderWorkboardOrder, 0)

@@ -98,7 +98,7 @@ func ListDeliveryAttempts(db *sql.DB, outcome string, limit int) ([]DeliveryAtte
 	if err != nil {
 		return nil, DeliveryAuditSummary{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]DeliveryAttempt, 0)
 	for rows.Next() {
 		var item DeliveryAttempt
@@ -201,7 +201,7 @@ func ListPushDeliveryAudit(db *sql.DB, limit int) ([]PushDeliveryAudit, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]PushDeliveryAudit, 0)
 	for rows.Next() {
 		var item PushDeliveryAudit

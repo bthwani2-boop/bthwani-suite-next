@@ -56,7 +56,7 @@ func listTickerPromos(ctx context.Context, db *sql.DB, query HomeDiscoveryQuery)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query marketing ticker projection: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []HomePromo{}
 	for rows.Next() {
 		var item HomePromo
@@ -110,7 +110,7 @@ func listCampaignPromos(ctx context.Context, db *sql.DB, query HomeDiscoveryQuer
 	if err != nil {
 		return nil, fmt.Errorf("failed to query marketing campaign projection: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []HomePromo{}
 	for rows.Next() {
 		var item HomePromo
@@ -154,7 +154,7 @@ func listPartnerOfferPromos(ctx context.Context, db *sql.DB, query HomeDiscovery
 	if err != nil {
 		return nil, fmt.Errorf("failed to query partner-offer projection: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []HomePromo{}
 	for rows.Next() {
 		var item HomePromo

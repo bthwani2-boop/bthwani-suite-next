@@ -138,7 +138,7 @@ func List(ctx context.Context, db *sql.DB, clientID string) ([]Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	addresses := make([]Address, 0)
 	for rows.Next() {
 		address, scanErr := scanAddress(rows)
@@ -196,7 +196,7 @@ func Create(ctx context.Context, db *sql.DB, clientID string, raw CreateInput, m
 	if err != nil {
 		return nil, false, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := lockClient(ctx, tx, clientID); err != nil {
 		return nil, false, err
 	}
@@ -255,7 +255,7 @@ func Update(ctx context.Context, db *sql.DB, clientID, addressID string, raw Upd
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := lockClient(ctx, tx, clientID); err != nil {
 		return nil, err
 	}
@@ -306,7 +306,7 @@ func SetDefault(ctx context.Context, db *sql.DB, clientID, addressID, correlatio
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := lockClient(ctx, tx, clientID); err != nil {
 		return nil, err
 	}
@@ -350,7 +350,7 @@ func Delete(ctx context.Context, db *sql.DB, clientID, addressID string, expecte
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := lockClient(ctx, tx, clientID); err != nil {
 		return err
 	}

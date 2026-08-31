@@ -41,7 +41,7 @@ func (s *protectedStoreServer) enqueueCouponFundingRelease(
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := promotionfundingoutbox.Enqueue(tx, promotionfundingoutbox.EnqueueInput{
 		EventType:          promotionfundingoutbox.EventRelease,
 		OperatorContextID:  operatorContextID,
@@ -71,7 +71,7 @@ func (s *protectedStoreServer) enqueueCouponFundingReserveThenRelease(
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := promotionfundingoutbox.Enqueue(tx, promotionfundingoutbox.EnqueueInput{
 		EventType:          promotionfundingoutbox.EventReserveThenRelease,
 		OperatorContextID:  operatorContextID,
@@ -227,73 +227,4 @@ func (s *protectedStoreServer) releaseCouponFunding(
 		return fmt.Errorf("WLT promotion funding released but DSH projection update failed; durable release queued: %w", err)
 	}
 	return nil
-}
-
-func (s *protectedStoreServer) commitCouponFunding(
-	ctx context.Context,
-	operatorContextID string,
-	checkoutIntentID string,
-	orderID string,
-	correlationID string,
-) error {
-	projection, err := coupons.FundingByIntent(ctx, s.db, checkoutIntentID)
-	if err != nil || projection == nil {
-		return err
-	}
-	operatorContextID = fundingOperatorContext(operatorContextID, projection)
-	if projection.WLTReservationID == "" || operatorContextID == "" {
-		return fmt.Errorf("coupon funding reservation or OperatorContext is missing")
-	}
-	if projection.Status == "committed" {
-		return nil
-	}
-	correlationID = fundingCorrelation(correlationID, orderID)
-	reservation, err := s.wlt.CommitPromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{
-		OperatorContextID: operatorContextID,
-		OrderID:           orderID,
-	}, "dsh-promotion-funding-commit:"+projection.RedemptionID, correlationID)
-	if err != nil {
-		return err
-	}
-	if reservation.Status != "committed" || reservation.OperatorContextID != operatorContextID || reservation.OrderID == nil || *reservation.OrderID != orderID {
-		return fmt.Errorf("WLT promotion funding commit response is invalid")
-	}
-	return coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "committed")
-}
-
-func (s *protectedStoreServer) reverseCouponFunding(
-	ctx context.Context,
-	operatorContextID string,
-	checkoutIntentID string,
-	orderID string,
-	reason string,
-	correlationID string,
-) error {
-	projection, err := coupons.FundingByIntent(ctx, s.db, checkoutIntentID)
-	if err != nil || projection == nil {
-		return err
-	}
-	operatorContextID = fundingOperatorContext(operatorContextID, projection)
-	if projection.WLTReservationID == "" || projection.Status == "reversed" {
-		return nil
-	}
-	if operatorContextID == "" {
-		return fmt.Errorf("coupon funding OperatorContext is missing")
-	}
-	if projection.Status != "committed" {
-		return fmt.Errorf("only committed coupon funding can be reversed")
-	}
-	correlationID = fundingCorrelation(correlationID, orderID)
-	reservation, err := s.wlt.ReversePromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{
-		OperatorContextID: operatorContextID,
-		OrderID:           orderID,
-		Reason:            strings.TrimSpace(reason),
-	}, "dsh-promotion-funding-reverse:"+projection.RedemptionID, correlationID)
-	if err != nil {
-		return err
-	}
-	if reservation.Status != "reversed" || reservation.OperatorContextID != operatorContextID {
-		return fmt.Errorf("WLT promotion funding reversal response is invalid")
-	}
-	return coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "reversed")
 }

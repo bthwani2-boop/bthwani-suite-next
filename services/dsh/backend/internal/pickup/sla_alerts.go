@@ -96,7 +96,7 @@ func RefreshPickupSLAAlerts(db *sql.DB, correlationID string, now time.Time) (*R
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	opened := 0
 	for sessionID, info := range overdue {
@@ -121,7 +121,7 @@ func RefreshPickupSLAAlerts(db *sql.DB, correlationID string, now time.Time) (*R
 	for rows.Next() {
 		var row openRow
 		if err := rows.Scan(&row.id, &row.sessionID, &row.leg); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, err
 		}
 		info, stillOverdue := overdue[row.sessionID]
@@ -130,10 +130,10 @@ func RefreshPickupSLAAlerts(db *sql.DB, correlationID string, now time.Time) (*R
 		}
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return nil, err
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	resolved := 0
 	for _, row := range toResolve {
@@ -175,7 +175,7 @@ func ListPickupSLAAlerts(db *sql.DB, status SLAAlertStatus, limit int) ([]Pickup
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	alerts := make([]PickupSLAAlert, 0)
 	for rows.Next() {
 		alert, err := scanPickupSLAAlert(rows.Scan)

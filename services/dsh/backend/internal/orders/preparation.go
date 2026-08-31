@@ -139,7 +139,7 @@ func AcceptOrderWithPreparation(db *sql.DB, orderID, actorID string) (*Order, er
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var storeID string
 	var current OrderStatus
@@ -223,7 +223,7 @@ func RevisePreparationEstimate(db *sql.DB, input RevisePreparationEstimateInput)
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var currentStatus OrderStatus
 	var currentEstimate time.Time
@@ -373,7 +373,7 @@ func UpdateStorePreparationPolicy(db *sql.DB, input UpdateStorePreparationPolicy
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.Exec(`
 		INSERT INTO dsh_store_order_preparation_policies(store_id)
 		VALUES($1)

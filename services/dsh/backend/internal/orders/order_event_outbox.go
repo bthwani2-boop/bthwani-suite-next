@@ -33,7 +33,7 @@ func ClaimOrderEvents(db *sql.DB, limit int) ([]OrderOutboxRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	rows, err := tx.Query(`
 		WITH candidates AS (
@@ -57,7 +57,7 @@ func ClaimOrderEvents(db *sql.DB, limit int) ([]OrderOutboxRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	result := make([]OrderOutboxRecord, 0)
 	for rows.Next() {
 		var record OrderOutboxRecord

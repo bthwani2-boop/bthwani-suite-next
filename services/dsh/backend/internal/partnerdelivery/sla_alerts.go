@@ -103,7 +103,7 @@ func RefreshDeliverySLAAlerts(db *sql.DB, operatorContextID, correlationID strin
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	opened := 0
 	for taskID, info := range overdue {
@@ -128,7 +128,7 @@ func RefreshDeliverySLAAlerts(db *sql.DB, operatorContextID, correlationID strin
 	for rows.Next() {
 		var row openRow
 		if err := rows.Scan(&row.id, &row.taskID, &row.leg); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, err
 		}
 		info, stillOverdue := overdue[row.taskID]
@@ -137,10 +137,10 @@ func RefreshDeliverySLAAlerts(db *sql.DB, operatorContextID, correlationID strin
 		}
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return nil, err
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	resolved := 0
 	for _, row := range toResolve {
@@ -183,7 +183,7 @@ func ListDeliverySLAAlerts(db *sql.DB, operatorContextID string, status SLAAlert
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	alerts := make([]DeliverySLAAlert, 0)
 	for rows.Next() {
 		alert, err := scanDeliverySLAAlert(rows.Scan)

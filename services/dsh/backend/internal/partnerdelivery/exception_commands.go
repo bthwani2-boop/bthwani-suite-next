@@ -57,7 +57,7 @@ func (s *Service) raiseExceptionWithEvidence(ctx context.Context, operatorContex
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := GetForUpdateForOperatorContext(tx, operatorContextID, taskID)
 	if err != nil {

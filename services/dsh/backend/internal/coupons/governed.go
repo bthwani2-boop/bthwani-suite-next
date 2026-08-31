@@ -73,7 +73,7 @@ func ListGoverned(db *sql.DB) ([]GovernedCoupon, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	result := make([]GovernedCoupon, 0)
 	for rows.Next() {
 		coupon, scanErr := scanGovernedCoupon(rows)

@@ -53,7 +53,7 @@ func UpsertPushEndpoint(db *sql.DB, actorID, actorType string, input PushEndpoin
 	if err != nil {
 		return PushEndpoint{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// A provider token can move between actors only after a logout/login or app
 	// reinstall. Removing the stale owner prevents cross-actor delivery.

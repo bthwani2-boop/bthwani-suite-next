@@ -151,7 +151,7 @@ func ListDeliveryModePolicies(ctx context.Context, db *sql.DB, zoneID string) ([
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []DeliveryModePolicy{}
 	for rows.Next() {
 		var item DeliveryModePolicy
@@ -470,7 +470,7 @@ func ListPolicyAuditEvents(ctx context.Context, db *sql.DB, aggregateType string
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []PolicyAuditEvent{}
 	for rows.Next() {
 		var item PolicyAuditEvent

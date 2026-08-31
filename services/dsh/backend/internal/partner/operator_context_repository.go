@@ -439,7 +439,7 @@ func ListPartnersForOperatorContext(db *sql.DB, operatorContextID string, q Part
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	list := make([]PartnerSummary, 0)
 	for rows.Next() {

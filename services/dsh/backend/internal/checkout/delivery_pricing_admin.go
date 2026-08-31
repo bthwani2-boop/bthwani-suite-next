@@ -90,7 +90,7 @@ func ListDeliveryPricing(db *sql.DB, storeID string) ([]DeliveryPricingRecord, e
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	result := []DeliveryPricingRecord{}
 	for rows.Next() {
 		record, scanErr := scanDeliveryPricing(rows)
@@ -163,7 +163,7 @@ func UpsertDeliveryPricing(
 	if err != nil {
 		return DeliveryPricingRecord{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var before DeliveryPricingRecord
 	var beforeApprovedAt sql.NullString

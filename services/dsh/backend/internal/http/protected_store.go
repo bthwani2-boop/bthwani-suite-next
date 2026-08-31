@@ -109,12 +109,11 @@ func (s *protectedStoreServer) writeHomeDiscoveryAdminResult(w http.ResponseWrit
 
 func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.Client, platformClient *platformclient.Client, mediaProvider *media.Provider) *protectedStoreServer {
 	decisionService, err := store.NewConfiguredDispatchDecisionServiceFromEnv()
+	var configuredDecisionService store.DecisionService
 	if err != nil {
-		decisionService = nil
-	}
-	var configuredDecisionService store.DecisionService = decisionService
-	if configuredDecisionService == nil {
 		configuredDecisionService = store.FailClosedDecisionService(err)
+	} else {
+		configuredDecisionService = decisionService
 	}
 	return &protectedStoreServer{
 		db:              db,
@@ -147,7 +146,6 @@ func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Requ
 		surface = dshActorSurface(actor.Role)
 	}
 	ctx = partner.WithActorContext(ctx, actor.ID, surface)
-	ctx = context.WithValue(ctx, "actor_phone", actor.PhoneE164)
 	ctx = context.WithValue(ctx, storeActorContextKeyType{}, actor)
 	return r.WithContext(ctx)
 }
@@ -178,7 +176,7 @@ func dshActorSurface(role string) string {
 
 func partnerRequestWithPartner(r *http.Request, actor store.StoreActor, partnerID string) *http.Request {
 	ctx := partnerRequestWithActor(r, actor).Context()
-	ctx = context.WithValue(ctx, "partner_id", partnerID)
+	ctx = partner.WithPartnerID(ctx, partnerID)
 	return r.WithContext(ctx)
 }
 
@@ -546,9 +544,7 @@ func (s *protectedStoreServer) withPermission(surface, action string, next http.
 		if !ok {
 			return
 		}
-		ctx := partnerRequestWithActor(r, actor).Context()
-		ctx = context.WithValue(ctx, "authorized_action", actor.AuthorizedAction)
-		ctx = context.WithValue(ctx, "authorization_scope", actor.AuthorizationScope)
+		ctx := auth.WithAuthorizationContext(partnerRequestWithActor(r, actor).Context(), actor.AuthorizedAction, actor.AuthorizationScope)
 		next(w, r.WithContext(ctx))
 	}
 }

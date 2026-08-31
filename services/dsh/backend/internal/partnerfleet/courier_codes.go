@@ -186,23 +186,23 @@ func IssueCode(ctx context.Context, db *sql.DB, storeID, teamMemberID, actorID s
 	for rows.Next() {
 		var codeID, status, createdBy string
 		if scanErr := rows.Scan(&codeID, &status, &createdBy); scanErr != nil {
-			rows.Close()
+			_ = rows.Close()
 			return IssuedConnectionCode{}, scanErr
 		}
 		if err := insertMembershipHistory(ctx, tx, teamMemberID, "expire_captain_connection_code", actorID, "pending", "expired", idempotencyKey+":expire:"+codeID, correlationID); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return IssuedConnectionCode{}, err
 		}
 		if err := insertFleetNotification(ctx, tx, createdBy, "partner", "partner_fleet_connection", "انتهت صلاحية كود ربط الأسطول", "انتهت صلاحية كود ربط موصل المتجر."); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return IssuedConnectionCode{}, err
 		}
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return IssuedConnectionCode{}, err
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	row := tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_partner_courier_connection_codes (

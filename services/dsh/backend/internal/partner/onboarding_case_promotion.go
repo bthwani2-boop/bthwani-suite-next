@@ -45,7 +45,7 @@ func EvaluateOnboardingCaseStatus(ctx context.Context, tx *sql.Tx, partnerID str
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	uploadedSet := make(map[string]bool)
 	for rows.Next() {

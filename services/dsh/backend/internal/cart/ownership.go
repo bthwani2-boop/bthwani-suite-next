@@ -24,7 +24,7 @@ func RemoveOwnedItem(
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if expectedVersion != nil {
 		var currentVersion int
@@ -79,7 +79,7 @@ func ClearOwnedCart(
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var lockedCartID string
 	var currentVersion int

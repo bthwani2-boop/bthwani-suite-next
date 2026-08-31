@@ -164,7 +164,7 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	if err != nil {
 		return nil, fmt.Errorf("%w: call WLT payment session: %v", ErrPaymentSessionOutcomeUnknown, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
 			return nil, fmt.Errorf("%w: HTTP %d", ErrPaymentSessionOutcomeUnknown, response.StatusCode)
@@ -233,7 +233,7 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	if err != nil {
 		return fmt.Errorf("call WLT field commission: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return fmt.Errorf("WLT field commission returned HTTP %d", response.StatusCode)
 	}
@@ -289,7 +289,7 @@ func (c *Client) DeliverCaptainCommission(ctx context.Context, input DeliverCapt
 	if err != nil {
 		return fmt.Errorf("call WLT captain commission: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return fmt.Errorf("WLT captain commission returned HTTP %d", response.StatusCode)
 	}
@@ -324,7 +324,7 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 	if err != nil {
 		return fmt.Errorf("%w: call WLT expire-session: %v", ErrMutationOutcomeUnknown, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode == http.StatusConflict {
 		return nil
 	}

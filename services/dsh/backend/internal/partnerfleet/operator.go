@@ -32,7 +32,7 @@ func ListStoreFleetMembers(ctx context.Context, db *sql.DB, storeID string) ([]S
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	members := make([]StoreFleetMember, 0)
 	for rows.Next() {

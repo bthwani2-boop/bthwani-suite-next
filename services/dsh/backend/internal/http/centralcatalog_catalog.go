@@ -101,7 +101,7 @@ func (s *protectedStoreServer) handleMergeCatalogNode(w http.ResponseWriter, r *
 		s.writeCentralCatalogError(w, err)
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if err := centralcatalog.MergeNode(r.Context(), tx, r.PathValue("nodeId"), input.TargetNodeID); err != nil {
 		s.writeCentralCatalogError(w, err)
@@ -252,13 +252,6 @@ func (s *protectedStoreServer) handleListProductProposals(w http.ResponseWriter,
 	store.SendJSON(w, http.StatusOK, map[string]any{
 		"proposals": items, "total": total, "limit": effectiveLimit, "offset": effectiveOffset,
 	})
-}
-
-func decideProposalPermissionAction(decision string) string {
-	if decision == "adopted" {
-		return CatalogPermissionProposalAdopt
-	}
-	return CatalogPermissionProposalReview
 }
 
 func proposalTransitionPermissionAction(nextStatus string) string {

@@ -98,7 +98,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 	if err != nil {
 		return nil, false, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, input.OperatorContextID+"|"+input.ClientID+"|"+input.IdempotencyKey); err != nil {
 		return nil, false, err
@@ -381,7 +381,7 @@ func GetOrderTruth(db *sql.DB, orderID, operatorContextID, viewerRole string) (*
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	truth, err := getOrderTruthTx(tx, orderID, operatorContextID, viewerRole)
 	if err != nil {
 		return nil, err
@@ -431,17 +431,17 @@ func getOrderTruthTx(tx *sql.Tx, orderID, operatorContextID, viewerRole string) 
 		var item OrderTruthItem
 		var snapshot []byte
 		if err = itemRows.Scan(&item.ID, &item.ProductID, &item.ProductName, &item.Quantity, &item.UnitPrice, &item.LineTotalMinorUnits, &snapshot); err != nil {
-			itemRows.Close()
+			_ = itemRows.Close()
 			return nil, err
 		}
 		item.Snapshot = json.RawMessage(snapshot)
 		truth.Items = append(truth.Items, item)
 	}
 	if err = itemRows.Err(); err != nil {
-		itemRows.Close()
+		_ = itemRows.Close()
 		return nil, err
 	}
-	itemRows.Close()
+	_ = itemRows.Close()
 
 	eventRows, err := tx.Query(`
 		SELECT id::text, event_type, actor_role, from_status, to_status, correlation_id,
@@ -455,17 +455,17 @@ func getOrderTruthTx(tx *sql.Tx, orderID, operatorContextID, viewerRole string) 
 		var event OrderTruthEvent
 		var metadata []byte
 		if err = eventRows.Scan(&event.ID, &event.Type, &event.ActorRole, &event.FromStatus, &event.ToStatus, &event.CorrelationID, &event.CausationID, &event.OrderVersion, &metadata, &event.CreatedAt); err != nil {
-			eventRows.Close()
+			_ = eventRows.Close()
 			return nil, err
 		}
 		event.Metadata = json.RawMessage(metadata)
 		truth.StatusTimeline = append(truth.StatusTimeline, event)
 	}
 	if err = eventRows.Err(); err != nil {
-		eventRows.Close()
+		_ = eventRows.Close()
 		return nil, err
 	}
-	eventRows.Close()
+	_ = eventRows.Close()
 	return &truth, nil
 }
 

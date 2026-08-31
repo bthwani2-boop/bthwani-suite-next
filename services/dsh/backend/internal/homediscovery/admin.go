@@ -61,7 +61,7 @@ func ListAdminContent(ctx context.Context, db *sql.DB, kind string) ([]AdminCont
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []AdminContentItem{}
 	for rows.Next() {
 		item, scanErr := scanAdminContent(rows, kind)
@@ -101,7 +101,7 @@ func DeleteAdminContent(ctx context.Context, db *sql.DB, kind, id, actorID, corr
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	result, err := tx.ExecContext(ctx, "DELETE FROM "+table+" WHERE id = $1", id)
 	if err != nil {
 		return err
@@ -144,7 +144,7 @@ func writeAdminContent(
 	if err != nil {
 		return AdminContentItem{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if create {
 		if kind == "promos" {

@@ -15,7 +15,7 @@ func policyCheckTypes(t *testing.T, db *sql.DB, visitID string) []string {
 	if err != nil {
 		t.Fatalf("list visit checklist policy: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []string
 	for rows.Next() {
 		var checkType string

@@ -80,7 +80,7 @@ func (c *Client) commercialMutationRequest(
 	if err != nil {
 		return fmt.Errorf("call WLT commercial mutation: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		var apiError struct {
 			Code    string `json:"code"`

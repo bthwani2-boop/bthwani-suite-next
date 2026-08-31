@@ -169,7 +169,7 @@ func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListR
 	if err != nil {
 		return DshStoreListResult{}, fmt.Errorf("failed to query stores: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	stores := []DshStoreSummary{}
 	for rows.Next() {
@@ -201,10 +201,6 @@ func GetStoreByID(db *sql.DB, storeID string) (*DshStoreRow, error) {
 	return &row, nil
 }
 
-type storeContextQueryRower interface {
-	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-}
-
 type storeContextQueryer interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 }
@@ -220,7 +216,7 @@ func ListStoresByPartnerIDContext(ctx context.Context, db storeContextQueryer, p
 	if err != nil {
 		return nil, fmt.Errorf("failed to list stores by partner id: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	stores := make([]DshStoreRow, 0)
 	for rows.Next() {
 		row, scanErr := scanStore(rows)
@@ -336,7 +332,7 @@ func UpdateFieldStoreDraft(
 	if err != nil {
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if err := lockStoreMutationIdempotency(ctx, tx, actorID, "update-field-store-draft", idempotencyKey); err != nil {
 		return FieldPartnerStoreDraft{}, StoreAuditEvent{}, err

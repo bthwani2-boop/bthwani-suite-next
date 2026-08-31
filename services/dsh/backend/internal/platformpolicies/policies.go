@@ -84,7 +84,7 @@ func ListZones(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	items := []Zone{}
 	for rows.Next() {
@@ -126,7 +126,7 @@ func ListSlaRules(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	items := []SlaRule{}
 	for rows.Next() {
@@ -240,7 +240,7 @@ func withIdempotency[T any](
 	if err != nil {
 		return zero, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	lockKey := mutation.ActorID + "|" + operation + "|" + mutation.IdempotencyKey
 	if _, err := tx.ExecContext(

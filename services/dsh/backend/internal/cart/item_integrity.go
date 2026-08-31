@@ -88,7 +88,7 @@ func HydrateOperatorCartItems(ctx context.Context, db *sql.DB, carts []Cart) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	itemsByCartID := make(map[string][]CartItem, len(carts))
 	for rows.Next() {

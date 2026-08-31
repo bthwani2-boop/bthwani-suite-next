@@ -67,7 +67,7 @@ func (s *protectedStoreServer) handleLinkCatalogAssetSafe(w http.ResponseWriter,
 			s.writeCatalogMutationError(w, beginErr)
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 		link, err = centralcatalog.ReplacePrimaryAssetLink(r.Context(), tx, input)
 		if err == nil {
 			err = tx.Commit()
@@ -121,7 +121,7 @@ func (s *protectedStoreServer) putEntityImageSafe(
 		s.writeCatalogMutationError(w, err)
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	link, err := centralcatalog.ReplacePrimaryAssetLink(r.Context(), tx, centralcatalog.AssetLinkInput{
 		AssetID:    input.AssetID,

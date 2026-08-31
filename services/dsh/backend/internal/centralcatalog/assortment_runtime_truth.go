@@ -311,7 +311,7 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 	if err != nil {
 		return StoreAssortment{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(
 		ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,

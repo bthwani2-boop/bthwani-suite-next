@@ -155,7 +155,7 @@ func (c *Client) CalculateQuote(ctx context.Context, input CalculatePricingQuote
 	if err != nil {
 		return nil, fmt.Errorf("call WLT pricing quote: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return nil, fmt.Errorf("WLT pricing quote returned HTTP %d", response.StatusCode)
@@ -196,7 +196,7 @@ func (c *Client) GetCheckoutQuote(ctx context.Context, checkoutIntentID string) 
 	if err != nil {
 		return nil, fmt.Errorf("read WLT checkout quote: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode == http.StatusNotFound || response.StatusCode == http.StatusConflict {
 		return nil, fmt.Errorf("canonical WLT checkout quote is unavailable (HTTP %d)", response.StatusCode)
 	}

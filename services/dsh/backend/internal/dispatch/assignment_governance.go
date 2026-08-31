@@ -282,7 +282,7 @@ func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCod
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]CaptainDispatchCandidate, 0)
 	for rows.Next() {
 		var item CaptainDispatchCandidate
@@ -296,22 +296,6 @@ func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCod
 		items = append(items, item)
 	}
 	return items, rows.Err()
-}
-
-func getCaptainCandidate(db *sql.DB, operatorContextID, captainID, serviceAreaCode string) (*CaptainDispatchCandidate, error) {
-	if serviceAreaCode == "" {
-		return nil, fmt.Errorf("%w: serviceAreaCode is required, cannot determine from local DB anymore", ErrInvalid)
-	}
-	items, err := ListCaptainDispatchCandidates(db, operatorContextID, serviceAreaCode, 200)
-	if err != nil {
-		return nil, err
-	}
-	for i := range items {
-		if items[i].CaptainID == captainID {
-			return &items[i], nil
-		}
-	}
-	return nil, ErrCaptainNotEligible
 }
 
 func finalizeCandidate(item *CaptainDispatchCandidate) {
@@ -421,7 +405,7 @@ func CreateGovernedAssignment(db *sql.DB, input GovernedCreateAssignmentInput) (
 	if err != nil {
 		return nil, false, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, input.OperatorContextID+"|dispatch|"+input.OrderID); err != nil {
 		return nil, false, err
@@ -580,7 +564,7 @@ func acceptGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignment
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	assignmentID = command.AssignmentID
 	captainID = command.ActorID
 	if replayed {
@@ -648,7 +632,7 @@ func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmen
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	assignmentID = command.AssignmentID
 	captainID = command.ActorID
 	if replayed {
@@ -784,7 +768,7 @@ func expireOverdueAssignments(
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if command != nil {
 		resultCount, replayed, err := beginOperatorDispatchCommand(tx, *command)
 		if err != nil {
@@ -804,7 +788,7 @@ func expireOverdueAssignments(
 		return 0, err
 	}
 	items, err := scanAssignments(rows)
-	rows.Close()
+	_ = rows.Close()
 	if err != nil {
 		return 0, err
 	}
@@ -892,7 +876,7 @@ func cancelGovernedAssignment(
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if command != nil {
 		_, replayed, err := beginOperatorDispatchCommand(tx, *command)
 		if err != nil {
@@ -974,7 +958,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, "dispatch-reassign|"+input.AssignmentID); err != nil {
 		return nil, err
 	}
@@ -1120,7 +1104,7 @@ func ListDispatchDecisions(db *sql.DB, operatorContextID, assignmentID, orderID 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]DispatchDecision, 0)
 	for rows.Next() {
 		var item DispatchDecision
@@ -1149,7 +1133,7 @@ func ListOperatorAssignmentsInOperatorContext(db *sql.DB, operatorContextID stri
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanAssignments(rows)
 }
 
@@ -1174,7 +1158,7 @@ func ListCaptainAssignmentsInOperatorContext(db *sql.DB, operatorContextID, capt
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanAssignments(rows)
 }
 

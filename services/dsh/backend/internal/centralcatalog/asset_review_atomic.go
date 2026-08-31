@@ -26,7 +26,7 @@ func ReviewAssetAtomicExpected(
 	if err != nil {
 		return CatalogAsset{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var currentStatus string
 	var currentVersion int

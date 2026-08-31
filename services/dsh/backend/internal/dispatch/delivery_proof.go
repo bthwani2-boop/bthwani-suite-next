@@ -134,7 +134,7 @@ func issueDeliveryPIN(db *sql.DB, operatorContextID, orderID, clientID string) (
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var assignmentID, deliveryStatus, assignmentStatus string
 	err = tx.QueryRow(`
@@ -241,7 +241,7 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var current *Assignment
 	current, err = lockAssignmentForOperatorContext(tx, input.OperatorContextID, assignmentID, captainID)
@@ -361,7 +361,7 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var storedProofID, storedFingerprint string
 	receiptErr := tx.QueryRow(`
@@ -596,7 +596,7 @@ func listOperatorDeliveryProofs(db *sql.DB, operatorContextID string, status Del
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	proofs := make([]DeliveryProof, 0)
 	for rows.Next() {
 		proof, _, scanErr := scanDeliveryProofRow(rows)

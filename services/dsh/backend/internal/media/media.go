@@ -131,7 +131,7 @@ func (c *Client) ChecksumSHA256(ctx context.Context, key string) (string, error)
 	if err != nil {
 		return "", fmt.Errorf("media: checksum get failed: %w", err)
 	}
-	defer obj.Close()
+	defer func() { _ = obj.Close() }()
 	h := sha256.New()
 	if _, err := io.Copy(h, obj); err != nil {
 		return "", fmt.Errorf("media: checksum read failed: %w", err)

@@ -188,7 +188,7 @@ func ReportDeliveryException(db *sql.DB, assignmentID, captainID string, input R
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	requestedOperatorContextID := strings.TrimSpace(input.OperatorContextID)
 	if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, requestedOperatorContextID+"|delivery-exception|"+input.IdempotencyKey); err != nil {
@@ -290,7 +290,7 @@ func AcknowledgeDeliveryException(db *sql.DB, operatorContextID, id string, expe
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := acknowledgeDeliveryExceptionTx(tx, operatorContextID, id, expectedVersion, actorID); err != nil {
 		return nil, err
 	}
@@ -347,7 +347,7 @@ func ResolveDeliveryExceptionRetrySameCaptain(db *sql.DB, operatorContextID, id 
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := resolveDeliveryExceptionRetrySameCaptainTx(tx, operatorContextID, id, expectedVersion, note, actorID, false); err != nil {
 		return nil, err
 	}
@@ -429,7 +429,7 @@ func ResolveDeliveryExceptionReassignCaptain(db *sql.DB, operatorContextID, id s
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := resolveDeliveryExceptionReassignCaptainTx(tx, operatorContextID, id, expectedVersion, newCaptainID, note, actorID, false); err != nil {
 		return nil, err
 	}
@@ -704,7 +704,7 @@ func resolveDeliveryExceptionCancelOrderWithCorrelation(db *sql.DB, operatorCont
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	res, err := tx.Exec(`
                 UPDATE dsh_delivery_exceptions
                 SET status='resolved', resolved_at=NOW(), resolved_by_actor_id=$1,
@@ -738,7 +738,7 @@ func ResolveDeliveryExceptionReturnToStore(db *sql.DB, operatorContextID, id str
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := resolveDeliveryExceptionReturnToStoreTx(tx, operatorContextID, id, expectedVersion, note, actorID, false); err != nil {
 		return nil, err
 	}
@@ -840,7 +840,7 @@ func captainArriveReturnToStore(db *sql.DB, command returnToStoreCommand, assign
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if exceptionID, found, err := beginReturnToStoreCommand(tx, command); err != nil {
 		return nil, err
 	} else if found {
@@ -956,7 +956,7 @@ func AcceptReturnToStoreByPartner(db *sql.DB, operatorContextID, orderID, actorI
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	exceptionID, found, err := beginReturnToStoreCommand(tx, command)
 	if err != nil {
 		return nil, err
@@ -1067,15 +1067,6 @@ func completeReturnToStoreTx(tx *sql.Tx, assignmentID, orderID, actorID, excepti
 	return nil
 }
 
-func getDeliveryExceptionForUpdate(tx *sql.Tx, id string) (*DeliveryException, error) {
-	row := tx.QueryRow(`SELECT `+deliveryExceptionColumns+` FROM dsh_delivery_exceptions e WHERE e.id=$1::uuid FOR UPDATE`, id)
-	item, err := scanDeliveryException(row.Scan)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	return item, err
-}
-
 func getDeliveryExceptionForUpdateForContext(tx *sql.Tx, operatorContextID, id string) (*DeliveryException, error) {
 	row := tx.QueryRow(deliveryExceptionByIDAndContextForUpdateSQL, id, operatorContextID)
 	item, err := scanDeliveryException(row.Scan)
@@ -1169,7 +1160,7 @@ func ListOperatorDeliveryExceptions(db *sql.DB, operatorContextID string, status
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]DeliveryException, 0)
 	for rows.Next() {
 		item, err := scanDeliveryException(rows.Scan)

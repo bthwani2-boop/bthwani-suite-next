@@ -65,7 +65,7 @@ func ListFundingLifecycleDiagnostics(db *sql.DB, limit int) ([]FundingLifecycleD
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	items := make([]FundingLifecycleDiagnostic, 0)
 	for rows.Next() {

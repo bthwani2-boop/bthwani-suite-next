@@ -12,8 +12,6 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-const wltStoreOnboardingFeePolicyPath = "/wlt/commercial/store-onboarding-fee"
-
 type storeOnboardingFeePolicyWriteInput struct {
 	Enabled          bool       `json:"enabled"`
 	AmountMinorUnits int64      `json:"amountMinorUnits"`

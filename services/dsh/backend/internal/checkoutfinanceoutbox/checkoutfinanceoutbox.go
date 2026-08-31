@@ -129,7 +129,7 @@ func EnqueueCodReservationReleaseForOrder(db *sql.DB, orderID, reason, correlati
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := EnqueueCodReservationReleaseForOrderTx(tx, orderID, reason, correlationID); err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func EnqueuePaymentSessionExpiry(db *sql.DB, checkoutIntentID, paymentSessionID,
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := Enqueue(tx, EnqueueInput{
 		EventType:        EventTypeExpireSession,
 		CheckoutIntentID: strings.TrimSpace(checkoutIntentID),
@@ -222,16 +222,16 @@ func claimBatch(db *sql.DB, limit int, lease time.Duration, checkoutIntentID str
 			&event.ClientID, &event.Reason, &event.CorrelationID, &event.AttemptCount,
 			&event.ReadbackAttemptCount, &event.FailureDisposition, &event.FailureClassification, &event.DiagnosticCode,
 		); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, fmt.Errorf("scan checkout finance outbox event: %w", err)
 		}
 		events = append(events, event)
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return nil, err
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	for index := range events {
 		events[index].LeaseToken = uuid.NewString()

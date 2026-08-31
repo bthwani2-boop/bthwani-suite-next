@@ -16,10 +16,6 @@ import (
 	"dsh-api/internal/store"
 )
 
-type cartServer struct {
-	protectedStoreServer
-}
-
 func requireCartMutationIdempotency(w http.ResponseWriter, r *http.Request) (string, bool) {
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {

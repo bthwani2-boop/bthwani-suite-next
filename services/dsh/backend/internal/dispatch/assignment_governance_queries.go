@@ -63,7 +63,7 @@ func ListAssignmentGovernance(db *sql.DB, assignmentIDs []string) (map[string]As
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make(map[string]AssignmentGovernance, len(assignmentIDs))
 	for rows.Next() {
 		var item AssignmentGovernance

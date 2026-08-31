@@ -204,7 +204,7 @@ func ListPreparationIssues(db *sql.DB, orderID string) ([]PreparationIssue, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	issues := make([]PreparationIssue, 0)
 	for rows.Next() {
 		issue, scanErr := scanPreparationIssue(rows)
@@ -277,7 +277,7 @@ func CreatePreparationIssue(db *sql.DB, rawInput CreatePreparationIssueInput) (*
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var actualStoreID string
 	var status OrderStatus
@@ -415,7 +415,7 @@ func DecidePreparationIssue(db *sql.DB, input DecidePreparationIssueInput) (*Pre
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := scanPreparationIssue(tx.QueryRow(`
 		SELECT `+preparationIssueColumns+`
@@ -535,7 +535,7 @@ func ResolvePreparationIssue(db *sql.DB, input ResolvePreparationIssueInput) (*P
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := scanPreparationIssue(tx.QueryRow(`
 		SELECT `+preparationIssueColumns+`

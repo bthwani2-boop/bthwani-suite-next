@@ -172,7 +172,7 @@ func List(db *sql.DB, filter ListFilter) ([]PickupSession, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var sessions []PickupSession
 	for rows.Next() {

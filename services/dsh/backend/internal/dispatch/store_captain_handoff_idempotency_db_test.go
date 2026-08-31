@@ -139,7 +139,7 @@ func TestReplacementAssignmentImmediatelySupersedesStoreCaptainHandoffDBIntegrat
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`
 		UPDATE dsh_assignments
 		SET status='cancelled', updated_at=NOW()

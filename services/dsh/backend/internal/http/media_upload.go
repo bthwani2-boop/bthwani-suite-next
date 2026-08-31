@@ -103,7 +103,7 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file field is required")
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	uploadBody, contentType, err := prepareMediaUploadBody(file, header.Header.Get("Content-Type"))
 	if err != nil {
@@ -169,7 +169,7 @@ func (s *protectedStoreServer) handleMediaDownload(w http.ResponseWriter, r *htt
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "media not found")
 		return
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	w.Header().Set("Content-Type", contentType)
 	_, _ = io.Copy(w, reader)
 }

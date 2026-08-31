@@ -51,7 +51,7 @@ func TestComputeCheckoutSnapshotTxUsesMinorUnitSnapshotDBIntegration(t *testing.
 	if err != nil {
 		t.Fatalf("begin checkout snapshot transaction: %v", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	snapshot, err := ComputeCheckoutSnapshotTx(ctx, tx, clientID, cartID, storeID, 1)
 	if err != nil {
@@ -76,7 +76,7 @@ func TestComputeCheckoutSnapshotTxUsesMinorUnitSnapshotDBIntegration(t *testing.
 	if err != nil {
 		t.Fatalf("begin stale checkout snapshot transaction: %v", err)
 	}
-	defer staleTx.Rollback()
+	defer func() { _ = staleTx.Rollback() }()
 	if _, err := ComputeCheckoutSnapshotTx(ctx, staleTx, clientID, cartID, storeID, 1); !errors.Is(err, ErrVersionConflict) {
 		t.Fatalf("expected stale checkout version conflict before snapshot creation, got %v", err)
 	}

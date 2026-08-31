@@ -113,7 +113,7 @@ func RefreshPreparationAlerts(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	resolvedResult, err := tx.Exec(`
 		UPDATE dsh_order_preparation_alerts a
@@ -271,7 +271,7 @@ func ListPreparationAlerts(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	alerts := make([]PreparationAlert, 0)
 	for rows.Next() {
 		alert, scanErr := scanPreparationAlert(rows)
@@ -299,7 +299,7 @@ func AcknowledgePreparationAlert(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	alert, err := scanPreparationAlert(tx.QueryRow(`
 		UPDATE dsh_order_preparation_alerts

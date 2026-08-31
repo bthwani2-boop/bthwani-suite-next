@@ -50,7 +50,7 @@ func (s *protectedStoreServer) handlePreviewOperatorReelMedia(w http.ResponseWri
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "reel media object not found")
 		return
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "private, no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")

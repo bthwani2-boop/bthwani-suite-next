@@ -246,7 +246,7 @@ func ListForOperatorContext(db *sql.DB, operatorContextID string, filter ListFil
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tasks []PartnerDeliveryTask
 	for rows.Next() {

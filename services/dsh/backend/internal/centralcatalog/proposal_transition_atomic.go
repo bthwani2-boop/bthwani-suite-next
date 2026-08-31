@@ -14,7 +14,7 @@ func collectIDs(rows *sql.Rows, err error) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var ids []string
 	for rows.Next() {
 		var id string
@@ -46,7 +46,7 @@ func TransitionProposalAtomicExpected(
 	if err != nil {
 		return ProductProposal{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	proposal, err := scanProposal(tx.QueryRowContext(ctx,
 		`SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1 FOR UPDATE`, id))

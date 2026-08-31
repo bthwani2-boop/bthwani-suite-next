@@ -213,7 +213,7 @@ func clientOrderRatingPromptQuery(ctx context.Context, queryer ratingQueryer, op
 	if err != nil {
 		return ClientOrderPrompt{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var kind string
 		if err := rows.Scan(&kind); err != nil {
@@ -253,7 +253,7 @@ func SubmitClientOrderRatings(ctx context.Context, db *sql.DB, operatorContextID
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
 		operatorContextID+"|"+clientActorID+"|client-order-ratings|key|"+mutation.IdempotencyKey); err != nil {
 		return nil, err
@@ -368,17 +368,12 @@ type ratingInput struct {
 	Score                                                                  int
 }
 
-type queryRowExecutor interface {
-	QueryRowContext(context.Context, string, ...any) *sql.Row
-	ExecContext(context.Context, string, ...any) (sql.Result, error)
-}
-
 func upsertRating(ctx context.Context, db *sql.DB, input ratingInput) (Rating, error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return Rating{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	rating, err := upsertRatingTx(ctx, tx, input)
 	if err != nil {
 		return Rating{}, err
@@ -475,7 +470,7 @@ func Summary(ctx context.Context, db *sql.DB, operatorContextID, targetKind, tar
 	if err != nil {
 		return RatingSummary{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var score, count int
 		if err := rows.Scan(&score, &count); err != nil {
@@ -505,7 +500,7 @@ func UpdateModerationStatus(ctx context.Context, db *sql.DB, operatorContextID, 
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	res, err := tx.ExecContext(ctx, `
 		UPDATE dsh_provider_ratings
@@ -536,7 +531,7 @@ func SubmitPartnerResponse(ctx context.Context, db *sql.DB, operatorContextID, p
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	res, err := tx.ExecContext(ctx, `
 		UPDATE dsh_provider_ratings

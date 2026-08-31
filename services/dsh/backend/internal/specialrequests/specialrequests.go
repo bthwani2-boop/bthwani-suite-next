@@ -805,7 +805,7 @@ func (r *PostgresRepository) ListByClientInOperatorContext(ctx context.Context, 
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var reqs []SpecialRequest
 	for rows.Next() {
@@ -870,7 +870,7 @@ func (r *PostgresRepository) ListForOperatorInOperatorContext(ctx context.Contex
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var reqs []SpecialRequest
 	for rows.Next() {

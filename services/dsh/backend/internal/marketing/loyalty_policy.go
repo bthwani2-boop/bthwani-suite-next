@@ -100,7 +100,7 @@ func ListLoyaltyEarningPolicies(db *sql.DB) ([]LoyaltyEarningPolicy, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	result := []LoyaltyEarningPolicy{}
 	for rows.Next() {
 		policy, scanErr := scanLoyaltyPolicy(rows)
@@ -215,7 +215,7 @@ func UpdateLoyaltyEarningPolicy(
 	if err != nil {
 		return LoyaltyEarningPolicy{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if next.Status == "active" {
 		if _, err := tx.Exec(`
 			UPDATE dsh_loyalty_earning_policies

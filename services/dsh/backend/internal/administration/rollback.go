@@ -73,7 +73,7 @@ func CreateRollbackRequest(ctx context.Context, db *sql.DB, actorID string, appr
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var actionType, targetActor, roleName, status, sourceApprovedBy string
 	err = tx.QueryRowContext(ctx, `
@@ -174,7 +174,7 @@ func ListRollbackRequests(ctx context.Context, db *sql.DB, status string) ([]Rol
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	out := make([]RollbackRequest, 0)
 	for rows.Next() {
@@ -247,7 +247,7 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var req RollbackRequest
 	err = tx.QueryRowContext(ctx, `

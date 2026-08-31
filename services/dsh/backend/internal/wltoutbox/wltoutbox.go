@@ -153,7 +153,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
         if err != nil {
                 return nil, err
         }
-        defer tx.Rollback()
+        defer func() { _ = tx.Rollback() }()
 
         if _, err := tx.Exec(`
                 UPDATE dsh_wlt_outbox_events
@@ -189,7 +189,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
                         &event.ReversalOfReference, &event.ExternalReference, &payload,
                         &event.ReversalRequested, &event.AttemptCount,
                 ); err != nil {
-                        rows.Close()
+                        _ = rows.Close()
                         return nil, fmt.Errorf("scan wlt outbox event: %w", err)
                 }
                 event.Payload = map[string]any{}
@@ -201,7 +201,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
         if err := rows.Err(); err != nil {
                 return nil, err
         }
-        rows.Close()
+        _ = rows.Close()
 
         if len(events) > 0 {
                 ids := make([]string, len(events))
@@ -228,7 +228,7 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
         if err != nil {
                 return err
         }
-        defer tx.Rollback()
+        defer func() { _ = tx.Rollback() }()
 
         var eventType, operatorContextID, orderID, partnerID, checkoutIntentID, clientID string
         var points int64

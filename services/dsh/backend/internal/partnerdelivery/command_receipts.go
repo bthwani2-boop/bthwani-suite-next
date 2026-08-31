@@ -60,7 +60,7 @@ func (s *Service) executeCommand(
 	if err != nil {
 		return nil, err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	lockKey := "partner_delivery|" + operatorContextID + "|" + actorID + "|" + commandID
 	if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_lock(hashtextextended($1, 0))`, lockKey); err != nil {

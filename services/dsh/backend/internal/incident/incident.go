@@ -156,7 +156,7 @@ func List(db *sql.DB, filter ListFilter) ([]Incident, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var incidents []Incident
 	for rows.Next() {

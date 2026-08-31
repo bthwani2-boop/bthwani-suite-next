@@ -30,7 +30,7 @@ func DeliverOtpNotification(ctx context.Context, db *sql.DB, session *PickupSess
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	actionURL := "/orders/" + session.OrderID + "/pickup"
 	if _, err := tx.ExecContext(ctx, `

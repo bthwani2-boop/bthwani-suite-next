@@ -195,7 +195,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 			sessionID = deliveryCtx.WltPaymentSessionID
 			checkoutIntentID = deliveryCtx.CheckoutIntentID
 		}
-		tx.Rollback()
+		_ = tx.Rollback()
 	}
 
 	if isCod {

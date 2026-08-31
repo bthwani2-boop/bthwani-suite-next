@@ -186,7 +186,7 @@ func TestOutboundHandoffReassignmentSupersedesPriorAttemptDBIntegration(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`UPDATE dsh_assignments SET status='cancelled', updated_at=NOW() WHERE id=$1::uuid`, fixture.AssignmentID); err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +222,7 @@ func TestOutboundHandoffReassignmentSupersedesPriorAttemptDBIntegration(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	statuses := map[string]string{}
 	for rows.Next() {
 		var id, status string

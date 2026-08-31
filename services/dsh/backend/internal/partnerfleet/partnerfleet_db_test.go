@@ -26,7 +26,7 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	if err := db.Ping(); err != nil {
 		t.Fatal(err)
 	}

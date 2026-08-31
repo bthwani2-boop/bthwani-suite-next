@@ -83,7 +83,7 @@ func (c *Client) do(ctx context.Context, path string, input any, output any) err
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
 	if err != nil {
 		return err

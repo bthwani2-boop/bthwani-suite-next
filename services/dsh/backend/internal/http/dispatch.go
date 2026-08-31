@@ -246,20 +246,6 @@ func (s *protectedStoreServer) handleArriveReturnToStore(w http.ResponseWriter, 
 	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
 }
 
-func marshalDispatchAssignmentForPartner(a dispatch.Assignment) map[string]any {
-	return map[string]any{
-		"id":             a.ID,
-		"orderId":        a.OrderID,
-		"captainId":      a.CaptainID,
-		"status":         string(a.Status),
-		"acceptedAt":     a.AcceptedAt,
-		"completedAt":    a.CompletedAt,
-		"createdAt":      a.CreatedAt,
-		"updatedAt":      a.UpdatedAt,
-		"deliveryStatus": string(a.Delivery.Status),
-	}
-}
-
 func (s *protectedStoreServer) writeDispatchResult(w http.ResponseWriter, status int, assignment *dispatch.Assignment, err error) {
 	switch {
 	case err == nil:
@@ -275,14 +261,6 @@ func (s *protectedStoreServer) writeDispatchResult(w http.ResponseWriter, status
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "dispatch operation failed")
 	}
-}
-
-func marshalDispatchAssignments(list []dispatch.Assignment) []map[string]any {
-	out := make([]map[string]any, len(list))
-	for i, item := range list {
-		out[i] = marshalDispatchAssignment(item)
-	}
-	return out
 }
 
 func marshalDispatchAssignment(a dispatch.Assignment) map[string]any {

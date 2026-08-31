@@ -45,7 +45,7 @@ func (c *Client) GetPromotionFundingReservation(
 	if err != nil {
 		return nil, fmt.Errorf("read WLT promotion funding: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		var apiError struct {
 			Code    string `json:"code"`
