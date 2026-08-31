@@ -939,9 +939,11 @@ jobs:
           node --check "${trusted_task_validator}"
           project_key="$(sed -n 's/^sonar\.projectKey=//p' "${trusted_properties}" | head -n 1)"
           [[ -n "${project_key}" ]] || { echo "::error::trusted Sonar project key missing"; exit 1; }
-          echo "TRUSTED_SONAR_CLASSIFIER=${trusted_classifier}" >> "${GITHUB_ENV}"
-          echo "TRUSTED_SONAR_TASK_VALIDATOR=${trusted_task_validator}" >> "${GITHUB_ENV}"
-          echo "SONAR_PROJECT_KEY=${project_key}" >> "${GITHUB_ENV}"
+          {
+            echo "TRUSTED_SONAR_CLASSIFIER=${trusted_classifier}"
+            echo "TRUSTED_SONAR_TASK_VALIDATOR=${trusted_task_validator}"
+            echo "SONAR_PROJECT_KEY=${project_key}"
+          } >> "${GITHUB_ENV}"
 
       - name: Download and validate exact Sonar analysis task identity
         shell: bash
