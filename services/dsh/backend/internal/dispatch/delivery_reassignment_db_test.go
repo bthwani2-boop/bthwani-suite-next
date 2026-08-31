@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"dsh-api/internal/specialrequests"
+
 	"github.com/google/uuid"
 )
 
@@ -150,5 +152,108 @@ func TestDeliveryExceptionRejectsReassignmentAfterPickupDBIntegration(t *testing
 	}
 	if _, err := ResolveDeliveryExceptionReassignCaptain(db, operatorContextID, item.ID, item.Version, "other-captain", "محاولة إعادة إسناد غير مسموحة", "operator-1"); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected reassignment conflict after pickup, got %v", err)
+	}
+}
+
+func TestValidateReassignmentStateRejectsUnsafeStates(t *testing.T) {
+	cancelOrder := "cancel_order"
+	tests := []struct {
+		name                string
+		current             *DeliveryException
+		expectedVersion     int
+		newCaptainID        string
+		note                string
+		requireAcknowledged bool
+		wantErr             error
+	}{
+		{
+			name:                "open exception requires acknowledgement",
+			current:             &DeliveryException{Status: DeliveryExceptionOpen, CaptainID: "captain-old", Version: 1},
+			expectedVersion:     1,
+			newCaptainID:        "captain-new",
+			note:                "acknowledge before reassignment",
+			requireAcknowledged: true,
+			wantErr:             ErrConflict,
+		},
+		{
+			name:            "resolved exception cannot change action",
+			current:         &DeliveryException{Status: DeliveryExceptionResolved, CaptainID: "captain-old", Version: 2, ResolutionAction: &cancelOrder},
+			expectedVersion: 2,
+			newCaptainID:    "captain-new",
+			note:            "reassign after resolution",
+			wantErr:         ErrConflict,
+		},
+		{
+			name:            "stale exception version is rejected",
+			current:         &DeliveryException{Status: DeliveryExceptionAcknowledged, CaptainID: "captain-old", Version: 2},
+			expectedVersion: 1,
+			newCaptainID:    "captain-new",
+			note:            "stale reassignment",
+			wantErr:         ErrConflict,
+		},
+		{
+			name:            "same captain is rejected",
+			current:         &DeliveryException{Status: DeliveryExceptionAcknowledged, CaptainID: "captain-old", Version: 1},
+			expectedVersion: 1,
+			newCaptainID:    "captain-old",
+			note:            "same captain reassignment",
+			wantErr:         ErrInvalid,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := validateReassignmentState(tt.current, tt.expectedVersion, tt.newCaptainID, tt.note, tt.requireAcknowledged)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("expected %v, got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestSpecialRequestDeliveryExceptionReassignsBeforePickupDBIntegration(t *testing.T) {
+	db := openDispatchRequiredDB(t)
+	specialRequestID, _ := newApprovedSpecialRequestFixture(t, db)
+	oldCaptainID, actorID := newCaptainAndActor()
+	assignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
+		SpecialRequestID:   specialRequestID,
+		CaptainID:          oldCaptainID,
+		ActorID:            actorID,
+		OperatorContextID:  testSpecialRequestOperatorContextID,
+	})
+	if err != nil {
+		t.Fatalf("create special-request assignment: %v", err)
+	}
+	if _, err := AcceptAssignment(db, testSpecialRequestOperatorContextID, assignment.ID, oldCaptainID); err != nil {
+		t.Fatalf("accept special-request assignment: %v", err)
+	}
+	if _, err := testDeliveryStatusCommandCurrent(db, testSpecialRequestOperatorContextID, assignment.ID, oldCaptainID, DeliveryArrivedStore, "special-request-reassignment-arrival"); err != nil {
+		t.Fatalf("advance special-request delivery to store: %v", err)
+	}
+
+	exception, err := ReportDeliveryException(db, assignment.ID, oldCaptainID, ReportDeliveryExceptionInput{
+		OperatorContextID: testSpecialRequestOperatorContextID,
+		ReasonCode:        ExceptionCustomerUnreachable,
+		Note:              "تعذر الوصول إلى العميل قبل استلام الطلب",
+		IdempotencyKey:    "special-request-reassign-exception-" + assignment.ID,
+		CorrelationID:     "special-request-reassign-correlation-" + assignment.ID,
+	})
+	if err != nil {
+		t.Fatalf("report special-request exception: %v", err)
+	}
+
+	replacementCaptainID := oldCaptainID + "-replacement"
+	note := "إعادة إسناد الطلب الخاص قبل الاستلام"
+	resolved, err := ResolveDeliveryExceptionReassignCaptain(db, testSpecialRequestOperatorContextID, exception.ID, exception.Version, replacementCaptainID, note, actorID)
+	if err != nil {
+		t.Fatalf("resolve special-request reassignment: %v", err)
+	}
+	if resolved.Status != DeliveryExceptionResolved || resolved.ReplacementAssignmentID == nil || resolved.ReplacementCaptainID == nil || *resolved.ReplacementCaptainID != replacementCaptainID {
+		t.Fatalf("unexpected special-request reassignment result: %+v", resolved)
+	}
+
+	request := getSpecialRequest(t, db, specialRequestID)
+	if request.Status != specialrequests.StatusAssigned || request.DispatchAssignmentID == nil || *request.DispatchAssignmentID != *resolved.ReplacementAssignmentID {
+		t.Fatalf("special-request readback mismatch: status=%s assignment=%v resolved=%v", request.Status, request.DispatchAssignmentID, resolved.ReplacementAssignmentID)
 	}
 }

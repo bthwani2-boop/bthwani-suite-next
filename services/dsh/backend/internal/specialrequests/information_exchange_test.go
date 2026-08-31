@@ -2,6 +2,7 @@ package specialrequests
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -77,5 +78,11 @@ func TestInformationExchangeRequestRespondAndReplayDBIntegration(t *testing.T) {
 	}
 	if replayedRequest.Version != responded.Version || replayedExchange.ID != answered.ID || replayedExchange.Status != answered.Status {
 		t.Fatalf("replay must return committed response without a second mutation: request=%#v exchange=%#v", replayedRequest, replayedExchange)
+	}
+	if _, _, err := svc.RespondClientInformationInOperatorContext(
+		ctx, testOperatorContextID, req.ID, clientID, exchange.ID, requested.Version,
+		"A different response must not reuse the idempotency key", mutation,
+	); !errors.Is(err, ErrInformationResponseIdempotencyConflict) {
+		t.Fatalf("different response with the same idempotency key returned %v, want conflict", err)
 	}
 }

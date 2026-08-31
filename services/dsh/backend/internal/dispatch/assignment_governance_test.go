@@ -112,3 +112,29 @@ func TestDispatchErrorCodeIsStable(t *testing.T) {
 		}
 	}
 }
+
+func TestPrepareCaptainAssignmentActionValidatesCommandBeforeOpeningDatabase(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		input captainAssignmentActionInput
+	}{
+		{
+			name:  "assignment and captain are required",
+			input: captainAssignmentActionInput{},
+		},
+		{
+			name: "command identity must be complete",
+			input: captainAssignmentActionInput{
+				assignmentID: "assignment-id", captainID: "captain-id", operation: "accept",
+				idempotencyKey: "short", correlationID: "valid-correlation-id",
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, _, _, _, err := prepareCaptainAssignmentAction(test.input)
+			if !errors.Is(err, ErrInvalid) {
+				t.Fatalf("expected ErrInvalid before database access, got %v", err)
+			}
+		})
+	}
+}

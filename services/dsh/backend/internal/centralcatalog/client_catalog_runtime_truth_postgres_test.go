@@ -2,6 +2,7 @@ package centralcatalog
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"testing"
 	"time"
@@ -93,6 +94,14 @@ func TestGetPurchasableClientCatalogUsesCurrentPriceAndInventoryDBIntegration(t 
 	overlappingPriceInput.EffectiveUntil = &overlappingPriceUntil
 	if _, err := CreateAssortmentPriceAtomic(ctx, db, storeID, productID, "operator-test", "client-catalog-truth-overlap-price-"+suffix, overlappingPriceInput); err == nil {
 		t.Fatal("overlapping effective price must be rejected")
+	}
+	invalidPriceInput := priceInput
+	invalidPriceInput.Currency = "EURO"
+	if _, err := CreateAssortmentPriceAtomic(ctx, db, storeID, productID, "operator-test", "client-catalog-truth-invalid-price-"+suffix, invalidPriceInput); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("invalid price input returned %v, want ErrInvalid", err)
+	}
+	if _, err := CreateAssortmentPriceAtomic(ctx, db, storeID, "missing-master-product-"+suffix, "operator-test", "client-catalog-truth-missing-assortment-"+suffix, priceInput); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("missing assortment returned %v, want ErrNotFound", err)
 	}
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortments WHERE id=$1`, assortmentID)
