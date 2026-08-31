@@ -348,41 +348,13 @@ func ReviewDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID, docume
 		operatorContextID, partnerID, documentID, input.ReviewedByActorID, key,
 	).Scan(&replayID, &storedHash)
 	if err == nil {
-		if storedHash != requestHash {
-			return Document{}, DocumentReview{}, ErrIdempotencyConflict
-		}
-		document, loadErr := loadDocumentTx(ctx, tx, partnerID, documentID)
-		if loadErr != nil {
-			return Document{}, DocumentReview{}, loadErr
-		}
-		review, loadErr := loadDocumentReviewTx(ctx, tx, partnerID, documentID, replayID)
-		if loadErr != nil {
-			return Document{}, DocumentReview{}, loadErr
-		}
-		if err := tx.Commit(); err != nil {
-			return Document{}, DocumentReview{}, err
-		}
-		return document, review, nil
+		return replayReviewedDocument(ctx, tx, partnerID, documentID, replayID, storedHash, requestHash)
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return Document{}, DocumentReview{}, err
 	}
 
-	// document_status remains a compatibility projection; review_status is canonical.
-	newDocStatus := "under_review"
-	newReviewStatus := "under_review"
-	switch input.Decision {
-	case "approved":
-		newDocStatus = "approved"
-		newReviewStatus = "verified"
-	case "rejected", "needs_resubmit":
-		newDocStatus = "rejected"
-		if input.Decision == "needs_resubmit" {
-			newReviewStatus = "reupload_required"
-		} else {
-			newReviewStatus = "rejected"
-		}
-	}
+	newDocStatus, newReviewStatus := documentReviewStatuses(input.Decision)
 
 	var d Document
 	err = tx.QueryRowContext(ctx, reviewPartnerDocumentSQL,
@@ -416,6 +388,37 @@ func ReviewDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID, docume
 		return Document{}, DocumentReview{}, err
 	}
 	return d, rev, nil
+}
+
+func replayReviewedDocument(ctx context.Context, tx *sql.Tx, partnerID, documentID, replayID, storedHash, requestHash string) (Document, DocumentReview, error) {
+	if storedHash != requestHash {
+		return Document{}, DocumentReview{}, ErrIdempotencyConflict
+	}
+	document, err := loadDocumentTx(ctx, tx, partnerID, documentID)
+	if err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	review, err := loadDocumentReviewTx(ctx, tx, partnerID, documentID, replayID)
+	if err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	return document, review, nil
+}
+
+func documentReviewStatuses(decision string) (string, string) {
+	switch decision {
+	case "approved":
+		return "approved", "verified"
+	case "needs_resubmit":
+		return "rejected", "reupload_required"
+	case "rejected":
+		return "rejected", "rejected"
+	default:
+		return "under_review", "under_review"
+	}
 }
 
 func loadDocumentReviewTx(ctx context.Context, tx *sql.Tx, partnerID, documentID, reviewID string) (DocumentReview, error) {

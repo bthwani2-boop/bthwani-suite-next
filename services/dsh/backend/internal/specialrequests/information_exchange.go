@@ -239,18 +239,9 @@ func (s *Service) RespondClientInformationInOperatorContext(
 		FOR UPDATE`, operatorContextID, clientID, mutation.IdempotencyKey).Scan(
 		&storedRequestID, &storedFingerprint, &storedExchangeID)
 	if receiptErr == nil {
-		if storedRequestID != requestID || storedFingerprint != fingerprint {
-			return nil, nil, ErrInformationResponseIdempotencyConflict
-		}
-		exchange, err := scanInformationExchange(tx.QueryRowContext(ctx, informationExchangeByIDSQL,
-			storedExchangeID, operatorContextID, requestID, clientID).Scan)
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, fmt.Errorf("%w: committed information exchange is missing", ErrConflict)
-		}
+		exchange, err := replayInformationResponse(ctx, tx, requestID, clientID, operatorContextID,
+			storedRequestID, storedFingerprint, storedExchangeID, fingerprint)
 		if err != nil {
-			return nil, nil, err
-		}
-		if err := tx.Commit(); err != nil {
 			return nil, nil, err
 		}
 		return current, exchange, nil
@@ -274,12 +265,49 @@ func (s *Service) RespondClientInformationInOperatorContext(
 		return nil, nil, err
 	}
 
+	return persistInformationResponse(ctx, tx, s, current, operatorContextID, requestID, clientID,
+		expectedVersion, response, mutation, fingerprint, pending.ID)
+}
+
+func replayInformationResponse(
+	ctx context.Context,
+	tx *sql.Tx,
+	requestID, clientID, operatorContextID, storedRequestID, storedFingerprint, storedExchangeID, fingerprint string,
+) (*InformationExchange, error) {
+	if storedRequestID != requestID || storedFingerprint != fingerprint {
+		return nil, ErrInformationResponseIdempotencyConflict
+	}
+	exchange, err := scanInformationExchange(tx.QueryRowContext(ctx, informationExchangeByIDSQL,
+		storedExchangeID, operatorContextID, requestID, clientID).Scan)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: committed information exchange is missing", ErrConflict)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return exchange, nil
+}
+
+func persistInformationResponse(
+	ctx context.Context,
+	tx *sql.Tx,
+	service *Service,
+	current *SpecialRequest,
+	operatorContextID, requestID, clientID string,
+	expectedVersion int,
+	response string,
+	mutation InformationResponseMutationContext,
+	fingerprint, exchangeID string,
+) (*SpecialRequest, *InformationExchange, error) {
 	status := StatusUnderReview
 	stage := "quote_pending"
 	if current.RequestType == TypeAwnakErrand {
 		stage = "quote_review"
 	}
-	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, requestID, expectedVersion, UpdateInput{
+	updated, err := service.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, requestID, expectedVersion, UpdateInput{
 		Status:        &status,
 		WorkflowStage: &stage,
 	})
@@ -296,11 +324,10 @@ func (s *Service) RespondClientInformationInOperatorContext(
 			updated_at = now()
 		WHERE id = $3 AND status = 'pending'
 		RETURNING `+informationExchangeColumns,
-		response, updated.Version, pending.ID).Scan)
+		response, updated.Version, exchangeID).Scan)
 	if err != nil {
 		return nil, nil, err
 	}
-
 	if err := WriteAuditEvent(tx, requestID, clientID, "client", "respond_information", response, mutation.CorrelationID, requestJSON(current), requestJSON(updated)); err != nil {
 		return nil, nil, fmt.Errorf("write audit event: %w", err)
 	}

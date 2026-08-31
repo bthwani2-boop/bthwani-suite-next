@@ -572,49 +572,23 @@ func AcceptGovernedAssignmentForOperatorContext(
 }
 
 func acceptGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmentID, captainID, idempotencyKey, correlationID string) (*Assignment, error) {
-	assignmentID = strings.TrimSpace(assignmentID)
-	captainID = strings.TrimSpace(captainID)
-	if assignmentID == "" || captainID == "" {
-		return nil, fmt.Errorf("%w: assignmentId and captainId are required", ErrInvalid)
-	}
-	command, err := newCaptainAssignmentCommand(
-		requestedOperatorContextID, captainID, assignmentID, "accept", idempotencyKey, correlationID,
+	tx, command, current, replayed, err := prepareCaptainAssignmentAction(
+		db, requestedOperatorContextID, assignmentID, captainID, "accept", idempotencyKey, correlationID,
+		"captain responded after deadline",
 	)
 	if err != nil {
 		return nil, err
 	}
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
 	defer tx.Rollback()
-	replayed, err := beginCaptainAssignmentCommand(tx, command)
-	if err != nil {
-		return nil, err
-	}
+	assignmentID = command.AssignmentID
+	captainID = command.ActorID
 	if replayed {
 		if err = tx.Commit(); err != nil {
 			return nil, err
 		}
-		return GetCaptainAssignmentForOperatorContext(db, requestedOperatorContextID, assignmentID, captainID)
+		return GetCaptainAssignmentForOperatorContext(db, requestedOperatorContextID, command.AssignmentID, command.ActorID)
 	}
-	current, err := lockAssignmentForOperatorContext(tx, requestedOperatorContextID, assignmentID, captainID)
-	if err != nil {
-		return nil, err
-	}
-	operatorContextID := requestedOperatorContextID
-	if current.Status != AssignmentOffered {
-		return nil, fmt.Errorf("%w: assignment already actioned", ErrConflict)
-	}
-	if !current.ResponseDeadlineAt.After(time.Now().UTC()) {
-		if err = expireAssignmentTx(tx, operatorContextID, current, "captain", captainID, "OFFER_TIMEOUT", "captain responded after deadline"); err != nil {
-			return nil, err
-		}
-		if err = tx.Commit(); err != nil {
-			return nil, err
-		}
-		return nil, ErrOfferExpired
-	}
+	operatorContextID := command.OperatorContextID
 	if err = validateCaptainAcceptanceTx(tx, operatorContextID, captainID); err != nil {
 		return nil, err
 	}
@@ -660,52 +634,29 @@ func DeclineGovernedAssignmentForOperatorContext(
 }
 
 func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmentID, captainID, reasonCode, reason, idempotencyKey, correlationID string) (*Assignment, error) {
-	assignmentID = strings.TrimSpace(assignmentID)
-	captainID = strings.TrimSpace(captainID)
 	reasonCode = strings.TrimSpace(reasonCode)
 	reason = strings.TrimSpace(reason)
-	if assignmentID == "" || captainID == "" || reasonCode == "" || reason == "" {
+	if strings.TrimSpace(assignmentID) == "" || strings.TrimSpace(captainID) == "" || reasonCode == "" || reason == "" {
 		return nil, fmt.Errorf("%w: assignmentId, captainId, reasonCode, and reason are required", ErrInvalid)
 	}
-	command, err := newCaptainAssignmentCommand(
-		requestedOperatorContextID, captainID, assignmentID, "decline", idempotencyKey, correlationID,
+	tx, command, current, replayed, err := prepareCaptainAssignmentAction(
+		db, requestedOperatorContextID, assignmentID, captainID, "decline", idempotencyKey, correlationID,
+		reason,
 		reasonCode, reason,
 	)
 	if err != nil {
 		return nil, err
 	}
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
 	defer tx.Rollback()
-	replayed, err := beginCaptainAssignmentCommand(tx, command)
-	if err != nil {
-		return nil, err
-	}
+	assignmentID = command.AssignmentID
+	captainID = command.ActorID
 	if replayed {
 		if err = tx.Commit(); err != nil {
 			return nil, err
 		}
-		return GetCaptainAssignmentForOperatorContext(db, requestedOperatorContextID, assignmentID, captainID)
+		return GetCaptainAssignmentForOperatorContext(db, requestedOperatorContextID, command.AssignmentID, command.ActorID)
 	}
-	current, err := lockAssignmentForOperatorContext(tx, requestedOperatorContextID, assignmentID, captainID)
-	if err != nil {
-		return nil, err
-	}
-	operatorContextID := requestedOperatorContextID
-	if current.Status != AssignmentOffered {
-		return nil, fmt.Errorf("%w: assignment already actioned", ErrConflict)
-	}
-	if !current.ResponseDeadlineAt.After(time.Now().UTC()) {
-		if err = expireAssignmentTx(tx, operatorContextID, current, "captain", captainID, "OFFER_TIMEOUT", reason); err != nil {
-			return nil, err
-		}
-		if err = tx.Commit(); err != nil {
-			return nil, err
-		}
-		return nil, ErrOfferExpired
-	}
+	operatorContextID := command.OperatorContextID
 	if _, err = orders.TransitionDispatchOrder(tx, operatorContextID, current.OrderID, captainID, "captain",
 		[]orders.OrderStatus{orders.StatusDriverAssigned}, orders.StatusReadyForPickup, reason); err != nil {
 		return nil, mapOrderError(err)
@@ -736,6 +687,54 @@ func declineGovernedAssignment(db *sql.DB, requestedOperatorContextID, assignmen
 		return GetCaptainAssignment(db, assignmentID, captainID)
 	}
 	return GetCaptainAssignmentForOperatorContext(db, operatorContextID, assignmentID, captainID)
+}
+
+func prepareCaptainAssignmentAction(
+	db *sql.DB,
+	requestedOperatorContextID, assignmentID, captainID, operation, idempotencyKey, correlationID, expiryReason string,
+	fields ...string,
+) (tx *sql.Tx, command captainAssignmentCommand, current *Assignment, replayed bool, err error) {
+	assignmentID = strings.TrimSpace(assignmentID)
+	captainID = strings.TrimSpace(captainID)
+	if assignmentID == "" || captainID == "" {
+		return nil, captainAssignmentCommand{}, nil, false, fmt.Errorf("%w: assignmentId and captainId are required", ErrInvalid)
+	}
+	command, err = newCaptainAssignmentCommand(
+		requestedOperatorContextID, captainID, assignmentID, operation, idempotencyKey, correlationID, fields...,
+	)
+	if err != nil {
+		return nil, captainAssignmentCommand{}, nil, false, err
+	}
+	tx, err = db.Begin()
+	if err != nil {
+		return nil, captainAssignmentCommand{}, nil, false, err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+	replayed, err = beginCaptainAssignmentCommand(tx, command)
+	if err != nil || replayed {
+		return tx, command, nil, replayed, err
+	}
+	current, err = lockAssignmentForOperatorContext(tx, command.OperatorContextID, command.AssignmentID, command.ActorID)
+	if err != nil {
+		return tx, command, nil, false, err
+	}
+	if current.Status != AssignmentOffered {
+		return tx, command, nil, false, fmt.Errorf("%w: assignment already actioned", ErrConflict)
+	}
+	if current.ResponseDeadlineAt.After(time.Now().UTC()) {
+		return tx, command, current, false, nil
+	}
+	if err = expireAssignmentTx(tx, command.OperatorContextID, current, "captain", command.ActorID, "OFFER_TIMEOUT", expiryReason); err != nil {
+		return tx, command, nil, false, err
+	}
+	if err = tx.Commit(); err != nil {
+		return tx, command, nil, false, err
+	}
+	return tx, command, nil, false, ErrOfferExpired
 }
 
 func ExpireOverdueAssignments(db *sql.DB, operatorContextID, actorID string, limit int) (int, error) {

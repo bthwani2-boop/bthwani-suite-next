@@ -2706,16 +2706,7 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 	}
 	defer tx.Rollback()
 	if replay != nil {
-		var price StoreAssortmentPrice
-		err := tx.QueryRowContext(ctx, `
-			SELECT id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max,
-			       effective_from, effective_until, version
-			FROM dsh_store_assortment_prices WHERE id=$1`, replay.ResourceID).
-			Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin,
-				&price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
-		if errors.Is(err, sql.ErrNoRows) {
-			return StoreAssortmentPrice{}, ErrNotFound
-		}
+		price, err := readAssortmentPriceTx(ctx, tx, replay.ResourceID)
 		if err != nil {
 			return StoreAssortmentPrice{}, err
 		}
@@ -2725,51 +2716,21 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 		return price, nil
 	}
 
-	if input.AmountMinor < 0 || input.PrepTimeMin < 0 || input.PrepTimeMax < input.PrepTimeMin {
-		return StoreAssortmentPrice{}, ErrInvalid
-	}
-	if len(input.Currency) != 3 {
-		return StoreAssortmentPrice{}, ErrInvalid
-	}
-
-	var assortmentID string
-	err = tx.QueryRowContext(ctx, `SELECT id FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`, storeID, masterProductID).Scan(&assortmentID)
-	if err == sql.ErrNoRows {
-		return StoreAssortmentPrice{}, ErrNotFound
-	} else if err != nil {
+	if err := validateAssortmentPriceInput(input); err != nil {
 		return StoreAssortmentPrice{}, err
 	}
 
-	// Ensure no overlap
-	var overlapCount int
-	overlapQuery := `
-		SELECT COUNT(*) FROM dsh_store_assortment_prices
-		WHERE store_assortment_id = $1
-		AND (effective_until IS NULL OR effective_until > $2)
-	`
-	if input.EffectiveUntil != nil {
-		overlapQuery += ` AND effective_from < $3`
-		err = tx.QueryRowContext(ctx, overlapQuery, assortmentID, input.EffectiveFrom, *input.EffectiveUntil).Scan(&overlapCount)
-	} else {
-		err = tx.QueryRowContext(ctx, overlapQuery, assortmentID, input.EffectiveFrom).Scan(&overlapCount)
-	}
+	assortmentID, err := findAssortmentForPriceTx(ctx, tx, storeID, masterProductID)
 	if err != nil {
 		return StoreAssortmentPrice{}, err
 	}
-	if overlapCount > 0 {
-		return StoreAssortmentPrice{}, fmt.Errorf("%w: price schedule overlaps with existing schedule", ErrInvalid)
+
+	if err := ensureAssortmentPriceScheduleDoesNotOverlap(ctx, tx, assortmentID, input); err != nil {
+		return StoreAssortmentPrice{}, err
 	}
 
 	id := entityID("price")
-	var price StoreAssortmentPrice
-	err = tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_store_assortment_prices (
-			id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until, version
-	`, id, assortmentID, input.AmountMinor, input.Currency, input.PrepTimeMin, input.PrepTimeMax, input.EffectiveFrom, input.EffectiveUntil).
-		Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin, &price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
-
+	price, err := insertAssortmentPriceTx(ctx, tx, id, assortmentID, input)
 	if err != nil {
 		return StoreAssortmentPrice{}, err
 	}
@@ -2780,4 +2741,67 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 		return StoreAssortmentPrice{}, err
 	}
 	return price, nil
+}
+
+func readAssortmentPriceTx(ctx context.Context, tx *sql.Tx, id string) (StoreAssortmentPrice, error) {
+	var price StoreAssortmentPrice
+	err := tx.QueryRowContext(ctx, `
+		SELECT id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max,
+		       effective_from, effective_until, version
+		FROM dsh_store_assortment_prices WHERE id=$1`, id).
+		Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin,
+			&price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
+	if errors.Is(err, sql.ErrNoRows) {
+		return StoreAssortmentPrice{}, ErrNotFound
+	}
+	return price, err
+}
+
+func validateAssortmentPriceInput(input StoreAssortmentPriceInput) error {
+	if input.AmountMinor < 0 || input.PrepTimeMin < 0 || input.PrepTimeMax < input.PrepTimeMin || len(input.Currency) != 3 {
+		return ErrInvalid
+	}
+	return nil
+}
+
+func findAssortmentForPriceTx(ctx context.Context, tx *sql.Tx, storeID, masterProductID string) (string, error) {
+	var assortmentID string
+	err := tx.QueryRowContext(ctx, `SELECT id FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`, storeID, masterProductID).Scan(&assortmentID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return assortmentID, err
+}
+
+func ensureAssortmentPriceScheduleDoesNotOverlap(ctx context.Context, tx *sql.Tx, assortmentID string, input StoreAssortmentPriceInput) error {
+	const overlapQuery = `
+		SELECT COUNT(*) FROM dsh_store_assortment_prices
+		WHERE store_assortment_id = $1
+		AND (effective_until IS NULL OR effective_until > $2)`
+	var overlapCount int
+	var err error
+	if input.EffectiveUntil != nil {
+		err = tx.QueryRowContext(ctx, overlapQuery+` AND effective_from < $3`, assortmentID, input.EffectiveFrom, *input.EffectiveUntil).Scan(&overlapCount)
+	} else {
+		err = tx.QueryRowContext(ctx, overlapQuery, assortmentID, input.EffectiveFrom).Scan(&overlapCount)
+	}
+	if err != nil {
+		return err
+	}
+	if overlapCount > 0 {
+		return fmt.Errorf("%w: price schedule overlaps with existing schedule", ErrInvalid)
+	}
+	return nil
+}
+
+func insertAssortmentPriceTx(ctx context.Context, tx *sql.Tx, id, assortmentID string, input StoreAssortmentPriceInput) (StoreAssortmentPrice, error) {
+	var price StoreAssortmentPrice
+	err := tx.QueryRowContext(ctx, `
+		INSERT INTO dsh_store_assortment_prices (
+			id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until, version
+	`, id, assortmentID, input.AmountMinor, input.Currency, input.PrepTimeMin, input.PrepTimeMax, input.EffectiveFrom, input.EffectiveUntil).
+		Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin, &price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
+	return price, err
 }

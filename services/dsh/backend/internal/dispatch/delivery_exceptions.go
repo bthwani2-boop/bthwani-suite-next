@@ -450,88 +450,134 @@ func resolveDeliveryExceptionReassignCaptainTx(
 	if err != nil {
 		return nil, err
 	}
+	alreadyResolved, err := validateReassignmentState(current, expectedVersion, newCaptainID, note, requireAcknowledged)
+	if err != nil {
+		return nil, err
+	}
+	if alreadyResolved {
+		return current, nil
+	}
+	if current.SpecialRequestID != "" {
+		return resolveSpecialRequestReassignmentTx(tx, current, operatorContextID, id, expectedVersion, newCaptainID, note, actorID)
+	}
+
+	assignmentStatus, deliveryStatus, orderStatus, err := loadReassignmentDeliveryState(tx, current)
+	if err != nil {
+		return nil, err
+	}
+	if assignmentStatus != AssignmentAccepted || (deliveryStatus != DeliveryDriverAssigned && deliveryStatus != DeliveryArrivedStore) {
+		return nil, fmt.Errorf("%w: reassignment is allowed only before pickup", ErrConflict)
+	}
+	if err := cancelReassignedAssignmentTx(tx, current.AssignmentID); err != nil {
+		return nil, err
+	}
+	if err := advanceOrderForReassignmentTx(tx, current.OrderID, orderStatus); err != nil {
+		return nil, err
+	}
+	replacementAssignmentID, err := createReplacementAssignmentTx(tx, operatorContextID, current.OrderID, newCaptainID, actorID)
+	if err != nil {
+		return nil, err
+	}
+	if err := markReassignedExceptionTx(tx, id, expectedVersion, operatorContextID, actorID, note, replacementAssignmentID, newCaptainID); err != nil {
+		return nil, err
+	}
+	return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
+}
+
+func validateReassignmentState(current *DeliveryException, expectedVersion int, newCaptainID, note string, requireAcknowledged bool) (bool, error) {
 	if requireAcknowledged && current.Status == DeliveryExceptionOpen {
-		return nil, fmt.Errorf("%w: acknowledge the exception before resolution", ErrConflict)
+		return false, fmt.Errorf("%w: acknowledge the exception before resolution", ErrConflict)
 	}
 	if current.Status == DeliveryExceptionResolved {
 		if current.ResolutionAction != nil && *current.ResolutionAction == "reassign_captain" &&
 			current.ReplacementCaptainID != nil && *current.ReplacementCaptainID == newCaptainID &&
 			current.ResolutionNote != nil && *current.ResolutionNote == note {
-			return current, nil
+			return true, nil
 		}
-		return nil, fmt.Errorf("%w: delivery exception was already resolved differently", ErrConflict)
+		return false, fmt.Errorf("%w: delivery exception was already resolved differently", ErrConflict)
 	}
 	if current.Version != expectedVersion {
-		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+		return false, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
 	}
 	if newCaptainID == current.CaptainID {
-		return nil, fmt.Errorf("%w: replacement captain must differ from current captain", ErrInvalid)
+		return false, fmt.Errorf("%w: replacement captain must differ from current captain", ErrInvalid)
 	}
-	if current.SpecialRequestID != "" {
-		if _, err := resolveSpecialRequestExceptionReassignCaptainTx(tx, current, expectedVersion, newCaptainID, note, actorID); err != nil {
-			return nil, err
-		}
-		return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
-	}
+	return false, nil
+}
 
+func resolveSpecialRequestReassignmentTx(tx *sql.Tx, current *DeliveryException, operatorContextID, id string, expectedVersion int, newCaptainID, note, actorID string) (*DeliveryException, error) {
+	if _, err := resolveSpecialRequestExceptionReassignCaptainTx(tx, current, expectedVersion, newCaptainID, note, actorID); err != nil {
+		return nil, err
+	}
+	return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
+}
+
+func loadReassignmentDeliveryState(tx *sql.Tx, current *DeliveryException) (AssignmentStatus, DeliveryStatus, string, error) {
 	var assignmentStatus AssignmentStatus
 	var deliveryStatus DeliveryStatus
 	var orderStatus string
-	if err := tx.QueryRow(`
+	err := tx.QueryRow(`
                 SELECT a.status, d.status, o.status
                 FROM dsh_assignments a
                 JOIN dsh_deliveries d ON d.assignment_id=a.id
                 JOIN dsh_orders o ON o.id=a.order_id
                 WHERE a.id=$1::uuid AND a.captain_id=$2 AND o.id=$3::uuid
                 FOR UPDATE OF a, d, o`, current.AssignmentID, current.CaptainID, current.OrderID).
-		Scan(&assignmentStatus, &deliveryStatus, &orderStatus); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, err
+		Scan(&assignmentStatus, &deliveryStatus, &orderStatus)
+	if errors.Is(err, sql.ErrNoRows) {
+		return AssignmentStatus(""), DeliveryStatus(""), "", ErrNotFound
 	}
-	if assignmentStatus != AssignmentAccepted || (deliveryStatus != DeliveryDriverAssigned && deliveryStatus != DeliveryArrivedStore) {
-		return nil, fmt.Errorf("%w: reassignment is allowed only before pickup", ErrConflict)
-	}
+	return assignmentStatus, deliveryStatus, orderStatus, err
+}
 
+func cancelReassignedAssignmentTx(tx *sql.Tx, assignmentID string) error {
 	if _, err := tx.Exec(`
                 UPDATE dsh_assignments
                 SET status='cancelled', updated_at=NOW()
-                WHERE id=$1::uuid AND status='accepted'`, current.AssignmentID); err != nil {
-		return nil, err
+                WHERE id=$1::uuid AND status='accepted'`, assignmentID); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(`
                 UPDATE dsh_deliveries
                 SET status='cancelled', note=COALESCE(NULLIF(note,''), 'reassigned after delivery exception'), updated_at=NOW()
-                WHERE assignment_id=$1::uuid AND status IN ('driver_assigned','driver_arrived_store')`, current.AssignmentID); err != nil {
-		return nil, err
+			WHERE assignment_id=$1::uuid AND status IN ('driver_assigned','driver_arrived_store')`, assignmentID); err != nil {
+		return err
 	}
+	return nil
+}
 
+func advanceOrderForReassignmentTx(tx *sql.Tx, orderID, orderStatus string) error {
 	if orderStatus != "driver_assigned" {
-		if _, err := tx.Exec(`UPDATE dsh_orders SET status='driver_assigned', updated_at=NOW() WHERE id=$1::uuid`, current.OrderID); err != nil {
-			return nil, err
+		if _, err := tx.Exec(`UPDATE dsh_orders SET status='driver_assigned', updated_at=NOW() WHERE id=$1::uuid`, orderID); err != nil {
+			return err
 		}
 		if _, err := tx.Exec(`
                         INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note)
-                        VALUES($1::uuid,'operator',$2,'driver_assigned',$3)`, current.OrderID, orderStatus, "delivery exception reassigned to another captain"); err != nil {
-			return nil, err
+                        VALUES($1::uuid,'operator',$2,'driver_assigned',$3)`, orderID, orderStatus, "delivery exception reassigned to another captain"); err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
+func createReplacementAssignmentTx(tx *sql.Tx, operatorContextID, orderID, newCaptainID, actorID string) (string, error) {
 	var replacementAssignmentID string
 	if err := tx.QueryRow(`
                 INSERT INTO dsh_assignments(operator_context_id,order_id,captain_id,assigned_by,status,response_deadline_at)
                 VALUES($1,$2::uuid,$3,$4,'offered',NOW()+INTERVAL '90 seconds')
-                RETURNING id::text`, operatorContextID, current.OrderID, newCaptainID, actorID).Scan(&replacementAssignmentID); err != nil {
-		return nil, err
+                RETURNING id::text`, operatorContextID, orderID, newCaptainID, actorID).Scan(&replacementAssignmentID); err != nil {
+		return "", err
 	}
 	if _, err := tx.Exec(`
                 INSERT INTO dsh_deliveries(assignment_id,order_id,captain_id,status,note)
                 VALUES($1::uuid,$2::uuid,$3,'assigned','replacement assignment after governed delivery exception')`,
-		replacementAssignmentID, current.OrderID, newCaptainID); err != nil {
-		return nil, err
+		replacementAssignmentID, orderID, newCaptainID); err != nil {
+		return "", err
 	}
+	return replacementAssignmentID, nil
+}
 
+func markReassignedExceptionTx(tx *sql.Tx, id string, expectedVersion int, operatorContextID, actorID, note, replacementAssignmentID, newCaptainID string) error {
 	res, err := tx.Exec(`
                 UPDATE dsh_delivery_exceptions
                 SET status='resolved', resolved_at=NOW(), resolved_by_actor_id=$1,
@@ -541,12 +587,12 @@ func resolveDeliveryExceptionReassignCaptainTx(
                 WHERE id=$5::uuid AND operator_context_id=$7 AND version=$6 AND status IN ('open','acknowledged')`,
 		actorID, note, replacementAssignmentID, newCaptainID, id, expectedVersion, operatorContextID)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if n, _ := res.RowsAffected(); n != 1 {
-		return nil, fmt.Errorf("%w: delivery exception version changed", ErrConflict)
+		return fmt.Errorf("%w: delivery exception version changed", ErrConflict)
 	}
-	return getDeliveryExceptionForUpdateForContext(tx, operatorContextID, id)
+	return nil
 }
 
 // ResolveDeliveryExceptionCancelOrder resolves an open/acknowledged delivery
@@ -883,30 +929,15 @@ func AcceptReturnToStoreByPartner(db *sql.DB, operatorContextID, orderID, actorI
 		return nil, err
 	}
 	defer tx.Rollback()
-	if exceptionID, found, err := beginReturnToStoreCommand(tx, command); err != nil {
+	exceptionID, found, err := beginReturnToStoreCommand(tx, command)
+	if err != nil {
 		return nil, err
-	} else if found {
-		item, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, exceptionID)
-		if err != nil {
-			return nil, err
-		}
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
-		return item, nil
+	}
+	if found {
+		return commitReturnToStoreReplay(tx, operatorContextID, exceptionID)
 	}
 
-	row := tx.QueryRow(`
-                SELECT `+deliveryExceptionColumns+`
-                FROM dsh_delivery_exceptions e
-                JOIN dsh_orders o ON o.id=e.order_id
-                WHERE e.operator_context_id=$1 AND o.operator_context_id=$1 AND e.order_id=$2::uuid
-                  AND e.status='resolved' AND e.resolution_action='return_to_store'
-                ORDER BY e.resolved_at DESC LIMIT 1 FOR UPDATE`, operatorContextID, orderID)
-	item, err := scanDeliveryException(row.Scan)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
+	item, err := loadPartnerReturnExceptionTx(tx, operatorContextID, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -923,38 +954,14 @@ func AcceptReturnToStoreByPartner(db *sql.DB, operatorContextID, orderID, actorI
 		return nil, fmt.Errorf("%w: captain has not arrived at the store with the return", ErrConflict)
 	}
 
-	var assignmentStatus AssignmentStatus
-	var deliveryStatus DeliveryStatus
-	var orderStatus string
-	if err := tx.QueryRow(`
-                SELECT a.status,d.status,o.status
-                FROM dsh_assignments a
-                JOIN dsh_deliveries d ON d.assignment_id=a.id
-                JOIN dsh_orders o ON o.id=a.order_id
-                WHERE a.id=$1::uuid AND o.id=$2::uuid
-                FOR UPDATE OF a,d,o`, item.AssignmentID, orderID).
-		Scan(&assignmentStatus, &deliveryStatus, &orderStatus); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		}
+	assignmentStatus, deliveryStatus, orderStatus, err := loadReturnAcceptanceState(tx, item.AssignmentID, orderID)
+	if err != nil {
 		return nil, err
 	}
 	if assignmentStatus != AssignmentAccepted || deliveryStatus != DeliveryReturnArrivedStore || orderStatus != "return_arrived_store" {
 		return nil, fmt.Errorf("%w: returned order is not awaiting store receipt", ErrConflict)
 	}
-	if _, err := tx.Exec(`UPDATE dsh_deliveries SET status='returned_to_store', updated_at=NOW() WHERE assignment_id=$1::uuid`, item.AssignmentID); err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(`UPDATE dsh_assignments SET status='completed', completed_at=NOW(), updated_at=NOW() WHERE id=$1::uuid`, item.AssignmentID); err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(`UPDATE dsh_orders SET status='returned_to_store', updated_at=NOW() WHERE id=$1::uuid`, orderID); err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(`INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note) VALUES($1::uuid,'partner','return_arrived_store','returned_to_store','store accepted returned order custody')`, orderID); err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(`UPDATE dsh_delivery_exceptions SET returned_at=NOW(), return_accepted_by_actor_id=$1, version=version+1, updated_at=NOW() WHERE id=$2::uuid AND returned_at IS NULL`, actorID, item.ID); err != nil {
+	if err := completeReturnToStoreTx(tx, item.AssignmentID, orderID, actorID, item.ID); err != nil {
 		return nil, err
 	}
 	if err := recordReturnToStoreCommand(tx, command, item.ID); err != nil {
@@ -964,6 +971,72 @@ func AcceptReturnToStoreByPartner(db *sql.DB, operatorContextID, orderID, actorI
 		return nil, err
 	}
 	return GetDeliveryExceptionForContext(db, operatorContextID, item.ID)
+}
+
+func commitReturnToStoreReplay(tx *sql.Tx, operatorContextID, exceptionID string) (*DeliveryException, error) {
+	item, err := getDeliveryExceptionForUpdateForContext(tx, operatorContextID, exceptionID)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+
+func loadPartnerReturnExceptionTx(tx *sql.Tx, operatorContextID, orderID string) (*DeliveryException, error) {
+	row := tx.QueryRow(`
+                SELECT `+deliveryExceptionColumns+`
+                FROM dsh_delivery_exceptions e
+                JOIN dsh_orders o ON o.id=e.order_id
+                WHERE e.operator_context_id=$1 AND o.operator_context_id=$1 AND e.order_id=$2::uuid
+                  AND e.status='resolved' AND e.resolution_action='return_to_store'
+                ORDER BY e.resolved_at DESC LIMIT 1 FOR UPDATE`, operatorContextID, orderID)
+	item, err := scanDeliveryException(row.Scan)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+
+func loadReturnAcceptanceState(tx *sql.Tx, assignmentID, orderID string) (AssignmentStatus, DeliveryStatus, string, error) {
+	var assignmentStatus AssignmentStatus
+	var deliveryStatus DeliveryStatus
+	var orderStatus string
+	err := tx.QueryRow(`
+                SELECT a.status,d.status,o.status
+                FROM dsh_assignments a
+                JOIN dsh_deliveries d ON d.assignment_id=a.id
+                JOIN dsh_orders o ON o.id=a.order_id
+                WHERE a.id=$1::uuid AND o.id=$2::uuid
+                FOR UPDATE OF a,d,o`, assignmentID, orderID).
+		Scan(&assignmentStatus, &deliveryStatus, &orderStatus)
+	if errors.Is(err, sql.ErrNoRows) {
+		return AssignmentStatus(""), DeliveryStatus(""), "", ErrNotFound
+	}
+	return assignmentStatus, deliveryStatus, orderStatus, err
+}
+
+func completeReturnToStoreTx(tx *sql.Tx, assignmentID, orderID, actorID, exceptionID string) error {
+	if _, err := tx.Exec(`UPDATE dsh_deliveries SET status='returned_to_store', updated_at=NOW() WHERE assignment_id=$1::uuid`, assignmentID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`UPDATE dsh_assignments SET status='completed', completed_at=NOW(), updated_at=NOW() WHERE id=$1::uuid`, assignmentID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`UPDATE dsh_orders SET status='returned_to_store', updated_at=NOW() WHERE id=$1::uuid`, orderID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note) VALUES($1::uuid,'partner','return_arrived_store','returned_to_store','store accepted returned order custody')`, orderID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`UPDATE dsh_delivery_exceptions SET returned_at=NOW(), return_accepted_by_actor_id=$1, version=version+1, updated_at=NOW() WHERE id=$2::uuid AND returned_at IS NULL`, actorID, exceptionID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func getDeliveryExceptionForUpdate(tx *sql.Tx, id string) (*DeliveryException, error) {
