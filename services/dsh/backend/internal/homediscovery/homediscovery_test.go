@@ -1,6 +1,9 @@
 package homediscovery
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestDefaultFilters(t *testing.T) {
 	filters := DefaultFilters()
@@ -20,6 +23,28 @@ func TestDefaultFilters(t *testing.T) {
 	for _, expected := range []string{"all", "favorites", "nearest", "new", "offers"} {
 		if !kinds[expected] {
 			t.Errorf("missing filter kind: %s", expected)
+		}
+	}
+}
+
+func TestHomeStoreJSONRetainsGovernedPublicationFields(t *testing.T) {
+	payload, err := json.Marshal(HomeStore{
+		PartnerReadiness:      "ready",
+		CatalogApprovalStatus: "approved",
+		MarketingVisibility:   "visible",
+		PublicationDecision:   "PUBLISHED",
+		BlockingReasons:       []string{},
+	})
+	if err != nil {
+		t.Fatalf("marshal home store: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatalf("decode home store: %v", err)
+	}
+	for _, field := range []string{"partnerReadiness", "catalogApprovalStatus", "marketingVisibility", "publicationDecision", "blockingReasons"} {
+		if _, ok := decoded[field]; !ok {
+			t.Fatalf("governed publication field %q was omitted from home store JSON: %s", field, payload)
 		}
 	}
 }

@@ -262,6 +262,13 @@ func ListHomeStores(ctx context.Context, db *sql.DB, query HomeDiscoveryQuery) (
 		COALESCE(c.name_ar, '') AS category_label,
 		s.delivery_modes, s.is_free_delivery, s.distance_km, s.follower_count,
 		s.has_pro_badge, s.has_coupon_badge, s.points_multiplier, s.is_popular,
+		s.partner_readiness, s.catalog_approval_status, s.marketing_visibility,
+		COALESCE((SELECT readiness.publication_decision
+			FROM dsh_partner_store_readiness_v readiness
+			WHERE readiness.store_id = s.id), 'BLOCKED') AS publication_decision,
+		COALESCE((SELECT readiness.blocking_reason_codes
+			FROM dsh_partner_store_readiness_v readiness
+			WHERE readiness.store_id = s.id), ARRAY[]::text[]) AS blocking_reason_codes,
 		s.created_at, s.updated_at`
 
 	q := fmt.Sprintf(`SELECT %s FROM dsh_stores s
@@ -279,32 +286,37 @@ func ListHomeStores(ctx context.Context, db *sql.DB, query HomeDiscoveryQuery) (
 	stores := []HomeStore{}
 	for rows.Next() {
 		var (
-			id                   string
-			slug                 string
-			displayName          string
-			status               string
-			cityCode             string
-			serviceAreaCode      string
-			serviceabilityStatus string
-			ratingAverage        *float64
-			ratingCount          int
-			deliveryEtaMin       *int
-			deliveryEtaMax       *int
-			isVisible            bool
-			heroImageURL         *string
-			logoURL              *string
-			category             string
-			categoryLabel        string
-			deliveryModes        []string
-			isFreeDelivery       bool
-			distanceKm           *float64
-			followerCount        int
-			hasProBadge          bool
-			hasCouponBadge       bool
-			pointsMultiplier     *int
-			isPopular            bool
-			createdAt            time.Time
-			updatedAt            time.Time
+			id                    string
+			slug                  string
+			displayName           string
+			status                string
+			cityCode              string
+			serviceAreaCode       string
+			serviceabilityStatus  string
+			ratingAverage         *float64
+			ratingCount           int
+			deliveryEtaMin        *int
+			deliveryEtaMax        *int
+			isVisible             bool
+			heroImageURL          *string
+			logoURL               *string
+			category              string
+			categoryLabel         string
+			deliveryModes         []string
+			isFreeDelivery        bool
+			distanceKm            *float64
+			followerCount         int
+			hasProBadge           bool
+			hasCouponBadge        bool
+			pointsMultiplier      *int
+			isPopular             bool
+			partnerReadiness      string
+			catalogApprovalStatus string
+			marketingVisibility   string
+			publicationDecision   string
+			blockingReasons       []string
+			createdAt             time.Time
+			updatedAt             time.Time
 		)
 		if err := rows.Scan(
 			&id, &slug, &displayName, &status, &cityCode, &serviceAreaCode,
@@ -312,35 +324,41 @@ func ListHomeStores(ctx context.Context, db *sql.DB, query HomeDiscoveryQuery) (
 			&deliveryEtaMax, &isVisible, &heroImageURL, &logoURL, &category,
 			&categoryLabel, pq.Array(&deliveryModes), &isFreeDelivery, &distanceKm,
 			&followerCount, &hasProBadge, &hasCouponBadge, &pointsMultiplier,
-			&isPopular, &createdAt, &updatedAt,
+			&isPopular, &partnerReadiness, &catalogApprovalStatus, &marketingVisibility,
+			&publicationDecision, pq.Array(&blockingReasons), &createdAt, &updatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan home store row: %w", err)
 		}
 		stores = append(stores, HomeStore{
-			ID:               id,
-			Slug:             slug,
-			DisplayName:      displayName,
-			Status:           status,
-			Serviceability:   HomeServiceability{Status: serviceabilityStatus},
-			RatingAverage:    ratingAverage,
-			RatingCount:      ratingCount,
-			DeliveryEtaMin:   deliveryEtaMin,
-			DeliveryEtaMax:   deliveryEtaMax,
-			HeroImageURL:     heroImageURL,
-			LogoURL:          logoURL,
-			Category:         category,
-			CategoryLabel:    categoryLabel,
-			IsFreeDelivery:   isFreeDelivery,
-			HasProBadge:      hasProBadge,
-			HasCouponBadge:   hasCouponBadge,
-			IsPopular:        isPopular,
-			FollowerCount:    followerCount,
-			PointsMultiplier: pointsMultiplier,
-			CityCode:         cityCode,
-			ServiceAreaCode:  serviceAreaCode,
-			IsVisible:        isVisible,
-			DeliveryModes:    deliveryModes,
-			DistanceKm:       distanceKm,
+			ID:                    id,
+			Slug:                  slug,
+			DisplayName:           displayName,
+			Status:                status,
+			Serviceability:        HomeServiceability{Status: serviceabilityStatus},
+			RatingAverage:         ratingAverage,
+			RatingCount:           ratingCount,
+			DeliveryEtaMin:        deliveryEtaMin,
+			DeliveryEtaMax:        deliveryEtaMax,
+			HeroImageURL:          heroImageURL,
+			LogoURL:               logoURL,
+			Category:              category,
+			CategoryLabel:         categoryLabel,
+			IsFreeDelivery:        isFreeDelivery,
+			HasProBadge:           hasProBadge,
+			HasCouponBadge:        hasCouponBadge,
+			IsPopular:             isPopular,
+			FollowerCount:         followerCount,
+			PointsMultiplier:      pointsMultiplier,
+			PartnerReadiness:      partnerReadiness,
+			CatalogApprovalStatus: catalogApprovalStatus,
+			MarketingVisibility:   marketingVisibility,
+			PublicationDecision:   publicationDecision,
+			BlockingReasons:       blockingReasons,
+			CityCode:              cityCode,
+			ServiceAreaCode:       serviceAreaCode,
+			IsVisible:             isVisible,
+			DeliveryModes:         deliveryModes,
+			DistanceKm:            distanceKm,
 		})
 	}
 	if err := rows.Err(); err != nil {
