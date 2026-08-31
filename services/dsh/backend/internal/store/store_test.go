@@ -159,6 +159,21 @@ func TestValidateListQuery(t *testing.T) {
 			wantErr: "limit and offset must be integers",
 		},
 		{
+			name:    "empty limit rejected",
+			query:   url.Values{"limit": {""}},
+			wantErr: "limit and offset must be integers",
+		},
+		{
+			name:    "empty offset rejected",
+			query:   url.Values{"offset": {""}},
+			wantErr: "limit and offset must be integers",
+		},
+		{
+			name:    "unknown parameter rejected",
+			query:   url.Values{"x-schemathesis-unknown-property": {"42"}},
+			wantErr: "invalid query parameter: x-schemathesis-unknown-property",
+		},
+		{
 			name:    "unknown status rejected",
 			query:   url.Values{"status": {"bogus"}},
 			wantErr: "invalid status: bogus",

@@ -39,6 +39,25 @@ func SendError(w http.ResponseWriter, status int, code, message string) {
 //   - boolean filters, if present, must be true or false
 //   - text filters must be valid UTF-8 and cannot contain PostgreSQL NUL bytes
 func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
+	allowedParams := map[string]struct{}{
+		"category":        {},
+		"cityCode":        {},
+		"hasProBadge":     {},
+		"isFreeDelivery":  {},
+		"isVisible":       {},
+		"limit":           {},
+		"offset":          {},
+		"search":          {},
+		"serviceAreaCode": {},
+		"sort":            {},
+		"status":          {},
+	}
+	for name := range q {
+		if _, ok := allowedParams[name]; !ok {
+			return DshStoreListQuery{}, "invalid query parameter: " + name
+		}
+	}
+
 	textParams := []struct {
 		name  string
 		value string
@@ -63,6 +82,9 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 	offset := 0
 	var err error
 
+	if _, present := q["limit"]; present && limitStr == "" {
+		return DshStoreListQuery{}, "limit and offset must be integers"
+	}
 	if limitStr != "" {
 		limit, err = strconv.Atoi(limitStr)
 		if err != nil {
@@ -70,6 +92,9 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 		}
 	}
 
+	if _, present := q["offset"]; present && offsetStr == "" {
+		return DshStoreListQuery{}, "limit and offset must be integers"
+	}
 	if offsetStr != "" {
 		offset, err = strconv.Atoi(offsetStr)
 		if err != nil {
