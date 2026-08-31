@@ -439,7 +439,7 @@ export function PlatformDashboardScreen({
             description={runtime.state.message}
             code="PLATFORM_CONTROL_UNAVAILABLE"
           >
-            <CpRetryButton onClick={runtime.reload}>إعادة المحاولة</CpRetryButton>
+            <CpRetryButton onClick={() => { void runtime.reload(); }}>إعادة المحاولة</CpRetryButton>
           </CpStatePanel>
         ) : runtime.state.kind === "success" ? (
           <>
