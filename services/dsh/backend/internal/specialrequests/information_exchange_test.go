@@ -3,6 +3,8 @@ package specialrequests
 import (
 	"context"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 func TestInformationExchangeValidationAndCanonicalStage(t *testing.T) {
@@ -35,7 +37,7 @@ func TestInformationExchangeRequestRespondAndReplayDBIntegration(t *testing.T) {
 	cleanupRequest(t, db, req.ID)
 
 	requested, exchange, err := svc.RequestClientInformationInOperatorContext(
-		ctx, testOperatorContextID, req.ID, "operator-information-test", req.Version,
+		ctx, testOperatorContextID, req.ID, uuid.NewString(), req.Version,
 		"Please provide the required information",
 	)
 	if err != nil {
