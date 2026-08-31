@@ -55,9 +55,6 @@ type mutationReceipt struct {
 	ResultVersion      int
 }
 
-const profileColumns = `client_id, locale, currency_preference, marketing_consent_email,
-	marketing_consent_sms, marketing_consent_push, version, created_at, updated_at`
-
 const clientProfileSelectSQL = `SELECT client_id, locale, currency_preference, marketing_consent_email,
 	marketing_consent_sms, marketing_consent_push, version, created_at, updated_at
 	FROM dsh_client_profiles WHERE client_id = $1`

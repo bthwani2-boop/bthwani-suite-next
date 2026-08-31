@@ -21,7 +21,7 @@ import {
 } from "../../shared/client-profile";
 
 export type MyProfileScreenProps = {
-  onBack?: () => void;
+  readonly onBack?: () => void;
 };
 
 type ProfileState =

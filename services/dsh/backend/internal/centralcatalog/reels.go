@@ -315,7 +315,7 @@ func ReviewReel(ctx context.Context, db *sql.DB, reviewerID, reelID string, inpu
 	}
 	defer tx.Rollback()
 
-	reel, err := scanReel(tx.QueryRowContext(ctx, `SELECT `+reelColumns+` FROM dsh_reels WHERE id=$1 FOR UPDATE`, reelID))
+	reel, err := scanReel(tx.QueryRowContext(ctx, reelByIDForUpdateSQL, reelID))
 	if err != nil {
 		return Reel{}, err
 	}

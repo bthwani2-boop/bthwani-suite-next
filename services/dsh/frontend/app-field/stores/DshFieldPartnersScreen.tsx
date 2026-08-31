@@ -51,12 +51,12 @@ function FieldTopBar({
   // runtime user scope, never a hardcoded city.
   locationLabel = 'جولة المتاجر',
 }: {
-  onSearchPress: () => void;
-  onNotificationsPress: () => void;
-  onAccountPress: () => void;
-  onWorkQueuePress: () => void;
-  unreadCount?: number;
-  locationLabel?: string;
+    readonly onSearchPress: () => void;
+    readonly onNotificationsPress: () => void;
+    readonly onAccountPress: () => void;
+    readonly onWorkQueuePress: () => void;
+    readonly unreadCount?: number;
+    readonly locationLabel?: string;
 }) {
   return (
     <>

@@ -3,10 +3,10 @@ import { HomeDiscoveryScreen } from "./HomeDiscoveryScreen";
 import type { DshHomeSpecialRequestTarget } from "../../shared/home-discovery";
 
 type Props = {
-  searchQuery?: string | undefined;
-  onStorePress?: ((storeId: string, slug: string) => void) | undefined;
-  onSpecialRequestPress?: ((requestType: DshHomeSpecialRequestTarget) => void) | undefined;
-  onMarketingAction?: ((actionType: string, actionTarget: string) => void) | undefined;
+  readonly searchQuery?: string | undefined;
+  readonly onStorePress?: ((storeId: string, slug: string) => void) | undefined;
+  readonly onSpecialRequestPress?: ((requestType: DshHomeSpecialRequestTarget) => void) | undefined;
+  readonly onMarketingAction?: ((actionType: string, actionTarget: string) => void) | undefined;
 };
 
 export function HomeDiscoveryRoute({ searchQuery, onStorePress, onSpecialRequestPress, onMarketingAction }: Props) {

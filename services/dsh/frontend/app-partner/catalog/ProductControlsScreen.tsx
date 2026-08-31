@@ -25,10 +25,10 @@ import { InventoryConfigurationModal } from './InventoryConfigurationModal';
 import { PriceConfigurationModal } from './PriceConfigurationModal';
 
 export type ProductControlsScreenProps = {
-  storeId: string;
-  productId: string;
-  onBack?: () => void;
-  onSaved?: () => void;
+  readonly storeId: string;
+  readonly productId: string;
+  readonly onBack?: () => void;
+  readonly onSaved?: () => void;
 };
 
 export type ProductControlsScreenState =
