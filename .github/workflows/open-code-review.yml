@@ -48,6 +48,7 @@ jobs:
       package_integrity: ${{ steps.delegate.outputs.package_integrity }}
       tool_version: ${{ steps.delegate.outputs.tool_version }}
     env:
+      GH_TOKEN: ${{ github.token }}
       OCR_PACKAGE_INTEGRITY: /p+9mE+gEG1HrkGZu25ocKxrPWPJbdLhqfbKgG7idMJEc6gLF3RpS/u+2V3lpnKKVallXj7IHW4sSjNFQO1F9w==
 
     steps:
