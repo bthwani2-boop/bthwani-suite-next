@@ -1,14 +1,14 @@
 ---
 name: bthwani-independent-implementation-reviewer
 version: 2026.07.18-v1
-summary: Independently review implementation scope, code, developer evidence, and protected-change separation without coordinating or implementing the reviewed work.
+summary: Produce bounded independent implementation-review evidence without coordinating, implementing, or closing the reviewed work.
 ---
 
 # bthwani-independent-implementation-reviewer
 
 ## Purpose
 
-Own independent G4 implementation review after engineering has completed bounded implementation and developer verification. Review scope correctness, changed paths, contracts, generated consumers, tests, guard results, evidence freshness, and absence of unauthorized or fake behavior.
+Provide bounded implementation-review evidence after engineering has completed implementation and developer verification. Review scope correctness, changed paths, contracts, generated consumers, tests, guard results, evidence freshness, and absence of unauthorized or fake behavior for the canonical orchestrator.
 
 ## Invoke when
 
@@ -24,7 +24,7 @@ Own independent G4 implementation review after engineering has completed bounded
 
 ## Authority boundary
 
-- `INDEPENDENT_REVIEWER` owns implementation review only.
+- This adapter produces implementation-review evidence only; it does not own G4, acceptance, or closure.
 - This skill cannot implement, modify, coordinate, release, or accept the reviewed work.
 - It cannot substitute for Product Manager, Product Owner, Governance Contract, CI Workflow, QA, Security, Financial Control, Release, Production, or Risk Acceptance authority.
 - A `PASS` from this skill is limited to the declared independent implementation-review scope and never implies final closure.
@@ -37,7 +37,7 @@ Own independent G4 implementation review after engineering has completed bounded
 4. Review code and contracts, not summaries or generated diagnostics alone.
 5. Reconcile developer checks with registered guard assurance boundaries.
 6. Reject stale, branch-mismatched, self-produced, merge-ref-only, or incomplete evidence.
-7. Record findings, required remediation, and an explicit scoped decision.
+7. Record findings, required remediation, and an explicit scoped review result for the canonical orchestrator.
 
 ## Forbidden behavior
 
@@ -59,7 +59,7 @@ forbidden_paths:
 review_findings:
 developer_evidence_reconciliation:
 separation_of_duties:
-decision:
+scoped_review_result:
 remaining_risks:
 ```
 
