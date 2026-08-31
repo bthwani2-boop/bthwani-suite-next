@@ -74,11 +74,18 @@ test("CodeQL trusted upload consumes SARIF findings before publishing", () => {
 
 test("CodeQL trusted upload waits for processing and exact analysis binding", () => {
   const f = read(".github/workflows/codeql.yml");
+  const validator = read("tools/scripts/validate-codeql-analysis-binding.mjs");
   assert.match(f, /processing_status/u);
   assert.match(f, /analyses_url/u);
-  assert.match(f, /\.commit_sha == \$candidate_sha/u);
-  assert.match(f, /\.ref == \$candidate_ref/u);
-  assert.match(f, /rtrimstr\("\/"\).*\$expected_category/u);
+  assert.match(f, /Load trusted CodeQL analysis binding validator/u);
+  assert.match(f, /TRUSTED_CODEQL_ANALYSIS_VALIDATOR/u);
+  assert.match(f, /validate-codeql-analysis-binding\.mjs/u);
+  assert.match(f, /--candidate-sha "\$\{CANDIDATE_SHA\}"/u);
+  assert.match(f, /--candidate-ref "\$\{CANDIDATE_REF\}"/u);
+  assert.match(validator, /response root must be an array/u);
+  assert.match(validator, /exactly one exact CodeQL analysis binding/u);
+  assert.match(validator, /commit_sha/u);
+  assert.match(validator, /candidateRef/u);
   assert.match(f, /codeql-upload-lifecycle-/u);
 });
 

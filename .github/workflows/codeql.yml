@@ -393,6 +393,21 @@ jobs:
           node --check "${trusted_classifier}"
           echo "TRUSTED_CODEQL_CLASSIFIER=${trusted_classifier}" >> "${GITHUB_ENV}"
 
+      - name: Load trusted CodeQL analysis binding validator
+        shell: bash
+        env:
+          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          trusted_validator="${RUNNER_TEMP}/validate-codeql-analysis-binding.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/validate-codeql-analysis-binding.mjs" \
+            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_validator}"
+          [[ -s "${trusted_validator}" ]] || { echo "::error::trusted CodeQL analysis binding validator missing"; exit 1; }
+          node --check "${trusted_validator}"
+          echo "TRUSTED_CODEQL_ANALYSIS_VALIDATOR=${trusted_validator}" >> "${GITHUB_ENV}"
+
       - name: Download unprivileged CodeQL SARIF evidence
         shell: bash
         run: |
@@ -637,17 +652,23 @@ jobs:
             }
             analyses_endpoint="${analyses_url#https://api.github.com}"
             analyses="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "${analyses_endpoint}")"
-            exact_matches="$(jq --arg upload_id "${upload_id}" --arg candidate_sha "${CANDIDATE_SHA}" \
-              --arg candidate_ref "${CANDIDATE_REF}" --arg expected_category "${expected_category}" \
-              '[.analyses[]? | select((.sarif_id|tostring) == $upload_id and .commit_sha == $candidate_sha and .ref == $candidate_ref and ((.category // "") | rtrimstr("/")) == $expected_category)] | length' \
-              <<<"${analyses}")"
-            [[ "${exact_matches}" == "1" ]] || {
-              echo "::error::CodeQL analysis binding mismatch for upload ${upload_id}: matches=${exact_matches}"
-              exit 1
-            }
-            jq --arg upload_id "${upload_id}" --arg category "${expected_category}" \
-              --arg status "${processing_status}" --arg analyses_url "${analyses_url}" \
-              '. += [{uploadId:$upload_id,category:$category,processingStatus:$status,analysesUrl:$analyses_url,exactBinding:true}]' \
+            response_file="${RUNNER_TEMP}/codeql-analysis-${upload_id}.json"
+            printf '%s\n' "${analyses}" > "${response_file}"
+            binding="$(node "${TRUSTED_CODEQL_ANALYSIS_VALIDATOR}" \
+              --input "${response_file}" \
+              --repository "${GITHUB_REPOSITORY}" \
+              --candidate-sha "${CANDIDATE_SHA}" \
+              --candidate-ref "${CANDIDATE_REF}" \
+              --expected-category "${expected_category}" \
+              --upload-id "${upload_id}" \
+              --run-id "${GITHUB_RUN_ID}" \
+              --run-attempt "${GITHUB_RUN_ATTEMPT:-1}")" || {
+                echo "::error::CodeQL analysis binding validation failed for upload ${upload_id}"
+                exit 1
+              }
+            jq --arg status "${processing_status}" --arg analyses_url "${analyses_url}" \
+              --argjson binding "${binding}" \
+              '. += [$binding + {processingStatus:$status,analysesUrl:$analysesUrl}]' \
               "${RUNNER_TEMP}/codeql-upload-status.json" > "${RUNNER_TEMP}/codeql-upload-status.next.json"
             mv "${RUNNER_TEMP}/codeql-upload-status.next.json" "${RUNNER_TEMP}/codeql-upload-status.json"
           done < "${RUNNER_TEMP}/codeql-upload-metadata.tsv"
