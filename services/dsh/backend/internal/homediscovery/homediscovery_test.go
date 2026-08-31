@@ -49,6 +49,24 @@ func TestHomeStoreJSONRetainsGovernedPublicationFields(t *testing.T) {
 	}
 }
 
+func TestHomeStoreJSONNormalizesRequiredArrayFields(t *testing.T) {
+	payload, err := json.Marshal(HomeStore{})
+	if err != nil {
+		t.Fatalf("marshal home store: %v", err)
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(payload, &decoded); err != nil {
+		t.Fatalf("decode home store JSON: %v", err)
+	}
+	for _, field := range []string{"blockingReasons", "deliveryModes"} {
+		values, ok := decoded[field].([]any)
+		if !ok || values == nil {
+			t.Fatalf("required home store array %q must serialize as an array: %s", field, payload)
+		}
+	}
+}
+
 func TestEnsureHomeMarketingContentRequiresHeroMedia(t *testing.T) {
 	withoutMedia := []HomeStore{{ID: "store-without-media", DisplayName: "Media-neutral store"}}
 	banners, promos := ensureHomeMarketingContent(nil, nil, withoutMedia)

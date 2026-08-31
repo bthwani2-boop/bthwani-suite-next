@@ -43,3 +43,8 @@ test("runtime authority retains the unavailable local media safety guard", () =>
   assert.match(runtimeAuthority, /services\/dsh\/database\/seeds\/media\/local-media\.manifest\.json/u);
   assert.match(runtimeAuthority, /Use media-storage for MinIO\/runtime upload infrastructure/u);
 });
+
+test("Schemathesis property checks stay bound to the public DSH path scope", () => {
+  assert.match(workflow, /--include-path-regex '\^\/dsh\/\(health\|readiness\|stores\)\(\/\.\*\)\?\$'/u);
+  assert.doesNotMatch(workflow, /--include-method GET/u);
+});
