@@ -85,4 +85,13 @@ func TestInformationExchangeRequestRespondAndReplayDBIntegration(t *testing.T) {
 	); !errors.Is(err, ErrInformationResponseIdempotencyConflict) {
 		t.Fatalf("different response with the same idempotency key returned %v, want conflict", err)
 	}
+	if _, err := db.ExecContext(ctx, `DELETE FROM dsh_special_request_information_exchanges WHERE id = $1::uuid`, exchange.ID); err != nil {
+		t.Fatalf("delete exchange for missing-readback regression: %v", err)
+	}
+	if _, _, err := svc.RespondClientInformationInOperatorContext(
+		ctx, testOperatorContextID, req.ID, clientID, exchange.ID, requested.Version,
+		"Here is the requested information", mutation,
+	); !errors.Is(err, ErrConflict) {
+		t.Fatalf("missing committed exchange returned %v, want ErrConflict", err)
+	}
 }
