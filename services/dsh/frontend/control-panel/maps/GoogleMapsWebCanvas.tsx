@@ -31,7 +31,7 @@ export type GoogleMapsWebCanvasProps = {
 };
 
 type GoogleMapsOverlay = {
-  setMap(map: unknown | null): void;
+  setMap(map: GoogleMapsMap | null): void;
 };
 
 type GoogleMapsListener = {
