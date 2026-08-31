@@ -143,4 +143,10 @@ func TestGetPurchasableClientCatalogUsesCurrentPriceAndInventoryDBIntegration(t 
 	if len(products) != 0 {
 		t.Fatalf("paused assortment must not reach the client catalog: %#v", products)
 	}
+	if _, err := db.ExecContext(ctx, `DELETE FROM dsh_store_assortment_prices WHERE id=$1`, price.ID); err != nil {
+		t.Fatalf("remove price for missing-replay regression: %v", err)
+	}
+	if _, err := CreateAssortmentPriceAtomic(ctx, db, storeID, productID, "operator-test", "client-catalog-truth-price-"+suffix, priceInput); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("missing replay resource returned %v, want ErrNotFound", err)
+	}
 }
