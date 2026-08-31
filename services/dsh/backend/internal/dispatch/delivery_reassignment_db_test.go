@@ -216,10 +216,10 @@ func TestSpecialRequestDeliveryExceptionReassignsBeforePickupDBIntegration(t *te
 	specialRequestID, _ := newApprovedSpecialRequestFixture(t, db)
 	oldCaptainID, actorID := newCaptainAndActor()
 	assignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-		SpecialRequestID:   specialRequestID,
-		CaptainID:          oldCaptainID,
-		ActorID:            actorID,
-		OperatorContextID:  testSpecialRequestOperatorContextID,
+		SpecialRequestID:  specialRequestID,
+		CaptainID:         oldCaptainID,
+		ActorID:           actorID,
+		OperatorContextID: testSpecialRequestOperatorContextID,
 	})
 	if err != nil {
 		t.Fatalf("create special-request assignment: %v", err)
