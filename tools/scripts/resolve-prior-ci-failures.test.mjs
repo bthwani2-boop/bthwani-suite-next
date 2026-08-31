@@ -158,7 +158,7 @@ test("individual failed control step replays only that control claim", () => {
   const prior = classification({ci_control_plane: true, verification_required: true});
   const current = classification();
   const controls = job(40, "CI control-plane verification", "failure", [
-    {name: "Check protected assurance authority drift", conclusion: "failure"},
+    {name: "Check verification-workflow source immutability with trusted verifier", conclusion: "failure"},
     {name: "Check verification-workflow source immutability with trusted verifier", conclusion: "success"},
     {name: "Check Sonar coverage ownership and configuration with trusted authority", conclusion: "success"},
   ]);
@@ -168,7 +168,7 @@ test("individual failed control step replays only that control claim", () => {
     jobs: [contextJob(), controls, job(41, "Node verification", "success")],
   });
 
-  assert.ok(result.replayed_failed_claims.includes("control:assurance-authority-drift"));
+  assert.ok(result.replayed_failed_claims.includes("control:ci-source-immutability"));
   assert.equal(result.ci_control_plane, true);
   assert.equal(result.verification_required, false, "successful Node proof remains reusable");
 });

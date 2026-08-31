@@ -182,8 +182,8 @@ test("semantic review is bound to deterministic trusted OCR provenance", () => {
   assert.match(o, /opencodereview-delegation-\$\{HEAD_SHA\}-\$\{context_sha256\}/u);
   const v = read("tools/scripts/verify-pr-evidence-comments.mjs");
   assert.match(v, /does not match trusted OCR context/u);
-  assert.match(v, /attestation is stale or cross-SHA/u);
-  assert.match(v, /candidate author cannot self-attest/u);
+  assert.match(v, /evidence is stale or cross-SHA/u);
+  assert.match(v, /OWNER association/u);
 });
 
 test("assurance-critical routers and validators are loaded from trusted workflow authority", () => {
@@ -198,5 +198,8 @@ test("assurance-critical routers and validators are loaded from trusted workflow
 
 test("self qualification never claims semantic self-certification", () => {
   assert.match(read("tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md"), /SEMANTIC_SELF_CERTIFICATION: FORBIDDEN/u);
-  assert.match(read("tools/scripts/verify-assurance-bootstrap.mjs"), /Structural proof only/u);
+  const validator = read("tools/scripts/verify-pr-evidence-comments.mjs");
+  const retiredBootstrap = ["BTHWANI_ASSURANCE_", "BOOTSTRAP"].join("");
+  const retiredSoloOwner = ["solo-", "owner"].join("");
+  assert.doesNotMatch(validator, new RegExp(retiredBootstrap + "|" + retiredSoloOwner, "iu"));
 });

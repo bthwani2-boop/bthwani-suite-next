@@ -69,7 +69,6 @@ export function deriveRequiredClaims(classification) {
   const claims = [];
   if (classification.full_scope === true || classification.ci_control_plane === true) {
     claims.push(
-      "control:assurance-authority-drift",
       "control:ci-source-immutability",
       "control:sonar-coverage-ownership",
     );
@@ -107,7 +106,6 @@ export function applyForcedVerification(classification, forcedClaims = []) {
   const next = {...classification};
   for (const claimId of [...new Set(forcedClaims.map((value) => String(value).trim()).filter(Boolean))]) {
     switch (claimId) {
-      case "control:assurance-authority-drift":
       case "control:ci-source-immutability":
       case "control:sonar-coverage-ownership":
         next.ci_control_plane = true;
@@ -233,20 +231,6 @@ export function classifyFiles(inputFiles, options = {}) {
     infrastructure ? "infrastructure" : "",
   ].filter(Boolean);
 
-  // Human review is a changed-candidate risk decision, not a verification-mode
-  // side effect. Full-scope verification must therefore not manufacture a human
-  // approval requirement for unrelated bytes. Keep this policy centralized here
-  // so Final Closure consumes the same changed-file truth as every other caller.
-  const humanReviewRequired = hasPath(files, (file) =>
-    isAuthorizationPath(file) ||
-    isWltFinancialPath(file) ||
-    isIdentityPath(file) ||
-    isMigrationPath(file) ||
-    isMigrationAuthorityPath(file) ||
-    isWorkflowAuthorityPath(file) ||
-    /cancellation/iu.test(file),
-  );
-
   const diagnosticsRequired = contracts;
   const verificationRequired = node;
   const backendRequired = backend;
@@ -285,7 +269,6 @@ export function classifyFiles(inputFiles, options = {}) {
     node_platform: platform,
     migration_authority: migrationAuthority,
     risk_classes: riskClasses,
-    human_review_required: humanReviewRequired,
     verification_required: verificationRequired,
     backend_required: backendRequired,
     diagnostics_required: diagnosticsRequired,

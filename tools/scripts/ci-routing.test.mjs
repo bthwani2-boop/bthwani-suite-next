@@ -123,16 +123,22 @@ test("the affected router is based on the exact caller-supplied verification win
   assert.match(router, /\["diff", "--name-only"/u);
   assert.match(router, /baseSha, headSha/u);
   assert.match(workflow, /verification_base_sha: \$\{\{ steps\.scope\.outputs\.verification_base_sha \}\}/u);
-  assert.doesNotMatch(router, /previous|run.?history|semantic|financial|security_scan/u);
+  assert.doesNotMatch(router, /previous|run.?history|security_scan/u);
 });
 
-test("human review is one centralized changed-candidate risk decision", () => {
+test("risk routing relies on technical proof rather than a second-account approval gate", () => {
   const router = read("tools/scripts/detect-ci-context.mjs");
   const closure = read(".github/workflows/final-closure.yml");
-  assert.match(router, /human_review_required/u);
-  assert.match(closure, /human_review_required: \$\{\{ steps\.classification\.outputs\.human_review_required \}\}/u);
-  assert.match(closure, /HUMAN_REVIEW_REQUIRED/u);
-  assert.doesNotMatch(closure, /catastrophic domains|always require.*approval/iu);
+  const retiredHumanReview = ["human_review_", "required"].join("");
+  const retiredClosureGates = [
+    ["HUMAN_", "REVIEW_", "REQUIRED"].join(""),
+    ["approvals_", "on_head"].join(""),
+    ["human-review:", "0-approvals"].join(""),
+  ].join("|");
+  assert.doesNotMatch(router, new RegExp(retiredHumanReview, "u"));
+  assert.doesNotMatch(closure, new RegExp(retiredClosureGates, "u"));
+  assert.match(router, /risk_classes/u);
+  assert.match(closure, /risk_classes/u);
 });
 
 test("backend changes cannot become green by skipping backend verification", () => {

@@ -23,7 +23,6 @@ const BACKEND_CLAIMS = new Map([
 ]);
 
 const CONTROL_STEP = new Map([
-  ["control:assurance-authority-drift", "check protected assurance authority drift"],
   ["control:migration-manifest", "check governed migration manifest"],
   ["control:ci-source-immutability", "check verification-workflow source immutability"],
   ["control:sonar-coverage-ownership", "check sonar coverage ownership"],

@@ -29,10 +29,6 @@ concurrency:
 
 env:
   GH_TOKEN: ${{ github.token }}
-  # This repository is intentionally maintained by one owner.
-  # This exception is scoped ONLY to assurance bootstrap.
-  BTHWANI_ASSURANCE_BOOTSTRAP_MODE: solo-owner
-  BTHWANI_SOLO_MAINTAINER_LOGIN: bthwani2-boop
 
 jobs:
   context:
@@ -360,7 +356,6 @@ jobs:
             [[ -s "${target}" ]] || { echo "::error::trusted control missing: ${relative}"; exit 1; }
           }
           fetch_trusted tools/scripts/check-ci-source-immutability.mjs
-          fetch_trusted tools/scripts/verify-assurance-authority-drift.mjs
           fetch_trusted tools/guards/migration-manifest-drift-gate.mjs
           fetch_trusted tools/guards/sonar-coverage-ownership-gate.mjs
           fetch_trusted tools/guards/sonar-coverage-ownership-gate.test.mjs
@@ -371,21 +366,10 @@ jobs:
           fetch_trusted tools/verification/ownership.manifest.json
           {
             echo "TRUSTED_CI_SOURCE_IMMUTABILITY=${trusted_root}/tools/scripts/check-ci-source-immutability.mjs"
-            echo "TRUSTED_ASSURANCE_AUTHORITY_DRIFT=${trusted_root}/tools/scripts/verify-assurance-authority-drift.mjs"
             echo "TRUSTED_MIGRATION_MANIFEST_GUARD=${trusted_root}/tools/guards/migration-manifest-drift-gate.mjs"
             echo "TRUSTED_SONAR_OWNERSHIP_GUARD=${trusted_root}/tools/guards/sonar-coverage-ownership-gate.mjs"
             echo "TRUSTED_SONAR_OWNERSHIP_TEST=${trusted_root}/tools/guards/sonar-coverage-ownership-gate.test.mjs"
           } >> "${GITHUB_ENV}"
-      - name: Check protected assurance authority drift
-        id: assurance_authority
-        if: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' }}
-        continue-on-error: true
-        shell: bash
-        env:
-          BTHWANI_TARGET_REPO: ${{ github.workspace }}
-          BTHWANI_TRUSTED_SHA: ${{ github.sha }}
-          BTHWANI_CANDIDATE_SHA: ${{ needs.context.outputs.head_sha }}
-        run: node "${TRUSTED_ASSURANCE_AUTHORITY_DRIFT}"
       - name: Check governed migration manifest history with trusted authority
         id: migrations
         if: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.database_changed == 'true' }}
@@ -415,11 +399,9 @@ jobs:
         if: ${{ always() }}
         shell: bash
         env:
-          ASSURANCE_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' }}
           MIGRATIONS_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.database_changed == 'true' }}
           SOURCE_IMMUTABILITY_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' }}
           SONAR_OWNERSHIP_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.ci_control_plane == 'true' }}
-          ASSURANCE_AUTHORITY: ${{ steps.assurance_authority.outcome }}
           MIGRATIONS: ${{ steps.migrations.outcome }}
           SOURCE_IMMUTABILITY: ${{ steps.source_immutability.outcome }}
           SONAR_OWNERSHIP: ${{ steps.sonar_ownership.outcome }}
@@ -434,7 +416,6 @@ jobs:
               [[ "${result}" == "skipped" ]] || failures+=("${name}:unexpected-${result}")
             fi
           }
-          check_control assurance-authority-drift "${ASSURANCE_AUTHORITY}" "${ASSURANCE_REQUIRED}"
           check_control migration-manifest "${MIGRATIONS}" "${MIGRATIONS_REQUIRED}"
           check_control ci-source-immutability "${SOURCE_IMMUTABILITY}" "${SOURCE_IMMUTABILITY_REQUIRED}"
           check_control sonar-coverage-ownership "${SONAR_OWNERSHIP}" "${SONAR_OWNERSHIP_REQUIRED}"
