@@ -393,6 +393,30 @@ func TestCartMutationIdempotencyIsAtomicAndFingerprintBoundDBIntegration(t *test
 	}
 }
 
+func TestFindMutationReceiptHidesHistoricalMigrationRowsDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	clientID := "cart-historical-receipt-client-" + suffix
+	idempotencyKey := "cart-historical-key-" + suffix
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_cart_mutation_receipts (
+			client_id, idempotency_key, operation, request_fingerprint,
+			correlation_id, result_version, result_deleted, result_json
+		) VALUES ($1, $2, 'historical', repeat('a', 64), $3, 1, false, '{}'::jsonb)
+	`, clientID, idempotencyKey, "cart-historical-correlation-"+suffix); err != nil {
+		t.Fatalf("failed to insert historical receipt fixture: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_cart_mutation_receipts WHERE client_id = $1`, clientID)
+	})
+
+	if _, err := FindMutationReceipt(ctx, db, clientID, idempotencyKey); !errors.Is(err, ErrMutationReceiptNotFound) {
+		t.Fatalf("historical receipt was exposed as a client commit: %v", err)
+	}
+}
+
 func TestUpsertItemRejectsPublicationApprovalAndInventoryPolicyViolationsDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()

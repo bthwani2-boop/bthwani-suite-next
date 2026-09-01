@@ -97,7 +97,9 @@ func FindMutationReceipt(ctx context.Context, db *sql.DB, clientID, idempotencyK
 		SELECT idempotency_key, operation, cart_id::text, item_id::text,
 		       result_version, result_deleted, created_at
 		FROM dsh_cart_mutation_receipts
-		WHERE client_id = $1 AND idempotency_key = $2
+		WHERE client_id = $1
+		  AND idempotency_key = $2
+		  AND operation IN ('add_item', 'remove_item', 'clear_cart')
 		LIMIT 1
 	`, clientID, idempotencyKey).Scan(
 		&receipt.IdempotencyKey,
