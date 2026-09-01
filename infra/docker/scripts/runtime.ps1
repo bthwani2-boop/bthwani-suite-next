@@ -626,16 +626,27 @@ function Invoke-GovernedSeeds {
 }
 
 
+function Get-ApiHostPort {
+  param([Parameter(Mandatory)][string]$EnvironmentName, [Parameter(Mandatory)][int]$DefaultPort)
+  $rawPort = ([string][Environment]::GetEnvironmentVariable($EnvironmentName, "Process")).Trim()
+  if ([string]::IsNullOrWhiteSpace($rawPort)) { return [string]$DefaultPort }
+  if ($rawPort -notmatch '^\d{1,5}$' -or [int]$rawPort -lt 1 -or [int]$rawPort -gt 65535) {
+    throw "$EnvironmentName must be a valid TCP port; received '$rawPort'."
+  }
+  return $rawPort
+}
+
 function Wait-ForSelectedApis {
+
   if ($ProfileList -contains "identity") {
-    $identityApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_API_HOST_PORT)) { "18082" } else { $env:BTHWANI_IDENTITY_API_HOST_PORT }
+    $identityApiHostPort = Get-ApiHostPort -EnvironmentName "BTHWANI_IDENTITY_API_HOST_PORT" -DefaultPort 18082
     Wait-ForHttpStatus -Name "Identity API" -Url "http://localhost:$identityApiHostPort/identity/readiness" -HealthyValues @("HEALTHY") | Out-Null
   }
-  if ($ProfileList -contains "workforce") { Wait-ForHttpStatus -Name "Workforce API" -Url "http://localhost:18086/workforce/readiness" -HealthyValues @("HEALTHY") | Out-Null }
-  if ($ProfileList -contains "providers") { Wait-ForHttpStatus -Name "Providers API" -Url "http://localhost:18087/providers/readiness" -HealthyValues @("HEALTHY", "ready") | Out-Null }
-  if ($ProfileList -contains "platform") { Wait-ForHttpStatus -Name "Platform Control API" -Url "http://localhost:18088/platform/readiness" -HealthyValues @("HEALTHY") | Out-Null }
-  if ($ProfileList -contains "wlt") { Wait-ForHttpStatus -Name "WLT API" -Url "http://localhost:18083/wlt/readiness" -HealthyValues @("HEALTHY") | Out-Null }
-  if ($ProfileList -contains "dsh") { Wait-ForHttpStatus -Name "DSH API" -Url "http://localhost:18080/dsh/readiness" -HealthyValues @("HEALTHY") | Out-Null }
+  if ($ProfileList -contains "workforce") { $port = Get-ApiHostPort -EnvironmentName "BTHWANI_WORKFORCE_API_HOST_PORT" -DefaultPort 18086; Wait-ForHttpStatus -Name "Workforce API" -Url "http://localhost:$port/workforce/readiness" -HealthyValues @("HEALTHY") | Out-Null }
+  if ($ProfileList -contains "providers") { $port = Get-ApiHostPort -EnvironmentName "BTHWANI_PROVIDERS_API_HOST_PORT" -DefaultPort 18087; Wait-ForHttpStatus -Name "Providers API" -Url "http://localhost:$port/providers/readiness" -HealthyValues @("HEALTHY", "ready") | Out-Null }
+  if ($ProfileList -contains "platform") { $port = Get-ApiHostPort -EnvironmentName "BTHWANI_PLATFORM_CONTROL_API_HOST_PORT" -DefaultPort 18088; Wait-ForHttpStatus -Name "Platform Control API" -Url "http://localhost:$port/platform/readiness" -HealthyValues @("HEALTHY") | Out-Null }
+  if ($ProfileList -contains "wlt") { $port = Get-ApiHostPort -EnvironmentName "BTHWANI_WLT_API_HOST_PORT" -DefaultPort 18083; Wait-ForHttpStatus -Name "WLT API" -Url "http://localhost:$port/wlt/readiness" -HealthyValues @("HEALTHY") | Out-Null }
+  if ($ProfileList -contains "dsh") { $port = Get-ApiHostPort -EnvironmentName "BTHWANI_DSH_API_HOST_PORT" -DefaultPort 18080; Wait-ForHttpStatus -Name "DSH API" -Url "http://localhost:$port/dsh/readiness" -HealthyValues @("HEALTHY") | Out-Null }
   if ($ProfileList -contains "financial-simulators") {
     $financialSimulatorPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_WIREMOCK_FINANCIAL_PORT)) { 18090 } else { [int]$env:BTHWANI_WIREMOCK_FINANCIAL_PORT }
     Invoke-RestMethod "http://localhost:$financialSimulatorPort/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
@@ -656,7 +667,8 @@ function Invoke-SelectedSmoke {
   Write-Host "`n--- Runtime smoke ---"
   Wait-ForSelectedApis
   if ($ProfileList -contains "dsh") {
-    $stores = Invoke-RestMethod "http://localhost:18080/dsh/stores?limit=1&offset=0" -TimeoutSec 10 -ErrorAction Stop
+    $dshApiHostPort = Get-ApiHostPort -EnvironmentName "BTHWANI_DSH_API_HOST_PORT" -DefaultPort 18080
+    $stores = Invoke-RestMethod "http://localhost:$dshApiHostPort/dsh/stores?limit=1&offset=0" -TimeoutSec 10 -ErrorAction Stop
     if ($null -eq $stores.stores) { throw "/dsh/stores response is missing the stores field" }
     Write-Host "DSH stores smoke: PASS count=$($stores.stores.Count)"
   }

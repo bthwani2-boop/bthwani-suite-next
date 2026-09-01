@@ -16,7 +16,6 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const contractPath = path.join(repoRoot, "infra", "docker", "runtime-readiness.contract.json");
-const allowWithoutBackend = process.env.BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND === "true";
 const bundleArgIndex = process.argv.indexOf("--bundle");
 const bundleArg = bundleArgIndex >= 0 ? process.argv[bundleArgIndex + 1]?.trim() : "";
 if (bundleArgIndex >= 0 && !bundleArg) {
@@ -296,15 +295,10 @@ for (const result of results) {
 }
 console.log("─".repeat(64));
 
-if (anyFailed && !allowWithoutBackend) {
+if (anyFailed) {
   console.log(`${RED}${BOLD}BLOCKED:${RESET} One or more required '${bundleName}' runtime profiles are not ready.`);
   console.log("  Start the governed runtime or set a narrower governed bundle only when the surface contract permits it.\n");
   process.exit(1);
-}
-if (anyFailed) {
-  console.log(`${YELLOW}WARNING:${RESET} Required runtime profiles are unready, but BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND=true is set.`);
-  console.log("  This is development-only reduced functionality and is not readiness evidence.\n");
-  process.exit(0);
 }
 
 console.log(`${GREEN}${BOLD}Required runtime profiles are ready. Frontend may start.${RESET}\n`);

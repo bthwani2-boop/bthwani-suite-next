@@ -44,6 +44,22 @@ function Import-EnvironmentFile {
     }
 }
 
+function Get-ControlPanelServiceOrigin {
+    param(
+        [Parameter(Mandatory)][string] $HostPortEnvironment,
+        [Parameter(Mandatory)][int] $DefaultPort
+    )
+
+    $rawPort = ([string] [Environment]::GetEnvironmentVariable($HostPortEnvironment, "Process")).Trim()
+    if ([string]::IsNullOrWhiteSpace($rawPort)) {
+        $rawPort = [string] $DefaultPort
+    }
+    if ($rawPort -notmatch '^\d{1,5}$' -or [int]$rawPort -lt 1 -or [int]$rawPort -gt 65535) {
+        throw "$HostPortEnvironment must be a valid TCP port; received '$rawPort'."
+    }
+    return "http://127.0.0.1:$rawPort"
+}
+
 function Resolve-ControlPanelModulePath {
     param([Parameter(Mandatory)][string] $ModulePath)
 
@@ -249,11 +265,11 @@ $env:NEXT_PUBLIC_WORKFORCE_API_BASE_URL        = "/api/workforce"
 $env:NEXT_PUBLIC_PROVIDERS_API_BASE_URL        = "/api/providers"
 $env:NEXT_PUBLIC_PLATFORM_CONTROL_API_BASE_URL = "/api/platform-control"
 
-$env:DSH_API_BASE_URL              = "http://127.0.0.1:18080"
-$env:IDENTITY_API_BASE_URL         = "http://127.0.0.1:18082"
-$env:WORKFORCE_API_BASE_URL        = "http://127.0.0.1:18086"
-$env:PROVIDERS_API_BASE_URL        = "http://127.0.0.1:18087"
-$env:PLATFORM_CONTROL_API_BASE_URL = "http://127.0.0.1:18088"
+$env:DSH_API_BASE_URL              = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_DSH_API_HOST_PORT" -DefaultPort 18080
+$env:IDENTITY_API_BASE_URL         = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_IDENTITY_API_HOST_PORT" -DefaultPort 18082
+$env:WORKFORCE_API_BASE_URL        = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_WORKFORCE_API_HOST_PORT" -DefaultPort 18086
+$env:PROVIDERS_API_BASE_URL        = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_PROVIDERS_API_HOST_PORT" -DefaultPort 18087
+$env:PLATFORM_CONTROL_API_BASE_URL = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_PLATFORM_CONTROL_API_HOST_PORT" -DefaultPort 18088
 
 & pnpm dev
 exit $LASTEXITCODE
