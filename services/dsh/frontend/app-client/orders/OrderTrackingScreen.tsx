@@ -62,7 +62,7 @@ type Props = {
 const FULFILLMENT_LABELS: Readonly<Record<OrderTruth["fulfillmentMode"], string>> = {
   bthwani_delivery: "توصيل بثواني",
   partner_delivery: "توصيل المتجر",
-  pickup: "استلام ذاتي",
+  pickup: "استلم بنفسك",
 };
 
 function statusTone(status: string): "neutral" | "success" | "warning" | "danger" | "info" {

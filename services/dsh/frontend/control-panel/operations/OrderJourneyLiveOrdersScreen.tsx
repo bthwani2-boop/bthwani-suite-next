@@ -62,7 +62,7 @@ function filterOrders(
 
 function modeLabel(mode: OperatorOrderWorkboardRow['fulfillmentMode']): string {
   if (mode === 'partner_delivery') return 'توصيل المتجر';
-  if (mode === 'pickup') return 'استلام ذاتي';
+  if (mode === 'pickup') return 'استلم بنفسك';
   return 'توصيل بثواني';
 }
 

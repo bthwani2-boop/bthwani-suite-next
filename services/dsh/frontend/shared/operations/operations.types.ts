@@ -61,7 +61,7 @@ export const DSH_FULFILLMENT_OPERATIONAL_MODE_META: Readonly<Record<DshFulfillme
     requiresCustomerPickup: false,
   },
   pickup: {
-    label: 'استلام ذاتي',
+    label: 'استلم بنفسك',
     operationalOwner: 'العميل + المتجر',
     requiresCaptain: false,
     requiresPartnerCourier: false,
