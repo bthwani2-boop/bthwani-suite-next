@@ -43,6 +43,8 @@ func TestDeliveryExceptionCancelsOrderBeforePickupDBIntegration(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM dsh_order_cancellations WHERE order_id=$1::uuid`, orderID)
+		_, _ = db.Exec(`DELETE FROM dsh_dispatch_decisions WHERE order_id=$1::uuid`, orderID)
+		_, _ = db.Exec(`DELETE FROM dsh_order_event_outbox WHERE order_id=$1::uuid`, orderID)
 		_, _ = db.Exec(`DELETE FROM dsh_orders WHERE id=$1::uuid`, orderID)
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_intents WHERE id=$1::uuid`, checkoutIntentID)
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
@@ -127,6 +129,8 @@ func TestDeliveryExceptionRejectsDirectCancelAfterPickupDBIntegration(t *testing
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM dsh_dispatch_decisions WHERE order_id=$1::uuid`, orderID)
+		_, _ = db.Exec(`DELETE FROM dsh_order_event_outbox WHERE order_id=$1::uuid`, orderID)
 		_, _ = db.Exec(`DELETE FROM dsh_orders WHERE id=$1::uuid`, orderID)
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_intents WHERE id=$1::uuid`, checkoutIntentID)
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
@@ -176,6 +180,8 @@ func TestDeliveryExceptionCancelRejectsStaleVersionDBIntegration(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM dsh_order_cancellations WHERE order_id=$1::uuid`, orderID)
+		_, _ = db.Exec(`DELETE FROM dsh_dispatch_decisions WHERE order_id=$1::uuid`, orderID)
+		_, _ = db.Exec(`DELETE FROM dsh_order_event_outbox WHERE order_id=$1::uuid`, orderID)
 		_, _ = db.Exec(`DELETE FROM dsh_orders WHERE id=$1::uuid`, orderID)
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_intents WHERE id=$1::uuid`, checkoutIntentID)
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
