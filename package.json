@@ -190,7 +190,9 @@
     "ocr:setup": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode Setup",
     "ocr:audit": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode DelegateAudit",
     "lint:typed": "eslint --config eslint.typed.config.mjs \"{apps,core,services,shared}/**/*.{ts,tsx,mts,cts}\"",
-    "test:property": "node --test tools/scripts/detect-ci-context.property.test.mjs"
+    "test:property": "node --test tools/scripts/detect-ci-context.property.test.mjs",
+    "guard:core-package-dependencies": "node --test tools/guards/core-package-dependency-boundary-gate.test.mjs && node tools/guards/core-package-dependency-boundary-gate.mjs --package identity && node tools/guards/core-package-dependency-boundary-gate.mjs --package platform-control && node tools/guards/core-package-dependency-boundary-gate.mjs --package providers && node tools/guards/core-package-dependency-boundary-gate.mjs --package workforce",
+    "guard:workforce-hr-boundary": "node --test tools/guards/workforce-hr-boundary-gate.test.mjs && node tools/guards/workforce-hr-boundary-gate.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

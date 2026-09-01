@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:ts": "tsc --noEmit -p tsconfig.json",
     "typecheck:ts6:compat": "tsc6 --noEmit -p tsconfig.json",
-    "typecheck:all": "pnpm run typecheck:ts && pnpm run typecheck:ts6:compat"
+    "typecheck:all": "pnpm run typecheck:ts && pnpm run typecheck:ts6:compat",
+    "lint": "node ../../tools/guards/core-package-dependency-boundary-gate.mjs --package identity"
   },
   "peerDependencies": {
     "react": "19.2.3"

@@ -18,7 +18,7 @@
     "build:ts": "pnpm --dir ../.. exec nx run contracts:materialize && tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\"",
     "build": "pnpm run build:ts && node ../../tools/scripts/verify-go-build.mjs backend",
     "test": "pnpm run build:ts && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
-    "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
+    "lint": "pnpm --dir ../.. run guard:fullstack-boundary && pnpm --dir ../.. run guard:workforce-hr-boundary"
   },
   "peerDependencies": {
     "react": "19.2.3"
