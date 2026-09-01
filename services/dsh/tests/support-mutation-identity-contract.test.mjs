@@ -63,3 +63,11 @@ test("client and control-panel support surfaces pass live identity subjects", ()
   assert.match(dashboard, /useControlPanelSession/);
   assert.match(rescue, /useControlPanelSession/);
 });
+
+test("support mutation controllers serialize writes before React state updates", () => {
+  const ticket = source("frontend/shared/support/use-support-controller.tsx");
+  assert.equal((ticket.match(/const mutationBusyRef = useRef\(false\)/g) ?? []).length, 3);
+  assert.equal((ticket.match(/if \(mutationBusyRef\.current\) return false;/g) ?? []).length, 3);
+  assert.equal((ticket.match(/mutationBusyRef\.current = false;/g) ?? []).length, 3);
+  assert.match(ticket, /\}, \[actorId, loadEvents, loadMessages, mode, ticketId\]\);/);
+});

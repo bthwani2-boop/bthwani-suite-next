@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createSupportTicket,
   fetchMyTickets,
@@ -67,6 +67,7 @@ function stableFingerprint(value: unknown): string {
 export function useSupportTicketController(actorId: string | null, authKind = "unauthenticated") {
   const [listState, setListState] = useState(ticketListIdle());
   const [actionState, setActionState] = useState(ticketActionIdle());
+  const mutationBusyRef = useRef(false);
 
   const load = useCallback(async () => {
     setListState(ticketListLoading());
@@ -87,28 +88,37 @@ export function useSupportTicketController(actorId: string | null, authKind = "u
       setActionState(ticketActionError("يجب تسجيل الدخول قبل إنشاء تذكرة دعم"));
       return false;
     }
-    const fingerprint = stableFingerprint(input);
-    const attempt = await getOrCreateSupportMutationAttempt({
-      actorId,
-      scope: "client",
-      operation: "ticket-create",
-      fingerprint,
-    });
-    setActionState(ticketActionSubmitting());
+    if (mutationBusyRef.current) return false;
+    mutationBusyRef.current = true;
     try {
-      const ticket = await createSupportTicket(input, attempt.context);
-      await clearSupportMutationAttempt({
+      const fingerprint = stableFingerprint(input);
+      const attempt = await getOrCreateSupportMutationAttempt({
         actorId,
         scope: "client",
         operation: "ticket-create",
         fingerprint,
       });
-      setActionState(ticketActionSuccess(ticket));
-      await load();
-      return true;
+      setActionState(ticketActionSubmitting());
+      try {
+        const ticket = await createSupportTicket(input, attempt.context);
+        await clearSupportMutationAttempt({
+          actorId,
+          scope: "client",
+          operation: "ticket-create",
+          fingerprint,
+        });
+        setActionState(ticketActionSuccess(ticket));
+        await load();
+        return true;
+      } catch (err) {
+        setActionState(ticketActionError(resolveMessage(err)));
+        return false;
+      }
     } catch (err) {
       setActionState(ticketActionError(resolveMessage(err)));
       return false;
+    } finally {
+      mutationBusyRef.current = false;
     }
   }, [actorId, authKind, load]);
 
@@ -120,6 +130,7 @@ export function useSupportTicketController(actorId: string | null, authKind = "u
 export function useOperatorTicketController(actorId: string | null, authKind = "unauthenticated") {
   const [listState, setListState] = useState(ticketListIdle());
   const [actionState, setActionState] = useState(ticketActionIdle());
+  const mutationBusyRef = useRef(false);
 
   const load = useCallback(async (statusFilter?: string) => {
     setListState(ticketListLoading());
@@ -143,30 +154,39 @@ export function useOperatorTicketController(actorId: string | null, authKind = "
       setActionState(ticketActionError("تعذر تحديد هوية مشغل الدعم"));
       return false;
     }
-    const fingerprint = stableFingerprint(input);
-    const attempt = await getOrCreateSupportMutationAttempt({
-      actorId,
-      scope: "operator",
-      operation: "ticket-transition",
-      entityId: ticketId,
-      fingerprint,
-    });
-    setActionState(ticketActionSubmitting());
+    if (mutationBusyRef.current) return false;
+    mutationBusyRef.current = true;
     try {
-      const ticket = await updateTicket(ticketId, input, attempt.context);
-      await clearSupportMutationAttempt({
+      const fingerprint = stableFingerprint(input);
+      const attempt = await getOrCreateSupportMutationAttempt({
         actorId,
         scope: "operator",
         operation: "ticket-transition",
         entityId: ticketId,
         fingerprint,
       });
-      setActionState(ticketActionSuccess(ticket));
-      await load();
-      return true;
+      setActionState(ticketActionSubmitting());
+      try {
+        const ticket = await updateTicket(ticketId, input, attempt.context);
+        await clearSupportMutationAttempt({
+          actorId,
+          scope: "operator",
+          operation: "ticket-transition",
+          entityId: ticketId,
+          fingerprint,
+        });
+        setActionState(ticketActionSuccess(ticket));
+        await load();
+        return true;
+      } catch (err) {
+        setActionState(ticketActionError(resolveMessage(err)));
+        return false;
+      }
     } catch (err) {
       setActionState(ticketActionError(resolveMessage(err)));
       return false;
+    } finally {
+      mutationBusyRef.current = false;
     }
   }, [actorId, load]);
 
@@ -192,6 +212,7 @@ export function useTicketDetailController(
   const [messageListState, setMessageListState] = useState(messageListIdle());
   const [messageActionState, setMessageActionState] = useState(messageActionIdle());
   const [eventState, setEventState] = useState<SupportEventState>({ kind: "idle" });
+  const mutationBusyRef = useRef(false);
 
   const loadDetail = useCallback(async () => {
     if (!ticketId) {
@@ -257,34 +278,43 @@ export function useTicketDetailController(
       setMessageActionState(messageActionError("تعذر تحديد هوية مرسل الرسالة"));
       return false;
     }
-    const fingerprint = stableFingerprint({ body, isInternal: input.isInternal === true });
-    const attempt = await getOrCreateSupportMutationAttempt({
-      actorId,
-      scope: mode,
-      operation: "ticket-message",
-      entityId: ticketId,
-      fingerprint,
-    });
-    setMessageActionState(messageActionSubmitting());
+    if (mutationBusyRef.current) return false;
+    mutationBusyRef.current = true;
     try {
-      const message = mode === "operator"
-        ? await addOperatorTicketMessage(ticketId, normalizedInput, attempt.context)
-        : await addTicketMessage(ticketId, normalizedInput, attempt.context);
-      await clearSupportMutationAttempt({
+      const fingerprint = stableFingerprint({ body, isInternal: input.isInternal === true });
+      const attempt = await getOrCreateSupportMutationAttempt({
         actorId,
         scope: mode,
         operation: "ticket-message",
         entityId: ticketId,
         fingerprint,
       });
-      setMessageActionState(messageActionSuccess(message));
-      await Promise.all([loadMessages(), loadEvents()]);
-      return true;
+      setMessageActionState(messageActionSubmitting());
+      try {
+        const message = mode === "operator"
+          ? await addOperatorTicketMessage(ticketId, normalizedInput, attempt.context)
+          : await addTicketMessage(ticketId, normalizedInput, attempt.context);
+        await clearSupportMutationAttempt({
+          actorId,
+          scope: mode,
+          operation: "ticket-message",
+          entityId: ticketId,
+          fingerprint,
+        });
+        setMessageActionState(messageActionSuccess(message));
+        await Promise.all([loadMessages(), loadEvents()]);
+        return true;
+      } catch (err) {
+        setMessageActionState(messageActionError(resolveMessage(err)));
+        return false;
+      }
     } catch (err) {
       setMessageActionState(messageActionError(resolveMessage(err)));
       return false;
+    } finally {
+      mutationBusyRef.current = false;
     }
-  }, [loadEvents, loadMessages, mode, ticketId]);
+  }, [actorId, loadEvents, loadMessages, mode, ticketId]);
 
   const resetMessageAction = useCallback(() => setMessageActionState(messageActionIdle()), []);
 
