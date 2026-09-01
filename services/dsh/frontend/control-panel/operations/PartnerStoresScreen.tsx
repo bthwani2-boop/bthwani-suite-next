@@ -41,7 +41,7 @@ function mapAdminRowToCpRow(row: DshStoreAdminTableRow): CpStoreRow {
     name: row.displayName,
     branch: row.cityCode,
     status: isOpenNow ? 'مفتوح' : isTemporarilyUnavailable ? 'موقوف مؤقتًا' : 'مغلق',
-    deliveryMode: row.deliveryModes.includes('delivery') ? 'bthwani_delivery' : 'partner_delivery',
+    deliveryMode: row.deliveryModes.includes('express') ? 'bthwani_delivery' : 'partner_delivery',
     issue: row.isServiceable ? '' : 'خارج نطاق الخدمة الحالي',
     recommendation: row.catalogApprovalStatus === 'submitted'
       ? 'مراجعة الكتالوج لدى المالك المختص'
