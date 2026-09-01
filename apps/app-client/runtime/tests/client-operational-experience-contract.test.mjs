@@ -391,6 +391,10 @@ test("client commercial profile is reachable from My Space and has no inert priv
   assert.equal(profileApi.includes('createDshHttpClient("",'), false);
   assert.equal(profile.includes("طلب نسخة بياناتي"), false);
   assert.equal(profile.includes("طلب حذف الحساب"), false);
+  assert.equal(profile.includes("useState<ClientProfileCurrency>"), false);
+  assert.equal(profile.includes("setCurrency("), false);
+  assert.match(profile, /currencyPreference: profileState\.profile\.currencyPreference/);
+  assert.match(profile, /currencyPreference: "YER" as const/);
 });
 
 test("client profile mutations persist identity and reconcile partial saves", () => {

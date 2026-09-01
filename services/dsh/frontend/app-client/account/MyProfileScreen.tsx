@@ -18,7 +18,6 @@ import {
   getOrCreateClientProfileMutationAttempt,
   clearClientProfileMutationAttempt,
   type ClientProfile,
-  type ClientProfileCurrency,
   type ClientProfileLocale,
 } from "../../shared/client-profile";
 
@@ -37,7 +36,6 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
   const { state: sessionState } = useIdentitySession();
   const [profileState, setProfileState] = React.useState<ProfileState>({ kind: "loading" });
   const [locale, setLocale] = React.useState<ClientProfileLocale>("ar");
-  const [currency, setCurrency] = React.useState<ClientProfileCurrency>("YER");
   const [consentEmail, setConsentEmail] = React.useState(false);
   const [consentSms, setConsentSms] = React.useState(false);
   const [consentPush, setConsentPush] = React.useState(false);
@@ -50,7 +48,6 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
     try {
       const profile = await fetchClientProfile();
       setLocale(profile.locale);
-      setCurrency(profile.currencyPreference);
       setConsentEmail(profile.marketingConsentEmail);
       setConsentSms(profile.marketingConsentSms);
       setConsentPush(profile.marketingConsentPush);
@@ -58,7 +55,6 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
     } catch (error: any) {
       if (error?.status === 404) {
         setLocale("ar");
-        setCurrency("YER");
         setConsentEmail(false);
         setConsentSms(false);
         setConsentPush(false);
@@ -86,7 +82,6 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
   const hasChanges =
     profileState.kind === "ready" &&
     (locale !== profileState.profile.locale ||
-    currency !== profileState.profile.currencyPreference ||
     consentEmail !== profileState.profile.marketingConsentEmail ||
     consentSms !== profileState.profile.marketingConsentSms ||
     consentPush !== profileState.profile.marketingConsentPush);
@@ -97,13 +92,13 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
     setSaveError(null);
     let updatedProfile = profileState.profile;
     try {
-      const isPreferencesChanged = locale !== profileState.profile.locale || currency !== profileState.profile.currencyPreference;
+      const isPreferencesChanged = locale !== profileState.profile.locale;
       const isConsentsChanged = consentEmail !== profileState.profile.marketingConsentEmail || consentSms !== profileState.profile.marketingConsentSms || consentPush !== profileState.profile.marketingConsentPush;
 
       if (isPreferencesChanged) {
         const input = {
           locale,
-          currencyPreference: currency,
+          currencyPreference: profileState.profile.currencyPreference,
           ...(profileState.profile.version > 0
             ? { expectedVersion: profileState.profile.version }
             : {}),
@@ -116,7 +111,7 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
         const attempt = await getOrCreateClientProfileMutationAttempt(intent);
         updatedProfile = await upsertClientProfilePreferences(input, attempt.context);
         const readback = await fetchClientProfile();
-        if (readback.locale !== locale || readback.currencyPreference !== currency) {
+        if (readback.locale !== locale || readback.currencyPreference !== profileState.profile.currencyPreference) {
           throw new Error("تم حفظ التفضيلات لكن القراءة المعتمدة لم تطابق القيم المطلوبة");
         }
         updatedProfile = readback;
@@ -189,7 +184,7 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
     if (profileState.kind !== "not_found") return;
     setSaving(true);
     setSaveError(null);
-    const input = { locale, currencyPreference: currency };
+    const input = { locale, currencyPreference: "YER" as const };
     const intent = {
       actorId: identity.subject,
       operation: "preferences" as const,
@@ -199,7 +194,7 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
       const attempt = await getOrCreateClientProfileMutationAttempt(intent);
       await upsertClientProfilePreferences(input, attempt.context);
       const profile = await fetchClientProfile();
-      if (profile.locale !== locale || profile.currencyPreference !== currency) {
+      if (profile.locale !== locale || profile.currencyPreference !== "YER") {
         throw new Error("تم إنشاء الملف لكن القراءة المعتمدة لم تطابق التفضيلات المطلوبة");
       }
       setProfileState({ kind: "ready", profile });
@@ -215,7 +210,6 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
     if (profileState.kind === "ready" || profileState.kind === "conflict") {
       const p = profileState.kind === "ready" ? profileState.profile : profileState.serverProfile;
       setLocale(p.locale);
-      setCurrency(p.currencyPreference);
       setConsentEmail(p.marketingConsentEmail);
       setConsentSms(p.marketingConsentSms);
       setConsentPush(p.marketingConsentPush);
