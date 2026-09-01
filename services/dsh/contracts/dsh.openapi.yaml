@@ -24,7 +24,6 @@ x-bthwani-contracts:
   clientAddress: ./dsh.client-address.openapi.yaml
   clientAddressPrivacy: ./dsh.client-address-privacy.openapi.yaml
   clientMap: ./dsh.client-map.openapi.yaml
-  deliveryExceptions: ./dsh.delivery-exceptions.openapi.yaml
   deliveryProofCompletion: ./dsh.delivery-proof-completion.openapi.yaml
   deliveryProofMedia: ./dsh.delivery-proof-media.openapi.yaml
   dispatchGovernance: ./dsh.dispatch-governance.openapi.yaml

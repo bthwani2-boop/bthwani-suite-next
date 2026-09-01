@@ -9,7 +9,6 @@ modules:
   - dsh.client-address-privacy.openapi.yaml
   - dsh.client-address.openapi.yaml
   - dsh.client-map.openapi.yaml
-  - dsh.delivery-exceptions.openapi.yaml
   - dsh.delivery-proof-completion.openapi.yaml
   - dsh.delivery-proof-media.openapi.yaml
   - dsh.dispatch-governance.openapi.yaml

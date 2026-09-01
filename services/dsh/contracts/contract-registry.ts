@@ -48,7 +48,6 @@ export type DshContractRegistration = {
     | "dsh-dispatch-governance"
     | "dsh-captain-financial-eligibility"
     | "dsh-live-tracking"
-    | "dsh-delivery-exceptions"
     | "dsh-delivery-proof-media"
     | "dsh-delivery-proof-completion";
   readonly path: string;
@@ -348,14 +347,6 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/dispatch",
-  },
-  {
-    id: "dsh-delivery-exceptions",
-    path: "contracts/dsh.delivery-exceptions.openapi.yaml",
-    state: "CONTRACT_ACTIVE",
-    runtimeDependency: true,
-    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/dispatch/dispatch.api.ts",
   },
   {
     id: "dsh-delivery-proof-media",
