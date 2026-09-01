@@ -2,6 +2,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
+$RuntimeEnvironmentPath = Join-Path $RepoRoot "infra\docker\env\runtime.env.example"
 $GoogleEnvironmentPath = Join-Path $RepoRoot "infra\local\control-panel.google.env"
 $SourceIntegrityGuard = Join-Path $RepoRoot "tools\guards\source-integrity-gate.mjs"
 $ControlPanelRuntimeBootstrap = Join-Path $RepoRoot "apps\control-panel\ensure-control-panel-dev-runtime.ps1"
@@ -22,7 +23,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 function Import-EnvironmentFile {
-    param([Parameter(Mandatory)][string] $Path)
+    param(
+        [Parameter(Mandatory)][string] $Path,
+        [switch] $PreserveExisting,
+        [string[]] $OnlyNames = @()
+    )
 
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
         return
@@ -37,10 +42,13 @@ function Import-EnvironmentFile {
         $name = $parts[0].Trim()
         $value = $parts[1].Trim()
         if (-not $name) { continue }
+        if ($OnlyNames.Count -gt 0 -and $name -notin $OnlyNames) { continue }
         if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
             $value = $value.Substring(1, $value.Length - 2)
         }
-        [Environment]::SetEnvironmentVariable($name, $value, "Process")
+        if (-not $PreserveExisting -or [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name, "Process"))) {
+            [Environment]::SetEnvironmentVariable($name, $value, "Process")
+        }
     }
 }
 
@@ -247,6 +255,20 @@ function Ensure-BthwaniDevSessionBroker {
     throw "Local development session broker contract v$DevSessionBrokerContractVersion did not become healthy on port $DevSessionBrokerPort."
 }
 
+# Load the canonical runtime environment in this process before the bootstrap
+# child starts, so configured published ports also reach the Control Panel BFF.
+Import-EnvironmentFile -Path $RuntimeEnvironmentPath -PreserveExisting -OnlyNames @(
+    "BTHWANI_DSH_API_HOST_PORT",
+    "BTHWANI_IDENTITY_API_HOST_PORT",
+    "BTHWANI_WORKFORCE_API_HOST_PORT",
+    "BTHWANI_PROVIDERS_API_HOST_PORT",
+    "BTHWANI_PLATFORM_CONTROL_API_HOST_PORT"
+)
+$env:DSH_API_BASE_URL              = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_DSH_API_HOST_PORT" -DefaultPort 18080
+$env:IDENTITY_API_BASE_URL         = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_IDENTITY_API_HOST_PORT" -DefaultPort 18082
+$env:WORKFORCE_API_BASE_URL        = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_WORKFORCE_API_HOST_PORT" -DefaultPort 18086
+$env:PROVIDERS_API_BASE_URL        = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_PROVIDERS_API_HOST_PORT" -DefaultPort 18087
+$env:PLATFORM_CONTROL_API_BASE_URL = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_PLATFORM_CONTROL_API_HOST_PORT" -DefaultPort 18088
 Import-EnvironmentFile -Path $GoogleEnvironmentPath
 & pwsh -NoProfile -ExecutionPolicy Bypass -File $ControlPanelRuntimeBootstrap
 if ($LASTEXITCODE -ne 0) {
@@ -264,12 +286,6 @@ $env:NEXT_PUBLIC_IDENTITY_API_BASE_URL         = "/api/identity"
 $env:NEXT_PUBLIC_WORKFORCE_API_BASE_URL        = "/api/workforce"
 $env:NEXT_PUBLIC_PROVIDERS_API_BASE_URL        = "/api/providers"
 $env:NEXT_PUBLIC_PLATFORM_CONTROL_API_BASE_URL = "/api/platform-control"
-
-$env:DSH_API_BASE_URL              = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_DSH_API_HOST_PORT" -DefaultPort 18080
-$env:IDENTITY_API_BASE_URL         = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_IDENTITY_API_HOST_PORT" -DefaultPort 18082
-$env:WORKFORCE_API_BASE_URL        = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_WORKFORCE_API_HOST_PORT" -DefaultPort 18086
-$env:PROVIDERS_API_BASE_URL        = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_PROVIDERS_API_HOST_PORT" -DefaultPort 18087
-$env:PLATFORM_CONTROL_API_BASE_URL = Get-ControlPanelServiceOrigin -HostPortEnvironment "BTHWANI_PLATFORM_CONTROL_API_HOST_PORT" -DefaultPort 18088
 
 & pnpm dev
 exit $LASTEXITCODE

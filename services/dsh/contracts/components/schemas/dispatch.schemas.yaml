@@ -1,13 +1,38 @@
 # BThwani DSH OpenAPI schemas module: dispatch.
 # Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
 
+DshDispatchDelivery:
+  type: object
+  required: [id, assignmentId, orderId, specialRequestId, captainId, status, podMethod, podReference, note, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    assignmentId: { type: string }
+    orderId: { type: [string, "null"] }
+    specialRequestId: { type: [string, "null"] }
+    captainId: { type: string }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDeliveryStatus" }
+    podMethod: { type: string }
+    podReference: { type: string }
+    note: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+  oneOf:
+    - required: [orderId]
+      properties:
+        orderId: { type: string }
+        specialRequestId: { type: "null" }
+    - required: [specialRequestId]
+      properties:
+        orderId: { type: "null" }
+        specialRequestId: { type: string }
+
 DshDispatchAssignment:
   type: object
   required: [id, orderId, specialRequestId, requestType, captainId, assignedBy, status, responseDeadlineAt, createdAt, updatedAt, version, delivery]
   properties:
     id: { type: string }
-    orderId: { type: string }
-    specialRequestId: { type: string }
+    orderId: { type: [string, "null"] }
+    specialRequestId: { type: [string, "null"] }
     requestType: { type: string }
     captainId: { type: string }
     assignedBy: { type: string }
@@ -25,7 +50,17 @@ DshDispatchAssignment:
     lastLatitude: { type: ["number", "null"] }
     lastLongitude: { type: ["number", "null"] }
     locationRecordedAt: { type: ["string", "null"], format: date-time }
-    delivery: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshDelivery" }
+    delivery: { $ref: "#/DshDispatchDelivery" }
+  oneOf:
+    - required: [orderId]
+      properties:
+        orderId: { type: string }
+        specialRequestId: { type: "null" }
+    - required: [specialRequestId, requestType]
+      properties:
+        orderId: { type: "null" }
+        specialRequestId: { type: string }
+        requestType: { type: string, minLength: 1 }
 
 DshDispatchAssignmentResponse:
   type: object

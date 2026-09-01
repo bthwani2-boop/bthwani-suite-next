@@ -160,6 +160,18 @@ test("platform runtime waits use configured service ports", () => {
   assert.doesNotMatch(platformRuntimeSmoke, /localhost:180(?:82|87|88)/);
 });
 
+test("runtime readiness uses the configured Mailpit UI port and platform body status", () => {
+  assert.match(runtimeScript, /Get-ApiHostPort\s+-EnvironmentName "BTHWANI_MAILPIT_UI_PORT"\s+-DefaultPort 8025/);
+  assert.match(runtimeScript, /localhost:\$mailpitUiPort\/api\/v1\/info/);
+  assert.match(platformRuntimeCommon, /\[string\]\$ExpectedStatus = ""/);
+  assert.match(platformRuntimeCommon, /\[string\]\$response\.status -eq \$ExpectedStatus/);
+  assert.match(platformRuntimeCommon, /platform\/readiness" "HEALTHY"/);
+  assert.match(platformRuntimeSmoke, /\$providerReadiness\.status -ne "HEALTHY"/);
+  assert.match(platformRuntimeSmoke, /\$health\.status -ne "HEALTHY"/);
+  assert.match(platformRuntimeSmoke, /\$readiness\.status -ne "HEALTHY"/);
+  assert.doesNotMatch(platformRuntimeSmoke, /status -ne "ready"|status -ne "healthy"/);
+});
+
 test("financial runtime consumers honor configured WLT and simulator ports", () => {
   assert.match(financialRuntimeDispatcher, /\$env:BTHWANI_WIREMOCK_FINANCIAL_PORT/);
   assert.doesNotMatch(financialRuntimeDispatcher, /localhost:18090/);

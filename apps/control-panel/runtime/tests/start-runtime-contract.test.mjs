@@ -114,6 +114,24 @@ test("control-panel startup keeps service origins in server-only environment var
   }
 });
 
+test("control-panel startup imports canonical runtime ports before the bootstrap child", () => {
+  const bootstrapIndex = startScript.indexOf("& pwsh -NoProfile -ExecutionPolicy Bypass -File $ControlPanelRuntimeBootstrap");
+  assert.notEqual(bootstrapIndex, -1);
+  assert.ok(startScript.includes('$RuntimeEnvironmentPath = Join-Path $RepoRoot "infra\\docker\\env\\runtime.env.example"'));
+  assert.match(startScript, /Import-EnvironmentFile -Path \$RuntimeEnvironmentPath -PreserveExisting -OnlyNames @\(/);
+  assert.ok(startScript.indexOf("Import-EnvironmentFile -Path $RuntimeEnvironmentPath -PreserveExisting") < bootstrapIndex);
+  for (const name of [
+    "DSH_API_BASE_URL",
+    "IDENTITY_API_BASE_URL",
+    "WORKFORCE_API_BASE_URL",
+    "PROVIDERS_API_BASE_URL",
+    "PLATFORM_CONTROL_API_BASE_URL",
+  ]) {
+    assert.ok(startScript.indexOf(`$env:${name}`) < bootstrapIndex);
+  }
+  assert.match(startScript, /PreserveExisting/);
+});
+
 test("runtime waits and phase execution cannot bypass configured service readiness", () => {
   for (const [environment, port] of [
     ["BTHWANI_IDENTITY_API_HOST_PORT", 18082],

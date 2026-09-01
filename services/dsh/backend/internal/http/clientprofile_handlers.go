@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -40,8 +39,7 @@ func (s *protectedStoreServer) handleUpsertClientProfilePreferences(w http.Respo
 	}
 
 	var input clientprofile.ClientProfilePreferencesInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "Invalid JSON payload")
+	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
 
@@ -77,8 +75,7 @@ func (s *protectedStoreServer) handleUpsertClientProfileConsents(w http.Response
 	}
 
 	var input clientprofile.ClientProfileConsentsInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "Invalid JSON payload")
+	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
 

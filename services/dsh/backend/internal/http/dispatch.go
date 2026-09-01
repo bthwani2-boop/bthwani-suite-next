@@ -274,8 +274,8 @@ func (s *protectedStoreServer) writeDispatchResult(w http.ResponseWriter, status
 func marshalDispatchAssignment(a dispatch.Assignment) map[string]any {
 	return map[string]any{
 		"id":                 a.ID,
-		"orderId":            a.OrderID,
-		"specialRequestId":   a.SpecialRequestID,
+		"orderId":            nullableDispatchValue(a.OrderID),
+		"specialRequestId":   nullableDispatchValue(a.SpecialRequestID),
 		"requestType":        a.SpecialRequestType,
 		"captainId":          a.CaptainID,
 		"assignedBy":         a.AssignedBy,
@@ -293,16 +293,24 @@ func marshalDispatchAssignment(a dispatch.Assignment) map[string]any {
 		"lastLongitude":      a.LastLongitude,
 		"locationRecordedAt": a.LocationRecordedAt,
 		"delivery": map[string]any{
-			"id":           a.Delivery.ID,
-			"assignmentId": a.Delivery.AssignmentID,
-			"orderId":      a.Delivery.OrderID,
-			"captainId":    a.Delivery.CaptainID,
-			"status":       string(a.Delivery.Status),
-			"podMethod":    a.Delivery.PoDMethod,
-			"podReference": a.Delivery.PoDReference,
-			"note":         a.Delivery.Note,
-			"createdAt":    a.Delivery.CreatedAt,
-			"updatedAt":    a.Delivery.UpdatedAt,
+			"id":               a.Delivery.ID,
+			"assignmentId":     a.Delivery.AssignmentID,
+			"orderId":          nullableDispatchValue(a.Delivery.OrderID),
+			"specialRequestId": nullableDispatchValue(a.Delivery.SpecialRequestID),
+			"captainId":        a.Delivery.CaptainID,
+			"status":           string(a.Delivery.Status),
+			"podMethod":        a.Delivery.PoDMethod,
+			"podReference":     a.Delivery.PoDReference,
+			"note":             a.Delivery.Note,
+			"createdAt":        a.Delivery.CreatedAt,
+			"updatedAt":        a.Delivery.UpdatedAt,
 		},
 	}
+}
+
+func nullableDispatchValue(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
 }

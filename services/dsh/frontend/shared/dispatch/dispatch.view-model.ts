@@ -42,9 +42,10 @@ function deliverySequence(status: DshDeliveryStatus): readonly DshDeliveryStatus
 function toDispatchCardViewModel(assignment: DshDispatchAssignment): DshDispatchCardViewModel {
   const sequence = deliverySequence(assignment.delivery.status);
   const statusIndex = sequence.indexOf(assignment.delivery.status);
+  const workItemId = assignment.orderId ?? assignment.specialRequestId ?? "";
   return {
     id: assignment.id,
-    orderLabel: `طلب #${assignment.orderId.slice(-6).toUpperCase()}`,
+    orderLabel: workItemId ? `طلب #${workItemId.slice(-6).toUpperCase()}` : "مهمة غير معنونة",
     captainLabel: `كابتن #${assignment.captainId.slice(-6)}`,
     assignmentLabel: ASSIGNMENT_STATUS_LABELS[assignment.status as keyof typeof ASSIGNMENT_STATUS_LABELS] ?? "غير معروف",
     deliveryLabel: DELIVERY_STATUS_LABELS[assignment.delivery.status as keyof typeof DELIVERY_STATUS_LABELS] ?? "غير معروف",

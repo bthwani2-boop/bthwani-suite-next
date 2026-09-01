@@ -64,7 +64,7 @@ export function toBellItem(assignment: DshDispatchAssignment): CaptainInboxBellI
   const assignmentLabel = ASSIGNMENT_STATUS_LABELS[assignment.status] ?? assignment.status;
   return {
     id: assignment.id,
-    orderId: assignment.orderId,
+    orderId: assignment.orderId ?? '',
     kind: assignment.status === 'offered' ? 'incoming-offer' : 'active',
     serviceType,
     fulfillmentMode: resolveCaptainInboxFulfillmentMode(assignment),

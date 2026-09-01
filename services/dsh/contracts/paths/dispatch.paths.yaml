@@ -233,7 +233,7 @@
         description: Tracking assignment.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+            schema: { $ref: "../dsh.live-tracking.openapi.yaml#/components/schemas/ClientLiveTrackingResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
@@ -256,7 +256,7 @@
         description: Reference status (assignment is null before dispatch).
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerDispatchReferenceResponse" }
+            schema: { $ref: "../dsh.live-tracking.openapi.yaml#/components/schemas/PartnerTrackingResponse" }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
