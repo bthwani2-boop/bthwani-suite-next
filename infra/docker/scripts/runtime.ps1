@@ -38,12 +38,15 @@ $ObservabilityComposeFile = Join-Path $RepoRoot "infra/docker/compose.observabil
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $GovernedMigrationScript = Join-Path $RepoRoot "infra/docker/scripts/invoke-runtime-database-migrations.ps1"
 $GovernedSeedScript = Join-Path $RepoRoot "infra/docker/scripts/invoke-runtime-database-seeds.ps1"
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
 
-foreach ($requiredFile in @($ComposeFile, $EnvFile, $GovernedMigrationScript, $GovernedSeedScript)) {
+foreach ($requiredFile in @($ComposeFile, $EnvFile, $GovernedMigrationScript, $GovernedSeedScript, $SourceCommitProvenancePath)) {
   if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
     throw "Required runtime authority not found: $requiredFile"
   }
 }
+
+. $SourceCommitProvenancePath
 
 Get-Content -LiteralPath $EnvFile | ForEach-Object {
   $line = $_.Trim()
@@ -572,9 +575,7 @@ function Invoke-GovernedMinioInit {
 }
 
 function Get-SourceCommitSha {
-  $sha = (& git rev-parse HEAD).Trim()
-  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sha)) { throw "Unable to resolve source commit SHA." }
-  return $sha
+  return Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $script:RepoRoot -ExpectedSourceCommitSha $env:CANDIDATE_SHA
 }
 
 function Invoke-GovernedMigrations {

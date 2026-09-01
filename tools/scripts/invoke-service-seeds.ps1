@@ -28,7 +28,7 @@ param(
   [string]$ComposeFile = "infra/docker/compose.runtime.yml",
   [string]$EnvFile = "infra/docker/env/runtime.env.example",
 
-  [string]$SourceCommitSha = "",
+  [string]$SourceCommitSha = $env:CANDIDATE_SHA,
 
   # JSON map of @@TOKEN@@ -> value, resolved into seed SQL after the checksum is
   # computed. Lets fixtures reference runtime-provisioned identifiers (such as
@@ -130,16 +130,12 @@ foreach ($seedFile in $seedFiles) {
   }
 }
 
-if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
-  if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
-    $SourceCommitSha = $env:GITHUB_SHA
-  } else {
-    $SourceCommitSha = (& git -C $RepoRoot rev-parse HEAD).Trim()
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommitSha)) {
-      throw "Unable to resolve source commit SHA."
-    }
-  }
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
+if (-not (Test-Path -LiteralPath $SourceCommitProvenancePath -PathType Leaf)) {
+  throw "Checked-out source commit resolver not found: $SourceCommitProvenancePath"
 }
+. $SourceCommitProvenancePath
+$SourceCommitSha = Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $RepoRoot -ExpectedSourceCommitSha $SourceCommitSha
 
 function ConvertTo-SqlLiteral {
   param([AllowEmptyString()][string]$Value)

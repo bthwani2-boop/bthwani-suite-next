@@ -308,6 +308,7 @@ for (const token of [
   "CANDIDATE_SHA: ${{ inputs.candidate_sha }}",
   "Verify routed candidate identity",
   "ROUTED_CANDIDATE_SHA: ${{ inputs.candidate_sha }}",
+  "SourceCommitSha $env:CANDIDATE_SHA",
   "ref: ${{ env.CANDIDATE_SHA }}",
   "head_sha: ${{ env.CANDIDATE_SHA }}",
   "persist-credentials: false",

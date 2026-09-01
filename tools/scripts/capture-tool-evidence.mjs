@@ -5,17 +5,36 @@ import {fileURLToPath} from "node:url";
 
 import {buildEvidenceEnvelope} from "./lib/evidence-envelope.mjs";
 
-function resolveCandidateFromEnvironment() {
-  const headSha = String(
-    process.env.CANDIDATE_SHA
-      || process.env.HEAD_SHA
-      || process.env.GITHUB_SHA
-      || execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8", windowsHide: true}),
-  ).trim();
-  const baseSha = String(process.env.BASE_SHA || process.env.GITHUB_BASE_SHA || "").trim();
-  if (!/^[0-9a-f]{40}$/iu.test(headSha)) throw new Error("candidate head SHA must be a full commit SHA");
-  if (baseSha && !/^[0-9a-f]{40}$/iu.test(baseSha)) throw new Error("candidate base SHA must be empty or a full commit SHA");
-  return {headSha, baseSha, identity: headSha};
+const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
+const repositoryRoot = path.resolve(scriptDirectory, "../..");
+
+function normalizeFullSha(value, label) {
+  const sha = String(value ?? "").trim().toLowerCase();
+  if (!/^[0-9a-f]{40}$/u.test(sha)) throw new Error(`${label} must be a full commit SHA`);
+  return sha;
+}
+
+export function resolveCandidateFromEnvironment(environment = process.env) {
+  const actualHead = normalizeFullSha(
+    execFileSync("git", ["rev-parse", "--verify", "HEAD"], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      windowsHide: true,
+    }),
+    "checked-out candidate head SHA",
+  );
+
+  for (const [name, value] of [["CANDIDATE_SHA", environment.CANDIDATE_SHA], ["HEAD_SHA", environment.HEAD_SHA]]) {
+    if (!String(value ?? "").trim()) continue;
+    const expected = normalizeFullSha(value, name);
+    if (expected !== actualHead) {
+      throw new Error(`candidate provenance mismatch: ${name.toLowerCase()}=${expected} checked_out=${actualHead}`);
+    }
+  }
+
+  const rawBaseSha = String(environment.BASE_SHA || environment.GITHUB_BASE_SHA || "").trim();
+  const baseSha = rawBaseSha ? normalizeFullSha(rawBaseSha, "candidate base SHA") : "";
+  return {headSha: actualHead, baseSha, identity: actualHead};
 }
 
 function readNative(file) {

@@ -43,7 +43,7 @@ test("a ledger conflict stays classifiable after the failure-bookkeeping stateme
     "$batch = { throw 'ERROR:  GOVERNED_MIGRATION_LEDGER_CONFLICT: service identity contains an unknown or checksum-invalid row' }",
     "$statement = { param([string]$Sql) 'UPDATE 0' }",
     "$classified = $false",
-    "try { Invoke-BthwaniGovernedMigrations -ServiceName 'identity' -MigrationFiles $files -SourceCommitSha 'aaaaaaa' -ExecuteBatch $batch -ExecuteStatement $statement } catch { $classified = Test-BthwaniRecoverableLedgerConflict -FailureText ([string] $_.Exception.Message) }",
+    "try { Invoke-BthwaniGovernedMigrations -ServiceName 'identity' -MigrationFiles $files -SourceCommitSha 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' -ExecuteBatch $batch -ExecuteStatement $statement } catch { $classified = Test-BthwaniRecoverableLedgerConflict -FailureText ([string] $_.Exception.Message) }",
     "if (-not $classified) { throw 'ledger conflict was lost before the recovery guard could classify it' }",
   ].join("; ");
 

@@ -19,7 +19,9 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$MigrationDirectory,
 
-  [string]$DatabaseUrl = $env:DATABASE_URL
+  [string]$DatabaseUrl = $env:DATABASE_URL,
+
+  [string]$SourceCommitSha = $env:CANDIDATE_SHA
 )
 
 Set-StrictMode -Version Latest
@@ -28,6 +30,7 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RunnerPath = Join-Path $PSScriptRoot "invoke-service-migrations.ps1"
 $GovernedRunnerPath = Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1"
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
 $MigrationPath = if ([System.IO.Path]::IsPathRooted($MigrationDirectory)) {
   $MigrationDirectory
 } else {
@@ -43,6 +46,11 @@ if (-not (Test-Path -LiteralPath $RunnerPath -PathType Leaf)) {
 if (-not (Test-Path -LiteralPath $GovernedRunnerPath -PathType Leaf)) {
   throw "Governed migration runner not found: $GovernedRunnerPath"
 }
+if (-not (Test-Path -LiteralPath $SourceCommitProvenancePath -PathType Leaf)) {
+  throw "Checked-out source commit resolver not found: $SourceCommitProvenancePath"
+}
+. $SourceCommitProvenancePath
+$SourceCommitSha = Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $RepoRoot -ExpectedSourceCommitSha $SourceCommitSha
 if (-not (Test-Path -LiteralPath $MigrationPath -PathType Container)) {
   throw "Migration directory not found: $MigrationPath"
 }
@@ -98,24 +106,30 @@ function Invoke-RunnerProcess {
     [string]$OverrideDatabaseUrl = ""
   )
 
+  $effectiveDatabaseUrl = if (-not [string]::IsNullOrWhiteSpace($OverrideDatabaseUrl)) {
+    $OverrideDatabaseUrl
+  } else {
+    $DatabaseUrl
+  }
   $runnerArguments = @(
     '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $RunnerPath,
     '-ServiceKey', $RunnerServiceKey,
     '-MigrationDirectory', $Directory,
-    '-DatabaseUrl', $DatabaseUrl
+    '-DatabaseUrl', $effectiveDatabaseUrl,
+    '-SourceCommitSha', $SourceCommitSha
   )
-  if (-not [string]::IsNullOrWhiteSpace($OverrideDatabaseUrl)) {
-    $runnerArguments[-1] = $OverrideDatabaseUrl
-  }
   if ($ServiceKey -eq 'workforce') {
-    $runnerArguments += @('-IdentityDatabaseUrl', $runnerArguments[-1])
+    $runnerArguments += @('-IdentityDatabaseUrl', $effectiveDatabaseUrl)
   }
   $output = & pwsh @runnerArguments 2>&1
   $exitCode = $LASTEXITCODE
 
+  $message = (($output | ForEach-Object { "$_" }) -join "`n").Trim()
   if ($ExpectSuccess -and $exitCode -ne 0) {
-    $message = (($output | ForEach-Object { "$_" }) -join "`n").Trim()
     throw "Migration wrapper unexpectedly failed for '$RunnerServiceKey' (exit $exitCode).`n$message"
+  }
+  if ($ExpectSuccess -and $message -notmatch [regex]::Escape("sha=$SourceCommitSha")) {
+    throw "Migration wrapper did not attest the checked-out source commit for '$RunnerServiceKey': expected sha=$SourceCommitSha.`n$message"
   }
   if (-not $ExpectSuccess -and $exitCode -eq 0) {
     throw "Migration wrapper unexpectedly succeeded for the required failure probe '$RunnerServiceKey'."

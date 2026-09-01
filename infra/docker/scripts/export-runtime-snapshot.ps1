@@ -4,13 +4,23 @@ param(
   [string]$BackupDir = "",
   [string]$EnvFile = "",
   [ValidateSet("HotPerDatabase", "Quiesced")]
-  [string]$ConsistencyMode = "HotPerDatabase"
+  [string]$ConsistencyMode = "HotPerDatabase",
+  [string]$SourceCommitSha = $env:CANDIDATE_SHA
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path
 Set-Location -LiteralPath $RepoRoot
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
+if (-not (Test-Path -LiteralPath $SourceCommitProvenancePath -PathType Leaf)) {
+  throw "Checked-out source commit resolver not found: $SourceCommitProvenancePath"
+}
+. $SourceCommitProvenancePath
+$SourceCommitSha = Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $RepoRoot -ExpectedSourceCommitSha $SourceCommitSha
+$trackedStatus = @(& git -C $RepoRoot status --porcelain --untracked-files=no)
+if ($LASTEXITCODE -ne 0) { throw "Unable to inspect source tree state for runtime snapshot provenance." }
+$SourceTreeState = if ($trackedStatus.Count -eq 0) { "CLEAN" } else { "DIRTY_TRACKED" }
 
 function Resolve-RuntimeEnvFile {
   param([string]$Requested)
@@ -99,7 +109,8 @@ if (-not [string]::IsNullOrWhiteSpace($PostgresPassword)) { $DockerEnv += @("-e"
 $Manifest = [ordered]@{
   schemaVersion = 3
   createdAt = [DateTimeOffset]::UtcNow.ToString("o")
-  sourceCommitSha = if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { "LOCAL_UNPINNED" }
+  sourceCommitSha = $SourceCommitSha
+  sourceTreeState = $SourceTreeState
   consistencyMode = $ConsistencyMode
   postgresImage = (docker inspect --format '{{.Config.Image}}' $PostgresContainer).Trim()
   databases = @()

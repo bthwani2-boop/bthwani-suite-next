@@ -338,7 +338,8 @@ jobs:
             -File tools/scripts/test-service-migration-runner.ps1 `
             -ServiceKey $env:BACKEND_KEY `
             -MigrationDirectory $env:MIGRATION_DIRECTORY `
-            -DatabaseUrl $env:DATABASE_URL 2>&1
+            -DatabaseUrl $env:DATABASE_URL `
+            -SourceCommitSha $env:CANDIDATE_SHA 2>&1
           $exitCode = $LASTEXITCODE
           $output | Tee-Object -FilePath $log
           if ($exitCode -ne 0) {
@@ -501,15 +502,15 @@ jobs:
         shell: pwsh
         run: >-
           ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport url -DatabaseUrl
-          $env:DATABASE_URL
+          $env:DATABASE_URL -SourceCommitSha $env:CANDIDATE_SHA
       - name: Re-run canonical DSH migrations
         shell: pwsh
         run: >-
           ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport url -DatabaseUrl
-          $env:DATABASE_URL
+          $env:DATABASE_URL -SourceCommitSha $env:CANDIDATE_SHA
       - name: Verify DSH migration runner failure contracts
         shell: pwsh
-        run: ./services/dsh/database/scripts/test-dsh-migration-runner.ps1 -DatabaseUrl $env:DATABASE_URL
+        run: ./services/dsh/database/scripts/test-dsh-migration-runner.ps1 -DatabaseUrl $env:DATABASE_URL -SourceCommitSha $env:CANDIDATE_SHA
       - name: Run DSH schema database contracts
         shell: pwsh
         run: >-
@@ -524,9 +525,9 @@ jobs:
             CAPTAIN_ACTOR_ID = "ci-captain-actor-001"
           } | ConvertTo-Json | Set-Content -LiteralPath $placeholderFile -Encoding utf8NoBOM
           ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl `
-          $env:DATABASE_URL -AllowLocalSeeds -PlaceholderFile $placeholderFile
+          $env:DATABASE_URL -SourceCommitSha $env:CANDIDATE_SHA -AllowLocalSeeds -PlaceholderFile $placeholderFile
           ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl `
-          $env:DATABASE_URL -AllowLocalSeeds -PlaceholderFile $placeholderFile
+          $env:DATABASE_URL -SourceCommitSha $env:CANDIDATE_SHA -AllowLocalSeeds -PlaceholderFile $placeholderFile
       - name: Run DSH seed database contracts
         shell: pwsh
         run: >-

@@ -293,7 +293,7 @@ function New-BthwaniGovernedMigrationBatch {
   param(
     [Parameter(Mandatory = $true)][ValidatePattern('^[a-z0-9-]+$')][string]$ServiceName,
     [Parameter(Mandatory = $true)][System.IO.FileInfo[]]$MigrationFiles,
-    [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string]$SourceCommitSha
+    [Parameter(Mandatory = $true)][ValidatePattern('^[0-9a-fA-F]{40}$')][string]$SourceCommitSha
   )
 
   $orderedFiles = @(Resolve-BthwaniGovernedMigrationPlan -ServiceName $ServiceName -MigrationFiles $MigrationFiles)
@@ -653,7 +653,7 @@ function Invoke-BthwaniGovernedMigrations {
   param(
     [Parameter(Mandatory = $true)][ValidatePattern('^[a-z0-9-]+$')][string]$ServiceName,
     [Parameter(Mandatory = $true)][System.IO.FileInfo[]]$MigrationFiles,
-    [Parameter(Mandatory = $true)][ValidateNotNullOrEmpty()][string]$SourceCommitSha,
+    [Parameter(Mandatory = $true)][ValidatePattern('^[0-9a-fA-F]{40}$')][string]$SourceCommitSha,
     [Parameter(Mandatory = $true)][scriptblock]$ExecuteBatch,
     [Parameter(Mandatory = $true)][scriptblock]$ExecuteStatement
   )

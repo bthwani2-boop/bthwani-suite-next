@@ -15,7 +15,7 @@ param(
   [ValidateSet("dsh", "wlt")]
   [string]$Service,
 
-  [string]$SourceCommitSha = "",
+  [string]$SourceCommitSha = $env:CANDIDATE_SHA,
 
   [switch]$AllowLocalSeeds
 )
@@ -25,9 +25,15 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../../")).Path
 $CanonicalSeedRunner = Join-Path $RepoRoot "tools/scripts/invoke-service-seeds.ps1"
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
 if (-not (Test-Path -LiteralPath $CanonicalSeedRunner -PathType Leaf)) {
   throw "Canonical service seed runner not found: $CanonicalSeedRunner"
 }
+if (-not (Test-Path -LiteralPath $SourceCommitProvenancePath -PathType Leaf)) {
+  throw "Checked-out source commit resolver not found: $SourceCommitProvenancePath"
+}
+. $SourceCommitProvenancePath
+$SourceCommitSha = Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $RepoRoot -ExpectedSourceCommitSha $SourceCommitSha
 
 $serviceMap = @{
   dsh = @{
