@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "ORDER_CREATION",
+  "title": "إنشاء الطلب وحقيقة الطلب",
+  "problem": {
+    "statement": "A valid checkout intent must create at most one auditable DSH order whose accepted commercial/address/item snapshots and operational truth cannot be silently repriced, rebound or duplicated under retry/concurrency.",
+    "affectedActors": ["client", "partner", "operator", "system"]
+  },
+  "actors": [
+    {
+      "id": "client",
+      "role": "Creates an order from an owned eligible checkout intent and reads only authorized customer order truth.",
+      "permittedActions": ["submit eligible checkout intent for order creation", "read owned order", "retry with governed idempotency semantics"],
+      "forbiddenActions": ["supply authoritative price/financial truth", "create from another client checkout intent", "change immutable order snapshots after creation"]
+    },
+    {
+      "id": "partner",
+      "role": "Reads/operates store-scoped order truth after creation according to later legal transitions.",
+      "permittedActions": ["read authorized owned-store order", "consume immutable order snapshot"],
+      "forbiddenActions": ["reprice the created order", "change client address snapshot", "read another store order", "mutate WLT financial truth"]
+    },
+    {
+      "id": "operator",
+      "role": "Reads or performs separately authorized order operations without changing canonical creation truth outside legal transitions.",
+      "permittedActions": ["read authorized order truth", "perform explicitly governed later order operations"],
+      "forbiddenActions": ["create duplicate order", "rewrite immutable commercial/address/item snapshot", "mutate WLT financial truth through DSH"]
+    },
+    {
+      "id": "system",
+      "role": "Validates the checkout intent and atomically persists one DSH order plus required operational event/outbox effects.",
+      "permittedActions": ["validate checkout eligibility", "enforce one-order-per-canonical-idempotency scope", "persist immutable snapshots", "emit required operational event/outbox", "return canonical readback"],
+      "forbiddenActions": ["rederive accepted price from live catalog after creation", "create duplicate order on retry", "treat WLT projection as DSH-owned finance"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["client"],
+      "states": ["loading", "success", "offline", "forbidden", "conflict", "partial", "error"],
+      "actions": ["create order from eligible checkout", "read order", "retry/recover"]
+    },
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner"],
+      "states": ["loading", "empty", "ready", "forbidden", "offline", "error"],
+      "actions": ["read owned-store order truth"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["operator"],
+      "states": ["loading", "ready", "not_found", "forbidden", "error"],
+      "actions": ["read authorized order truth"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["client", "partner", "operator", "system"],
+      "states": ["authorized", "forbidden", "invalid_checkout", "conflict", "idempotent_replay", "created"],
+      "actions": ["authorize", "validate checkout", "persist order snapshot", "persist required event/outbox", "return canonical readback"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["system"],
+      "states": ["transactional", "idempotent", "snapshot_persisted", "auditable"],
+      "actions": ["enforce one order per canonical checkout/idempotency identity", "persist immutable required snapshot", "atomically retain required operational event/outbox state"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["client", "partner", "operator"],
+      "states": ["loading", "success", "forbidden", "conflict", "offline", "error"],
+      "actions": ["map canonical contract state", "coordinate readback", "avoid local order/payment authority"]
+    },
+    {
+      "id": "app-captain",
+      "required": false,
+      "exclusionReason": "Captain enters later dispatch/fulfillment journeys, not order creation.",
+      "actors": [], "states": ["not_affected"], "actions": []
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "exclusionReason": "Field workforce does not own order creation/truth under the current model.",
+      "actors": [], "states": ["not_affected"], "actions": []
+    }
+  ],
+  "outcome": {
+    "statement": "One eligible checkout intent yields one canonical DSH order with durable accepted snapshots, authorized multi-surface readback and WLT-owned financial projection semantics.",
+    "targetState": "Retries/concurrency cannot duplicate the order, accepted snapshots remain stable, all affected surfaces read the same authorized operational truth, and no DSH/frontend financial authority is created."
+  },
+  "preconditions": [
+    "Checkout intent belongs to the same trusted platform/operator context and client required by the current contract.",
+    "Checkout intent is in the financial/operational state allowed for order creation, including COD when applicable.",
+    "Cart is active/non-empty and each item has a valid accepted commercial snapshot.",
+    "Address, fulfillment mode and serviceability are proven in the checkout intent.",
+    "Any WLT reference required by checkout remains a reference and does not grant DSH financial ownership."
+  ],
+  "acceptance": {
+    "criteria": [
+      "One checkout intent/canonical idempotency scope creates at most one order even under concurrent retry.",
+      "The created order carries the governed identifiers/versioning required for subsequent concurrency-safe transitions.",
+      "Order items, prices, currency, address and fulfillment snapshots required by the contract are fixed at creation and are not re-derived from live catalog state.",
+      "Client, partner and operator readbacks expose the same operational truth with actor-appropriate redaction.",
+      "Payment state is a read-only WLT-owned projection and DSH performs no authoritative financial mutation for order creation.",
+      "Required operational event/outbox effects are persisted with the order under the required transactional discipline and remain retry/reconciliation safe.",
+      "Affected surfaces expose truthful loading/empty/offline/forbidden/conflict/partial/error/retry states without mock/local truth.",
+      "Every read/write is scoped by trusted context plus actor/object authorization and produces attributable correlation/audit evidence where required."
+    ],
+    "failureStates": ["ineligible_checkout_created", "duplicate_order_for_checkout", "snapshot_repriced_or_rebound", "frontend_status_authority", "cross_scope_order_access", "address_pii_overexposed", "dsh_financial_mutation", "success_without_canonical_readback"]
+  },
+  "invariants": {
+    "business": [
+      "DSH owns order operational truth; WLT owns financial truth.",
+      "A canonical eligible checkout/idempotency scope yields at most one order.",
+      "Accepted commercial/address/item snapshots required by the contract remain stable after creation unless a later explicit legal transition governs a change.",
+      "All required surfaces consume one authorized DSH order truth and bounded WLT-backed financial projection.",
+      "Required operational event/outbox state follows the same transactional consistency guarantees as order creation."
+    ],
+    "negative": [
+      "No order is created from an invalid/ineligible checkout intent.",
+      "No duplicate order is created for one canonical checkout/idempotency scope.",
+      "No accepted snapshot is silently re-derived from live catalog/address state.",
+      "No frontend derives allowed business actions solely from a local status label.",
+      "No surface exposes full address PII to an actor that does not operationally require it.",
+      "No DSH/frontend path performs debit, refund, settlement or balance mutation as order-creation truth."
+    ]
+  },
+  "owners": {
+    "operationalTruthOwner": "DSH",
+    "financialTruthOwner": "WLT"
+  }
+}
