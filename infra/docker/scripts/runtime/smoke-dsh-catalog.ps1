@@ -182,16 +182,14 @@ $proposal = Invoke-RestMethod "$dshBaseUrl/dsh/operator/catalog/product-proposal
 
 $assortmentUrl = "$dshBaseUrl/dsh/operator/stores/store-test-grocery/assortment/$($proposal.proposal.adoptedMasterProductId)"
 $assortmentList = Invoke-RestMethod "$dshBaseUrl/dsh/operator/stores/store-test-grocery/assortment" -Headers $operatorHeaders -TimeoutSec 10
-$currentAssortment = @($assortmentList.assortment) |
+$currentAssortment = @($assortmentList.assortments) |
   Where-Object { $_.masterProductId -eq $proposal.proposal.adoptedMasterProductId } |
   Select-Object -First 1
 
 if ($null -eq $currentAssortment) {
   $draftAssortmentBody = @{
-    unitPrice = 0.00
-    currency = "YER"
-    available = $false
-    stockStatus = "out_of_stock"
+    localNote = "runtime smoke assortment"
+    customImageObjectKey = $null
     publicationStatus = "draft"
   } | ConvertTo-Json
   $createdAssortment = Invoke-RestMethod $assortmentUrl -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $draftAssortmentBody -TimeoutSec 10
@@ -222,29 +220,27 @@ $inventoryBody = @{
 } | ConvertTo-Json
 Invoke-RestMethod "$assortmentUrl/inventory" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $inventoryBody -TimeoutSec 10 | Out-Null
 
-$assortmentList = Invoke-RestMethod "$dshBaseUrl/dsh/operator/stores/store-test-grocery/assortment" -Headers $operatorHeaders -TimeoutSec 10
-$currentAssortment = @($assortmentList.assortment) |
-  Where-Object { $_.masterProductId -eq $proposal.proposal.adoptedMasterProductId } |
-  Select-Object -First 1
-if ($null -eq $currentAssortment) { throw "normalized assortment readback is missing" }
-if (-not $currentAssortment.available -or $currentAssortment.stockStatus -eq "out_of_stock") {
-  throw "normalized assortment inventory is not purchasable"
+$inventory = Invoke-RestMethod "$assortmentUrl/inventory" -Headers $operatorHeaders -TimeoutSec 10
+if ($null -eq $inventory.inventory -or [int]$inventory.inventory.quantity -ne 100 -or
+    [int]$inventory.inventory.reservedQuantity -ne 0 -or
+    $inventory.inventory.policyType -ne "quantity") {
+  throw "normalized assortment inventory truth was not persisted"
 }
-if ([math]::Abs(([double]$currentAssortment.unitPrice) - 10.00) -gt 0.000001 -or $currentAssortment.currency -ne "YER") {
+$prices = Invoke-RestMethod "$assortmentUrl/prices" -Headers $operatorHeaders -TimeoutSec 10
+$currentPrice = @($prices.prices) | Select-Object -First 1
+if ($null -eq $currentPrice -or [int]$currentPrice.amountMinor -ne 1000 -or $currentPrice.currency -ne "YER") {
   throw "normalized assortment effective price was not persisted"
 }
 
 $expectedPublicationStatus = if ($MediaEnabled) { "client_visible" } else { "approved" }
 $publishAssortmentBody = @{
-  unitPrice = [double]$currentAssortment.unitPrice
-  currency = [string]$currentAssortment.currency
-  available = [bool]$currentAssortment.available
-  stockStatus = [string]$currentAssortment.stockStatus
+  localNote = [string]$currentAssortment.localNote
+  customImageObjectKey = $currentAssortment.customImageObjectKey
   publicationStatus = $expectedPublicationStatus
   expectedVersion = [int]$currentAssortment.version
 } | ConvertTo-Json
 $assortment = Invoke-RestMethod $assortmentUrl -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $publishAssortmentBody -TimeoutSec 10
-if ($assortment.assortment.publicationStatus -ne $expectedPublicationStatus -or -not $assortment.assortment.available) {
+if ($assortment.assortment.publicationStatus -ne $expectedPublicationStatus) {
   throw "normalized assortment publication was not persisted"
 }
 
