@@ -3,7 +3,7 @@
   "service": "workforce",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "workforce-028_provider_penalty_financial_saga.sql",
+  "cutover": "workforce-031_remove_local_geography_authority.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -213,6 +213,13 @@
       "file": "workforce-030_identity_boundary_saga.sql",
       "sha256": "fe297a6bb6572714134fef8da3cd71cf46a6c58073ad3851ba411e021584e516",
       "historicalPrefix": "030",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 31,
+      "file": "workforce-031_remove_local_geography_authority.sql",
+      "sha256": "01af6721cb2e3a7e53266a0841fbebfdeb0fbc962b0e03a489d0deb6f2665462",
+      "historicalPrefix": "031",
       "state": "ACTIVE"
     }
   ]

@@ -244,7 +244,16 @@ components:
       - zoneId
       - category
       - maxPrepMins
+      - maxAssignmentMins
       - maxDeliveryMins
+      - warningBeforeMins
+      - pickupNotifyMins
+      - pickupArrivalMins
+      - pickupVerifyMins
+      - deliveryAssignToPickupMins
+      - deliveryPickupToDepartMins
+      - deliveryDepartToArriveMins
+      - deliveryArriveToProofMins
       - version
       - updatedBy
       - updatedAt
@@ -257,8 +266,48 @@ components:
           type: string
         maxPrepMins:
           type: integer
+          minimum: 1
+          maximum: 1440
+        maxAssignmentMins:
+          type: integer
+          minimum: 1
+          maximum: 1440
         maxDeliveryMins:
           type: integer
+          minimum: 1
+          maximum: 1440
+        warningBeforeMins:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        pickupNotifyMins:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        pickupArrivalMins:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        pickupVerifyMins:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        deliveryAssignToPickupMins:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        deliveryPickupToDepartMins:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        deliveryDepartToArriveMins:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        deliveryArriveToProofMins:
+          type: integer
+          minimum: 1
+          maximum: 1440
         version:
           type: integer
           minimum: 1

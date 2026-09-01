@@ -115,11 +115,14 @@ test("partner surface keeps store scope explicit while navigation is router-owne
   assert.doesNotMatch(model, /routeHistoryRef|handleHardwareBackPress|usePartnerProfileModel|usePartnerSupportModel/);
 });
 
-test("partner client visibility keeps unknown serviceability and store-open state closed", async () => {
+test("partner client visibility projects canonical publication readback and keeps UI hints presentation-only", async () => {
   const source = await read("services/dsh/frontend/shared/partner/dsh-client-visibility.model.ts");
 
-  assert.match(source, /if \(typeof options\.inZone === 'boolean'\) return options\.inZone;/);
-  assert.match(source, /return false;/);
-  assert.match(source, /options\.storeOpen \?\? false/);
+  assert.match(source, /store\?\.publicationDecision === 'PUBLISHED'/);
+  assert.match(source, /store\.isClientVisible/);
+  assert.match(source, /getDshPartnerVisibilityBadge\(activationStatus, storeOpen, busy, inZone\)/);
+  assert.match(source, /storeOpen = false/);
+  assert.match(source, /inZone = true/);
+  assert.doesNotMatch(source, /serviceabilityStatus|isServiceable|isOpen/);
   assert.doesNotMatch(source, /options\.storeOpen \?\? true/);
 });

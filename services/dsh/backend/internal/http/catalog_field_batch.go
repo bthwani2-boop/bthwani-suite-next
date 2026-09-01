@@ -16,10 +16,10 @@ type fieldAssortmentBatchRequest struct {
 }
 
 type fieldStoreAssortmentMutationInput struct {
-	LocalNote            string                                 `json:"localNote"`
-	CustomImageObjectKey *string                                `json:"customImageObjectKey"`
-	PublicationStatus    string                                 `json:"publicationStatus"`
-	ExpectedVersion      *int                                   `json:"expectedVersion"`
+	LocalNote            string                                       `json:"localNote"`
+	CustomImageObjectKey *string                                      `json:"customImageObjectKey"`
+	PublicationStatus    string                                       `json:"publicationStatus"`
+	ExpectedVersion      *int                                         `json:"expectedVersion"`
 	Inventory            centralcatalog.StoreAssortmentInventoryInput `json:"inventory"`
 	Price                centralcatalog.StoreAssortmentPriceInput     `json:"price"`
 }
@@ -204,7 +204,7 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentBatch(w http.Resp
 		}
 		item.PublicationStatus = "submitted"
 		assortment, err := s.upsertFieldStoreAssortmentWithCommercialTruth(
-			r, actor.ID, resolvedStoreID, masterProductID, item,
+			r, actor.ID, resolvedStoreID, masterProductID, item.fieldStoreAssortmentMutationInput,
 			policy.AllowsStoreProductCustomImage,
 			batchIdempotencyKey+":"+masterProductID,
 		)

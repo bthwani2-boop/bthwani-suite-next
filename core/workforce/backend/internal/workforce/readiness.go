@@ -81,7 +81,7 @@ func (s *Service) EvaluateCurrentProviderReadiness(ctx context.Context, actorID 
 			readiness.BlockerReasons = append(readiness.BlockerReasons, CurrentProviderBlockerProfileIncomplete)
 			break
 		}
-		if len(profile.DocumentMediaRefs) == 0 || profile.CityCode == "" || profile.ServiceZoneID == "" {
+		if len(profile.DocumentMediaRefs) == 0 || profile.ServiceAreaCode == "" || profile.ServiceZoneID == "" {
 			readiness.BlockerReasons = append(readiness.BlockerReasons, CurrentProviderBlockerProfileIncomplete)
 		}
 	}

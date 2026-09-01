@@ -18,7 +18,6 @@ import type {
   UpdateCaptainInput,
   UpdateEmployeeInput,
   UpdateFieldAgentInput,
-  WorkforceCity,
   WorkforceShift,
 } from "./workforce.types";
 
@@ -59,7 +58,7 @@ export function workforceErrorMessage(error: unknown): string {
     case "IDEMPOTENCY_CONFLICT":
       return "تم إرسال طلب مختلف بنفس مفتاح التكرار — أعد المحاولة بطلب جديد";
     case "INVALID_REFERENCE_CODE":
-      return "كود المدينة أو الوردية غير معروف أو غير مفعل";
+      return "منطقة الخدمة أو الوردية غير معروفة أو غير مفعلة";
     case "REFERENCE_EXISTS":
       return "الكود المرجعي موجود بالفعل";
     case "REFERENCE_IN_USE":
@@ -93,7 +92,7 @@ export function workforceErrorMessage(error: unknown): string {
 function listQuery(filter: FieldAgentListFilter): string {
   const params = new URLSearchParams();
   if (filter.status) params.set("status", filter.status);
-  if (filter.city) params.set("city", filter.city);
+  if (filter.serviceAreaCode) params.set("serviceAreaCode", filter.serviceAreaCode);
   if (filter.q) params.set("q", filter.q);
   if (filter.limit) params.set("limit", String(filter.limit));
   if (filter.offset) params.set("offset", String(filter.offset));
@@ -222,20 +221,6 @@ export async function searchSupervisors(kind: ProviderKind, q: string): Promise<
   const qs = params.toString();
   const result = await request<{ supervisors: SupervisorCandidate[] }>(`/workforce/reference/supervisors${qs ? `?${qs}` : ""}`);
   return result.supervisors;
-}
-
-export async function listWorkforceCities(includeInactive = false): Promise<readonly WorkforceCity[]> {
-  const result = await request<{ cities: WorkforceCity[] }>(`/workforce/reference/cities${includeInactive ? "?includeInactive=true" : ""}`);
-  return result.cities;
-}
-
-export async function createWorkforceCity(city: WorkforceCity, idempotencyKey?: string): Promise<WorkforceCity> {
-  return request<WorkforceCity>("/workforce/reference/cities", { method: "POST", body: city, idempotencyKey });
-}
-
-export async function updateWorkforceCity(city: WorkforceCity, idempotencyKey?: string): Promise<WorkforceCity> {
-  const { code, ...body } = city;
-  return request<WorkforceCity>(`/workforce/reference/cities/${encodeURIComponent(code)}`, { method: "PATCH", body, idempotencyKey });
 }
 
 export async function listWorkforceShifts(includeInactive = false): Promise<readonly WorkforceShift[]> {

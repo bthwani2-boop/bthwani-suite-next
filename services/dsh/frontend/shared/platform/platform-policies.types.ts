@@ -14,7 +14,16 @@ export type DshSlaRule = {
   readonly zoneId: string;
   readonly category: string;
   readonly maxPrepMins: number;
+  readonly maxAssignmentMins: number;
   readonly maxDeliveryMins: number;
+  readonly warningBeforeMins: number;
+  readonly pickupNotifyMins: number;
+  readonly pickupArrivalMins: number;
+  readonly pickupVerifyMins: number;
+  readonly deliveryAssignToPickupMins: number;
+  readonly deliveryPickupToDepartMins: number;
+  readonly deliveryDepartToArriveMins: number;
+  readonly deliveryArriveToProofMins: number;
   readonly version: number;
   readonly updatedBy: string;
   readonly updatedAt: string;

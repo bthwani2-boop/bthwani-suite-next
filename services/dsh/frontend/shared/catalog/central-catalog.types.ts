@@ -12,15 +12,8 @@ export type DomainPatchInput = CatalogSchema<"DshDomainUpdateInput">;
 export type NodePatchInput = CatalogSchema<"DshNodeUpdateInput">;
 export type CatalogPolicyUpdateInput = CatalogSchema<"DshCatalogPlatformPolicyUpdateInput">;
 export type ProductProposal = CatalogSchema<"DshProductProposal">;
-/**
- * Store assortment identity/metadata only. The generated backend response
- * still carries compatibility projections, but no frontend type may expose
- * those projections as store-local commercial truth.
- */
-export type StoreAssortment = Omit<
-  CatalogSchema<"DshStoreAssortment">,
-  "unitPrice" | "currency" | "available" | "stockStatus"
->;
+/** Store assortment identity and metadata; commercial truth has separate resources. */
+export type StoreAssortment = CatalogSchema<"DshStoreAssortment">;
 export type StoreAssortmentMetadataUpdateInput = CatalogSchema<"DshStoreAssortmentMetadataUpdateInput">;
 export type StoreAssortmentCreateInput = Omit<StoreAssortmentMetadataUpdateInput, "expectedVersion">;
 export type StoreAssortmentMetadataInput = StoreAssortmentCreateInput & {

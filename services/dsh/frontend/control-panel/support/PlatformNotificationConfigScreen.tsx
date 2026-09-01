@@ -45,13 +45,16 @@ function outcomeTone(outcome: DshNotificationDeliveryOutcome): CpBadgeTone {
 
 function pushStatusTone(status: DshPushDeliveryAudit["status"]): CpBadgeTone {
   if (status === "sent") return "success";
-  if (status === "failed") return "danger";
+  if (status === "failed" || status === "unknown") return "danger";
   return "warning";
 }
 
 function pushStatusLabel(status: DshPushDeliveryAudit["status"]): string {
   if (status === "sent") return "Push مرسل";
   if (status === "failed") return "Push فاشل";
+  if (status === "unknown") return "Push يحتاج reconciliation";
+  if (status === "sending") return "Push قيد الإرسال";
+  if (status === "suppressed") return "Push محجوب";
   return "Push معلّق";
 }
 
@@ -329,6 +332,7 @@ function PlatformNotificationConfigContent({ canManage }: { readonly canManage: 
                 <CpBadge tone="danger">{`Outbox فاشل: ${deliveryAudit.state.summary.failedOutbox}`}</CpBadge>
                 <CpBadge tone="success">{`Push مرسل: ${deliveryAudit.state.summary.sentPush}`}</CpBadge>
                 <CpBadge tone="warning">{`Push معلّق: ${deliveryAudit.state.summary.pendingPush}`}</CpBadge>
+                <CpBadge tone="danger">{`Push غير محسوم: ${deliveryAudit.state.summary.unknownPush}`}</CpBadge>
                 <CpBadge tone="danger">{`Push فاشل: ${deliveryAudit.state.summary.failedPush}`}</CpBadge>
               </CpFilterBar>
               <CpFilterBar label="فلاتر تدقيق التسليم">
@@ -379,7 +383,7 @@ function PlatformNotificationConfigContent({ canManage }: { readonly canManage: 
                       <CpTableHeaderCell>الممثل</CpTableHeaderCell>
                       <CpTableHeaderCell>الحالة</CpTableHeaderCell>
                       <CpTableHeaderCell>المحاولات</CpTableHeaderCell>
-                      <CpTableHeaderCell>معرّف المزود</CpTableHeaderCell>
+                        <CpTableHeaderCell>مفتاح idempotency / معرّف المزود</CpTableHeaderCell>
                       <CpTableHeaderCell>آخر خطأ</CpTableHeaderCell>
                       <CpTableHeaderCell>آخر تحديث</CpTableHeaderCell>
                     </tr>
@@ -393,7 +397,7 @@ function PlatformNotificationConfigContent({ canManage }: { readonly canManage: 
                           <CpBadge tone={pushStatusTone(row.status)}>{pushStatusLabel(row.status)}</CpBadge>
                         </CpTableCell>
                         <CpTableCell>{String(row.attemptCount)}</CpTableCell>
-                        <CpTableCell>{row.providerMessageId || "—"}</CpTableCell>
+                        <CpTableCell>{row.providerIdempotencyKey}{row.providerMessageId ? ` / ${row.providerMessageId}` : ""}</CpTableCell>
                         <CpTableCell>{row.lastError || "—"}</CpTableCell>
                         <CpTableCell>{new Date(row.updatedAt).toLocaleString("ar-YE")}</CpTableCell>
                       </tr>

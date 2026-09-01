@@ -388,7 +388,7 @@ func (s *protectedStoreServer) handleReschedulePickupWindow(w http.ResponseWrite
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+	writePickupSession(w, http.StatusOK, nil, session, r.Context(), s.db)
 }
 
 // RegisterPickupRecoveryRoutes adds the operator-owned no-show recovery route.

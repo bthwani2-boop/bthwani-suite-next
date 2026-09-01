@@ -112,9 +112,10 @@ export type DshPushDeliveryAudit = {
   readonly actorId: string;
   readonly actorType: string;
   readonly topic: string;
-  readonly status: "pending" | "sent" | "failed";
+  readonly status: "pending" | "sending" | "unknown" | "sent" | "failed" | "suppressed";
   readonly attemptCount: number;
   readonly nextRetryAt: string;
+  readonly providerIdempotencyKey: string;
   readonly providerMessageId: string;
   readonly lastError: string;
   readonly sentAt?: string | undefined;
@@ -131,6 +132,7 @@ export type DshNotificationDeliveryAuditSummary = {
   readonly failedOutbox: number;
   readonly sentPush: number;
   readonly pendingPush: number;
+  readonly unknownPush: number;
   readonly failedPush: number;
 };
 

@@ -4,13 +4,13 @@ package workforce
 // They contain only the canonical Workforce input plus the already-authorized
 // DSH-derived city code needed to rebuild a local projection after restart.
 type fieldIdentityBoundaryPayload struct {
-	Input    CreateFieldAgentInput `json:"input"`
-	CityCode string                `json:"cityCode"`
+	Input           CreateFieldAgentInput `json:"input"`
+	ServiceAreaCode string                `json:"serviceAreaCode"`
 }
 
 type captainIdentityBoundaryPayload struct {
-	Input    CreateCaptainInput `json:"input"`
-	CityCode string             `json:"cityCode"`
+	Input           CreateCaptainInput `json:"input"`
+	ServiceAreaCode string             `json:"serviceAreaCode"`
 }
 
 type employeeIdentityBoundaryPayload struct {

@@ -19,7 +19,6 @@ import {
 } from '@bthwani/ui-kit';
 import {
   useFieldPartnerProgressController,
-  getDshPartnerReadinessChecklist,
   DOCUMENT_TYPE_LABELS,
   DOCUMENT_REVIEW_STATUS_LABELS,
 } from '../../shared/partner';
@@ -61,7 +60,7 @@ function SectionCard({ title, children }: { readonly title: string; readonly chi
 }
 
 export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProducts, onOpenVisit, onOpenEscalation }: DshFieldPartnerProgressScreenProps) {
-  const { state, statusLabel, isClientVisible, reload } = useFieldPartnerProgressController(partnerId);
+  const { state, statusLabel, reload } = useFieldPartnerProgressController(partnerId);
 
   if (state.kind === 'loading' || state.kind === 'idle') {
     return <StateView loading title="جاري تحميل تقدّم ملف الشريك…" />;
@@ -82,8 +81,8 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
     );
   }
 
-  const { partner, readiness, documents, fieldVisits, storeId } = state;
-  const lifecycle = getDshPartnerReadinessChecklist(partner.activationStatus);
+  const { partner, readiness, documents, fieldVisits } = state;
+  const allStoresPublished = readiness.publicationDecision === 'PUBLISHED';
 
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
@@ -97,17 +96,26 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
           <View style={{ flexDirection: 'row-reverse', gap: spacing[2], flexWrap: 'wrap' }}>
             <Badge label={statusLabel} tone="info" />
             <Badge
-              label={isClientVisible ? 'ظاهر للعملاء الآن' : 'غير ظاهر للعملاء بعد'}
-              tone={isClientVisible ? 'success' : 'warning'}
+              label={allStoresPublished ? 'كل الفروع منشورة' : 'النشر محجوب عن فرع واحد أو أكثر'}
+              tone={allStoresPublished ? 'success' : 'warning'}
             />
+          </View>
+          <View style={{ flexDirection: 'row-reverse', gap: spacing[2], flexWrap: 'wrap' }}>
+            <Badge label={`الفروع: ${readiness.storeSummary.totalStores}`} tone="info" />
+            <Badge label={`الجاهزة: ${readiness.storeSummary.readyStores}`} tone="success" />
+            <Badge label={`المحجوبة: ${readiness.storeSummary.blockedStores}`} tone={readiness.storeSummary.blockedStores > 0 ? 'danger' : 'info'} />
+            <Badge label={`الظاهرة للعملاء: ${readiness.storeSummary.clientVisibleStores}`} tone="info" />
           </View>
           <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
             هذا الملف للاطلاع فقط — القرارات النهائية (الاعتماد، التفعيل، الظهور) من صلاحية قسم الشركاء بلوحة التحكم.
           </Text>
+          <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
+            آخر احتساب من الخادم: {new Date(readiness.generatedAt).toLocaleString('ar-SA')}
+          </Text>
         </SectionCard>
 
         <SectionCard title="مسار التفعيل الكامل">
-          {lifecycle.map((item) => (
+          {readiness.checklist.map((item) => (
             <View
               key={item.id}
               style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing[1] }}
@@ -125,6 +133,46 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
               />
             </View>
           ))}
+        </SectionCard>
+
+        <SectionCard title={`جاهزية الفروع (${readiness.storeSummary.totalStores})`}>
+          {readiness.stores.length === 0 ? (
+            <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>لا يوجد متجر مرتبط بهذا الملف بعد.</Text>
+          ) : (
+            readiness.stores.map((store) => (
+              <View
+                key={store.storeId}
+                style={{ borderTopWidth: borders.hairline, borderTopColor: colorRoles.borderSubtle, paddingTop: spacing[2], gap: spacing[2] }}
+              >
+                <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', gap: spacing[2] }}>
+                  <Text role="bodySm" style={{ flex: 1, textAlign: 'right', fontWeight: 'bold' }}>{store.displayName}</Text>
+                  <Badge
+                    label={store.publicationDecision === 'PUBLISHED' ? 'منشور' : 'محجوب'}
+                    tone={store.publicationDecision === 'PUBLISHED' ? 'success' : 'warning'}
+                  />
+                  <Badge
+                    label={store.isClientVisible ? 'ظاهر للعملاء' : 'غير ظاهر'}
+                    tone={store.isClientVisible ? 'success' : 'info'}
+                  />
+                </View>
+                {store.blockingReasons.length > 0 ? (
+                  <Text role="caption" tone="danger" style={{ textAlign: 'right' }}>
+                    أسباب الحجب: {store.blockingReasons.join('، ')}
+                  </Text>
+                ) : null}
+                {(onOpenVisit || onOpenEscalation) && (
+                  <View style={{ flexDirection: 'row-reverse', gap: spacing[2], flexWrap: 'wrap' }}>
+                    {onOpenVisit && (
+                      <Button label="فتح الزيارات" tone="primary" onPress={() => onOpenVisit(store.storeId)} />
+                    )}
+                    {onOpenEscalation && (
+                      <Button label="رفع تصعيد" tone="danger" onPress={() => onOpenEscalation(store.storeId)} />
+                    )}
+                  </View>
+                )}
+              </View>
+            ))
+          )}
         </SectionCard>
 
         {!readiness.canActivatePartner && readiness.partnerActivationBlockedReason && (
@@ -166,28 +214,6 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
               </View>
             ))
           )}
-        </SectionCard>
-
-        <SectionCard title="مهام التحقق الميداني">
-          <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-            افتح زيارة المتجر أو ارفع تصعيدًا تشغيليًا باستخدام معرف المتجر المرتبط بهذا الملف.
-          </Text>
-          <View style={{ flexDirection: 'row-reverse', gap: spacing[2], flexWrap: 'wrap' }}>
-            {onOpenVisit && (
-              <Button
-                label="فتح الزيارات"
-                tone="primary"
-                onPress={() => onOpenVisit(storeId)}
-              />
-            )}
-            {onOpenEscalation && (
-              <Button
-                label="رفع تصعيد"
-                tone="danger"
-                onPress={() => onOpenEscalation(storeId)}
-              />
-            )}
-          </View>
         </SectionCard>
 
         {onOpenProducts && (

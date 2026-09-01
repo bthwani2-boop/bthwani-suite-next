@@ -20,25 +20,24 @@ import type {
   DshPartnerDetailState,
   DshPartnerReadinessState,
 } from "../../shared/partner/partner.states";
-import type { DshPartnerReadinessViewModel } from "../../shared/partner/partner.view-model";
 
 export interface PartnerOnboardingStatusViewProps {
   selfStatusState: DshPartnerDetailState & { kind: "success" };
   selfReadinessState: DshPartnerReadinessState;
-  selfReadinessViewModel: DshPartnerReadinessViewModel | null;
   reloadSelfStatus: () => void;
 }
 
 export function PartnerOnboardingStatusView({
   selfStatusState,
   selfReadinessState,
-  selfReadinessViewModel,
   reloadSelfStatus,
 }: PartnerOnboardingStatusViewProps) {
   const statusMeta = getDshPartnerActivationStateMetadata(
     selfStatusState.partner.activationStatus,
   );
-  const readinessItems = selfReadinessViewModel?.items ?? [];
+  const readinessItems = selfReadinessState.kind === "success"
+    ? selfReadinessState.readiness.checklist
+    : [];
 
   return (
     <MobileScrollView
@@ -98,9 +97,9 @@ export function PartnerOnboardingStatusView({
             الخطوة التالية
           </Text>
           <Text role="bodySm" tone="secondary" style={{ textAlign: "right" }}>
-            {statusMeta.nextAction}
+            {statusMeta?.nextAction ?? "راجع حالة الشريك من لوحة التحكم."}
           </Text>
-          {statusMeta.blockedReason ? (
+          {statusMeta?.blockedReason ? (
             <Text role="caption" tone="danger" style={{ textAlign: "right" }}>
               {statusMeta.blockedReason}
             </Text>

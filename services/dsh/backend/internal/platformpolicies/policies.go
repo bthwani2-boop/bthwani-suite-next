@@ -39,14 +39,23 @@ type Zone struct {
 }
 
 type SlaRule struct {
-	ID              string    `json:"id"`
-	ZoneID          string    `json:"zoneId"`
-	Category        string    `json:"category"`
-	MaxPrepMins     int       `json:"maxPrepMins"`
-	MaxDeliveryMins int       `json:"maxDeliveryMins"`
-	Version         int       `json:"version"`
-	UpdatedBy       string    `json:"updatedBy"`
-	UpdatedAt       time.Time `json:"updatedAt"`
+	ID                         string    `json:"id"`
+	ZoneID                     string    `json:"zoneId"`
+	Category                   string    `json:"category"`
+	MaxPrepMins                int       `json:"maxPrepMins"`
+	MaxAssignmentMins          int       `json:"maxAssignmentMins"`
+	MaxDeliveryMins            int       `json:"maxDeliveryMins"`
+	WarningBeforeMins          int       `json:"warningBeforeMins"`
+	PickupNotifyMins           int       `json:"pickupNotifyMins"`
+	PickupArrivalMins          int       `json:"pickupArrivalMins"`
+	PickupVerifyMins           int       `json:"pickupVerifyMins"`
+	DeliveryAssignToPickupMins int       `json:"deliveryAssignToPickupMins"`
+	DeliveryPickupToDepartMins int       `json:"deliveryPickupToDepartMins"`
+	DeliveryDepartToArriveMins int       `json:"deliveryDepartToArriveMins"`
+	DeliveryArriveToProofMins  int       `json:"deliveryArriveToProofMins"`
+	Version                    int       `json:"version"`
+	UpdatedBy                  string    `json:"updatedBy"`
+	UpdatedAt                  time.Time `json:"updatedAt"`
 }
 
 type CapacityConfig struct {
@@ -113,7 +122,11 @@ func ListSlaRules(
 ) ([]SlaRule, error) {
 	args := []any{}
 	query := `
-		SELECT id, zone_id, category, max_prep_mins, max_delivery_mins,
+		SELECT id, zone_id, category, max_prep_mins, max_assignment_mins,
+		       max_delivery_mins, warning_before_mins, pickup_notify_mins,
+		       pickup_arrival_mins, pickup_verify_mins,
+		       delivery_assign_to_pickup_mins, delivery_pickup_to_depart_mins,
+		       delivery_depart_to_arrive_mins, delivery_arrive_to_proof_mins,
 		       version, updated_by, updated_at
 		FROM dsh_platform_sla_rules`
 	if strings.TrimSpace(zoneID) != "" {
@@ -136,7 +149,16 @@ func ListSlaRules(
 			&item.ZoneID,
 			&item.Category,
 			&item.MaxPrepMins,
+			&item.MaxAssignmentMins,
 			&item.MaxDeliveryMins,
+			&item.WarningBeforeMins,
+			&item.PickupNotifyMins,
+			&item.PickupArrivalMins,
+			&item.PickupVerifyMins,
+			&item.DeliveryAssignToPickupMins,
+			&item.DeliveryPickupToDepartMins,
+			&item.DeliveryDepartToArriveMins,
+			&item.DeliveryArriveToProofMins,
 			&item.Version,
 			&item.UpdatedBy,
 			&item.UpdatedAt,

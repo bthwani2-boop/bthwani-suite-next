@@ -1,4 +1,4 @@
-import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
+import { bthwaniSensitiveStorage } from "@bthwani/data-runtime/sensitive-storage-adapter";
 import {
   MutationIdentityScopeError,
   resolveMutationIdentityScope,
@@ -6,9 +6,15 @@ import {
 import type { DshCreateTicketInput } from "./support.types";
 import type { PartnerSupportMutationContext } from "./partner-support.api";
 import { secureRandomId } from "../_kernel/secure-random.ts";
+import {
+  ensureSensitiveSupportAttemptsMigrated,
+  opaqueSupportFingerprint,
+  SENSITIVE_PARTNER_CREATE_ATTEMPT_PREFIX,
+  SENSITIVE_PARTNER_MESSAGE_ATTEMPT_PREFIX,
+} from "./sensitive-support-attempt-storage.ts";
 
-const CREATE_ATTEMPT_PREFIX = "@bthwani/dsh/partner-support/create-attempt/v3/";
-const MESSAGE_ATTEMPT_PREFIX = "@bthwani/dsh/partner-support/message-attempt/v3/";
+const CREATE_ATTEMPT_PREFIX = SENSITIVE_PARTNER_CREATE_ATTEMPT_PREFIX;
+const MESSAGE_ATTEMPT_PREFIX = SENSITIVE_PARTNER_MESSAGE_ATTEMPT_PREFIX;
 
 function uniquePart(): string {
   return secureRandomId();
@@ -53,14 +59,14 @@ function parseAttempt(raw: string | null): PersistedAttempt | null {
 }
 
 function createFingerprint(input: DshCreateTicketInput): string {
-  return JSON.stringify({
+  return opaqueSupportFingerprint(JSON.stringify({
     subject: input.subject.trim(),
     description: input.description.trim(),
     category: input.category,
     priority: input.priority ?? "normal",
     storeId: input.storeId?.trim() ?? "",
     orderId: input.orderId?.trim() ?? "",
-  });
+  }));
 }
 
 function createAttemptKey(scope: { readonly actorId: string; readonly installationId: string }): string {
@@ -99,11 +105,12 @@ export async function getOrCreatePartnerTicketAttempt(
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
   const key = createAttemptKey(scoped);
 
-  const stored = parseAttempt(await bthwaniDurableStorage.getItem(key));
+  await ensureSensitiveSupportAttemptsMigrated();
+  const stored = parseAttempt(await bthwaniSensitiveStorage.getItem(key));
   if (stored?.fingerprint === fingerprint) {
     assertScopeMatchesStored(stored, scoped);
     if (stored.scope.entityId !== entityId) {
-      await bthwaniDurableStorage.removeItem(key);
+      await bthwaniSensitiveStorage.removeItem(key);
     } else {
       return stored;
     }
@@ -113,13 +120,14 @@ export async function getOrCreatePartnerTicketAttempt(
     context: newContext("partner-ticket-create"),
     scope: scoped,
   } as const;
-  await bthwaniDurableStorage.setItem(key, JSON.stringify(attempt));
+  await bthwaniSensitiveStorage.setItem(key, JSON.stringify(attempt));
   return attempt;
 }
 
 export async function clearPartnerTicketAttempt(actorId: string): Promise<void> {
+  await ensureSensitiveSupportAttemptsMigrated();
   const scope = await resolveMutationIdentityScope(actorId, { entityId: "partner-ticket-create-cleanup" });
-  await bthwaniDurableStorage.removeItem(createAttemptKey(scope));
+  await bthwaniSensitiveStorage.removeItem(createAttemptKey(scope));
 }
 
 export async function getOrCreatePartnerMessageAttempt(
@@ -127,17 +135,18 @@ export async function getOrCreatePartnerMessageAttempt(
   ticketId: string,
   body: string,
 ): Promise<PersistedAttempt> {
-  const fingerprint = JSON.stringify({ ticketId, body: body.trim() });
+  const fingerprint = opaqueSupportFingerprint(JSON.stringify({ ticketId, body: body.trim() }));
   const entityId = `${ticketId}:${fingerprint.slice(0, 16)}`;
   const scope = await resolveMutationIdentityScope(actorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
   const key = messageAttemptKey(scoped, ticketId);
 
-  const stored = parseAttempt(await bthwaniDurableStorage.getItem(key));
+  await ensureSensitiveSupportAttemptsMigrated();
+  const stored = parseAttempt(await bthwaniSensitiveStorage.getItem(key));
   if (stored?.fingerprint === fingerprint) {
     assertScopeMatchesStored(stored, scoped);
     if (stored.scope.entityId !== entityId) {
-      await bthwaniDurableStorage.removeItem(key);
+      await bthwaniSensitiveStorage.removeItem(key);
     } else {
       return stored;
     }
@@ -147,11 +156,12 @@ export async function getOrCreatePartnerMessageAttempt(
     context: newContext(`partner-message:${ticketId}`),
     scope: scoped,
   } as const;
-  await bthwaniDurableStorage.setItem(key, JSON.stringify(attempt));
+  await bthwaniSensitiveStorage.setItem(key, JSON.stringify(attempt));
   return attempt;
 }
 
 export async function clearPartnerMessageAttempt(actorId: string, ticketId: string): Promise<void> {
+  await ensureSensitiveSupportAttemptsMigrated();
   const scope = await resolveMutationIdentityScope(actorId, { entityId: `${ticketId}:cleanup` });
-  await bthwaniDurableStorage.removeItem(messageAttemptKey(scope, ticketId));
+  await bthwaniSensitiveStorage.removeItem(messageAttemptKey(scope, ticketId));
 }

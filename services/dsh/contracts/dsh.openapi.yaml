@@ -1609,6 +1609,16 @@ components:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshTicketCategoryCount"
     DshSupportAnalyticsResponse:
       $ref: "./components/schemas/support.schemas.yaml#/DshSupportAnalyticsResponse"
+    DshPartnerSupportAggregate:
+      $ref: "./components/schemas/support.schemas.yaml#/DshPartnerSupportAggregate"
+    DshPartnerOperationalStore:
+      $ref: "./components/schemas/support.schemas.yaml#/DshPartnerOperationalStore"
+    DshPartnerOperationalOrder:
+      $ref: "./components/schemas/support.schemas.yaml#/DshPartnerOperationalOrder"
+    DshPartnerOperationalTicket:
+      $ref: "./components/schemas/support.schemas.yaml#/DshPartnerOperationalTicket"
+    DshPartnerSupportOperations:
+      $ref: "./components/schemas/support.schemas.yaml#/DshPartnerSupportOperations"
     DshStoreAnalyticsResponse:
       $ref: "./components/schemas/analytics.schemas.yaml#/DshStoreAnalyticsResponse"
     DshPartnerPerformanceResponse:
@@ -1661,6 +1671,8 @@ components:
       $ref: "./components/schemas/partner.schemas.yaml#/DshPartnerTransitionResponse"
     DshPartnerActivationStatus:
       $ref: "./components/schemas/partner.schemas.yaml#/DshPartnerActivationStatus"
+    DshPartnerActivationStatusValue:
+      $ref: "./components/schemas/partner.schemas.yaml#/DshPartnerActivationStatusValue"
     DshPartnerTeamMember:
       $ref: "./components/schemas/partner.schemas.yaml#/DshPartnerTeamMember"
     DshPartnerStoreCourierSettings:

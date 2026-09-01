@@ -57,7 +57,12 @@ func (s *protectedStoreServer) handleGetClientPickupSession(w http.ResponseWrite
 
 	var sessionPayload any
 	if session != nil {
-		sessionPayload = marshalPickupSession(session)
+		var marshalErr error
+		sessionPayload, marshalErr = marshalPickupSession(r.Context(), s.db, session)
+		if marshalErr != nil {
+			writePickupPolicyError(w, marshalErr)
+			return
+		}
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{
 		"session": sessionPayload,

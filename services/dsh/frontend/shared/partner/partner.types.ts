@@ -23,6 +23,8 @@ export type DshPartner = {
   readonly destinationMethod: string;
   readonly maskedDestinationReference: string;
   readonly destinationVerificationStatus: string;
+  readonly allowedActions?: readonly string[];
+  readonly allowedTransitions?: readonly DshPartnerActivationStatus[];
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -82,6 +84,21 @@ export type DshPartnerReadinessItem = {
   readonly blockedReason?: string;
 };
 
+export type DshPartnerStoreReadinessSummary = {
+  readonly totalStores: number;
+  readonly readyStores: number;
+  readonly blockedStores: number;
+  readonly clientVisibleStores: number;
+};
+
+export type DshPartnerStorePublicationReadiness = {
+  readonly storeId: string;
+  readonly displayName: string;
+  readonly publicationDecision: "PUBLISHED" | "BLOCKED";
+  readonly blockingReasons: readonly string[];
+  readonly isClientVisible: boolean;
+};
+
 export type DshPartnerReadiness = {
   readonly partnerId: string;
   readonly canActivate: boolean;
@@ -91,7 +108,10 @@ export type DshPartnerReadiness = {
   readonly blockingReasons: readonly string[];
   readonly blockedReason?: string;
   readonly partnerActivationBlockedReason?: string;
-  readonly checklist: DshPartnerReadinessItem[];
+  readonly checklist: readonly DshPartnerReadinessItem[];
+  readonly storeSummary: DshPartnerStoreReadinessSummary;
+  readonly stores: readonly DshPartnerStorePublicationReadiness[];
+  readonly generatedAt: string;
 };
 
 export type DshPartnerAuditEvent = {

@@ -250,14 +250,20 @@ paths:
       operationId: get_dsh_operator_support_partners__partnerId__aggregate
       responses:
         '200':
-          description: Auto-generated
+          description: Partner support aggregate readback.
           content:
             application/json:
               schema:
                 type: object
+                required: [aggregate]
+                properties:
+                  aggregate:
+                    $ref: './dsh.openapi.yaml#/components/schemas/DshPartnerSupportAggregate'
         '401':
           $ref: '#/components/responses/Error'
         '403':
+          $ref: '#/components/responses/Error'
+        '404':
           $ref: '#/components/responses/Error'
       security:
       - bearerAuth: []
@@ -298,14 +304,20 @@ paths:
       operationId: get_dsh_operator_support_partners__partnerId__operations
       responses:
         '200':
-          description: Auto-generated
+          description: Scoped partner operational readback.
           content:
             application/json:
               schema:
                 type: object
+                required: [operations]
+                properties:
+                  operations:
+                    $ref: './dsh.openapi.yaml#/components/schemas/DshPartnerSupportOperations'
         '401':
           $ref: '#/components/responses/Error'
         '403':
+          $ref: '#/components/responses/Error'
+        '404':
           $ref: '#/components/responses/Error'
       security:
       - bearerAuth: []

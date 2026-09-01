@@ -126,4 +126,19 @@ describe("partner unified multi-surface platform closure", () => {
     assert.match(shell, /stores=\{filteredStores\}/);
     assert.equal((shell.match(/<HomeStoreFeedSection/g) ?? []).length, 1);
   });
+
+  test("serves a real partner-scoped operations read model instead of a support placeholder", () => {
+    const readModel = read("services/dsh/backend/internal/support/partner_operations.go");
+    const handler = read("services/dsh/backend/internal/http/governed_partner_support.go");
+    const contract = read("services/dsh/contracts/dsh.support-governance.openapi.yaml");
+
+    assert.match(handler, /GetPartnerOperationsReadModel/);
+    assert.doesNotMatch(handler, /scoped_read_only|return a stub|Operational mutations must occur/);
+    assert.match(readModel, /FROM dsh_partner_store_readiness_v/);
+    assert.match(readModel, /s\.partner_id = \$2/);
+    assert.match(readModel, /t\.reporter_id = \$1/);
+    assert.match(readModel, /Message bodies and\s+\/\/ reporter identities remain behind/);
+    assert.match(contract, /DshPartnerSupportOperations/);
+    assert.match(contract, /required: \[operations\]/);
+  });
 });

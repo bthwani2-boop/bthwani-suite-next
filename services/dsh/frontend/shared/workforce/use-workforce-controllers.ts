@@ -8,7 +8,6 @@ import {
   issueFieldAgentActivationCode,
   listCaptains,
   listFieldAgents,
-  listWorkforceCities,
   listWorkforceShifts,
   reactivateCaptain,
   reactivateFieldAgent,
@@ -39,7 +38,6 @@ import type {
   SupervisorCandidate,
   UpdateCaptainInput,
   UpdateFieldAgentInput,
-  WorkforceCity,
   WorkforceShift,
 } from "./workforce.types";
 
@@ -192,7 +190,7 @@ export function useFieldAgentDetailController(actorId: string) {
 export type WorkforceReferenceState = {
   readonly loading: boolean;
   readonly error: string | null;
-  readonly cities: readonly WorkforceCity[];
+  readonly zones: readonly DshZone[];
   readonly shifts: readonly WorkforceShift[];
 };
 
@@ -200,18 +198,18 @@ export function useWorkforceReferenceData(includeInactive = false) {
   const [state, setState] = useState<WorkforceReferenceState>({
     loading: true,
     error: null,
-    cities: [],
+    zones: [],
     shifts: [],
   });
 
   const reload = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const [cities, shifts] = await Promise.all([
-        listWorkforceCities(includeInactive),
+      const [{ zones }, shifts] = await Promise.all([
+        fetchZones(includeInactive),
         listWorkforceShifts(includeInactive),
       ]);
-      setState({ loading: false, error: null, cities, shifts });
+      setState({ loading: false, error: null, zones: zones ?? [], shifts });
     } catch (error) {
       setState((prev) => ({ ...prev, loading: false, error: workforceErrorMessage(error) }));
     }
@@ -221,17 +219,17 @@ export function useWorkforceReferenceData(includeInactive = false) {
     void reload();
   }, [reload]);
 
-  const cityLabel = useMemo(() => {
-    const byCode = new Map(state.cities.map((city) => [city.code, city.nameAr]));
+  const serviceAreaLabel = useMemo(() => {
+    const byCode = new Map(state.zones.map((zone) => [zone.serviceAreaCode, zone.name]));
     return (code?: string) => (code ? byCode.get(code) ?? code : "—");
-  }, [state.cities]);
+  }, [state.zones]);
 
   const shiftLabel = useMemo(() => {
     const byCode = new Map(state.shifts.map((shift) => [shift.code, shift.nameAr]));
     return (code?: string) => (code ? byCode.get(code) ?? code : "—");
   }, [state.shifts]);
 
-  return { ...state, reload, cityLabel, shiftLabel };
+  return { ...state, reload, serviceAreaLabel, shiftLabel };
 }
 
 // ---- captains (mirrors the field-agent controllers above) ----

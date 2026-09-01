@@ -104,8 +104,8 @@ export function ProviderActivationWorkspace({
                       <Text role="bodyStrong">{provider.fullNameAr}</Text>
                       <Text role="caption" tone="muted">
                         {provider.workforceCode} · {providerKind === "captain"
-                          ? reference.cityLabel(provider.captainProfile?.operatingCityCode)
-                          : reference.cityLabel(provider.fieldProfile?.cityCode)} · {ENGAGEMENT_STATUS_LABEL_AR[provider.engagementStatus]}
+                          ? reference.serviceAreaLabel(provider.captainProfile?.operatingServiceAreaCode)
+                          : reference.serviceAreaLabel(provider.fieldProfile?.serviceAreaCode)} · {ENGAGEMENT_STATUS_LABEL_AR[provider.engagementStatus]}
                       </Text>
                     </Box>
                     <CpButton
@@ -179,7 +179,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
   if (providerKind === "field") {
     if (!detail.fieldProfile?.serviceZoneId) missingReasons.push("منطقة الخدمة مطلوبة");
   } else {
-    if (!detail.captainProfile?.operatingCityCode) missingReasons.push("مدينة التشغيل مطلوبة");
+    if (!detail.captainProfile?.operatingServiceAreaCode) missingReasons.push("منطقة الخدمة التشغيلية مطلوبة");
     if (!detail.captainProfile?.vehicleType) missingReasons.push("نوع المركبة مطلوب");
     if (!detail.captainProfile?.vehicleIdentifier) missingReasons.push("معرف المركبة مطلوب");
     if (detail.captainProfile?.licenseStatus !== "valid") missingReasons.push("رخصة القيادة يجب أن تكون معتمدة وصالحة");

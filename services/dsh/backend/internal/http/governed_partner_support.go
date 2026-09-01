@@ -22,7 +22,7 @@ func (s *administrationSupportServer) handleGetPartnerSupportAggregate(w http.Re
 
 	agg, err := support.GetPartnerAggregate(s.db, partnerID)
 	if err != nil {
-		writeSupportRequestError(w, err)
+		writePartnerSupportReadError(w, err)
 		return
 	}
 
@@ -42,7 +42,7 @@ func (s *administrationSupportServer) handleGetPartnerSupportFinance(w http.Resp
 	// We need operatorContextID for WLT references
 	agg, err := support.GetPartnerAggregate(s.db, partnerID)
 	if err != nil {
-		writeSupportRequestError(w, err)
+		writePartnerSupportReadError(w, err)
 		return
 	}
 
@@ -73,20 +73,22 @@ func (s *administrationSupportServer) handleGetPartnerSupportOperations(w http.R
 		return
 	}
 
-	agg, err := support.GetPartnerAggregate(s.db, partnerID)
+	operations, err := support.GetPartnerOperationsReadModel(s.db, partnerID)
 	if err != nil {
-		writeSupportRequestError(w, err)
+		writePartnerSupportReadError(w, err)
 		return
 	}
 
-	// Fetch a scoped, read-only operational view for this partner.
-	// For J074, we simply return a stub that points to the finance and support tickets,
-	// preventing operators from directly mutating the order state here.
-	operations := map[string]any{
-		"operatorContextId": agg.OperatorContextID,
-		"status":            "scoped_read_only",
-		"message":           "Operational mutations must occur through the explicit Order lifecycle routes, not the support facade.",
-	}
-
 	store.SendJSON(w, http.StatusOK, map[string]any{"operations": operations})
+}
+
+func writePartnerSupportReadError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, support.ErrInvalid):
+		store.SendError(w, http.StatusBadRequest, "SUPPORT_REQUEST_INVALID", "partner support target is invalid")
+	case errors.Is(err, support.ErrNotFound):
+		store.SendError(w, http.StatusNotFound, "PARTNER_NOT_FOUND", "partner support target was not found")
+	default:
+		writeSupportRequestError(w, err)
+	}
 }

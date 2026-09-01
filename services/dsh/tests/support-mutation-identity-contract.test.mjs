@@ -8,7 +8,13 @@ function source(path) {
 
 test("support mutation attempts are namespaced by actor and installation", () => {
   const attempt = source("frontend/shared/support/support-mutation-attempt.ts");
-  assert.match(attempt, /const PREFIX = "@bthwani\/dsh\/support-mutation\/v3\/"/);
+  const storage = source("frontend/shared/support/sensitive-support-attempt-storage.ts");
+  assert.match(attempt, /const PREFIX = SENSITIVE_SUPPORT_MUTATION_PREFIX/);
+  assert.match(attempt, /bthwaniSensitiveStorage/);
+  assert.doesNotMatch(attempt, /bthwaniDurableStorage/);
+  assert.match(storage, /support-mutation\/v3/);
+  assert.match(storage, /ensureSensitiveSupportAttemptsMigrated/);
+  assert.match(storage, /opaqueSupportFingerprint/);
   assert.match(attempt, /readonly actorId: string;/);
   assert.match(attempt, /resolveMutationIdentityScope\(actorId, /);
   assert.match(attempt, /encode\(scope\.actorId\).*encode\(scope\.installationId\)/);

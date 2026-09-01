@@ -191,7 +191,7 @@ export function ProviderListView(props: {
               <CpTableCell>
                 {member.workforceKind === "employee"
                   ? member.employeeProfile?.department || "بدون قسم"
-                  : reference.cityLabel(member.fieldProfile?.cityCode ?? member.captainProfile?.operatingCityCode)}
+                  : reference.serviceAreaLabel(member.fieldProfile?.serviceAreaCode ?? member.captainProfile?.operatingServiceAreaCode)}
               </CpTableCell>
               <CpTableCell>
                 <CpBadge tone={statusTone(member.engagementStatus)}>{ENGAGEMENT_STATUS_LABEL_AR[member.engagementStatus]}</CpBadge>

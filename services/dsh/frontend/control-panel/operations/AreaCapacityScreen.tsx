@@ -162,6 +162,14 @@ function CapacityInspector({
         sla.maxPrepMins == null ||
         sla.maxAssignmentMins == null ||
         sla.maxDeliveryMins == null ||
+        sla.warningBeforeMins == null ||
+        sla.pickupNotifyMins == null ||
+        sla.pickupArrivalMins == null ||
+        sla.pickupVerifyMins == null ||
+        sla.deliveryAssignToPickupMins == null ||
+        sla.deliveryPickupToDepartMins == null ||
+        sla.deliveryDepartToArriveMins == null ||
+        sla.deliveryArriveToProofMins == null ||
         sla.version == null
       ) {
         throw new Error(
@@ -178,6 +186,14 @@ function CapacityInspector({
         maxPrepMins: sla.maxPrepMins,
         maxAssignmentMins: sla.maxAssignmentMins,
         maxDeliveryMins: sla.maxDeliveryMins,
+        warningBeforeMins: sla.warningBeforeMins,
+        pickupNotifyMins: sla.pickupNotifyMins,
+        pickupArrivalMins: sla.pickupArrivalMins,
+        pickupVerifyMins: sla.pickupVerifyMins,
+        deliveryAssignToPickupMins: sla.deliveryAssignToPickupMins,
+        deliveryPickupToDepartMins: sla.deliveryPickupToDepartMins,
+        deliveryDepartToArriveMins: sla.deliveryDepartToArriveMins,
+        deliveryArriveToProofMins: sla.deliveryArriveToProofMins,
         expectedSlaVersion: sla.version,
         maxConcurrentOrders: parsePositiveInteger(
           form.maxConcurrentOrders,

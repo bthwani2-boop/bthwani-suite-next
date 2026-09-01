@@ -1,6 +1,7 @@
 package partnerdelivery
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strings"
@@ -66,16 +67,15 @@ type RefreshDeliverySLAAlertsResult struct {
 // RefreshDeliverySLAAlerts scans every partner_delivery task, opens an
 // alert for any task whose current leg is overdue (per sla.go's on-read
 // evaluation), and resolves alerts whose leg is no longer overdue --
-// because the task advanced, or closed. The scan-and-reconcile shape
-// mirrors orders.RefreshPreparationAlerts; the reconciliation itself runs
-// in Go rather than as one SQL statement because a task's overdue leg
+// because the task advanced, or closed. The reconciliation runs in Go rather
+// than as one SQL statement because a task's overdue leg
 // depends on which of four timestamps is set, which is materially harder
 // to express as a single declarative condition than preparation's
 // single-deadline case.
-func RefreshDeliverySLAAlerts(db *sql.DB, operatorContextID, correlationID string, now time.Time) (*RefreshDeliverySLAAlertsResult, error) {
+func RefreshDeliverySLAAlerts(ctx context.Context, db *sql.DB, operatorContextID, correlationID string, now time.Time) (*RefreshDeliverySLAAlertsResult, error) {
 	correlationID = strings.TrimSpace(correlationID)
 	operatorContextID = strings.TrimSpace(operatorContextID)
-	if db == nil || operatorContextID == "" || correlationID == "" {
+	if ctx == nil || db == nil || operatorContextID == "" || correlationID == "" {
 		return nil, ErrInvalid
 	}
 
@@ -83,7 +83,7 @@ func RefreshDeliverySLAAlerts(db *sql.DB, operatorContextID, correlationID strin
 	if err != nil {
 		return nil, err
 	}
-	thresholds := DefaultDeliverySLAThresholds()
+	thresholdsByStore := make(map[string]DeliverySLAThresholds)
 
 	type overdueInfo struct {
 		leg     DeliverySLALeg
@@ -93,6 +93,14 @@ func RefreshDeliverySLAAlerts(db *sql.DB, operatorContextID, correlationID strin
 	overdue := make(map[string]overdueInfo, len(tasks))
 	for i := range tasks {
 		task := &tasks[i]
+		thresholds, ok := thresholdsByStore[task.StoreID]
+		if !ok {
+			thresholds, err = GetSLAThresholds(ctx, db, task.StoreID)
+			if err != nil {
+				return nil, err
+			}
+			thresholdsByStore[task.StoreID] = thresholds
+		}
 		sla := EvaluateDeliverySLA(task, thresholds, now)
 		if sla.State == DeliverySLAOverdue {
 			overdue[task.ID] = overdueInfo{leg: sla.CurrentLeg, orderID: task.OrderID, storeID: task.StoreID}

@@ -163,16 +163,19 @@ func enqueueNotificationChannels(tx *sql.Tx, notificationID string, channels []s
 	for _, channel := range uniqueChannels(channels) {
 		status := "pending"
 		var sentAt any
+		var providerIdempotencyKey any
 		if channel == "in_app" {
 			status = "sent"
 			sentAt = time.Now().UTC()
+		} else {
+			providerIdempotencyKey = "push:" + notificationID
 		}
 		if _, err := tx.Exec(`
 			INSERT INTO dsh_notification_channel_deliveries
-				(notification_id, channel, status, sent_at)
-			VALUES ($1::uuid, $2, $3, $4)
+				(notification_id, channel, status, sent_at, provider_idempotency_key)
+			VALUES ($1::uuid, $2, $3, $4, $5)
 			ON CONFLICT (notification_id, channel) DO NOTHING`,
-			notificationID, channel, status, sentAt,
+			notificationID, channel, status, sentAt, providerIdempotencyKey,
 		); err != nil {
 			return fmt.Errorf("enqueue notification channel %s: %w", channel, err)
 		}

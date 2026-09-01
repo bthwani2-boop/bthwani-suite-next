@@ -1,17 +1,24 @@
 package partnerdelivery
 
-import "time"
+import (
+	"context"
+	"database/sql"
+	"time"
+
+	"dsh-api/internal/platformpolicies"
+)
 
 // DeliverySLAState classifies how a partner_delivery task's current leg is
-// tracking against its threshold. Mirrors orders.PreparationSLAState.
-type DeliverySLAState string
+// tracking against its threshold. The state vocabulary is shared across DSH
+// SLA projections; partner delivery owns its distinct leg vocabulary.
+type DeliverySLAState = platformpolicies.SLAState
 
 const (
-	DeliverySLANotStarted DeliverySLAState = "not_started"
-	DeliverySLAOnTrack    DeliverySLAState = "on_track"
-	DeliverySLADueSoon    DeliverySLAState = "due_soon"
-	DeliverySLAOverdue    DeliverySLAState = "overdue"
-	DeliverySLAClosed     DeliverySLAState = "closed"
+	DeliverySLANotStarted = platformpolicies.SLANotStarted
+	DeliverySLAOnTrack    = platformpolicies.SLAOnTrack
+	DeliverySLADueSoon    = platformpolicies.SLADueSoon
+	DeliverySLAOverdue    = platformpolicies.SLAOverdue
+	DeliverySLAClosed     = platformpolicies.SLAClosed
 )
 
 // DeliverySLALeg names which handoff the task is currently in.
@@ -25,9 +32,8 @@ const (
 	DeliveryLegArriveToProof  DeliverySLALeg = "arrive_to_proof"
 )
 
-// DeliverySLAThresholds bounds how long each leg may run before it is
-// flagged due_soon/overdue. Global constants for now; per-store tuning can
-// follow orders.StorePreparationPolicy's pattern later if needed.
+// DeliverySLAThresholds is the partner-delivery projection of the governed
+// operational SLA policy. It contains no default values.
 type DeliverySLAThresholds struct {
 	AssignToPickup time.Duration
 	PickupToDepart time.Duration
@@ -36,14 +42,18 @@ type DeliverySLAThresholds struct {
 	WarningBefore  time.Duration
 }
 
-func DefaultDeliverySLAThresholds() DeliverySLAThresholds {
-	return DeliverySLAThresholds{
-		AssignToPickup: 15 * time.Minute,
-		PickupToDepart: 10 * time.Minute,
-		DepartToArrive: 45 * time.Minute,
-		ArriveToProof:  15 * time.Minute,
-		WarningBefore:  5 * time.Minute,
+func GetSLAThresholds(ctx context.Context, db *sql.DB, storeID string) (DeliverySLAThresholds, error) {
+	policy, err := platformpolicies.GetOperationalSLAForStore(ctx, db, storeID, "default")
+	if err != nil {
+		return DeliverySLAThresholds{}, err
 	}
+	return DeliverySLAThresholds{
+		AssignToPickup: time.Duration(policy.DeliveryAssignToPickupMins) * time.Minute,
+		PickupToDepart: time.Duration(policy.DeliveryPickupToDepartMins) * time.Minute,
+		DepartToArrive: time.Duration(policy.DeliveryDepartToArriveMins) * time.Minute,
+		ArriveToProof:  time.Duration(policy.DeliveryArriveToProofMins) * time.Minute,
+		WarningBefore:  time.Duration(policy.WarningBeforeMins) * time.Minute,
+	}, nil
 }
 
 // DeliverySLA is the volatile, computed-on-read SLA projection for a task.

@@ -26,7 +26,6 @@ type NodeMutationInput = NonNullable<operations["updateCatalogNode"]["requestBod
 type ProductMutationInput = NonNullable<operations["updateMasterProduct"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type ProposalTransitionInput = Parameters<typeof catalogApi.transitionProductProposal>[1] & { readonly expectedVersion: number };
 type OperatorMetadataMutationInput = Parameters<typeof catalogApi.upsertOperatorStoreAssortmentMetadata>[2];
-type OperatorInventoryMutationInput = Parameters<typeof catalogApi.upsertOperatorStoreAssortmentInventory>[2];
 type OperatorPriceInput = Parameters<typeof catalogApi.createOperatorStoreAssortmentPrice>[2];
 type AssetMutationInput = NonNullable<operations["updateCatalogAsset"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type AssetReviewInput = NonNullable<operations["reviewCatalogAsset"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
@@ -90,10 +89,6 @@ export async function upsertOperatorStoreAssortmentMetadataOCC(
     input,
   );
 }
-
-export type StoreAssortmentOCCInput = Omit<OperatorInventoryMutationInput, "expectedVersion"> & {
-  readonly expectedVersion?: number | undefined;
-};
 
 export type CreateStoreAssortmentWithCommercialTruthInput = {
   readonly metadata: StoreAssortmentCreateInput;

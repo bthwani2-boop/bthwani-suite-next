@@ -104,7 +104,7 @@ func TestPartnerDeliverySLAAlertContextIsolationDBIntegration(t *testing.T) {
 		t.Fatalf("age task for SLA: %v", err)
 	}
 
-	result, err := RefreshDeliverySLAAlerts(db, owner.operatorContextID, "corr-sla-refresh", time.Now().UTC())
+	result, err := RefreshDeliverySLAAlerts(context.Background(), db, owner.operatorContextID, "corr-sla-refresh", time.Now().UTC())
 	if err != nil {
 		t.Fatalf("refresh owner SLA alerts failed: %v", err)
 	}

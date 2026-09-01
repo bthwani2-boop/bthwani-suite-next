@@ -190,7 +190,7 @@ func (r *Repository) recoverFieldProjection(ctx context.Context, c claimedIdenti
 		return err
 	}
 	return r.GovernedWrite(ctx, func(tx *sql.Tx) error {
-		person, err := createPersonTx(ctx, tx, actor.ActorID, c.WorkforceCode, payload.CityCode, payload.Input)
+		person, err := createPersonTx(ctx, tx, actor.ActorID, c.WorkforceCode, payload.ServiceAreaCode, payload.Input)
 		if err != nil {
 			return err
 		}
@@ -208,7 +208,7 @@ func (r *Repository) recoverCaptainProjection(ctx context.Context, c claimedIden
 		return err
 	}
 	return r.GovernedWrite(ctx, func(tx *sql.Tx) error {
-		person, err := createCaptainTx(ctx, tx, actor.ActorID, c.WorkforceCode, payload.CityCode, payload.Input)
+		person, err := createCaptainTx(ctx, tx, actor.ActorID, c.WorkforceCode, payload.ServiceAreaCode, payload.Input)
 		if err != nil {
 			return err
 		}

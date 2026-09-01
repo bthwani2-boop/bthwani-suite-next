@@ -1,7 +1,7 @@
 // Partner Onboarding & Store Publication — shared brain public barrel.
 // Surfaces import from this barrel or an explicit *.public.ts capability entrypoint, never implementation modules.
 
-export type { DshPartnerActivationStatus, DshPartnerActivationStateMetadata, DshPartnerReadinessCheckItem, DshPartnerDecisionCommand, DshPartnerDecisionCommandId } from "./partner-activation.model";
+export type { DshPartnerActivationStatus, DshPartnerActivationStateMetadata, DshPartnerDecisionCommand, DshPartnerDecisionCommandId } from "./partner-activation.model";
 export {
   DSH_PARTNER_ACTIVATION_STATES,
   getDshPartnerActivationStateMetadata,
@@ -9,7 +9,6 @@ export {
   isDshPartnerActivationComplete,
   getDshPartnerActivationProgress,
   getDshPartnerActivationStatusLabel,
-  getDshPartnerReadinessChecklist,
 } from "./partner-activation.model";
 
 export type {

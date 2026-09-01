@@ -152,6 +152,82 @@ DshSupportAnalyticsResponse:
     period: { type: string }
     generatedAt: { type: string, format: date-time }
 
+DshPartnerSupportAggregate:
+  type: object
+  additionalProperties: false
+  required: [partnerId, operatorContextId, activationStatus, onboardingCaseStatus, category, archivedAt, activeStoresCount, activeOrdersCount, activeTicketsCount]
+  properties:
+    partnerId: { type: string }
+    operatorContextId: { type: string }
+    activationStatus: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerActivationStatusValue" }
+    onboardingCaseStatus: { type: string }
+    category: { type: string }
+    archivedAt: { type: [string, 'null'], format: date-time }
+    activeStoresCount: { type: integer, minimum: 0 }
+    activeOrdersCount: { type: integer, minimum: 0 }
+    activeTicketsCount: { type: integer, minimum: 0 }
+
+DshPartnerOperationalStore:
+  type: object
+  additionalProperties: false
+  required: [id, displayName, status, isVisible, serviceabilityStatus, partnerReadiness, catalogApprovalStatus, marketingVisibility, publicationDecision, blockingReasonCodes]
+  properties:
+    id: { type: string }
+    displayName: { type: string }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreStatus" }
+    isVisible: { type: boolean }
+    serviceabilityStatus: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreServiceabilityStatus" }
+    partnerReadiness: { type: string, enum: [pending, ready, blocked] }
+    catalogApprovalStatus: { type: string }
+    marketingVisibility: { type: string, enum: [hidden, visible] }
+    publicationDecision: { type: string, enum: [PUBLISHED, BLOCKED] }
+    blockingReasonCodes: { type: array, items: { type: string } }
+
+DshPartnerOperationalOrder:
+  type: object
+  additionalProperties: false
+  required: [id, storeId, status, fulfillmentMode, version, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    storeId: { type: string }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOrderStatus" }
+    fulfillmentMode: { type: string, enum: [bthwani_delivery, partner_delivery, pickup] }
+    version: { type: integer, minimum: 1 }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshPartnerOperationalTicket:
+  type: object
+  additionalProperties: false
+  required: [id, storeId, orderId, category, priority, status, assignedTo, version, createdAt, updatedAt]
+  properties:
+    id: { type: string }
+    storeId: { type: string }
+    orderId: { type: string }
+    category: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketCategory" }
+    priority: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketPriority" }
+    status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketStatus" }
+    assignedTo: { type: string }
+    version: { type: integer, minimum: 1 }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshPartnerSupportOperations:
+  type: object
+  additionalProperties: false
+  required: [partnerId, operatorContextId, activationStatus, onboardingCaseStatus, category, archivedAt, stores, orders, tickets, generatedAt]
+  properties:
+    partnerId: { type: string }
+    operatorContextId: { type: string }
+    activationStatus: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerActivationStatusValue" }
+    onboardingCaseStatus: { type: string }
+    category: { type: string }
+    archivedAt: { type: [string, 'null'], format: date-time }
+    stores: { type: array, items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerOperationalStore" } }
+    orders: { type: array, items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerOperationalOrder" } }
+    tickets: { type: array, items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerOperationalTicket" } }
+    generatedAt: { type: string, format: date-time }
+
 DshOnboardingCollaborationThread:
   type: object
   required: [id, operatorContextId, partnerId, status, createdByActorId, version, createdAt, updatedAt]

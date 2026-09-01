@@ -9,7 +9,7 @@ import (
 
 const (
 	workforceMigrationServiceName = "workforce"
-	workforceLatestMigration      = "workforce-030_identity_boundary_saga.sql"
+	workforceLatestMigration      = "workforce-031_remove_local_geography_authority.sql"
 	workforceReadinessTimeout     = 2 * time.Second
 )
 
@@ -46,6 +46,17 @@ func (s sqlWorkforceRuntimeReadinessStore) Ready(ctx context.Context) (bool, err
 			AND to_regclass('public.workforce_dsh_availability_outbox') IS NOT NULL
 			AND to_regclass('public.workforce_provider_penalty_commands') IS NOT NULL
 			AND to_regclass('public.workforce_provisioning_cases') IS NOT NULL
+			AND to_regclass('public.workforce_cities') IS NULL
+			AND (
+				SELECT COUNT(*) FROM information_schema.columns
+				 WHERE table_schema = 'public' AND table_name = 'workforce_field_profiles'
+				   AND column_name IN ('service_area_code', 'service_zone_id')
+			) = 2
+			AND (
+				SELECT COUNT(*) FROM information_schema.columns
+				 WHERE table_schema = 'public' AND table_name = 'workforce_captain_profiles'
+				   AND column_name IN ('operating_service_area_code', 'service_zone_id')
+			) = 2
 			AND (
 				SELECT COUNT(*)
 				  FROM information_schema.columns

@@ -368,8 +368,8 @@ func EvaluateProviderActivationReadiness(person Person, core ProviderOperational
 		if person.FieldProfile == nil {
 			missing = append(missing, "fieldProfile")
 		} else {
-			if strings.TrimSpace(person.FieldProfile.CityCode) == "" {
-				missing = append(missing, "cityCode")
+			if strings.TrimSpace(person.FieldProfile.ServiceAreaCode) == "" {
+				missing = append(missing, "serviceAreaCode")
 			}
 			if strings.TrimSpace(person.FieldProfile.ServiceZoneID) == "" {
 				missing = append(missing, "serviceZoneId")
