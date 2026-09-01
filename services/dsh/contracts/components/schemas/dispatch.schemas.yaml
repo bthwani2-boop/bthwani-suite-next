@@ -104,7 +104,8 @@ DshDispatchAssignmentsResponse:
 
 DshPushDispatchLocationRequest:
   type: object
-  required: [latitude, longitude]
+  additionalProperties: false
+  required: [latitude, longitude, accuracyMeters, recordedAt]
   description: >-
     Foreground-only location sample (register item 14 + 42 — no live
     tracking, no background location). Sent by the captain app roughly
@@ -118,6 +119,10 @@ DshPushDispatchLocationRequest:
       type: number
       minimum: -180
       maximum: 180
+    accuracyMeters:
+      type: number
+      exclusiveMinimum: 0
+      maximum: 100
     recordedAt:
       type: string
       format: date-time
