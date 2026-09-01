@@ -71,3 +71,17 @@ test("support mutation controllers serialize writes before React state updates",
   assert.equal((ticket.match(/mutationBusyRef\.current = false;/g) ?? []).length, 3);
   assert.match(ticket, /\}, \[actorId, loadEvents, loadMessages, mode, ticketId\]\);/);
 });
+
+test("direct order conversations serialize durable writes before React state updates", () => {
+  const client = source("frontend/app-client/orders/OrderChatScreen.tsx");
+  const captain = source("frontend/app-captain/orders/CaptainOrderSupportConversationScreen.tsx");
+  for (const screen of [client, captain]) {
+    assert.equal((screen.match(/const mutationBusyRef = React\.useRef\(false\)/g) ?? []).length, 1);
+  }
+  assert.equal((client.match(/mutationBusyRef\.current[^;\n]*return;/g) ?? []).length, 1);
+  assert.equal((client.match(/mutationBusyRef\.current = false;/g) ?? []).length, 1);
+  assert.equal((captain.match(/mutationBusyRef\.current[^;\n]*return;/g) ?? []).length, 2);
+  assert.equal((captain.match(/mutationBusyRef\.current = false;/g) ?? []).length, 2);
+  assert.match(client, /const loadBusyRef = React\.useRef\(false\)/);
+  assert.match(client, /if \(!orderId\.trim\(\) \|\| loadBusyRef\.current\) return;/);
+});
