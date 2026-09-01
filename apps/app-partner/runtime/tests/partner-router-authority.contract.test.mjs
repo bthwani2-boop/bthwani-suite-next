@@ -26,6 +26,7 @@ test("partner route contract makes URL state the single navigation authority", a
   assert.doesNotMatch(productMedia, /partnerId\?: string|route compatibility/i);
   assert.match(renderer, /const scopedStoreId = selectedStoreScope\.storeId/);
   assert.doesNotMatch(renderer, /selectedStoreScopeId === "all"/);
+  assert.match(renderer, /initialCaseId=\{route\.context\.highlightedCaseId \?\? route\.orderId \?\? null\}/);
   assert.match(journey, /buildDshPartnerSupportDirectoryRouteFromFlow\('order-handoff', 'orders', orderId\)/);
   assert.match(journey, /buildDshPartnerSupportDirectoryRouteFromFlow\('order-reject', 'orders', orderId\)/);
 });
