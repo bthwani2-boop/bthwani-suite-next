@@ -265,6 +265,41 @@ func operationalPolicyServiceabilityFailure(decision platformpolicies.Operationa
 	}
 }
 
+// applyOperationalModePolicies keeps the per-mode capability list aligned with
+// the same live policy snapshot that authorizes checkout. Store publication and
+// geofence evidence alone cannot advertise a mode when capacity, SLA, pause or
+// mode policy currently denies it.
+func applyOperationalModePolicies(
+	ctx context.Context,
+	db *sql.DB,
+	storeID string,
+	modes []FulfillmentModeAvailability,
+) (map[FulfillmentMode]platformpolicies.OperationalDecision, int, error) {
+	decisions := make(map[FulfillmentMode]platformpolicies.OperationalDecision, len(modes))
+	activeOrders := 0
+	for index := range modes {
+		if !modes[index].Available {
+			continue
+		}
+		decision, orders, err := platformpolicies.EvaluateOperationalPolicyForStoreSnapshot(
+			ctx,
+			db,
+			storeID,
+			string(modes[index].Mode),
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+		decisions[modes[index].Mode] = decision
+		activeOrders = orders
+		if !decision.Serviceable {
+			modes[index].Available = false
+			modes[index].UnavailableReasonCode, _ = operationalPolicyServiceabilityFailure(decision)
+		}
+	}
+	return decisions, activeOrders, nil
+}
+
 // CheckGovernedServiceability combines geographic/store readiness with the
 // exact same canonical operational-policy snapshot used by cart/checkout/order
 // mutation guards. There is no second zone resolver, terminal-order list, SLA
@@ -290,10 +325,16 @@ func CheckGovernedServiceability(
 		EtaStatus:            "not_requested",
 		CheckedAt:            time.Now().UTC(),
 	}
+	availableModes := append([]FulfillmentModeAvailability(nil), base.AvailableModes...)
+	decisions, activeOrders, err := applyOperationalModePolicies(ctx, db, storeID, availableModes)
+	if err != nil {
+		return GovernedServiceabilityResult{}, err
+	}
+	result.ServiceabilityResult.AvailableModes = availableModes
 
 	if requestedMode != "" {
 		modeAvailable := false
-		for _, candidate := range base.AvailableModes {
+		for _, candidate := range availableModes {
 			if candidate.Mode == requestedMode {
 				modeAvailable = candidate.Available
 				break
@@ -313,25 +354,16 @@ func CheckGovernedServiceability(
 		}
 	}
 
-	decision, activeOrders, err := platformpolicies.EvaluateOperationalPolicyForStoreSnapshot(
-		ctx,
-		db,
-		storeID,
-		string(requestedMode),
-	)
-	if err != nil {
-		return GovernedServiceabilityResult{}, err
-	}
-
 	result.ActiveOrders = activeOrders
-	if decision.SLA.Configured {
+	decision, decisionFound := decisions[requestedMode]
+	if decisionFound && decision.SLA.Configured {
 		prep := decision.SLA.MaxPrepMins
 		delivery := decision.SLA.MaxDeliveryMins
 		result.SlaConfigured = true
 		result.SlaPrepMinutes = &prep
 		result.SlaDeliveryMinutes = &delivery
 	}
-	if decision.Capacity.Configured && decision.Capacity.MaxConcurrentOrders > 0 {
+	if decisionFound && decision.Capacity.Configured && decision.Capacity.MaxConcurrentOrders > 0 {
 		maxValue := decision.Capacity.MaxConcurrentOrders
 		ratio := decision.PressureRatio
 		result.CapacityConfigured = true
@@ -353,7 +385,7 @@ func CheckGovernedServiceability(
 			result.CapacityState = "unserviceable"
 		}
 	}
-	if !decision.Serviceable && result.Serviceable {
+	if decisionFound && !decision.Serviceable && result.Serviceable {
 		result.Serviceable = false
 		result.Code, result.Reason = operationalPolicyServiceabilityFailure(decision)
 	}

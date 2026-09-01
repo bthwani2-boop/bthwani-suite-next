@@ -11,7 +11,7 @@ FulfillmentModeAvailability:
     available: { type: boolean }
     unavailableReasonCode:
       type: string
-      enum: [mode_not_enabled, out_of_area, store_unavailable]
+      enum: [mode_not_enabled, out_of_area, store_unavailable, mode_unavailable, policy_unavailable, capacity_paused, capacity_exhausted, capacity_throttled]
 
 # ─── Checkout Intent schemas ────────────────────────────────────
 

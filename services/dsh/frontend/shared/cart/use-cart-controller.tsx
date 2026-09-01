@@ -407,6 +407,7 @@ export function useCartController(
 export function useServiceabilityController() {
   const [serviceability, setServiceability] =
     useState<DshServiceabilityState>(serviceabilityIdleState());
+  const requestSequence = useRef(0);
 
   const check = useCallback(
     async (
@@ -414,11 +415,14 @@ export function useServiceabilityController() {
       addressId: string,
       fulfillmentMode: DshFulfillmentMode,
     ) => {
+      const sequence = ++requestSequence.current;
       setServiceability({ kind: "checking" });
       try {
         const result = await checkServiceability(storeId, addressId, fulfillmentMode);
+        if (sequence !== requestSequence.current) return;
         setServiceability(resolveServiceabilityState(result));
       } catch {
+        if (sequence !== requestSequence.current) return;
         setServiceability(resolveServiceabilityError());
       }
     },
@@ -426,7 +430,10 @@ export function useServiceabilityController() {
   );
 
   const reset = useCallback(
-    () => setServiceability(serviceabilityIdleState()),
+    () => {
+      requestSequence.current += 1;
+      setServiceability(serviceabilityIdleState());
+    },
     [],
   );
 

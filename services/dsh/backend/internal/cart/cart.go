@@ -563,6 +563,9 @@ func GetFulfillmentModes(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 	if len(modes) == 0 {
 		modes = allModesUnavailable("store_unavailable")
 	}
+	if _, _, err := applyOperationalModePolicies(ctx, db, storeID, modes); err != nil {
+		return FulfillmentModesResponse{}, err
+	}
 
 	return FulfillmentModesResponse{
 		StoreID:     storeID,

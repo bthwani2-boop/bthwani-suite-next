@@ -25,6 +25,7 @@ import type {
 } from "../../shared/cart";
 import type { CheckoutToOrderFlowState, DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
+import { getDshDeliveryModeDefinition } from "../../shared/delivery/delivery.contract";
 import { useWltPaymentController } from "@bthwani/dsh/wlt";
 import { useStoreDetailController } from "../../shared/store";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
@@ -57,14 +58,7 @@ type Props = {
 };
 
 function fulfillmentLabel(mode: DshFulfillmentMode): string {
-  switch (mode) {
-    case "bthwani_delivery":
-      return "توصيل بثواني";
-    case "partner_delivery":
-      return "توصيل المتجر";
-    case "pickup":
-      return "استلام ذاتي";
-  }
+  return getDshDeliveryModeDefinition(mode).label;
 }
 
 export function CartScreen({
@@ -100,6 +94,15 @@ export function CartScreen({
   const wltPayment = useWltPaymentController({ totalMinorUnits: cartTotal, currency: cartCurrency });
   const activeFulfillmentMode = localFulfillmentMode ?? (cart?.fulfillmentMode ?? "bthwani_delivery");
   const requiresDeliveryAddress = activeFulfillmentMode !== "pickup";
+  const modeOptions = store?.availableFulfillmentModes.length
+    ? store.availableFulfillmentModes
+    : cart
+      ? [cart.fulfillmentMode]
+      : [];
+  const modeAvailability = serviceabilityController.serviceability.kind === "serviceable"
+    || serviceabilityController.serviceability.kind === "blocked"
+    ? new Map(serviceabilityController.serviceability.availableModes.map((mode) => [mode.mode, mode.available]))
+    : new Map();
   const actionPending = controller.action === "submitting";
   const cartReady = cart?.validation?.ready !== false;
   const checkoutLocked = checkoutState?.kind === "loading"
@@ -112,15 +115,6 @@ export function CartScreen({
     () => new Map((cart?.validation?.items ?? []).map((item) => [item.itemId, item])),
     [cart?.validation?.items],
   );
-
-  const toggleFulfillmentMode = () => {
-    setLocalFulfillmentMode((prev) => {
-      const current = prev ?? (cart?.fulfillmentMode ?? "bthwani_delivery");
-      if (current === "bthwani_delivery") return "pickup";
-      if (current === "pickup") return "partner_delivery";
-      return "bthwani_delivery";
-    });
-  };
 
   useEffect(() => {
     if (!cart || !requiresDeliveryAddress || !selectedAddress?.id) {
@@ -263,19 +257,33 @@ export function CartScreen({
               <Icon name={activeFulfillmentMode === "pickup" ? "storefront-outline" : "car-outline"} size={24} tone="brand" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text role="bodyStrong" style={styles.richSectionTitle}>خيار التوصيل والاستلام</Text>
-              <Text role="caption" style={styles.mutedText}>
+            <Text role="bodyStrong" style={styles.richSectionTitle}>خيار التوصيل والاستلام</Text>
+            <Text role="caption" style={styles.mutedText}>
                 الخيار المحدد: {fulfillmentLabel(activeFulfillmentMode)}
               </Text>
             </View>
-            <Button
-              label="تغيير الخيار"
-              tone="secondary"
-              size="sm"
-              disabled={checkoutLocked}
-              onPress={toggleFulfillmentMode}
-            />
           </View>
+          {modeOptions.length > 1 ? (
+            <View style={styles.modeOptions}>
+              {modeOptions.map((mode) => {
+                const selected = mode === activeFulfillmentMode;
+                const available = modeAvailability.get(mode);
+                const disabled = checkoutLocked || available === false;
+                return (
+                  <Button
+                    key={mode}
+                    label={`${getDshDeliveryModeDefinition(mode).label}${available === false ? " (غير متاح حاليًا)" : ""}`}
+                    accessibilityLabel={`اختيار ${getDshDeliveryModeDefinition(mode).label}`}
+                    accessibilityState={{ selected, disabled }}
+                    tone={selected ? "primary" : "secondary"}
+                    size="sm"
+                    disabled={disabled}
+                    onPress={() => setLocalFulfillmentMode(mode)}
+                  />
+                );
+              })}
+            </View>
+          ) : null}
         </Surface>
 
         <CheckoutProgress
@@ -307,6 +315,7 @@ export function CartScreen({
           selectedAddress={selectedAddress}
           cart={cart}
           storeId={storeId}
+          fulfillmentMode={activeFulfillmentMode}
           serviceabilityState={serviceabilityController.serviceability}
           {...(onManageAddresses ? { onManageAddresses } : {})}
           onCheckServiceability={(sId, addrId, mode) => {
@@ -445,7 +454,7 @@ export function CartScreen({
               ? "جاري تأكيد الطلب…"
               : requiresDeliveryAddress
                 ? "تأكيد الطلب والتوصيل"
-                : "تأكيد الطلب للاستلام الذاتي"
+                : `تأكيد الطلب — ${fulfillmentLabel(activeFulfillmentMode)}`
           }
           tone="brand"
           loading={checkoutState?.kind === "loading" || checkoutState?.kind === "confirming" || checkoutState?.kind === "creating_order"}
@@ -537,6 +546,7 @@ const styles = StyleSheet.create({
     gap: 6,
     alignItems: "center",
   },
+  modeOptions: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 },
   mutedText: { color: colorRoles.textSecondary, textAlign: "right", fontSize: 11, lineHeight: 16 },
   field: { gap: 4 },
   fieldLabel: { color: colorRoles.textPrimary, textAlign: "right", fontSize: 11 },
