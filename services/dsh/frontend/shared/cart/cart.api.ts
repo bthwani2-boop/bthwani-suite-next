@@ -125,11 +125,11 @@ export async function checkServiceability(
 
 export async function fetchFulfillmentModes(
   storeId: string,
-  serviceAreaCode?: string,
+  addressId: string,
 ) {
   const params = new URLSearchParams();
   params.set("storeId", storeId);
-  if (serviceAreaCode) params.set("serviceAreaCode", serviceAreaCode);
+  params.set("addressId", addressId);
   return request<import("../checkout/checkout.types").DshFulfillmentModesResponse>(
     `/dsh/client/cart/fulfillment-modes?${params.toString()}`,
   );

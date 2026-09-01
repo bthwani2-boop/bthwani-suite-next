@@ -29,7 +29,7 @@ func requireCartMutationIdentity(w http.ResponseWriter, r *http.Request) (string
 
 // GET /dsh/client/cart/fulfillment-modes
 func (s *protectedStoreServer) handleGetFulfillmentModes(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "client")
+	actor, ok := s.requireActor(w, r, "client")
 	if !ok {
 		return
 	}
@@ -38,12 +38,22 @@ func (s *protectedStoreServer) handleGetFulfillmentModes(w http.ResponseWriter, 
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId query parameter is required")
 		return
 	}
-	serviceAreaCode := r.URL.Query().Get("serviceAreaCode")
+	addressID := strings.TrimSpace(r.URL.Query().Get("addressId"))
+	if addressID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "addressId query parameter is required")
+		return
+	}
+	address, err := clientaddress.GetOwned(r.Context(), s.db, actor.ID, addressID)
+	if errors.Is(err, clientaddress.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "address is not owned by the authenticated client")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not resolve delivery address")
+		return
+	}
 
-	// GetFulfillmentModes doesn't rely on full physical coordinates in the simple case,
-	// but if we have an active address, we should technically use it.
-	// For J051 lightweight capability fetch, we just rely on the zone/serviceAreaCode.
-	resp, err := cart.GetFulfillmentModes(r.Context(), s.db, storeID, serviceAreaCode, nil, nil)
+	resp, err := cart.GetFulfillmentModes(r.Context(), s.db, storeID, address.ServiceAreaCode, address.Latitude, address.Longitude)
 	if errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable) {
 		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
 		return
@@ -72,34 +82,21 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 	}
 	body.StoreID = strings.TrimSpace(body.StoreID)
 	body.AddressID = strings.TrimSpace(body.AddressID)
-	if body.StoreID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId is required")
+	if body.StoreID == "" || body.AddressID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId and addressId are required")
 		return
 	}
 	mode := cart.FulfillmentMode(strings.TrimSpace(body.FulfillmentMode))
 	if mode == "" {
-		mode = cart.ModeBthwaniDelivery
+		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillmentMode is required")
+		return
 	}
 	if mode != cart.ModeBthwaniDelivery && mode != cart.ModePartnerDelivery && mode != cart.ModePickup {
 		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillmentMode is invalid")
 		return
 	}
 
-	var address *clientaddress.Address
-	var err error
-	if body.AddressID != "" {
-		address, err = clientaddress.GetOwned(r.Context(), s.db, actor.ID, body.AddressID)
-	} else {
-		var addresses []clientaddress.Address
-		addresses, err = clientaddress.List(r.Context(), s.db, actor.ID)
-		if err == nil && len(addresses) == 0 {
-			store.SendError(w, http.StatusUnprocessableEntity, "ADDRESS_REQUIRED", "create a governed client address before checking delivery serviceability")
-			return
-		}
-		if err == nil {
-			address = &addresses[0]
-		}
-	}
+	address, err := clientaddress.GetOwned(r.Context(), s.db, actor.ID, body.AddressID)
 	if errors.Is(err, clientaddress.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "address is not owned by the authenticated client")
 		return
@@ -151,26 +148,50 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		MaxMinutes int `json:"maxMinutes"`
 	}
 	type Response struct {
-		Serviceable    bool                               `json:"serviceable"`
-		Code           string                             `json:"code"`
-		Reason         string                             `json:"reason,omitempty"`
-		AvailableModes []cart.FulfillmentModeAvailability `json:"availableModes,omitempty"`
-		EtaWindow      *EtaWindow                         `json:"etaWindow,omitempty"`
-		EtaStatus      string                             `json:"etaStatus"`
-		EtaReasonCode  string                             `json:"etaReasonCode,omitempty"`
-		QuoteVersion   string                             `json:"quoteVersion,omitempty"`
-		ExpiresAt      *time.Time                         `json:"expiresAt,omitempty"`
+		Serviceable         bool                               `json:"serviceable"`
+		Code                string                             `json:"code"`
+		Reason              string                             `json:"reason,omitempty"`
+		AvailableModes      []cart.FulfillmentModeAvailability `json:"availableModes,omitempty"`
+		AddressID           string                             `json:"addressId"`
+		AddressVersion      int                                `json:"addressVersion"`
+		RequestedMode       cart.FulfillmentMode               `json:"requestedMode"`
+		CapacityState       string                             `json:"capacityState"`
+		CapacityConfigured  bool                               `json:"capacityConfigured"`
+		ActiveOrders        int                                `json:"activeOrders"`
+		MaxConcurrentOrders *int                               `json:"maxConcurrentOrders,omitempty"`
+		CapacityLoadRatio   *float64                           `json:"capacityLoadRatio,omitempty"`
+		SlaConfigured       bool                               `json:"slaConfigured"`
+		SlaPrepMinutes      *int                               `json:"slaPrepMinutes,omitempty"`
+		SlaDeliveryMinutes  *int                               `json:"slaDeliveryMinutes,omitempty"`
+		CheckedAt           time.Time                          `json:"checkedAt"`
+		EtaWindow           *EtaWindow                         `json:"etaWindow,omitempty"`
+		EtaStatus           string                             `json:"etaStatus"`
+		EtaReasonCode       string                             `json:"etaReasonCode,omitempty"`
+		QuoteVersion        string                             `json:"quoteVersion,omitempty"`
+		ExpiresAt           *time.Time                         `json:"expiresAt,omitempty"`
 	}
 
 	resp := Response{
-		Serviceable:    result.Serviceable,
-		Code:           result.Code,
-		Reason:         result.Reason,
-		AvailableModes: result.AvailableModes,
-		EtaStatus:      result.EtaStatus,
-		EtaReasonCode:  result.EtaReasonCode,
-		QuoteVersion:   result.QuoteVersion,
-		ExpiresAt:      result.ExpiresAt,
+		Serviceable:         result.Serviceable,
+		Code:                result.Code,
+		Reason:              result.Reason,
+		AvailableModes:      result.AvailableModes,
+		AddressID:           result.AddressID,
+		AddressVersion:      result.AddressVersion,
+		RequestedMode:       result.RequestedMode,
+		CapacityState:       result.CapacityState,
+		CapacityConfigured:  result.CapacityConfigured,
+		ActiveOrders:        result.ActiveOrders,
+		MaxConcurrentOrders: result.MaxConcurrentOrders,
+		CapacityLoadRatio:   result.CapacityLoadRatio,
+		SlaConfigured:       result.SlaConfigured,
+		SlaPrepMinutes:      result.SlaPrepMinutes,
+		SlaDeliveryMinutes:  result.SlaDeliveryMinutes,
+		CheckedAt:           result.CheckedAt,
+		EtaStatus:           result.EtaStatus,
+		EtaReasonCode:       result.EtaReasonCode,
+		QuoteVersion:        result.QuoteVersion,
+		ExpiresAt:           result.ExpiresAt,
 	}
 	if result.EtaMinMinutes != nil && result.EtaMaxMinutes != nil {
 		resp.EtaWindow = &EtaWindow{
