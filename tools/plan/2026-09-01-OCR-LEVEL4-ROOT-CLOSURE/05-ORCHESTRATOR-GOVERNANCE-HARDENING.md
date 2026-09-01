@@ -2,6 +2,8 @@
 
 These proposals are intended to strengthen the live orchestrator without creating a second assurance/control-plane authority. They should be integrated into the existing `00–05`/focus-module model only where they reduce ambiguity and recurrence.
 
+**Campaign applicability note:** the current OCR Level-4 closure campaign is explicitly `SINGLE_SESSION_DIRECT_ON_OCR`. Any multi-agent/write-lease concept described as a future governance capability is **not active execution authority for this campaign** and must not create Session A/B/C lanes, temporary execution branches, or parallel mutation worktrees.
+
 ---
 
 # 1. Authority Uniqueness Ledger — REQUIRED
@@ -178,29 +180,32 @@ A mechanical repository check should flag those repair patterns in directories t
 
 ---
 
-# 7. Parallel Write Lease Protocol — REQUIRED for multi-agent execution
+# 7. Single-Session Exact-HEAD Mutation Protocol — REQUIRED for this campaign
 
-Add first-class orchestration fields:
+Current campaign mutation fields:
 
 ```text
-SESSION_ID
+EXECUTION_MODE=SINGLE_SESSION_DIRECT_ON_OCR
+TARGET_BRANCH=ocr
+ACTIVE_MUTATION_SESSIONS=1
 PINNED_PARENT_SHA
 ROOT_ID
 CANONICAL_OWNER
-WRITE_LEASE_PATHS
-READ_ONLY_AFFECTED_PATHS
-COLLISION_KEYS
+AFFECTED_CONE
+REMOTE_HEAD_CONCURRENCY_RISK
 ```
 
-Before write:
+Before each material write checkpoint:
 
-- compare live remote SHA to pinned parent;
-- ensure no active lease owns the same canonical owner/collision key;
-- if remote moved materially, re-pin and re-diagnose.
+- compare live remote `ocr` SHA to the pinned parent;
+- if remote moved, fetch and compare the intervening delta;
+- invalidate overlapping diagnosis/evidence;
+- re-pin and re-diagnose before continuing;
+- never force-push over intervening work.
 
-No two sessions may mutate the same semantic writer even if files do not overlap textually.
+The campaign must not create Session A/B/C lanes, execution worktrees, temporary root branches, or parallel material mutation sessions. Repository-wide roots are completed serially by causal priority in the same session.
 
-This enables safe three-session parallel execution without direct chaotic writes to `ocr`.
+A general multi-agent write-lease protocol may remain a future orchestrator capability, but it is **NOT APPLICABLE** to this campaign unless the human explicitly changes execution mode in a later instruction.
 
 ---
 
@@ -385,7 +390,7 @@ The status should be derived from the required cell set where practical.
 
 # 15. Exact HEAD Concurrency Lock — REQUIRED
 
-Before any mutation/commit/push in a coordinated campaign:
+Before any mutation/commit/push in this campaign:
 
 ```text
 expected_remote_sha == actual_remote_sha
@@ -397,11 +402,12 @@ If false:
 fetch
 → compare delta
 → invalidate overlapping assumptions/evidence
-→ rebase/reapply if safe
+→ re-pin on current origin/ocr
+→ safely reapply/rebase only if still root-correct
 → re-diagnose
 ```
 
-Do not allow a session to continue writing against a stale semantic baseline just because Git can later merge the text.
+Do not allow the single execution session to continue writing against a stale semantic baseline just because Git can later merge the text.
 
 ---
 
@@ -448,11 +454,11 @@ EXPECTED_DELETIONS
 NEGATIVE_SPACE_SEARCH
 TARGETED_VERIFICATION
 EVIDENCE_INVALIDATION
-PARALLEL_WRITE_COLLISIONS
+REMOTE_HEAD_CONCURRENCY_CHECK
 FIXED_POINT_REOPEN_CONDITIONS
 ```
 
-This turns cleanup, filesystem ownership and parallel safety into first-class closure requirements instead of optional prose.
+This turns cleanup, filesystem ownership and exact-HEAD concurrency safety into first-class closure requirements instead of optional prose.
 
 ---
 

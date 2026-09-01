@@ -3,11 +3,13 @@
 **Repository:** `bthwani2-boop/bthwani-suite-next`  
 **Branch:** `ocr`  
 **Audited exact starting HEAD:** `4aa1f00decc9ed2ac5c724b7cc316e0247fe8a0d`  
+**Execution-mode reconfiguration parent:** `b889d75fbf502e524b0b04289722a6c798933a72`  
 **Orchestrator package revision:** `24`  
 **Created:** 2026-09-01  
-**Completion target:** `LEVEL_4` repository/product fixed point, then integration into `master` and requalification of the resulting exact `master` SHA.
+**Execution mode:** `SINGLE_SESSION_DIRECT_ON_OCR` — exactly one material execution session, directly on `ocr`; no Session A/B/C split, no temporary execution worktrees/branches, and no parallel material mutation lanes.  
+**Completion target:** `LEVEL_4` repository/product fixed point on `ocr`; integration into `master` and requalification of the resulting exact `master` SHA is a separate post-qualification boundary.
 
-> This package is an execution snapshot and closure workset, **not a parallel canonical authority**. Every execution session MUST begin from the live `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`, load the live `01–05` and material focus modules, resolve the current remote `ocr` HEAD, and invalidate/re-rank any item here that no longer matches live truth.
+> This package is an execution snapshot and closure workset, **not a parallel canonical authority**. The single execution session MUST begin from the live `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`, load the live `01–05` and material focus modules, resolve the current remote `ocr` HEAD, and invalidate/re-rank any item here that no longer matches live truth.
 
 ## 1. Why this package exists
 
@@ -105,9 +107,9 @@ Any file violating those responsibilities is a move/merge/delete candidate.
 1. **`00-EXECUTION-INDEX.md`** — authority, current verdict, topology law, campaign rules.
 2. **`01-LIVE-ROOT-GRAPH-AND-CLOSURE-UNITS.md`** — ranked current Root Graph, actual Source-of-Fix, affected cones, deletion conditions, and previously treated roots.
 3. **`02-FILESYSTEM-MIGRATION-CLEANUP-DELETION-MATRIX.md`** — strict file/folder/naming/compatibility cleanup system for `core/shared/infra/services/apps/tools`.
-4. **`03-THREE-SESSION-PARALLEL-EXECUTION.md`** — safe three-session/worktree model, write ownership, collision matrix, integration protocol.
+4. **`03-SINGLE-SESSION-DIRECT-OCR-EXECUTION.md`** — one-session direct-on-`ocr` execution contract, exact-HEAD lock, serial root protocol, and per-root closure checkpoint.
 5. **`04-VERIFICATION-MERGE-FIXED-POINT.md`** — closure proof, negative-space audit, exact-SHA evidence, merge-to-master qualification.
-6. **`05-ORCHESTRATOR-GOVERNANCE-HARDENING.md`** — proposed orchestrator/governance additions that prevent recurrence of parallel truth and stale residue.
+6. **`05-ORCHESTRATOR-GOVERNANCE-HARDENING.md`** — proposed orchestrator/governance additions that prevent recurrence of parallel truth and stale residue; multi-agent mutation rules are explicitly non-active for this single-session campaign.
 
 ## 5. Non-negotiable execution laws
 
@@ -186,6 +188,8 @@ R12 Fresh broad adversarial re-audit
 R13 Exact final candidate qualification
 R14 Integrate into master and requalify resulting exact master SHA
 ```
+
+The single execution session processes this queue **serially by proven causal priority**, not by preassigned subsystem lanes. A root may cross backend, database, contracts, generated clients, shared packages, apps, core and infra in one causally complete Closure Unit.
 
 ## 8. What “100%” means here
 
