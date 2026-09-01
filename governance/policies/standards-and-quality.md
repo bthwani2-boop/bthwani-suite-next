@@ -65,6 +65,17 @@ Design important behavior so its invariants and failure/recovery paths can be fa
 
 Do not weaken tests/scanners or create a fake-green compatibility path to accept a design that remains wrong. Conversely, do not introduce a large test/guard framework when a focused existing test/runtime proof gives equivalent assurance more simply.
 
+## Suppressions and intentional conditions
+
+A warning/test/scanner finding may not be hidden merely to obtain green. Material suppression/ignore/allowlist requires one of:
+
+- a proven false positive; or
+- an explicitly authorized intentional condition whose risk/behavior is understood.
+
+The suppression must be the narrowest sufficient scope, live at the correct owner, preserve visibility of unrelated paths, record enough rationale for future re-evaluation and have an expiry/removal trigger when temporary. A broad exclusion that hides required analysis, or a local disable used instead of fixing the actual Source-of-Fix, is not acceptable evidence.
+
+An executing agent/tool may propose or technically apply a suppression only when current authority permits; it cannot manufacture business/security risk acceptance merely because the finding is inconvenient.
+
 ## Dependency hygiene
 
 Dependencies/tooling must provide material capability not reasonably owned already, be compatible with platform/security/licensing/supply-chain requirements, remain lockable/reproducible and have clear removal/update ownership. Remove unused/obsolete/duplicate dependencies after consumer/build/runtime proof.

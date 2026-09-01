@@ -78,6 +78,29 @@ Product/Journey
 
 Static import/operation reachability proves only structure. It cannot prove correct permissions, persisted behavior, concurrency, failure recovery, provider outcome, migration state or cross-surface readback.
 
+## Contracts, events, and generated bindings
+
+For a materially affected boundary trace:
+
+```text
+canonical schema/OpenAPI/event
+-> generated/manual binding
+-> caller
+-> auth/authz/context
+-> handler/application boundary
+-> domain owner
+-> persistence/event/provider effect
+-> response/error semantics
+-> committed readback
+-> every affected consumer
+```
+
+The canonical external contract owns cross-boundary meaning; implementation-local DTOs/types do not independently redefine it. Inspect enum/nullability/default/error drift, ambiguous IDs/scopes, inconsistent operation/event identity, contract bypass, shadow endpoints, stale generated clients, payloads leaking private models and incompatible consumer assumptions.
+
+Generated outputs follow the source-of-fix law: repair the canonical schema/generator/template first, regenerate deterministically and verify consumers. Hand-maintained generated forks are forbidden final state.
+
+Breaking contract/event semantics require explicit affected-consumer migration/cutover. A compatibility path is allowed only for a proven compatibility window with owner, scope, telemetry/evidence where needed, cutover condition and removal trigger. Indefinite dual endpoints/fields/event meanings are parallel authority.
+
 ## Dependency direction
 
 Dependencies flow toward stable owners/boundaries. Material findings include circular ownership, lower layers importing surface/runtime implementations, domain logic depending on transport/UI, direct persistence/provider access bypassing owner, cross-surface copied business logic, public APIs leaking private models, re-export chains hiding ownership and historical package boundaries with no current responsibility.
@@ -89,6 +112,12 @@ Fix the highest correct boundary; do not add inversion layers or wrappers withou
 A shared abstraction requires a genuinely shared stable concept, clear owner, real multiple consumers and no leakage of domain authority. Generic `shared/common/utils/helpers` directories are not auto-wrong, but mixed ownership or unclear consumers is a defect.
 
 Each wrapper/adapter/facade must own unique value such as protocol translation, security boundary, lifecycle/state, orchestration, bounded compatibility, testable transformation or runtime isolation. Pass-through indirection with no unique responsibility should be merged/inlined/deleted after consumer proof.
+
+## Naming and discoverability
+
+A competent engineer or execution agent should be able to locate the canonical owner, public contract, configuration schema, runtime entrypoint and derived/generated path for a material concept without guessing among multiple plausible authorities.
+
+Misleading names, stale aliases, duplicate commands/exports, historical folder names and convenience re-export chains are defects when they can direct future reads/writes to the wrong owner. After rename/move/cutover, repair consumers/references and remove obsolete aliases unless a bounded compatibility requirement proves otherwise.
 
 ## Semantic duplication and parallel truth
 

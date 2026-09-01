@@ -95,6 +95,12 @@ Do not create local token foundations/components that independently encode a mat
 
 Shared UI may own presentation behavior; it never becomes a domain/business/financial truth owner.
 
+## Design asset provenance
+
+Fonts, icons, images, illustrations, motion assets and other material design dependencies require known source/ownership and licensing/provenance compatible with repository/product use. Unknown, incompatible or unverifiable provenance is not an acceptable final-state asset merely because it looks correct.
+
+Generated/third-party assets remain subordinate to the same privacy, security and supply-chain requirements as other dependencies. Do not copy another product's proprietary visual identity or asset corpus as a shortcut to a coherent design system.
+
 ## Async, offline, weak-network, and recovery experience
 
 Loading/busy geometry and messaging must not fabricate completion. Retry preserves safe input/correlation and avoids duplicate mutations. Offline/local state remains subordinate to canonical authority and communicates synchronization/conflict/unknown outcomes truthfully.
