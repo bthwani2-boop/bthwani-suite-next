@@ -54,13 +54,14 @@ func TestGovernedRefundTopUpCompletionDebitsWalletBack(t *testing.T) {
         defer db.Close()
 
         sessionID, operatorContextID := insertCapturedTopUpSessionForRefund(t, db, "customer", "topup-client-1", 5000)
+        orderID := fmt.Sprintf("topup-refund-proof-%d", time.Now().UnixNano())
         created, replayed, err := CreateGovernedRefund(
                 shared.WithOperatorContext(context.Background(), operatorContextID),
                 db,
                 GovernedCreateRefundInput{
                         OperatorContextID:     operatorContextID,
                         PaymentSessionID:      sessionID,
-                        OrderID:               "topup-refund-proof",
+                        OrderID:               orderID,
                         ClientID:              "topup-client-1",
                         AmountMinorUnits:      5000,
                         Reason:                "topup refund runtime proof",
