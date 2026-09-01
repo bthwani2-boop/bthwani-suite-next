@@ -59,6 +59,14 @@ func TestClientProfileMutationsReplayWithoutDuplicateWriteDBIntegration(t *testi
 	if first.Locale != "en" || first.CurrencyPreference != DefaultCurrencyPreference || first.Version != 1 {
 		t.Fatalf("first profile = %#v, want version 1 with requested preferences", first)
 	}
+	if _, err := UpsertClientProfilePreferences(ctx, db, clientID, ClientProfilePreferencesInput{
+		Locale: "ar", CurrencyPreference: DefaultCurrencyPreference,
+	}, MutationContext{
+		IdempotencyKey: "client-profile-create-race-command-" + clientID,
+		CorrelationID:  "client-profile-create-race-correlation-" + clientID,
+	}); !errors.Is(err, ErrConflict) {
+		t.Fatalf("version-zero mutation against an existing profile returned %v, want ErrConflict", err)
+	}
 
 	replay, err := UpsertClientProfilePreferences(ctx, db, clientID, preferences, preferencesMutation)
 	if err != nil {

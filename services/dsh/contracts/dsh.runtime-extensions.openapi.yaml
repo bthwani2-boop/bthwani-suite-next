@@ -247,8 +247,10 @@ paths:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
+                required: [ code, message ]
                 properties:
-                  error:
+                  code:
                     type: string
                   message:
                     type: string
@@ -287,8 +289,10 @@ paths:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
+                required: [ code, message ]
                 properties:
-                  error:
+                  code:
                     type: string
                   message:
                     type: string
@@ -729,8 +733,10 @@ paths:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
+                required: [ code, message ]
                 properties:
-                  error:
+                  code:
                     type: string
                   message:
                     type: string

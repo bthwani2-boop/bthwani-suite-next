@@ -204,8 +204,10 @@ func upsert(
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return ClientProfile{}, err
 	}
-	if profileExists && expectedVersion > 0 && currentVersion != expectedVersion {
-		return ClientProfile{}, ErrConflict
+	if profileExists {
+		if expectedVersion == 0 || currentVersion != expectedVersion {
+			return ClientProfile{}, ErrConflict
+		}
 	}
 
 	profile, err := apply(tx, profileExists)

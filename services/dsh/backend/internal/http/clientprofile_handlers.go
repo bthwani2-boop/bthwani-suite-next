@@ -92,6 +92,10 @@ func (s *protectedStoreServer) handleUpsertClientProfileConsents(w http.Response
 			store.SendError(w, http.StatusConflict, "PROFILE_CONFLICT", "Profile version conflict")
 			return
 		}
+		if errors.Is(err, clientprofile.ErrInvalid) {
+			store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "Unsupported profile consents")
+			return
+		}
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update consents")
 		return
 	}
