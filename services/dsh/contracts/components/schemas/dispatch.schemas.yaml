@@ -62,6 +62,44 @@ DshDispatchAssignment:
         specialRequestId: { type: string }
         requestType: { type: string, minLength: 1 }
 
+DshGovernedDispatchAssignment:
+  allOf:
+    - $ref: "#/DshDispatchAssignment"
+    - type: object
+      required: [operatorContextId, serviceAreaCode, priority, allowedActions]
+      properties:
+        operatorContextId: { type: string, minLength: 1 }
+        serviceAreaCode: { type: string, minLength: 1 }
+        priority: { type: integer, minimum: 0, maximum: 100 }
+        distanceMeters: { type: [integer, "null"], minimum: 0 }
+        offerReason: { type: string }
+        responseReason: { type: string }
+        expiredAt: { type: [string, "null"], format: date-time }
+        cancelledAt: { type: [string, "null"], format: date-time }
+        cancelledBy: { type: string }
+        supersedesAssignmentId: { type: string, format: uuid }
+        allowedActions:
+          type: array
+          items: { type: string, minLength: 1 }
+        deliveryAddress:
+          type: object
+          additionalProperties: true
+          description: Sanitized delivery-address snapshot; sensitive fields are removed before dispatch exposure.
+
+DshGovernedDispatchAssignmentResponse:
+  type: object
+  required: [assignment]
+  properties:
+    assignment: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshGovernedDispatchAssignment" }
+
+DshGovernedDispatchAssignmentsResponse:
+  type: object
+  required: [assignments]
+  properties:
+    assignments:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshGovernedDispatchAssignment" }
+
 DshDispatchAssignmentResponse:
   type: object
   required: [assignment]

@@ -12,7 +12,7 @@
         description: Dispatch assignments.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentsResponse" }
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshGovernedDispatchAssignmentsResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
   post:
     operationId: createDshAssignment
@@ -32,7 +32,7 @@
         description: Assignment created.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshGovernedDispatchAssignmentResponse" }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
@@ -49,7 +49,7 @@
         description: Captain assignments.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentsResponse" }
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshGovernedDispatchAssignmentsResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
 /dsh/captain/dispatch/availability:
@@ -115,7 +115,7 @@
         description: Assignment accepted.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshGovernedDispatchAssignmentResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
@@ -143,7 +143,7 @@
         description: Assignment declined.
         content:
           application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentResponse" }
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshGovernedDispatchAssignmentResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }

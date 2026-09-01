@@ -15,15 +15,15 @@ import {
 import type { OperatorDispatchCommandIntent } from './operator-dispatch-command-attempt';
 import type {
   DshCaptainDispatchCandidate,
-  DshDispatchAssignment,
+  DshGovernedDispatchAssignment,
   DshDispatchDecision,
 } from '../dispatch/dispatch.types';
 import { useIdentitySession } from '@bthwani/core-identity';
 
 export type DispatchOperationsState = {
   readonly kind: 'loading' | 'ready' | 'error';
-  readonly assignments: readonly DshDispatchAssignment[];
-  readonly selectedAssignment: DshDispatchAssignment | null;
+  readonly assignments: readonly DshGovernedDispatchAssignment[];
+  readonly selectedAssignment: DshGovernedDispatchAssignment | null;
   readonly decisions: readonly DshDispatchDecision[];
   readonly candidates: readonly DshCaptainDispatchCandidate[];
   readonly mutationKind: 'idle' | 'expiring' | 'cancelling' | 'reassigning';
@@ -51,7 +51,7 @@ function dispatchOperationsErrorMessage(error: unknown): string {
   return classified.message ?? 'تعذر تنفيذ عملية الإسناد.';
 }
 
-function activeAssignments(items: readonly DshDispatchAssignment[]): readonly DshDispatchAssignment[] {
+function activeAssignments(items: readonly DshGovernedDispatchAssignment[]): readonly DshGovernedDispatchAssignment[] {
   return items.filter((item) => item.status === 'offered' || item.status === 'accepted');
 }
 
@@ -118,7 +118,7 @@ export function useDispatchOperations() {
     }
   }, []);
 
-  const selectAssignment = React.useCallback(async (assignment: DshDispatchAssignment) => {
+  const selectAssignment = React.useCallback(async (assignment: DshGovernedDispatchAssignment) => {
     setState((current) => ({
       ...current,
       selectedAssignment: assignment,
@@ -214,7 +214,7 @@ export function useDispatchOperations() {
   }, [actorId, load]);
 
   const reassign = React.useCallback(async (
-    assignment: DshDispatchAssignment,
+    assignment: DshGovernedDispatchAssignment,
     captainId: string,
     reason: string,
   ) => {

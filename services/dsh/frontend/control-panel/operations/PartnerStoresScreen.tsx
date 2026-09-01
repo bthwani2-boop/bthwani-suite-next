@@ -11,6 +11,11 @@ import {
 } from '@bthwani/ui-kit/web';
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
+import type { DshFulfillmentDeliveryMode } from "../../shared/delivery/delivery.contract";
+import {
+  formatFulfillmentModes,
+  toFulfillmentModes,
+} from "../../shared/store/store-discovery.formatters";
 import { buildOperationsHref } from './operations.registry';
 import { useStoreAdminController, type DshStoreAdminTableRow } from '../../shared/store';
 import styles from '../shared/control-panel-surface.module.css';
@@ -26,7 +31,7 @@ type CpStoreRow = {
   name: string;
   branch: string;
   status: string;
-  deliveryMode: 'bthwani_delivery' | 'partner_delivery';
+  deliveryModes: readonly DshFulfillmentDeliveryMode[];
   issue: string;
   recommendation: string;
   recommendationReason: string;
@@ -41,7 +46,7 @@ function mapAdminRowToCpRow(row: DshStoreAdminTableRow): CpStoreRow {
     name: row.displayName,
     branch: row.cityCode,
     status: isOpenNow ? 'مفتوح' : isTemporarilyUnavailable ? 'موقوف مؤقتًا' : 'مغلق',
-    deliveryMode: row.deliveryModes.includes('express') ? 'bthwani_delivery' : 'partner_delivery',
+    deliveryModes: toFulfillmentModes(row.deliveryModes),
     issue: row.isServiceable ? '' : 'خارج نطاق الخدمة الحالي',
     recommendation: row.catalogApprovalStatus === 'submitted'
       ? 'مراجعة الكتالوج لدى المالك المختص'
@@ -153,7 +158,7 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
               risk={store.statusTone === 'danger' ? 'danger' : store.statusTone === 'warning' ? 'warning' : 'neutral'}
               recommendation={store.recommendation}
               reason={store.recommendationReason}
-              sla={store.issue || (store.deliveryMode === 'partner_delivery' ? 'توصيل المتجر' : 'توصيل بثواني')}
+              sla={store.issue || formatFulfillmentModes(store.deliveryModes)}
               onInspect={() => {
                 controller.selectStore(store.id);
                 router.push(buildOperationsHref('exceptions', { orderId: store.id, subGroup: 'stores' }));
@@ -182,7 +187,7 @@ export function PartnerStoresScreen({ focusParams }: PartnerStoresScreenProps) {
                   <Text role="bodySm" tone="muted">الفرع: {activeStore.branch}</Text>
                   <Text role="bodySm">الحالة: {activeStore.status}</Text>
                   <Text role="bodySm">
-                    نمط التوصيل: {activeStore.deliveryMode === 'partner_delivery' ? 'توصيل المتجر' : 'توصيل بثواني'}
+                    أنماط التوصيل: {formatFulfillmentModes(activeStore.deliveryModes)}
                   </Text>
                   {activeStore.issue ? <Text role="bodySm" tone="danger">{activeStore.issue}</Text> : null}
                 </Box>

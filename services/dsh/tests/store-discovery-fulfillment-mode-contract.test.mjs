@@ -27,15 +27,18 @@ test("store discovery remains the sole formatter-owned mode translation", () => 
   assert.match(source, /delivery: "partner_delivery"/);
   assert.match(source, /express: "bthwani_delivery"/);
   assert.match(source, /pickup: "pickup"/);
+  assert.match(source, /export function formatFulfillmentModes\(/);
+  assert.match(source, /getDshDeliveryModeDefinition\(mode\)\.label/);
 });
 
 test("partner operations preserves the canonical delivery-mode meaning", () => {
   assert.match(
     operationsSource,
-    /deliveryMode: row\.deliveryModes\.includes\('express'\) \? 'bthwani_delivery' : 'partner_delivery'/,
+    /deliveryModes: toFulfillmentModes\(row\.deliveryModes\)/,
   );
   assert.doesNotMatch(
     operationsSource,
-    /deliveryMode: row\.deliveryModes\.includes\('delivery'\) \? 'bthwani_delivery'/,
+    /deliveryMode: row\.deliveryModes\.includes\(/,
   );
+  assert.match(operationsSource, /formatFulfillmentModes\(store\.deliveryModes\)/);
 });

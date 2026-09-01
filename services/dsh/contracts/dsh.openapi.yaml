@@ -1438,6 +1438,12 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshDelivery"
     DshDispatchAssignment:
       $ref: "./components/schemas/dispatch.schemas.yaml#/DshDispatchAssignment"
+    DshGovernedDispatchAssignment:
+      $ref: "./components/schemas/dispatch.schemas.yaml#/DshGovernedDispatchAssignment"
+    DshGovernedDispatchAssignmentResponse:
+      $ref: "./components/schemas/dispatch.schemas.yaml#/DshGovernedDispatchAssignmentResponse"
+    DshGovernedDispatchAssignmentsResponse:
+      $ref: "./components/schemas/dispatch.schemas.yaml#/DshGovernedDispatchAssignmentsResponse"
     DshDispatchAssignmentResponse:
       $ref: "./components/schemas/dispatch.schemas.yaml#/DshDispatchAssignmentResponse"
     DshPartnerDispatchReference:
