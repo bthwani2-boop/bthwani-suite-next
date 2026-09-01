@@ -515,6 +515,8 @@ test("checkout keeps an unresolved payment intent visible and blocks duplicate s
     ["const checkoutLocked", "checkoutLocked || !cartReady", "checkoutState?.kind === \"order_error\"", "serviceabilityController.serviceability.kind === \"serviceable\"", "disabled={!canProceed}"],
   );
   assert.match(cart, /actionPending \|\| checkoutLocked/);
+  assert.match(cart, /label="رمز القسيمة"/);
+  assert.match(cart, /accessibilityLabel=\{label \|\| placeholder\}/);
   assertMarkers(
     "services/dsh/frontend/app-client/cart/CheckoutProgress.tsx",
     ["جلسة الدفع ما تزال محفوظة", "إعادة محاولة الإلغاء", "state.intent.id"],

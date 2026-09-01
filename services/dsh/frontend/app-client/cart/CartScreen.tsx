@@ -330,7 +330,7 @@ export function CartScreen({
           <View style={styles.richInputRow}>
             <View style={{ flex: 1 }}>
               <CartInputField
-                label=""
+                label="رمز القسيمة"
                 value={couponCode}
                 onChangeText={(text: string) => {
                   setCouponCode(text);
@@ -490,6 +490,7 @@ function CartInputField({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        accessibilityLabel={label || placeholder}
         placeholderTextColor={colorRoles.textMuted}
         autoCapitalize={autoCapitalize}
         multiline={multiline}
