@@ -525,8 +525,17 @@ components:
         operatorContextId: { type: string, minLength: 1 }
         paymentSessionId: { type: string, minLength: 1 }
         status: { type: string, enum: [ authorized, captured, failed, expired ] }
-        providerReference: { type: string }
+        providerReference: { type: string, minLength: 1 }
         occurredAt: { type: string, format: date-time }
+      allOf:
+        - if:
+            properties:
+              status:
+                enum: [ authorized, captured ]
+          then:
+            required: [ providerReference ]
+            properties:
+              providerReference: { type: string, minLength: 1 }
     PaymentTimeline:
       type: object
       required: [ paymentSession, operationReceipts, providerEvents, reconciliationCases ]
