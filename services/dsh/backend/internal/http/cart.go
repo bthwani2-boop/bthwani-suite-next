@@ -27,6 +27,19 @@ func requireCartMutationIdentity(w http.ResponseWriter, r *http.Request) (string
 	return idempotencyKey, correlationID, true
 }
 
+func fulfillmentModeOrDefault(raw string) (cart.FulfillmentMode, bool) {
+	mode := cart.FulfillmentMode(strings.TrimSpace(raw))
+	if mode == "" {
+		return cart.ModeBthwaniDelivery, true
+	}
+	switch mode {
+	case cart.ModeBthwaniDelivery, cart.ModePartnerDelivery, cart.ModePickup:
+		return mode, true
+	default:
+		return "", false
+	}
+}
+
 // GET /dsh/client/cart/fulfillment-modes
 func (s *protectedStoreServer) handleGetFulfillmentModes(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
@@ -304,9 +317,10 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId, masterProductId and quantity >= 1 are required")
 		return
 	}
-	mode := cart.FulfillmentMode(body.FulfillmentMode)
-	if mode != cart.ModeBthwaniDelivery && mode != cart.ModePartnerDelivery && mode != cart.ModePickup {
-		mode = cart.ModeBthwaniDelivery
+	mode, validMode := fulfillmentModeOrDefault(body.FulfillmentMode)
+	if !validMode {
+		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillmentMode must be bthwani_delivery, partner_delivery, or pickup")
+		return
 	}
 	var expectedVersion *int
 	if match := r.Header.Get("If-Match-Version"); match != "" {

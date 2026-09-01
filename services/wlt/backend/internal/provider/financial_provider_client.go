@@ -94,9 +94,13 @@ func (c *Client) do(ctx context.Context, method string, path string, body any, m
 	})
 
 	if execErr != nil {
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
 		if errors.Is(execErr, ErrCircuitOpen) {
 			return ProviderResult{}, fmt.Errorf("provider circuit breaker is OPEN")
 		}
+		return ProviderResult{}, execErr
 	}
 
 	if resp == nil {

@@ -135,3 +135,15 @@ func TestComputeFulfillmentModeAvailabilityAllEnabledInZone(t *testing.T) {
 		}
 	}
 }
+
+func TestComputeCheckoutSnapshotRejectsInt64Overflow(t *testing.T) {
+	_, err := computeCheckoutSnapshotFromItems("cart-1", []CartItem{{
+		ProductID:           "product-1",
+		UnitPriceMinorUnits: 9_000_000_000_000_000_000,
+		Currency:            "YER",
+		Quantity:            2,
+	}})
+	if !errors.Is(err, ErrCartTotalOverflow) {
+		t.Fatalf("expected cart total overflow, got %v", err)
+	}
+}

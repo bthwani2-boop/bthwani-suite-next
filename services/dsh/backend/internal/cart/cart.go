@@ -27,6 +27,7 @@ var (
 	ErrStoreGone               = errors.New("store no longer active")
 	ErrOutOfArea               = errors.New("store outside serviceable area")
 	ErrFinancialUnavailable    = errors.New("canonical financial quote is unavailable")
+	ErrCartTotalOverflow       = errors.New("cart total exceeds int64 range")
 )
 
 type FulfillmentMode string
@@ -716,6 +717,23 @@ func ComputeCheckoutSnapshot(ctx context.Context, db *sql.DB, cartID string) (*C
 	return computeCheckoutSnapshotFromItems(cartID, items)
 }
 
+const maxCartAmountMinorUnits int64 = 1<<63 - 1
+
+func addCartLineTotal(total, unitPriceMinorUnits int64, quantity int) (int64, error) {
+	if quantity <= 0 {
+		return 0, fmt.Errorf("%w: cart item quantity must be positive", ErrInvalid)
+	}
+	quantityMinorUnits := int64(quantity)
+	if unitPriceMinorUnits > maxCartAmountMinorUnits/quantityMinorUnits {
+		return 0, ErrCartTotalOverflow
+	}
+	lineTotal := unitPriceMinorUnits * quantityMinorUnits
+	if total > maxCartAmountMinorUnits-lineTotal {
+		return 0, ErrCartTotalOverflow
+	}
+	return total + lineTotal, nil
+}
+
 func computeCheckoutSnapshotFromItems(cartID string, items []CartItem) (*CartSnapshot, error) {
 	if len(items) == 0 {
 		return nil, fmt.Errorf("%w: cart has no items", ErrInvalid)
@@ -737,8 +755,12 @@ func computeCheckoutSnapshotFromItems(cartID string, items []CartItem) (*CartSna
 		} else if currency != item.Currency {
 			return nil, ErrCartItemCurrency
 		}
+		var err error
+		totalMinorUnits, err = addCartLineTotal(totalMinorUnits, item.UnitPriceMinorUnits, item.Quantity)
+		if err != nil {
+			return nil, err
+		}
 		unitMinorUnits := item.UnitPriceMinorUnits
-		totalMinorUnits += unitMinorUnits * int64(item.Quantity)
 		_, _ = fmt.Fprintf(hasher, "|%s:%d:%d:%s", item.ProductID, item.Quantity, unitMinorUnits, item.Currency)
 	}
 
