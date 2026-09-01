@@ -229,7 +229,7 @@ func TestValidateListQuery(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, errMsg := validateListQuery(tc.query)
+			got, errMsg := ParseListQuery(tc.query)
 			if errMsg != tc.wantErr {
 				t.Fatalf("expected error %q, got %q", tc.wantErr, errMsg)
 			}
@@ -270,7 +270,7 @@ func TestParseListQueryRejectsInvalidBooleanAndUnsafeText(t *testing.T) {
 		{name: "invalid utf8 search", query: url.Values{"search": {string([]byte{0xff})}}, wantErr: "invalid search"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, errMsg := validateListQuery(tc.query)
+			_, errMsg := ParseListQuery(tc.query)
 			if errMsg != tc.wantErr {
 				t.Fatalf("expected error %q, got %q", tc.wantErr, errMsg)
 			}

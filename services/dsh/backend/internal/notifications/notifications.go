@@ -287,18 +287,6 @@ func formatPgTextArray(vals []string) string {
 	return "{" + strings.Join(quoted, ",") + "}"
 }
 
-// UpsertPlatformNotificationConfig preserves compatibility with existing
-// producers while applying governed defaults for templates and channels.
-func UpsertPlatformNotificationConfig(db *sql.DB, topic string, actorTypes []string, isEnabled bool, description, updatedBy string) (PlatformNotificationConfig, error) {
-	return UpsertPlatformNotificationConfigPolicy(db, PlatformNotificationConfigInput{
-		Topic:           topic,
-		ActorTypes:      actorTypes,
-		IsEnabled:       isEnabled,
-		Description:     description,
-		DefaultChannels: []string{"in_app"},
-	}, updatedBy)
-}
-
 func UpsertPlatformNotificationConfigPolicy(db *sql.DB, input PlatformNotificationConfigInput, updatedBy string) (PlatformNotificationConfig, error) {
 	input.Topic = strings.TrimSpace(input.Topic)
 	if input.Topic == "" || db == nil {

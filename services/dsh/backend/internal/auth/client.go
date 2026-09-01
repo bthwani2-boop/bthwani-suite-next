@@ -346,13 +346,14 @@ var (
 // RbacRole is the canonical Identity role definition, as returned by the
 // Identity RBAC internal API.
 type RbacRole struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Active      bool      `json:"active"`
-	Version     int       `json:"version"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID          string       `json:"id"`
+	Name        string       `json:"name"`
+	Description string       `json:"description"`
+	Active      bool         `json:"active"`
+	Permissions []Permission `json:"permissions"`
+	Version     int          `json:"version"`
+	CreatedAt   time.Time    `json:"createdAt"`
+	UpdatedAt   time.Time    `json:"updatedAt"`
 }
 
 // RbacActorRoleAssignment is the canonical Identity actor→role grant.

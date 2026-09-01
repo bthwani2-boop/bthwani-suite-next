@@ -680,67 +680,6 @@ DshUpdateZoneRequest:
     isActive: { type: boolean }
     expectedVersion: { type: integer, minimum: 1 }
 
-DshSlaRule:
-  type: object
-  required: [id, zoneId, category, maxPrepMins, maxAssignmentMins, maxDeliveryMins, warningBeforeMins, pickupNotifyMins, pickupArrivalMins, pickupVerifyMins, deliveryAssignToPickupMins, deliveryPickupToDepartMins, deliveryDepartToArriveMins, deliveryArriveToProofMins, version, updatedBy, updatedAt]
-  properties:
-    id: { type: string, format: uuid }
-    zoneId: { type: string, format: uuid }
-    category: { type: string, minLength: 1, maxLength: 120 }
-    maxPrepMins: { type: integer, minimum: 1, maximum: 1440 }
-    maxAssignmentMins: { type: integer, minimum: 1, maximum: 1440 }
-    maxDeliveryMins: { type: integer, minimum: 1, maximum: 1440 }
-    warningBeforeMins: { type: integer, minimum: 1, maximum: 1440 }
-    pickupNotifyMins: { type: integer, minimum: 1, maximum: 1440 }
-    pickupArrivalMins: { type: integer, minimum: 1, maximum: 1440 }
-    pickupVerifyMins: { type: integer, minimum: 1, maximum: 1440 }
-    deliveryAssignToPickupMins: { type: integer, minimum: 1, maximum: 1440 }
-    deliveryPickupToDepartMins: { type: integer, minimum: 1, maximum: 1440 }
-    deliveryDepartToArriveMins: { type: integer, minimum: 1, maximum: 1440 }
-    deliveryArriveToProofMins: { type: integer, minimum: 1, maximum: 1440 }
-    version: { type: integer, minimum: 1 }
-    updatedBy: { type: string }
-    updatedAt: { type: string, format: date-time }
-
-DshSlaRulesResponse:
-  type: object
-  required: [slaRules]
-  properties:
-    slaRules:
-      type: array
-      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSlaRule" }
-
-DshUpsertSlaRulesRequest:
-  type: object
-  required: [zoneId, captainSlaMinutes, partnerSlaMinutes]
-  properties:
-    zoneId: { type: string }
-    captainSlaMinutes: { type: integer }
-    partnerSlaMinutes: { type: integer }
-
-DshCapacityConfig:
-  type: object
-  required: [zoneId, maxConcurrentOrders, warningThreshold, updatedAt]
-  properties:
-    zoneId: { type: string }
-    maxConcurrentOrders: { type: integer }
-    warningThreshold: { type: number }
-    updatedAt: { type: string, format: date-time }
-
-DshCapacityConfigResponse:
-  type: object
-  required: [config]
-  properties:
-    config: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCapacityConfig" }
-
-DshUpsertCapacityConfigRequest:
-  type: object
-  required: [zoneId, maxConcurrentOrders, warningThreshold]
-  properties:
-    zoneId: { type: string }
-    maxConcurrentOrders: { type: integer }
-    warningThreshold: { type: number }
-
 DshCreateSpecialRequest:
   type: object
   required: [requestType, idempotencyKey]

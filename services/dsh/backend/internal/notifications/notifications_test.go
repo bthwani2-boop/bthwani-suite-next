@@ -109,8 +109,13 @@ func TestUpsertNotificationPreferencesRequiresActorAndTopic(t *testing.T) {
 	}
 }
 
-func TestUpsertPlatformNotificationConfigRequiresTopic(t *testing.T) {
-	_, err := UpsertPlatformNotificationConfig(nil, "", []string{"client"}, true, "desc", "admin-1")
+func TestUpsertPlatformNotificationConfigPolicyRequiresTopic(t *testing.T) {
+	_, err := UpsertPlatformNotificationConfigPolicy(nil, PlatformNotificationConfigInput{
+		ActorTypes:      []string{"client"},
+		IsEnabled:       true,
+		Description:     "desc",
+		DefaultChannels: []string{"in_app"},
+	}, "admin-1")
 	if err != ErrInvalid {
 		t.Fatalf("expected ErrInvalid for empty topic, got %v", err)
 	}

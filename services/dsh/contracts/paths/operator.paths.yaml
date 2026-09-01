@@ -278,48 +278,6 @@
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
-/dsh/operator/platform/sla-rules:
-  get:
-    operationId: getDshSlaRules
-    summary: Get SLA rules for a zone.
-    tags: [DshPlatformPolicies]
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: zoneId
-        in: query
-        required: true
-        schema: { type: string }
-    responses:
-      "200":
-        description: SLA rules.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSlaRulesResponse" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-
-/dsh/operator/platform/capacity:
-  get:
-    operationId: getDshCapacityConfig
-    summary: Get capacity configuration for a zone.
-    tags: [DshPlatformPolicies]
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: zoneId
-        in: query
-        required: true
-        schema: { type: string }
-    responses:
-      "200":
-        description: Capacity config.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCapacityConfigResponse" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-
 # ─── Partner Onboarding & Store Publication ─────────────────────────
 /dsh/operator/special-requests:
   get:

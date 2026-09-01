@@ -530,10 +530,6 @@ paths:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1platform~1zones"
   /dsh/operator/platform/zones/{zoneId}:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1platform~1zones~1{zoneId}"
-  /dsh/operator/platform/sla-rules:
-    $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1platform~1sla-rules"
-  /dsh/operator/platform/capacity:
-    $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1platform~1capacity"
   /dsh/operator/platform/operational-profiles/{zoneId}:
     $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-profiles~1{zoneId}"
   /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes:
@@ -1741,18 +1737,6 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshCreateZoneRequest"
     DshUpdateZoneRequest:
       $ref: "./components/schemas/common.schemas.yaml#/DshUpdateZoneRequest"
-    DshSlaRule:
-      $ref: "./components/schemas/common.schemas.yaml#/DshSlaRule"
-    DshSlaRulesResponse:
-      $ref: "./components/schemas/common.schemas.yaml#/DshSlaRulesResponse"
-    DshUpsertSlaRulesRequest:
-      $ref: "./components/schemas/common.schemas.yaml#/DshUpsertSlaRulesRequest"
-    DshCapacityConfig:
-      $ref: "./components/schemas/common.schemas.yaml#/DshCapacityConfig"
-    DshCapacityConfigResponse:
-      $ref: "./components/schemas/common.schemas.yaml#/DshCapacityConfigResponse"
-    DshUpsertCapacityConfigRequest:
-      $ref: "./components/schemas/common.schemas.yaml#/DshUpsertCapacityConfigRequest"
     DshZoneServiceabilityResponse:
       $ref: "./components/schemas/cart-serviceability.schemas.yaml#/DshZoneServiceabilityResponse"
     DshOperationalPolicyFulfillmentMode:

@@ -54,24 +54,31 @@ type CreatePaymentSessionInput struct {
 }
 
 type PaymentSession struct {
-	ID                    string                   `json:"id"`
-	CheckoutIntentID      string                   `json:"checkoutIntentId"`
-	SpecialRequestID      string                   `json:"specialRequestId"`
-	OperatorContextID     string                   `json:"operatorContextId"`
-	ClientID              string                   `json:"clientId"`
-	StoreID               string                   `json:"storeId"`
-	PaymentMethod         string                   `json:"paymentMethod"`
-	Status                string                   `json:"status"`
-	ProviderReference     string                   `json:"providerReference"`
-	AmountMinorUnits      int64                    `json:"amountMinorUnits"`
-	Currency              string                   `json:"currency"`
-	TenderAllocation      *PaymentTenderAllocation `json:"tenderAllocation,omitempty"`
-	CreatedAt             string                   `json:"createdAt"`
-	UpdatedAt             string                   `json:"updatedAt"`
-	PricingQuoteID        string                   `json:"pricingQuoteId,omitempty"`
-	PricingQuoteHash      string                   `json:"pricingQuoteHash,omitempty"`
-	PricingQuoteVersion   int                      `json:"pricingQuoteVersion,omitempty"`
-	PricingQuoteExpiresAt string                   `json:"pricingQuoteExpiresAt,omitempty"`
+	ID                     string                   `json:"id"`
+	CheckoutIntentID       string                   `json:"checkoutIntentId"`
+	SpecialRequestID       string                   `json:"specialRequestId"`
+	SubscriptionPurchaseID string                   `json:"subscriptionPurchaseId"`
+	CommercialProductRef   string                   `json:"commercialProductReference"`
+	TopUpReference         *string                  `json:"topupReference"`
+	TopUpActorType         *string                  `json:"topupActorType"`
+	OperatorContextID      string                   `json:"operatorContextId"`
+	ClientID               string                   `json:"clientId"`
+	StoreID                string                   `json:"storeId"`
+	PaymentMethod          string                   `json:"paymentMethod"`
+	Status                 string                   `json:"status"`
+	ProviderReference      string                   `json:"providerReference"`
+	AmountMinorUnits       int64                    `json:"amountMinorUnits"`
+	Currency               string                   `json:"currency"`
+	FinancialPurpose       string                   `json:"financialPurpose"`
+	TenderAllocation       *PaymentTenderAllocation `json:"tenderAllocation,omitempty"`
+	PricingQuoteID         string                   `json:"pricingQuoteId,omitempty"`
+	PricingQuoteHash       string                   `json:"pricingQuoteHash,omitempty"`
+	PricingQuoteVersion    int                      `json:"pricingQuoteVersion,omitempty"`
+	PricingQuoteExpiresAt  *time.Time               `json:"pricingQuoteExpiresAt"`
+	Allocation             []PaymentAllocationLine  `json:"allocation,omitempty"`
+	CapturedAt             *time.Time               `json:"capturedAt"`
+	CreatedAt              time.Time                `json:"createdAt"`
+	UpdatedAt              time.Time                `json:"updatedAt"`
 }
 
 type PaymentTenderAllocation struct {

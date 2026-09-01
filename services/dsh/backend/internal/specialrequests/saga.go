@@ -353,7 +353,7 @@ func quoteMatches(input QuoteSagaInput, quote *wlt.SpecialRequestQuote) bool {
 	return quote != nil && quote.ID != "" && quote.OperatorContextID == input.OperatorContextID && quote.SpecialRequestID == input.SpecialRequestID && quote.ClientID == input.ClientID && quote.PolicyID == input.PolicyID && quote.ProposedAmountMinorUnits == input.ProposedAmountMinorUnits && quote.ProposedCurrency == input.ProposedCurrency && quote.Status == "active" && time.Now().Before(quote.ExpiresAt)
 }
 
-func paymentMatches(input PaymentSessionSagaInput, session *wlt.PaymentSessionDetail) bool {
+func paymentMatches(input PaymentSessionSagaInput, session *wlt.PaymentSession) bool {
 	return session != nil && session.ID != "" && session.StoreID == input.StoreID && session.PaymentMethod == input.PaymentMethod && session.AmountMinorUnits == input.AmountMinorUnits && session.Currency == input.Currency && session.Status != "failed" && session.Status != "expired"
 }
 
@@ -406,7 +406,7 @@ func executeQuoteSaga(ctx context.Context, db *sql.DB, client *wlt.Client, saga 
 
 func executePaymentSaga(ctx context.Context, db *sql.DB, client *wlt.Client, saga *SpecialRequestSaga, input PaymentSessionSagaInput) error {
 	wltCtx := wlt.WithOperatorContext(ctx, input.OperatorContextID)
-	var session *wlt.PaymentSessionDetail
+	var session *wlt.PaymentSession
 	if saga.RemoteReference != "" {
 		session, _ = client.GetPaymentSession(wltCtx, saga.RemoteReference)
 	}

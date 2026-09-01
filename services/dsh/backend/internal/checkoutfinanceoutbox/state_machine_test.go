@@ -43,7 +43,7 @@ func TestPaymentSessionReadbackMapsTerminalClosureStates(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result, err := resultForPaymentSession(Event{EventType: EventTypeExpireSession}, &wlt.PaymentSessionDetail{
+			result, err := resultForPaymentSession(Event{EventType: EventTypeExpireSession}, &wlt.PaymentSession{
 				ID: "payment-session-1", Status: test.status,
 			})
 			if err != nil {
@@ -57,7 +57,7 @@ func TestPaymentSessionReadbackMapsTerminalClosureStates(t *testing.T) {
 }
 
 func TestUnknownPaymentSessionReadbackCannotBecomeSuccess(t *testing.T) {
-	_, err := resultForPaymentSession(Event{EventType: EventTypeExpireSession}, &wlt.PaymentSessionDetail{
+	_, err := resultForPaymentSession(Event{EventType: EventTypeExpireSession}, &wlt.PaymentSession{
 		ID: "payment-session-1", Status: "provider_result_unknown",
 	})
 	if !errors.Is(err, wlt.ErrPaymentSessionOutcomeUnknown) {

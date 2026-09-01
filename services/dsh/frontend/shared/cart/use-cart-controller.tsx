@@ -14,7 +14,7 @@ import {
   discardCartSyncQueue,
   enqueueCartSyncCommand,
   getCartSyncQueue,
-  quarantineLegacyCartSyncQueue,
+  purgeRetiredCartSyncArtifacts,
   removeCartSyncCommand,
   updateCartSyncCommand,
   type CartMutationCommand,
@@ -229,7 +229,7 @@ export function useCartController(
   }, [actorId, load]);
 
   useEffect(() => {
-    void quarantineLegacyCartSyncQueue().catch((error: unknown) => {
+    void purgeRetiredCartSyncArtifacts().catch((error: unknown) => {
       setAction("error");
       setActionError(mutationErrorMessage(error));
     });

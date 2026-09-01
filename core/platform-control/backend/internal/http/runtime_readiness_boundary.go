@@ -110,9 +110,10 @@ func isPlatformOperationalRequest(r *http.Request) bool {
 
 func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Health and readiness are now handled by the canonical router.
-		// Pass them through to the next handler (the router).
-		if r.Method == http.MethodGet && (r.URL.Path == "/platform/health" || r.URL.Path == "/platform/readiness") {
+		// Liveness is intentionally independent of the operational store. Readiness
+		// is an operational claim and must pass every runtime probe below before the
+		// router can return HEALTHY.
+		if r.Method == http.MethodGet && r.URL.Path == "/platform/health" {
 			next.ServeHTTP(w, r)
 			return
 		}

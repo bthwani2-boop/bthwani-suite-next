@@ -81,16 +81,12 @@ test("policy surfaces gate reads and writes before invoking their controllers", 
   const serviceArea = read("services/dsh/frontend/control-panel/platform/ServiceAreaGovernanceSection.tsx");
   const privacy = read("services/dsh/frontend/control-panel/platform/ClientAddressPrivacySection.tsx");
   const operational = read("services/dsh/frontend/control-panel/platform/OperationalPolicySection.tsx");
-  const governance = read("services/dsh/frontend/control-panel/platform/OperationalPolicyGovernanceSection.tsx");
   assert.match(serviceArea, /useServiceAreaController\(canRead\)/);
   assert.match(privacy, /useClientAddressPrivacyController\(canRead\)/);
   assert.match(operational, /useZonesController\(canReadZones \? "authenticated" : "restricted"\)/);
   assert.match(operational, /evaluateDshOperatorOperationalPolicy/);
   assert.match(operational, /if \(!canManageProfile \|\| !selectedZoneId\) return/);
   assert.match(operational, /if \(!canManageDeliveryModes \|\| !selectedZoneId\) return/);
-  assert.match(governance, /useZonesController\(canReadZones \? "authenticated" : "restricted"\)/);
-  assert.match(governance, /useSlaRulesController\(canReadSla \? "authenticated" : "restricted"\)/);
-  assert.match(governance, /useAreaCapacityController\(canReadCapacity \? "authenticated" : "restricted"/);
   assert.match(operational, /if \(!canRollback \|\| !selectedAudit\) return/);
 });
 

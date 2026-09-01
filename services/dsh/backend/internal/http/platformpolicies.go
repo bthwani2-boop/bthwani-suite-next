@@ -49,30 +49,6 @@ func (s *protectedStoreServer) handleListZones(w http.ResponseWriter, r *http.Re
 	store.SendJSON(w, http.StatusOK, map[string]any{"zones": zones})
 }
 
-func (s *protectedStoreServer) handleListSlaRules(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.ActorFromContext(r.Context()); !ok {
-		return
-	}
-	rules, err := platformpolicies.ListSlaRules(r.Context(), s.db, r.URL.Query().Get("zoneId"))
-	if err != nil {
-		writePlatformPolicyError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"slaRules": rules})
-}
-
-func (s *protectedStoreServer) handleGetCapacityConfig(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.ActorFromContext(r.Context()); !ok {
-		return
-	}
-	config, err := platformpolicies.GetCapacity(r.Context(), s.db, r.URL.Query().Get("zoneId"))
-	if err != nil {
-		writePlatformPolicyError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"capacityConfig": config})
-}
-
 func (s *protectedStoreServer) handleGetZoneServiceability(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return

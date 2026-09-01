@@ -27,6 +27,8 @@ const runtime = readRepositoryFile("apps/app-field/runtime/src/index.ts");
 test("field offline queue has one v4 authority with a one-way v3 migration", () => {
   assert.match(source, /const STORAGE_PREFIX = "bthwani\.field-offline-queue\.v4"/);
   assert.match(source, /const V3_STORAGE_PREFIX = "bthwani\.field-offline-queue\.v3"/);
+  assert.match(source, /const V3_CUTOVER_MARKER_SUFFIX = "v3-cutover-complete"/);
+  assert.match(source, /cutoverMarker/);
   assert.match(source, /migrateV3Artifacts/);
   assert.match(source, /buildFieldIntentFingerprint\(operation\.operationType, operation\.payload\)/);
   assert.match(source, /await storageAdapter\.removeItem\(v3StorageKey\(scope\)\)/);

@@ -203,8 +203,8 @@ func (s *server) platformHealth(w http.ResponseWriter, r *http.Request) {
 func (s *server) platformReadiness(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json")
-	// For now, return healthy. The actual readiness check is done by the middleware
-	// as a cross-cutting concern for other routes.
+	// RuntimeReadinessBoundary is the sole gate for this route and only invokes
+	// this handler after the database, migration, schema and clock probes pass.
 	sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-platform-control"})
 }
 

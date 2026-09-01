@@ -270,7 +270,7 @@ func markComplete(ctx context.Context, db *sql.DB, id string) error {
         return err
 }
 
-func matches(in Input, session *wlt.PaymentSessionDetail) bool {
+func matches(in Input, session *wlt.PaymentSession) bool {
         return session != nil && session.ID != "" && session.ClientID == in.ClientID && session.StoreID == in.StoreID && session.PaymentMethod == in.PaymentMethod && session.AmountMinorUnits == in.AmountMinorUnits && session.Currency == in.Currency && session.Status != "failed" && session.Status != "expired"
 }
 
@@ -291,7 +291,7 @@ func Dispatch(ctx context.Context, db *sql.DB, client *wlt.Client, id string) (*
                 return Get(ctx, db, id)
         }
         wltCtx := wlt.WithOperatorContext(ctx, in.OperatorContextID)
-        var session *wlt.PaymentSessionDetail
+		var session *wlt.PaymentSession
         if s.PaymentSessionID != "" {
                 session, _ = client.GetPaymentSession(wltCtx, s.PaymentSessionID)
         }

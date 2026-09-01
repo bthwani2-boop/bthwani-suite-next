@@ -166,12 +166,6 @@ func parseOptionalBoolean(q url.Values, name string) (*bool, string) {
 	}
 }
 
-// validateListQuery remains as the package-local compatibility entry point for
-// existing tests and callers while ParseListQuery is used by protected routes.
-func validateListQuery(q url.Values) (DshStoreListQuery, string) {
-	return ParseListQuery(q)
-}
-
 func HandleListStores(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		listQuery, errMsg := ParseListQuery(r.URL.Query())

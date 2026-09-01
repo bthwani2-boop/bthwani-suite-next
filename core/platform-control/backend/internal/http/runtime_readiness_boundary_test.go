@@ -122,13 +122,33 @@ func TestPlatformPreflightAndLivenessDoNotDependOnReadiness(t *testing.T) {
 		t.Fatalf("preflight status=%d called=%v", preflight.Code, called)
 	}
 
-	// Health and readiness are now handled by the canonical router.
-	// The middleware passes them through to the next handler.
+	called = false
+	readiness := httptest.NewRecorder()
+	handler.ServeHTTP(readiness, httptest.NewRequest(http.MethodGet, "/platform/readiness", nil))
+	if readiness.Code != http.StatusServiceUnavailable || called {
+		t.Fatalf("readiness status=%d called=%v; readiness must fail closed without the runtime store", readiness.Code, called)
+	}
+
+	// Liveness remains independent of operational readiness.
 	called = false
 	liveness := httptest.NewRecorder()
 	handler.ServeHTTP(liveness, httptest.NewRequest(http.MethodGet, "/platform/health", nil))
-	// The middleware passes through to the next handler (which returns 204 in this test)
 	if liveness.Code != http.StatusNoContent || !called {
 		t.Fatalf("liveness status=%d called=%v", liveness.Code, called)
+	}
+}
+
+func TestPlatformReadinessPassesOnlyAfterRuntimeProbes(t *testing.T) {
+	configurePlatformControlRuntimeTest(t)
+	called := false
+	handler := runtimeReadinessBoundary(healthyPlatformControlRuntimeStore(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/platform/readiness", nil))
+	if recorder.Code != http.StatusNoContent || !called {
+		t.Fatalf("readiness status=%d called=%v; healthy runtime must reach the canonical route", recorder.Code, called)
 	}
 }

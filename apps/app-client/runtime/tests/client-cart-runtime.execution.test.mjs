@@ -33,13 +33,15 @@ const {
   removeCartSyncCommand,
   updateCartSyncCommand,
   discardCartSyncQueue,
-  quarantineLegacyCartSyncQueue,
+  purgeRetiredCartSyncArtifacts,
 } = await import(queueUrl.href);
 
 function memoryStorage() {
   const values = new Map();
   return {
     values,
+    get length() { return values.size; },
+    key: (index) => [...values.keys()][index] ?? null,
     getItem: (key) => values.has(key) ? values.get(key) : null,
     setItem: (key, value) => values.set(key, String(value)),
     removeItem: (key) => values.delete(key),
@@ -75,16 +77,16 @@ test.after(() => {
   else globalThis.localStorage = previousLocalStorage;
 });
 
-test("retired unscoped cart queue is quarantined before actor-scoped reads", async () => {
+test("retired cart namespaces are purged before actor-scoped reads", async () => {
   globalThis.localStorage.setItem("dsh_cart_sync_queue", "[{\"legacy\":true}]");
+  durable.values.set("@bthwani/dsh/cart-sync-queue/v3/actor/install", "[{\"legacy\":true}]");
+  durable.values.set("@bthwani/dsh/cart-sync-queue/v4/quarantine/actor/install", "[{\"legacy\":true}]");
 
-  await quarantineLegacyCartSyncQueue();
+  await purgeRetiredCartSyncArtifacts();
 
   assert.equal(globalThis.localStorage.getItem("dsh_cart_sync_queue"), null);
-  assert.ok(
-    [...durable.values.keys()].some((key) => key.includes("legacy-quarantine")),
-    "legacy evidence must remain recoverable in durable storage",
-  );
+  assert.equal([...durable.values.keys()].some((key) => key.includes("/v3/")), false);
+  assert.equal([...durable.values.keys()].some((key) => key.includes("/quarantine/")), false);
 });
 
 test("client cart loads only for an authenticated actor with a store scope", () => {
@@ -147,13 +149,10 @@ test("offline cart commands are actor/install scoped and retain identity until e
 
   await discardCartSyncQueue("actor-A", "customer explicitly chose server state");
   assert.deepEqual(await getCartSyncQueue("actor-A"), []);
-  assert.ok(
-    [...durable.values.keys()].some((key) => key.includes("/quarantine/")),
-    "explicit discard must leave durable recovery evidence",
-  );
+  assert.ok([...durable.values.keys()].some((key) => key.includes("/recovery/")));
 });
 
-test("corrupt scoped cart commands are quarantined and never treated as an empty queue", async () => {
+test("corrupt scoped cart commands preserve bounded recovery metadata and never look empty", async () => {
   const installationId = await import(
     new URL("../../../../shared/data-runtime/src/installation-id.ts", import.meta.url).href,
   ).then(({ getBthwaniInstallationId }) => getBthwaniInstallationId());
@@ -162,10 +161,18 @@ test("corrupt scoped cart commands are quarantined and never treated as an empty
 
   await assert.rejects(
     getCartSyncQueue("actor-corrupt"),
-    /cart queue is corrupt and was preserved for recovery/,
+    /cart queue is corrupt and a bounded recovery marker was preserved/,
   );
   assert.equal(durable.values.has(key), false);
-  assert.ok([...durable.values.keys()].some((candidate) => candidate.includes("/quarantine/")));
+  const recoveryKey = [...durable.values.keys()].find((candidate) => candidate.includes("/recovery/"));
+  assert.ok(recoveryKey);
+  assert.deepEqual(JSON.parse(durable.values.get(recoveryKey)), {
+    sourceKey: key,
+    reason: "CORRUPT_SCOPED_CART_QUEUE",
+    capturedAt: JSON.parse(durable.values.get(recoveryKey)).capturedAt,
+    recordCount: null,
+    rawLength: 9,
+  });
 });
 
 test("cart command enqueue fails closed when durable storage rejects the intent write", async () => {

@@ -53,7 +53,7 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("POST /dsh/operator/platform/zones", protected.withPermission("control-panel", DshServiceZonesPermissionManage, protected.handleCreateZone))
 	mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.withPermission("control-panel", DshServiceZonesPermissionManage, protected.handleUpdateZone))
 
-	// GET zones/sla-rules/capacity/serviceability are registered by
+	// GET zones/serviceability is registered by
 	// registerUnifiedCatalogRoutes in catalog_unified_routes.go (single
 	// compatibility owner — registering them here too would panic on duplicate
 	// mux patterns).

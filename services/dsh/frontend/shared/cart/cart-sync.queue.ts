@@ -47,18 +47,18 @@ type CartQueueScope = {
   readonly installationId: string;
 };
 
-type LegacyCartQueueQuarantine = {
-  readonly sourceKey: string;
-  readonly reason: "UNSCOPED_LEGACY_CART_QUEUE";
-  readonly capturedAt: string;
-  readonly raw: string;
-};
-
 const STORAGE_PREFIX = "@bthwani/dsh/cart-sync-queue/v4/";
-const LEGACY_QUEUE_STORAGE_KEY = "dsh_cart_sync_queue";
-const LEGACY_QUARANTINE_PREFIX = "@bthwani/dsh/cart-sync-queue/legacy-quarantine/v1/";
-
-let legacyMigration: Promise<void> | undefined;
+const RECOVERY_PREFIX = `${STORAGE_PREFIX}recovery/`;
+const RETIRED_EXACT_KEYS = new Set(["dsh_cart_sync_queue"]);
+const RETIRED_PREFIXES = [
+  "@bthwani/dsh/cart-sync-queue/v1/",
+  "@bthwani/dsh/cart-sync-queue/v2/",
+  "@bthwani/dsh/cart-sync-queue/v3/",
+  "@bthwani/dsh/cart-sync-queue/legacy-quarantine/",
+  `${STORAGE_PREFIX}quarantine/`,
+];
+const MAX_QUEUE_MUTATIONS = 100;
+const MAX_SERIALIZED_CHARACTERS = 96_000;
 let queueWrite: Promise<void> = Promise.resolve();
 
 function encode(value: string): string {
@@ -69,11 +69,11 @@ function queueKey(scope: CartQueueScope): string {
   return `${STORAGE_PREFIX}${encode(scope.actorId)}/${encode(scope.installationId)}`;
 }
 
-function quarantineKey(scope: CartQueueScope): string {
-  return `${STORAGE_PREFIX}quarantine/${encode(scope.actorId)}/${encode(scope.installationId)}/${Date.now()}-${secureRandomId()}`;
+function recoveryKey(scope: CartQueueScope): string {
+  return `${RECOVERY_PREFIX}${encode(scope.actorId)}/${encode(scope.installationId)}`;
 }
 
-function legacyStorage(): Storage | null {
+function browserStorage(): Storage | null {
   const globalObject = globalThis as typeof globalThis & {
     localStorage?: Storage;
     window?: Window;
@@ -163,11 +163,17 @@ async function readQueue(scope: CartQueueScope): Promise<QueuedCartMutation[]> {
     return parsed;
   } catch (error) {
     await bthwaniDurableStorage.setItem(
-      quarantineKey(scope),
-      JSON.stringify({ sourceKey: key, reason: "CORRUPT_SCOPED_CART_QUEUE", capturedAt: new Date().toISOString(), raw }),
+      recoveryKey(scope),
+      JSON.stringify({
+        sourceKey: key,
+        reason: "CORRUPT_SCOPED_CART_QUEUE",
+        capturedAt: new Date().toISOString(),
+        recordCount: null,
+        rawLength: raw.length,
+      }),
     );
     await bthwaniDurableStorage.removeItem(key);
-    throw new Error(`cart queue is corrupt and was preserved for recovery: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`cart queue is corrupt and a bounded recovery marker was preserved: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -177,7 +183,12 @@ async function writeQueue(scope: CartQueueScope, queue: readonly QueuedCartMutat
     await bthwaniDurableStorage.removeItem(key);
     return;
   }
-  await bthwaniDurableStorage.setItem(key, JSON.stringify(queue));
+  if (queue.length > MAX_QUEUE_MUTATIONS) throw new Error("cart offline queue capacity exceeded");
+  const serialized = JSON.stringify(queue);
+  if (serialized.length > MAX_SERIALIZED_CHARACTERS) {
+    throw new Error("cart offline queue storage limit exceeded");
+  }
+  await bthwaniDurableStorage.setItem(key, serialized);
 }
 
 async function withQueueWrite<T>(work: () => Promise<T>): Promise<T> {
@@ -193,47 +204,41 @@ async function withQueueWrite<T>(work: () => Promise<T>): Promise<T> {
 }
 
 /**
- * The former queue had no actor or installation scope and was persisted in
- * localStorage. It must never be rebound to the current actor. Preserve it as
- * recovery evidence, then remove only the retired active key.
+ * One-way cleanup for storage namespaces retired before the scoped v4 queue.
+ * It never reads or rebinds legacy payloads: all retired keys are removed and
+ * the operation verifies that no retired namespace remains.
  */
-export function quarantineLegacyCartSyncQueue(): Promise<void> {
-  if (legacyMigration) return legacyMigration;
-  legacyMigration = (async () => {
-    const storage = legacyStorage();
-    if (!storage) return;
-    let raw: string | null;
-    try {
-      raw = storage.getItem(LEGACY_QUEUE_STORAGE_KEY);
-    } catch (error) {
-      throw new Error(`legacy cart queue could not be inspected: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    if (!raw) return;
+export async function purgeRetiredCartSyncArtifacts(): Promise<void> {
+  const durableKeys = await bthwaniDurableStorage.getAllKeys();
+  const retiredDurableKeys = durableKeys.filter((key) =>
+    RETIRED_EXACT_KEYS.has(key) || RETIRED_PREFIXES.some((prefix) => key.startsWith(prefix)),
+  );
+  if (retiredDurableKeys.length > 0) {
+    await bthwaniDurableStorage.multiRemove(retiredDurableKeys);
+  }
 
-    const quarantine: LegacyCartQueueQuarantine = {
-      sourceKey: LEGACY_QUEUE_STORAGE_KEY,
-      reason: "UNSCOPED_LEGACY_CART_QUEUE",
-      capturedAt: new Date().toISOString(),
-      raw,
-    };
-    await bthwaniDurableStorage.setItem(
-      `${LEGACY_QUARANTINE_PREFIX}${Date.now()}-${secureRandomId()}`,
-      JSON.stringify(quarantine),
-    );
-    try {
-      storage.removeItem(LEGACY_QUEUE_STORAGE_KEY);
-    } catch (error) {
-      throw new Error(`legacy cart queue could not be retired: ${error instanceof Error ? error.message : String(error)}`);
+  const storage = browserStorage();
+  if (storage) {
+    const browserRetiredKeys: string[] = [];
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (key && (RETIRED_EXACT_KEYS.has(key) || RETIRED_PREFIXES.some((prefix) => key.startsWith(prefix)))) {
+        browserRetiredKeys.push(key);
+      }
     }
-  })().catch((error) => {
-    legacyMigration = undefined;
-    throw error;
-  });
-  return legacyMigration;
+    for (const key of browserRetiredKeys) storage.removeItem(key);
+  }
+
+  const remaining = (await bthwaniDurableStorage.getAllKeys()).filter((key) =>
+    RETIRED_EXACT_KEYS.has(key) || RETIRED_PREFIXES.some((prefix) => key.startsWith(prefix)),
+  );
+  if (remaining.length > 0 || browserStorage()?.getItem("dsh_cart_sync_queue")) {
+    throw new Error(`retired cart storage cleanup incomplete: ${remaining.length} durable keys remain`);
+  }
 }
 
 export async function getCartSyncQueue(actorId: string): Promise<readonly QueuedCartMutation[]> {
-  await quarantineLegacyCartSyncQueue();
+  await purgeRetiredCartSyncArtifacts();
   return readQueue(await resolveQueueScope(actorId));
 }
 
@@ -242,7 +247,7 @@ export async function enqueueCartSyncCommand(input: {
   readonly expectedVersion: number | undefined;
   readonly command: CartMutationCommand;
 }): Promise<QueuedCartMutation> {
-  await quarantineLegacyCartSyncQueue();
+  await purgeRetiredCartSyncArtifacts();
   const scope = await resolveQueueScope(input.actorId);
   const entityId = commandEntityId(input.command);
   const operation = input.command.kind === "add" ? "add" : input.command.kind;
@@ -284,8 +289,9 @@ export async function updateCartSyncCommand(
   const scope = await resolveQueueScope(actorId);
   await withQueueWrite(async () => {
     const queue = await readQueue(scope);
+    const diagnostic = lastError?.trim().slice(0, 512);
     await writeQueue(scope, queue.map((entry) => entry.id === id
-      ? { ...entry, status, ...(lastError ? { lastError } : {}) }
+      ? { ...entry, status, ...(diagnostic ? { lastError: diagnostic } : {}) }
       : entry));
   });
 }
@@ -300,13 +306,13 @@ export async function discardCartSyncQueue(actorId: string, reason: string): Pro
     const queue = await readQueue(scope);
     if (queue.length === 0) return;
     await bthwaniDurableStorage.setItem(
-      quarantineKey(scope),
+      recoveryKey(scope),
       JSON.stringify({
         sourceKey: queueKey(scope),
         reason: "DISCARDED_BY_EXPLICIT_USER_DECISION",
-        decision: requireNonEmpty(reason, "cart discard reason"),
+        decisionProvided: Boolean(requireNonEmpty(reason, "cart discard reason")),
         capturedAt: new Date().toISOString(),
-        raw: JSON.stringify(queue),
+        recordCount: queue.length,
       }),
     );
     await writeQueue(scope, []);
