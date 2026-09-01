@@ -1,6 +1,6 @@
 param(
   [string]$IdentityBaseUrl = "http://localhost:18082",
-  [string]$DshBaseUrl = "http://localhost:18080",
+  [string]$DshBaseUrl = "",
   [string]$StoreId = "store-test-grocery"
 )
 
@@ -8,6 +8,9 @@ Set-StrictMode -Version Latest
 
 . (Join-Path $PSScriptRoot "../../dev/local-actors.ps1")
 $ErrorActionPreference = "Stop"
+
+$dshApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_DSH_API_HOST_PORT)) { "18080" } else { $env:BTHWANI_DSH_API_HOST_PORT }
+if ([string]::IsNullOrWhiteSpace($DshBaseUrl)) { $DshBaseUrl = "http://localhost:$dshApiHostPort" }
 
 $password = Get-LocalPassword
 

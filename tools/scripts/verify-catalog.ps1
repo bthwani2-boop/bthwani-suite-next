@@ -7,7 +7,8 @@ $ErrorActionPreference = "Stop"
 $mode = if ($RequireMedia) { "media-overlay" } else { "core" }
 Write-Host "=== verify-catalog mode=$mode ==="
 
-$ApiBase = "http://localhost:18080"
+$dshApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_DSH_API_HOST_PORT)) { "18080" } else { $env:BTHWANI_DSH_API_HOST_PORT }
+$ApiBase = "http://localhost:$dshApiHostPort"
 
 function Resolve-PublicMediaUrl {
     param([Parameter(Mandatory = $true)][string]$Value)

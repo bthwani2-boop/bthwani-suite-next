@@ -44,9 +44,9 @@ function Get-ProvisionedWorkforceActorToken {
     [Parameter(Mandatory = $true)]
     [string]$OperatorToken,
 
-    [string]$WorkforceBaseUrl = "http://localhost:18086",
-    [string]$IdentityBaseUrl = "http://localhost:18082",
-    [string]$DshBaseUrl = "http://localhost:18080",
+    [string]$WorkforceBaseUrl = "",
+    [string]$IdentityBaseUrl = "",
+    [string]$DshBaseUrl = "",
     [string]$OperatorContextId = "local-dsh",
     [string]$DeviceFingerprint = "local-workforce-runtime",
     [string]$RegistryPath = $script:LocalWorkforceActorRegistryPath
@@ -54,6 +54,19 @@ function Get-ProvisionedWorkforceActorToken {
 
   if ([string]::IsNullOrWhiteSpace($OperatorToken)) {
     throw "OperatorToken is required to issue a governed Workforce activation code."
+  }
+
+  if ([string]::IsNullOrWhiteSpace($DshBaseUrl)) {
+    $dshApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_DSH_API_HOST_PORT)) { "18080" } else { $env:BTHWANI_DSH_API_HOST_PORT }
+    $DshBaseUrl = "http://localhost:$dshApiHostPort"
+  }
+  if ([string]::IsNullOrWhiteSpace($WorkforceBaseUrl)) {
+    $workforceApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_WORKFORCE_API_HOST_PORT)) { "18086" } else { $env:BTHWANI_WORKFORCE_API_HOST_PORT }
+    $WorkforceBaseUrl = "http://localhost:$workforceApiHostPort"
+  }
+  if ([string]::IsNullOrWhiteSpace($IdentityBaseUrl)) {
+    $identityApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_API_HOST_PORT)) { "18082" } else { $env:BTHWANI_IDENTITY_API_HOST_PORT }
+    $IdentityBaseUrl = "http://localhost:$identityApiHostPort"
   }
 
   $provider = Get-ProvisionedWorkforceActor -Kind $Kind -RegistryPath $RegistryPath

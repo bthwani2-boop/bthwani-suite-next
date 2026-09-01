@@ -18,6 +18,10 @@ const workforceActorHelper = await readFile(
   new URL("../dev/local-workforce-actors.ps1", import.meta.url),
   "utf8",
 );
+const platformRuntimeCommon = await readFile(
+  new URL("../scripts/platform-control-runtime/common.ps1", import.meta.url),
+  "utf8",
+);
 const dshPartnerOnboardingSmoke = await readFile(
   new URL("../../infra/docker/scripts/runtime/smoke-dsh-partner-onboarding.ps1", import.meta.url),
   "utf8",
@@ -100,6 +104,28 @@ test("DSH smoke scripts use the configured published API port", () => {
   }
   assert.match(dshRuntimeSmoke, /\$env:BTHWANI_DSH_API_HOST_PORT/);
   assert.doesNotMatch(dshRuntimeSmoke, /http:\/\/localhost:18080/);
+  for (const environment of [
+    "BTHWANI_IDENTITY_API_HOST_PORT",
+    "BTHWANI_WORKFORCE_API_HOST_PORT",
+    "BTHWANI_DSH_API_HOST_PORT",
+  ]) {
+    assert.match(workforceActorHelper, new RegExp(`\\$env:${environment}`));
+  }
+});
+
+test("platform runtime waits use configured service ports", () => {
+  assert.match(platformRuntimeCommon, /function Get-ConfiguredRuntimePort/);
+  for (const environment of [
+    "BTHWANI_WIREMOCK_FINANCIAL_PORT",
+    "BTHWANI_IDENTITY_API_HOST_PORT",
+    "BTHWANI_PROVIDERS_API_HOST_PORT",
+    "BTHWANI_WLT_API_HOST_PORT",
+    "BTHWANI_DSH_API_HOST_PORT",
+    "BTHWANI_PLATFORM_CONTROL_API_HOST_PORT",
+  ]) {
+    assert.match(platformRuntimeCommon, new RegExp(`-EnvironmentName "${environment}"`));
+  }
+  assert.doesNotMatch(platformRuntimeCommon, /localhost:180(?:80|82|83|87|88|90)/);
 });
 
 test("PowerShell runtime consumers authenticate Workforce providers by activation", () => {
