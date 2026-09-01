@@ -4,149 +4,144 @@ Status: ACTIVE_CANONICAL
 
 ## Purpose
 
-`governance/` contains durable human/product policy truth and acts as BThwani's progressively clarified **durable project memory**. It is not an execution engine and must not grow registries, guard catalogs, workflow catalogs, approval state machines, task state, implementation inventories, or SDLC bureaucracy.
+`governance/` is BThwani's durable Product/System/Engineering/Security/Delivery authority and progressively clarified project memory. It records what must remain true across implementations, agents, branches, objectives, refactors, providers and execution sessions.
 
-BThwani is governed as one platform. A current `OBJECTIVE` selects work priority inside that platform; it does not redefine Product/System truth, ownership, architecture or another journey around itself unless an explicit authorized semantic decision changes durable truth.
+It is **not** an execution engine and must not become a registry of guards, workflows, tools, tasks, findings, branches, PRs, SHAs, current bugs, runtime snapshots, migration filenames, implementation inventories or SDLC bureaucracy.
 
-Governance is expected to become clearer over time as execution proves reusable platform facts. Discovery alone never authorizes a governance write; only proven durable material truth that belongs in a canonical governance owner may be reconciled or added.
+BThwani is one platform. A current `OBJECTIVE` chooses work priority; it does not redefine Product/System truth, ownership, architecture, security, delivery semantics or another journey around itself unless an explicit authorized durable decision changes that truth.
+
+## Canonical authority model
+
+Durable meaning is owned by the smallest applicable governance owner:
+
+```text
+current authorized durable human decision
+-> governance/product/PRD.md
+-> governance/product/PRODUCT-TRUTH-SPEC.md + applicable capability Product Truth
+-> governance/product/EXPERIENCE-AND-DESIGN.md when human experience/design meaning is material
+-> governance/policies/** for durable engineering/security/delivery law
+-> service/core contracts and implementation for executable implementation truth
+-> same-candidate runtime/data evidence for runtime claims
+-> current authoritative external standards/vendor rules when materially applicable
+```
+
+This is a reconciliation order, not permission to ignore contradictions. Governance can be stale; code can be wrong; runtime can expose drift; external standards can change. Reconcile to one current truth instead of blindly preferring the newest file or the running implementation.
+
+A document outside `governance/` may be canonical **only for its bounded executable/implementation artifact** (for example one schema, migration history, runtime configuration or generated source). It cannot establish competing durable Product/System/Engineering policy merely by using words such as `canonical`, `source of truth`, `target architecture`, or `policy`.
 
 ## Structure
 
-- `product/PRD.md` — platform-wide product meaning and ownership.
-- `product/platform-model.yaml` — compact stable platform model when machine-readable product context is useful.
-- `product/contracts/` — capability-specific Product Truth.
-- `policies/engineering.md` — architecture, contracts, data, runtime, quality, and cleanup.
-- `policies/security.md` — authentication, authorization, secrets, privacy, isolation, and sensitive operations.
-- `policies/delivery.md` — branch safety, affected verification, CI evidence, release/deployment boundaries.
+### Product/System truth
 
-Everything else belongs with its executable owner:
+- `product/PRD.md` — platform-wide product meaning, durable actors, domains, surfaces and major ownership.
+- `product/platform-model.yaml` — compact stable machine-readable orientation only.
+- `product/PRODUCT-TRUTH-SPEC.md` — canonical semantic contract for capability/journey Product Truth.
+- `product/EXPERIENCE-AND-DESIGN.md` — durable UX, information architecture, content, brand/design, accessibility, localization and cross-surface experience semantics.
+- `product/contracts/*.product-truth.json` — capability/journey-specific durable Product Truth.
 
-- code verification configuration: `tools/verification/`;
-- executable guards: `tools/guards/`;
-- CI: `.github/workflows/` and `.github/actions/`;
-- agent routing: `AGENTS.md` and `.agents/`;
-- service/API/data contracts: their owning `core/**` or `services/**` trees.
+### Engineering/Security/Delivery policy
 
-## Project-frame execution model
+- `policies/engineering.md` — engineering constitution and policy routing.
+- `policies/architecture-and-fullstack.md` — architecture, layer ownership, dependency direction and vertical full-stack integrity.
+- `policies/data-and-migrations.md` — durable data ownership, schemas, migrations, backfills, cutovers, seeds/fixtures and data recovery.
+- `policies/frontend-and-client.md` — frontend/client layer responsibility, state/readback, mobile lifecycle, resources, accessibility and RTL/localization implementation law.
+- `policies/runtime-reliability.md` — runtime/config/providers, reliability, observability, performance/capacity and recovery.
+- `policies/standards-and-quality.md` — context-appropriate engineering standards, Best-Practice adequacy, minimum necessary complexity and quality law.
+- `policies/security.md` — authentication, authorization, secrets, privacy, isolation and sensitive operations.
+- `policies/delivery.md` — exact-candidate delivery, CI/review, build, promotion, release and environment boundaries.
 
-Every task is judged inside one current project-wide Canonical frame reconciled from authorized intent, applicable Product Truth/policies and live system evidence.
+Everything executable stays with its executable owner: service/API/data contracts under `core/**` or `services/**`; verification configuration under `tools/verification/`; guards under `tools/guards/`; CI under `.github/**`; operational runbooks under `docs/runbooks/`; agent routing under `AGENTS.md` and `.agents/**`; execution methodology under `tools/prompting/bthwani-orchestrator/**`.
 
-```text
-project-wide frame
-→ current objective priority
-→ authoritative semantic/operational parent
-→ highest proven root cause
-→ smallest complete affected working cone
-→ direct root-correct fix
-→ migrate all affected consumers/data/contracts/runtime
-→ remove obsolete truth
-→ classify newly proven knowledge for durable project memory
-→ reconcile/enrich affected governance when required
-→ affected verification + touched project-invariant proof
-→ broader proof only when risk/closure requires it
-```
+## Durable versus derived representations
 
-Project-wide context does not mean repository-wide mutation or mechanically running every tool. A narrow working cone does not permit a narrow worldview. Depth means reaching the real root and proving both the affected outcome and the materially touched platform invariants.
-
-## Truth reconciliation
-
-For a concrete engineering/product claim, reconcile rather than blindly prefer one representation:
-
-1. current authorized human intent, distinguishing work priority from an explicit durable Product/System decision;
-2. applicable Product Truth/policy and previously proven canonical closures still valid on current evidence;
-3. actual contracts, code, migrations, configuration, tests, data and live platform state;
-4. same-candidate runtime evidence when runtime behavior is claimed;
-5. authoritative external technical/standard evidence where required, without importing external product semantics.
-
-Governance may be `CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN | DECISION_REQUIRED` against current reconciled truth. Code may also be wrong. Neither representation wins by existence or recency alone.
-
-Plans, prompts, fixtures, diagnostics, generated reports, and historical results are support/evidence only. They never substitute for implementation or runtime truth.
-
-## Progressive project memory
-
-Every materially relevant fact exposed by audit, diagnosis or execution is classified before it can become durable governance:
+Classify a materially relevant representation as one of:
 
 ```text
-EPHEMERAL_IMPLEMENTATION_FACT
-CURRENT_RUNTIME_FACT
-TASK_LOCAL_FACT
 DURABLE_PROJECT_TRUTH
 DURABLE_POLICY_INVARIANT
+DERIVED_IMPLEMENTATION_MAP
+EXECUTABLE_SOURCE
+GENERATED_DERIVED_OUTPUT
+CURRENT_RUNTIME_FACT
+TASK_LOCAL_FACT
+HISTORICAL_EVIDENCE
 DECISION_REQUIRED
 ```
 
-A fact becomes a governance-enrichment candidate only when all materially applicable conditions hold:
+A derived map may mirror durable truth for tooling or implementation orientation, but it must declare itself subordinate and must not silently become a second authority. `UX-CONTRACT.md`, `DESIGN.md`, service architecture notes, runbooks, capability maps and generated registries are not durable Product/System authority unless governance explicitly assigns them that bounded role.
+
+## Governance write gate
+
+Discovery alone never authorizes a governance write. A fact becomes a governance candidate only when materially applicable conditions hold:
 
 ```text
 PROVEN
 + DURABLE ACROSS EXPECTED IMPLEMENTATION CHANGE
-+ MATERIAL TO PRODUCT / OPERATIONS / OWNERSHIP / BOUNDARIES / POLICY
++ MATERIAL TO PRODUCT / OPERATIONS / OWNERSHIP / BOUNDARIES / ENGINEERING / SECURITY / DELIVERY
 + REUSABLE ACROSS OBJECTIVES / AGENTS / SESSIONS
-+ ABSENCE OR AMBIGUITY CAN MATERIALLY MISLEAD FUTURE UNDERSTANDING OR EXECUTION
-+ CANONICAL GOVERNANCE HOME EXISTS
-+ NO UNRESOLVED CONTRADICTION OR DECISION GAP CAN CHANGE IT
++ ABSENCE OR AMBIGUITY CAN MATERIALLY MISDIRECT FUTURE WORK
++ SMALLEST CANONICAL GOVERNANCE HOME IS KNOWN
++ NO UNRESOLVED DECISION OR CONTRADICTION CAN CHANGE IT
 ```
 
-`DISCOVERED ≠ GOVERNANCE WORTHY` and `CURRENT CODE ≠ DURABLE PROJECT TRUTH`.
+`DISCOVERED != GOVERNANCE_WORTHY` and `CURRENT_CODE != DURABLE_PROJECT_TRUTH`.
 
-Examples of governance-worthy facts when proven include platform/surface identity, durable actors and role boundaries, authority/responsibility, canonical ownership, domain/service boundaries, durable journeys and handoffs, material state/invariant semantics, security/financial boundaries and stable product policy. Function names, SHAs, temporary paths, task status, bug lists, transient runtime state and replaceable implementation detail do not belong here merely because they were observed.
+Implementation identifiers such as operation IDs, function names, file paths, package paths, migration filenames, commands and tool brands may appear in governance only when essential explanatory examples; they are never the durable authority unless the policy explicitly owns that identifier as a stable contract.
 
-Route durable knowledge to the smallest existing canonical owner:
+## Project-frame execution model
 
 ```text
-platform-wide meaning / surfaces / actors / durable ownership
-→ product/PRD.md
-
-compact stable platform model used for rapid orientation
-→ product/platform-model.yaml
-
-capability/journey-specific Product Truth
-→ product/contracts/*.product-truth.json
-
-durable engineering/security/delivery policy
-→ policies/**
+project-wide frame
+-> current objective priority
+-> applicable durable Product/System/Engineering authority
+-> highest proven root cause
+-> smallest causally complete affected cone
+-> standards-grounded root-correct treatment at actual owner
+-> full affected writer/reader/consumer/data/contract/runtime migration
+-> canonical cutover
+-> cleanup/deletion/finishing
+-> exact-candidate proof
+-> classify newly proven durable knowledge
+-> reconcile affected governance when required
 ```
 
-Prefer enriching an existing canonical owner. Create a new governance file only when a distinct durable concept cannot be represented cleanly by an existing owner and the new artifact passes the same non-duplication/value discipline.
-
-Governance clarification is progressive, not exhaustive. Unknown or unresolved areas may remain explicit; they must never be filled with guesses simply to make the model look complete.
+Wide understanding does not authorize repository-wide mutation. A narrow working cone does not authorize a narrow worldview.
 
 ## One-source rules
 
-- one authoritative owner per durable fact;
-- one canonical write path per state transition;
-- one migration history per service;
-- one API contract provenance path;
-- one Product Truth identity per capability;
-- no parallel runtime truth, fallback truth, or duplicated business logic;
-- no machine governance control plane parallel to code/runtime;
-- no objective-, agent-, or session-local Product/System truth that competes with the shared project frame.
+- one durable authority per material concept;
+- one canonical owner and write path per material state transition;
+- one service-owned migration history per service/database authority;
+- one external API/event contract provenance path per boundary;
+- one durable Product Truth identity per material capability/journey;
+- projections/caches/read models may not independently redefine truth;
+- no parallel/shadow/fallback business truth;
+- no objective-, branch-, agent-, prompt- or session-local Product/System truth competing with shared governance;
+- no governance control plane parallel to executable code/runtime.
 
-## Governance convergence
+## Governance convergence and residue
 
-A material semantic system change requires governance impact classification. If the proven Canonical Product/System truth changes an actor, authority, responsibility, journey, state, transition, invariant, canonical owner, API/data ownership or durable policy meaning, reconcile the affected governance after the actual system treatment is proven.
-
-The same convergence requirement applies when execution proves a durable material truth that was already true in the system but is missing, incomplete or materially ambiguous in governance. Governance clarification is therefore not limited to documenting newly changed semantics.
+A material semantic change requires governance impact classification. Reconcile governance when proven truth changes, or when execution proves an already-existing durable fact whose absence/ambiguity can materially misdirect future work.
 
 ```text
 wrong system + corrected governance = NOT CLOSED
 correct system + materially stale/misleading governance = NOT CLOSED
-correct system + proven durable truth materially missing from governance = NOT CLOSED when the gap can mislead future execution
-correct system + reconciled governance + required evidence = closure candidate
+correct system + materially missing proven durable truth = NOT CLOSED when future execution can be misdirected
+correct system + reconciled governance + required exact-candidate evidence = closure candidate
 ```
 
-Do not update governance merely to mirror current code, and do not leave stale or materially incomplete governance capable of directing future work toward an obsolete or ambiguous owner/path/semantic model.
+Do not update governance merely to mirror code. Do not leave a competing durable authority outside governance after cutover; reclassify it as derived/implementation/historical, or retire it after consumer proof.
 
 ## Verification boundary
 
-Guards and workflows exist only for executable engineering truth: source integrity, architecture/imports, API/contracts, migrations/data, runtime/config, frontend binding/accessibility, security/dependencies, and executable CI.
+Governance defines requirements; executable evidence proves implementation. Do not create a guard/workflow merely to validate governance prose, prompt text, agent metadata, approval registries or evidence bookkeeping. Machine checks may validate executable invariants or non-authoritative structure, but they cannot semantically self-certify governance correctness.
 
-Do not create a guard or workflow merely to validate governance text, agent instructions, plans, approval metadata, registries, or evidence bookkeeping. If a check adds no unique material assurance, remove it.
+## Orchestrator boundary
+
+`tools/prompting/bthwani-orchestrator/**` owns **how execution discovers, ranks, treats, migrates, verifies, re-diagnoses and closes**. It applies governance; it does not own a competing copy of durable engineering/product policy. Focus modules are execution lenses/adapters over the applicable governance owners.
+
+Ordinary project work treats the orchestrator package as read-only unless current human intent explicitly authorizes package maintenance.
 
 ## Repository safety
 
-Pin the exact user-named branch and current SHA before writes. Re-resolve after material write batches and before the final claim. Reconcile concurrent movement; never overwrite newer unrelated work or infer branch-specific truth from default-branch search alone.
-
-## Orchestrator package
-
-`tools/prompting/bthwani-orchestrator/**` is a separate self-contained textual execution package. It is read-only unless the current human instruction explicitly authorizes changes to that package. The package owns execution method; `governance/` owns durable Product/policy truth. Neither duplicates the other's responsibility.
+Pin the exact user-named branch/ref and current SHA before writes. Re-resolve after material write batches and before final claims. Reconcile concurrent movement; never overwrite newer unrelated work or infer branch-specific truth from default-branch search alone.
