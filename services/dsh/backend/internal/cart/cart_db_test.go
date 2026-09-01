@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"dsh-api/internal/servicearea"
 	"dsh-api/internal/wlt"
 	_ "github.com/lib/pq"
 )
@@ -550,21 +551,40 @@ func TestComputeCheckoutSnapshotRejectsMixedCurrenciesDBIntegration(t *testing.T
 func TestCheckServiceabilityUsesCanonicalServiceAreaEvidenceDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
-	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	seed := time.Now().UnixNano()
+	suffix := strconv.FormatInt(seed, 10)
 	storeID := "cart-service-area-store-" + suffix
+	serviceAreaCode := "integration-area-" + suffix
+	baseLng := -170.0 + float64(seed%30000)/100
+	baseLat := -80.0 + float64((seed/30000)%15000)/100
+	if _, err := servicearea.Upsert(ctx, db, serviceAreaCode, servicearea.UpsertInput{
+		DisplayName:    "Cart Service Area Test",
+		Polygon:        [][]float64{{baseLng, baseLat}, {baseLng + 0.2, baseLat}, {baseLng + 0.2, baseLat + 0.2}, {baseLng, baseLat + 0.2}},
+		Active:         true,
+		Priority:       100,
+		SRID:           4326,
+		OverlapPolicy:  "priority_then_code",
+		Reason:         "cart serviceability integration fixture",
+		ActorID:        "operator-cart-service-area-" + suffix,
+		ActorSurface:   "test",
+		IdempotencyKey: "cart-service-area-create-" + suffix,
+		CorrelationID:  "cart-service-area-correlation-" + suffix,
+	}); err != nil {
+		t.Fatalf("failed to create service-area test fixture: %v", err)
+	}
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores
 			(id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, delivery_modes)
-		VALUES ($1, $1, 'Cart Service Area Test Store', 'published', 'not-authoritative', 'integration-area', 'serviceable', true,
-			ARRAY['delivery', 'pickup']::text[])`, storeID); err != nil {
+		VALUES ($1, $1, 'Cart Service Area Test Store', 'published', 'not-authoritative', $2, 'serviceable', true,
+			ARRAY['delivery', 'pickup']::text[])`, storeID, serviceAreaCode); err != nil {
 		t.Fatalf("failed to insert service-area test store: %v", err)
 	}
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
 	})
 
-	insideLat, insideLng := 15.5, 44.5
-	result, err := CheckServiceability(ctx, db, storeID, "integration-area", &insideLat, &insideLng)
+	insideLat, insideLng := baseLat+0.1, baseLng+0.1
+	result, err := CheckServiceability(ctx, db, storeID, serviceAreaCode, &insideLat, &insideLng)
 	if err != nil {
 		t.Fatalf("inside geofence check failed: %v", err)
 	}
@@ -575,8 +595,8 @@ func TestCheckServiceabilityUsesCanonicalServiceAreaEvidenceDBIntegration(t *tes
 		t.Fatalf("expected delivery mode available inside canonical geofence, got %+v", got)
 	}
 
-	outLat, outLng := 14.5, 44.5
-	result, err = CheckServiceability(ctx, db, storeID, "integration-area", &outLat, &outLng)
+	outLat, outLng := baseLat+0.4, baseLng+0.1
+	result, err = CheckServiceability(ctx, db, storeID, serviceAreaCode, &outLat, &outLng)
 	if err != nil {
 		t.Fatalf("outside geofence check failed: %v", err)
 	}
@@ -590,7 +610,7 @@ func TestCheckServiceabilityUsesCanonicalServiceAreaEvidenceDBIntegration(t *tes
 		t.Fatalf("expected pickup to remain independent of delivery coverage, got %+v", got)
 	}
 
-	result, err = CheckServiceability(ctx, db, storeID, "integration-area", nil, nil)
+	result, err = CheckServiceability(ctx, db, storeID, serviceAreaCode, nil, nil)
 	if err != nil {
 		t.Fatalf("missing coordinate check failed: %v", err)
 	}
