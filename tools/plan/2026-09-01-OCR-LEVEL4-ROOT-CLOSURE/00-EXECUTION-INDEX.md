@@ -1,12 +1,12 @@
 # OCR Level-4 Root-Correct Closure — Execution Index
 
-**Repository:** `bthwani2-boop/bthwani-suite-next`  
-**Branch:** `ocr`  
-**Audited exact starting HEAD:** `4aa1f00decc9ed2ac5c724b7cc316e0247fe8a0d`  
-**Execution-mode reconfiguration parent:** `b889d75fbf502e524b0b04289722a6c798933a72`  
-**Orchestrator package revision:** `24`  
-**Created:** 2026-09-01  
-**Execution mode:** `SINGLE_SESSION_DIRECT_ON_OCR` — exactly one material execution session, directly on `ocr`; no Session A/B/C split, no temporary execution worktrees/branches, and no parallel material mutation lanes.  
+**Repository:** `bthwani2-boop/bthwani-suite-next`<br>
+**Branch:** `ocr`<br>
+**Audited exact starting HEAD:** `4aa1f00decc9ed2ac5c724b7cc316e0247fe8a0d`<br>
+**Execution-mode reconfiguration parent:** `b889d75fbf502e524b0b04289722a6c798933a72`<br>
+**Orchestrator package revision:** `24`<br>
+**Created:** 2026-09-01<br>
+**Execution mode:** `SINGLE_SESSION_DIRECT_ON_OCR` — exactly one material execution session, directly on `ocr`; no Session A/B/C split, no temporary execution worktrees/branches, and no parallel material mutation lanes.<br>
 **Completion target:** `LEVEL_4` repository/product fixed point on `ocr`; integration into `master` and requalification of the resulting exact `master` SHA is a separate post-qualification boundary.
 
 > This package is an execution snapshot and closure workset, **not a parallel canonical authority**. The single execution session MUST begin from the live `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`, load the live `01–05` and material focus modules, resolve the current remote `ocr` HEAD, and invalidate/re-rank any item here that no longer matches live truth.

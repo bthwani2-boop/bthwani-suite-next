@@ -1,7 +1,7 @@
 # Live Root Graph and Causally Complete Closure Units
 
-**Starting evidence pin:** `ocr@4aa1f00decc9ed2ac5c724b7cc316e0247fe8a0d`  
-**Authority:** live orchestrator revision 24.  
+**Starting evidence pin:** `ocr@4aa1f00decc9ed2ac5c724b7cc316e0247fe8a0d`<br>
+**Authority:** live orchestrator revision 24.<br>
 **Rule:** this queue is re-ranked after every material mutation; a proven causal parent preempts descendants.
 
 ---
