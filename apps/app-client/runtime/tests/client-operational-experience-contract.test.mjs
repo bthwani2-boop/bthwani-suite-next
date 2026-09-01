@@ -428,6 +428,11 @@ test("client profile mutations persist identity and reconcile partial saves", ()
     ["ClientIdempotencyKey", "ClientCorrelationId", "dsh_client_me_profile_preferences", "dsh_client_me_profile_consents"],
   );
   assert.ok(contract.includes("#/components/responses/Conflict"));
+  assert.match(contract, /DshClientProfilePreferencesInput/);
+  assert.match(contract, /currencyPreference: \{ type: string, const: YER \}/);
+  assert.match(screen, /kind: \"not_found\"/);
+  assert.match(screen, /إنشاء الملف الشخصي/);
+  assert.doesNotMatch(screen, /Not found, use defaults|version: 0/);
 });
 
 test("client profile consent withdrawal requires explicit confirmation", () => {

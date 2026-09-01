@@ -562,6 +562,13 @@
     "sha256": "7ab458f637b31e8cc9fe1d7bb0d2a61939f588ba3a20613cc13b3a079531c152",
     "historicalPrefix": "1079",
     "state": "ACTIVE"
+  },
+  {
+    "ordinal": 321,
+    "file": "dsh-1080_client_profile_preferences_domain.sql",
+    "sha256": "62ee9f409864d3e919033d8bb05082733eaace584e3db5e99e0dd1ae0ce82446",
+    "historicalPrefix": "1080",
+    "state": "ACTIVE"
   }
 ]
 }

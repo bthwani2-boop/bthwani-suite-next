@@ -19,6 +19,11 @@ var (
 	ErrIdempotencyConflict = errors.New("client profile idempotency conflict")
 )
 
+const (
+	DefaultLocale             = "ar"
+	DefaultCurrencyPreference = "YER"
+)
+
 type ClientProfile struct {
 	ClientID              string    `json:"clientId"`
 	Locale                string    `json:"locale"`
@@ -78,9 +83,9 @@ const updateClientProfileConsentsSQL = `UPDATE dsh_client_profiles
 		marketing_consent_sms, marketing_consent_push, version, created_at, updated_at`
 
 const insertClientProfileConsentsSQL = `INSERT INTO dsh_client_profiles (
-	client_id, marketing_consent_email, marketing_consent_sms, marketing_consent_push,
+	client_id, locale, currency_preference, marketing_consent_email, marketing_consent_sms, marketing_consent_push,
 	version, created_at, updated_at
-) VALUES ($1, $2, $3, $4, 1, NOW(), NOW())
+) VALUES ($1, $2, $3, $4, $5, $6, 1, NOW(), NOW())
 	RETURNING client_id, locale, currency_preference, marketing_consent_email,
 		marketing_consent_sms, marketing_consent_push, version, created_at, updated_at`
 
@@ -99,6 +104,10 @@ func UpsertClientProfilePreferences(
 	input ClientProfilePreferencesInput,
 	mutation MutationContext,
 ) (ClientProfile, error) {
+	input, err := normalizePreferences(input)
+	if err != nil {
+		return ClientProfile{}, err
+	}
 	fingerprint, err := mutationFingerprint("preferences", input)
 	if err != nil {
 		return ClientProfile{}, err
@@ -130,8 +139,17 @@ func UpsertClientProfileConsents(
 				clientID, input.MarketingConsentEmail, input.MarketingConsentSms, input.MarketingConsentPush))
 		}
 		return scanProfile(tx.QueryRowContext(ctx, insertClientProfileConsentsSQL,
-			clientID, input.MarketingConsentEmail, input.MarketingConsentSms, input.MarketingConsentPush))
+			clientID, DefaultLocale, DefaultCurrencyPreference, input.MarketingConsentEmail, input.MarketingConsentSms, input.MarketingConsentPush))
 	}, input)
+}
+
+func normalizePreferences(input ClientProfilePreferencesInput) (ClientProfilePreferencesInput, error) {
+	input.Locale = strings.ToLower(strings.TrimSpace(input.Locale))
+	input.CurrencyPreference = strings.ToUpper(strings.TrimSpace(input.CurrencyPreference))
+	if (input.Locale != "ar" && input.Locale != "en") || input.CurrencyPreference != DefaultCurrencyPreference {
+		return ClientProfilePreferencesInput{}, ErrInvalid
+	}
+	return input, nil
 }
 
 func upsert(

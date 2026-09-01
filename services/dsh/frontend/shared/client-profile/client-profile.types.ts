@@ -1,7 +1,10 @@
+export type ClientProfileLocale = "ar" | "en";
+export type ClientProfileCurrency = "YER";
+
 export type ClientProfile = {
   readonly clientId: string;
-  readonly locale: string;
-  readonly currencyPreference: string;
+  readonly locale: ClientProfileLocale;
+  readonly currencyPreference: ClientProfileCurrency;
   readonly marketingConsentEmail: boolean;
   readonly marketingConsentSms: boolean;
   readonly marketingConsentPush: boolean;
@@ -11,8 +14,8 @@ export type ClientProfile = {
 };
 
 export type ClientProfilePreferencesInput = {
-  readonly locale: string;
-  readonly currencyPreference: string;
+  readonly locale: ClientProfileLocale;
+  readonly currencyPreference: ClientProfileCurrency;
   readonly expectedVersion?: number;
 };
 

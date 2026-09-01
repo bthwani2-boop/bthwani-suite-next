@@ -228,13 +228,19 @@ paths:
       parameters:
       - $ref: '#/components/parameters/ClientIdempotencyKey'
       - $ref: '#/components/parameters/ClientCorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DshClientProfileConsentsInput'
       responses:
         '200':
-          description: Auto-generated
+          description: Canonical client profile after the consent mutation.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/DshClientProfileResponse'
         '400':
           description: Bad request
           content:
@@ -262,13 +268,19 @@ paths:
       parameters:
       - $ref: '#/components/parameters/ClientIdempotencyKey'
       - $ref: '#/components/parameters/ClientCorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DshClientProfilePreferencesInput'
       responses:
         '200':
-          description: Auto-generated
+          description: Canonical client profile after the preference mutation.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/DshClientProfileResponse'
         '400':
           description: Bad request
           content:
@@ -706,11 +718,11 @@ paths:
       operationId: get_dsh_client_me_profile
       responses:
         '200':
-          description: Auto-generated
+          description: Canonical client profile.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/DshClientProfileResponse'
         '400':
           description: Bad request
           content:
@@ -726,6 +738,8 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+        '404':
+          description: The authenticated client has not created a profile yet.
       security:
       - bearerAuth: []
   /dsh/internal/operations/carts/{cartId}/sync-diagnostics:
@@ -887,6 +901,43 @@ components:
     Conflict:
       description: Version or idempotency conflict.
   schemas:
+    DshClientProfile:
+      type: object
+      additionalProperties: false
+      required: [ clientId, locale, currencyPreference, marketingConsentEmail, marketingConsentSms, marketingConsentPush, version, createdAt, updatedAt ]
+      properties:
+        clientId: { type: string, minLength: 1 }
+        locale: { type: string, enum: [ ar, en ] }
+        currencyPreference: { type: string, const: YER }
+        marketingConsentEmail: { type: boolean }
+        marketingConsentSms: { type: boolean }
+        marketingConsentPush: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DshClientProfileResponse:
+      type: object
+      additionalProperties: false
+      required: [ profile ]
+      properties:
+        profile: { $ref: '#/components/schemas/DshClientProfile' }
+    DshClientProfilePreferencesInput:
+      type: object
+      additionalProperties: false
+      required: [ locale, currencyPreference ]
+      properties:
+        locale: { type: string, enum: [ ar, en ] }
+        currencyPreference: { type: string, const: YER }
+        expectedVersion: { type: integer, minimum: 0 }
+    DshClientProfileConsentsInput:
+      type: object
+      additionalProperties: false
+      required: [ marketingConsentEmail, marketingConsentSms, marketingConsentPush ]
+      properties:
+        marketingConsentEmail: { type: boolean }
+        marketingConsentSms: { type: boolean }
+        marketingConsentPush: { type: boolean }
+        expectedVersion: { type: integer, minimum: 0 }
     WorkforceAvailabilityProjectionInput:
       type: object
       additionalProperties: false

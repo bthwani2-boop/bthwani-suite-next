@@ -51,12 +51,12 @@ func TestClientProfileMutationsReplayWithoutDuplicateWriteDBIntegration(t *testi
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_client_profiles WHERE client_id = $1`, clientID)
 	})
 
-	preferences := ClientProfilePreferencesInput{Locale: "en", CurrencyPreference: "USD"}
+	preferences := ClientProfilePreferencesInput{Locale: "en", CurrencyPreference: DefaultCurrencyPreference}
 	first, err := UpsertClientProfilePreferences(ctx, db, clientID, preferences, preferencesMutation)
 	if err != nil {
 		t.Fatalf("first preferences mutation failed: %v", err)
 	}
-	if first.Locale != "en" || first.CurrencyPreference != "USD" || first.Version != 1 {
+	if first.Locale != "en" || first.CurrencyPreference != DefaultCurrencyPreference || first.Version != 1 {
 		t.Fatalf("first profile = %#v, want version 1 with requested preferences", first)
 	}
 
@@ -79,7 +79,7 @@ func TestClientProfileMutationsReplayWithoutDuplicateWriteDBIntegration(t *testi
 		t.Fatalf("replay created %d events and %d receipts, want one of each", eventCount, receiptCount)
 	}
 
-	differentPreferences := ClientProfilePreferencesInput{Locale: "ar", CurrencyPreference: "SAR"}
+	differentPreferences := ClientProfilePreferencesInput{Locale: "ar", CurrencyPreference: DefaultCurrencyPreference}
 	if _, err := UpsertClientProfilePreferences(ctx, db, clientID, differentPreferences, preferencesMutation); !errors.Is(err, ErrIdempotencyConflict) {
 		t.Fatalf("reusing key for another preferences mutation returned %v, want ErrIdempotencyConflict", err)
 	}

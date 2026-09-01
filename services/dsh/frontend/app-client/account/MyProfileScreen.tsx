@@ -18,6 +18,8 @@ import {
   getOrCreateClientProfileMutationAttempt,
   clearClientProfileMutationAttempt,
   type ClientProfile,
+  type ClientProfileCurrency,
+  type ClientProfileLocale,
 } from "../../shared/client-profile";
 
 export type MyProfileScreenProps = {
@@ -26,6 +28,7 @@ export type MyProfileScreenProps = {
 
 type ProfileState =
   | { kind: "loading" }
+  | { kind: "not_found" }
   | { kind: "ready"; profile: ClientProfile }
   | { kind: "error"; message: string }
   | { kind: "conflict"; message: string; serverProfile: ClientProfile };
@@ -33,8 +36,8 @@ type ProfileState =
 export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
   const { state: sessionState } = useIdentitySession();
   const [profileState, setProfileState] = React.useState<ProfileState>({ kind: "loading" });
-  const [locale, setLocale] = React.useState<"ar" | "en">("ar");
-  const [currency, setCurrency] = React.useState("SAR");
+  const [locale, setLocale] = React.useState<ClientProfileLocale>("ar");
+  const [currency, setCurrency] = React.useState<ClientProfileCurrency>("YER");
   const [consentEmail, setConsentEmail] = React.useState(false);
   const [consentSms, setConsentSms] = React.useState(false);
   const [consentPush, setConsentPush] = React.useState(false);
@@ -46,29 +49,20 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
     setProfileState({ kind: "loading" });
     try {
       const profile = await fetchClientProfile();
-      setLocale(profile.locale as "ar" | "en" || "ar");
-      setCurrency(profile.currencyPreference || "SAR");
+      setLocale(profile.locale);
+      setCurrency(profile.currencyPreference);
       setConsentEmail(profile.marketingConsentEmail);
       setConsentSms(profile.marketingConsentSms);
       setConsentPush(profile.marketingConsentPush);
       setProfileState({ kind: "ready", profile });
     } catch (error: any) {
       if (error?.status === 404) {
-        // Not found, use defaults
-        setProfileState({
-          kind: "ready",
-          profile: {
-            clientId: sessionState.identity.subject,
-            locale: "ar",
-            currencyPreference: "SAR",
-            marketingConsentEmail: false,
-            marketingConsentPush: false,
-            marketingConsentSms: false,
-            version: 0,
-            createdAt: "",
-            updatedAt: "",
-          },
-        });
+        setLocale("ar");
+        setCurrency("YER");
+        setConsentEmail(false);
+        setConsentSms(false);
+        setConsentPush(false);
+        setProfileState({ kind: "not_found" });
       } else {
         setProfileState({ kind: "error", message: error?.message || "تعذر جلب الملف التجاري" });
       }
@@ -191,11 +185,37 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
     }
   };
 
+  const handleCreate = async () => {
+    if (profileState.kind !== "not_found") return;
+    setSaving(true);
+    setSaveError(null);
+    const input = { locale, currencyPreference: currency };
+    const intent = {
+      actorId: identity.subject,
+      operation: "preferences" as const,
+      input,
+    };
+    try {
+      const attempt = await getOrCreateClientProfileMutationAttempt(intent);
+      await upsertClientProfilePreferences(input, attempt.context);
+      const profile = await fetchClientProfile();
+      if (profile.locale !== locale || profile.currencyPreference !== currency) {
+        throw new Error("تم إنشاء الملف لكن القراءة المعتمدة لم تطابق التفضيلات المطلوبة");
+      }
+      setProfileState({ kind: "ready", profile });
+      await clearClientProfileMutationAttempt(intent, attempt.signature).catch(() => undefined);
+    } catch (error: any) {
+      setProfileState({ kind: "error", message: error?.message || "تعذر إنشاء الملف الشخصي" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleCancel = () => {
     if (profileState.kind === "ready" || profileState.kind === "conflict") {
       const p = profileState.kind === "ready" ? profileState.profile : profileState.serverProfile;
-      setLocale(p.locale as "ar" | "en" || "ar");
-      setCurrency(p.currencyPreference || "SAR");
+      setLocale(p.locale);
+      setCurrency(p.currencyPreference);
       setConsentEmail(p.marketingConsentEmail);
       setConsentSms(p.marketingConsentSms);
       setConsentPush(p.marketingConsentPush);
@@ -243,6 +263,12 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
         </View>
 
         {profileState.kind === "loading" && <StateView tone="neutral" title="جارٍ تحميل الملف..." />}
+        {profileState.kind === "not_found" && (
+          <View>
+            <StateView tone="neutral" title="الملف الشخصي غير منشأ بعد" description="أنشئ ملفك لحفظ تفضيلات اللغة والتواصل." />
+            <Button label={saving ? "جاري الإنشاء..." : "إنشاء الملف الشخصي"} onPress={handleCreate} disabled={saving} />
+          </View>
+        )}
         {profileState.kind === "error" && (
           <View>
             <StateView tone="danger" title="حدث خطأ" description={profileState.message} />
