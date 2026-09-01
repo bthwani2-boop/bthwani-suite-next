@@ -6,6 +6,10 @@ const phaseScript = await readFile(
   new URL("../scripts/invoke-runtime-phase.ps1", import.meta.url),
   "utf8",
 );
+const runtimeScript = await readFile(
+  new URL("../../infra/docker/scripts/runtime.ps1", import.meta.url),
+  "utf8",
+);
 const dshCatalogSmoke = await readFile(
   new URL("../../infra/docker/scripts/runtime/smoke-dsh-catalog.ps1", import.meta.url),
   "utf8",
@@ -91,6 +95,13 @@ test("runtime accepts a single non-WLT profile under StrictMode", () => {
     /elseif \(-not \[string\]::IsNullOrWhiteSpace\(\$runtimeProfiles\)\)/,
   );
   assert.doesNotMatch(phaseScript, /\$runtimeProfileList\.Count/);
+});
+
+test("default local DSH runtime includes governed seed dependencies", () => {
+  assert.match(
+    runtimeScript,
+    /\$ProfileList\s*=\s*@\("identity",\s*"workforce",\s*"wlt",\s*"dsh"\)/,
+  );
 });
 
 test("PowerShell-only runtime phases use the initialized exit-code boundary", () => {

@@ -10,6 +10,14 @@ BEGIN
   INTO eligible_count
   FROM dsh_stores
   WHERE operator_context_id = 'local-dsh'
+    AND id IN (
+      'store-test-grocery',
+      'store-1002',
+      'store-1003',
+      'store-1005',
+      'store-1006',
+      'store-test-electronics'
+    )
     AND is_visible = true
     AND status = 'published'
     AND serviceability_status IN ('serviceable', 'limited')
@@ -30,6 +38,14 @@ BEGIN
   INTO incomplete_count
   FROM dsh_stores
   WHERE operator_context_id = 'local-dsh'
+    AND id IN (
+      'store-test-grocery',
+      'store-1002',
+      'store-1003',
+      'store-1005',
+      'store-1006',
+      'store-test-electronics'
+    )
     AND status = 'published'
     AND is_visible = true
     AND partner_readiness = 'ready'

@@ -67,7 +67,10 @@ if (-not [string]::IsNullOrWhiteSpace($Profiles)) {
   $ProfileList = @($Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 }
 if ($ProfileList.Count -eq 0 -and @("up", "reset", "smoke", "all", "bootstrap-dev").Contains($Action)) {
-  $ProfileList = @("identity", "dsh")
+  # The default local DSH runtime includes its governed Workforce and WLT
+  # dependencies so clean reset/bootstrap runs can provision seed actors and
+  # evaluate server-owned financial standing without unresolved placeholders.
+  $ProfileList = @("identity", "workforce", "wlt", "dsh")
 }
 
 $AllowedProfiles = @(
