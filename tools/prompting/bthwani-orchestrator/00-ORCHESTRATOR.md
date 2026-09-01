@@ -1,6 +1,6 @@
 # BThwani Root-Cause Orchestrator
 
-PACKAGE_REVISION: 23
+PACKAGE_REVISION: 24
 PACKAGE_CLASS: UNIFIED_ROOT_CAUSE_EXECUTION_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -43,11 +43,13 @@ Exactly nine files are semantic owners in this package:
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — live mutation, migration, cutover, restructuring, cleanup/deletion and finishing.
 5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, repository-platform proof, re-diagnosis and fail-closed closure.
 6. `05-OBJECTIVES-PLAYBOOK.md` — objective discovery, decomposition, traversal/campaign scheduling, elastic safe delegation, portable pre-execution declaration and cross-window collision selection.
-7. `focus/code-architecture-organization.md` — code/architecture/structure/UI implementation quality.
-8. `focus/governance-product-design.md` — Product/System meaning, UX semantics and durable governance reconciliation.
-9. `focus/data-contracts-runtime-security-quality.md` — data/contracts/runtime/security/quality/tools/CI evidence.
+7. `focus/code-architecture-organization.md` — execution lens for code/architecture/structure/UI implementation over applicable durable governance policy.
+8. `focus/governance-product-design.md` — execution lens for Product/System/UX/design/governance reconciliation over durable governance Product/experience owners.
+9. `focus/data-contracts-runtime-security-quality.md` — execution lens for data/contracts/runtime/security/quality/tool evidence over applicable durable governance policies.
 
 One material law has one owner. Other files reference/apply it; they do not restate competing versions.
+
+`PACKAGE SEMANTIC OWNER != DURABLE PROJECT POLICY OWNER`. The nine files above own orchestration/execution semantics inside this package. Durable Product/System/Engineering/Security/Delivery meaning is owned by the applicable `governance/**` authorities and executable service/core contracts. Focus modules apply those owners during diagnosis/treatment/verification; they must not recreate a parallel durable policy layer.
 
 `PRIMARY_COORDINATOR` loads all six core owners (`00`–`05`) and evaluates all focus modules for applicability. A `SUBAGENT` receives only its bounded delegation contract plus materially relevant owners/focus modules; it may not redefine project truth, root ranking, integration refs, collision status, execution readiness or closure.
 
@@ -154,7 +156,7 @@ RESOLVE / REVALIDATE LIVE TARGET + PR + HEAD
 -> PROVE COLLISION DISPOSITION AGAINST EVERY ACTIVE OBJECTIVE
 -> EMIT ONE CONCISE PORTABLE SELECTED CLOSURE OBJECTIVE BEFORE FIRST MATERIAL MUTATION
 -> JUST-IN-TIME PLAN IN MEMORY OR OPTIONAL TASK-LOCAL ARTIFACT
--> TREAT ACTUAL SOURCE-OF-DEFECT
+-> STANDARDS-GROUNDED ROOT-CORRECT TREATMENT AT ACTUAL SOURCE-OF-DEFECT
 -> MIGRATE WRITERS/READERS/CONSUMERS/DATA/CONTRACTS
 -> CANONICAL CUTOVER
 -> RESTRUCTURE + MANDATORY CLEANUP/DELETION
@@ -166,6 +168,8 @@ RESOLVE / REVALIDATE LIVE TARGET + PR + HEAD
 -> EXACT FINAL CANDIDATE
 -> CLOSED ONLY UNDER 04
 ```
+
+The standards-grounding requirement above is defined by applicable durable governance policy, especially `governance/policies/standards-and-quality.md`; this package applies that policy and does not duplicate its engineering-standard catalog.
 
 The pre-execution Objective declaration is a coordination checkpoint, not an approval gate. If current human intent already authorizes execution, emit it and continue immediately unless a legitimate stop state applies.
 
@@ -344,7 +348,7 @@ RESOLVE LIVE TARGET / PR IDENTITY
 -> PORTABLE OBJECTIVE DECLARATION
 -> CANONICAL TARGET + SOURCE-OF-FIX
 -> JIT PLANNING AS NEEDED
--> ROOT-CORRECT TREATMENT
+-> STANDARDS-GROUNDED ROOT-CORRECT TREATMENT
 -> FULL AFFECTED-CONE MIGRATION/CUTOVER
 -> FORCED STRUCTURAL CLEANUP
 -> TOOL/RUNTIME/REVIEW EVIDENCE INGESTION
