@@ -1,7 +1,8 @@
-schemaVersion: 2
+schemaVersion: 3
+status: DERIVED_ORIENTATION
+authority: governance/product/PRD.md
 classification: UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_FINANCIAL_PLATFORM
 operatingModel: BTHWANI_OPERATED_PLATFORM
-softwareDeliveryModel: UNIFIED_PLATFORM
 surfaces:
   - APP_CLIENT
   - APP_PARTNER
@@ -15,19 +16,18 @@ surfaceActors:
   APP_FIELD: FIELD
   CONTROL_PANEL: OPERATOR
 actors:
-  - OPERATOR
+  - CUSTOMER
   - PARTNER
   - CAPTAIN
   - FIELD
-  - CUSTOMER
+  - OPERATOR
 captainAffiliations:
   - BTHWANI
   - PARTNER
-fulfillmentModes:
-  - BTHWANI_CAPTAIN
-  - PARTNER_CAPTAIN
-  - PARTNER_SELF_FULFILLMENT
-  - CUSTOMER_PICKUP
+fulfillmentPolicyModes:
+  - BTHWANI_DELIVERY
+  - PARTNER_DELIVERY
+  - CLIENT_PICKUP
 partnerCommercialModels:
   - COMMISSION
   - SUBSCRIPTION
@@ -50,7 +50,3 @@ capabilityOwners:
   platformControl: PLATFORM_CONTROL
   providers: PROVIDERS
   media: MEDIA_WHERE_ASSIGNED_BY_CURRENT_CONTRACT
-ownership:
-  operationalTruth: DSH
-  financialTruth: WLT
-  applicationFinancialAccess: DSH_FACADE_ONLY

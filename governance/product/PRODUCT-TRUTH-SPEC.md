@@ -1,72 +1,108 @@
 # BThwani Product Truth Specification
 
 Status: ACTIVE_CANONICAL
+Representation: `PRODUCT_TRUTH_V1`
+Structural schema: `PRODUCT-TRUTH.schema.json`
 
 ## Purpose
 
-Capability/journey Product Truth records durable Product/System meaning that must survive implementation refactors. It defines **what the capability means, who owns it, who may act, what states/transitions/invariants are legal, how truth is written/read back, and what outcomes are forbidden**. It is not an implementation registry or execution plan.
+A Product Truth record owns durable capability/journey meaning that must survive refactors, framework changes, route/file renames, generated-client changes and replacement of execution tooling. It defines what the capability means, who may act, who owns each truth boundary, what states/outcomes are legal, what must never happen and what canonical readback must prove.
 
-There is one durable Product Truth identity per material capability/journey. Split files only when concepts have genuinely independent Product semantics/owners; merge overlapping contracts that compete for the same semantic authority after migration proof.
+Product Truth is not an implementation registry, execution plan, test plan, task ledger or current-code snapshot.
 
-## Canonical semantic envelope
+## Canonical active representation
 
-A materially complete Product Truth defines, when applicable:
+Every active `*.product-truth.json` uses one representation grammar:
 
-1. stable capability/journey identity and outcome/problem;
-2. affected actors and their responsibilities;
-3. canonical Product/domain owners and authority boundaries;
+```text
+schemaVersion: 1
+capabilityId
+problem
+actors[]
+surfaces[]
+outcome
+acceptance
+invariants
+owners
+```
+
+Optional semantic extensions such as `preconditions`, `stateModel`, `transitions`, `relationships`, `capabilities` or domain-specific matrices are allowed when they express durable meaning and do not create a second grammar.
+
+`PRODUCT-TRUTH.schema.json` validates representation structure only. Schema PASS does **not** prove that Product semantics are correct.
+
+## Identity and filenames
+
+- `capabilityId` is a stable uppercase-snake semantic identity, not a task/campaign name.
+- filenames use lowercase kebab-case and end in `.product-truth.json`.
+- branch names, PR numbers, current bugs, dates of a repair campaign, `fix/rescue/closure` workstream names and temporary implementation identifiers are forbidden as capability identity.
+- one material capability/journey has one durable Product Truth identity.
+
+Two records may share actors/owners only when their outcomes and authority boundaries are genuinely distinct. If two active records govern the same decision/state transition, explicitly resolve one owner and merge/split/re-scope rather than relying on synchronization.
+
+## Required semantic envelope
+
+A materially complete Product Truth expresses, when applicable:
+
+1. problem/outcome and affected actors;
+2. actor responsibilities, permitted actions and forbidden actions;
+3. canonical semantic owners and cross-domain boundaries;
 4. required surfaces/consumers and explicit exclusions with reasons;
 5. preconditions and trusted context/object-scope requirements;
 6. durable states, legal transitions and forbidden transitions;
-7. business/negative invariants and decision semantics;
-8. canonical write intent/path semantics and committed readback semantics;
+7. business and negative invariants;
+8. canonical mutation intent/authority and committed readback semantics;
 9. cross-surface/service handoffs and durable event/contract meaning;
 10. canonical data ownership and material persistence/migration implications;
 11. idempotency/concurrency/retry/replay semantics where material;
 12. external-provider unknown-result/reconciliation/recovery semantics where material;
-13. security/privacy/financial classification and restrictions where material;
-14. loading/empty/offline/forbidden/conflict/partial/error/recovery semantics when user-visible;
-15. acceptance criteria and negative/failure states;
-16. evidence classes needed to prove the capability, without hard-coding one tool as semantic authority;
-17. legacy/superseded authority removal condition when a semantic migration exists;
-18. explicit `DECISION_REQUIRED` gaps when durable behavior cannot be derived safely.
+13. security/privacy/financial restrictions where material;
+14. user-visible loading/empty/offline/forbidden/conflict/partial/error/recovery semantics where material;
+15. acceptance criteria and failure states;
+16. any bounded unresolved durable decision that truly requires authorization.
 
-Do not manufacture irrelevant fields merely to fill a template.
+Do not manufacture irrelevant fields simply to satisfy symmetry.
 
-## Representation versioning
+## Actor model
 
-Current repository contracts contain more than one historical JSON shape. Syntax divergence alone does not invalidate otherwise proven Product meaning, and **blind mass conversion that risks semantic loss is forbidden**.
+Every `actors[]` entry states:
 
-For any new Product Truth or any materially edited existing Product Truth, converge toward a single canonical semantic representation with an explicit schema/version marker and the envelope above. Migration must preserve every still-valid durable rule, distinguish intentionally removed semantics, and avoid converting replaceable implementation identifiers into durable Product authority.
+- `id` — stable actor identity within the capability;
+- `role` — responsibility in this capability;
+- `permittedActions` — actions the actor may intentionally initiate/consume;
+- `forbiddenActions` — authority the actor must never gain through this capability.
 
-Legacy representations remain `LEGACY_REPRESENTATION` until touched/migrated; they must not gain new incompatible ad-hoc grammar. Their semantic content is reconciled using this specification.
+Actor permissions in Product Truth express durable Product responsibility. Concrete endpoint authorization remains enforced by the owning executable system and security policy.
 
-## Durable versus traceability fields
+## Surface model
 
-Durable fields own meaning. Implementation traceability may reference current routes, operation IDs, screens, tables or paths **only as derived locators** and must be clearly non-authoritative. Such identifiers may change without changing Product truth.
+Every `surfaces[]` entry states at minimum `id`, `required`, `actors`, `states`, and `actions`. An excluded surface uses `required: false` plus `exclusionReason` when misunderstanding the exclusion could materially misdirect implementation.
 
-If a contract currently contains `operationIds`, route/screen paths, filenames or implementation statuses, treat them as `DERIVED_TRACEABILITY` unless the public identifier itself is intentionally a durable external contract. Never infer Product semantics from their presence alone.
+Fields such as `routesOrScreens`, `operationIds`, table names or current component names are permitted only as **derived non-normative traceability**. Their presence does not make them Product authority, and changing them does not require a Product semantic change when capability meaning remains identical.
 
-Task/campaign terms such as `fix`, `rescue`, `closure`, current branch state, current bug status or migration workstream do not belong in a durable capability identity. When encountered in a legacy Product Truth, classify durable semantics separately and migrate/retire the task-local naming after reference proof.
+Implementation-specific correctness requirements such as generated-client mechanics, file placement, framework patterns or test commands belong to engineering policy/executable contracts, not Product acceptance criteria.
 
-## Ownership and writers/readers
+## Owners and stewardship
 
-Product Truth names semantic owners and allowed actor responsibilities; executable service/API/data contracts own concrete technical interfaces. A surface can be required without becoming the owner. A projection/read model can be required without becoming a writer.
+`owners` identifies semantic/domain truth owners and may also carry named stewardship labels for discoverability. Keys such as `productManager`, `productOwner` and `uxJourneyOwner` are stewardship roles only; they do not override explicit domain truth owners such as `IDENTITY`, `WORKFORCE`, `DSH`, `WLT`, `PLATFORM_CONTROL`, `PROVIDERS` or `MEDIA`.
 
-Ambiguous ownership must not be solved by permanent synchronization between two authorities. Resolve one owner, define migration/cutover, and make other copies subordinate/reconstructable or remove them.
+When a capability spans domains, state exactly which owner owns which durable fact. `both systems keep it in sync` is not ownership.
 
-## State and failure semantics
+## State, mutation, readback and recovery
 
-Happy-path acceptance alone is incomplete when retries, concurrency, authorization, offline behavior, provider unknown outcomes, partial failure or recovery can change the user/business result. Record materially required failure/unknown/recovery semantics so implementations cannot invent divergent behavior per surface.
+Happy-path acceptance is incomplete when retries, concurrency, authorization, offline behavior, provider uncertainty, partial failure or recovery can change the business result.
+
+A Product Truth must not allow a surface-local state machine, optimistic UI state, cache, projection or external-provider response to become canonical persisted success unless the owning semantics explicitly define it.
+
+Unknown external financial/provider outcomes remain unknown/reconcilable until authoritative evidence resolves them.
 
 ## Product Truth changes
 
-A Product Truth change requires a proven durable semantic reason, not merely current code shape. When meaning changes, identify affected actors/surfaces/owners/contracts/data/migrations/readbacks/legacy consumers and propagate the change through the real system before claiming closure.
+A Product Truth changes only for a proven/authorized durable semantic reason, not because implementation moved. A semantic change must account for affected actors, surfaces, owners, contracts, data/migrations, readbacks and superseded authority.
 
-A human decision is required only when multiple materially valid Product semantics remain after derivable evidence is exhausted. External Best Practice may inform engineering technique but cannot invent BThwani Product behavior.
+A representation-only migration must preserve every still-valid semantic statement. Any intentionally removed statement needs an explicit reason in the change review; formatting cleanup is not permission to drop meaning.
 
-## Acceptance and verification boundary
+## Acceptance and evidence boundary
 
-Product Truth states what must be proven; exact evidence is chosen by engineering/security/delivery policy and the execution orchestrator. Static success, runtime success, visual success and security/finance/isolation proof are distinct evidence classes.
+Product Truth states what outcome/invariant must be proven. Engineering, security and delivery governance determine the evidence class required for the affected claim. Static, runtime, visual, accessibility, security, financial, data-migration and release evidence are not interchangeable.
 
-Do not create a workflow or semantic linter that declares Product Truth itself correct. Structural schema checks may detect malformed representation, but semantic correctness requires reconciliation with authorized intent, governance, implementation and evidence.
+No workflow, agent, prompt, scanner or schema can declare Product Truth semantically correct merely because its own validation passed.

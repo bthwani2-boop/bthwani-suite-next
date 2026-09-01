@@ -2,9 +2,9 @@
 
 Status: ACTIVE_CANONICAL
 
-## Standards-Grounded treatment gate
+## Standards-grounded treatment gate
 
-For every material root, functional success or symptom removal is insufficient. The resulting canonical treatment must be the **correct, simplest, durable root solution appropriate to the actual context**, consistent with current materially applicable authoritative engineering/platform standards, Product/System semantics, repository constraints and the owning technology.
+Functional success or symptom removal is insufficient for a material engineering defect/change. The resulting treatment must be the **correct, simplest durable solution appropriate to the actual context**, consistent with current materially applicable authoritative engineering/platform standards, Product/System semantics, repository constraints and the owning technology.
 
 Evaluate dimensions only when material:
 
@@ -15,7 +15,7 @@ Evaluate dimensions only when material:
 When more than one treatment is valid, prefer the one maximizing:
 
 ```text
-Root Removal
+Cause Removal
 + Canonical Simplicity
 + Strong Invariants
 + Minimal Necessary Complexity
@@ -55,52 +55,49 @@ An abstraction/service/package/dependency exists only when it has necessary purp
 
 ## External standards and official guidance
 
-Use current authoritative standards/vendor/platform documentation when they can materially change a design decision, prevent a known class of defect or are required for release/compliance. Examples may include current NIST secure-development guidance, OWASP application/API/mobile guidance, SLSA/supply-chain guidance, language/runtime/database/framework official guidance and current Apple/Google platform rules.
+Use current authoritative standards/vendor/platform documentation when it can materially change a design decision, prevent a known class of defect or is required for release/compliance. Examples include NIST secure-development guidance, OWASP application/API/mobile guidance, SLSA/supply-chain guidance, W3C accessibility standards, language/runtime/database/framework official guidance and current Apple/Google platform rules when applicable.
 
-External standards do not create BThwani Product semantics. Mutable version numbers/rules must be revalidated when the decision/release depends on them rather than copied into governance as eternal facts.
+External standards do not invent BThwani Product semantics. Mutable version numbers/rules are revalidated when a decision/release depends on them rather than copied into governance as eternal facts.
 
 ## Quality and testability
 
 Design important behavior so its invariants and failure/recovery paths can be falsified. Tests are evidence, not Product Truth, and should target the authority/behavior they prove without hard-coding obsolete implementation structure as semantics.
 
-Do not weaken tests/scanners or create a fake-green compatibility path to accept a design that remains wrong. Conversely, do not introduce a large test/guard framework when a focused existing test/runtime proof gives equivalent assurance more simply.
+Do not weaken tests/scanners or create a fake-green compatibility path to accept a design that remains wrong. Conversely, do not introduce a large test/guard framework when focused existing evidence gives equivalent assurance more simply.
 
 ## Suppressions and intentional conditions
 
-A warning/test/scanner finding may not be hidden merely to obtain green. Material suppression/ignore/allowlist requires one of:
+A warning/test/scanner finding may not be hidden merely to obtain green. Material suppression/ignore/allowlist requires either a proven false positive or an explicitly authorized intentional condition whose risk/behavior is understood.
 
-- a proven false positive; or
-- an explicitly authorized intentional condition whose risk/behavior is understood.
+The suppression must use the narrowest sufficient scope, live at the correct owner, preserve visibility of unrelated paths, record enough rationale for future re-evaluation and have an expiry/removal trigger when temporary. A broad exclusion that hides required analysis, or a local disable used instead of correcting the authoritative defect, is not acceptable evidence.
 
-The suppression must be the narrowest sufficient scope, live at the correct owner, preserve visibility of unrelated paths, record enough rationale for future re-evaluation and have an expiry/removal trigger when temporary. A broad exclusion that hides required analysis, or a local disable used instead of fixing the actual Source-of-Fix, is not acceptable evidence.
-
-An executing agent/tool may propose or technically apply a suppression only when current authority permits; it cannot manufacture business/security risk acceptance merely because the finding is inconvenient.
+A tool or implementation actor cannot manufacture business/security risk acceptance merely because a finding is inconvenient.
 
 ## Dependency hygiene
 
 Dependencies/tooling must provide material capability not reasonably owned already, be compatible with platform/security/licensing/supply-chain requirements, remain lockable/reproducible and have clear removal/update ownership. Remove unused/obsolete/duplicate dependencies after consumer/build/runtime proof.
 
-## Tools and assurance outputs
+## Assurance outputs
 
-CI, Sonar, CodeQL, Semgrep, reviews, scanners and similar systems are **evidence producers**, not Product/System authority. Consume material findings, warnings, execution limitations and coverage gaps; correlate/deduplicate/map them to actual roots; fix the Product/code/data/runtime Source-of-Fix.
+CI, static analyzers, security scanners, reviews and similar systems are **evidence producers**, not Product/System authority. Consume material findings, warnings, execution limitations and coverage gaps; correlate/deduplicate them; correct the actual Product/code/data/runtime owner.
 
-Do not turn ordinary product/root work into an assurance-control-plane/toolchain side project merely because a scanner/workflow is imperfect. Repair the assurance machinery only when it is the explicit objective or when a proven indispensable evidence blocker leaves no materially adequate route to the required claim. Do not create bypasses or shadow assurance systems.
+Do not turn ordinary Product engineering into an assurance-control-plane side project merely because one scanner/workflow is imperfect. Repair assurance machinery when it is itself the objective or when a proven indispensable evidence blocker leaves no materially adequate route to the required claim. Never create bypasses or shadow assurance systems.
 
-## Adequacy proof before closure
+## Adequacy before completion
 
-A material root is not standards-grounded closed until evidence supports, as applicable:
+A material change/defect is not standards-grounded complete until evidence supports, as applicable:
 
 ```text
-ROOT_CAUSE_REMOVED
+CAUSE_REMOVED
 + CORRECT_OWNER_AND_LAYER
 + CONTEXT_APPROPRIATE_BEST_PRACTICE
 + APPLICABLE_STANDARDS_SATISFIED
-+ NO_SIMPLER_EQUIVALENT_ROOT_CORRECT_DESIGN
++ NO_SIMPLER_EQUIVALENT_CORRECT_DESIGN
 + NO_NEW_PARALLEL_TRUTH
 + NO_UNJUSTIFIED_COMPLEXITY
-+ FULL_AFFECTED_CONE_CONSISTENCY
++ COMPLETE_MATERIALLY_AFFECTED_SET_CONSISTENT
 + FAILURE_AND_RECOVERY_BEHAVIOR_VERIFIABLE
-+ NO_KNOWN_MATERIAL_RESIDUE_TIED_TO_ROOT
++ NO_KNOWN_MATERIAL_RESIDUE_TIED_TO_CHANGE
 ```
 
-A change that works functionally but leaves a known materially fragile design, violates an applicable standard, or replaces the defect with unjustified structural debt returns to diagnosis/treatment rather than qualifying as root-correct closure.
+A change that works functionally but leaves a known materially fragile design, violates an applicable standard, or replaces the defect with unjustified structural debt requires further correction.
