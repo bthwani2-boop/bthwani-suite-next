@@ -2,7 +2,7 @@
 
 ## Decision
 
-**Yes — use three concurrent execution sessions.**  
+**Yes — use three concurrent execution sessions.**
 **No — do not let three sessions write directly and independently to remote `ocr`.**
 
 The fastest safe model is:
