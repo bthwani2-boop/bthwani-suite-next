@@ -202,7 +202,6 @@ try {
 
   if ($Action -eq "smoke" -and $ProfileList -contains "dsh") {
     Assert-PreparedRuntimeMarker
-    $runtimeParameters.PreparedRuntime = $true
     if ($ProfileList -contains "wlt") {
       $runtimeParameters.SeedWlt = $true
     }

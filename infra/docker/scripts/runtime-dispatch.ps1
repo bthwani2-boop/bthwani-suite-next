@@ -10,7 +10,6 @@ param(
   [string]$Profiles = "",
   [string]$Service = "",
   [switch]$Force,
-  [switch]$PreparedRuntime,
   [switch]$SeedWlt
 )
 
@@ -104,12 +103,7 @@ if ($nonDshProfiles.Length -gt 0) {
 }
 if ($financialSimulatorsRequested) { Invoke-FinancialSimulatorHealthSmoke }
 
-if ($PreparedRuntime) {
-  Write-Host "Prepared runtime supplied: skipping duplicate DSH image build"
-  Invoke-RuntimeEngine -EngineAction "smoke" -EngineProfiles $dshProfileString
-} else {
-  Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles $dshProfileString
-}
+Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles $dshProfileString
 $seedProfiles = @($dshProfiles)
 if ($SeedWlt) { $seedProfiles += "wlt" }
 Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles ($seedProfiles -join ",")

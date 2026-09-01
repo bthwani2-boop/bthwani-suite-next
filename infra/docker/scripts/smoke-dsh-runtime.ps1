@@ -3,7 +3,8 @@ Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent (Split-Path -P
 
 $ComposeFile = ".\infra\docker\compose.runtime.yml"
 $EnvFile     = ".\infra\docker\env\runtime.env.example"
-$DshBaseUrl  = "http://localhost:18080"
+$dshApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_DSH_API_HOST_PORT)) { "18080" } else { $env:BTHWANI_DSH_API_HOST_PORT }
+$DshBaseUrl  = "http://localhost:$dshApiHostPort"
 
 Write-Host "=== DSH runtime smoke ==="
 

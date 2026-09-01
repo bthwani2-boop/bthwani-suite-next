@@ -58,6 +58,11 @@ test("runtime still fails closed after the one narrow retry", () => {
   );
 });
 
+test("DSH smoke always executes the canonical fresh runtime phase", () => {
+  assert.match(dshRuntimeDispatcher, /Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles \$dshProfileString/);
+  assert.doesNotMatch(dshRuntimeDispatcher, /PreparedRuntime|Prepared runtime supplied|skipping duplicate DSH image build/);
+});
+
 test("runtime accepts a single non-WLT profile under StrictMode", () => {
   assert.match(phaseScript, /\$runtimeProfiles = \$runtimeProfileList -join ","/);
   assert.match(
@@ -85,6 +90,16 @@ test("DSH runtime smoke enforces the canonical HEALTHY readiness state", () => {
   assert.doesNotMatch(dshCatalogSmoke, /\$readiness\.status -eq "ready"/);
   assert.doesNotMatch(dshRuntimeSmoke, /\$readiness\.status -ne "ready"/);
   assert.doesNotMatch(dshRuntimeSmoke, /\$storeId:/);
+});
+
+test("DSH smoke scripts use the configured published API port", () => {
+  for (const smoke of [dshCatalogSmoke, dshClientHomeSmoke, dshPartnerOnboardingSmoke]) {
+    assert.match(smoke, /\$dshApiHostPort\s*=\s*if \(\[string\]::IsNullOrWhiteSpace\(\$env:BTHWANI_DSH_API_HOST_PORT\)/);
+    assert.match(smoke, /\$dshBaseUrl\s*=\s*"http:\/\/localhost:\$dshApiHostPort"/);
+    assert.doesNotMatch(smoke, /http:\/\/localhost:18080/);
+  }
+  assert.match(dshRuntimeSmoke, /\$env:BTHWANI_DSH_API_HOST_PORT/);
+  assert.doesNotMatch(dshRuntimeSmoke, /http:\/\/localhost:18080/);
 });
 
 test("PowerShell runtime consumers authenticate Workforce providers by activation", () => {
