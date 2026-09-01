@@ -656,7 +656,8 @@ function Wait-ForSelectedApis {
     Write-Host "WireMock financial provider: healthy"
   }
   if ($ProfileList -contains "mail") {
-    Invoke-RestMethod "http://localhost:8025/api/v1/info" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+    $mailpitUiPort = Get-ApiHostPort -EnvironmentName "BTHWANI_MAILPIT_UI_PORT" -DefaultPort 8025
+    Invoke-RestMethod "http://localhost:$mailpitUiPort/api/v1/info" -TimeoutSec 10 -ErrorAction Stop | Out-Null
     Write-Host "Mailpit: healthy"
   }
   if ($ProfileList -contains "cache") {

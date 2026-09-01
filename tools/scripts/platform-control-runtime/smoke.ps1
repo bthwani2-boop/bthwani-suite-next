@@ -74,7 +74,7 @@ function Invoke-ProviderGovernanceSmoke {
     throw "unconfigured local providers were incorrectly reported healthy"
   }
   $providerReadiness = Invoke-RestMethod "http://localhost:$providersApiHostPort/providers/readiness" -TimeoutSec 10
-  if ($providerReadiness.status -ne "ready") { throw "providers readiness is not ready" }
+  if ($providerReadiness.status -ne "HEALTHY") { throw "providers readiness is not healthy" }
 
   $readHeaders = New-PlatformAuthHeaders -AccessToken $AccessToken -CorrelationId "$CorrelationId-provider-read"
   $providers = @(Invoke-RestMethod "http://localhost:$providersApiHostPort/providers" -Headers $readHeaders -TimeoutSec 10)
@@ -127,9 +127,9 @@ function Invoke-ProviderGovernanceSmoke {
 function Invoke-PlatformP3Smoke {
   Start-PlatformP3Runtime
   $health = Invoke-RestMethod "http://localhost:$platformApiHostPort/platform/health" -TimeoutSec 10
-  if ($health.status -ne "healthy") { throw "platform health is not healthy" }
+  if ($health.status -ne "HEALTHY") { throw "platform health is not healthy" }
   $readiness = Invoke-RestMethod "http://localhost:$platformApiHostPort/platform/readiness" -TimeoutSec 10
-  if ($readiness.status -ne "ready") { throw "platform readiness is not ready" }
+  if ($readiness.status -ne "HEALTHY") { throw "platform readiness is not healthy" }
 
   $password = Get-LocalPassword
   $correlationId = "platform-p3-smoke-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"

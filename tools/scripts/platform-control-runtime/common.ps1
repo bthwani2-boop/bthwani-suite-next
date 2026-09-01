@@ -77,18 +77,26 @@ function Invoke-PlatformDatabasePsql {
 }
 
 function Wait-PlatformHttpReady {
-  param([Parameter(Mandatory = $true)][string]$Url)
+  param(
+    [Parameter(Mandatory = $true)][string]$Url,
+    [string]$ExpectedStatus = ""
+  )
 
   for ($attempt = 1; $attempt -le 60; $attempt++) {
     try {
-      Invoke-RestMethod $Url -TimeoutSec 5 -ErrorAction Stop | Out-Null
-      return
+      $response = Invoke-RestMethod $Url -TimeoutSec 5 -ErrorAction Stop
+      if ([string]::IsNullOrWhiteSpace($ExpectedStatus) -or [string]$response.status -eq $ExpectedStatus) {
+        return
+      }
     } catch {
-      Start-Sleep -Seconds 2
     }
+    Start-Sleep -Seconds 2
   }
 
-  throw "endpoint did not become ready: $Url"
+  if ([string]::IsNullOrWhiteSpace($ExpectedStatus)) {
+    throw "endpoint did not become ready: $Url"
+  }
+  throw "endpoint did not report status '$ExpectedStatus': $Url"
 }
 
 function Invoke-PlatformMigrations {
@@ -111,9 +119,9 @@ function Start-PlatformP3Runtime {
     "http://localhost:$providersApiHostPort/providers/readiness",
     "http://localhost:$wltApiHostPort/wlt/health",
     "http://localhost:$dshApiHostPort/dsh/health",
-    "http://localhost:$platformApiHostPort/platform/health",
-    "http://localhost:$platformApiHostPort/platform/readiness"
+    "http://localhost:$platformApiHostPort/platform/health"
   )) {
     Wait-PlatformHttpReady $url
   }
+  Wait-PlatformHttpReady "http://localhost:$platformApiHostPort/platform/readiness" "HEALTHY"
 }
