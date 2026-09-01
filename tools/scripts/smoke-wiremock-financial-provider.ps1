@@ -5,7 +5,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
-  $BaseUrl = "http://localhost:18090"
+  $wiremockPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_WIREMOCK_FINANCIAL_PORT)) { "18090" } else { $env:BTHWANI_WIREMOCK_FINANCIAL_PORT }
+  $BaseUrl = "http://localhost:$wiremockPort"
 }
 
 function Invoke-Json {

@@ -1,9 +1,14 @@
 param(
-  [string]$BaseUrl = "http://localhost:18083"
+  [string]$BaseUrl = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
+  $wltApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_WLT_API_HOST_PORT)) { "18083" } else { $env:BTHWANI_WLT_API_HOST_PORT }
+  $BaseUrl = "http://localhost:$wltApiHostPort"
+}
 
 $serviceToken = [string]$env:WLT_DSH_SERVICE_TOKEN
 if ([string]::IsNullOrWhiteSpace($serviceToken)) {

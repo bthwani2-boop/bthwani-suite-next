@@ -30,6 +30,23 @@ const dshRuntimeDispatcher = await readFile(
   new URL("../../infra/docker/scripts/runtime-dispatch.ps1", import.meta.url),
   "utf8",
 );
+const platformRuntimeSmoke = await readFile(
+  new URL("../scripts/platform-control-runtime/smoke.ps1", import.meta.url),
+  "utf8",
+);
+const financialRuntimeDispatcher = dshRuntimeDispatcher;
+const wltAuthenticatedSmoke = await readFile(
+  new URL("../scripts/finance/smoke-wlt-authenticated-runtime.ps1", import.meta.url),
+  "utf8",
+);
+const wltProviderSmoke = await readFile(
+  new URL("../scripts/smoke-wlt-provider-through-wlt.ps1", import.meta.url),
+  "utf8",
+);
+const wiremockFinancialSmoke = await readFile(
+  new URL("../scripts/smoke-wiremock-financial-provider.ps1", import.meta.url),
+  "utf8",
+);
 const dshClientHomeSmoke = await readFile(
   new URL("../../infra/docker/scripts/runtime/smoke-dsh-client-home.ps1", import.meta.url),
   "utf8",
@@ -126,6 +143,22 @@ test("platform runtime waits use configured service ports", () => {
     assert.match(platformRuntimeCommon, new RegExp(`-EnvironmentName "${environment}"`));
   }
   assert.doesNotMatch(platformRuntimeCommon, /localhost:180(?:80|82|83|87|88|90)/);
+  assert.match(platformRuntimeSmoke, /\$identityApiHostPort/);
+  assert.match(platformRuntimeSmoke, /\$providersApiHostPort/);
+  assert.match(platformRuntimeSmoke, /\$platformApiHostPort/);
+  assert.doesNotMatch(platformRuntimeSmoke, /localhost:180(?:82|87|88)/);
+});
+
+test("financial runtime consumers honor configured WLT and simulator ports", () => {
+  assert.match(financialRuntimeDispatcher, /\$env:BTHWANI_WIREMOCK_FINANCIAL_PORT/);
+  assert.doesNotMatch(financialRuntimeDispatcher, /localhost:18090/);
+  assert.match(wltAuthenticatedSmoke, /\$env:BTHWANI_WLT_API_HOST_PORT/);
+  assert.match(wltProviderSmoke, /\$env:BTHWANI_WLT_API_HOST_PORT/);
+  assert.match(wltProviderSmoke, /\$env:BTHWANI_WIREMOCK_FINANCIAL_PORT/);
+  assert.match(wiremockFinancialSmoke, /\$env:BTHWANI_WIREMOCK_FINANCIAL_PORT/);
+  for (const smoke of [wltAuthenticatedSmoke, wltProviderSmoke, wiremockFinancialSmoke]) {
+    assert.doesNotMatch(smoke, /localhost:180(?:83|90)/);
+  }
 });
 
 test("PowerShell runtime consumers authenticate Workforce providers by activation", () => {

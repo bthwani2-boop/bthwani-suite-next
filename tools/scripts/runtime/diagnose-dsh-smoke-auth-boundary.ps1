@@ -1,5 +1,5 @@
 param(
-  [string]$IdentityBaseUrl = "http://localhost:18082",
+  [string]$IdentityBaseUrl = "",
   [string]$DshBaseUrl = "",
   [string]$StoreId = "store-test-grocery"
 )
@@ -11,6 +11,8 @@ $ErrorActionPreference = "Stop"
 
 $dshApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_DSH_API_HOST_PORT)) { "18080" } else { $env:BTHWANI_DSH_API_HOST_PORT }
 if ([string]::IsNullOrWhiteSpace($DshBaseUrl)) { $DshBaseUrl = "http://localhost:$dshApiHostPort" }
+$identityApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_API_HOST_PORT)) { "18082" } else { $env:BTHWANI_IDENTITY_API_HOST_PORT }
+if ([string]::IsNullOrWhiteSpace($IdentityBaseUrl)) { $IdentityBaseUrl = "http://localhost:$identityApiHostPort" }
 
 $password = Get-LocalPassword
 
