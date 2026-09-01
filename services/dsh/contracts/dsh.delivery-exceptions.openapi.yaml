@@ -75,10 +75,12 @@ components:
     ReportDeliveryExceptionRequest:
       type: object
       additionalProperties: false
-      required: [ reasonCode, note ]
+      required: [ reasonCode, note, correlationId ]
       properties:
         reasonCode: { $ref: '#/components/schemas/DeliveryExceptionReasonCode' }
         note: { type: string, minLength: 5, maxLength: 1000 }
+        correlationId: { type: string, minLength: 8, maxLength: 200 }
+        proofMediaRef: { type: string, minLength: 1, maxLength: 1000 }
         latitude: { type: [number, 'null'], format: double, minimum: -90, maximum: 90 }
         longitude:
           {
@@ -115,7 +117,6 @@ components:
         - id
         - operatorContextId
         - assignmentId
-        - orderId
         - captainId
         - reasonCode
         - note
@@ -130,7 +131,8 @@ components:
         id: { type: string, format: uuid }
         operatorContextId: { type: string }
         assignmentId: { type: string, format: uuid }
-        orderId: { type: string, format: uuid }
+        orderId: { type: [string, 'null'], format: uuid }
+        specialRequestId: { type: [string, 'null'], format: uuid }
         captainId: { type: string }
         reasonCode: { $ref: '#/components/schemas/DeliveryExceptionReasonCode' }
         note: { type: string, minLength: 5, maxLength: 1000 }
@@ -139,6 +141,7 @@ components:
           enum: [ driver_assigned, driver_arrived_store, picked_up, arrived_customer ]
         severity: { $ref: '#/components/schemas/DeliveryExceptionSeverity' }
         status: { $ref: '#/components/schemas/DeliveryExceptionStatus' }
+        correlationId: { type: string, minLength: 8, maxLength: 200 }
         reportedLatitude: { type: [number, 'null'], format: double }
         reportedLongitude: { type: [number, 'null'], format: double }
         reportedAt: { type: string, format: date-time }
@@ -157,6 +160,8 @@ components:
         returnArrivedAt: { type: [string, 'null'], format: date-time }
         returnedAt: { type: [string, 'null'], format: date-time }
         returnAcceptedByActorId: { type: [string, 'null'] }
+        proofMediaRef: { type: [string, 'null'], minLength: 1 }
+        policyNextAction: { type: string, enum: [retry, wait, return, rescue, review] }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

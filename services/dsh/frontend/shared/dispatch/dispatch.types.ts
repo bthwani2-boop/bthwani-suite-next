@@ -25,13 +25,10 @@ type GeneratedDshDeliveryExceptionReasonCode = components["schemas"]["DshDeliver
 type GeneratedDshReportDeliveryExceptionInput = components["schemas"]["DshReportDeliveryExceptionRequest"];
 
 export type DshDeliveryExceptionReasonCode =
-  | GeneratedDshDeliveryExceptionReasonCode
-  | "handoff_shortage"
-  | "handoff_mismatch";
+  GeneratedDshDeliveryExceptionReasonCode;
 
-export type DshDeliveryException = Omit<GeneratedDshDeliveryException, "reasonCode" | "orderId"> & {
+export type DshDeliveryException = Omit<GeneratedDshDeliveryException, "reasonCode"> & {
   readonly reasonCode: DshDeliveryExceptionReasonCode;
-  readonly orderId: string;
 };
 
 export type DshReportDeliveryExceptionInput = Omit<

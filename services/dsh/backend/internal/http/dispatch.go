@@ -132,9 +132,17 @@ func writeDeliveryExceptionError(w http.ResponseWriter, err error) {
 }
 
 func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
+	var orderID any = item.OrderID
+	if item.OrderID == "" {
+		orderID = nil
+	}
+	var specialRequestID any = item.SpecialRequestID
+	if item.SpecialRequestID == "" {
+		specialRequestID = nil
+	}
 	return map[string]any{
 		"id": item.ID, "operatorContextId": item.OperatorContextID, "assignmentId": item.AssignmentID,
-		"orderId": item.OrderID, "specialRequestId": item.SpecialRequestID, "captainId": item.CaptainID,
+		"orderId": orderID, "specialRequestId": specialRequestID, "captainId": item.CaptainID,
 		"reasonCode": string(item.ReasonCode), "note": item.Note,
 		"deliveryStatusAtReport": string(item.DeliveryStatusAtReport),
 		"severity":               string(item.Severity), "status": string(item.Status),

@@ -134,7 +134,7 @@
       - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
       - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
-      required: false
+      required: true
       content:
         application/json:
           schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDeclineAssignmentRequest" }
