@@ -30,7 +30,7 @@ func LoadConfig() (Config, error) {
 		return Config{}, fmt.Errorf("unsupported WLT_FINANCIAL_PROVIDER_MODE: %s", mode)
 	}
 	if mode == ModeProduction {
-		return Config{}, fmt.Errorf("%w: WLT_FINANCIAL_PROVIDER_MODE=production is blocked until a real provider adapter, secret reference, inquiry, webhook verification, reconciliation, and independent release approvals are implemented", ErrProductionProviderUnavailable)
+		return Config{}, fmt.Errorf("%w: production mode is intentionally unavailable; WLT_ALLOW_PRODUCTION_PROVIDER is not an activation switch; a real approved provider adapter, secret reference, provider inquiry, verified webhook handling, reconciliation, independent release approvals, and same-commit runtime evidence are required", ErrProductionProviderUnavailable)
 	}
 	if mode == ModeMock && strings.TrimSpace(os.Getenv("WLT_ALLOW_MOCK_PROVIDER")) != "true" {
 		return Config{}, fmt.Errorf("mock payment provider is disabled; set WLT_ALLOW_MOCK_PROVIDER=true only for an explicit local simulation")

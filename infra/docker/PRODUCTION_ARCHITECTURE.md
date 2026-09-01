@@ -65,18 +65,19 @@ environment_separation_proposal:
   production:
     status: NOT_YET_DEFINED_BLOCKED_EXTERNAL
     financial_provider: >
-      يُمنع mock. التبديل يتم فقط عبر متغيرات بيئة موجودة فعليًا في الكود اليوم:
-      WLT_FINANCIAL_PROVIDER_MODE (يجب أن يكون قيمة مزود حقيقي وليس "mock") و
-      WLT_ALLOW_PRODUCTION_PROVIDER=true. هذا التبديل env-only، بلا حاجة لتغيير كود WLT.
+      production provider غير متاح حاليًا ويُرفض fail-closed في كود WLT.
+      WLT_ALLOW_PRODUCTION_PROVIDER ليس مفتاح تفعيل؛ يلزم adapter حقيقي معتمد،
+      secret reference، provider inquiry، webhook verification، reconciliation،
+      وموافقات وإثبات runtime مستقل على SHA واحد قبل أي تفعيل مستقبلي.
     bindings: نطاقات عامة خلف TLS termination، لا يوجد أي 127.0.0.1 binding
     secrets: secret manager إلزامي، لا قيم افتراضية، فشل البناء عند اكتشاف سر افتراضي (انظر القسم 3)
 
 production_provider_switch_contract:
   variables:
-    - WLT_FINANCIAL_PROVIDER_MODE   # قيمة غير "mock" في production
-    - WLT_ALLOW_PRODUCTION_PROVIDER # "true" في production فقط
+    - WLT_FINANCIAL_PROVIDER_MODE   # production مرفوض حاليًا fail-closed
+    - WLT_ALLOW_PRODUCTION_PROVIDER # reserved؛ لا يفعّل production وحده
   code_evidence: "infra/docker/compose.runtime.yml, service wlt-api, أسطر environment"
-  claim: "قابلية التبديل موجودة في الكود اليوم؛ اختيار المزود الفعلي ونطاق WLT النهائي = قرار مالك (انظر البند 2 من سجل الإغلاق)"
+  claim: "لا توجد حاليًا قابلية تفعيل production عبر env فقط؛ اختيار المزود الفعلي يتطلب تنفيذ adapter وإثباتات مستقلة واعتماد المالك"
 ```
 
 ---
@@ -183,7 +184,7 @@ docker_hosting_runtime_matrix:
 ```yaml
 repo_can_decide_or_already_provides:
   - "فصل local/staging/production كمبدأ معماري (هذه الوثيقة)"
-  - "آلية التبديل env-only بين mock وreal provider في WLT (WLT_FINANCIAL_PROVIDER_MODE + WLT_ALLOW_PRODUCTION_PROVIDER)"
+  - "fail-closed production provider configuration في WLT؛ متغيرات البيئة وحدها لا تتجاوز غياب adapter/evidence"
   - "health endpoints جاهزة للمراقبة (/identity/health, /workforce/health, /dsh/health, /wlt/health)"
   - "عقد S3-compatible API في DSH (لا حاجة لتغيير كود عند تبديل مزود التخزين)"
   - "منع compose files بديلة (سياسة x-bthwani-policy)"

@@ -45,7 +45,7 @@ export const wltServiceManifest = {
     productionMutationsReady: false,
     productionProviderDefaultEnabled: false,
     blocker:
-      "Production provider mutations remain fail-closed unless WLT_ALLOW_PRODUCTION_PROVIDER is explicitly true and independent finance, security, release, operator-context-isolation, and same-commit runtime evidence are complete.",
+      "Production provider mutations remain unconditionally fail-closed: WLT_ALLOW_PRODUCTION_PROVIDER alone cannot enable them. Production requires an implemented approved provider adapter, secret reference, provider inquiry, verified webhook handling, reconciliation, independent finance/security/release approvals, operator-context isolation, and same-commit runtime evidence.",
   },
 
   // Compatibility fields are deliberately evidence-safe. Static source or
@@ -63,7 +63,7 @@ export const wltServiceManifest = {
   stagingProviderLabMutationsReady: false,
   productionMutationsReady: false,
   productionMutationBlocker:
-    "Production provider mutations remain fail-closed pending explicit provider enablement and same-commit independent evidence.",
+    "Production provider mutations remain unconditionally fail-closed until an approved provider adapter and same-commit independent evidence exist; WLT_ALLOW_PRODUCTION_PROVIDER alone is insufficient.",
   mutationRuntimeReady: false,
   mutationJourneysApproved: false,
 
