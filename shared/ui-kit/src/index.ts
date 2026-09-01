@@ -34,15 +34,12 @@ export {
   amountToArabicText,
   nativeThemeOutputs,
   surfaceContainerRoles,
-  shadowLaw,
-  typographyRoles,
   neutralPalette,
   brandPalette,
   successPalette,
   warningPalette,
   dangerPalette,
   infoPalette,
-  shadowByElevation,
   sizes,
   zIndex,
   opacities,
@@ -52,7 +49,6 @@ export {
   resolveLogicalPadding,
   resolveLogicalMargin,
   resolveLogicalBorderRadius,
-  resolveTextAlign,
   tamaguiBridge,
 } from "./foundation";
 

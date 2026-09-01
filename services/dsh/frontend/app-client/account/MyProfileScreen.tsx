@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Switch, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Switch, TouchableOpacity, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Header,
@@ -206,12 +206,25 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
   };
 
   const confirmWithdrawConsent = (type: "email" | "sms" | "push") => {
-    // Ideally this would show a dialog, but for now we immediately toggle.
-    // DSH specifies: "Withdraw consent shows confirmation then updates."
-    // In a real app we'd use React Native Alert.alert.
-    if (type === "email") setConsentEmail(false);
-    if (type === "sms") setConsentSms(false);
-    if (type === "push") setConsentPush(false);
+    const channelLabel = type === "email"
+      ? "البريد الإلكتروني"
+      : type === "sms"
+        ? "الرسائل النصية"
+        : "إشعارات الهاتف";
+    const revoke = type === "email"
+      ? () => setConsentEmail(false)
+      : type === "sms"
+        ? () => setConsentSms(false)
+        : () => setConsentPush(false);
+
+    Alert.alert(
+      "تأكيد سحب الموافقة",
+      `هل تريد سحب موافقتك على رسائل ${channelLabel} التسويقية؟`,
+      [
+        { text: "إلغاء", style: "cancel" },
+        { text: "سحب الموافقة", style: "destructive", onPress: revoke },
+      ],
+    );
   };
 
   return (

@@ -522,3 +522,61 @@ func TestComputeCheckoutSnapshotRejectsMixedCurrenciesDBIntegration(t *testing.T
 		t.Fatalf("expected ErrCartItemCurrency, got %v", err)
 	}
 }
+
+func TestCheckServiceabilityUsesCanonicalServiceAreaEvidenceDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	storeID := "cart-service-area-store-" + suffix
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_stores
+			(id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, delivery_modes)
+		VALUES ($1, $1, 'Cart Service Area Test Store', 'published', 'not-authoritative', 'integration-area', 'serviceable', true,
+			ARRAY['delivery', 'pickup']::text[])`, storeID); err != nil {
+		t.Fatalf("failed to insert service-area test store: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
+	})
+
+	insideLat, insideLng := 15.5, 44.5
+	result, err := CheckServiceability(ctx, db, storeID, "integration-area", &insideLat, &insideLng)
+	if err != nil {
+		t.Fatalf("inside geofence check failed: %v", err)
+	}
+	if !result.Serviceable || result.Code != "serviceable" {
+		t.Fatalf("expected canonical geofence to make delivery serviceable, got %+v", result)
+	}
+	if got := availabilityFor(result.AvailableModes, ModePartnerDelivery); !got.Available {
+		t.Fatalf("expected delivery mode available inside canonical geofence, got %+v", got)
+	}
+
+	outLat, outLng := 14.5, 44.5
+	result, err = CheckServiceability(ctx, db, storeID, "integration-area", &outLat, &outLng)
+	if err != nil {
+		t.Fatalf("outside geofence check failed: %v", err)
+	}
+	if result.Serviceable || result.Code != "out_of_area" {
+		t.Fatalf("expected outside canonical geofence to fail closed, got %+v", result)
+	}
+	if got := availabilityFor(result.AvailableModes, ModePartnerDelivery); got.Available || got.UnavailableReasonCode != "out_of_area" {
+		t.Fatalf("expected delivery mode out_of_area, got %+v", got)
+	}
+	if got := availabilityFor(result.AvailableModes, ModePickup); !got.Available {
+		t.Fatalf("expected pickup to remain independent of delivery coverage, got %+v", got)
+	}
+
+	result, err = CheckServiceability(ctx, db, storeID, "integration-area", nil, nil)
+	if err != nil {
+		t.Fatalf("missing coordinate check failed: %v", err)
+	}
+	if result.Serviceable || result.Code != "policy_unavailable" {
+		t.Fatalf("expected missing coordinates to remain unknown/fail closed, got %+v", result)
+	}
+	if got := availabilityFor(result.AvailableModes, ModePartnerDelivery); got.Available || got.UnavailableReasonCode != "policy_unavailable" {
+		t.Fatalf("expected delivery mode policy_unavailable without coordinates, got %+v", got)
+	}
+	if got := availabilityFor(result.AvailableModes, ModePickup); !got.Available {
+		t.Fatalf("expected pickup without coordinates, got %+v", got)
+	}
+}

@@ -8,13 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 	"time"
 
 	"dsh-api/internal/checkout"
 	"dsh-api/internal/platformpolicies"
+	"dsh-api/internal/servicearea"
 	"dsh-api/internal/wlt"
 	"github.com/lib/pq"
 )
@@ -488,59 +488,17 @@ func UpdateFulfillmentMode(ctx context.Context, db *sql.DB, cartID string, mode 
 	return nil
 }
 
-func calculateDistanceKM(lat1, lon1, lat2, lon2 float64) float64 {
-	const earthRadius = 6371.0 // Earth radius in kilometers
-
-	radLat1 := lat1 * math.Pi / 180
-	radLon1 := lon1 * math.Pi / 180
-	radLat2 := lat2 * math.Pi / 180
-	radLon2 := lon2 * math.Pi / 180
-
-	diffLat := radLat2 - radLat1
-	diffLon := radLon2 - radLon1
-
-	a := math.Sin(diffLat/2)*math.Sin(diffLat/2) +
-		math.Cos(radLat1)*math.Cos(radLat2)*
-			math.Sin(diffLon/2)*math.Sin(diffLon/2)
-
-	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-
-	return earthRadius * c
-}
-
-// CheckServiceability verifies that the store is active and in the serviceable state,
-func normalizeCityCode(code string) string {
-	code = strings.ToLower(strings.TrimSpace(code))
-	switch code {
-	case "sana", "sanaa", "sana'a", "صنعاء", "haddah", "maeen", "sabeen", "taiz-st", "zubairi", "old-city", "sanaa-haddah":
-		return "sana"
-	case "aden", "عدن":
-		return "aden"
-	case "taiz", "تعز":
-		return "taiz"
-	case "ibb", "إب":
-		return "ibb"
-	case "mukalla", "المكلا":
-		return "mukalla"
-	case "hodeidah", "الحديدة":
-		return "hodeidah"
-	default:
-		return code
-	}
-}
-
-// CheckServiceability determines if a store is active, published, and within physical range of a client,
-// and reports which canonical checkout fulfillment modes are actually usable for this
-// store+location combination. DSH only checks store-level and zone-level availability —
-// delivery fee and zone pricing are WLT concerns.
+// CheckServiceability determines whether a published store can serve a client
+// from the canonical DSH service-area geofence. Cart does not own city aliases,
+// distance thresholds, or coordinate-to-area policy; it only consumes the
+// servicearea resolver and reports the resulting mode capabilities.
 func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string, clientLat, clientLng *float64) (ServiceabilityResult, error) {
-	var storeStatus, serviceabilityStatus, storeServiceArea, storeCity string
-	var distanceKM, storeLat, storeLng *float64
+	var storeStatus, serviceabilityStatus, storeServiceArea string
 	var deliveryModes []string
 	err := db.QueryRowContext(ctx,
-		`SELECT status, serviceability_status, service_area_code, city_code, distance_km, latitude, longitude, delivery_modes FROM dsh_stores WHERE id = $1`,
+		`SELECT status, serviceability_status, service_area_code, delivery_modes FROM dsh_stores WHERE id = $1`,
 		storeID,
-	).Scan(&storeStatus, &serviceabilityStatus, &storeServiceArea, &storeCity, &distanceKM, &storeLat, &storeLng, pq.Array(&deliveryModes))
+	).Scan(&storeStatus, &serviceabilityStatus, &storeServiceArea, pq.Array(&deliveryModes))
 	if errors.Is(err, sql.ErrNoRows) {
 		return ServiceabilityResult{Serviceable: false, Code: "store_unavailable", Reason: "store not found"}, nil
 	}
@@ -560,33 +518,28 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 		}, nil
 	}
 
-	// Calculate physical distance between client and store coordinates if both are provided
-	var calculatedDistance *float64
-	if clientLat != nil && clientLng != nil && storeLat != nil && storeLng != nil {
-		dist := calculateDistanceKM(*clientLat, *clientLng, *storeLat, *storeLng)
-		calculatedDistance = &dist
-	} else {
-		calculatedDistance = distanceKM
+	coverageCode := "policy_unavailable"
+	if clientLat != nil && clientLng != nil {
+		resolution, resolveErr := servicearea.Resolve(ctx, db, *clientLat, *clientLng)
+		if resolveErr != nil {
+			return ServiceabilityResult{}, fmt.Errorf("%w: resolve client service area: %v", platformpolicies.ErrPolicyTruthUnavailable, resolveErr)
+		}
+		if !resolution.Verified {
+			coverageCode = "out_of_area"
+		} else if serviceAreaCode != "" && !strings.EqualFold(strings.TrimSpace(serviceAreaCode), resolution.ServiceAreaCode) {
+			coverageCode = "policy_unavailable"
+		} else if strings.EqualFold(strings.TrimSpace(storeServiceArea), resolution.ServiceAreaCode) {
+			coverageCode = "serviceable"
+		} else {
+			coverageCode = "out_of_area"
+		}
 	}
 
-	// Delivery coverage is at the city level:
-	// A store can deliver across its entire city (e.g. Sana'a city-wide delivery within 35 km).
-	normStoreCity := normalizeCityCode(storeCity)
-	if normStoreCity == "" {
-		normStoreCity = normalizeCityCode(storeServiceArea)
-	}
-	normClientCity := normalizeCityCode(serviceAreaCode)
+	availableModes := computeFulfillmentModeAvailability(deliveryModes, coverageCode)
 
-	isSameCity := normStoreCity != "" && normClientCity != "" && normStoreCity == normClientCity
-	isWithinDistance := calculatedDistance == nil || *calculatedDistance <= 35.0
-	matchesZone := serviceAreaCode != "" && (storeServiceArea == serviceAreaCode || storeCity == serviceAreaCode)
-	inZone := isSameCity || matchesZone || isWithinDistance
-
-	availableModes := computeFulfillmentModeAvailability(deliveryModes, inZone)
-
-	if !inZone {
+	if coverageCode != "serviceable" {
 		return ServiceabilityResult{
-			Serviceable: false, Code: "out_of_area", Reason: "store outside requested service area",
+			Serviceable: false, Code: coverageCode, Reason: "canonical service-area evidence is unavailable or does not cover this store",
 			AvailableModes: availableModes,
 		}, nil
 	}
@@ -594,9 +547,9 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 }
 
 // GetFulfillmentModes is the J051 lightweight mode capability fetcher.
-// It uses the same zone check as CheckServiceability but only returns modes.
+// It uses the same canonical geofence check as CheckServiceability but only returns modes.
 func GetFulfillmentModes(ctx context.Context, db *sql.DB, storeID, serviceAreaCode string, clientLat, clientLng *float64) (FulfillmentModesResponse, error) {
-	// Call CheckServiceability to run the identical store and zone constraints
+	// Call CheckServiceability to run the identical store and geofence constraints
 	res, err := CheckServiceability(ctx, db, storeID, serviceAreaCode, clientLat, clientLng)
 	if err != nil {
 		return FulfillmentModesResponse{}, err
@@ -616,10 +569,10 @@ func GetFulfillmentModes(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 }
 
 // computeFulfillmentModeAvailability derives per-mode availability from the
-// store's enabled delivery modes and whether the client is in the store's
-// serviceable zone. pickup never requires zone coverage — the customer
+// store's enabled delivery modes and the canonical coverage result. pickup
+// never requires geofence coverage — the customer
 // travels to the store; bthwani_delivery/partner_delivery both require it.
-func computeFulfillmentModeAvailability(storeDeliveryModes []string, inZone bool) []FulfillmentModeAvailability {
+func computeFulfillmentModeAvailability(storeDeliveryModes []string, coverageCode string) []FulfillmentModeAvailability {
 	enabled := make(map[FulfillmentMode]bool, len(storeDeliveryModes))
 	for _, raw := range storeDeliveryModes {
 		if mode, ok := storeDeliveryModeToFulfillmentMode[raw]; ok {
@@ -633,8 +586,12 @@ func computeFulfillmentModeAvailability(storeDeliveryModes []string, inZone bool
 			result = append(result, FulfillmentModeAvailability{Mode: mode, Available: false, UnavailableReasonCode: "mode_not_enabled"})
 			continue
 		}
-		if mode != ModePickup && !inZone {
-			result = append(result, FulfillmentModeAvailability{Mode: mode, Available: false, UnavailableReasonCode: "out_of_area"})
+		if mode != ModePickup && coverageCode != "serviceable" {
+			reasonCode := coverageCode
+			if reasonCode == "" {
+				reasonCode = "policy_unavailable"
+			}
+			result = append(result, FulfillmentModeAvailability{Mode: mode, Available: false, UnavailableReasonCode: reasonCode})
 			continue
 		}
 		result = append(result, FulfillmentModeAvailability{Mode: mode, Available: true})

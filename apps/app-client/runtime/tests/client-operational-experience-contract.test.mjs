@@ -430,6 +430,23 @@ test("client profile mutations persist identity and reconcile partial saves", ()
   assert.ok(contract.includes("#/components/responses/Conflict"));
 });
 
+test("client profile consent withdrawal requires explicit confirmation", () => {
+  const screen = assertMarkers(
+    "services/dsh/frontend/app-client/account/MyProfileScreen.tsx",
+    [
+      'import { Alert, StyleSheet, Switch, TouchableOpacity, View } from "react-native";',
+      "Alert.alert(",
+      "تأكيد سحب الموافقة",
+      "سحب الموافقة",
+      'style: "cancel"',
+      'style: "destructive"',
+      "onPress: revoke",
+    ],
+  );
+  assert.match(screen, /onValueChange=\{\(v\) => v \? setConsentEmail\(true\) : confirmWithdrawConsent\("email"\)\}/);
+  assert.doesNotMatch(screen, /immediately toggle|if \(type === "email"\) setConsentEmail\(false\)/);
+});
+
 test("catalog verification wrapper initializes native exit state before a PowerShell child", () => {
   const runtime = assertMarkers(
     "infra/docker/scripts/runtime.ps1",
