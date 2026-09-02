@@ -35,6 +35,11 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Set up canonical Go toolchain for contract materialization
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: core/identity/clients/go/identityauth/go.mod
+          cache: false
 
       - name: Materialize contracts
         id: materialize
