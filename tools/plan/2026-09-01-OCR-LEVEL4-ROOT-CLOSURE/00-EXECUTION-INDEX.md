@@ -1,211 +1,174 @@
-# OCR Level-4 Root-Correct Closure — Execution Index
+# LEVEL-4 ROOT-CLOSURE EXECUTION INDEX — `g` RADICAL CLEANUP / RESTRUCTURE
 
-**Repository:** `bthwani2-boop/bthwani-suite-next`<br>
-**Branch:** `ocr`<br>
-**Audited exact starting HEAD:** `4aa1f00decc9ed2ac5c724b7cc316e0247fe8a0d`<br>
-**Execution-mode reconfiguration parent:** `b889d75fbf502e524b0b04289722a6c798933a72`<br>
-**Orchestrator package revision:** `24`<br>
-**Created:** 2026-09-01<br>
-**Execution mode:** `SINGLE_SESSION_DIRECT_ON_OCR` — exactly one material execution session, directly on `ocr`; no Session A/B/C split, no temporary execution worktrees/branches, and no parallel material mutation lanes.<br>
-**Completion target:** `LEVEL_4` repository/product fixed point on `ocr`; integration into `master` and requalification of the resulting exact `master` SHA is a separate post-qualification boundary.
+## 0. Campaign identity
 
-> This package is an execution snapshot and closure workset, **not a parallel canonical authority**. The single execution session MUST begin from the live `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`, load the live `01–05` and material focus modules, resolve the current remote `ocr` HEAD, and invalidate/re-rank any item here that no longer matches live truth.
+- Repository: `bthwani2-boop/bthwani-suite-next`
+- Execution branch: `g`
+- Branch purpose: **dedicated repository-wide radical cleanup, canonicalization, migration, cutover, deletion, and deep restructuring branch**.
+- Audit pin used to refresh this package: `a86f546d9d4c5fa7fbcd0e27d7c7fbe92b2ff74e`.
+- Live authority: latest `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` plus routed `01–05` and material focus modules.
+- Execution mode: `SINGLE_SESSION_DIRECT_ON_G`.
+- Active material mutation sessions: `1`.
+- The directory name `2026-09-01-OCR-LEVEL4-ROOT-CLOSURE` is a historical locator only. It does **not** make `ocr` an execution authority.
 
-## 1. Why this package exists
+This package is subordinate execution context. If any sentence here conflicts with the live orchestrator on the pinned HEAD, the orchestrator wins and this package must be corrected before mutation continues.
 
-The previous `tools/plan/2026-08-31-LEVEL4-REPOSITORY-DEEP-AUDIT-OCR.md` was useful as an audit snapshot, but the branch moved materially after it. Keeping an obsolete audit alongside a new plan would itself create stale execution truth. Its still-useful principles/findings have therefore been distilled here and the superseded file is removed in the same cleanup commit.
+## 1. What `g` means
 
-This package is designed for the requested end state:
+`g` is not a patch branch and not a temporary integration lane. It is the branch on which the repository may be deeply rebuilt until its live structure is canonical, minimal, coherent, and residue-free.
 
-```text
-ONE PRODUCT/SYSTEM MEANING
-→ ONE CANONICAL OWNER PER MATERIAL TRUTH
-→ ONE CANONICAL WRITER PER MUTABLE TRUTH
-→ DERIVED/READ-ONLY CONSUMERS ONLY
-→ NO SHADOW/MIRROR/PARALLEL AUTHORITY
-→ COMPLETE MIGRATION/BACKFILL/RECONCILIATION
-→ COMPLETE CUTOVER
-→ DELETE SUPERSEDED FILES/PATHS/CONTRACTS/WRITERS/READERS
-→ EXACT-CANDIDATE VERIFICATION
-→ FRESH ADVERSARIAL RE-AUDIT
-→ FIXED POINT
-```
+The cleanup/restructure authority applies at every granularity:
 
-`GREEN != CLOSED`. A working build, a passing scanner, or a successful smoke test cannot override an open product/code root.
+`repository → domain → service/surface → package → directory → file-family → file → component/type → function/symbol → line/statement → writer/reader/consumer → schema/data → contract/generated binding → runtime/config → test/fixture/mock → dependency → product journey`.
 
-## 2. Current live verdict at the audited starting SHA
+Permitted and expected work on `g`, when causally justified, includes:
 
-`ocr@4aa1f00d...` is **not Level-4 closed** and is not yet a safe final baseline for `master`.
+- delete obsolete files, folders, packages, routes, writers, adapters, wrappers, compatibility paths, generated repairs, tests, fixtures, mocks, scripts, configs, dependencies, manifests, and shadow implementations;
+- move/rename/rehome files or complete directory trees to restore canonical ownership;
+- merge duplicate authorities and split mixed-responsibility modules;
+- rewrite defective abstractions instead of accumulating local patches;
+- change schemas/contracts and migrate every producer/consumer;
+- data migration/backfill/reconciliation and clean-install/bootstrap correction;
+- regenerate derived clients/types and delete handwritten repairs;
+- restructure shared packages, runtime bindings, product journeys, infra/topology, and repository layout;
+- remove temporary or historical execution artifacts after their evidence is ingested.
 
-Material reasons proven on the exact candidate include:
+The branch must become **structurally cleaner after every closed root**. A root is not closed if a new implementation coexists indefinitely with the old authority.
 
-- the newly introduced Cart atomic-idempotency design exists, but exact-candidate backend verification exposes an incomplete receipt data/nullability migration;
-- Cart still owns serviceability geography policy and treats missing distance evidence as eligible;
-- `dsh.client.checkout` and `dsh.policies` remain `runtimeBound:false` / `FIX_REQUIRED`;
-- Support and Dispatch capabilities remain `FIX_REQUIRED`; Notifications still declares experience work required;
-- all five DSH surfaces remain `fix-required`;
-- WLT itself declares `FIX_REQUIRED`, database readiness false, and production mutations not ready;
-- Dispatch frontend still repairs generated wire/domain types manually;
-- Client Profile still fabricates a profile on 404, carries `SAR` local defaults, and skips required marketing-consent withdrawal confirmation;
-- shared UI still contains file-wide `any` suppression, `@ts-ignore`, hard-coded English copy, and a dead public callback contract;
-- Providers and Platform-Control explicitly require current runtime/release evidence;
-- exact-candidate DSH seed and clean-install proof are red and must be root-diagnosed without weakening constraints.
+## 2. Supreme campaign rule
 
-At the same time, several former roots have been materially treated and must **not** be reopened from stale reports without evidence. See `01-LIVE-ROOT-GRAPH-AND-CLOSURE-UNITS.md`.
+Do not run:
 
-## 3. Repository topology law
+`FIND ERROR → PATCH ERROR → NEXT ERROR`.
 
-The current high-level topology is intentional and should not be flattened for aesthetics:
+Run:
 
-```text
-core/
-  identity/
-  workforce/
-  providers/
-  platform-control/
+`LIVE TRUTH → PROVE HIGHEST ROOT → DETERMINE LOCAL VS STRUCTURAL → CANONICAL TARGET → RESTRUCTURE/REWRITE IF REQUIRED → MIGRATE COMPLETE AFFECTED CONE → CUT OVER → DELETE LOSING AUTHORITY → DELETE MATERIAL RESIDUE → VERIFY → FALSIFY → COMMIT → PUSH g → VERIFY REMOTE SHA → RE-PIN → RE-DIAGNOSE/RE-RANK`.
 
-services/
-  dsh/
-  wlt/
+If the structure itself causes repeated defects:
 
-shared/
-  data-runtime/
-  ui-kit/
-  control-panel/
+`STOP PATCHING DESCENDANTS → RECONSTRUCT THE ROOT`.
 
-apps/
-  app-client/
-  app-partner/
-  app-captain/
-  app-field/
-  control-panel/
+No preservation bias exists for current folder layout, internal APIs, wrappers, adapters, mappings, or compatibility layers. Preserve only proven required behavior/data/contracts, not defective structure.
 
-infra/
-  docker/
-  data-plane/
-  local/
-```
+## 3. P0 closure invariants
 
-Required ownership direction:
+For this campaign:
 
-- `core/identity`: identity/session/authentication authority and generated client boundary.
-- `core/workforce`: workforce profiles/activation/employment authority; **not** geography owner.
-- `core/providers`: provider configuration/credentials/health authority; not financial truth.
-- `core/platform-control`: platform runtime/change/rollout/control authority.
-- `services/dsh`: delivery/shopping product truth and operational orchestration, but no financial writer authority.
-- `services/wlt`: only financial mutable truth owner.
-- `shared/data-runtime`: runtime/query/connectivity/storage/mutation-identity adapters only; no copied domain policy.
-- `shared/ui-kit`: reusable visual primitives/tokens/components, not control-panel business semantics.
-- `shared/control-panel`: reusable control-panel presentation/composition only; no duplicate generic UI design system and no domain writer.
-- `apps/*/runtime`: deployment/runtime/composition shells only; no canonical business policy.
-- `infra/`: executable infrastructure/runtime configuration only; no stale roadmap authority.
+`GREEN != CLOSED`
 
-Any file violating those responsibilities is a move/merge/delete candidate.
+and:
 
-## 4. Files in this execution package
+`ROOT CORRECTNESS + CANONICAL UNIQUENESS + COMPLETE MIGRATION + OLD-AUTHORITY REMOVAL + ZERO MATERIAL RESIDUE = ONE CLOSURE UNIT`.
 
-1. **`00-EXECUTION-INDEX.md`** — authority, current verdict, topology law, campaign rules.
-2. **`01-LIVE-ROOT-GRAPH-AND-CLOSURE-UNITS.md`** — ranked current Root Graph, actual Source-of-Fix, affected cones, deletion conditions, and previously treated roots.
-3. **`02-FILESYSTEM-MIGRATION-CLEANUP-DELETION-MATRIX.md`** — strict file/folder/naming/compatibility cleanup system for `core/shared/infra/services/apps/tools`.
-4. **`03-SINGLE-SESSION-DIRECT-OCR-EXECUTION.md`** — one-session direct-on-`ocr` execution contract, exact-HEAD lock, serial root protocol, and per-root closure checkpoint.
-5. **`04-VERIFICATION-MERGE-FIXED-POINT.md`** — closure proof, negative-space audit, exact-SHA evidence, merge-to-master qualification.
-6. **`05-ORCHESTRATOR-GOVERNANCE-HARDENING.md`** — proposed orchestrator/governance additions that prevent recurrence of parallel truth and stale residue; multi-agent mutation rules are explicitly non-active for this single-session campaign.
+A material root is `CLOSED` only when:
 
-## 5. Non-negotiable execution laws
+1. actual source of defect is proven;
+2. actual source of fix is canonical;
+3. canonical owner and writer are unique;
+4. all affected writers/readers/consumers/data/contracts/generated/runtime/journeys are migrated;
+5. old writes are disabled;
+6. old reads/imports/routes/config/runtime references are absent;
+7. superseded files/folders/packages are deleted;
+8. no unbounded compatibility or third authority remains;
+9. targeted verification passes;
+10. independent negative-space falsification finds no material residue;
+11. exact remote `g` SHA is verified/re-pinned;
+12. evidence is ingested and root graph is re-diagnosed/re-ranked.
 
-For every material root:
+A temporary compatibility bridge is allowed only when atomic migration is impossible, with explicit owner, consumers, removal trigger, bounded lifetime, and proof that the bridge cannot redefine canonical truth.
 
-```text
-Prove actual defect
-→ prove highest executable causal root
-→ prove canonical owner/writer
-→ inventory ALL writers/readers/consumers/contracts/data/config/runtime paths
-→ treat source-of-fix
-→ migrate/backfill/reconcile
-→ regenerate bindings where applicable
-→ cut over all consumers
-→ prove zero old consumers
-→ delete superseded authority/residue
-→ targeted verification
-→ negative-space re-audit
-→ commit/push
-→ verify remote HEAD
-→ re-pin exact SHA
-→ ingest new evidence
-→ re-rank
-```
+## 4. Live evidence snapshot at audit pin
 
-Forbidden final states:
+The current `g` history above the earlier single-session baseline includes:
 
-- dual write;
-- old and new state machines both reachable;
-- manual frontend repair of generated wire contracts;
-- error/missing/unknown converted to plausible success/empty/default truth;
-- `legacy`, `history`, `old`, `tmp`, `backup`, `v2/v3` runtime residue with no bounded migration purpose;
-- stale config kept “just in case”;
-- file-wide lint/type suppression used as closure;
-- tests weakened to match incorrect behavior;
-- database constraints weakened for green checks;
-- readiness/status flags manually promoted without exact-candidate evidence;
-- cleanup deferred after cutover.
+- `d2f6ac31075c7638bbe93ff72c7f920d570ed7e8` — `fix(dsh): serialize direct support conversations`;
+- `2db4bc2cf746c1232cd8fc65355df9a0c38abc9d` — plan metadata whitespace cleanup;
+- `a86f546d9d4c5fa7fbcd0e27d7c7fbe92b2ff74e` — `fix(dsh): close cart mutation receipt invariant`.
 
-## 6. SHIP or REMOVE
+Planning consequences:
 
-For every active capability or surface feature, choose exactly one:
+- the old cart receipt invariant is `FIXED_REVALIDATION_REQUIRED`, not a proven-open root;
+- direct support conversation serialization is `FIXED_REVALIDATION_REQUIRED`, not a proven-open implementation gap;
+- neither commit automatically closes broader affected cones;
+- exact-candidate CI proof for `a86f546…` is currently `UNKNOWN_REQUIRES_PROOF` through the available commit-run query;
+- known PR/merge-context run `33574719348` is non-candidate evidence only: runtime smoke and WLT database safety passed, while DSH DB integration/clean-install, multiple backend jobs, and evidence aggregation were red. Each red must be root-diagnosed; no CI job name is itself a root cause.
+
+## 5. Package files
+
+1. `00-EXECUTION-INDEX.md` — campaign identity, invariants, evidence state, order of operations.
+2. `01-LIVE-ROOT-GRAPH-AND-CLOSURE-UNITS.md` — live root graph and closure-unit protocol.
+3. `02-FILESYSTEM-MIGRATION-CLEANUP-DELETION-MATRIX.md` — exhaustive artifact cleanup/restructure/deletion law.
+4. `03-SINGLE-SESSION-DIRECT-G-EXECUTION.md` — direct execution and exact-HEAD protocol on `g`.
+5. `04-VERIFICATION-MERGE-FIXED-POINT.md` — evidence ladder, exact-candidate qualification, fixed point, and master boundary.
+6. `05-ORCHESTRATOR-AUTHORITY-DISPOSITION.md` — prevents this package from becoming parallel governance.
+
+Superseded internal filenames containing `DIRECT-OCR` or speculative governance hardening must not remain after this refresh.
+
+## 6. Root selection law
+
+The root graph is dynamic. Rank roots by:
+
+`severity × causal depth × fanout × structural leverage × executable proof × evidence invalidation risk`.
+
+Structural leverage is highest when a root explains:
+
+`parallel/shadow truth`, `duplicate mutable writers`, `multiple authorities for one meaning`, `repeated local repairs`, `manual mirrors/mappings`, `unbounded compatibility`, `reachable superseded runtime`, `dead/stale/obsolete residue`, or `ambiguous filesystem ownership`.
+
+Do not select work merely because it is easy, local, or already has a failing test. Select the **highest proven executable root** and complete its causally connected affected cone before moving to an unrelated root.
+
+## 7. Mandatory root pipeline
+
+For every root:
+
+`LIVE TRUTH → ROOT DIAGNOSIS → CANONICAL TARGET → OWNER/WRITER INVENTORY → COMPLETE AFFECTED CONE → ROOT-CORRECT IMPLEMENTATION/RESTRUCTURE → DATA MIGRATION/BACKFILL → CONTRACT/GENERATED MIGRATION → ALL CONSUMERS → RUNTIME/JOURNEY CUTOVER → DISABLE OLD AUTHORITY → DELETE SUPERSEDED STRUCTURE → ZERO-RESIDUE FINISHING → TARGETED PROOF → NEGATIVE-SPACE FALSIFICATION → COMMIT → PUSH g → VERIFY REMOTE SHA → RE-PIN → EVIDENCE INGESTION → RE-RANK`.
+
+A root crossing backend, DB, contracts, generated clients, shared packages, mobile apps, control panel, core, or infra remains **one closure unit** when causally connected.
+
+## 8. Exact-HEAD mutation lock
+
+Before each material commit/push:
 
 ```text
-SHIP = complete owner + contract + runtime + data + journey + failure/recovery + UX + evidence
+EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA
 ```
 
-or
+If false:
+
+1. fetch live `g`;
+2. inspect intervening delta;
+3. identify overlap with active root;
+4. invalidate affected diagnosis/evidence;
+5. re-pin;
+6. re-diagnose and safely reapply/rebase only if root remains valid;
+7. rerun invalidated proof.
+
+Never force-push `g` as part of this campaign.
+
+## 9. Fixed-point target on `g`
+
+Emit `G_LEVEL4_CANDIDATE_READY` only when:
 
 ```text
-REMOVE = remove from active product/capability/navigation/contract/runtime truth,
-         delete reachable implementation/config/tests/docs,
-         prove zero consumers.
+EXACT_G_SHA=<immutable sha>
+KNOWN_MATERIAL_ROOTS=0
+KNOWN_MATERIAL_GAPS=0
+KNOWN_MATERIAL_UNKNOWNS=0
+UNMIGRATED_CONSUMERS=0
+REACHABLE_OLD_AUTHORITIES=0
+PARALLEL_OR_SHADOW_TRUTHS=0
+DUPLICATE_MUTABLE_WRITERS=0
+UNBOUNDED_COMPATIBILITY=0
+UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
+CLEANUP_RESIDUE=0
+MATERIAL_FILESYSTEM_NOISE=0
+REQUIRED_EVIDENCE=PASS_OR_JUSTIFIED_NA
+FRESH_ADVERSARIAL_REAUDIT=PASS
+NEGATIVE_SPACE=PASS
 ```
 
-There is no final state `ACTIVE_BUT_INCOMPLETE`.
+This qualifies `g`; it does not automatically integrate it into `master`.
 
-## 7. Current highest execution order
+## 10. Master boundary
 
-Initial order only; re-rank whenever new evidence changes causality:
-
-```text
-R0  Cart receipt/data atomicity closure + DB seed/clean-install truth
-R1  Canonical Serviceability/Geo authority
-R2  WLT financial production truth
-R3  Dispatch canonical contract collapse
-R4  Checkout/address/maps runtime binding
-R5  Client Profile/locale/currency/consent truth
-R6  Support/Notifications/Dispatch journey completion
-R7  Five-surface exact journey/UX closure
-R8  Shared UI ownership/type/i18n cleanup
-R9  Core service runtime/ownership closure
-R10 Infra/topology/filesystem cleanup
-R11 Repository-wide stale/legacy/history/compatibility residue elimination
-R12 Fresh broad adversarial re-audit
-R13 Exact final candidate qualification
-R14 Integrate into master and requalify resulting exact master SHA
-```
-
-The single execution session processes this queue **serially by proven causal priority**, not by preassigned subsystem lanes. A root may cross backend, database, contracts, generated clients, shared packages, apps, core and infra in one causally complete Closure Unit.
-
-## 8. What “100%” means here
-
-This campaign must not claim a mathematical promise that no undiscovered bug can ever exist. The defensible closure target is stronger and auditable:
-
-```text
-ZERO KNOWN MATERIAL OPEN ROOTS
-ZERO UNKNOWN REQUIRED MATERIAL CELLS
-ZERO PARALLEL/SHADOW AUTHORITIES
-ZERO DUPLICATE MUTABLE WRITERS
-ZERO UNMIGRATED MATERIAL CONSUMERS
-ZERO REACHABLE SUPERSEDED PATHS
-ZERO UNBOUNDED COMPATIBILITY RESIDUE
-ZERO KNOWN MATERIAL UX/RTL/A11Y JOURNEY GAPS
-ZERO REQUIRED STALE EVIDENCE
-ALL REQUIRED PROOF BOUND TO ONE EXACT FINAL SHA
-```
-
-Only after the fresh hostile re-audit fails to discover another material root can the candidate be called evidence-bounded Level-4 closed.
+`g → master` is a separate post-qualification boundary. Any resulting master SHA must be separately pinned and requalified. Pre-merge evidence from `g` is not automatically evidence for a distinct merge commit.
