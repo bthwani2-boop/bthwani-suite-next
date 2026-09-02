@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Build the complete evidence-backed inventory of branch `g` before any material root selection or mutation. The census must classify ownership, semantic authority, boundary responsibility, reachability, and survival disposition across the actual tracked tree.
+Build the complete evidence-backed inventory of branch `g` before any structural root selection or semantic mutation. The census classifies ownership, semantic authority, boundary responsibility, reachability, and survival disposition across the actual tracked tree.
 
 ## Exact live pin
 
@@ -16,7 +16,39 @@ Cover all material source/runtime code, apps/surfaces, domains/services, `core/*
 
 Any uncensused tracked area blocks the baseline unless explicitly proven non-material and recorded as such.
 
-## 2. Artifact Disposition Ledger — mandatory
+## 2. Fast garbage elimination during census — explicit exception
+
+The census is read-only for structural/semantic work, but it may delete proven low-risk garbage immediately.
+
+An artifact is eligible for `DELETE_NOW` when all are proven:
+
+```text
+NOT_REQUIRED_BY_CURRENT_PRODUCT_SYSTEM
+NO_CANONICAL_AUTHORITY
+NO_MUTABLE_STATE
+NO_REQUIRED_RUNTIME_ROUTE
+NO_REQUIRED_EXTERNAL_CONTRACT
+NO_REQUIRED_IMPORT_CALLER_READER_CONSUMER
+NO_REQUIRED_MIGRATION_OR_UPGRADE_ROLE
+NO_SECURITY_OR_COMPLIANCE_ROLE
+NO_GENERATED_LINEAGE_REQUIREMENT
+```
+
+This applies to a line/symbol/file/directory/package/script/workflow/dependency/test/fixture/mock/snapshot/wrapper.
+
+Execute:
+
+`QUICK REFERENCE/REACHABILITY CHECK → DELETE_NOW → SEARCH AGAIN → AFFECTED VERIFY`.
+
+Do not wait for Root Graph synthesis and do not create a separate cleanup root for proven low-risk garbage.
+
+When several nearby garbage artifacts are proven together, batch them into one coherent fast-cleanup checkpoint. After that batch:
+
+`COMMIT/PUSH g → VERIFY REMOTE SHA → RE-PIN → REFRESH AFFECTED CENSUS`.
+
+If the candidate deletion exposes or changes semantic authority, ownership, contract, data, runtime, or required consumer behavior, it is **not** low-risk garbage; stop and defer it to canonical root execution.
+
+## 3. Artifact Disposition Ledger — mandatory
 
 Every in-scope material artifact receives exactly one current disposition:
 
@@ -49,7 +81,7 @@ DELETION_RISK_CLASS=LOW|STATEFUL|CONTRACTUAL|RUNTIME|SECURITY|MIGRATION
 DELETION_SAFETY_REQUIREMENTS=
 ```
 
-Before first mutation:
+Before structural root mutation:
 
 ```text
 UNREVIEWED_TRACKED_ARTIFACTS=0
@@ -57,7 +89,7 @@ UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
 UNKNOWN_KEEP=0
 ```
 
-## 3. Semantic Authority Registry — mandatory
+## 4. Semantic Authority Registry — mandatory
 
 Inventory material meanings independently of filenames and implementations:
 
@@ -79,7 +111,7 @@ LOSING_AUTHORITIES=
 
 Any meaning with multiple mutable writers or authorities remains unresolved until winner/loser treatment is defined.
 
-## 4. Directory / Package Responsibility Census — mandatory
+## 5. Directory / Package Responsibility Census — mandatory
 
 Every material directory/package boundary must answer:
 
@@ -97,55 +129,24 @@ Verdicts:
 
 ```text
 UNIQUE_CORRECT_RESPONSIBILITY → KEEP/HARDEN
-NO_UNIQUE_RESPONSIBILITY → DELETE_AFTER_MIGRATION OR DELETE_NOW IF EMPTY/DEAD
+NO_UNIQUE_RESPONSIBILITY → DELETE_AFTER_MIGRATION OR DELETE_NOW IF UNUSED/DEAD
 DUPLICATE_RESPONSIBILITY → SELECT_WINNER → MIGRATE → DELETE_LOSER
 MIXED_RESPONSIBILITIES → SPLIT_BY_TRUE_OWNER
 WRONG_OWNER → REHOME
-PASS_THROUGH_ONLY → REMOVE
+PASS_THROUGH_ONLY → DELETE_NOW IF UNCONSUMED; OTHERWISE REMOVE AFTER MIGRATION
 HISTORICAL_COMPAT_ONLY → REMOVE AFTER BOUNDED CUTOVER
 MISLEADING_NAME_PATH → RENAME/REHOME
 ```
 
-Before first mutation:
+Before structural root mutation:
 
 `UNRESOLVED_DIRECTORY_PACKAGE_VERDICTS=0`.
 
-## 5. Fast garbage classification
-
-Do not burden obvious low-risk garbage with stateful migration ceremony.
-
-An artifact qualifies `DELETE_NOW` when all are proven:
-
-```text
-NO_CANONICAL_AUTHORITY
-NO_MUTABLE_STATE
-NO_REQUIRED_RUNTIME_ROUTE
-NO_REQUIRED_EXTERNAL_CONTRACT
-NO_REQUIRED_IMPORT/CALLER/CONSUMER
-NO_REQUIRED_MIGRATION_OR_UPGRADE_ROLE
-NO_SECURITY_OR_COMPLIANCE_ROLE
-```
-
-Then:
-
-`QUICK REFERENCE/REACHABILITY CHECK → DELETE_NOW → SEARCH AGAIN → AFFECTED VERIFY`.
-
-Examples: dead line/symbol, unused helper/export, obsolete file, empty/useless folder, stale script, unused workflow, unused dependency, redundant fixture/mock/snapshot, dead pass-through wrapper.
-
 ## 6. Heightened `core/**` and `shared/**` review
 
-Every material artifact under `core/**` or `shared/**` must additionally prove:
+Every material artifact under `core/**` or `shared/**` must prove why it is genuinely cross-cutting and why a precise domain cannot own it. If not: `REHOME | SPLIT | MERGE | DELETE`.
 
-```text
-WHY_IS_THIS_CROSS_CUTTING?
-WHY_CANNOT_A_PRECISE_DOMAIN_OWN_IT?
-WHO_ARE_ALL_CURRENT_CONSUMERS?
-DOES_IT_CONTAIN_BUSINESS_OR_DOMAIN_POLICY?
-DOES_IT_DUPLICATE_SERVICE_LOGIC_OR_CONTRACTS?
-DOES_IT_HIDE_A_MORE_PRECISE_OWNER?
-```
-
-If not genuinely cross-cutting: `REHOME | SPLIT | MERGE | DELETE`.
+Unused/unconsumed artifacts in these trees are not protected by the folder name; if low-risk, `DELETE_NOW`.
 
 ## 7. First-class support surfaces
 
@@ -153,11 +154,15 @@ If not genuinely cross-cutting: `REHOME | SPLIT | MERGE | DELETE`.
 
 `CURRENT PURPOSE | CANONICAL OWNER | WRITER/DERIVED STATUS | INVOCATIONS/CONSUMERS | REACHABILITY | DUPLICATION | TARGET DISPOSITION`.
 
+Unused/unconsumed support artifacts with no required role are `DELETE_NOW` candidates.
+
 ## 8. Symbol/line-level discovery
 
 Within files that own or duplicate material semantics, descend to symbols/branches/lines sufficiently to expose:
 
 `dead symbol | unused export | duplicate validation/default/mapping | shadow local policy | obsolete branch | stale flag | unnecessary wrapper | misleading symbol | unjustified suppression | stale TODO/FIXME/HACK`.
+
+Any dead/unconsumed symbol with no required semantic role is deleted immediately through the fast lane.
 
 ## Baseline output
 

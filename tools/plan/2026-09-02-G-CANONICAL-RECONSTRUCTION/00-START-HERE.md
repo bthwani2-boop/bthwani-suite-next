@@ -38,11 +38,7 @@ ELIMINATE EVERYTHING ELSE.
 
 `CURRENT EXISTENCE DOES NOT CREATE A PRESUMPTION TO KEEP.`
 
-Every tracked artifact starts as:
-
-`DEFAULT_DISPOSITION=UNJUSTIFIED_UNTIL_PROVEN`.
-
-The current file/path/package/API/directory/wrapper/script/workflow/test/config/schema/generated repair/dependency/abstraction has no survival right merely because it exists or currently works.
+Every tracked artifact starts as `DEFAULT_DISPOSITION=UNJUSTIFIED_UNTIL_PROVEN`.
 
 Allowed final dispositions:
 
@@ -51,8 +47,6 @@ Allowed final dispositions:
 There is no final `UNKNOWN`, `NOT_REVIEWED`, `MAYBE`, `LATER`, `KEEP_JUST_IN_CASE`, `HISTORICAL_KEEP`, or permanent temporary state.
 
 ## P0 — destructive canonicalization / elimination mandate
-
-This is a burden-of-proof rule against preservation bias, not permission for unsafe deletion.
 
 ```text
 ONE MATERIAL MEANING
@@ -64,39 +58,55 @@ ONE MATERIAL MEANING
 → ZERO MATERIAL RESIDUE
 ```
 
-Any proven duplicate/parallel/shadow authority requires a winner and loser. The loser must be migrated away, cut over, and deleted unless a bounded external compatibility requirement is proven.
-
-`LOSING_AUTHORITY_SURVIVES_AFTER_CUTOVER=ROOT_OPEN`.
+Any proven duplicate/parallel/shadow authority requires winner/loser treatment. `LOSING_AUTHORITY_SURVIVES_AFTER_CUTOVER=ROOT_OPEN`.
 
 ## Fast garbage deletion law
 
 Deletion ceremony is proportional to risk.
 
-If an artifact is proven to be only noise/dead/unreferenced/obsolete/superseded/non-authoritative and has no persisted-data, external-contract, live-runtime, supported-migration, or required consumer dependency, do not create a large migration project for it.
-
-Use:
+If a line/symbol/file/directory/package/script/workflow/dependency/test artifact is proven unused, unconsumed, unreachable, non-authoritative, not required by the current product/system, and has no state/contract/runtime/security/migration responsibility, delete it immediately.
 
 ```text
-CLASSIFY PROVEN_NOISE
-→ QUICK REFERENCE/REACHABILITY CHECK
+PROVEN_UNUSED_AND_NOT_REQUIRED=DELETE_NOW
+PROVEN_LOW_RISK_GARBAGE=DELETE_NOW
+NO_KEEP_JUST_IN_CASE
+NO_DEFERRED_GARBAGE_BACKLOG
+```
+
+Fast path:
+
+```text
+PROVE NO REQUIRED PURPOSE
+→ QUICK IMPORT/CALLER/CONSUMER/REACHABILITY CHECK
 → DELETE_NOW
-→ SEARCH AGAIN
+→ SEARCH REFERENCES AGAIN
 → RUN AFFECTED VERIFICATION
 ```
 
-This applies equally to a dead line/symbol, obsolete file, useless directory, stale script, unused workflow, unused dependency, redundant test fixture, temporary artifact, or empty/pass-through wrapper.
+No migration plan, compatibility layer, archive folder, or separate structural Root is required for proven low-risk garbage.
+
+Escalate only when the artifact can carry persisted data, mutable authority, external contract, runtime routing, security semantics, generated lineage, supported migration/upgrade behavior, or a required consumer.
+
+## Pre-mutation baseline and the single exception
+
+Structural, semantic, ownership, schema, contract, runtime, migration, rename/rehome, and root-correct mutations remain forbidden until the complete baseline passes.
+
+The **only** pre-baseline mutation exception is `FAST_GARBAGE_ELIMINATION` for artifacts that meet the low-risk `DELETE_NOW` proof above.
 
 ```text
-PROVEN_LOW_RISK_GARBAGE=DELETE_NOW
-NO_MIGRATION_CEREMONY_REQUIRED
-NO_KEEP_JUST_IN_CASE
+PRE_BASELINE_STRUCTURAL_MUTATION=FORBIDDEN
+PRE_BASELINE_FAST_GARBAGE_DELETE_NOW=ALLOWED
 ```
 
-Escalate deletion proof only when the artifact can carry state, external compatibility, runtime routing, mutable authority, migration history, generated lineage, security semantics, or required consumers.
+When multiple nearby garbage findings are proven together, remove them in one coherent fast-cleanup checkpoint rather than one commit per line. After the batch:
 
-## Mandatory pre-mutation baseline
+`SEARCH AGAIN → AFFECTED VERIFY → COMMIT/PUSH g → VERIFY REMOTE SHA → RE-PIN → REFRESH AFFECTED CENSUS`.
 
-No product/code/architecture mutation before all stages pass on one exact pinned `g` SHA:
+Because this lane deletes only proven non-authoritative/non-required artifacts, it does not require Root Graph selection. If deletion reveals semantic or structural change, immediately stop the fast lane and return to the complete baseline.
+
+## Mandatory branch-wide reconstruction baseline
+
+Before the first non-garbage structural mutation, all stages must pass on one exact pinned `g` SHA:
 
 ```text
 STEP 0  PIN EXACT LIVE g
@@ -110,7 +120,7 @@ STEP 7  IDENTIFY WINNING/LOSING AUTHORITIES
 STEP 8  COMPUTE COMPLETE CURRENT→CANONICAL STRUCTURAL DELTA
 STEP 9  SYNTHESIZE/RANK TRUE CAUSAL ROOTS
 STEP 10 SELECT HIGHEST PROVEN EXECUTABLE STRUCTURAL ROOT
-ONLY THEN FIRST MATERIAL MUTATION
+ONLY THEN FIRST STRUCTURAL/SEMANTIC ROOT MUTATION
 ```
 
 The baseline fails if any in-scope material artifact or boundary remains `UNREVIEWED`, `UNDISPOSITIONED`, or unknown in a way that can change owner, writer, target topology, migration direction, deletion safety, or root ranking.
@@ -119,15 +129,11 @@ The baseline fails if any in-scope material artifact or boundary remains `UNREVI
 
 Never retain wrong structure because of smaller diff, familiar path, existing internal API, compatibility just-in-case, possible future use, cost of renaming imports, or fear of deleting many files.
 
-Measure treatments by causal correctness, canonical ownership, structural simplicity, migration completeness, deletion completeness, verification strength, and long-term reduction of failure surfaces.
-
 ## Structural rewrite escalation
 
-If three or more signals cluster around one responsibility—duplicate owners/writers/mappings, multiple wrappers, parallel directories, conflicting defaults, multiple config sources, duplicated state logic, manual generated repairs, repeated patches, unbounded compatibility—escalate from local repair to structural-root investigation.
+If three or more signals cluster around one responsibility—duplicate owners/writers/mappings, wrappers, parallel directories, conflicting defaults, multiple config sources, duplicated state logic, generated/manual repairs, repeated patches, unbounded compatibility—escalate from local repair to structural-root investigation.
 
-If a common root is proven:
-
-`STOP PATCHING DESCENDANTS → RECONSTRUCT ROOT`.
+`STOP PATCHING DESCENDANTS → RECONSTRUCT ROOT` when a common structural root is proven.
 
 ## High-risk topology zones
 
@@ -137,17 +143,9 @@ If a common root is proven:
 
 ## Exact-HEAD and CI law
 
-Before every material push:
+Before every material push require `EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA`. Never force-push unseen work.
 
-`EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA`.
-
-If false:
-
-`FETCH → COMPARE → INVALIDATE AFFECTED EVIDENCE → RE-PIN → RE-DIAGNOSE → REAPPLY ONLY IF STILL VALID`.
-
-Never force-push unseen work.
-
-After each material push, obtain trusted Exact-HEAD CI evidence. CI is evidence only.
+After each material push obtain trusted Exact-HEAD CI evidence. CI is evidence only.
 
 `CI_FAILURE != EXECUTION_ROOT` and `GREEN_CI != CLOSED`.
 
@@ -166,6 +164,7 @@ LOSING_AUTHORITIES_REMAINING=0
 PARALLEL_TRUTHS=0
 SHADOW_AUTHORITIES=0
 DUPLICATE_MUTABLE_WRITERS=0
+PROVEN_LOW_RISK_GARBAGE_REMAINING=0
 REACHABLE_SUPERSEDED_STRUCTURE=0
 MISLEADING_NAMES_PATHS=0
 KNOWN_NONCANONICAL_TOPOLOGY=0
