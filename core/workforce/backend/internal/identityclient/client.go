@@ -288,7 +288,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 	if err != nil {
 		return ErrUnavailable
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		if target == nil {
 			return nil
