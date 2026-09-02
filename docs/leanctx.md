@@ -4,7 +4,7 @@ LeanCTX is an optional context-reduction and code-navigation tool. It is not a g
 
 Canonical tool policy: `.agents/tools/leanctx.md`.
 Agent adapter: `LEAN-CTX.md`.
-Tool registry: `governance/tools/agent-tool-registry.json`.
+Agent routing index: `.agents/INDEX.md`.
 
 ## Use when
 

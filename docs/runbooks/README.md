@@ -8,7 +8,7 @@ This directory contains operational and recovery procedures. Runbooks are not go
 
 Before acting on a runbook, resolve the current repository commit and verify the relevant canonical sources:
 
-1. `governance/authority/authority-precedence.json`;
+1. `governance/GOVERNANCE.md`;
 2. `AGENTS.md` and applicable canonical governance;
 3. current service contracts, migrations, source and runtime configuration;
 4. current registered guard/CI commands.

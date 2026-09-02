@@ -1,6 +1,6 @@
 # Claude Code Adapter
 
-Use `governance/GOVERNANCE.md` as the unified repository governance entry point. `AGENTS.md` is the thin coding-agent adapter and `governance/authority/authority-precedence.json` resolves authority conflicts.
+Use `governance/GOVERNANCE.md` as the unified repository governance entry point and authority-resolution table. `AGENTS.md` is the thin coding-agent adapter.
 
 Read only the applicable Product Truth/policy and smallest sufficient skill/tool context.
 

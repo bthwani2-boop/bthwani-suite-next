@@ -73,7 +73,7 @@ Approval/review evidence: <!-- exact candidate-bound references -->
 
 ## Decision
 
-Use only `governance/contracts/decision-vocabulary.json`:
+Use only the delivery-policy decision vocabulary (`governance/policies/delivery.md` §18):
 
 - [ ] `READY_FOR_REVIEW`
 - [ ] `PASS` (scoped claim only)

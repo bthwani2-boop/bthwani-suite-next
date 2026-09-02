@@ -6,13 +6,11 @@
 - `components/schemas/*.schemas.yaml`: schemas grouped by domain.
 - `components/*.yaml`: shared parameters, responses, security schemes, and other component maps.
 - `generated/dsh.bundle.openapi.yaml`: deterministic monolithic bundle used for client generation and Swagger. Never edit it directly.
-- `dsh.modular.manifest.json`: expected path, operation, component, and domain counts.
-- `dsh.contract-ownership.json`: ignored diagnostic derived from the sovereign entry and projection contracts; compose regenerates it and it must never be committed or edited.
 - `contract.manifest.yaml`: bounded-context manifest. Its `modules` list must match the entry's `x-bthwani-contracts` exactly.
 
 ## Commands
 
-`pnpm --dir services/dsh openapi:compose` regenerates the bundle and current ownership diagnostic.
+`pnpm --dir services/dsh openapi:compose` regenerates the bundle.
 
 `pnpm --dir services/dsh openapi:generate` regenerates the bundle and TypeScript client.
 

@@ -57,4 +57,4 @@ Idempotency/temporary operational rows are cleaned only under current retention 
 
 ## Decision boundary
 
-This runbook cannot issue a custom closure label. Use only `governance/contracts/decision-vocabulary.json`. A runbook or support procedure alone cannot produce `CLOSED_WITH_EVIDENCE`.
+This runbook cannot issue a custom closure label. Use only the delivery-policy decision vocabulary (`governance/policies/delivery.md` §18). A runbook or support procedure alone cannot produce `CLOSED_WITH_EVIDENCE`.
