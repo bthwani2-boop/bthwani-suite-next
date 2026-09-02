@@ -45,7 +45,37 @@ All material commits/pushes go directly to `g` only.
 
 A proven external change may be deliberately imported only when an active `g` root cannot be closed without it. Such intake must be narrow, exact-SHA-aware, and followed by re-diagnosis.
 
-## 3. Supreme execution law
+## 3. CANONICAL NAMING / PATH / TOPOLOGY LAW
+
+Radical restructuring is incomplete if behavior is correct while names, paths, or directory/package topology remain misleading, transitional, arbitrary, patch-shaped, or inconsistent.
+
+Every material artifact on `g` must end in a name and location that truthfully communicates its current canonical responsibility.
+
+The final structure must satisfy, where applicable:
+
+```text
+TRUTHFUL FILE NAMES
+TRUTHFUL DIRECTORY NAMES
+TRUTHFUL PACKAGE/MODULE NAMES
+CANONICAL OWNER-ALIGNED PATHS
+CONSISTENT NAMING CONVENTIONS PER LANGUAGE/FRAMEWORK
+NO OLD/NEW/V2/V3/TEMP/LEGACY/COPY/BACKUP NAMING USED AS PERMANENT ARCHITECTURE
+NO MISLEADING GENERIC BUCKETS WHEN A REAL DOMAIN/OWNER EXISTS
+NO PATH THAT IMPLIES A FALSE OWNER OR RESPONSIBILITY
+NO DUPLICATE DIRECTORY TREES FOR THE SAME RESPONSIBILITY
+NO TRANSITIONAL FORWARDING PATH LEFT WITHOUT A BOUNDED REMOVAL NEED
+NO FILE/FOLDER NAME PRESERVED ONLY TO MINIMIZE DIFF OR AVOID IMPORT MIGRATION
+```
+
+Use established ecosystem/framework conventions and repository-wide consistency where they improve correctness, discoverability, ownership clarity, portability, tooling compatibility, and maintainability. Do not force cosmetic convention changes that provide no material value, but do not preserve misleading or non-standard structure when it materially obscures responsibility or creates maintenance risk.
+
+When a name/path is wrong:
+
+`PROVE TARGET OWNER/RESPONSIBILITY → CHOOSE CANONICAL NAME/PATH → MOVE/RENAME → MIGRATE ALL REFERENCES → DELETE OLD PATH → SEARCH OLD NAME/PATH → PROVE ZERO REQUIRED REFERENCES`.
+
+A rename/move is not closed by leaving an old compatibility shell indefinitely.
+
+## 4. Supreme execution law
 
 Do not run:
 
@@ -59,17 +89,17 @@ If structure causes repeated defects:
 
 `STOP PATCHING DESCENDANTS → RECONSTRUCT THE ROOT`.
 
-No preservation bias exists for current layout, files, directories, scripts, workflows, internal APIs, wrappers, adapters, mappings, tests, configs, dependencies, or compatibility layers.
+No preservation bias exists for current layout, filenames, directory names, package names, paths, files, directories, scripts, workflows, internal APIs, wrappers, adapters, mappings, tests, configs, dependencies, or compatibility layers.
 
-## 4. P0 closure invariant
+## 5. P0 closure invariant
 
 `GREEN != CLOSED`.
 
-`ROOT CORRECTNESS + CANONICAL UNIQUENESS + COMPLETE MIGRATION + OLD-AUTHORITY REMOVAL + ZERO MATERIAL RESIDUE = ONE CLOSURE UNIT`.
+`ROOT CORRECTNESS + CANONICAL UNIQUENESS + CANONICAL NAMING/PATH/TOPOLOGY + COMPLETE MIGRATION + OLD-AUTHORITY REMOVAL + ZERO MATERIAL RESIDUE = ONE CLOSURE UNIT`.
 
-A root is closed only after all affected consumers/data/contracts/runtime/tooling are migrated, old writes/reads/imports/routes/config/script/workflow references are zero, superseded artifacts are deleted, no third authority or unbounded compatibility remains, targeted proof passes, negative-space falsification is clean, and exact remote `g` SHA is verified/re-pinned.
+A root is closed only after all affected consumers/data/contracts/runtime/tooling are migrated, names/paths/topology are canonical where affected, old writes/reads/imports/routes/config/script/workflow references are zero, superseded artifacts and old paths are deleted, no third authority or unbounded compatibility remains, targeted proof passes, negative-space falsification is clean, and exact remote `g` SHA is verified/re-pinned.
 
-## 5. Universal deletion rule
+## 6. Universal deletion rule
 
 Every material artifact on `g` must eventually prove one valid disposition:
 
@@ -88,28 +118,28 @@ then:
 
 Git history is the archive. The live contents of `g` are not an archive.
 
-## 6. Package files
+## 7. Package files
 
-1. `00-EXECUTION-INDEX.md` — campaign identity, branch-only scope, isolation, invariants.
+1. `00-EXECUTION-INDEX.md` — campaign identity, branch-only scope, isolation, invariants, naming/path/topology law.
 2. `01-LIVE-ROOT-GRAPH-AND-CLOSURE-UNITS.md` — dynamic `g` Root Graph; current entries are not scope limits.
-3. `02-FILESYSTEM-MIGRATION-CLEANUP-DELETION-MATRIX.md` — all-artifact cleanup/restructure/deletion law for `g` only.
+3. `02-FILESYSTEM-MIGRATION-CLEANUP-DELETION-MATRIX.md` — all-artifact cleanup/restructure/deletion/naming/path law for `g` only.
 4. `03-SINGLE-SESSION-DIRECT-G-EXECUTION.md` — isolated direct execution on `g`.
 5. `04-FINAL-G-FIXED-POINT.md` — exact-candidate final qualification and freeze; no merge/PR semantics.
 6. `05-ORCHESTRATOR-AUTHORITY-DISPOSITION.md` — prevents plan-level parallel governance.
 
-The plan itself is subject to cleanup. Misleading obsolete filenames/sections must be removed when they stop serving a required locator.
+The plan itself is subject to cleanup. Misleading obsolete filenames/sections must be renamed or removed when they stop serving a required locator.
 
-## 7. Root selection
+## 8. Root selection
 
 Rank by:
 
 `severity × causal depth × fanout × structural leverage × executable proof × evidence invalidation risk`.
 
-High structural leverage includes parallel/shadow truth, duplicate mutable writers, multiple authorities, repeated repairs, manual mirrors/mappings, unbounded compatibility, reachable superseded runtime, dead/stale/obsolete residue, unused scripts/workflows/config/dependencies, and ambiguous ownership.
+High structural leverage includes parallel/shadow truth, duplicate mutable writers, multiple authorities, repeated repairs, manual mirrors/mappings, unbounded compatibility, reachable superseded runtime, dead/stale/obsolete residue, unused scripts/workflows/config/dependencies, misleading naming/path topology, and ambiguous ownership.
 
 Select the highest proven executable root, not the easiest failure.
 
-## 8. Exact-HEAD mutation lock
+## 9. Exact-HEAD mutation lock
 
 Before every material commit/push:
 
@@ -123,7 +153,7 @@ If false:
 
 Never force-push over unseen work.
 
-## 9. Final fixed point
+## 10. Final fixed point
 
 Do not emit `MERGE_READY` or `G_LEVEL4_CANDIDATE_READY`.
 
@@ -136,6 +166,7 @@ LEVEL_4_EVIDENCE_STATE=PASS
 ROOT_CORRECTNESS_STATE=PASS
 STRUCTURAL_RECONSTRUCTION_STATE=PASS
 CANONICAL_UNIQUENESS_STATE=PASS
+CANONICAL_NAMING_PATH_TOPOLOGY_STATE=PASS
 ZERO_PARALLEL_TRUTH_STATE=PASS
 ZERO_RESIDUE_STATE=PASS
 REPOSITORY_NOISE_BUDGET=ZERO_KNOWN_MATERIAL_NOISE
@@ -144,9 +175,9 @@ KNOWN_MATERIAL_GAPS=0
 KNOWN_MATERIAL_UNKNOWNS=0
 ```
 
-Only after a fresh branch-wide adversarial audit of **all material content on `g`**, not merely previously listed files, finds no remaining known material root/gap/unknown/parallel truth/shadow authority/duplicate writer/reachable old authority/unbounded compatibility/undispositioned artifact/cleanup residue/filesystem noise/evidence debt.
+Only after a fresh branch-wide adversarial audit of **all material content on `g`**, not merely previously listed files, finds no remaining known material root/gap/unknown/parallel truth/shadow authority/duplicate writer/reachable old authority/unbounded compatibility/undispositioned artifact/cleanup residue/filesystem or naming/path/topology noise/evidence debt.
 
-## 10. Completion action
+## 11. Completion action
 
 After `G_RADICAL_CLEANUP_COMPLETE`:
 
