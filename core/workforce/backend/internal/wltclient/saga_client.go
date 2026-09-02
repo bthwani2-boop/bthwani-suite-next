@@ -98,7 +98,7 @@ func (c *Client) sagaRequest(ctx context.Context, method, path, idempotencyKey, 
 		}
 		return SagaProviderPenalty{}, &RequestError{Kind: kind, Cause: fmt.Errorf("call WLT provider penalty: %w", err)}
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	payload, err := io.ReadAll(io.LimitReader(response.Body, 256*1024))
 	if err != nil {
 		kind := ErrRetryable
