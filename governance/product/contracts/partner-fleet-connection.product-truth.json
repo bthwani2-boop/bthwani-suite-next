@@ -50,7 +50,7 @@
       "id": "control-panel",
       "required": true,
       "actors": ["control-panel-operator"],
-      "routesOrScreens": ["OperatorPartnerFleetPanel", "PartnerDetailOperationalScreen"],
+      "routesOrScreens": ["OperatorPartnerFleetPanel"],
       "operationIds": [],
       "states": ["loading", "empty", "ready", "error", "redacted"],
       "actions": ["read redacted store fleet snapshot", "retry readback"]
