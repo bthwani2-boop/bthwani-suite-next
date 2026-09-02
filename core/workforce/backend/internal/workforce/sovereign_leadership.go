@@ -160,7 +160,7 @@ func (r *Repository) ListSovereignLeadership(ctx context.Context) ([]SovereignLe
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	records := []SovereignLeadershipRecord{}
 	for rows.Next() {
 		person, err := scanPerson(rows)
@@ -221,7 +221,7 @@ func (r *Repository) ListEmployeesForDepartments(ctx context.Context, department
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	people := []Person{}
 	for rows.Next() {
 		person, err := scanPerson(rows)
