@@ -28,6 +28,7 @@
   "exports": {
     ".": "./clients/index.ts",
     "./server": "./clients/identity-client.ts",
-    "./session-policy": "./clients/identity-session-policy.ts"
+    "./session-policy": "./clients/identity-session-policy.ts",
+    "./secure-random": "./clients/secure-random.ts"
   }
 }

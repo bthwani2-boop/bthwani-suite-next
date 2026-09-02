@@ -1,5 +1,5 @@
 package fieldcommissionoutbox
 
-import "dsh-api/internal/testdb"
+import "dsh-api/internal/testsupport"
 
-func init() { testdb.ConfigureTrustedOperatorContext() }
+func init() { testsupport.ConfigureTrustedOperatorContext() }

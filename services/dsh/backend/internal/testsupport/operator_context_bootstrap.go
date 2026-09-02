@@ -1,4 +1,4 @@
-package testdb
+package testsupport
 
 import (
 	"fmt"

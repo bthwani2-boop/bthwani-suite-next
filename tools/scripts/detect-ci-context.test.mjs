@@ -68,7 +68,7 @@ test("CI control-plane changes run node verification without semantic filename r
 });
 
 test("CI control-plane changes do not require product Sonar analysis", () => {
-  const result = classifyFiles([".github/workflows/master-sonar.yml"]);
+  const result = classifyFiles([".github/workflows/repository-baseline.yml"]);
   assert.equal(result.ci_control_plane, true);
   assert.equal(result.sonar_required, false);
 });

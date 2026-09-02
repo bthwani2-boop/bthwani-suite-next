@@ -189,7 +189,7 @@ requireText(trustedOperatorContextMigration, "OperatorContext_OWNERSHIP_IMMUTABL
 requireText(trustedOperatorContextMigration, "trg_dsh_partners_OperatorContext", trustedOperatorContextMigrationPath);
 requireText(trustedOperatorContextMigration, "trg_dsh_stores_OperatorContext", trustedOperatorContextMigrationPath);
 
-const testOperatorContextHelperPath = "services/dsh/backend/internal/testdb/operator_context_context.go";
+const testOperatorContextHelperPath = "services/dsh/backend/internal/testsupport/operator_context_bootstrap.go";
 const testOperatorContextHelper = read(testOperatorContextHelperPath);
 requireText(testOperatorContextHelper, "DSH_REQUIRE_DB_TESTS", testOperatorContextHelperPath);
 requireText(testOperatorContextHelper, "DSH_TEST_operator_context_id", testOperatorContextHelperPath);
@@ -218,7 +218,7 @@ for (const packageName of databaseTestPackages) {
   const activatorPath = `services/dsh/backend/internal/${packageName}/operator_context_context_test.go`;
   const activator = read(activatorPath);
   requireText(activator, `package ${packageName}`, activatorPath);
-  requireText(activator, "testdb.ConfigureTrustedOperatorContext()", activatorPath);
+  requireText(activator, "testsupport.ConfigureTrustedOperatorContext()", activatorPath);
 }
 
 for (const suite of ["schema", "seed"]) {
