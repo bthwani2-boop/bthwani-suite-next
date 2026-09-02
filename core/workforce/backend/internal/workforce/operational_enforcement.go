@@ -293,7 +293,7 @@ func (r *Repository) ListProviderIncidentTransitions(ctx context.Context, incide
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	items := make([]ProviderIncidentTransition, 0)
 	for rows.Next() {
