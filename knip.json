@@ -35,6 +35,7 @@
     "dev",
     "gh",
     "go",
+    "gofmt",
     "pwsh",
     "where",
     "where.exe",

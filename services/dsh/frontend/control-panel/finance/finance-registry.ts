@@ -100,8 +100,6 @@ export const FINANCE_CANONICAL_GROUPS: readonly FinanceGroupMeta[] = [
   }
 ];
 
-export const FINANCE_CANONICAL_GROUP_IDS = FINANCE_CANONICAL_GROUPS.map((group) => group.id) as readonly CanonicalFinanceGroupId[];
-
 export function getFinanceGroupMeta(groupId: CanonicalFinanceGroupId) {
   return FINANCE_CANONICAL_GROUPS.find((group) => group.id === groupId) ?? FINANCE_CANONICAL_GROUPS[0]!;
 }
