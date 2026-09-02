@@ -210,5 +210,12 @@ func writeReadinessFailure(w http.ResponseWriter, check string, startedAt time.T
 	w.Header().Set("X-Providers-Runtime-Status", "NOT_READY")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusServiceUnavailable)
-	w.Write([]byte(`{"error":{"code":"PROVIDERS_NOT_READY","message":"providers runtime is not ready"}}`))
+	if _, writeErr := w.Write([]byte(`{"error":{"code":"PROVIDERS_NOT_READY","message":"providers runtime is not ready"}}`)); writeErr != nil {
+		providersRuntimeLogger.Warn(
+			"providers readiness response write failed",
+			"service", "core-providers",
+			"check", check,
+			"error", writeErr,
+		)
+	}
 }
