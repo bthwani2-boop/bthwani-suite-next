@@ -49,7 +49,7 @@ func (r *Repository) AppendProviderDocument(
 	if err != nil {
 		return Person{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var currentVersion int
 	var currentKind string
