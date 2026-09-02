@@ -2,29 +2,20 @@
 
 ## Purpose
 
-Prevent the campaign from becoming a one-pass rewrite or a mechanical march through old findings.
+After each coherent Closure Unit, verify the result, refresh affected truth, continue discovery, and choose the next highest proven executable root.
 
-After each coherent Closure Unit, update live truth and select the next unit from the **new** structure.
+Do not turn historical findings into a static queue and do not require a complete repository-wide model before every next root.
 
-## Campaign sequencing authority
+## Verify and checkpoint the completed root
 
-This plan continues to own the `g` campaign sequence after every Closure Unit. The live orchestrator remains applicable only as the cross-cutting source of root-correctness, affected-cone, exact-HEAD, evidence, migration/cutover, verification, and closure invariants.
-
-Do not hand sequencing back to generic `AUTO/NEXT` or a historical queue after a commit. The next root must be derived from the refreshed:
-
-`CURRENT_G_MODEL → CANONICAL_G_TARGET → STRUCTURAL_DELTA → DYNAMIC_ROOT_GRAPH`.
-
-## Step 8 — verify and checkpoint the completed root
-
-Before commit:
+Before closure/commit:
 
 - run targeted tests/checks for invalidated claims;
 - prove migration/backfill/readback where material;
-- prove contract/generated parity;
-- review canonical naming/path/topology for the affected cone;
-- confirm expected deletions and old-path removals;
+- prove contract/generated parity where material;
+- confirm canonical owner/writer/name/path/topology in the affected cone;
+- confirm required deletions and old-path removals;
 - run reference and negative-space searches;
-- perform structural ownership review;
 - independently attempt to falsify closure;
 - confirm no unrelated accidental diff.
 
@@ -34,55 +25,53 @@ Immediately before push require:
 
 Then:
 
-`COMMIT ONE COHERENT CLOSURE UNIT → PUSH DIRECTLY TO g → FETCH → VERIFY REMOTE HEAD == PUSHED SHA → RE-PIN`.
+`COMMIT COHERENT CLOSURE UNIT → PUSH DIRECTLY TO g → FETCH → VERIFY REMOTE HEAD → RE-PIN`.
 
 No force push.
 
-## Step 9 — refresh structural truth
+## Refresh only what changed or can invalidate the next decision
 
-After every closure, do not simply pick the next historical finding.
-
-Refresh all affected portions of:
+After every closure:
 
 ```text
-CURRENT_G_MODEL
-CANONICAL_G_TARGET
-CURRENT_TO_CANONICAL_STRUCTURAL_DELTA
-DYNAMIC_ROOT_GRAPH
-EVIDENCE_VALIDITY
+RE-PIN
+→ INGEST NEW EVIDENCE
+→ REFRESH AFFECTED CURRENT STATE
+→ REFRESH AFFECTED CANONICAL TARGET
+→ REFRESH AFFECTED STRUCTURAL DELTA
+→ CONTINUE BRANCH-WIDE DISCOVERY
+→ RE-DIAGNOSE ROOT CANDIDATES
 ```
 
-At minimum:
+A full branch-wide Current/Canonical/Delta/Root Graph rebuild is **not mandatory after every root**.
 
-`RE-PIN → INGEST NEW EVIDENCE → UPDATE CURRENT MODEL → INVALIDATE TARGET ASSUMPTIONS AFFECTED BY CHANGE → RECHECK CANONICAL TARGET → UPDATE STRUCTURAL DELTA → RE-SYNTHESIZE CAUSAL ROOTS → RE-RANK`.
+Broaden the re-census when a closure or new evidence changes a material top-level topology, canonical owner, major data/schema authority, contract/generated authority, runtime/config composition, dependency direction, tooling authority, or reveals a higher root capable of invalidating current treatment.
 
-## Re-baseline triggers
+## Next-root rule
 
-Perform a broader partial/full re-census when a closure changes or discovers any material:
+The next root may execute when it passes the `ROOT-CORRECT EXECUTION GATE` from `00`:
 
-- top-level/major package topology;
-- canonical owner or major responsibility boundary;
-- shared/core/service ownership;
-- major data/schema authority;
-- contract/generated authority;
-- runtime/config composition;
-- dependency direction/cycles;
-- script/workflow/tooling authority;
-- a higher structural root capable of invalidating current ranking.
+```text
+PINNED
+CANONICAL_OWNER_CONFIRMED
+CAUSAL_ROOT_PROVEN
+COMPLETE_AFFECTED_CONE_MAPPED
+FINAL_STATE_CONFIRMED
+MIGRATION_CUTOVER_CLEANUP_DEFINED
+VERIFICATION_DEFINED
+```
 
-If the object of comparison materially changed, stale Current/Canonical/Delta evidence cannot be reused unchanged.
+Unrelated uncensused repository areas do not block that root unless they can materially change its owner, Source-of-Fix, affected cone, cutover direction, or causal rank.
 
 ## Root preemption law
 
 If re-diagnosis proves a higher root that invalidates descendant treatment:
 
-`STOP DESCENDANT QUEUE → PROMOTE HIGHER ROOT → REDEFINE CANONICAL TARGET/AFFECTED CONE → EXECUTE HIGHER ROOT`.
+`STOP DESCENDANT QUEUE → PROMOTE HIGHER ROOT → REDEFINE CANONICAL TARGET/AFFECTED CONE → EXECUTE HIGHER ROOT WHEN GATE PASSES`.
 
-Do not keep fixing descendants because they were already listed.
+## Historical probe law
 
-## Historical probe law remains active
-
-Old findings remain evidence only. After each closure they may become:
+Old findings remain evidence only. They may become:
 
 `PROMOTED LIVE ROOT | DESCENDANT OF HIGHER ROOT | SUPERSEDED | FALSE_POSITIVE | EVIDENCE_ONLY`.
 
@@ -90,14 +79,12 @@ They never become a static queue.
 
 ## Repeat condition
 
-If the dynamic Root Graph still contains a proven executable root:
+If at least one proven executable root exists, return to `03`, close the highest currently proven causal root, verify, and return here.
 
-`RETURN TO 03 → SELECT HIGHEST PROVEN CAUSAL ROOT → EXECUTE 03/04 → VERIFY → RETURN HERE`.
+Continue branch-wide census/discovery throughout the campaign so newly exposed roots can be promoted as evidence becomes sufficient.
 
-Continue until the **dynamic** Root Graph first reaches zero.
+## Final transition
 
-## Queue zero is not completion
+When no proven executable root remains, do **not** declare completion from queue state alone.
 
-The first time the dynamic graph appears empty, do not emit completion.
-
-Transition to `06-FINAL-ADVERSARIAL-QUALIFICATION.md` for a fresh branch-wide re-census and exact fixed-point proof.
+Transition to `06-FINAL-ADVERSARIAL-QUALIFICATION.md` for the fresh complete branch-wide re-census and exact fixed-point proof. Any material finding from that final qualification reopens execution at `03`.
