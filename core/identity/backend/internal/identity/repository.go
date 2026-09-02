@@ -135,7 +135,7 @@ func (r *Repository) IssueActivationForActor(ctx context.Context, actorID string
 	if err != nil {
 		return IssueActivationResult{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	actor, err := actorByIDForUpdateTx(ctx, tx, actorID)
 	if err != nil {
@@ -283,7 +283,7 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 	if err != nil {
 		return TokenPair{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var challengeID, actorID, codeHash, status string
 	var attempts int
@@ -492,7 +492,7 @@ func (r *Repository) Refresh(ctx context.Context, refreshToken string) (TokenPai
 	if err != nil {
 		return TokenPair{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var actorID, surface, currentHash string
 	err = tx.QueryRowContext(ctx, `
@@ -507,12 +507,17 @@ func (r *Repository) Refresh(ctx context.Context, refreshToken string) (TokenPai
 	}
 
 	if currentHash != tokenHash(presentedRandomToken) {
-		// REUSE DETECTED!
-		_, _ = tx.ExecContext(ctx, `
+		// REUSE DETECTED: revocation persistence is part of the security
+		// invariant, so failures must not be hidden behind ErrInvalidRefresh.
+		if _, err := tx.ExecContext(ctx, `
 			UPDATE identity_sessions
 			SET revoked_at = now(), compromised_at = now()
-			WHERE id = $1`, sessionID)
-		tx.Commit()
+			WHERE id = $1`, sessionID); err != nil {
+			return TokenPair{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return TokenPair{}, err
+		}
 		return TokenPair{}, ErrInvalidRefresh
 	}
 
@@ -571,7 +576,7 @@ func (r *Repository) createSession(ctx context.Context, actor Actor, fingerprint
 	if err != nil {
 		return TokenPair{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	pair, err := createSessionTx(ctx, tx, actor, fingerprint, surface, r.now())
 	if err != nil {
 		return TokenPair{}, err
@@ -810,7 +815,7 @@ func (r *Repository) SuspendActor(ctx context.Context, actorID, requestedByActor
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if transition.status != ActorStatusActive {
 		replay, err := actorLifecycleReplayExistsTx(ctx, tx, transition, "suspended")
 		if err != nil {
@@ -846,7 +851,7 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByAc
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if transition.status == ActorStatusActive {
 		replay, err := actorLifecycleReplayExistsTx(ctx, tx, transition, "reactivated")
 		if err != nil {
@@ -997,7 +1002,7 @@ func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]Sessio
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []SessionInfo
 	for rows.Next() {
 		var s SessionInfo
@@ -1037,7 +1042,7 @@ func (r *Repository) DeleteAccount(ctx context.Context, actorID string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var phone string
 	err = tx.QueryRowContext(ctx, `
