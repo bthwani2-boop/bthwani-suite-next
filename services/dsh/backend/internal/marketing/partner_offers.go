@@ -281,7 +281,7 @@ func UpdatePartnerOffer(db *sql.DB, id string, in UpdatePartnerOfferInput) (Part
 			if next.CouponID == "" {
 				return PartnerOffer{}, ErrCouponLinkRequired
 			}
-			coupon, couponErr := coupons.Get(db, next.CouponID)
+			coupon, couponErr := coupons.GetGoverned(db, next.CouponID)
 			if couponErr != nil || coupon.Status != "active" || coupon.ApprovedAt == nil ||
 				(coupon.StoreID != nil && *coupon.StoreID != next.StoreID) {
 				return PartnerOffer{}, ErrCouponLinkRequired
