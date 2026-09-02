@@ -77,6 +77,34 @@ test("ignores generated asset size listings even when a filename contains error"
   assert.equal(envelope.accounting.evidenceComplete, true);
 });
 
+test("ignores Node runtime warnings emitted by the test harness", () => {
+  const envelope = buildEvidenceEnvelope({
+    toolId: "nx-test",
+    candidate,
+    status: "PASS",
+    exitCode: 0,
+    rawText: "(node:1234) ExperimentalWarning: `--experimental-loader` may be removed in the future\n(Use `node --trace-warnings ...` to show where the warning was created)\n",
+  });
+
+  assert.equal(envelope.findings.length, 0);
+  assert.equal(envelope.accounting.rawFindingCount, 0);
+  assert.equal(envelope.accounting.evidenceComplete, true);
+});
+
+test("ignores Nx-prefixed passing test lines whose names contain failure words", () => {
+  const envelope = buildEvidenceEnvelope({
+    toolId: "nx-test",
+    candidate,
+    status: "PASS",
+    exitCode: 0,
+    rawText: "dsh: ✔ provider mutations fail closed and reuse actor-scoped commands (0.4ms)\\n",
+  });
+
+  assert.equal(envelope.findings.length, 0);
+  assert.equal(envelope.accounting.rawFindingCount, 0);
+  assert.equal(envelope.accounting.evidenceComplete, true);
+});
+
 test("adapts existing classified evidence into the universal envelope", () => {
   const envelope = buildEvidenceEnvelope({
     toolId: "codeql",

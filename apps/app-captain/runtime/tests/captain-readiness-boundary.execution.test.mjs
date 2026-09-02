@@ -16,8 +16,9 @@ test("captain readiness API exposes a DSH-owned start-work decision", async () =
   assert.match(publicApi, /DshCaptainReadiness as CaptainOperationalReadiness/);
   assert.match(dispatchApi, /export function fetchOwnCaptainReadiness/);
   assert.match(dispatchApi, /\/dsh\/captain\/me\/readiness/);
-  assert.match(dispatchTypes, /export type DshCaptainReadiness/);
-  assert.match(dispatchTypes, /ready: boolean/);
-  assert.match(dispatchTypes, /missing: readonly string\[\]/);
+  assert.match(
+    dispatchTypes,
+    /export type DshCaptainReadiness =\s*operations\["getOwnCaptainReadiness"\]\["responses"\]\[200\]\["content"\]\["application\/json"\];/,
+  );
   assert.doesNotMatch(publicApi, /captain-readiness\.api/);
 });

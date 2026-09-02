@@ -14,8 +14,8 @@
     "database:test": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite schema",
     "database:test:seed": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite seed",
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
-    "typecheck": "pnpm --dir ../.. exec nx run contracts:materialize && tsc -p tsconfig.json --noEmit",
-    "build:ts": "pnpm --dir ../.. exec nx run contracts:materialize && tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\"",
+    "typecheck": "node ../../tools/scripts/materialize-openapi-artifacts.mjs && tsc -p tsconfig.json --noEmit",
+    "build:ts": "node ../../tools/scripts/materialize-openapi-artifacts.mjs && tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\"",
     "build": "pnpm run build:ts && node ../../tools/scripts/verify-go-build.mjs backend",
     "test": "pnpm run build:ts && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary && pnpm --dir ../.. run guard:workforce-hr-boundary"

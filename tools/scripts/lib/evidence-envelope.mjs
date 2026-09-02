@@ -256,7 +256,7 @@ function findingsFromText(toolId, rawText) {
   lines.forEach((line, index) => {
     const trimmed = line.trim().replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, "");
     if (!trimmed) return;
-    if (/\bDeprecationWarning\b|NO_COLOR.*FORCE_COLOR|trace-warnings/iu.test(trimmed)) return;
+    if (/\b(?:Deprecation|Experimental)Warning\b|NO_COLOR.*FORCE_COLOR|trace-warnings/iu.test(trimmed)) return;
     if (/(?:^|\s)ℹ\s+(?:fail|skipped|pass|tests?|suites?)\b/iu.test(trimmed)) return;
     for (const pattern of patterns) {
       const match = pattern.exec(trimmed);
@@ -284,10 +284,10 @@ function findingsFromText(toolId, rawText) {
 function materialDiagnosticLines(lines, consumedLines) {
   return lines.map((line, index) => ({line: line.trim().replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, ""), index}))
     .filter(({line, index}) => line && !consumedLines.has(index)
-      && !/^[ℹ✔✓]/u.test(line)
+      && !/^(?:[^:]+:\s*)?[ℹ✔✓]/u.test(line)
       && !/(?:^|\s)ℹ\s+(?:fail|skipped|pass|tests?|suites?)\b/iu.test(line)
       && !/^\(Use .*--trace-deprecation/iu.test(line)
-      && !/\bDeprecationWarning\b/iu.test(line)
+      && !/\b(?:Deprecation|Experimental)Warning\b/iu.test(line)
       && !/NO_COLOR.*FORCE_COLOR|trace-warnings/iu.test(line)
       && !/node_modules[\\/].*assets[\\/].+\s+\(\d+(?:\.\d+)?\s*(?:B|KB|MB)\)$/iu.test(line)
       && !/\bno\s+(?:breaking\s+changes?|violations?|issues?|errors?)\b/iu.test(line)

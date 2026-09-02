@@ -307,7 +307,10 @@ async function main() {
   const args = new Set(process.argv.slice(2));
   const full = args.has("--full");
   const concurrencyArg = process.argv.find((v) => v.startsWith("--concurrency="));
-  const concurrency = Math.max(1, Number(concurrencyArg?.split("=")[1] ?? 3));
+  // Full discovery runs multiple Nx commands that share the package-json plugin
+  // worker; serialize that phase so the evidence reflects the repository rather
+  // than a worker-start race between concurrent Nx processes.
+  const concurrency = full ? 1 : Math.max(1, Number(concurrencyArg?.split("=")[1] ?? 3));
   const stamp = new Date().toISOString().replaceAll(":", "-");
   const evidenceDir = mkdtempSync(path.join(tmpdir(), `bthwani-deep-discovery-${stamp}-`));
   const candidate = captureCandidate();
