@@ -53,6 +53,21 @@ func TestResolveRequiresAuthenticatedSubjectAndOperatorContext(t *testing.T) {
 	}
 }
 
+func TestResolveKeepsSessionOperatorContextAuthoritative(t *testing.T) {
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "process-default-must-not-win")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(ActorIdentity{
+			Subject: "actor-2", OperatorContextID: "session-context", AuthState: "authenticated",
+		})
+	}))
+	defer server.Close()
+
+	identity, err := NewClient(server.URL).Resolve(context.Background(), "Bearer session-token")
+	if err != nil || identity.OperatorContextID != "session-context" {
+		t.Fatalf("session operator context was not authoritative: identity=%#v err=%v", identity, err)
+	}
+}
+
 func TestResolveRetriesTransientIdentityFailure(t *testing.T) {
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

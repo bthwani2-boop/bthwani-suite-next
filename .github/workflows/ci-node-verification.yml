@@ -75,6 +75,16 @@ jobs:
         if: ${{ inputs.contracts == 'true' }}
         continue-on-error: true
         run: pnpm exec nx run contracts:materialize
+      - name: Verify generated contract provenance and Identity ownership
+        id: contract_provenance
+        if: ${{ inputs.contracts == 'true' && steps.materialize.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/guards/generated-client-provenance-gate.mjs
+          node tools/guards/identity-contract-ownership-gate.mjs
+          node tools/guards/go-module-topology-gate.mjs
       - name: Verify all applicable Node targets without first-failure masking
         id: node_graph
         if: ${{ inputs.contracts != 'true' || steps.materialize.outcome == 'success' }}
@@ -155,6 +165,7 @@ jobs:
           WHITESPACE: ${{ steps.whitespace.outcome }}
           CONTRACTS_REQUIRED: ${{ inputs.contracts }}
           MATERIALIZE: ${{ steps.materialize.outcome }}
+          CONTRACT_PROVENANCE: ${{ steps.contract_provenance.outcome }}
           NODE_GRAPH: ${{ steps.node_graph.outcome }}
           TYPED_LINT: ${{ steps.typed_lint.outcome }}
           TYPED_LINT_REQUIRED: ${{ inputs.typed_lint_required }}
@@ -176,12 +187,14 @@ jobs:
           if [[ "${CONTRACTS_REQUIRED}" == "true" ]]; then
             [[ "${MATERIALIZE}" == "success" ]] || failures+=("contract-materialization:${MATERIALIZE}")
             if [[ "${MATERIALIZE}" == "success" ]]; then
+              [[ "${CONTRACT_PROVENANCE}" == "success" ]] || failures+=("contract-provenance:${CONTRACT_PROVENANCE}")
               [[ "${NODE_GRAPH}" == "success" ]] || failures+=("node-graph:${NODE_GRAPH}")
             else
-              echo "Node graph BLOCKED_BY contract-materialization:${MATERIALIZE}"
+              echo "Contract provenance and node graph BLOCKED_BY contract-materialization:${MATERIALIZE}"
             fi
           else
             [[ "${MATERIALIZE}" == "skipped" ]] || failures+=("contract-materialization-unexpected:${MATERIALIZE}")
+            [[ "${CONTRACT_PROVENANCE}" == "skipped" ]] || failures+=("contract-provenance-unexpected:${CONTRACT_PROVENANCE}")
             [[ "${NODE_GRAPH}" == "success" ]] || failures+=("node-graph:${NODE_GRAPH}")
           fi
           if [[ "${CI_CONTROL_REQUIRED}" == "true" ]]; then

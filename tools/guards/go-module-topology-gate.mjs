@@ -50,20 +50,25 @@ for (const trackedPath of execFileSync("git", ["ls-files", "shared/go/**"], {
   failures.push(`${trackedPath}: language-first shared/go topology is forbidden`);
 }
 
-const dockerRequirements = new Map([
-  ["core/platform-control/backend/Dockerfile", "COPY core/identity/clients/go/identityauth/"],
-  ["core/providers/backend/Dockerfile", "COPY core/identity/clients/go/identityauth/"],
-  ["core/workforce/backend/Dockerfile", "COPY core/identity/clients/go/identityauth/"],
-  ["services/dsh/backend/Dockerfile", "COPY core/identity/clients/go/identityauth/"],
-  ["services/dsh/backend/Dockerfile", "COPY shared/resilience/"],
-  ["services/wlt/backend/Dockerfile", "COPY shared/resilience/"],
-]);
-for (const [dockerfile, requiredCopy] of dockerRequirements) {
-  const source = read(dockerfile);
-  const copyIndex = source.indexOf(requiredCopy);
-  const downloadIndex = source.indexOf("RUN go mod download");
-  if (copyIndex < 0 || downloadIndex < 0 || copyIndex > downloadIndex) {
-    failures.push(`${dockerfile}: local Go dependency must be copied into the build context`);
+for (const goMod of trackedGoMods) {
+  const moduleDir = path.posix.dirname(goMod);
+  const dockerfile = path.posix.join(moduleDir, "Dockerfile");
+  if (!fs.existsSync(path.join(root, dockerfile))) continue;
+
+  const source = read(goMod);
+  const dockerSource = read(dockerfile);
+  const downloadIndex = dockerSource.indexOf("RUN go mod download");
+  if (downloadIndex < 0) continue;
+
+  for (const match of source.matchAll(/^\s*replace\s+\S+\s+=>\s+(\.\.\/[^\s]+)\s*$/gm)) {
+    const target = path.resolve(root, moduleDir, match[1]);
+    if (!fs.existsSync(target)) continue;
+    const relativeTarget = path.relative(root, target).replaceAll("\\", "/");
+    const requiredCopy = `COPY ${relativeTarget}/`;
+    const copyIndex = dockerSource.indexOf(requiredCopy);
+    if (copyIndex < 0 || copyIndex > downloadIndex) {
+      failures.push(`${dockerfile}: local replacement ${relativeTarget} must be copied before RUN go mod download`);
+    }
   }
 }
 

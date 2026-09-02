@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import openapiTS, { astToString } from "openapi-typescript";
 import { composeAllContexts, repositoryRoot } from "./openapi-context-composer.mjs";
 import { generatedClientEntries } from "./contract-client-metadata.mjs";
+import { generateGoTypesFromFile } from "./generate-openapi-go-types.mjs";
 
 const MATERIALIZATION_SCHEMA_VERSION = 3;
 const OPENAPI_TYPESCRIPT_HEADER = `/**
@@ -18,6 +19,7 @@ const OPENAPI_TYPESCRIPT_HEADER = `/**
 const materializerPath = fileURLToPath(import.meta.url);
 const composerPath = path.join(repositoryRoot, "tools/scripts/openapi-context-composer.mjs");
 const clientMetadataPath = path.join(repositoryRoot, "tools/scripts/contract-client-metadata.mjs");
+const goTypesGeneratorPath = path.join(repositoryRoot, "tools/scripts/generate-openapi-go-types.mjs");
 const lockfilePath = path.join(repositoryRoot, "pnpm-lock.yaml");
 const stampPath = path.join(repositoryRoot, ".artifacts/openapi/materialization.json");
 
@@ -87,7 +89,7 @@ async function generateRegisteredClients(entries, composition) {
   const composedByContext = new Map(composition.map((entry) => [entry.context, entry]));
 
   for (const entry of entries) {
-    if (entry.mode !== "OPENAPI_TYPESCRIPT") {
+    if (!["OPENAPI_TYPESCRIPT", "OPENAPI_GO"].includes(entry.mode)) {
       fail(`unsupported generated-client mode ${String(entry.mode)} for ${entry.context}`);
     }
 
@@ -107,17 +109,21 @@ async function generateRegisteredClients(entries, composition) {
       fail(`missing materialized contract ${entry.contract}`);
     }
 
-    const ast = await openapiTS(pathToFileURL(contractPath));
-    const body = normalizeText(astToString(ast));
-    const generated = body.startsWith(OPENAPI_TYPESCRIPT_HEADER)
-      ? body
-      : `${OPENAPI_TYPESCRIPT_HEADER}${body}`;
     fs.mkdirSync(path.dirname(clientPath), { recursive: true });
-    fs.writeFileSync(
-      clientPath,
-      generated.endsWith("\n") ? generated : `${generated}\n`,
-      "utf8",
-    );
+    if (entry.mode === "OPENAPI_TYPESCRIPT") {
+      const ast = await openapiTS(pathToFileURL(contractPath));
+      const body = normalizeText(astToString(ast));
+      const generated = body.startsWith(OPENAPI_TYPESCRIPT_HEADER)
+        ? body
+        : `${OPENAPI_TYPESCRIPT_HEADER}${body}`;
+      fs.writeFileSync(
+        clientPath,
+        generated.endsWith("\n") ? generated : `${generated}\n`,
+        "utf8",
+      );
+    } else {
+      fs.writeFileSync(clientPath, generateGoTypesFromFile(contractPath, entry.contract), "utf8");
+    }
   }
 }
 
@@ -133,6 +139,7 @@ const toolchainDigests = {
   materializer: sha256File(materializerPath),
   composer: sha256File(composerPath),
   clientMetadata: sha256File(clientMetadataPath),
+  goTypesGenerator: sha256File(goTypesGeneratorPath),
 };
 const clientMetadataDigest = sha256(JSON.stringify(generatedClients));
 const materializationKey = sha256(JSON.stringify({

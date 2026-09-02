@@ -216,8 +216,8 @@ func TestFetchPartnerPermissionBundlesAuthenticatesAndCachesDefensiveCopy(t *tes
 		if r.Header.Get("X-Operator-Context-ID") != "operator-main" {
 			t.Fatalf("unexpected operator context %q", r.Header.Get("X-Operator-Context-ID"))
 		}
-		_ = json.NewEncoder(w).Encode(partnerPermissionBundlesResponse{
-			PermissionBundles: []PartnerPermissionBundleDescriptor{
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"permissionBundles": []PartnerPermissionBundleDescriptor{
 				{Code: "owner", NameAr: "مالك", NameEn: "Owner", Actions: []string{"team.manage", "catalog.manage"}},
 			},
 		})

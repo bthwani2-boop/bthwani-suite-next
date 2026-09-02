@@ -10,8 +10,14 @@ owner: core/identity
 contractState: CONTRACT_ACTIVE
 layout: INDEXED
 bundle: ./generated/identity.bundle.openapi.yaml
-client: ../clients/generated/identity-api.ts
-regenerateScript: pnpm run openapi:generate:identity
+generatedClients:
+  - mode: OPENAPI_TYPESCRIPT
+    client: ../clients/generated/identity-api.ts
+    regenerateScript: pnpm run openapi:generate:identity
+  - mode: OPENAPI_GO
+    client: ../clients/go/identityauth/contract.gen.go
+    regenerateScript: pnpm run openapi:generate:identity:go
+    scanRoot: false
 modules:
   - ./employee-access.openapi.yaml
   - ./identity.rbac-admin.openapi.yaml

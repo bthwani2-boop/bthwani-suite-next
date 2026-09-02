@@ -1,34 +1,37 @@
 package auth
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
-	"io"
-	"net/http"
-	"net/url"
-	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	identityauth "github.com/bthwani2-boop/bthwani-identityauth"
 )
 
 var (
-	ErrUnauthenticated     = identityauth.ErrUnauthenticated
-	ErrIdentityUnavailable = identityauth.ErrIdentityUnavailable
+	ErrUnauthenticated           = identityauth.ErrUnauthenticated
+	ErrIdentityUnavailable       = identityauth.ErrIdentityUnavailable
+	ErrRbacSelfGrant             = identityauth.ErrRbacSelfGrant
+	ErrRbacRoleNotFound          = identityauth.ErrRbacRoleNotFound
+	ErrRbacRoleAlreadyExists     = identityauth.ErrRbacRoleAlreadyExists
+	ErrRbacConflict              = identityauth.ErrRbacConflict
+	ErrRbacVersionConflict       = identityauth.ErrRbacVersionConflict
+	ErrRbacInvalidRoleDefinition = identityauth.ErrRbacInvalidRoleDefinition
 )
 
+// These aliases keep DSH's application facade stable while making Identity's
+// generated contract types the only wire-model owner.
 type Permission = identityauth.Permission
 type ActorIdentity = identityauth.ActorIdentity
+type PartnerPermissionBundleDescriptor = identityauth.PartnerPermissionBundleDescriptor
+type RbacRole = identityauth.RbacRole
+type RbacActorRoleAssignment = identityauth.RbacActorRoleAssignment
+type RbacStaffActor = identityauth.RbacStaffActor
+type RbacPermissionVocabularyEntry = identityauth.PermissionVocabularyEntry
+type RbacRoleDefinition = identityauth.RbacRole
 
 type Client struct {
-	baseURL              string
-	internalServiceToken string
-	http                 *http.Client
-	session              *identityauth.Client
+	identity *identityauth.Client
 
 	mu                   sync.RWMutex
 	partnerBundles       []PartnerPermissionBundleDescriptor
@@ -40,36 +43,33 @@ func NewClient(baseURL string) *Client {
 }
 
 // NewClientWithInternalAccess configures the DSH-to-Identity trust boundary.
-// The service token is server-owned configuration. The operator context is
+// The service token is server-owned configuration. Operator context is
 // resolved per request from the trusted Identity boundary.
 func NewClientWithInternalAccess(baseURL, serviceToken, _ string) *Client {
 	return &Client{
-		baseURL:              strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		internalServiceToken: strings.TrimSpace(serviceToken),
-		http:                 &http.Client{Timeout: 3 * time.Second},
-		session:              identityauth.NewClient(baseURL),
+		identity: identityauth.NewClientWithInternalAccess(baseURL, serviceToken, "dsh"),
 	}
+}
+
+func (c *Client) operatorContextID(ctx context.Context) (string, error) {
+	if c == nil || c.identity == nil {
+		return "", ErrIdentityUnavailable
+	}
+	operatorContextID, ok := OperatorContextIDFromContext(ctx)
+	if !ok || operatorContextID == "legacy-unscoped" {
+		return "", ErrIdentityUnavailable
+	}
+	return operatorContextID, nil
 }
 
 // Resolve accepts only authenticated Identity assertions with an explicit
-// operator context. The Identity session is the operator-context authority; a
-// process-wide default is never used to select or reject a valid scoped session.
+// operator context. The Identity session is the operator-context authority;
+// a process-wide default is never used to select or reject a valid session.
 func (c *Client) Resolve(ctx context.Context, authorization string) (identityauth.ActorIdentity, error) {
-	if c == nil || c.session == nil {
+	if c == nil || c.identity == nil {
 		return identityauth.ActorIdentity{}, ErrIdentityUnavailable
 	}
-	return c.session.Resolve(ctx, authorization)
-}
-
-type PartnerPermissionBundleDescriptor struct {
-	Code    string   `json:"code"`
-	NameAr  string   `json:"nameAr"`
-	NameEn  string   `json:"nameEn"`
-	Actions []string `json:"actions"`
-}
-
-type partnerPermissionBundlesResponse struct {
-	PermissionBundles []PartnerPermissionBundleDescriptor `json:"permissionBundles"`
+	return c.identity.Resolve(ctx, authorization)
 }
 
 func clonePartnerPermissionBundles(source []PartnerPermissionBundleDescriptor) []PartnerPermissionBundleDescriptor {
@@ -81,8 +81,8 @@ func clonePartnerPermissionBundles(source []PartnerPermissionBundleDescriptor) [
 	return result
 }
 
-// FetchPartnerPermissionBundles retrieves the canonical Identity-owned partner
-// permission bundles through the authenticated DSH service boundary.
+// FetchPartnerPermissionBundles retrieves the canonical Identity-owned
+// partner permission bundles through the authenticated DSH service boundary.
 func (c *Client) FetchPartnerPermissionBundles(ctx context.Context) ([]PartnerPermissionBundleDescriptor, error) {
 	c.mu.RLock()
 	if c.partnerBundlesLoaded {
@@ -97,387 +97,86 @@ func (c *Client) FetchPartnerPermissionBundles(ctx context.Context) ([]PartnerPe
 	if c.partnerBundlesLoaded {
 		return clonePartnerPermissionBundles(c.partnerBundles), nil
 	}
-	operatorContextID, ok := OperatorContextIDFromContext(ctx)
-	if c.baseURL == "" || c.internalServiceToken == "" || !ok {
-		return nil, ErrIdentityUnavailable
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/partner/permission-bundles", nil)
+	operatorContextID, err := c.operatorContextID(ctx)
 	if err != nil {
-		return nil, ErrIdentityUnavailable
+		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
-
-	resp, err := c.http.Do(req)
+	bundles, err := c.identity.FetchPartnerPermissionBundles(ctx, operatorContextID)
 	if err != nil {
-		return nil, ErrIdentityUnavailable
+		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return nil, ErrIdentityUnavailable
-	}
-	var response partnerPermissionBundlesResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, ErrIdentityUnavailable
-	}
-	c.partnerBundles = clonePartnerPermissionBundles(response.PermissionBundles)
+	c.partnerBundles = clonePartnerPermissionBundles(bundles)
 	c.partnerBundlesLoaded = true
 	return clonePartnerPermissionBundles(c.partnerBundles), nil
 }
 
-// CheckHealth queries the Identity service health endpoint to determine if it is
-// HEALTHY, DEGRADED, or NOT_READY, returning the status as a string.
+// CheckHealth queries the canonical Identity readiness endpoint.
 func (c *Client) CheckHealth(ctx context.Context) string {
-	if c.baseURL == "" {
+	if c == nil || c.identity == nil {
 		return "NOT_READY"
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/identity/readiness", nil)
-	if err != nil {
-		return "NOT_READY"
-	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return "NOT_READY"
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode == http.StatusOK {
-		var healthResp struct {
-			Status string `json:"status"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&healthResp); err == nil {
-			if strings.ToUpper(healthResp.Status) == "DEGRADED" {
-				return "DEGRADED"
-			}
-		}
-		return "HEALTHY"
-	}
-
-	if resp.StatusCode == http.StatusServiceUnavailable {
-		var healthResp struct {
-			Status string `json:"status"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&healthResp); err == nil {
-			if strings.ToUpper(healthResp.Status) == "DEGRADED" {
-				return "DEGRADED"
-			}
-		}
-	}
-
-	return "NOT_READY"
+	return c.identity.CheckHealth(ctx)
 }
 
-// IsSessionValid securely queries the Identity backend using the internal service token
-// to determine if the given session is active and not compromised.
+// IsSessionValid securely queries Identity using the internal service token.
 func (c *Client) IsSessionValid(ctx context.Context, actorID, sessionID string) (bool, error) {
-	if c.baseURL == "" || c.internalServiceToken == "" {
+	if c == nil || c.identity == nil {
 		return false, ErrIdentityUnavailable
 	}
-	if strings.TrimSpace(actorID) == "" || strings.TrimSpace(sessionID) == "" {
-		return false, nil
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/dsh/actors/"+actorID+"/sessions", nil)
-	if err != nil {
-		return false, ErrIdentityUnavailable
-	}
-	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return false, ErrIdentityUnavailable
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return false, nil
-	}
-	if resp.StatusCode != http.StatusOK {
-		return false, ErrIdentityUnavailable
-	}
-
-	var sessions []struct {
-		SessionID     string `json:"sessionId"`
-		CompromisedAt string `json:"compromisedAt"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&sessions); err != nil {
-		return false, ErrIdentityUnavailable
-	}
-
-	for _, s := range sessions {
-		if s.SessionID == sessionID {
-			if s.CompromisedAt != "" {
-				return false, nil // Compromised
-			}
-			return true, nil // Valid
-		}
-	}
-	return false, nil
+	return c.identity.IsSessionValid(ctx, actorID, sessionID)
 }
 
-// ResolvePermissions queries the RBAC registry in Identity for the canonical
-// permission set of the given operator actor. This is the deny-by-default
-// authority: only permissions explicitly granted through the relational RBAC
-// schema are returned. A missing or unconfigured internal token returns
-// ErrIdentityUnavailable so callers must treat unavailability as a denial.
+// ResolvePermissions returns the deny-by-default canonical RBAC projection.
 func (c *Client) ResolvePermissions(ctx context.Context, actorID string) ([]Permission, error) {
-	if c.baseURL == "" || c.internalServiceToken == "" {
-		return nil, ErrIdentityUnavailable
-	}
 	if strings.TrimSpace(actorID) == "" {
 		return nil, ErrIdentityUnavailable
 	}
-	operatorContextID, ok := OperatorContextIDFromContext(ctx)
-	if !ok || operatorContextID == "legacy-unscoped" {
-		return nil, ErrIdentityUnavailable
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/permissions/resolve", nil)
+	operatorContextID, err := c.operatorContextID(ctx)
 	if err != nil {
-		return nil, ErrIdentityUnavailable
+		return nil, err
 	}
-	q := req.URL.Query()
-	q.Set("actorId", actorID)
-	req.URL.RawQuery = q.Encode()
-	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, ErrIdentityUnavailable
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, ErrIdentityUnavailable
-	}
-
-	var result struct {
-		Permissions []Permission `json:"permissions"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, ErrIdentityUnavailable
-	}
-	return result.Permissions, nil
+	return c.identity.ResolvePermissions(ctx, actorID, operatorContextID)
 }
 
-var (
-	// ErrRbacSelfGrant mirrors Identity's self-grant/self-revoke rejection.
-	ErrRbacSelfGrant = errors.New("self-grant or self-revoke is prohibited")
-	// ErrRbacRoleNotFound mirrors Identity's unknown-role rejection.
-	ErrRbacRoleNotFound = errors.New("role does not exist in the Identity vocabulary")
-	// ErrRbacRoleAlreadyExists mirrors Identity's duplicate-role rejection.
-	ErrRbacRoleAlreadyExists = errors.New("role already exists in Identity")
-	ErrRbacConflict          = errors.New("canonical RBAC request conflicted")
-	ErrRbacVersionConflict   = errors.New("canonical role version conflicted")
-)
-
-// RbacRole is the canonical Identity role definition, as returned by the
-// Identity RBAC internal API.
-type RbacRole struct {
-	ID          string       `json:"id"`
-	Name        string       `json:"name"`
-	Description string       `json:"description"`
-	Active      bool         `json:"active"`
-	Permissions []Permission `json:"permissions"`
-	Version     int          `json:"version"`
-	CreatedAt   time.Time    `json:"createdAt"`
-	UpdatedAt   time.Time    `json:"updatedAt"`
-}
-
-// RbacActorRoleAssignment is the canonical Identity actor→role grant.
-type RbacActorRoleAssignment struct {
-	ActorID   string `json:"actorId"`
-	RoleID    string `json:"roleId"`
-	RoleName  string `json:"roleName"`
-	GrantedBy string `json:"grantedBy"`
-}
-
-func (c *Client) rbacRequest(ctx context.Context, method, path string, query map[string]string, body any) (*http.Response, error) {
-	return c.rbacRequestWithHeaders(ctx, method, path, query, body, nil)
-}
-
-func (c *Client) rbacRequestWithHeaders(ctx context.Context, method, path string, query map[string]string, body any, headers map[string]string) (*http.Response, error) {
-	if c.baseURL == "" || c.internalServiceToken == "" {
-		return nil, ErrIdentityUnavailable
-	}
-	operatorContextID, ok := OperatorContextIDFromContext(ctx)
-	if !ok || operatorContextID == "legacy-unscoped" {
-		return nil, ErrIdentityUnavailable
-	}
-	var bodyReader io.Reader
-	if body != nil {
-		encoded, err := json.Marshal(body)
-		if err != nil {
-			return nil, err
-		}
-		bodyReader = bytes.NewReader(encoded)
-	}
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bodyReader)
-	if err != nil {
-		return nil, ErrIdentityUnavailable
-	}
-	if len(query) > 0 {
-		q := req.URL.Query()
-		for key, value := range query {
-			q.Set(key, value)
-		}
-		req.URL.RawQuery = q.Encode()
-	}
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
-	for key, value := range headers {
-		if strings.TrimSpace(value) != "" {
-			req.Header.Set(key, value)
-		}
-	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, ErrIdentityUnavailable
-	}
-	return resp, nil
-}
-
-// ListRoles returns every durable role definition owned by Identity. DSH
-// must not maintain a role vocabulary of its own; this call is the only
-// legitimate source for "what roles exist."
 func (c *Client) ListRoles(ctx context.Context) ([]RbacRole, error) {
-	resp, err := c.rbacRequest(ctx, http.MethodGet, "/internal/rbac/roles", nil, nil)
+	operatorContextID, err := c.operatorContextID(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return nil, ErrIdentityUnavailable
-	}
-	var result struct {
-		Roles []RbacRole `json:"roles"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, ErrIdentityUnavailable
-	}
-	return result.Roles, nil
+	return c.identity.ListRoles(ctx, operatorContextID)
 }
 
-// RbacStaffActor is an Identity actor holding at least one durable role
-// assignment.
-type RbacStaffActor struct {
-	ID        string    `json:"id"`
-	Username  string    `json:"username"`
-	Roles     []string  `json:"roles"`
-	GrantedAt time.Time `json:"grantedAt"`
-}
-
-// ListStaff returns every actor Identity has granted at least one durable
-// role. DSH must not report a permanently empty staff list; this is the
-// canonical source.
 func (c *Client) ListStaff(ctx context.Context) ([]RbacStaffActor, error) {
-	resp, err := c.rbacRequest(ctx, http.MethodGet, "/internal/rbac/staff", nil, nil)
+	operatorContextID, err := c.operatorContextID(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return nil, ErrIdentityUnavailable
-	}
-	var result struct {
-		Staff []RbacStaffActor `json:"staff"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, ErrIdentityUnavailable
-	}
-	return result.Staff, nil
+	return c.identity.ListStaff(ctx, operatorContextID)
 }
 
-// ListActorRoleAssignments returns the durable actor-to-role memberships owned
-// by Identity. Unlike ListStaff, this read intentionally includes assignments
-// to inactive roles so DSH can verify that a revoke removed the canonical row
-// rather than merely hiding it from the effective-access projection.
 func (c *Client) ListActorRoleAssignments(ctx context.Context, actorID string) ([]RbacActorRoleAssignment, error) {
-	actorID = strings.TrimSpace(actorID)
-	if actorID == "" {
+	if strings.TrimSpace(actorID) == "" {
 		return nil, ErrIdentityUnavailable
 	}
-	resp, err := c.rbacRequest(ctx, http.MethodGet, "/internal/rbac/actors/"+url.PathEscape(actorID)+"/roles", nil, nil)
+	operatorContextID, err := c.operatorContextID(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return nil, ErrIdentityUnavailable
-	}
-	var result struct {
-		Assignments []RbacActorRoleAssignment `json:"assignments"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, ErrIdentityUnavailable
-	}
-	return result.Assignments, nil
+	return c.identity.ListActorRoleAssignments(ctx, actorID, operatorContextID)
 }
 
 func (c *Client) GrantRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int, idempotencyKey string) (RbacActorRoleAssignment, error) {
-	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodPost, "/internal/rbac/actors/"+targetActorID+"/roles", nil, map[string]any{
-		"roleName":            roleName,
-		"requestedByActorId":  requestedByActorID,
-		"expectedRoleVersion": expectedRoleVersion,
-	}, map[string]string{"Idempotency-Key": idempotencyKey, "X-Canonical-Intent-ID": idempotencyKey})
+	operatorContextID, err := c.operatorContextID(ctx)
 	if err != nil {
 		return RbacActorRoleAssignment{}, err
 	}
-	defer func() { _ = resp.Body.Close() }()
-	switch resp.StatusCode {
-	case http.StatusOK, http.StatusCreated:
-		var assignment RbacActorRoleAssignment
-		if err := json.NewDecoder(resp.Body).Decode(&assignment); err != nil {
-			return RbacActorRoleAssignment{}, ErrIdentityUnavailable
-		}
-		return assignment, nil
-	case http.StatusNotFound:
-		return RbacActorRoleAssignment{}, ErrRbacRoleNotFound
-	case http.StatusBadRequest:
-		return RbacActorRoleAssignment{}, ErrRbacSelfGrant
-	case http.StatusConflict:
-		return RbacActorRoleAssignment{}, rbacConflictError(resp)
-	default:
-		return RbacActorRoleAssignment{}, ErrIdentityUnavailable
-	}
+	return c.identity.GrantRoleWithIdempotency(ctx, operatorContextID, targetActorID, roleName, requestedByActorID, expectedRoleVersion, idempotencyKey)
 }
 
 func (c *Client) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int, idempotencyKey string) error {
-	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodDelete, "/internal/rbac/actors/"+targetActorID+"/roles", map[string]string{
-		"roleName":            roleName,
-		"requestedByActorId":  requestedByActorID,
-		"expectedRoleVersion": strconv.Itoa(expectedRoleVersion),
-	}, nil, map[string]string{"Idempotency-Key": idempotencyKey, "X-Canonical-Intent-ID": idempotencyKey})
+	operatorContextID, err := c.operatorContextID(ctx)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = resp.Body.Close() }()
-	switch resp.StatusCode {
-	case http.StatusNoContent:
-		return nil
-	case http.StatusBadRequest:
-		return ErrRbacSelfGrant
-	case http.StatusConflict:
-		return rbacConflictError(resp)
-	default:
-		return ErrIdentityUnavailable
-	}
-}
-
-func rbacConflictError(resp *http.Response) error {
-	var payload struct {
-		Code string `json:"code"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err == nil && payload.Code == "ROLE_VERSION_CONFLICT" {
-		return ErrRbacVersionConflict
-	}
-	return ErrRbacConflict
+	return c.identity.RevokeRoleWithIdempotency(ctx, operatorContextID, targetActorID, roleName, requestedByActorID, expectedRoleVersion, idempotencyKey)
 }

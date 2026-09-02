@@ -1,91 +1,23 @@
 package auth
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
-	"net/http"
-	"net/url"
 	"strings"
-	"time"
+
+	identityauth "github.com/bthwani2-boop/bthwani-identityauth"
 )
 
 var (
-	ErrIdentityConflict = errors.New("identity conflict")
-	ErrIdentityRejected = errors.New("identity request rejected")
+	ErrIdentityConflict = identityauth.ErrIdentityConflict
+	ErrIdentityRejected = identityauth.ErrIdentityRejected
 )
 
-type PartnerActorProvisionInput struct {
-	Username         string `json:"username"`
-	PhoneE164        string `json:"phoneE164"`
-	PermissionBundle string `json:"permissionBundle"`
-	StoreID          string `json:"storeId"`
-}
-
-type PartnerActorView struct {
-	ActorID   string   `json:"actorId"`
-	Username  string   `json:"username"`
-	PhoneE164 string   `json:"phoneE164"`
-	Roles     []string `json:"roles"`
-	Active    bool     `json:"active"`
-}
-
-type PartnerActivationInput struct {
-	IssuedByActorID string `json:"issuedByActorId"`
-	StoreID         string `json:"storeId"`
-}
-
-type PartnerStoreAccessInput struct {
-	StoreID          string `json:"storeId"`
-	PermissionBundle string `json:"permissionBundle,omitempty"`
-	Enabled          bool   `json:"enabled"`
-	Reactivate       bool   `json:"reactivate"`
-}
-
-type PartnerActivationResult struct {
-	ActivationID string    `json:"activationId"`
-	Code         string    `json:"code"`
-	MaskedPhone  string    `json:"maskedPhone"`
-	ExpiresAt    time.Time `json:"expiresAt"`
-}
-
-func (c *Client) newDSHInternalRequest(ctx context.Context, method, path string, body any) (*http.Request, error) {
-	operatorContextID, ok := OperatorContextIDFromContext(ctx)
-	if c.baseURL == "" || c.internalServiceToken == "" || !ok {
-		return nil, ErrIdentityUnavailable
-	}
-	var encoded []byte
-	var err error
-	if body != nil {
-		encoded, err = json.Marshal(body)
-		if err != nil {
-			return nil, ErrIdentityRejected
-		}
-	}
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(encoded))
-	if err != nil {
-		return nil, ErrIdentityUnavailable
-	}
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
-	return req, nil
-}
-
-func identityMutationError(status int) error {
-	switch status {
-	case http.StatusBadRequest, http.StatusForbidden, http.StatusNotFound, http.StatusUnprocessableEntity:
-		return ErrIdentityRejected
-	case http.StatusConflict, http.StatusTooManyRequests:
-		return ErrIdentityConflict
-	default:
-		return ErrIdentityUnavailable
-	}
-}
+type PartnerActorProvisionInput = identityauth.PartnerActorProvisionRequest
+type PartnerActorView = identityauth.ActorAdminView
+type PartnerActivationInput = identityauth.PartnerActivationRequest
+type PartnerStoreAccessInput = identityauth.PartnerStoreAccessRequest
+type PartnerActivationResult = identityauth.IssueActivationResponse
 
 func (c *Client) ProvisionPartnerActor(ctx context.Context, input PartnerActorProvisionInput) (PartnerActorView, error) {
 	var view PartnerActorView
@@ -96,60 +28,47 @@ func (c *Client) ProvisionPartnerActor(ctx context.Context, input PartnerActorPr
 	if input.Username == "" || input.PhoneE164 == "" || input.PermissionBundle == "" || input.StoreID == "" {
 		return view, ErrIdentityRejected
 	}
-	req, err := c.newDSHInternalRequest(ctx, http.MethodPost, "/internal/partner/actors/provision", input)
+	operatorContextID, err := c.operatorContextID(ctx)
 	if err != nil {
 		return view, err
 	}
-	resp, err := c.http.Do(req)
+	view, err = c.identity.ProvisionPartnerActor(ctx, operatorContextID, input)
 	if err != nil {
-		return view, ErrIdentityUnavailable
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusCreated {
-		return view, identityMutationError(resp.StatusCode)
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&view); err != nil || strings.TrimSpace(view.ActorID) == "" {
-		return PartnerActorView{}, ErrIdentityUnavailable
+		if errors.Is(err, identityauth.ErrIdentityRejected) {
+			return PartnerActorView{}, ErrIdentityRejected
+		}
+		if errors.Is(err, identityauth.ErrIdentityConflict) {
+			return PartnerActorView{}, ErrIdentityConflict
+		}
+		return PartnerActorView{}, err
 	}
 	return view, nil
 }
 
 // SetPartnerStoreAccess replaces or revokes one actor's Identity-owned
 // executable permissions for a single DSH store.
-func (c *Client) SetPartnerStoreAccess(
-	ctx context.Context,
-	actorID string,
-	input PartnerStoreAccessInput,
-) error {
+func (c *Client) SetPartnerStoreAccess(ctx context.Context, actorID string, input PartnerStoreAccessInput) error {
 	actorID = strings.TrimSpace(actorID)
 	input.StoreID = strings.TrimSpace(input.StoreID)
 	input.PermissionBundle = strings.TrimSpace(input.PermissionBundle)
 	if actorID == "" || input.StoreID == "" || (input.Enabled && input.PermissionBundle == "") || (input.Reactivate && !input.Enabled) {
 		return ErrIdentityRejected
 	}
-	path := "/internal/partner/actors/" + url.PathEscape(actorID) + "/store-access"
-	req, err := c.newDSHInternalRequest(ctx, http.MethodPut, path, input)
+	operatorContextID, err := c.operatorContextID(ctx)
 	if err != nil {
 		return err
 	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return ErrIdentityUnavailable
+	err = c.identity.SetPartnerStoreAccess(ctx, operatorContextID, actorID, input)
+	if errors.Is(err, identityauth.ErrIdentityRejected) {
+		return ErrIdentityRejected
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return identityMutationError(resp.StatusCode)
+	if errors.Is(err, identityauth.ErrIdentityConflict) {
+		return ErrIdentityConflict
 	}
-	return nil
+	return err
 }
 
-func (c *Client) IssuePartnerActivation(
-	ctx context.Context,
-	actorID string,
-	input PartnerActivationInput,
-	idempotencyKey string,
-	correlationID string,
-) (PartnerActivationResult, error) {
+func (c *Client) IssuePartnerActivation(ctx context.Context, actorID string, input PartnerActivationInput, idempotencyKey, correlationID string) (PartnerActivationResult, error) {
 	var result PartnerActivationResult
 	actorID = strings.TrimSpace(actorID)
 	input.IssuedByActorID = strings.TrimSpace(input.IssuedByActorID)
@@ -157,27 +76,16 @@ func (c *Client) IssuePartnerActivation(
 	if actorID == "" || input.IssuedByActorID == "" || input.StoreID == "" {
 		return result, ErrIdentityRejected
 	}
-	path := "/internal/partner/actors/" + url.PathEscape(actorID) + "/activations"
-	req, err := c.newDSHInternalRequest(ctx, http.MethodPost, path, input)
+	operatorContextID, err := c.operatorContextID(ctx)
 	if err != nil {
 		return result, err
 	}
-	if key := strings.TrimSpace(idempotencyKey); key != "" {
-		req.Header.Set("Idempotency-Key", key)
+	result, err = c.identity.IssuePartnerActivation(ctx, operatorContextID, actorID, input, strings.TrimSpace(idempotencyKey), strings.TrimSpace(correlationID))
+	if errors.Is(err, identityauth.ErrIdentityRejected) {
+		return PartnerActivationResult{}, ErrIdentityRejected
 	}
-	if value := strings.TrimSpace(correlationID); value != "" {
-		req.Header.Set("X-Correlation-ID", value)
+	if errors.Is(err, identityauth.ErrIdentityConflict) {
+		return PartnerActivationResult{}, ErrIdentityConflict
 	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return result, ErrIdentityUnavailable
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusCreated {
-		return result, identityMutationError(resp.StatusCode)
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil || strings.TrimSpace(result.ActivationID) == "" || strings.TrimSpace(result.Code) == "" {
-		return PartnerActivationResult{}, ErrIdentityUnavailable
-	}
-	return result, nil
+	return result, err
 }

@@ -29,14 +29,16 @@ test("generated OpenAPI artifacts remain derived and untracked", () => {
 test("bounded-context manifests are the only generated-client metadata source", () => {
   const entries = generatedClientEntries();
   assert.deepEqual(
-    entries.map((entry) => entry.context).sort(),
+    [...new Set(entries.map((entry) => entry.context))].sort(),
     ["dsh", "identity", "platform-control", "providers", "wlt", "workforce"],
   );
-  assert.equal(new Set(entries.map((entry) => entry.client)).size, 6);
+  assert.equal(new Set(entries.map((entry) => entry.client)).size, 7);
   assert.equal(new Set(entries.map((entry) => entry.contract)).size, 6);
   for (const entry of entries) {
-    assert.match(read(entry.manifest), /^client:\s+.+$/m);
-    assert.match(read(entry.manifest), /^regenerateScript:\s+pnpm run [A-Za-z0-9:_-]+$/m);
+    const manifest = read(entry.manifest);
+    assert.match(manifest, /client:\s+.+/);
+    assert.match(manifest, /regenerateScript:\s+pnpm run [A-Za-z0-9:_-]+/);
+    if (entry.mode === "OPENAPI_GO") assert.match(manifest, /mode:\s+OPENAPI_GO/);
   }
   assert.equal(fs.existsSync(path.join(repoRoot, "tools/verification/generated-client-registry.json")), false);
 });

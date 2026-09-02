@@ -4,7 +4,8 @@
  * The contract registry is a derived diagnostic, never a tracked source. This
  * gate rejects committed derived copies, generates a fresh report in an
  * isolated temporary directory, and validates that the six canonical bounded
- * contexts each resolve to exactly one generated OpenAPI TypeScript client.
+ * contexts each resolve to one generated OpenAPI TypeScript client plus any
+ * explicitly registered typed clients.
  */
 
 import fs from "node:fs";
@@ -86,17 +87,25 @@ try {
         }
       }
       for (const context of report.contexts ?? []) {
-        if (!Array.isArray(context.clients) || context.clients.length !== 1) {
+        if (!Array.isArray(context.clients) || context.clients.length === 0) {
           violations.push({
             file: context.entry ?? diagnosticPath,
-            message: `BOUNDED_CONTEXT_CLIENT_CARDINALITY_INVALID ${context.context}: expected exactly one client`,
+            message: `BOUNDED_CONTEXT_CLIENT_CARDINALITY_INVALID ${context.context}: expected at least one client`,
           });
           continue;
         }
-        if (context.clients[0].mode !== "OPENAPI_TYPESCRIPT") {
+        const typeScriptClients = context.clients.filter((client) => client.mode === "OPENAPI_TYPESCRIPT");
+        if (typeScriptClients.length !== 1) {
           violations.push({
-            file: context.clients[0].client ?? context.entry ?? diagnosticPath,
-            message: `HAND_AUTHORED_GENERATED_CLIENT_FORBIDDEN ${context.context}`,
+            file: context.entry ?? diagnosticPath,
+            message: `BOUNDED_CONTEXT_TYPESCRIPT_CLIENT_CARDINALITY_INVALID ${context.context}: expected exactly one OPENAPI_TYPESCRIPT client`,
+          });
+        }
+        const supportedClients = context.clients.filter((client) => ["OPENAPI_TYPESCRIPT", "OPENAPI_GO"].includes(client.mode));
+        if (supportedClients.length !== context.clients.length || new Set(context.clients.map((client) => client.client)).size !== context.clients.length) {
+          violations.push({
+            file: context.entry ?? diagnosticPath,
+            message: `GENERATED_CLIENT_TARGET_INVALID ${context.context}: targets must be unique and use a supported generated mode`,
           });
         }
       }

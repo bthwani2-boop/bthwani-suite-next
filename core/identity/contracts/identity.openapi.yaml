@@ -745,9 +745,19 @@ paths:
           schema:
             type: string
             minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartnerActorProvisionRequest"
       responses:
         '201':
           description: Partner actor provisioned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorAdminView"
         '400':
           $ref: "#/components/responses/InvalidRequest"
         '401':
@@ -774,9 +784,19 @@ paths:
           schema:
             type: string
             minLength: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartnerStoreAccessRequest"
       responses:
         '200':
           description: Partner store access updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActorAdminView"
         '400':
           $ref: "#/components/responses/InvalidRequest"
         '401':
@@ -813,9 +833,19 @@ paths:
           required: false
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartnerActivationRequest"
       responses:
         '201':
           description: Partner activation issued successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueActivationResponse"
         '400':
           $ref: "#/components/responses/InvalidRequest"
         '401':
@@ -898,6 +928,49 @@ components:
           schema:
             $ref: "#/components/schemas/ApiError"
   schemas:
+    PartnerActorProvisionRequest:
+      type: object
+      additionalProperties: false
+      required: [ username, phoneE164, permissionBundle, storeId ]
+      properties:
+        username:
+          type: string
+          minLength: 1
+        phoneE164:
+          type: string
+          minLength: 8
+          maxLength: 20
+        permissionBundle:
+          type: string
+          minLength: 1
+        storeId:
+          type: string
+          minLength: 1
+    PartnerStoreAccessRequest:
+      type: object
+      additionalProperties: false
+      required: [ storeId, enabled, reactivate ]
+      properties:
+        storeId:
+          type: string
+          minLength: 1
+        permissionBundle:
+          type: string
+        enabled:
+          type: boolean
+        reactivate:
+          type: boolean
+    PartnerActivationRequest:
+      type: object
+      additionalProperties: false
+      required: [ issuedByActorId, storeId ]
+      properties:
+        issuedByActorId:
+          type: string
+          minLength: 1
+        storeId:
+          type: string
+          minLength: 1
     PartnerPermissionBundleDescriptor:
       type: object
       description: Canonical Identity-owned partner permission bundle.
