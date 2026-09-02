@@ -54,14 +54,6 @@ var governedWorkerNames = map[string]bool{
 	"insertLifecycleCommandTx": true, "markLifecycleCommandTx": true,
 }
 
-var serviceLayerFiles = map[string]bool{
-	"service.go":              true,
-	"sovereign_leadership.go": true,
-}
-
-// serviceLayerFiles is retained for documentation: the NO_RAW_TX rule is
-// enforced structurally on Service receivers, not on file names.
-
 type astViolation struct {
 	file string
 	line int
@@ -153,15 +145,19 @@ func (v *guardVisitor) Visit(n ast.Node) ast.Visitor {
 		if fn.Recv != nil && len(fn.Recv.List) > 0 {
 			switch rt := fn.Recv.List[0].Type.(type) {
 			case *ast.StarExpr:
-				if id, ok := rt.X.(*ast.Ident); ok && id.Name == "Service" {
-					owner = "service"
-				} else if id, ok := rt.X.(*ast.Ident); ok && id.Name == "Repository" {
-					owner = "repo"
+				if id, ok := rt.X.(*ast.Ident); ok {
+					switch id.Name {
+					case "Service":
+						owner = "service"
+					case "Repository":
+						owner = "repo"
+					}
 				}
 			case *ast.Ident:
-				if rt.Name == "Service" {
+				switch rt.Name {
+				case "Service":
 					owner = "service"
-				} else if rt.Name == "Repository" {
+				case "Repository":
 					owner = "repo"
 				}
 			}
