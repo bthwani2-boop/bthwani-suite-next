@@ -159,7 +159,7 @@ func claimBatch(ctx context.Context, db *sql.DB, owner string, limit int, lease 
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer func() { _ = tx.Rollback() }()
 	rows, err := tx.QueryContext(ctx, `SELECT command.id::text,command.operator_context_id,command.incident_id::text,
                 command.incident_source_version,command.operation,command.command_idempotency_key,
                 command.provider_actor_id,command.provider_actor_type,command.policy_id,command.reason,
@@ -183,7 +183,6 @@ func claimBatch(ctx context.Context, db *sql.DB, owner string, limit int, lease 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	items := make([]command, 0, limit)
 	for rows.Next() {
 		var item command
@@ -195,6 +194,7 @@ func claimBatch(ctx context.Context, db *sql.DB, owner string, limit int, lease 
 			&item.TerminalDisposition, &item.ParentCommandID, &item.ParentLifecycleState,
 			&item.ParentRemotePenaltyID, &item.IncidentOperatorContextID, &item.ActorOperatorContextID,
 			&item.IncidentStatus, &item.IncidentVersion, &item.IncidentFinancialRef); err != nil {
+			_ = rows.Close()
 			return nil, err
 		}
 		item.NeedsReadback = needsAuthoritativeReadback(item.LifecycleState)
@@ -202,7 +202,11 @@ func claimBatch(ctx context.Context, db *sql.DB, owner string, limit int, lease 
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
+		_ = rows.Close()
 		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, fmt.Errorf("close provider penalty command rows: %w", err)
 	}
 	leaseSeconds := fmt.Sprintf("%.6f seconds", lease.Seconds())
 	for index := range items {
@@ -298,21 +302,12 @@ func markPermanent(ctx context.Context, db *sql.DB, item command, code string, c
 	return requireFencedUpdate(ok, err)
 }
 
-func markHistoricUnproven(ctx context.Context, db *sql.DB, item command, code string, cause error) error {
-	ok, err := fencedUpdate(ctx, db, item, `UPDATE workforce_provider_penalty_commands
-                SET lifecycle_state='HISTORIC_UNPROVEN',last_error_code=$3,last_error=$4,
-                        terminal_disposition=$3,reconciliation_state='UNPROVEN',completed_at=NOW(),last_readback_at=NOW(),
-                        lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`, code, errorText(cause))
-	return requireFencedUpdate(ok, err)
-}
-
 func reconcileHistoricAbsence(ctx context.Context, db *sql.DB, item command, cause error) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer func() { _ = tx.Rollback() }()
 	result, err := tx.ExecContext(ctx, `UPDATE workforce_provider_penalty_commands
                 SET lifecycle_state='HISTORIC_UNPROVEN',last_error_code='HISTORIC_WLT_EVIDENCE_ABSENT',last_error=$3,
                         terminal_disposition='historic_wlt_evidence_absent',reconciliation_state='ABSENT',
@@ -417,7 +412,7 @@ func project(ctx context.Context, db *sql.DB, item command, remote *wltclient.Sa
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer func() { _ = tx.Rollback() }()
 	result, err := tx.ExecContext(ctx, `UPDATE workforce_provider_penalty_commands
                 SET lifecycle_state='LOCAL_PROJECTION_PENDING',reconciliation_state=CASE WHEN $3 THEN 'ABSENT' ELSE 'FOUND' END,updated_at=NOW()
                 WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state IN ('IN_FLIGHT','REMOTE_CONFIRMED')
@@ -634,7 +629,7 @@ func processItem(ctx context.Context, db *sql.DB, identity *identityclient.Clien
 				if strings.HasPrefix(item.TerminalDisposition, "historic_") {
 					return reconcileHistoricAbsence(ctx, db, item, err)
 				} else if identityInvalid {
-					return markPermanent(ctx, db, item, "INVALID_OPERATOR_CONTEXT", fmt.Errorf("Identity invalidated the durable command before WLT recorded an effect"))
+					return markPermanent(ctx, db, item, "INVALID_OPERATOR_CONTEXT", fmt.Errorf("identity invalidated the durable command before WLT recorded an effect"))
 				} else {
 					return markAbsentReady(ctx, db, item)
 				}
