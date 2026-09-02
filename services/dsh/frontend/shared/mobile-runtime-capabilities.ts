@@ -17,7 +17,7 @@ import {
   type DshMapRenderer,
   type DshVideoRenderer,
   type DshVideoSurfaceProps,
-} from "../../../services/dsh/frontend/shared/mobile-capabilities";
+} from "./mobile-capabilities";
 
 type ReactRuntime = {
   readonly useEffect: (effect: () => void | (() => void), dependencies: readonly unknown[]) => void;

@@ -22,6 +22,11 @@ function walk(directory) {
   });
 }
 
+function importsTooling(specifier) {
+  const normalized = specifier.replaceAll("\\", "/");
+  return normalized.startsWith("tools/") || normalized.includes("/tools/");
+}
+
 if (!appKey || !fs.existsSync(appDir)) {
   fail(`unknown or missing app runtime: ${appKey || "<none>"}`);
 } else {
@@ -52,6 +57,14 @@ if (!appKey || !fs.existsSync(appDir)) {
     }
     for (const [pattern, label] of forbidden) {
       if (pattern.test(source)) fail(`${relative}: forbidden ${label}`);
+    }
+    for (const statement of sourceFile.statements) {
+      const isModuleDeclaration = ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement);
+      if (!isModuleDeclaration || !statement.moduleSpecifier || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+      const specifier = statement.moduleSpecifier.text;
+      if (importsTooling(specifier)) {
+        fail(`${relative}: production source must not import tooling module ${specifier}`);
+      }
     }
   }
 

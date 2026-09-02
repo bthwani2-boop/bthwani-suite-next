@@ -9,7 +9,7 @@ import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { colorRoles } from "@bthwani/ui-kit";
-import { configureDshMobileCapabilities } from "../../../../../tools/mobile/runtime-shared/dsh-capabilities";
+import { configureDshMobileCapabilities } from "@bthwani/dsh/mobile-runtime-capabilities";
 
 const platform = Platform.OS === "android" || Platform.OS === "ios" ? Platform.OS : "web";
 

@@ -10,7 +10,7 @@ import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { colorRoles } from "@bthwani/ui-kit";
-import { configureDshMobileCapabilities } from "../../../../../tools/mobile/runtime-shared/dsh-capabilities";
+import { configureDshMobileCapabilities } from "@bthwani/dsh/mobile-runtime-capabilities";
 import type { DshVideoSurfaceProps } from "@bthwani/dsh/mobile-capabilities";
 
 const platform = Platform.OS === "android" || Platform.OS === "ios" ? Platform.OS : "web";
