@@ -42,7 +42,7 @@ test("app-client keeps every Expo capability used by the operational experience"
 
 test("client native wiring leaves inbound URL navigation to Expo Router", () => {
   const platform = source("apps/app-client/runtime/src/platform/dsh-capabilities.tsx");
-  const sharedCapabilities = source("tools/mobile/runtime-shared/dsh-capabilities.ts");
+  const sharedCapabilities = source("services/dsh/frontend/shared/mobile-runtime-capabilities.ts");
 
   assert.doesNotMatch(platform, /configureDshLinkingAdapter|getInitialURL|getInitialUrl|addUrlListener|addEventListener\("url"/);
   assert.match(sharedCapabilities, /configureDshMobileNotificationRuntime\(createDshExpoNotificationRuntime/);
@@ -115,7 +115,7 @@ test("client discovery exposes real search, cached images, and a persistent dono
   );
   assert.equal(reels.includes("expo-av"), false);
   assert.equal(reels.includes("expo-video"), false);
-  const capabilities = `${source("apps/app-client/runtime/src/platform/dsh-capabilities.tsx")}\n${source("tools/mobile/runtime-shared/dsh-capabilities.ts")}`;
+  const capabilities = `${source("apps/app-client/runtime/src/platform/dsh-capabilities.tsx")}\n${source("services/dsh/frontend/shared/mobile-runtime-capabilities.ts")}`;
   for (const marker of ["expo-video", "useVideoPlayer", "useCaching: true", "player.pause()", "allowsPictureInPicture"]) {
     assert.ok(capabilities.includes(marker), `mobile capability wiring missing ${marker}`);
   }
