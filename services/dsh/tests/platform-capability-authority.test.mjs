@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { collectEnforcedAuthorizationScopes } from "../../../tools/guards/lib/authorization-scope-extractor.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..");
 
@@ -9,17 +10,15 @@ function read(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
-const scopeVocabulary = JSON.parse(read("tools/verification/security-scope-vocabulary.json"));
 const capabilityContract = JSON.parse(read("services/dsh/contracts/authorization-capabilities.json"));
-const declaredScopes = new Set(
-  scopeVocabulary.families.flatMap((family) => family.scopes.map(({ scope }) => scope)),
-);
+const runtimeAuthorization = collectEnforcedAuthorizationScopes(repoRoot);
 
-test("platform capability contract is bound to the enforced scope inventory", () => {
+test("platform capability contract is bound directly to Go enforcement", () => {
+  assert.deepEqual(runtimeAuthorization.failures, [], "runtime authorization extraction must resolve every permission reference");
   assert.equal(
-    Object.hasOwn(scopeVocabulary, "capabilities"),
+    fs.existsSync(path.join(repoRoot, "tools/verification/security-scope-vocabulary.json")),
     false,
-    "verification inventory must not own runtime capability semantics",
+    "retired verification scope inventory must not return",
   );
   assert.equal(capabilityContract.authority, "DSH_CONTROL_PANEL_AUTHORIZATION_CAPABILITIES");
   assert.equal(capabilityContract.owner, "services/dsh");
@@ -31,9 +30,9 @@ test("platform capability contract is bound to the enforced scope inventory", ()
     for (const action of ["read", "manage", "healthRead", "auditRead", "rollback"]) {
       for (const permission of capability[action] ?? []) {
         assert.equal(
-          declaredScopes.has(permission),
+          runtimeAuthorization.enforced.has(permission),
           true,
-          `${capability.id}.${action} uses undeclared permission ${permission}`,
+          `${capability.id}.${action} uses permission with no Go enforcement site: ${permission}`,
         );
       }
     }
