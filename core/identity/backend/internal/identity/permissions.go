@@ -82,7 +82,7 @@ func (e *PermissionEnforcer) ListRoles(ctx context.Context) ([]RbacRole, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var roles []RbacRole
 	for rows.Next() {
@@ -136,7 +136,7 @@ func (e *PermissionEnforcer) GrantRoleWithIdempotency(ctx context.Context, reque
 	if err != nil {
 		return ActorRoleAssignment{}, false, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := requireActorsInOperatorContextTx(ctx, tx, operatorContextID, targetActorID, requestedByActorID); err != nil {
 		return ActorRoleAssignment{}, false, err
 	}
@@ -253,7 +253,7 @@ func (e *PermissionEnforcer) RevokeRoleWithIdempotency(ctx context.Context, requ
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := requireActorsInOperatorContextTx(ctx, tx, operatorContextID, targetActorID, requestedByActorID); err != nil {
 		return err
 	}
@@ -329,7 +329,7 @@ func (e *PermissionEnforcer) ListStaffActors(ctx context.Context, operatorContex
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var staff []StaffActor
 	for rows.Next() {
@@ -371,7 +371,7 @@ func (e *PermissionEnforcer) ListActorRoleAssignments(ctx context.Context, opera
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	assignments := make([]ActorRoleAssignment, 0)
 	for rows.Next() {
@@ -430,7 +430,7 @@ func (e *PermissionEnforcer) GetActorPermissions(ctx context.Context, operatorCo
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var permissions []Permission
 	for rows.Next() {
