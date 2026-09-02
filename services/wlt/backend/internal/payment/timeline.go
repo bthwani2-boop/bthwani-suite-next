@@ -103,16 +103,16 @@ func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string)
 		if err := receipts.Scan(&item.ID, &item.Operation, &item.State, &item.ResponseStatus,
 			&item.ProviderReference, &item.CorrelationID, &item.CreatedAt, &item.UpdatedAt,
 			&item.CompletedAt); err != nil {
-			receipts.Close()
+			_ = receipts.Close()
 			return nil, err
 		}
 		timeline.OperationReceipts = append(timeline.OperationReceipts, item)
 	}
 	if err := receipts.Err(); err != nil {
-		receipts.Close()
+		_ = receipts.Close()
 		return nil, err
 	}
-	receipts.Close()
+	_ = receipts.Close()
 
 	events, err := db.Query(`
 		SELECT provider_event_id, event_type, provider_status, provider_reference,
@@ -129,16 +129,16 @@ func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string)
 		if err := events.Scan(&item.ProviderEventID, &item.EventType, &item.ProviderStatus,
 			&item.ProviderReference, &item.ProcessingState, &item.ProcessingResult,
 			&item.SignatureTime, &item.OccurredAt, &item.ReceivedAt, &item.ProcessedAt); err != nil {
-			events.Close()
+			_ = events.Close()
 			return nil, err
 		}
 		timeline.ProviderEvents = append(timeline.ProviderEvents, item)
 	}
 	if err := events.Err(); err != nil {
-		events.Close()
+		_ = events.Close()
 		return nil, err
 	}
-	events.Close()
+	_ = events.Close()
 
 	cases, err := db.Query(`
 		SELECT id, operation, trigger_reason, status, assigned_to_operator_id,
@@ -155,16 +155,16 @@ func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string)
 		if err := cases.Scan(&item.ID, &item.Operation, &item.TriggerReason, &item.Status,
 			&item.AssignedToOperatorID, &item.Resolution, &item.ResolutionAction,
 			&item.ResolutionNote, &item.ResolvedAt, &item.CreatedAt, &item.UpdatedAt); err != nil {
-			cases.Close()
+			_ = cases.Close()
 			return nil, err
 		}
 		timeline.ReconciliationCases = append(timeline.ReconciliationCases, item)
 	}
 	if err := cases.Err(); err != nil {
-		cases.Close()
+		_ = cases.Close()
 		return nil, err
 	}
-	cases.Close()
+	_ = cases.Close()
 	return timeline, nil
 }
 

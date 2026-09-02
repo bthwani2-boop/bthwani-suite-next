@@ -91,15 +91,7 @@ type canonicalStatementArtifact struct {
 func canonicalStatementArtifactBytes(input ImportAuthoritativeStatementInput, businessDate time.Time) ([]byte, error) {
 	lines := make([]canonicalStatementLine, 0, len(input.Lines))
 	for _, line := range input.Lines {
-		lines = append(lines, canonicalStatementLine{
-			ExternalTransferReference: line.ExternalTransferReference,
-			Direction:                 line.Direction,
-			AmountMinorUnits:          line.AmountMinorUnits,
-			Currency:                  line.Currency,
-			DestinationReferenceHash:  line.DestinationReferenceHash,
-			OccurredAt:                line.OccurredAt,
-			SourceRecord:              line.SourceRecord,
-		})
+		lines = append(lines, canonicalStatementLine(line))
 	}
 	payload, err := json.Marshal(canonicalStatementArtifact{
 		ExternalProviderAccountID: input.ExternalProviderAccountID,
@@ -177,7 +169,7 @@ func isSHA256(value string) bool {
 		return false
 	}
 	for _, runeValue := range value {
-		if !((runeValue >= '0' && runeValue <= '9') || (runeValue >= 'a' && runeValue <= 'f')) {
+		if (runeValue < '0' || runeValue > '9') && (runeValue < 'a' || runeValue > 'f') {
 			return false
 		}
 	}
@@ -251,10 +243,11 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 		return nil, fmt.Errorf("artifact bytes are invalid or empty")
 	}
 	var provenanceEvidenceBytes []byte
-	if input.ProvenanceType == "operator_attested" {
+	switch input.ProvenanceType {
+	case "operator_attested":
 		input.ProvenanceEvidenceSHA256 = input.ArtifactSHA256
 		provenanceEvidenceBytes = artifactBytes
-	} else if input.ProvenanceType == "provider_signed" {
+	case "provider_signed":
 		if input.ProvenanceKeyID == "" || input.ProviderSignatureBase64 == "" {
 			return nil, fmt.Errorf("provider_signed requires a provider key id and signature; self-asserted evidence is not accepted")
 		}
@@ -264,7 +257,7 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 		}
 		input.ProvenanceEvidenceBytesBase64 = input.ProviderSignatureBase64
 		input.ProvenanceEvidenceSHA256 = ""
-	} else {
+	default:
 		return nil, fmt.Errorf("provider_api_verified requires the trusted provider API verifier; caller-asserted API provenance is rejected")
 	}
 	for i := range input.Lines {

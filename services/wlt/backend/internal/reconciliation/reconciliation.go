@@ -160,7 +160,7 @@ func resolveReconciliationPrincipal(ctx context.Context, asserted string) (strin
 		return authenticated, nil
 	}
 	if asserted == "" {
-		return "", fmt.Errorf("Identity-authenticated delegated finance principal is required")
+		return "", fmt.Errorf("identity-authenticated delegated finance principal is required")
 	}
 	return asserted, nil
 }

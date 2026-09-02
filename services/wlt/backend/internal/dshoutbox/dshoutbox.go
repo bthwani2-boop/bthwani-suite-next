@@ -111,7 +111,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 			&e.CheckoutIntentID, &e.SpecialRequestID, &e.OrderID, &e.RefundReference,
 			&e.Reason, &e.CorrelationID, &e.PaymentMethod, &e.AttemptCount,
 		); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, fmt.Errorf("scan dsh outbox event: %w", err)
 		}
 		if err := requireOperatorContextID(e.OperatorContextID); err != nil {
@@ -122,7 +122,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	if len(events) > 0 {
 		ids := make([]string, len(events))

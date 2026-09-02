@@ -48,10 +48,6 @@ type governedCreatePayoutInput struct {
 	IdempotencyKey       string `json:"idempotencyKey"`
 }
 
-type payoutReconciliationInput struct {
-	OperatorID string `json:"operatorId"`
-}
-
 func normalizeGovernedOwner(actorType, actorID string) (string, string, error) {
 	actorType = strings.ToLower(strings.TrimSpace(actorType))
 	actorID = strings.TrimSpace(actorID)
@@ -345,13 +341,13 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			rows, queryErr := tx.QueryContext(r.Context(), "SELECT "+requestCols+" FROM wlt_payout_requests WHERE operator_context_id=$1 AND id=$2", operatorContextID, existingID)
 			if queryErr != nil || !rows.Next() {
 				if rows != nil {
-					rows.Close()
+					_ = rows.Close()
 				}
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read idempotent payout request")
 				return
 			}
 			existing, scanErr := scanPayoutRequest(rows)
-			rows.Close()
+			_ = rows.Close()
 			if scanErr != nil {
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode idempotent payout request")
 				return
@@ -449,13 +445,13 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			input.IdempotencyKey, requestHash, destinationID)
 		if err != nil || !rows.Next() {
 			if rows != nil {
-				rows.Close()
+				_ = rows.Close()
 			}
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to create payout request")
 			return
 		}
 		created, scanErr := scanPayoutRequest(rows)
-		rows.Close()
+		_ = rows.Close()
 		if scanErr != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode payout request")
 			return
@@ -463,11 +459,11 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 
 		created.ReconciliationStatus = "not_required"
 		if err := appendPayoutAudit(r.Context(), tx, "payout_request", created.ID, "payout.requested", input.BeneficiaryActorID, input.BeneficiaryActorType, "", correlationID, map[string]any{
-			"payoutDestinationId": destinationID,
-			"destinationVersion":  destinationVersion,
-			"amountMode":          input.AmountMode,
-			"amountMinorUnits":    amount,
-			"currency":            input.Currency,
+			"payoutDestinationId":       destinationID,
+			"destinationVersion":        destinationVersion,
+			"amountMode":                input.AmountMode,
+			"amountMinorUnits":          amount,
+			"currency":                  input.Currency,
 			"reservationHeldMinorUnits": amount,
 		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout request")
@@ -512,9 +508,4 @@ func HandleListPayoutAudit(db *sql.DB) http.HandlerFunc {
 		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"auditEvents": audit})
 	}
-}
-
-func mustJSON(value any) string {
-	encoded, _ := json.Marshal(value)
-	return string(encoded)
 }

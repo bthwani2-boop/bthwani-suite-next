@@ -16,27 +16,6 @@ import (
 	"wlt-api/internal/shared"
 )
 
-func insertOperatorContextSettlement(t *testing.T, operatorContextID, partnerID string, gross, fee, net int64) *Settlement {
-	t.Helper()
-	db := getTestDB(t)
-	if db == nil {
-		return nil
-	}
-	defer db.Close()
-	row := db.QueryRow(`
-		INSERT INTO wlt_settlements
-			(operator_context_id, partner_id, period_start, period_end, gross_amount, platform_fee, net_amount, currency, order_count, status)
-		VALUES ($1, $2, DATE '2026-07-01', DATE '2026-07-31', $3::bigint, $4::bigint, $5::bigint, 'YER', 1, 'pending')
-		RETURNING `+settlementCols,
-		operatorContextID, partnerID, gross, fee, net,
-	)
-	settlement, err := scanSettlement(row)
-	if err != nil {
-		t.Fatalf("insert OperatorContext settlement: %v", err)
-	}
-	return settlement
-}
-
 func TestSettlementSummaryDoesNotAggregateAnotherOperatorContext(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {

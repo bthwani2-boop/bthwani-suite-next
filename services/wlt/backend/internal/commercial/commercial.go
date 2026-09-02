@@ -373,33 +373,6 @@ type Subscription struct {
 	UpdatedAt         string  `json:"updatedAt"`
 }
 
-const subscriptionSelectCols = `id::TEXT, operator_context_id, client_id, product_reference, status,
-	payment_session_id::TEXT, starts_at::TEXT, ends_at::TEXT, created_at::TEXT, updated_at::TEXT`
-
-func scanSubscription(row interface{ Scan(dest ...any) error }) (*Subscription, error) {
-	var subscription Subscription
-	var paymentSession sql.NullString
-	var endsAt sql.NullString
-	err := row.Scan(
-		&subscription.ID, &subscription.OperatorContextID, &subscription.ClientID, &subscription.ProductReference,
-		&subscription.Status, &paymentSession, &subscription.StartsAt, &endsAt,
-		&subscription.CreatedAt, &subscription.UpdatedAt,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	if paymentSession.Valid {
-		subscription.PaymentSessionID = &paymentSession.String
-	}
-	if endsAt.Valid {
-		subscription.EndsAt = &endsAt.String
-	}
-	return &subscription, nil
-}
-
 func cycleEnd(start time.Time, cycle string) time.Time {
 	switch cycle {
 	case "monthly":

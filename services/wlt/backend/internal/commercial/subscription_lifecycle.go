@@ -493,10 +493,7 @@ func RenewSubscriptionLifecycleGoverned(
 		return nil, ErrSubscriptionExpired
 	}
 
-	activationInput := ActivateSubscriptionLifecycleInput{
-		ClientID: input.ClientID, ProductReference: input.ProductReference,
-		PaymentSessionID: input.PaymentSessionID, SubscriptionPurchaseID: input.SubscriptionPurchaseID,
-	}
+	activationInput := ActivateSubscriptionLifecycleInput(input)
 	_, _, cycle, _, err := validateBoundSubscriptionPayment(ctx, tx, activationInput)
 	if err != nil {
 		return nil, err

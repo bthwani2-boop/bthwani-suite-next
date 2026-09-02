@@ -69,18 +69,6 @@ func scanCodReservation(row rowScanner) (*CodReservation, error) {
 	return &out, nil
 }
 
-func getCodReservationForUpdate(ctx context.Context, tx *sql.Tx, operatorContextID, orderID string) (*CodReservation, error) {
-	reservation, err := scanCodReservation(tx.QueryRowContext(ctx, `
-		SELECT `+codReservationCols+` FROM wlt_cod_reservations
-		WHERE operator_context_id = $1 AND order_id = $2 FOR UPDATE`,
-		operatorContextID, strings.TrimSpace(orderID),
-	))
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	return reservation, err
-}
-
 // ReserveCodCapacity atomically reserves amountMinorUnits of captainId's
 // wallet capacity against orderId. A new reservation is inserted first so
 // replays can be identified without re-checking a later wallet balance. Only a
