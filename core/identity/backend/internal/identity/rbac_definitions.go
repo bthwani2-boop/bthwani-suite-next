@@ -64,7 +64,7 @@ ORDER BY service, surface, action`, service, surface)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	entries := make([]PermissionVocabularyEntry, 0)
 	for rows.Next() {
 		var entry PermissionVocabularyEntry
@@ -128,7 +128,7 @@ func (e *PermissionEnforcer) UpsertRoleDefinitionWithOptions(ctx context.Context
 	if err != nil {
 		return RoleDefinition{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var ledgerHash, ledgerStatus string
 	var ledgerResult []byte
@@ -210,9 +210,9 @@ RETURNING request_hash, status, result`, operatorContextID, caller, idempotencyK
 
 func roleDefinitionRequestHash(operatorContextID, name, description string, active bool, expectedVersion int, permissions []Permission) string {
 	h := sha256.New()
-	fmt.Fprintf(h, "%s\x00%s\x00%s\x00%t\x00%d\x00", operatorContextID, name, description, active, expectedVersion)
+	_, _ = fmt.Fprintf(h, "%s\x00%s\x00%s\x00%t\x00%d\x00", operatorContextID, name, description, active, expectedVersion)
 	for _, permission := range permissions {
-		fmt.Fprintf(h, "%s\x00", permissionSetKey(permission))
+		_, _ = fmt.Fprintf(h, "%s\x00", permissionSetKey(permission))
 	}
 	return hex.EncodeToString(h.Sum(nil))
 }
@@ -222,7 +222,7 @@ func getRolePermissionsTx(ctx context.Context, tx *sql.Tx, roleID string) ([]Per
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	permissions := make([]Permission, 0)
 	for rows.Next() {
 		var permission Permission
@@ -247,7 +247,7 @@ func (e *PermissionEnforcer) GetRoleDefinition(ctx context.Context, name string)
 	if err != nil {
 		return RoleDefinition{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	role.Permissions = make([]Permission, 0)
 	for rows.Next() {
 		var permission Permission
