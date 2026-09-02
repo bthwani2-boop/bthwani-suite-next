@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { composeContext } from "../../tools/scripts/openapi-context-composer.mjs";
+import { generatedClientEntries } from "../../tools/scripts/contract-client-metadata.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
@@ -23,6 +24,21 @@ test("generated OpenAPI artifacts remain derived and untracked", () => {
   const gitignore = read(".gitignore");
   assert.match(gitignore, /\*\*\/contracts\/generated\/\*\.bundle\.openapi\.yaml/);
   assert.match(gitignore, /\*\*\/clients\/generated\/\*-api\.ts/);
+});
+
+test("bounded-context manifests are the only generated-client metadata source", () => {
+  const entries = generatedClientEntries();
+  assert.deepEqual(
+    entries.map((entry) => entry.context).sort(),
+    ["dsh", "identity", "platform-control", "providers", "wlt", "workforce"],
+  );
+  assert.equal(new Set(entries.map((entry) => entry.client)).size, 6);
+  assert.equal(new Set(entries.map((entry) => entry.contract)).size, 6);
+  for (const entry of entries) {
+    assert.match(read(entry.manifest), /^client:\s+.+$/m);
+    assert.match(read(entry.manifest), /^regenerateScript:\s+pnpm run [A-Za-z0-9:_-]+$/m);
+  }
+  assert.equal(fs.existsSync(path.join(repoRoot, "tools/verification/generated-client-registry.json")), false);
 });
 
 test("Nx verification targets materialize contracts before parallel work", () => {
@@ -51,8 +67,9 @@ test("materialization freshness binds sources, composed output, toolchain and ac
     "toolchainDigests",
     "materializerPath",
     "composerPath",
+    "contract-client-metadata.mjs",
+    "clientMetadataDigest",
     "pnpm-lock.yaml",
-    "generated-client-registry.json",
     "materializationKey",
     "currentArtifactHashes",
     "sameHashes",

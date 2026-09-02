@@ -49,14 +49,16 @@ contractState: CONTRACT_ACTIVE
 layout: MODULAR
 bundle: ./generated/dsh.bundle.openapi.yaml
 client: ../clients/generated/dsh-api.ts
-regenerateScript: pnpm --dir services/dsh openapi:generate
+regenerateScript: pnpm run openapi:generate:dsh
 modules:
   - ./dsh.administration.openapi.yaml
   # ...
 ```
 
-`modules` must equal the entry's `x-bthwani-contracts` exactly, and `client` must
-be registered in `tools/verification/generated-client-registry.json`.
+`modules` must equal the entry's `x-bthwani-contracts` exactly. The manifest also
+owns the generated bundle/client locations and regeneration command for its bounded
+context. Contract tooling derives generated-client inventory directly from these
+six manifests; there is no second generated-client registry to keep synchronized.
 
 ## Derived diagnostics
 

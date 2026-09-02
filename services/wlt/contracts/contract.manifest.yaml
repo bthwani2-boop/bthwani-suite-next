@@ -1,24 +1,33 @@
-bundle: generated/wlt.bundle.openapi.yaml
-entry: wlt.openapi.yaml
+# Bounded-context contract manifest.
+# Owns WLT contract composition and generated-client materialization metadata.
+
+context: services/wlt
+entry: ./wlt.openapi.yaml
+owner: services/wlt
+contractState: CONTRACT_ACTIVE
+layout: INDEXED
+bundle: ./generated/wlt.bundle.openapi.yaml
+client: ../clients/generated/wlt-api.ts
+regenerateScript: pnpm run openapi:generate:wlt
 modules:
-  - wlt.cod-reservations.openapi.yaml
-  - wlt.captain-collateral.openapi.yaml
-  - wlt.commercial-summary.openapi.yaml
-  - wlt.commercial.openapi.yaml
-  - wlt.common.openapi.yaml
-  - wlt.dispatch-financial-eligibility.openapi.yaml
-  - wlt.payments.openapi.yaml
-  - wlt.payout-failure-boundary.openapi.yaml
-  - wlt.payouts-destinations.openapi.yaml
-  - wlt.pricing-quotes.openapi.yaml
-  - wlt.special-request-quotes.openapi.yaml
-  - wlt.promotion-funding.openapi.yaml
-  - wlt.refunds.openapi.yaml
-  - wlt.settlement-operations.openapi.yaml
-  - wlt.settlements-commissions.openapi.yaml
-  - wlt.store-onboarding-fee.openapi.yaml
-  - wlt.workforce-finance.openapi.yaml
+  - ./wlt.cod-reservations.openapi.yaml
+  - ./wlt.captain-collateral.openapi.yaml
+  - ./wlt.commercial-summary.openapi.yaml
+  - ./wlt.commercial.openapi.yaml
+  - ./wlt.common.openapi.yaml
+  - ./wlt.dispatch-financial-eligibility.openapi.yaml
+  - ./wlt.payments.openapi.yaml
+  - ./wlt.payout-failure-boundary.openapi.yaml
+  - ./wlt.payouts-destinations.openapi.yaml
+  - ./wlt.pricing-quotes.openapi.yaml
+  - ./wlt.special-request-quotes.openapi.yaml
+  - ./wlt.promotion-funding.openapi.yaml
+  - ./wlt.refunds.openapi.yaml
+  - ./wlt.settlement-operations.openapi.yaml
+  - ./wlt.settlements-commissions.openapi.yaml
+  - ./wlt.store-onboarding-fee.openapi.yaml
+  - ./wlt.workforce-finance.openapi.yaml
 
 overlays:
-  - wlt.payment-session-capabilities.overlay.yaml
-  - wlt.dsh-checkout-handoff.overlay.yaml
+  - ./wlt.payment-session-capabilities.overlay.yaml
+  - ./wlt.dsh-checkout-handoff.overlay.yaml

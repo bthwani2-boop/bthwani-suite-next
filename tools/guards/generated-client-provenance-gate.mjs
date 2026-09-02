@@ -7,11 +7,11 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { resolvePackageManagerInvocation } from "../scripts/lib/package-manager-invocation.mjs";
+import { generatedClientEntries } from "../scripts/contract-client-metadata.mjs";
 
 const repositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..", "..");
-const registryRelative = "tools/verification/generated-client-registry.json";
 const packageScripts = JSON.parse(fs.readFileSync(path.join(repositoryRoot, "package.json"), "utf8")).scripts ?? {};
-const registry = JSON.parse(fs.readFileSync(path.join(repositoryRoot, registryRelative), "utf8"));
+const entries = generatedClientEntries();
 
 const failures = [];
 const requiredContexts = new Set(["identity", "workforce", "platform-control", "providers", "dsh", "wlt"]);
@@ -30,31 +30,32 @@ for (const retiredRoot of retiredHandAuthoredGeneratedRoots) {
   }
 }
 
-if (registry.schemaVersion !== 2) failures.push(`${registryRelative}: schemaVersion must be 2`);
-if (registry.entries.length !== requiredContexts.size) {
-  failures.push(`${registryRelative}: expected exactly ${requiredContexts.size} clients, found ${registry.entries.length}`);
+if (entries.length !== requiredContexts.size) {
+  failures.push(`contract manifests: expected exactly ${requiredContexts.size} generated clients, found ${entries.length}`);
 }
 
 const registered = new Map();
-for (const entry of registry.entries) {
-  if (!requiredContexts.delete(entry.context)) failures.push(`${registryRelative}: unexpected or duplicate context '${entry.context}'`);
-  if (registered.has(entry.client)) failures.push(`${registryRelative}: duplicate entry for ${entry.client}`);
+const generatedRoots = new Set();
+for (const entry of entries) {
+  if (!requiredContexts.delete(entry.context)) failures.push(`${entry.manifest}: unexpected or duplicate context '${entry.context}'`);
+  if (registered.has(entry.client)) failures.push(`${entry.manifest}: duplicate generated client ${entry.client}`);
   registered.set(entry.client, entry);
+  generatedRoots.add(entry.generatedRoot);
 }
-for (const context of requiredContexts) failures.push(`${registryRelative}: missing bounded context '${context}'`);
+for (const context of requiredContexts) failures.push(`contract manifests: missing bounded context '${context}'`);
 
-const ignored = new Set(registry.ignoredFiles ?? []);
-for (const root of registry.generatedRoots) {
+const ignored = new Set([".gitkeep", "README.md"]);
+for (const root of generatedRoots) {
   const absoluteRoot = path.join(repositoryRoot, root);
   if (!fs.existsSync(absoluteRoot)) {
-    failures.push(`${registryRelative}: declared generated root does not exist after materialization: ${root}`);
+    failures.push(`contract manifests: declared generated root does not exist after materialization: ${root}`);
     continue;
   }
   for (const name of fs.readdirSync(absoluteRoot)) {
     if (ignored.has(name)) continue;
     const relative = `${root}/${name}`;
     if (!registered.has(relative)) {
-      failures.push(`unregistered file in a generated directory: ${relative} — register the bounded-context client or remove the artifact`);
+      failures.push(`unregistered file in a generated directory: ${relative} — declare the bounded-context client in its contract manifest or remove the artifact`);
     }
   }
 }
@@ -67,15 +68,15 @@ for (const [relativeClient, entry] of registered) {
   const contractPath = path.join(repositoryRoot, entry.contract);
 
   if (!fs.existsSync(clientPath)) {
-    failures.push(`registered client is missing after materialization: ${relativeClient}`);
+    failures.push(`generated client is missing after materialization: ${relativeClient}`);
     continue;
   }
   if (!fs.existsSync(contractPath)) {
     failures.push(`${relativeClient}: canonical bundle was not materialized: ${entry.contract}`);
     continue;
   }
-  if (!registry.generatedRoots.some((root) => relativeClient.startsWith(`${root}/`))) {
-    failures.push(`${relativeClient} is registered but sits outside every declared generated root`);
+  if (!relativeClient.startsWith(`${entry.generatedRoot}/`)) {
+    failures.push(`${relativeClient} sits outside its manifest-derived generated root ${entry.generatedRoot}`);
   }
 
   if (entry.mode !== "OPENAPI_TYPESCRIPT") {
@@ -83,8 +84,11 @@ for (const [relativeClient, entry] of registered) {
     continue;
   }
 
-  if (!entry.regenerateScript || !packageScripts[entry.regenerateScript]) {
-    failures.push(`${relativeClient}: regenerateScript '${entry.regenerateScript}' is not a root package.json script`);
+  const regenerateMatch = /^pnpm run ([A-Za-z0-9:_-]+)$/.exec(entry.regenerateScript ?? "");
+  if (!regenerateMatch) {
+    failures.push(`${relativeClient}: regenerateScript '${entry.regenerateScript}' must name one root pnpm script`);
+  } else if (!packageScripts[regenerateMatch[1]]) {
+    failures.push(`${relativeClient}: regenerateScript '${entry.regenerateScript}' does not resolve to a root package.json script`);
   }
 
   const materialized = fs.readFileSync(clientPath, "utf8");
@@ -136,7 +140,7 @@ for (const result of generationResults) {
     continue;
   }
   if (fs.readFileSync(job.outFile, "utf8") !== job.materialized) {
-    failures.push(`${job.relativeClient} is stale relative to ${job.contract}; rerun pnpm run ${job.regenerateScript}`);
+    failures.push(`${job.relativeClient} is stale relative to ${job.contract}; rerun ${job.regenerateScript}`);
   }
 }
 

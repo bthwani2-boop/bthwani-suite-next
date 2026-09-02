@@ -321,9 +321,13 @@ const generatedAuthorityChecks = [
     [/getWltTypedPayoutDestination/, "WLT_GENERATED_FINANCIAL_CLIENT_MISSING_PAYOUT_READ"],
     [/deactivateWltTypedPayoutDestination/, "WLT_GENERATED_FINANCIAL_CLIENT_MISSING_PAYOUT_DEACTIVATE"],
   ]],
-  ["tools/verification/generated-client-registry.json", [
-    [/"context":\s*"dsh"/, "DSH_GENERATED_CLIENT_REGISTRY_ENTRY_MISSING"],
-    [/"context":\s*"wlt"/, "WLT_GENERATED_CLIENT_REGISTRY_ENTRY_MISSING"],
+  ["services/dsh/contracts/contract.manifest.yaml", [
+    [/^client:\s+\.\.\/clients\/generated\/dsh-api\.ts$/m, "DSH_GENERATED_CLIENT_MANIFEST_BINDING_MISSING"],
+    [/^regenerateScript:\s+pnpm run openapi:generate:dsh$/m, "DSH_GENERATED_CLIENT_REGENERATION_BINDING_MISSING"],
+  ]],
+  ["services/wlt/contracts/contract.manifest.yaml", [
+    [/^client:\s+\.\.\/clients\/generated\/wlt-api\.ts$/m, "WLT_GENERATED_CLIENT_MANIFEST_BINDING_MISSING"],
+    [/^regenerateScript:\s+pnpm run openapi:generate:wlt$/m, "WLT_GENERATED_CLIENT_REGENERATION_BINDING_MISSING"],
   ]],
 ];
 for (const [file, markers] of generatedAuthorityChecks) {

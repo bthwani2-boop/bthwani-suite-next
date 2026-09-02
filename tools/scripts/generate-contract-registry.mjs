@@ -7,9 +7,9 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { read, repoRoot, toPosix } from "../guards/_guard-utils.mjs";
 import { parseIndexedContractModules, parseOpenApiContract } from "../guards/_openapi-utils.mjs";
+import { generatedClientEntries } from "./contract-client-metadata.mjs";
 
 const canonicalIndex = "contracts/openapi/index.yaml";
-const clientRegistryPath = "tools/verification/generated-client-registry.json";
 const outputFlagIndex = process.argv.indexOf("--output");
 if (outputFlagIndex >= 0 && !process.argv[outputFlagIndex + 1]) {
   throw new Error("--output requires a path");
@@ -19,6 +19,7 @@ const configuredOutput = outputFlagIndex >= 0
   : process.env.BTHWANI_CONTRACT_REGISTRY_OUTPUT;
 const registryPath = configuredOutput || ".diagnostics/contracts/contract-registry.json";
 const absoluteRegistryPath = path.isAbsolute(registryPath) ? registryPath : path.join(repoRoot, registryPath);
+const clientEntries = generatedClientEntries();
 
 function indexEntries() {
   const lines = read(canonicalIndex).split(/\r?\n/);
@@ -60,16 +61,14 @@ function manifestFor(entryFile) {
   return { file: manifest, values };
 }
 
-function clientsFor(contractFiles) {
-  if (!fs.existsSync(path.join(repoRoot, clientRegistryPath))) return [];
-  const registry = JSON.parse(read(clientRegistryPath));
-  return (registry.entries ?? [])
-    .filter((entry) => contractFiles.includes(entry.contract))
+function clientsForManifest(manifestFile) {
+  return clientEntries
+    .filter((entry) => entry.manifest === manifestFile)
     .map((entry) => ({
       client: entry.client,
       mode: entry.mode,
       contract: entry.contract,
-      regenerateScript: entry.regenerateScript ?? null,
+      regenerateScript: entry.regenerateScript,
     }));
 }
 
@@ -96,13 +95,12 @@ const contexts = indexEntries().map((entry) => {
     overlays,
     entryPathCount: new Set(parseOpenApiContract(entry.file).map((operation) => operation.path)).size,
     reachablePathCount: new Set(reachableFiles.flatMap((file) => parseOpenApiContract(file).map((operation) => operation.path))).size,
-    clients: clientsFor([entry.file, bundle, ...modules, ...overlays].filter(Boolean)),
+    clients: manifest ? clientsForManifest(manifest.file) : [],
   };
 });
 
 const sourceFiles = [
   canonicalIndex,
-  ...(fs.existsSync(path.join(repoRoot, clientRegistryPath)) ? [clientRegistryPath] : []),
   ...contexts.flatMap((context) => [
     context.entry,
     context.manifest,
