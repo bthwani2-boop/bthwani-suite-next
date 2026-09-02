@@ -208,7 +208,15 @@ If three or more signals cluster around one responsibility—duplicate owners/wr
 
 Before every material push require `EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA`. Never force-push unseen work.
 
-After each material push obtain trusted Exact-HEAD CI evidence. CI is evidence only.
+Push is a durable checkpoint, not a mandatory remote CI wait barrier for every intermediate step. Nearest local affected verification suffices for localized or low-risk units.
+
+GitHub Actions runs are executed on demand ("حسب الاحتياج") using `workflow_dispatch` on `g` (`gh workflow run ...`) when:
+1. Remote-owned gates are required (SonarQube Cloud, CodeQL, remote security analysis).
+2. Changes touch `.github/**`, CI control plane, shared contracts, database migrations, or cross-service boundaries.
+3. Local verification lacks environment/tooling for full multi-service backend integration.
+4. Final adversarial qualification (`06`) requires full-scope exact-HEAD remote verification.
+
+When dispatched, runs execute asynchronously unless remote evidence is an immediate blocker for the next step. Ingest all run outputs into the dynamic root graph. CI remains evidence only:
 
 `CI_FAILURE != EXECUTION_ROOT` and `GREEN_CI != CLOSED`.
 

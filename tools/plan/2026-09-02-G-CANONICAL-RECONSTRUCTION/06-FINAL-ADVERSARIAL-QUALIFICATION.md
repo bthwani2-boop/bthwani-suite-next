@@ -199,7 +199,23 @@ MAINTAINABILITY=PASS
 
 ## Final trusted Exact-HEAD CI
 
-Run trusted full-scope CI on the exact immutable final `g` SHA and require:
+Dispatch and verify trusted full-scope GitHub Actions CI on the exact immutable final `g` SHA:
+
+```bash
+# Dispatch full-scope verification on g:
+gh workflow run ci-check.yml --ref g -f expected_head_sha=<EXACT_FINAL_SHA> -f full_scope=true
+
+# Await completion:
+gh run watch <RUN_ID> --exit-status
+```
+
+When remote security analysis (SonarQube Cloud / CodeQL / remote security) is applicable, dispatch and await those runs:
+
+```bash
+gh workflow run security-remote.yml --ref g -f head_sha=<EXACT_FINAL_SHA> -f base_sha=<BASE_SHA>
+```
+
+Require:
 
 ```text
 FINAL_FULL_SCOPE_EXACT_HEAD_CI=PASS

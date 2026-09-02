@@ -203,7 +203,12 @@ Unused/unconsumed artifacts in these trees are not protected by the folder name;
 
 `CURRENT PURPOSE | CANONICAL OWNER | WRITER/DERIVED STATUS | INVOCATIONS/CONSUMERS | REACHABILITY | DUPLICATION | TARGET DISPOSITION`.
 
-Unused/unconsumed support artifacts with no required role are `DELETE_NOW` candidates.
+For `.github/workflows/**`, specifically census:
+- Which workflows support on-demand `workflow_dispatch` on `g` (e.g. `ci-check.yml`, `final-closure.yml`).
+- Accepted dispatch inputs (`expected_head_sha`, `expected_base_sha`, `verify_from_sha`, `full_scope`, `pr_number`).
+- Which workflows are required on-demand for remote-owned analysis (SonarQube Cloud, CodeQL, remote security).
+
+Unused/unconsumed support artifacts with no required role are `DELETE_NOW` candidates. Do not delete workflow dispatch mechanisms needed for on-demand verification.
 
 ## 9. Symbol/line-level discovery
 

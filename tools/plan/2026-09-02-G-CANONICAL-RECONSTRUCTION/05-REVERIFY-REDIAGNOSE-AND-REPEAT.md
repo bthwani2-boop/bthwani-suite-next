@@ -58,17 +58,60 @@ No force push.
 
 For structural roots:
 
-`COMMIT ONE COHERENT CLOSURE UNIT → PUSH g → FETCH → VERIFY REMOTE HEAD → PIN EXACT PUSHED SHA → OBTAIN TRUSTED EXACT-HEAD CI`.
+`COMMIT ONE COHERENT CLOSURE UNIT → PUSH g → FETCH → VERIFY REMOTE HEAD → PIN EXACT PUSHED SHA → EVALUATE ON-DEMAND REMOTE CI NEED`.
 
-For fast-garbage-only checkpoints, run the minimum affected verification plus trusted Exact-HEAD CI when the repository routing considers the change material or when deletion touches build/runtime/tooling/dependency/API/generated/frontend routing graphs. CI remains evidence only.
+Push is a durable checkpoint, not an unconditional remote CI wait barrier:
+- If nearest local affected verification passes and no remote-owned assurance is required for this step, continue immediately from the newly pinned HEAD.
+- Do not stall execution in an idle wait on remote CI after every minor mutation.
 
 ```text
 CI_ROLE=EVIDENCE_ONLY
 CI_FAILURE_AS_AUTOMATIC_ROOT=NO
 STALE_SHA_CI_EVIDENCE=INVALID
+PUSH_AS_CHECKPOINT=YES
+UNCONDITIONAL_REMOTE_WAIT_BARRIER=NO
 ```
 
-Escalate structural closures to full-scope verification when topology, package boundaries, canonical ownership, shared/core/service boundaries, schema/migrations, APIs/events/contracts/generated, frontend data/bindings/screens, runtime/config, dependency direction, CI control plane, security boundary, infra topology, or cross-surface contracts change materially.
+## On-Demand GitHub Actions Execution Protocol ("حسب الاحتياج")
+
+### 1. When to dispatch GitHub Actions runs (As-Needed Criteria)
+
+Dispatch a remote GitHub Actions run only when explicitly justified:
+1. **Remote-Owned Security/Static Scanners**: Per `AGENTS.md`, SonarQube Cloud, CodeQL, Semgrep, and remote security scans are remote-owned and must run on GitHub-hosted runners, not locally.
+2. **CI Control Plane & Infrastructure**: Any mutation touching `.github/workflows/**`, `.github/actions/**`, CI scripts, or runtime container configurations.
+3. **High-Impact Structural Boundaries**: Cutovers affecting shared/core package boundaries, cross-service contracts/generated bindings, database schema/migrations, or financial invariants.
+4. **Environment-Constrained Integration**: Backend or multi-service integration tests that require GitHub-hosted services or runner environments not viable locally.
+5. **Final Qualification**: Milestone or final closure candidate (`06`) requiring full-scope exact-HEAD verification.
+
+For localized code, pure frontend components with green local tests, or low-risk fast-garbage deletions, local affected verification is sufficient and remote runs should not be redundantly dispatched.
+
+### 2. Dispatching on branch `g` via GitHub CLI
+
+Because branch `g` operates without active PRs (`PR=FORBIDDEN`), execute on-demand runs via `workflow_dispatch` on the pinned ref `g`:
+
+```bash
+# General / Incremental verification of exact pushed candidate:
+gh workflow run ci-check.yml --ref g -f expected_head_sha=<EXACT_SHA>
+
+# Full-scope verification from closure base:
+gh workflow run ci-check.yml --ref g -f expected_head_sha=<EXACT_SHA> -f full_scope=true
+
+# Remote security / scanner runs when applicable:
+gh workflow run security-remote.yml --ref g -f head_sha=<EXACT_SHA> -f base_sha=<BASE_SHA>
+```
+
+### 3. Monitoring, Execution Mode, and Failure Triage
+
+- **Asynchronous Mode (Default for Intermediate Steps)**:
+  Dispatch the run, capture the workflow run ID via:
+  `gh run list --workflow=ci-check.yml --branch=g -L 3`
+  Continue with non-dependent diagnostic, review, or census tasks without stalling.
+- **Blocking Mode (Milestone / Required Evidence)**:
+  When remote evidence is an explicit prerequisite for closure or cutover:
+  `gh run watch <RUN_ID> --exit-status`
+- **Failure Inspection**:
+  Retrieve raw failure logs immediately upon failure:
+  `gh run view <RUN_ID> --log-failed`
 
 ## Evidence ingestion
 
@@ -76,7 +119,7 @@ For every material CI/test/scanner/runtime/UI result:
 
 `INGEST → VERIFY ACTUAL HEAD SHA/BASE/WORKFLOW PROVENANCE → DEDUPLICATE → CORRELATE TO CURRENT g/CANONICAL g/DELTA/E2E MATRIX → IDENTIFY CAUSAL PARENT → UPDATE EVIDENCE VALIDITY`.
 
-`CI FAILURE != EXECUTION ROOT`.
+`CI FAILURE != EXECUTION ROOT`. Failures are evidence to be addressed at their canonical Source-of-Fix; a failing run never halts discovery or re-diagnosis.
 
 ## Mandatory branch-wide refresh after structural roots
 
