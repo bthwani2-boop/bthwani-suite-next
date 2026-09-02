@@ -10,7 +10,7 @@ Use the current registered commands when provider behavior must be tested:
 pnpm run runtime:financial-simulators
 pnpm run runtime:mail
 pnpm run runtime:cache
-pnpm run runtime:dev-financial
+pnpm run runtime:financial-simulators
 pnpm run runtime:wlt:provider:smoke
 ```
 

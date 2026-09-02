@@ -108,31 +108,3 @@ func (c *Client) CancelCommercialSubscription(
 	}
 	return &envelope.Subscription, envelope.Compensation, nil
 }
-
-func (c *Client) ExpireDueCommercialSubscriptions(
-	ctx context.Context,
-	idempotencyKey string,
-	correlationID string,
-) (int, error) {
-	var envelope struct {
-		ExpiredCount int `json:"expiredCount"`
-	}
-	if strings.TrimSpace(idempotencyKey) == "" {
-		idempotencyKey = deterministicMutationKey("subscription-expire-due", strings.TrimSpace(correlationID))
-	}
-	if strings.TrimSpace(correlationID) == "" {
-		correlationID = "subscription-expire-due"
-	}
-	if err := c.commercialMutationRequest(
-		ctx,
-		http.MethodPost,
-		"/wlt/commercial/subscriptions/expire-due",
-		map[string]any{},
-		idempotencyKey,
-		correlationID,
-		&envelope,
-	); err != nil {
-		return 0, err
-	}
-	return envelope.ExpiredCount, nil
-}

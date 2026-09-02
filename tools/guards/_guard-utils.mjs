@@ -34,12 +34,7 @@ export function isInside(filePath, prefix) {
 export function isExcluded(relPath, isDir, name) {
   if (isDir) {
     if (EXCLUDED_DIRS.has(name)) return true;
-    if (relPath === "tools/diagnostics") return true;
     if (name === "_donor" || name === ".graphify") return true;
-  }
-  if (relPath.startsWith("tools/registry/runs")) {
-    const parts = relPath.split("/");
-    if (parts[0] === "tools" && parts[1] === "registry" && parts[2] === "runs") return true;
   }
   if (!isDir) {
     const ext = path.extname(name).toLowerCase();
@@ -56,7 +51,7 @@ function hasExcludedDirectory(relPath) {
   for (const name of parts.slice(0, -1)) {
     if (EXCLUDED_DIRS.has(name) || name === "_donor" || name === ".graphify") return true;
   }
-  return relPath.startsWith("tools/diagnostics/") || relPath.startsWith("tools/registry/runs/");
+  return false;
 }
 
 function repositoryFiles() {

@@ -4,8 +4,6 @@
     ".cache/**",
     ".gocache*/**",
     ".gomodcache*/**",
-    "tools/diagnostics/**",
-    "services/dsh/evidence/**",
     "infra/**",
     "governance/**",
     ".github/**",
@@ -23,12 +21,8 @@
     "@types/react",
     "@ast-grep/cli",
     "@redocly/cli",
-    "@stoplight/spectral-cli",
     "autocannon",
     "babel-plugin-react-compiler",
-    "dependency-cruiser",
-    "markdownlint-cli2",
-    "sherif",
     "size-limit"
   ],
   "ignoreBinaries": [
@@ -78,11 +72,9 @@
         "tools/dev/verify-local-identity-bootstrap.mjs"
       ],
       "project": [
-        "tools/**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}",
-        "eslint.config.mjs"
+        "tools/**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}"
       ],
       "ignoreFiles": [
-        "tools/contracts/**/*.mjs",
         "tools/mobile/*.d.ts",
         "tools/performance/**/*.{js,cjs}",
         "tools/verification/**/*.sh"
@@ -166,7 +158,6 @@
         "frontend/shared/**/*image-source.ts",
         "frontend/shared/**/*notification-action.ts",
         "frontend/shared/partner-delivery/PartnerDeliveryStatusCard.tsx",
-        "frontend/shared/partner/operator-delivery-pricing.tsx",
         "frontend/shared/workforce/WorkforceErrorState.tsx",
         "frontend/wlt-boundary/index.ts"
       ],

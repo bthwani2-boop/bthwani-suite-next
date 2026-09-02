@@ -7,8 +7,8 @@ Remote Docker is a later option for a dedicated server and must use SSH Docker c
 Runtime remains opt-in:
 
 ```powershell
-pnpm run runtime:dev-core
-pnpm run runtime:dev-financial
+pnpm run runtime:codespaces:core
+pnpm run runtime:codespaces:wlt
 pnpm run runtime:down
 ```
 

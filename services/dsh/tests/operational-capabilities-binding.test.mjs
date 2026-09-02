@@ -25,7 +25,6 @@ describe("delivery exceptions and return custody", () => {
 
 describe("support conversation and order rescue", () => {
   const actorApi = source("../frontend/shared/support/actor-support.api.ts");
-  const deliveryApi = source("../frontend/shared/support/support-message-delivery.api.ts");
   const deliveryDomain = source("../backend/internal/support/message_delivery.go");
   const deliveryRoutes = source("../backend/internal/http/support_message_delivery_routes.go");
   const migration = source("../database/migrations/dsh-096_support_message_delivery.sql");
@@ -48,7 +47,6 @@ describe("support conversation and order rescue", () => {
     assert.match(deliveryDomain, /MarkActorTicketMessagesRead/);
     assert.match(deliveryRoutes, /messages\/\{messageId\}\/attachments/);
     assert.match(deliveryRoutes, /messages\/read/);
-    assert.match(deliveryApi, /attachActorSupportMessageAsset/);
     assert.match(actorApi, /markActorSupportMessagesRead/);
     assert.match(conversation, /markActorSupportMessagesRead/);
     assert.match(apiMain, /RegisterSupportMessageDeliveryRoutes\(router/);

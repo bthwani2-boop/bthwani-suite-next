@@ -4,7 +4,7 @@ Status: DERIVED_EXECUTION_MAP
 
 Durable UX/Product/Design authority: `governance/product/EXPERIENCE-AND-DESIGN.md`, `governance/product/PRD.md`, and applicable `governance/product/contracts/*.product-truth.json`.
 
-This file is a **tool-facing/current implementation map**, retained because `premium-ui.json` and UI verification use its capability mapping. `canonicalMap` in that tool configuration means the canonical map for that tool's implementation checks; it does **not** make this file a competing durable Product/System governance authority. If durable semantics conflict, governance wins and this map must be updated.
+This file is a **tool-facing/current implementation map**, retained because UI verification tooling uses its capability mapping. It does **not** make this file a competing durable Product/System governance authority. If durable semantics conflict, governance wins and this map must be updated.
 
 ## Product context
 
@@ -68,6 +68,6 @@ Migration/current-work status is evidence, not governance. The exact candidate d
 
 ## Verification map
 
-Current tool commands include `pnpm guard:ui-kit-boundary`, `pnpm visual:ui-kit:contract`, `pnpm guard:icon-contract`, targeted package typechecks and the premium audit configured by `premium-ui.json` when applicable. Commands are executable evidence mechanisms and may evolve without changing durable UX semantics.
+Current tool commands include `pnpm guard:ui-kit-boundary`, `pnpm visual:ui-kit:contract`, `pnpm guard:icon-contract`, and targeted package typechecks. Commands are executable evidence mechanisms and may evolve without changing durable UX semantics.
 
 Use browser/device/locale/theme/accessibility/runtime evidence only when material to the affected claim. CRUD or persisted-state closure requires canonical runtime readback; static UI success alone is insufficient.

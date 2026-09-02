@@ -25,7 +25,6 @@
     "**/*.7z",
     "**/*.rar",
     "pnpm-lock.yaml",
-    "tools/registry/runs/**",
     "**/vendor/**",
     "**/*.graphify-bak"
   ],

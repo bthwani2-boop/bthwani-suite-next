@@ -16,7 +16,7 @@ updates:
         patterns: ["@playwright/*", "@axe-core/*"]
         update-types: ["minor", "patch"]
       quality-tools-non-major:
-        patterns: ["@ast-grep/*", "jscpd", "knip", "markdownlint-cli2", "sherif", "size-limit"]
+        patterns: ["@ast-grep/*", "jscpd", "knip", "size-limit"]
         update-types: ["minor", "patch"]
       typescript-major:
         patterns: ["typescript"]

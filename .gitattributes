@@ -1,6 +1,4 @@
 # Evidence files contain raw API/command output that legitimately has trailing whitespace.
-services/*/evidence/**  -whitespace
-tools/registry/runs/**  -whitespace
 
 # Linux-executed scripts must stay LF. CRLF breaks /bin/sh inside Docker.
 *.sh text eol=lf

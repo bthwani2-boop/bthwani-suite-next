@@ -4,7 +4,7 @@ Codespaces is the first heavy-runtime path for this repository. It runs Docker i
 
 Create a codespace when local Docker is unavailable, slow, or too resource-heavy. Stop it when runtime work is done. Delete it when the branch no longer needs stored workspace state. Closing the browser tab does not immediately stop the codespace; stop it explicitly from GitHub or the Codespaces CLI when finished.
 
-Compute is consumed while the codespace is running. Storage remains allocated while the codespace exists. Runtime containers do not start automatically from `.devcontainer/devcontainer.json`.
+Compute is consumed while the codespace is running. Storage remains allocated while the codespace exists. Runtime containers never start automatically; the runtime is manually opt-in.
 
 Useful commands:
 
