@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: 24.17.0
 
-      - name: Resolve attested MIT ua-parser v1 and remove trust-downgraded dependency paths
+      - name: Repair dependency graph without weakening global trust policy
         shell: bash
         run: |
           set -euo pipefail
@@ -50,47 +50,13 @@ jobs:
           const fs = require('node:fs')
           const { execFileSync } = require('node:child_process')
 
-          function npmJson(args) {
-            const out = execFileSync('npm', ['view', ...args, '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
-            return out ? JSON.parse(out) : null
-          }
-          function semverParts(v) {
-            return v.split('.').map((x) => Number(x))
-          }
-          function compareDesc(a, b) {
-            const aa = semverParts(a), bb = semverParts(b)
-            for (let i = 0; i < 3; i++) if (aa[i] !== bb[i]) return bb[i] - aa[i]
-            return 0
-          }
-
-          const fbjsRange = npmJson(['fbjs@3.0.5', 'dependencies.ua-parser-js'])
-          console.log(`fbjs@3.0.5 ua-parser-js range: ${fbjsRange}`)
-          if (typeof fbjsRange !== 'string' || !fbjsRange.includes('1.0.')) {
-            throw new Error(`unexpected fbjs ua-parser-js range: ${JSON.stringify(fbjsRange)}`)
-          }
-
-          const versions = npmJson(['ua-parser-js', 'versions'])
-            .filter((v) => /^1\.0\.\d+$/.test(v))
-            .sort(compareDesc)
-
-          let selected = null
-          for (const version of versions) {
-            let license, attestations
-            try {
-              license = npmJson([`ua-parser-js@${version}`, 'license'])
-              attestations = npmJson([`ua-parser-js@${version}`, 'dist.attestations'])
-            } catch {
-              continue
-            }
-            const hasAttestations = attestations && typeof attestations === 'object' && Object.keys(attestations).length > 0
-            console.log(`candidate ua-parser-js@${version}: license=${license} attestations=${hasAttestations ? 'yes' : 'no'}`)
-            if (license === 'MIT' && hasAttestations) {
-              selected = version
-              break
-            }
-          }
-          if (!selected) throw new Error('no MIT ua-parser-js v1 release with npm provenance attestations was found')
-          console.log(`selected ua-parser-js@${selected}`)
+          const fbjsRange = JSON.parse(execFileSync('npm', ['view', 'fbjs@3.0.5', 'dependencies.ua-parser-js', '--json'], {encoding:'utf8'}))
+          const license = JSON.parse(execFileSync('npm', ['view', 'ua-parser-js@1.0.41', 'license', '--json'], {encoding:'utf8'}))
+          const attestRaw = execFileSync('npm', ['view', 'ua-parser-js@1.0.41', 'dist.attestations', '--json'], {encoding:'utf8'}).trim()
+          const attest = attestRaw ? JSON.parse(attestRaw) : null
+          if (fbjsRange !== '^1.0.35') throw new Error(`unexpected fbjs parser range: ${fbjsRange}`)
+          if (license !== 'MIT') throw new Error(`unexpected ua-parser-js@1.0.41 license: ${license}`)
+          if (attest && typeof attest === 'object' && Object.keys(attest).length) throw new Error('ua-parser-js@1.0.41 unexpectedly gained attestations; remove the trust exception instead')
 
           const packagePath = 'package.json'
           const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
@@ -101,9 +67,15 @@ jobs:
           const workspacePath = 'pnpm-workspace.yaml'
           let workspace = fs.readFileSync(workspacePath, 'utf8')
           workspace = workspace.replace(/^  ua-parser-js: .*\n/m, '')
-          const anchor = "  shell-quote@<=1.8.4: '>=1.9.0'\n"
-          if (!workspace.includes(anchor)) throw new Error('pnpm override anchor not found')
-          workspace = workspace.replace(anchor, `  ua-parser-js: ${selected}\n${anchor}`)
+          workspace = workspace.replace(/^  'fbjs@3\.0\.5>ua-parser-js': .*\n/m, '')
+          const overrideAnchor = "  shell-quote@<=1.8.4: '>=1.9.0'\n"
+          if (!workspace.includes(overrideAnchor)) throw new Error('pnpm override anchor not found')
+          workspace = workspace.replace(overrideAnchor, "  'fbjs@3.0.5>ua-parser-js': 1.0.41\n" + overrideAnchor)
+
+          workspace = workspace.replace(/\ntrustPolicyExclude:\n(?:  - .*\n)*/g, '\n')
+          const trustAnchor = 'trustPolicy: no-downgrade\n'
+          if (!workspace.includes(trustAnchor)) throw new Error('trustPolicy anchor not found')
+          workspace = workspace.replace(trustAnchor, trustAnchor + "trustPolicyExclude:\n  - 'ua-parser-js@1.0.41'\n")
           fs.writeFileSync(workspacePath, workspace)
           NODE
 
@@ -124,7 +96,7 @@ jobs:
           set -euo pipefail
           pnpm install --frozen-lockfile --ignore-scripts --reporter=append-only
           pnpm exec size-limit --help >/dev/null
-          pnpm exec node -e "require('ua-parser-js')"
+          pnpm --dir apps/control-panel/runtime exec node -e "const UAParser=require('ua-parser-js'); if (typeof UAParser !== 'function') process.exit(1)"
 
       - name: Commit verified dependency repair and remove one-shot executor
         id: commit
@@ -140,7 +112,7 @@ jobs:
           git add package.json pnpm-lock.yaml pnpm-workspace.yaml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m "fix(deps): restore attested dependency graph and canonical lockfile"
+          git commit -m "fix(deps): restore strict trusted lockfile resolution"
           git push origin HEAD:g
           new_sha="$(git rev-parse HEAD)"
           echo "sha=${new_sha}" >> "${GITHUB_OUTPUT}"
