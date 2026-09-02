@@ -106,11 +106,13 @@ function reaches(start, target) {
   return false;
 }
 
+let contractManifestFailed = false;
 function operationIds() {
   const files = new Set();
   try {
     for (const { file } of dshContractRegistrations()) files.add(file);
   } catch (error) {
+    contractManifestFailed = true;
     violations.push({ file: contractManifestFile, message: `INVALID_DSH_CONTRACT_MANIFEST ${error.message}` });
   }
   const ids = new Set();
@@ -155,9 +157,11 @@ if (registry && schema) {
 const operations = operationIds();
 const capabilities = capabilityIds();
 let routes = new Set();
+let routeExtractionFailed = false;
 try {
   routes = routeSet();
 } catch (error) {
+  routeExtractionFailed = true;
   violations.push({ file: routerDir, message: `GO_AST_ROUTE_EXTRACTION_FAILED ${error.message}` });
 }
 
@@ -187,8 +191,8 @@ try {
     if (readText(entry.screen) && readText(entry.controller) && !reaches(entry.screen, entry.controller)) {
       violations.push({ file: entry.screen, message: `SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE ${entry.id} -> ${entry.controller}` });
     }
-    if (!operations.has(entry.operationId)) violations.push({ file: contractManifestFile, message: `OPENAPI_OPERATION_MISSING ${entry.id} -> ${entry.operationId}` });
-    if (!routes.has(entry.route)) violations.push({ file: routerDir, message: `BACKEND_ROUTE_MISSING ${entry.id} -> ${entry.route}` });
+    if (!contractManifestFailed && !operations.has(entry.operationId)) violations.push({ file: contractManifestFile, message: `OPENAPI_OPERATION_MISSING ${entry.id} -> ${entry.operationId}` });
+    if (!routeExtractionFailed && !routes.has(entry.route)) violations.push({ file: routerDir, message: `BACKEND_ROUTE_MISSING ${entry.id} -> ${entry.route}` });
     if (!capabilities.has(entry.capabilityId)) violations.push({ file: "services/dsh/capability-map.ts", message: `SERVICE_MANIFEST_CAPABILITY_MISSING ${entry.id} -> ${entry.capabilityId}` });
   }
 } finally {
