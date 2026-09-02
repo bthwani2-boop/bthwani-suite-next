@@ -144,20 +144,6 @@ func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string,
 			return "", err
 		}
 		return entry.ID, nil
-	case EventTypePromotionFundingCommit, EventTypePromotionFundingRelease, EventTypePromotionFundingReverse:
-		reservationID, ok := event.Payload["fundingReservationId"].(string)
-		if !ok || reservationID == "" {
-			return "", fmt.Errorf("promotion funding event lacks reservation id")
-		}
-		redemptionID, _ := event.Payload["couponRedemptionId"].(string)
-		reason, _ := event.Payload["reason"].(string)
-		orderID, _ := event.Payload["orderId"].(string)
-		transition := map[string]string{EventTypePromotionFundingCommit: "commit", EventTypePromotionFundingRelease: "release", EventTypePromotionFundingReverse: "reverse"}[event.EventType]
-		result, err := client.TransitionPromotionFundingFromOutbox(ctx, reservationID, transition, wlt.PromotionFundingOutboxInput{OperatorContextID: event.OperatorContextID, OrderID: orderID, Reason: reason, IdempotencyKey: "coupon-redemption:" + redemptionID + ":funding:" + transition, CorrelationID: "dsh-promotion-funding-" + redemptionID})
-		if err != nil {
-			return "", err
-		}
-		return result.ID, nil
 	default:
 		return "", fmt.Errorf("unsupported WLT outbox event type %q", event.EventType)
 	}

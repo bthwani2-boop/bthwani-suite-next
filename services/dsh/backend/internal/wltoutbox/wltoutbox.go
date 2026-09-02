@@ -11,12 +11,9 @@ import (
 )
 
 const (
-	EventTypeDeliveryCompleted       = "delivery_completed"
-	EventTypeLoyaltyEarned           = "loyalty_earned"
-	EventTypeLoyaltyReversed         = "loyalty_reversed"
-	EventTypePromotionFundingCommit  = "promotion_funding_commit"
-	EventTypePromotionFundingRelease = "promotion_funding_release"
-	EventTypePromotionFundingReverse = "promotion_funding_reverse"
+	EventTypeDeliveryCompleted = "delivery_completed"
+	EventTypeLoyaltyEarned     = "loyalty_earned"
+	EventTypeLoyaltyReversed   = "loyalty_reversed"
 )
 
 const (
@@ -224,20 +221,6 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 		}
 	}
 
-	if eventType == EventTypePromotionFundingCommit || eventType == EventTypePromotionFundingRelease || eventType == EventTypePromotionFundingReverse {
-		redemptionID, _ := payloadString(payload, "couponRedemptionId")
-		target := map[string]string{
-			EventTypePromotionFundingCommit:  "committed",
-			EventTypePromotionFundingRelease: "released",
-			EventTypePromotionFundingReverse: "reversed",
-		}[eventType]
-		if redemptionID == "" {
-			return fmt.Errorf("promotion funding event lacks couponRedemptionId")
-		}
-		if _, err := tx.Exec(`UPDATE dsh_coupon_redemptions SET funding_status=$2,updated_at=NOW() WHERE id=$1::uuid`, redemptionID, target); err != nil {
-			return err
-		}
-	}
 	return tx.Commit()
 }
 
@@ -288,18 +271,6 @@ func MarkUnknown(db *sql.DB, id string, attemptCount int, cause error) error {
                     last_readback_at=NOW(),readback_attempt_count=readback_attempt_count+1,updated_at=NOW()
                 WHERE id=$1::uuid AND status='processing'`, id, attemptCount+1, message, MaxReadbackAttempts)
 	return err
-}
-
-func payloadString(payload []byte, key string) (string, error) {
-	values := map[string]any{}
-	if err := json.Unmarshal(payload, &values); err != nil {
-		return "", err
-	}
-	value, ok := values[key].(string)
-	if !ok {
-		return "", nil
-	}
-	return value, nil
 }
 
 func min(a, b int) int {

@@ -46,8 +46,6 @@ func (c *Client) ReadbackOutboxEvent(ctx context.Context, input OutboxReadbackIn
 	switch input.EventType {
 	case "delivery_completed":
 		return c.readDeliveryCompletion(ctx, input)
-	case "promotion_funding_commit", "promotion_funding_release", "promotion_funding_reverse":
-		return c.readPromotionFunding(ctx, input)
 	case "loyalty_earned", "loyalty_reversed":
 		return c.readLoyaltyEntry(ctx, input)
 	default:
@@ -114,31 +112,6 @@ func (c *Client) readDeliveryCompletion(ctx context.Context, input OutboxReadbac
 		if commission.ID != "" && commission.SourceID == input.OrderID && commission.BeneficiaryActorID == input.CollectorID && commission.BeneficiaryActorType == "captain" {
 			return OutboxReadbackResult{Present: true, Reference: reservationEnvelope.CodReservation.ID + ":" + commission.ID}, nil
 		}
-	}
-	return OutboxReadbackResult{Absent: true}, nil
-}
-
-func (c *Client) readPromotionFunding(ctx context.Context, input OutboxReadbackInput) (OutboxReadbackResult, error) {
-	reservationID, _ := input.Payload["fundingReservationId"].(string)
-	if strings.TrimSpace(reservationID) == "" {
-		return OutboxReadbackResult{}, fmt.Errorf("%w: reservation id missing", ErrCanonicalReadbackUnavailable)
-	}
-	var envelope struct {
-		Reservation struct {
-			ID     string `json:"id"`
-			Status string `json:"status"`
-		} `json:"reservation"`
-	}
-	status, err := c.readJSON(ctx, "/wlt/promotion-funding/reservations/"+url.PathEscape(reservationID), &envelope)
-	if err != nil {
-		return OutboxReadbackResult{}, err
-	}
-	if status == http.StatusNotFound {
-		return OutboxReadbackResult{Absent: true}, nil
-	}
-	want := map[string]string{"promotion_funding_commit": "committed", "promotion_funding_release": "released", "promotion_funding_reverse": "reversed"}[input.EventType]
-	if envelope.Reservation.Status == want {
-		return OutboxReadbackResult{Present: true, Reference: envelope.Reservation.ID}, nil
 	}
 	return OutboxReadbackResult{Absent: true}, nil
 }
