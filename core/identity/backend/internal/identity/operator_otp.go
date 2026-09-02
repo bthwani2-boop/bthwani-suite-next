@@ -64,7 +64,7 @@ func (r *Repository) RequestOtpForOperatorContext(
 	if err != nil {
 		return IssueActivationResult{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	actor, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
