@@ -1,63 +1,10 @@
 import { DSH_CAPABILITY_MAP, type DshCapability } from "./capability-map";
-import {
-  DSH_CAPABILITY_MAP_EXTENSIONS,
-  type DshCapabilityExtension,
-} from "./capability-map.extensions";
-
-export type DshMergedCapability = Omit<DshCapability, "topicScope"> & {
-  readonly topicScope?: readonly string[];
-};
 
 function unique<T>(values: readonly T[]): readonly T[] {
   return [...new Set(values)];
 }
 
-function mergeCapabilityExtension(
-  capability: DshCapability,
-  extension: DshCapabilityExtension | undefined,
-): DshMergedCapability {
-  if (!extension) return capability;
-
-  const topic = extension.topic ?? capability.topic;
-  return {
-    ...capability,
-    status: extension.status,
-    contractOperations: unique([
-      ...capability.contractOperations,
-      ...extension.contractOperations,
-    ]),
-    surfaces: unique([...capability.surfaces, ...extension.surfaces]),
-    runtimeBound: capability.runtimeBound && extension.runtimeBound,
-    closureState: extension.closureState,
-    ...(topic !== undefined ? { topic } : {}),
-    topicScope: unique([
-      ...(capability.topicScope ?? []),
-      ...extension.topicScope,
-    ]),
-  };
-}
-
-const baseCapabilityIds = new Set(DSH_CAPABILITY_MAP.map((capability) => capability.id));
-const extensionByCapabilityId = new Map<DshCapability["id"], DshCapabilityExtension>();
-
-for (const extension of DSH_CAPABILITY_MAP_EXTENSIONS) {
-  if (!baseCapabilityIds.has(extension.id)) {
-    throw new Error(
-      `ORPHAN_DSH_CAPABILITY_EXTENSION: ${extension.id} has no canonical capability owner`,
-    );
-  }
-  if (extensionByCapabilityId.has(extension.id)) {
-    throw new Error(
-      `DUPLICATE_DSH_CAPABILITY_EXTENSION: ${extension.id} has more than one extension`,
-    );
-  }
-  extensionByCapabilityId.set(extension.id, extension);
-}
-
-export const DSH_CAPABILITIES: readonly DshMergedCapability[] =
-  DSH_CAPABILITY_MAP.map((capability) =>
-    mergeCapabilityExtension(capability, extensionByCapabilityId.get(capability.id)),
-  );
+export const DSH_CAPABILITIES = DSH_CAPABILITY_MAP;
 
 export const DSH_CAPABILITY_IDS = DSH_CAPABILITIES.map((capability) => capability.id);
 
@@ -66,5 +13,5 @@ export const DSH_CONTRACT_OPERATIONS = unique(
 );
 
 export function getDshCapabilitiesForSurface(surface: string) {
-  return DSH_CAPABILITIES.filter((capability) => capability.surfaces.includes(surface));
+  return DSH_CAPABILITIES.filter((capability) => capability.surfaces.some((candidate) => candidate === surface));
 }

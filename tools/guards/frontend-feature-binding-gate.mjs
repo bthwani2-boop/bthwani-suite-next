@@ -135,7 +135,7 @@ function routeSet() {
 
 function capabilityIds() {
   const ids = new Set();
-  for (const file of ["services/dsh/capability-map.ts", "services/dsh/capability-map.extensions.ts"]) {
+  for (const file of ["services/dsh/capability-map.ts"]) {
     for (const match of readText(file).matchAll(/\bid:\s*["']([^"']+)["']/g)) ids.add(match[1]);
   }
   return ids;

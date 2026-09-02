@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fail, read, repoRoot, toPosix } from "./_guard-utils.mjs";
 import { parseOpenApiContract } from "./_openapi-utils.mjs";
 import { dshContractRegistrations } from "../scripts/contract-client-metadata.mjs";
@@ -10,7 +11,8 @@ const serviceRoot = "services/dsh";
 const manifestFile = `${serviceRoot}/service.manifest.ts`;
 const runtimeMapFile = `${serviceRoot}/runtime-map.ts`;
 const registryFile = `${serviceRoot}/contracts/contract.manifest.yaml`;
-const capabilityFiles = [`${serviceRoot}/capability-map.ts`, `${serviceRoot}/capability-map.extensions.ts`];
+const capabilityFiles = [`${serviceRoot}/capability-map.ts`];
+const extensionFile = `${serviceRoot}/${["capability-map", "extensions.ts"].join(".")}`;
 const manifest = read(manifestFile);
 const runtimeMap = read(runtimeMapFile);
 let registry = [];
@@ -138,17 +140,9 @@ function capabilities(file) {
 }
 
 const base = capabilities(capabilityFiles[0]);
-const extensions = capabilities(capabilityFiles[1]);
-const baseIds = new Set(base.map((item) => item.id));
-const extensionIds = new Set();
-for (const item of extensions) {
-  if (!baseIds.has(item.id)) violations.push({ file: item.file, message: `ORPHAN_CAPABILITY_EXTENSION:${item.id}` });
-  if (extensionIds.has(item.id)) violations.push({ file: item.file, message: `DUPLICATE_CAPABILITY_EXTENSION:${item.id}` });
-  extensionIds.add(item.id);
-}
 
 const owners = new Map();
-for (const item of [...base, ...extensions]) {
+for (const item of base) {
   if (!item.id) violations.push({ file: item.file, message: "CAPABILITY_ID_MISSING" });
   if (item.operations.length === 0) violations.push({ file: item.file, message: `EMPTY_CAPABILITY_OPERATION_SET:${item.id}` });
   const local = new Set();
@@ -162,6 +156,23 @@ for (const item of [...base, ...extensions]) {
 }
 for (const [operationId, operationOwners] of owners) {
   if (operationOwners.size > 1) violations.push({ file: capabilityFiles.join(","), message: `DUPLICATE_OPERATION_OWNERSHIP:${operationId}` });
+}
+
+if (fs.existsSync(path.join(repoRoot, extensionFile))) {
+  violations.push({ file: extensionFile, message: "DSH_CAPABILITY_EXTENSION_FILE_FORBIDDEN" });
+}
+
+const trackedFiles = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
+  .split(/\r?\n/)
+  .filter(Boolean)
+  .filter((file) => fs.existsSync(path.join(repoRoot, file)))
+  .filter((file) => file !== "tools/guards/service-manifest-drift-gate.mjs");
+for (const [marker, message] of [
+  [["DSH_CAPABILITY_MAP_", "EXTENSIONS"].join(""), ["DSH_CAPABILITY_MAP_", "EXTENSIONS_FORBIDDEN"].join("")],
+  [["DshCapability", "Extension"].join(""), "DSH_CAPABILITY_EXTENSION_TYPE_FORBIDDEN"],
+]) {
+  const matches = trackedFiles.filter((file) => read(file).includes(marker));
+  if (matches.length) violations.push({ file: matches.join(","), message });
 }
 
 // The canonical DSH manifest is the contract inventory. The capability map is

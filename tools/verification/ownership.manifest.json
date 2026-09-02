@@ -39,7 +39,6 @@
       "kind": "domain",
       "root": "services/dsh",
       "sourcePrefixes": [
-        "services/dsh/capability-map.extensions.ts",
         "services/dsh/capability-map.ts",
         "services/dsh/capabilities.ts",
         "services/dsh/frontend/",

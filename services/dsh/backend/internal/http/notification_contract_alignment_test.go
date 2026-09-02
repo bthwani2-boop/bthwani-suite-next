@@ -52,7 +52,7 @@ func TestNotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 
 	contract := readNotificationGovernanceFixture(t, "../../../contracts/dsh.notifications-governance.openapi.yaml")
 	manifest := readNotificationGovernanceFixture(t, "../../../contracts/contract.manifest.yaml")
-	capabilities := readNotificationGovernanceFixture(t, "../../../capability-map.extensions.ts")
+	capabilities := readNotificationGovernanceFixture(t, "../../../capability-map.ts")
 	frontendTypes := readNotificationGovernanceFixture(t, "../../../frontend/shared/notifications/notifications.types.ts")
 	migration := readNotificationGovernanceFixture(t, "../../../database/migrations/dsh-088_notification_delivery_policy.sql")
 

@@ -1,10 +1,10 @@
-import type { DshMergedCapability } from "./capabilities";
+import type { DshCapability } from "./capability-map";
 import { DSH_CAPABILITIES } from "./capabilities";
 
 export type DshRuntimeEvidenceState = "NONE" | "SAME_COMMIT_VERIFIED";
 
 export type DshRuntimeBinding = {
-  readonly capabilityId: DshMergedCapability["id"];
+  readonly capabilityId: DshCapability["id"];
   readonly contractOperations: readonly string[];
   /** Static source presence only; this is not runtime, database, or release proof. */
   readonly backendImplemented: boolean;
@@ -28,7 +28,7 @@ export type DshRuntimeBinding = {
 };
 
 function unresolvedState(
-  capability: Pick<DshMergedCapability, "status" | "closureState">,
+  capability: Pick<DshCapability, "status" | "closureState">,
 ): DshRuntimeBinding["state"] {
   if (capability.status === "blocked-runtime") return "blocked";
   if (capability.status === "planned" || capability.status === "contract-active") return "incomplete";

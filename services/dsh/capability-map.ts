@@ -75,6 +75,45 @@ export type DshCapability = {
     | "store-analytics"
     | "partner-performance"
     | "field-finance"
+    | "partner-proposal-readback"
+    | "field-proposal-readback"
+    | "product-attributes"
+    | "category-attribute-rules"
+    | "product-alternatives"
+    | "assortment-pauses"
+    | "catalog-audit"
+    | "guarded-rollback"
+    | "special-requests"
+    | "quotes"
+    | "dispatch-handoff"
+    | "client-ticket-submission"
+    | "partner-ticket-submission"
+    | "captain-ticket-submission"
+    | "ticket-conversation"
+    | "operator-readback"
+    | "support-audit"
+    | "actor-inbox"
+    | "channel-preferences"
+    | "quiet-hours"
+    | "localized-templates"
+    | "deep-links"
+    | "actor-targeting"
+    | "push-endpoint-lifecycle"
+    | "push-provider-worker"
+    | "delivery-audit"
+    | "retry-dead-letter"
+    | "partner-delivery"
+    | "pickup"
+    | "proof"
+    | "exceptions"
+    | "client-address-book"
+    | "governed-map-search"
+    | "reverse-geocoding"
+    | "serviceability-address"
+    | "checkout-address"
+    | "service-area-geofences"
+    | "coordinate-to-service-area"
+    | "map-provider-boundary"
   )[];
 };
 
@@ -192,12 +231,55 @@ export const DSH_CAPABILITY_MAP = [
       "fieldUpsertStoreAssortment",
       "fieldGetStoreAssortment",
       "createFieldProductProposal",
+      "listPartnerProductProposals",
+      "listFieldProductProposals",
+      "listOperatorCatalogAttributes",
+      "createOperatorCatalogAttribute",
+      "listOperatorCatalogAttributeOptions",
+      "createOperatorCatalogAttributeOption",
+      "upsertOperatorCatalogNodeAttributeRule",
+      "listOperatorMasterProductAttributeValues",
+      "upsertOperatorMasterProductAttributeValue",
+      "listOperatorMasterProductRelationships",
+      "upsertOperatorMasterProductRelationship",
+      "deleteOperatorMasterProductRelationship",
+      "listOperatorAssortmentPauses",
+      "pauseOperatorStoreAssortment",
+      "resumeOperatorStoreAssortment",
+      "listOperatorCatalogAudit",
+      "rollbackOperatorCatalogAudit",
+      "listPartnerCatalogAttributes",
+      "listPartnerCatalogAttributeOptions",
+      "listPartnerMasterProductAttributeValues",
+      "listPartnerMasterProductRelationships",
+      "get_dsh_partner_stores__storeId__assortment_pauses",
+      "post_dsh_partner_stores__storeId__assortment__masterProductId__pause",
+      "post_dsh_partner_stores__storeId__assortment__masterProductId__resume",
+      "listFieldCatalogAttributes",
+      "listFieldCatalogAttributeOptions",
+      "listFieldMasterProductAttributeValues",
+      "listFieldMasterProductRelationships",
+      "get_dsh_field_partners__partnerId__assortment_pauses",
+      "post_dsh_field_partners__partnerId__assortment__masterProductId__pause",
+      "post_dsh_field_partners__partnerId__assortment__masterProductId__resume",
     ],
-    surfaces: ["app-client", "app-partner", "control-panel"],
+    surfaces: ["app-client", "app-partner", "control-panel", "app-field"],
     runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    closureState: "IMPLEMENTED_MULTI_SURFACE",
     topic: "catalog",
-    topicScope: ["browse", "partner-manage", "operator-govern"],
+    topicScope: [
+      "browse",
+      "partner-manage",
+      "operator-govern",
+      "partner-proposal-readback",
+      "field-proposal-readback",
+      "product-attributes",
+      "category-attribute-rules",
+      "product-alternatives",
+      "assortment-pauses",
+      "catalog-audit",
+      "guarded-rollback",
+    ],
   },
   // ── Cart & Serviceability ─────────────────────────────────────────────────
   {
@@ -220,19 +302,34 @@ export const DSH_CAPABILITY_MAP = [
   // ── Checkout Intent & WLT Handoff ─────────────────────────────────────────
   {
     id: "dsh.client.checkout",
-    status: "runtime-verified",
+    status: "experience-fix-required",
     contractOperations: [
       "createDshCheckoutIntent",
       "getDshCheckoutIntent",
       "cancelDshCheckoutIntent",
       "listOperatorCheckoutIntents",
       "reportWltPaymentSessionEvent",
+      "listDshClientAddresses",
+      "createDshClientAddress",
+      "updateDshClientAddress",
+      "deleteDshClientAddress",
+      "setDshClientDefaultAddress",
+      "searchDshClientMapLocations",
+      "reverseDshClientMapLocation",
     ],
     surfaces: ["app-client", "control-panel"],
-    runtimeBound: true,
+    runtimeBound: false,
     closureState: "FIX_REQUIRED",
     topic: "commerce",
-    topicScope: ["checkout", "wlt-handoff"],
+    topicScope: [
+      "checkout",
+      "wlt-handoff",
+      "client-address-book",
+      "governed-map-search",
+      "reverse-geocoding",
+      "serviceability-address",
+      "checkout-address",
+    ],
   },
   // ── Order Fulfillment & Partner Acceptance ────────────────────────────────
   {
@@ -258,7 +355,7 @@ export const DSH_CAPABILITY_MAP = [
   // ── Dispatch & Captain Delivery Lifecycle ─────────────────────────────────
   {
     id: "dsh.client.dispatch",
-    status: "runtime-verified",
+    status: "experience-fix-required",
     contractOperations: [
       "createDshAssignment",
       "listDshDispatchAssignments",
@@ -270,12 +367,36 @@ export const DSH_CAPABILITY_MAP = [
 		"submitCaptainDeliveryProof",
       "getDshClientOrderTracking",
       "reportCaptainPickupReadiness",
+      "arriveDshPartnerDeliveryTask",
+      "assignDshPartnerDeliveryTask",
+      "departDshPartnerDeliveryTask",
+      "extendDshPickupWindow",
+      "getDshOperatorPartnerDelivery",
+      "getDshOperatorPickup",
+      "listDshOperatorPartnerDeliveries",
+      "listDshOperatorPickups",
+      "markDshPartnerDeliveryPickedUp",
+      "markDshPickupCustomerArrived",
+      "markDshPickupNoShow",
+      "markDshPickupReady",
+      "notifyDshPickupCustomer",
+      "raiseDshPartnerDeliveryException",
+      "submitDshPartnerDeliveryProof",
+      "verifyDshPickupSession",
     ],
-    surfaces: ["app-client", "app-captain", "control-panel"],
+    surfaces: ["app-client", "app-captain", "control-panel", "app-partner"],
     runtimeBound: true,
     closureState: "FIX_REQUIRED",
     topic: "commerce",
-    topicScope: ["dispatch", "captain-delivery", "client-tracking"],
+    topicScope: [
+      "dispatch",
+      "captain-delivery",
+      "client-tracking",
+      "partner-delivery",
+      "pickup",
+      "proof",
+      "exceptions",
+    ],
   },
   // ── Field Verification & Store Quality Assurance ──────────────────────────
   {
@@ -320,7 +441,7 @@ export const DSH_CAPABILITY_MAP = [
   // ── Support, Incidents & Escalation Room ───────────────────────────────────
   {
     id: "dsh.support.hub",
-    status: "runtime-verified",
+    status: "experience-fix-required",
     contractOperations: [
       "createDshSupportTicket",
       "listDshMyTickets",
@@ -332,12 +453,38 @@ export const DSH_CAPABILITY_MAP = [
       "createDshGovernedIncident",
       "listDshGovernedIncidents",
       "updateDshGovernedIncident",
+      "approveDshSpecialRequestQuote",
+      "assignDshSpecialRequestDispatch",
+      "cancelDshClientSpecialRequest",
+      "createDshClientSpecialRequest",
+      "getDshClientSpecialRequest",
+      "getDshOperatorSpecialRequest",
+      "listDshClientSpecialRequests",
+      "listDshOperatorSpecialRequests",
+      "updateDshOperatorSpecialRequest",
+      "getDshOperatorSupportTicket",
+      "listDshOperatorSupportMessages",
+      "addDshOperatorSupportMessage",
+      "listDshOperatorSupportEvents",
     ],
-    surfaces: ["app-client", "app-partner", "control-panel"],
+    surfaces: ["app-client", "app-partner", "control-panel", "app-captain"],
     runtimeBound: true,
     closureState: "FIX_REQUIRED",
     topic: "support",
-    topicScope: ["ticket-submission", "ticket-management", "incident-management"],
+    topicScope: [
+      "ticket-submission",
+      "ticket-management",
+      "incident-management",
+      "special-requests",
+      "quotes",
+      "dispatch-handoff",
+      "client-ticket-submission",
+      "partner-ticket-submission",
+      "captain-ticket-submission",
+      "ticket-conversation",
+      "operator-readback",
+      "support-audit",
+    ],
   },
   // ── Platform Analytics & Operational Reporting ────────────────────────────
   {
@@ -374,10 +521,25 @@ export const DSH_CAPABILITY_MAP = [
       "updateDshNotificationPreferences",
       "listDshPlatformNotificationConfig",
       "upsertDshPlatformNotificationConfig",
+      "upsertDshNotificationPushEndpoint",
+      "deactivateDshNotificationPushEndpoint",
+      "listDshNotificationDeliveryAttempts",
     ],
     surfaces: ["app-client", "control-panel", "app-partner", "app-field", "app-captain"],
     runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    closureState: "IMPLEMENTED_MULTI_SURFACE",
+    topicScope: [
+      "actor-inbox",
+      "channel-preferences",
+      "quiet-hours",
+      "localized-templates",
+      "deep-links",
+      "actor-targeting",
+      "push-endpoint-lifecycle",
+      "push-provider-worker",
+      "delivery-audit",
+      "retry-dead-letter",
+    ],
   },
   // ── Marketing Command Deck ─────────────────────────────────────────────────
   // Active decks are all API-backed: campaigns and tickers (soft
@@ -429,7 +591,7 @@ export const DSH_CAPABILITY_MAP = [
   // ── Platform Policies & Service Area Management ───────────────────────────
   {
     id: "dsh.policies",
-    status: "runtime-verified",
+    status: "experience-fix-required",
     contractOperations: [
       "listDshZones",
       "createDshZone",
@@ -440,10 +602,17 @@ export const DSH_CAPABILITY_MAP = [
       "getDshStoreOnboardingFeePolicy",
       "upsertDshStoreOnboardingFeePolicy",
       "getDshStoreOnboardingFeeReference",
+      "get_dsh_operator_platform_service_areas",
+      "put_dsh_operator_platform_service_areas__serviceAreaCode_",
     ],
     surfaces: ["control-panel"],
-    runtimeBound: true,
+    runtimeBound: false,
     closureState: "FIX_REQUIRED",
+    topicScope: [
+      "service-area-geofences",
+      "coordinate-to-service-area",
+      "map-provider-boundary",
+    ],
   },
   // ── Administration, Roles & Activation ────────────────────────────────────
   {
