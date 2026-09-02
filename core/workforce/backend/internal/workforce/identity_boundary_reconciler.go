@@ -44,7 +44,7 @@ func (r *Repository) claimIdentityBoundaryCases(ctx context.Context, owner strin
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var result []claimedIdentityBoundaryCase
 	for rows.Next() {
 		var c claimedIdentityBoundaryCase
