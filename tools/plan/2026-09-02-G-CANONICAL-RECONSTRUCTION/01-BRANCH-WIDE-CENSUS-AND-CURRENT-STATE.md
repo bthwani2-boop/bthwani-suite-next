@@ -1,8 +1,8 @@
-# 01 — BRANCH-WIDE CENSUS, AUTHORITY REGISTRY, AND DISPOSITION LEDGER
+# 01 — BRANCH-WIDE CENSUS, AUTHORITY REGISTRY, DISPOSITION LEDGER, AND CAPABILITY COVERAGE
 
 ## Purpose
 
-Build the complete evidence-backed inventory of branch `g` before any structural root selection or semantic mutation. The census classifies ownership, semantic authority, boundary responsibility, reachability, and survival disposition across the actual tracked tree.
+Build the complete evidence-backed inventory of branch `g` before any structural root selection or semantic mutation. The census classifies ownership, semantic authority, boundary responsibility, reachability, survival disposition, and end-to-end capability coverage across the actual tracked tree.
 
 ## Exact live pin
 
@@ -12,7 +12,7 @@ Build the complete evidence-backed inventory of branch `g` before any structural
 
 Traverse the actual tracked tree. No hardcoded directory list may act as a scope boundary.
 
-Cover all material source/runtime code, apps/surfaces, domains/services, `core/**`, `shared/**`, packages/modules, database/schema/migrations, contracts/generated bindings, runtime/config/env, `infra/**`, `tools/**`, scripts/CLI, `.github/**`, tests/fixtures/mocks/snapshots, dependencies/plugins, assets/manifests, and live authoritative documents.
+Cover all material source/runtime code, apps/surfaces, screens/routes/components, frontend data/query/mutation/store/view-model layers, domains/services/backend handlers/use-cases, `core/**`, `shared/**`, packages/modules, database/schema/migrations, APIs/events/contracts/generated bindings, runtime/config/env, `infra/**`, `tools/**`, scripts/CLI, `.github/**`, tests/fixtures/mocks/snapshots, dependencies/plugins, assets/manifests, and live authoritative documents.
 
 Any uncensused tracked area blocks the baseline unless explicitly proven non-material and recorded as such.
 
@@ -34,11 +34,13 @@ NO_SECURITY_OR_COMPLIANCE_ROLE
 NO_GENERATED_LINEAGE_REQUIREMENT
 ```
 
-This applies to a line/symbol/file/directory/package/script/workflow/dependency/test/fixture/mock/snapshot/wrapper.
+This applies to a line/symbol/file/directory/package/script/workflow/dependency/test/fixture/mock/snapshot/wrapper/screen/route/binding/API artifact.
+
+Before deleting backend/API/data artifacts, search all possible required consumers: every app/surface, control panel, mobile client, runtime route/call, integration, event/webhook, script/tool, supported operation, and external consumer.
 
 Execute:
 
-`QUICK REFERENCE/REACHABILITY CHECK → DELETE_NOW → SEARCH AGAIN → AFFECTED VERIFY`.
+`QUICK ALL-CONSUMER / REFERENCE / REACHABILITY CHECK → DELETE_NOW → SEARCH AGAIN → AFFECTED VERIFY`.
 
 Do not wait for Root Graph synthesis and do not create a separate cleanup root for proven low-risk garbage.
 
@@ -46,7 +48,7 @@ When several nearby garbage artifacts are proven together, batch them into one c
 
 `COMMIT/PUSH g → VERIFY REMOTE SHA → RE-PIN → REFRESH AFFECTED CENSUS`.
 
-If the candidate deletion exposes or changes semantic authority, ownership, contract, data, runtime, or required consumer behavior, it is **not** low-risk garbage; stop and defer it to canonical root execution.
+If candidate deletion exposes or changes semantic authority, end-to-end parity, ownership, contract, data, runtime, or required consumer behavior, it is **not** low-risk garbage; stop and defer it to canonical root execution.
 
 ## 3. Artifact Disposition Ledger — mandatory
 
@@ -56,7 +58,7 @@ Every in-scope material artifact receives exactly one current disposition:
 
 Coverage includes as applicable:
 
-`directory | package | module | file | material symbol | route | API | contract | schema object | generated boundary | runtime/config entry | script | workflow | dependency | test | fixture | mock | snapshot | authoritative document`.
+`directory | package | module | file | material symbol | screen | route | component | frontend consumer | API | event | contract | schema object | generated binding/boundary | runtime/config entry | script | workflow | dependency | test | fixture | mock | snapshot | authoritative document`.
 
 Required ledger fields:
 
@@ -69,6 +71,7 @@ CURRENT_OWNER=
 CURRENT_WRITER_OR_DERIVED_STATUS=
 CURRENT_CONSUMERS=
 RUNTIME_OR_BUILD_REACHABILITY=
+PRODUCT_CAPABILITY_JOURNEY=
 SEMANTIC_MEANING_OWNED=
 DUPLICATE_PARALLEL_SHADOW_RELATIONSHIP=
 NAME_PATH_BOUNDARY_VERDICT=
@@ -102,6 +105,8 @@ SEMANTIC_MEANING=
 CURRENT_AUTHORITIES=
 CURRENT_MUTABLE_WRITERS=
 CURRENT_READERS_CONSUMERS=
+FRONTEND_LOCAL_INTERPRETATIONS=
+BACKEND_LOCAL_INTERPRETATIONS=
 CANONICAL_OWNER_CANDIDATE=
 CANONICAL_WRITER_CANDIDATE=
 DUPLICATE_PARALLEL_SHADOW_STATE=
@@ -111,7 +116,51 @@ LOSING_AUTHORITIES=
 
 Any meaning with multiple mutable writers or authorities remains unresolved until winner/loser treatment is defined.
 
-## 5. Directory / Package Responsibility Census — mandatory
+## 5. Capability / journey coverage census — mandatory
+
+Inventory every material capability/journey represented anywhere in `g`, including backend-only, frontend-only, data-only, contract-only, and partially connected implementations.
+
+For each candidate identify enough evidence to feed `02A`:
+
+```text
+CAPABILITY
+ACTOR
+JOURNEY
+STATES_TRANSITIONS
+DOMAIN_OWNER
+DB_STORAGE_TRUTH
+BACKEND_SERVICE_USE_CASE
+API_EVENT_COMMAND
+CONTRACT
+GENERATED_BINDING
+FRONTEND_CONSUMER
+COMPONENTS
+SCREENS_ROUTES
+USER_ACTIONS
+MUTATION
+PERSISTED_READBACK
+VISIBLE_FINAL_STATE
+```
+
+Explicitly find:
+
+```text
+SCREEN_WITHOUT_BACKEND_CAPABILITY
+BACKEND_CAPABILITY_WITHOUT_REQUIRED_UI_CONSUMER
+API_WITHOUT_REQUIRED_CONSUMER
+CONTRACT_WITHOUT_IMPLEMENTATION_OR_CONSUMER
+GENERATED_BINDING_WITHOUT_REQUIRED_CONSUMER
+DB_TRUTH_WITHOUT_REQUIRED_OWNER_CONSUMER
+MOCK_OR_HARDCODED_UI_PRETENDING_TO_BE_BUSINESS_TRUTH
+MANUAL_FRONTEND_DTO_ENUM_STATUS_MAP
+MANUAL_BACKEND_CONTRACT_MIRROR
+```
+
+Do not decide that backend and frontend are consistent merely because each compiles independently.
+
+Before `03`, `02A` must classify every material capability and parity break.
+
+## 6. Directory / Package Responsibility Census — mandatory
 
 Every material directory/package boundary must answer:
 
@@ -142,13 +191,13 @@ Before structural root mutation:
 
 `UNRESOLVED_DIRECTORY_PACKAGE_VERDICTS=0`.
 
-## 6. Heightened `core/**` and `shared/**` review
+## 7. Heightened `core/**` and `shared/**` review
 
 Every material artifact under `core/**` or `shared/**` must prove why it is genuinely cross-cutting and why a precise domain cannot own it. If not: `REHOME | SPLIT | MERGE | DELETE`.
 
 Unused/unconsumed artifacts in these trees are not protected by the folder name; if low-risk, `DELETE_NOW`.
 
-## 7. First-class support surfaces
+## 8. First-class support surfaces
 
 `infra/**`, `tools/**`, `.github/**`, scripts, workflows, runtime/config, tests, fixtures, mocks, and dependencies are not exempt. Establish:
 
@@ -156,7 +205,7 @@ Unused/unconsumed artifacts in these trees are not protected by the folder name;
 
 Unused/unconsumed support artifacts with no required role are `DELETE_NOW` candidates.
 
-## 8. Symbol/line-level discovery
+## 9. Symbol/line-level discovery
 
 Within files that own or duplicate material semantics, descend to symbols/branches/lines sufficiently to expose:
 
@@ -166,4 +215,4 @@ Any dead/unconsumed symbol with no required semantic role is deleted immediately
 
 ## Baseline output
 
-The census must produce complete inputs for `CURRENT g`, the Artifact Disposition Ledger, Semantic Authority Registry, Directory/Package Verdicts, and the candidate winning/losing authority map used by `02`.
+The census must produce complete inputs for `CURRENT g`, the Artifact Disposition Ledger, Semantic Authority Registry, Directory/Package Verdicts, candidate winning/losing authority map, and complete capability/journey inventory consumed by `02` and `02A`.
