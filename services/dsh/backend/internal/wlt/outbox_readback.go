@@ -2,6 +2,7 @@ package wlt
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -41,7 +42,7 @@ func (c *Client) ReadbackOutboxEvent(ctx context.Context, input OutboxReadbackIn
 	if !c.Configured() {
 		return OutboxReadbackResult{}, ErrCanonicalReadbackUnavailable
 	}
-	ctx = WithOperatorContext(ctx, strings.TrimSpace(input.OperatorContextID))
+	ctx = opctx.WithOperatorContext(ctx, strings.TrimSpace(input.OperatorContextID))
 	switch input.EventType {
 	case "delivery_completed":
 		return c.readDeliveryCompletion(ctx, input)

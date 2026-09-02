@@ -3,6 +3,7 @@ package partnerwltoutbox
 import (
 	"context"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"errors"
 	"fmt"
 	"log"
@@ -89,7 +90,7 @@ func ProcessNext(ctx context.Context, db *sql.DB, client *wlt.Client) (bool, err
 		return true, recordDeliveryFailure(ctx, db, event, fmt.Errorf("partner WLT event has no OperatorContext context"))
 	}
 
-	deliveryCtx := wlt.WithOperatorContext(ctx, event.OperatorContextID)
+	deliveryCtx := opctx.WithOperatorContext(ctx, event.OperatorContextID)
 	var deliveryErr error
 	switch event.EventType {
 	case EventDeactivatePayout:
@@ -230,7 +231,7 @@ func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	}
 
 	for _, partner := range partners {
-		readCtx := wlt.WithOperatorContext(ctx, partner.OperatorContextID)
+		readCtx := opctx.WithOperatorContext(ctx, partner.OperatorContextID)
 		ref, readErr := client.GetPayoutDestination(readCtx, partner.PartnerID)
 		if errors.Is(readErr, wlt.ErrPayoutDestinationNotFound) {
 			if partner.PayoutDestination != "" && partner.ActivationStatus != "partner_terminated" {

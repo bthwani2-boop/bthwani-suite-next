@@ -1,12 +1,12 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"dsh-api/internal/store"
-	"dsh-api/internal/wlt"
 )
 
 var representativeWalletActorTypes = map[string]struct{}{
@@ -33,7 +33,7 @@ func (s *protectedStoreServer) handleOwnRepresentativeWallet(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), actor.OperatorContextID)
 	status, body, err := s.wlt.ExecuteFinanceRead(trustedContext, "finance.wallet.read", map[string]string{"actorType": actorType, "actorId": actor.ID}, nil, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
@@ -49,7 +49,7 @@ func (s *protectedStoreServer) handleOwnRepresentativeLedger(w http.ResponseWrit
 			query.Set(key, value)
 		}
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), actor.OperatorContextID)
 	status, body, err := s.wlt.ExecuteFinanceRead(trustedContext, "finance.ledger.entries.read", nil, query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
@@ -60,7 +60,7 @@ func (s *protectedStoreServer) handleOwnRepresentativeCommissions(w http.Respons
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), actor.OperatorContextID)
 	status, body, err := s.wlt.ExecuteFinanceRead(trustedContext, "finance.ledger.commissions.read", nil, query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
@@ -116,7 +116,7 @@ func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.Res
 	if !ok {
 		return
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), operator.OperatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), operator.OperatorContextID)
 	status, body, err := s.wlt.ExecuteFinanceRead(trustedContext, "finance.wallet.read", map[string]string{"actorType": actorType, "actorId": actorID}, nil, r.Header.Get("X-Correlation-ID"), operator.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
@@ -136,7 +136,7 @@ func (s *protectedStoreServer) handleControlPanelRepresentativeLedger(w http.Res
 			query.Set(key, value)
 		}
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), operator.OperatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), operator.OperatorContextID)
 	status, body, err := s.wlt.ExecuteFinanceRead(trustedContext, "finance.ledger.entries.read", nil, query, r.Header.Get("X-Correlation-ID"), operator.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }

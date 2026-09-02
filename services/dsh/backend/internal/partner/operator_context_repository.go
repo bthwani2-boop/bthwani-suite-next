@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -18,7 +19,7 @@ var ErrPartnerCreationIdempotencyRequired = errors.New("partner creation idempot
 func normalizeOperatorContextID(operatorContextID string) (string, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
-		return "", ErrOperatorContextRequired
+		return "", opctx.ErrOperatorContextRequired
 	}
 	return operatorContextID, nil
 }

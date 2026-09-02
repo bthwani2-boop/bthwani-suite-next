@@ -2,12 +2,11 @@ package platformclient
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"dsh-api/internal/wlt"
 )
 
 func TestGetVariableUsesTrustedInternalPlatformRoute(t *testing.T) {
@@ -26,7 +25,7 @@ func TestGetVariableUsesTrustedInternalPlatformRoute(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	variable, err := client.GetVariable(wlt.WithOperatorContext(context.Background(), "operator-context-1"), "VAR_PARTNER_COMMERCIAL_MODEL", "partner", "partner-1")
+	variable, err := client.GetVariable(opctx.WithOperatorContext(context.Background(), "operator-context-1"), "VAR_PARTNER_COMMERCIAL_MODEL", "partner", "partner-1")
 	if err != nil {
 		t.Fatalf("GetVariable failed: %v", err)
 	}

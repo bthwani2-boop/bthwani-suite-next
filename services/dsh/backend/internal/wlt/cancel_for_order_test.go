@@ -2,6 +2,7 @@ package wlt
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,7 +11,7 @@ import (
 )
 
 func trustedCancellationTestContext() context.Context {
-	return WithOperatorContext(context.Background(), "OperatorContext-a")
+	return opctx.WithOperatorContext(context.Background(), "OperatorContext-a")
 }
 
 func TestCancelSessionForOrderUsesExplicitCorrelation(t *testing.T) {

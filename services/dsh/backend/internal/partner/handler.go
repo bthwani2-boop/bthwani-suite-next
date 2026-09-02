@@ -2,6 +2,7 @@ package partner
 
 import (
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -62,7 +63,7 @@ func versionFromQuery(r *http.Request) int {
 // partner draft at partnerID. Returns false and writes the response if the
 // partner does not exist or belongs to a different field actor.
 func requireFieldOwnsPartner(w http.ResponseWriter, db *sql.DB, r *http.Request, partnerID, actorID string) bool {
-	operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok || operatorContextID == "" {
 		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return false
@@ -88,7 +89,7 @@ func requireFieldOwnsPartner(w http.ResponseWriter, db *sql.DB, r *http.Request,
 // GET /dsh/partners/{partnerId}/documents â€” operator, any partner
 func HandleListDocuments(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok || operatorContextID == "" {
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
@@ -121,7 +122,7 @@ func HandleFieldListDocuments(db *sql.DB) http.HandlerFunc {
 // POST /dsh/partners/{partnerId}/documents/{documentId}/review
 func HandleReviewDocument(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok || operatorContextID == "" {
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
@@ -168,7 +169,7 @@ func HandleReviewDocument(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partners/{partnerId}/field-visits â€” operator, any partner
 func HandleListFieldVisits(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok || operatorContextID == "" {
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
@@ -201,7 +202,7 @@ func HandleFieldListFieldVisits(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partners/{partnerId}/stores
 func HandleListPartnerStores(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok || operatorContextID == "" {
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
@@ -222,7 +223,7 @@ func HandleListPartnerStores(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partners/{partnerId}/audit
 func HandleListAudit(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok || operatorContextID == "" {
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
@@ -244,7 +245,7 @@ func HandleListAudit(db *sql.DB) http.HandlerFunc {
 
 func uploadDocumentHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok || operatorContextID == "" {
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
@@ -311,7 +312,7 @@ func HandleAddDocument(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partner/me  â€” partner reads their own profile
 func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok || operatorContextID == "" {
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
@@ -395,7 +396,7 @@ func HandleListStoreCoverageZones(db *sql.DB) http.HandlerFunc {
 // active DSH store-access scopes, then lists that partner's stores as scopes.
 func HandleListPartnerScopes(db *sql.DB, authClient *auth.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok {
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return

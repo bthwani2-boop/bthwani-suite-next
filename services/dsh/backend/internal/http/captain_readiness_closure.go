@@ -1,6 +1,7 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"fmt"
 	"net/http"
 	"strings"
@@ -8,7 +9,6 @@ import (
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
-	"dsh-api/internal/wlt"
 )
 
 type AggregatedCaptainReadiness struct {
@@ -84,7 +84,7 @@ func (s *protectedStoreServer) handleGetCaptainSelfReadiness(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return
@@ -103,7 +103,7 @@ func (s *protectedStoreServer) handleGetCaptainOperatorReadiness(w http.Response
 	if !ok {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return

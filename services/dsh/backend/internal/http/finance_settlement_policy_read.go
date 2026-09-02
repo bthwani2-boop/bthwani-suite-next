@@ -1,11 +1,11 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"net/http"
 	"strings"
 
 	"dsh-api/internal/store"
-	"dsh-api/internal/wlt"
 )
 
 // GET /dsh/control-panel/finance/settlement-policies/{partnerId}
@@ -25,7 +25,7 @@ func (s *protectedStoreServer) handleGetFinanceSettlementPolicy(w http.ResponseW
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "partnerId is required")
 		return
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), actor.OperatorContextID)
 	status, body, err := s.wlt.ExecuteFinanceRead(
 		trustedContext,
 		"finance.settlement_policy.read",

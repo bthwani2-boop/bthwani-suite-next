@@ -2,6 +2,7 @@ package partner
 
 import (
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 )
 
 func requireOperatorContext(w http.ResponseWriter, r *http.Request) (string, bool) {
-	operatorContextID, ok := OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return "", false
@@ -52,8 +53,8 @@ func HandleOperatorContextListPartners(db *sql.DB) http.HandlerFunc {
 		sendJSON(w, http.StatusOK, map[string]any{
 			"partners": partners,
 			"pagination": map[string]int{
-				"total": total,
-				"limit": query.Limit,
+				"total":  total,
+				"limit":  query.Limit,
 				"offset": query.Offset,
 			},
 		})
@@ -81,8 +82,8 @@ func HandleOperatorContextListFieldPartnerDrafts(db *sql.DB) http.HandlerFunc {
 		sendJSON(w, http.StatusOK, map[string]any{
 			"partners": partners,
 			"pagination": map[string]int{
-				"total": total,
-				"limit": query.Limit,
+				"total":  total,
+				"limit":  query.Limit,
 				"offset": query.Offset,
 			},
 		})
@@ -115,7 +116,7 @@ func HandleOperatorContextLinkPartnerStore(db *sql.DB) http.HandlerFunc {
 		case errors.Is(err, ErrNotFound):
 			// Do not reveal whether an identifier exists in another OperatorContext.
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner or store not found")
-		case errors.Is(err, ErrOperatorContextRequired):
+		case errors.Is(err, opctx.ErrOperatorContextRequired):
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", err.Error())
 		case errors.Is(err, ErrPartnerCannotOwnStore):
 			sendError(w, http.StatusUnprocessableEntity, "PARTNER_OWNERSHIP_INELIGIBLE", "rejected or deactivated partner cannot receive store ownership")

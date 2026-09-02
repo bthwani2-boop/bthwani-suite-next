@@ -1,6 +1,7 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"errors"
 	"net/http"
 	"strings"
@@ -32,7 +33,7 @@ func (s *protectedStoreServer) withTrustedPartnerOperatorContext(next http.Handl
 			store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
 		}
-		ctx := partner.WithOperatorContext(r.Context(), operatorContextID)
+		ctx := opctx.WithOperatorContext(r.Context(), operatorContextID)
 		next(w, r.WithContext(ctx))
 	}
 }
@@ -42,7 +43,7 @@ func (s *protectedStoreServer) withTrustedPartnerOperatorContext(next http.Handl
 // Cross-OperatorContext ownership is intentionally indistinguishable from not found.
 func (s *protectedStoreServer) withOperatorContextPartnerResource(next http.HandlerFunc) http.HandlerFunc {
 	return s.withTrustedPartnerOperatorContext(func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := partner.OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok {
 			store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
@@ -52,7 +53,7 @@ func (s *protectedStoreServer) withOperatorContextPartnerResource(next http.Hand
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
 			return
 		}
-		if errors.Is(err, partner.ErrOperatorContextRequired) {
+		if errors.Is(err, opctx.ErrOperatorContextRequired) {
 			store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", err.Error())
 			return
 		}

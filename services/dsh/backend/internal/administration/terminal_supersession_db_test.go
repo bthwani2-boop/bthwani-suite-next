@@ -3,6 +3,7 @@ package administration
 import (
 	"context"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -424,7 +425,7 @@ func TestSupersedeFailedTerminalRequestsCreatesFreshRequestsForEveryFamily(t *te
 	}
 	identityClient, closeIdentity := newTerminalSupersessionIdentity(t, 7)
 	defer closeIdentity()
-	operatorContext := auth.WithOperatorContext(context.Background(), canonicalIntentTestOperatorContextID)
+	operatorContext := opctx.WithOperatorContext(context.Background(), canonicalIntentTestOperatorContextID)
 	params := SupersedeTerminalFailureParams{
 		ExpectedVersion:   1,
 		ReasonCode:        "canonical_version_changed",
@@ -527,7 +528,7 @@ func TestSupersedeFailedTerminalRequestRollsBackSourceAndReplacementWhenAuditFai
 	}
 	identityClient, closeIdentity := newTerminalSupersessionIdentity(t, 7)
 	defer closeIdentity()
-	operatorContext := auth.WithOperatorContext(context.Background(), canonicalIntentTestOperatorContextID)
+	operatorContext := opctx.WithOperatorContext(context.Background(), canonicalIntentTestOperatorContextID)
 	_, err := SupersedeFailedRoleAssignmentApproval(operatorContext, db, identityClient, "replacement-maker", terminalAssignmentRequestID, SupersedeTerminalFailureParams{
 		ExpectedVersion:   1,
 		ReasonCode:        "canonical_version_changed",

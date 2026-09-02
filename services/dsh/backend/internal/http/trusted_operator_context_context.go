@@ -1,11 +1,11 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"net/http"
 	"strings"
 
 	"dsh-api/internal/auth"
-	"dsh-api/internal/wlt"
 )
 
 // TrustedOperatorContextMiddleware resolves an authenticated Identity session and
@@ -17,8 +17,7 @@ func TrustedOperatorContextMiddleware(identity *auth.Client, next http.Handler) 
 		if identity != nil && strings.HasPrefix(strings.TrimSpace(r.Header.Get("Authorization")), "Bearer ") {
 			resolved, err := identity.Resolve(r.Context(), r.Header.Get("Authorization"))
 			if err == nil && strings.TrimSpace(resolved.OperatorContextID) != "" {
-				trustedContext := auth.WithOperatorContext(r.Context(), resolved.OperatorContextID)
-				r = r.WithContext(wlt.WithOperatorContext(trustedContext, resolved.OperatorContextID))
+				r = r.WithContext(opctx.WithOperatorContext(r.Context(), resolved.OperatorContextID))
 			}
 		}
 		next.ServeHTTP(w, r)

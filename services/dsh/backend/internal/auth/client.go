@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+
+	"dsh-api/internal/opctx"
 	"strings"
 	"sync"
 
@@ -55,7 +57,7 @@ func (c *Client) operatorContextID(ctx context.Context) (string, error) {
 	if c == nil || c.identity == nil {
 		return "", ErrIdentityUnavailable
 	}
-	operatorContextID, ok := OperatorContextIDFromContext(ctx)
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(ctx)
 	if !ok || operatorContextID == "legacy-unscoped" {
 		return "", ErrIdentityUnavailable
 	}

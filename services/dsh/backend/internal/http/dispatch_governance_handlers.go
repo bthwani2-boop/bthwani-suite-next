@@ -1,6 +1,7 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/orders"
 	"dsh-api/internal/store"
-	"dsh-api/internal/wlt"
 )
 
 func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +42,7 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
@@ -90,7 +90,7 @@ func (s *protectedStoreServer) handleListGovernedOperatorDispatchAssignments(w h
 	// operatorContextId must come from the authenticated Identity session, not from
 	// client-supplied query parameters. A browser-controlled ID is a resource locator
 	// claim and confers no authorization (J009).
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return
@@ -199,7 +199,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 	}
 
 	if isCod {
-		session, err := s.wlt.GetPaymentSession(wlt.WithOperatorContext(r.Context(), actor.OperatorContextID), sessionID)
+		session, err := s.wlt.GetPaymentSession(opctx.WithOperatorContext(r.Context(), actor.OperatorContextID), sessionID)
 		if err != nil {
 			store.SendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "failed to verify COD capacity")
 			return
@@ -302,7 +302,7 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
@@ -334,7 +334,7 @@ func (s *protectedStoreServer) handleListCaptainDispatchCandidates(w http.Respon
 		return
 	}
 	// OperatorContext must come from the trusted Identity session (J009).
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return
@@ -383,7 +383,7 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
@@ -437,7 +437,7 @@ func (s *protectedStoreServer) handleCancelGovernedDispatchAssignment(w http.Res
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return
@@ -468,7 +468,7 @@ func (s *protectedStoreServer) handleExpireGovernedDispatchAssignments(w http.Re
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
@@ -492,7 +492,7 @@ func (s *protectedStoreServer) handleListDispatchDecisions(w http.ResponseWriter
 		return
 	}
 	// OperatorContext must come from the trusted Identity session (J009).
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return

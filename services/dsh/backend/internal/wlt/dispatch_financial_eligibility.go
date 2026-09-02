@@ -3,6 +3,7 @@ package wlt
 import (
 	"bytes"
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -55,7 +56,7 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 	if captainID == "" || len(captainID) > 200 {
 		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: captain id is required and must not exceed 200 characters", ErrDispatchFinancialEligibilityInvalidRequest)
 	}
-	trustedOperatorContextID, ok := OperatorContextIDFromContext(ctx)
+	trustedOperatorContextID, ok := opctx.OperatorContextIDFromContext(ctx)
 	if !ok || strings.TrimSpace(trustedOperatorContextID) == "" {
 		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: trusted operator context is required", ErrDispatchFinancialEligibilityInvalidRequest)
 	}

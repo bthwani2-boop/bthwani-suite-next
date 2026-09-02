@@ -2,6 +2,7 @@ package partner
 
 import (
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -19,7 +20,7 @@ func decodePartnerCreationInput(w http.ResponseWriter, r *http.Request, input *C
 
 func writeIdempotentPartnerCreateResult(w http.ResponseWriter, p Partner, replayed bool, err error, draft bool) {
 	switch {
-	case errors.Is(err, ErrOperatorContextRequired):
+	case errors.Is(err, opctx.ErrOperatorContextRequired):
 		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", err.Error())
 	case errors.Is(err, ErrPartnerCreationIdempotencyRequired):
 		sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", err.Error())
@@ -46,10 +47,14 @@ func writeIdempotentPartnerCreateResult(w http.ResponseWriter, p Partner, replay
 func HandleOperatorContextCreatePartnerIdempotent(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requireOperatorContext(w, r)
-		if !ok { return }
+		if !ok {
+			return
+		}
 		actorID, surface := actorFromContext(r)
 		var input CreatePartnerInput
-		if !decodePartnerCreationInput(w, r, &input) { return }
+		if !decodePartnerCreationInput(w, r, &input) {
+			return
+		}
 		input.CreatedByActorID = actorID
 		input.CreatedBySurface = surface
 		p, replayed, err := CreatePartnerForOperatorContextIdempotent(r.Context(), db, operatorContextID, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input)
@@ -60,10 +65,14 @@ func HandleOperatorContextCreatePartnerIdempotent(db *sql.DB) http.HandlerFunc {
 func HandleOperatorContextFieldCreateDraftIdempotent(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requireOperatorContext(w, r)
-		if !ok { return }
+		if !ok {
+			return
+		}
 		actorID, _ := actorFromContext(r)
 		var input CreatePartnerInput
-		if !decodePartnerCreationInput(w, r, &input) { return }
+		if !decodePartnerCreationInput(w, r, &input) {
+			return
+		}
 		input.CreatedByActorID = actorID
 		input.CreatedBySurface = "app-field"
 		p, replayed, err := CreatePartnerForOperatorContextIdempotent(r.Context(), db, operatorContextID, r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input)

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -225,13 +226,13 @@ func TestFetchPartnerPermissionBundlesAuthenticatesAndCachesDefensiveCopy(t *tes
 	defer server.Close()
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-identity-secret", "operator-main")
-	first, err := client.FetchPartnerPermissionBundles(WithOperatorContext(context.Background(), "operator-main"))
+	first, err := client.FetchPartnerPermissionBundles(opctx.WithOperatorContext(context.Background(), "operator-main"))
 	if err != nil {
 		t.Fatalf("unexpected first fetch error: %v", err)
 	}
 	first[0].Actions[0] = "tampered"
 
-	second, err := client.FetchPartnerPermissionBundles(WithOperatorContext(context.Background(), "operator-main"))
+	second, err := client.FetchPartnerPermissionBundles(opctx.WithOperatorContext(context.Background(), "operator-main"))
 	if err != nil {
 		t.Fatalf("unexpected cached fetch error: %v", err)
 	}
@@ -265,7 +266,7 @@ func TestListActorRoleAssignmentsReadsDurableInactiveMemberships(t *testing.T) {
 	defer server.Close()
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-identity-secret", "")
-	assignments, err := client.ListActorRoleAssignments(WithOperatorContext(context.Background(), "operator-main"), "actor-1")
+	assignments, err := client.ListActorRoleAssignments(opctx.WithOperatorContext(context.Background(), "operator-main"), "actor-1")
 	if err != nil {
 		t.Fatalf("unexpected durable assignment read error: %v", err)
 	}
@@ -306,7 +307,7 @@ func TestRoleMutationCarriesVersionFenceAndMapsConflict(t *testing.T) {
 	defer server.Close()
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-identity-secret", "")
-	operatorContext := WithOperatorContext(context.Background(), "operator-main")
+	operatorContext := opctx.WithOperatorContext(context.Background(), "operator-main")
 	if _, err := client.GrantRoleWithIdempotency(operatorContext, "actor-1", "operations_support", "reviewer-1", 7, "intent-1"); err != ErrRbacVersionConflict {
 		t.Fatalf("grant conflict mapping = %v", err)
 	}

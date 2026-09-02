@@ -2,6 +2,7 @@ package wlt
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,7 +10,7 @@ import (
 )
 
 func trustedPaymentSessionContext() context.Context {
-	return WithOperatorContext(context.Background(), "OperatorContext-main")
+	return opctx.WithOperatorContext(context.Background(), "OperatorContext-main")
 }
 
 func TestReadPaymentSessionTimelineForwardsGovernedHeaders(t *testing.T) {

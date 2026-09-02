@@ -1,12 +1,12 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"net/http"
 	"strings"
 
 	"dsh-api/internal/store"
-	"dsh-api/internal/wlt"
 )
 
 type governedCommissionPolicyRequest struct {
@@ -158,7 +158,7 @@ func (s *protectedStoreServer) proxyGovernedCommissionLifecycle(w http.ResponseW
 	if idempotencyKey == "" {
 		idempotencyKey = "commission-" + refundHash(commissionID, action, operatorID, string(payload))[:32]
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), operatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), operatorContextID)
 	status, body, err := s.wlt.ExecuteFinanceWrite(trustedContext, "finance.commissions."+action, map[string]string{"commissionId": commissionID}, payload, correlationID, idempotencyKey, operatorContextID, "")
 	writeGovernedCommissionProxyResponse(w, status, body, err)
 }

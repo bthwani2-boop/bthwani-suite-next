@@ -3,6 +3,7 @@ package http
 import (
 	"bytes"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"io"
@@ -64,7 +65,7 @@ func handleWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
 		}
 		input.OperatorContextID = operatorContextID
 		input.IdempotencyKey = headerIdempotencyKey
-		trustedContext := auth.WithOperatorContext(r.Context(), operatorContextID)
+		trustedContext := opctx.WithOperatorContext(r.Context(), operatorContextID)
 		projection, err := dispatch.UpsertProviderAvailabilityProjection(trustedContext, db, input)
 		if err != nil {
 			writeGovernedDispatchError(w, err)
@@ -89,7 +90,7 @@ func handleGetWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
 			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "idempotency key is required")
 			return
 		}
-		trustedContext := auth.WithOperatorContext(r.Context(), operatorContextID)
+		trustedContext := opctx.WithOperatorContext(r.Context(), operatorContextID)
 		projection, found, err := dispatch.GetProviderAvailabilityProjectionByIdempotencyKey(
 			trustedContext, db, operatorContextID, idempotencyKey,
 		)
@@ -141,7 +142,7 @@ func (s *protectedStoreServer) handleGetServiceAreaCapacityForecast(w http.Respo
 	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
@@ -180,7 +181,7 @@ func (s *protectedStoreServer) handleGetOperationsHeatmap(w http.ResponseWriter,
 	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
@@ -215,7 +216,7 @@ func unavailableCaptainForRequest(r *http.Request, db *sql.DB) (bool, string, er
 		if json.Unmarshal(payload, &body) != nil || strings.TrimSpace(body.CaptainID) == "" {
 			return false, "", nil
 		}
-		operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok {
 			return false, "", nil
 		}
@@ -271,7 +272,7 @@ func OperationsAvailabilityMiddleware(db *sql.DB, next http.Handler) http.Handle
 				Candidates []dispatch.CaptainDispatchCandidate `json:"candidates"`
 			}
 			if json.Unmarshal(recorder.Body.Bytes(), &envelope) == nil {
-				operatorContextID, hasOperatorContext := wlt.OperatorContextIDFromContext(r.Context())
+				operatorContextID, hasOperatorContext := opctx.OperatorContextIDFromContext(r.Context())
 				if hasOperatorContext && dispatch.ApplyWorkforceAvailability(r.Context(), db, operatorContextID, time.Now().UTC(), envelope.Candidates) == nil {
 					store.SendJSON(w, http.StatusOK, map[string]any{"candidates": envelope.Candidates})
 					return

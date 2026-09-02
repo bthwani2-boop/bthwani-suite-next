@@ -1,6 +1,7 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"errors"
 	"fmt"
 	"net/http"
@@ -65,7 +66,7 @@ func (s *protectedStoreServer) handleRefreshOperatorCaptainFinancialEligibility(
 	if !ok {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return
@@ -83,7 +84,7 @@ func (s *protectedStoreServer) handleGetOperatorCaptainFinancialEligibility(w ht
 	if !ok {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "operatorContextId is required in context")
 		return

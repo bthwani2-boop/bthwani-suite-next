@@ -230,11 +230,15 @@ requireCanonicalMarkers(dshRegistryFile, dshRegistry, [
   [/ResponseContract\s+FinanceResponseContract/, "DSH_FINANCE_RESPONSE_CONTRACT_DESCRIPTOR_MISSING"],
 ]);
 
-const dshContextFile = "services/dsh/backend/internal/wlt/operator_context_context.go";
-const dshContext = readCanonicalSource(dshContextFile);
-requireCanonicalMarkers(dshContextFile, dshContext, [
+const dshOperatorContextOwnerFile = "services/dsh/backend/internal/opctx/opctx.go";
+const dshOperatorContextOwner = readCanonicalSource(dshOperatorContextOwnerFile);
+requireCanonicalMarkers(dshOperatorContextOwnerFile, dshOperatorContextOwner, [
   [/func WithOperatorContext/, "DSH_OPERATOR_CONTEXT_BINDING_MISSING"],
   [/func OperatorContextIDFromContext/, "DSH_OPERATOR_CONTEXT_READBACK_MISSING"],
+]);
+const dshContextFile = "services/dsh/backend/internal/wlt/operator_context_transport.go";
+const dshContext = readCanonicalSource(dshContextFile);
+requireCanonicalMarkers(dshContextFile, dshContext, [
   [/type OperatorContextRoundTripper/, "DSH_OPERATOR_CONTEXT_ROUND_TRIPPER_MISSING"],
   [/X-Delegated-Operator-Context/, "DSH_OPERATOR_CONTEXT_HEADER_CONTRACT_MISSING"],
 ]);
@@ -288,7 +292,7 @@ const payoutOutbox = readCanonicalSource(payoutOutboxFile);
 requireCanonicalMarkers(payoutOutboxFile, payoutOutbox, [
   [/client\.GetPayoutDestination/, "DSH_PAYOUT_RECONCILIATION_READBACK_NOT_BOUND"],
   [/client\.DeactivatePayoutDestination/, "DSH_PAYOUT_OUTBOX_MUTATION_NOT_BOUND"],
-  [/wlt\.WithOperatorContext/, "DSH_PAYOUT_OUTBOX_OPERATOR_CONTEXT_NOT_PROPAGATED"],
+  [/opctx\.WithOperatorContext/, "DSH_PAYOUT_OUTBOX_OPERATOR_CONTEXT_NOT_PROPAGATED"],
 ]);
 
 const payoutContractFile = "services/wlt/contracts/wlt.payouts-destinations.openapi.yaml";

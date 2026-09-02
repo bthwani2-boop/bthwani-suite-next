@@ -1,6 +1,7 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"io"
@@ -9,7 +10,6 @@ import (
 	"time"
 
 	"dsh-api/internal/store"
-	"dsh-api/internal/wlt"
 )
 
 type storeOnboardingFeePolicyWriteInput struct {
@@ -65,7 +65,7 @@ func (s *protectedStoreServer) proxyStoreOnboardingFeePolicyRead(w http.Response
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), operatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), operatorContextID)
 	status, body, err := s.wlt.ExecuteFinanceRead(
 		trustedContext,
 		"finance.store_onboarding_fee.read",
@@ -130,7 +130,7 @@ func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.Respo
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode store onboarding fee policy")
 		return
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), operatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), operatorContextID)
 	status, body, err := s.wlt.ExecuteFinanceWrite(
 		trustedContext,
 		"finance.store_onboarding_fee.upsert",

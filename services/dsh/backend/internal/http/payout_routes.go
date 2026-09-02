@@ -1,6 +1,7 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,7 +10,6 @@ import (
 
 	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
-	"dsh-api/internal/wlt"
 )
 
 const (
@@ -103,7 +103,7 @@ func (s *protectedStoreServer) handleActorPayoutDestinationRead(w http.ResponseW
 	if !ok {
 		return
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), actor.OperatorContextID)
 	status, body, err := s.wlt.ExecuteFinanceRead(trustedContext, "finance.payout_destinations.read", map[string]string{"actorType": actorType, "actorId": actor.ID}, nil, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		writeWltActorFinanceResponse(w, status, body, err)

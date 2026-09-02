@@ -1,6 +1,7 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"errors"
 	"net/http"
 	"strings"
@@ -34,7 +35,7 @@ func resolvedControlPanelPermissions(
 		if operatorContextID == "" || operatorContextID == "legacy-unscoped" {
 			return nil, auth.ErrIdentityUnavailable
 		}
-		return s.identity.ResolvePermissions(auth.WithOperatorContext(r.Context(), operatorContextID), identity.Subject)
+		return s.identity.ResolvePermissions(opctx.WithOperatorContext(r.Context(), operatorContextID), identity.Subject)
 	}
 	// Resolve() calls Identity /auth/session for every protected request, so
 	// these are the actor's current server-side permissions, not a browser or
@@ -64,7 +65,7 @@ func (s *protectedStoreServer) requireAdministrationPermission(
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "session has no executable operator context")
 		return store.StoreActor{}, false
 	}
-	*r = *r.WithContext(auth.WithOperatorContext(r.Context(), identity.OperatorContextID))
+	*r = *r.WithContext(opctx.WithOperatorContext(r.Context(), identity.OperatorContextID))
 	if identity.SessionSurface != "control-panel" {
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "control-panel session is required")
 		return store.StoreActor{}, false

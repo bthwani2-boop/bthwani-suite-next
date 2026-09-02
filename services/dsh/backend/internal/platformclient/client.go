@@ -2,14 +2,13 @@ package platformclient
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
-
-	"dsh-api/internal/wlt"
 )
 
 type Client struct {
@@ -33,13 +32,13 @@ func (c *Client) Configured() bool {
 }
 
 type PlatformVariable struct {
-	Key            string `json:"variableKey"`
-	ValueJSON      any    `json:"valueJson"`
-	ScopeType      string `json:"scopeType"`
-	ScopeID        string `json:"scopeId"`
-	EffectiveFrom  string `json:"effectiveFrom"`
-	ExpiresAt      string `json:"expiresAt,omitempty"`
-	Status         string `json:"status"`
+	Key           string `json:"variableKey"`
+	ValueJSON     any    `json:"valueJson"`
+	ScopeType     string `json:"scopeType"`
+	ScopeID       string `json:"scopeId"`
+	EffectiveFrom string `json:"effectiveFrom"`
+	ExpiresAt     string `json:"expiresAt,omitempty"`
+	Status        string `json:"status"`
 }
 
 func (c *Client) GetVariable(ctx context.Context, key, scopeType, scopeId string) (*PlatformVariable, error) {
@@ -47,7 +46,7 @@ func (c *Client) GetVariable(ctx context.Context, key, scopeType, scopeId string
 		return nil, fmt.Errorf("platform-control integration is not configured")
 	}
 
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(ctx)
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(ctx)
 	if !ok {
 		return nil, fmt.Errorf("trusted operator context is required for platform-control requests")
 	}

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -32,7 +33,7 @@ func TestProvisionPartnerActorUsesTrustedDSHBoundary(t *testing.T) {
 	defer server.Close()
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-secret", "operator-main")
-	view, err := client.ProvisionPartnerActor(WithOperatorContext(context.Background(), "operator-main"), PartnerActorProvisionInput{
+	view, err := client.ProvisionPartnerActor(opctx.WithOperatorContext(context.Background(), "operator-main"), PartnerActorProvisionInput{
 		Username: "partner-967771000001", PhoneE164: "+967771111111", PermissionBundle: "manager", StoreID: "store-1",
 	})
 	if err != nil || view.ActorID != "partner-actor-1" {
@@ -58,7 +59,7 @@ func TestIssuePartnerActivationForwardsIdempotencyAndCorrelation(t *testing.T) {
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-secret", "operator-main")
 	result, err := client.IssuePartnerActivation(
-		WithOperatorContext(context.Background(), "operator-main"),
+		opctx.WithOperatorContext(context.Background(), "operator-main"),
 		"partner-actor-1",
 		PartnerActivationInput{IssuedByActorID: "owner-1", StoreID: "store-1"},
 		"invite-1",
@@ -99,7 +100,7 @@ func TestSetPartnerStoreAccessUsesTrustedPutBoundary(t *testing.T) {
 	defer server.Close()
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-secret", "operator-main")
-	err := client.SetPartnerStoreAccess(WithOperatorContext(context.Background(), "operator-main"), "partner-actor-1", PartnerStoreAccessInput{
+	err := client.SetPartnerStoreAccess(opctx.WithOperatorContext(context.Background(), "operator-main"), "partner-actor-1", PartnerStoreAccessInput{
 		StoreID: "store-1", PermissionBundle: "staff", Enabled: true,
 	})
 	if err != nil {
@@ -121,7 +122,7 @@ func TestSetPartnerStoreAccessAllowsBundlelessRevocation(t *testing.T) {
 	defer server.Close()
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-secret", "operator-main")
-	if err := client.SetPartnerStoreAccess(WithOperatorContext(context.Background(), "operator-main"), "partner-actor-1", PartnerStoreAccessInput{StoreID: "store-1"}); err != nil {
+	if err := client.SetPartnerStoreAccess(opctx.WithOperatorContext(context.Background(), "operator-main"), "partner-actor-1", PartnerStoreAccessInput{StoreID: "store-1"}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

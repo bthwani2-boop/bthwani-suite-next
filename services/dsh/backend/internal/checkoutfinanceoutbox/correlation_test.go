@@ -2,6 +2,7 @@ package checkoutfinanceoutbox
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -28,7 +29,7 @@ func TestDispatchPreservesPersistedCancellationCorrelation(t *testing.T) {
 	defer server.Close()
 
 	client := wlt.NewClient(server.URL, "test-service-token")
-	trustedContext := wlt.WithOperatorContext(context.Background(), operatorContextID)
+	trustedContext := opctx.WithOperatorContext(context.Background(), operatorContextID)
 	result, err := dispatch(trustedContext, client, Event{
 		EventType:        EventTypeCancelForOrder,
 		CheckoutIntentID: "checkout-intent-1",

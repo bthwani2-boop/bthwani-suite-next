@@ -3,6 +3,7 @@ package checkoutfinanceoutbox
 import (
 	"context"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"errors"
 	"fmt"
 	"log"
@@ -49,7 +50,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 			continue
 		}
 
-		deliverCtx, cancel := context.WithTimeout(wlt.WithOperatorContext(ctx, event.OperatorContextID), notifyTimeout)
+		deliverCtx, cancel := context.WithTimeout(opctx.WithOperatorContext(ctx, event.OperatorContextID), notifyTimeout)
 		var result DeliveryResult
 		var deliverErr error
 		if event.Status == "unknown" {

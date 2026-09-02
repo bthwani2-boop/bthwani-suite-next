@@ -2,13 +2,14 @@ package wlt
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
 func representativeWalletTestContext() context.Context {
-	return WithOperatorContext(context.Background(), "OperatorContext-main")
+	return opctx.WithOperatorContext(context.Background(), "OperatorContext-main")
 }
 
 func TestExecuteFinanceReadAllowsEveryRepresentativeActorType(t *testing.T) {

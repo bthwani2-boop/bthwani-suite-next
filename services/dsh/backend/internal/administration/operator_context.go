@@ -2,17 +2,16 @@ package administration
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"strings"
-
-	"dsh-api/internal/auth"
 )
 
 const legacyUnscopedOperatorContext = "legacy-unscoped"
 
 func requireOperatorContext(ctx context.Context) (string, error) {
-	operatorContextID, ok := auth.OperatorContextIDFromContext(ctx)
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(ctx)
 	if !ok {
-		return "", ErrOperatorContextRequired
+		return "", opctx.ErrOperatorContextRequired
 	}
 	return validateOperatorContextID(operatorContextID)
 }
@@ -20,7 +19,7 @@ func requireOperatorContext(ctx context.Context) (string, error) {
 func validateOperatorContextID(operatorContextID string) (string, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" || operatorContextID == legacyUnscopedOperatorContext {
-		return "", ErrOperatorContextRequired
+		return "", opctx.ErrOperatorContextRequired
 	}
 	return operatorContextID, nil
 }

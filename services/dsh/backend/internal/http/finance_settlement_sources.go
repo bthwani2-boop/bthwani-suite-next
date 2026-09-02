@@ -3,6 +3,7 @@ package http
 import (
 	"crypto/sha256"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,6 @@ import (
 	"time"
 
 	"dsh-api/internal/store"
-	"dsh-api/internal/wlt"
 )
 
 type financeSettlementOrderSource struct {
@@ -169,7 +169,7 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode governed settlement")
 		return
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), actor.OperatorContextID)
 	status, responseBody, err := s.wlt.ExecuteFinanceWrite(trustedContext, "finance.settlements.create", nil, payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, "")
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT governed settlement call failed")
@@ -222,7 +222,7 @@ func (s *protectedStoreServer) handleUpsertFinanceSettlementPolicy(w http.Respon
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode settlement policy")
 		return
 	}
-	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	trustedContext := opctx.WithOperatorContext(r.Context(), actor.OperatorContextID)
 	status, responseBody, err := s.wlt.ExecuteFinanceWrite(trustedContext, "finance.settlement_policy.upsert", map[string]string{"partnerId": partnerID}, payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, "")
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "FINANCE_RESPONSE_UNAVAILABLE", "finance settlement policy response was invalid or unavailable")

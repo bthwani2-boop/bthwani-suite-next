@@ -3,6 +3,7 @@ package fieldcommissionoutbox
 import (
 	"context"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"fmt"
 	"log"
 	"time"
@@ -44,7 +45,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 			}
 			continue
 		}
-		notifyCtx, cancel := context.WithTimeout(wlt.WithOperatorContext(ctx, event.OperatorContextID), notifyTimeout)
+		notifyCtx, cancel := context.WithTimeout(opctx.WithOperatorContext(ctx, event.OperatorContextID), notifyTimeout)
 		err := client.DeliverFieldCategoryCommission(notifyCtx, wlt.DeliverFieldCategoryCommissionInput{
 			BeneficiaryActorID: event.FieldActorID,
 			VisitID:            event.VisitID,

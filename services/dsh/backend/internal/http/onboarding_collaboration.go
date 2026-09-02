@@ -1,6 +1,7 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"errors"
 	"net/http"
 	"strings"
@@ -17,7 +18,7 @@ func collaborationScope(r *http.Request) (actorID, surface, operatorContextID st
 			surface = dshActorSurface(actor.Role)
 		}
 	}
-	operatorContextID, _ = partner.OperatorContextIDFromContext(r.Context())
+	operatorContextID, _ = opctx.OperatorContextIDFromContext(r.Context())
 	return
 }
 
@@ -135,7 +136,7 @@ func (s *protectedStoreServer) serveFieldOnboardingWorkload(w http.ResponseWrite
 		return
 	}
 	enriched := partnerRequestWithActor(r, actor)
-	contextID, ok := partner.OperatorContextIDFromContext(enriched.Context())
+	contextID, ok := opctx.OperatorContextIDFromContext(enriched.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return

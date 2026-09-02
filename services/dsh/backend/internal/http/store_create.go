@@ -1,16 +1,16 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"net/http"
 
-	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
 )
 
 func (s *protectedStoreServer) handleOperatorCreateStore(w http.ResponseWriter, r *http.Request) {
-	operatorContextID, ok := partner.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return

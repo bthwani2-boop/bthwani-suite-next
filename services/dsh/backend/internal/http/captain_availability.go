@@ -1,13 +1,13 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"errors"
 	"net/http"
 	"strings"
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
-	"dsh-api/internal/wlt"
 )
 
 func (s *protectedStoreServer) handleGetCaptainAvailability(w http.ResponseWriter, r *http.Request) {
@@ -15,7 +15,7 @@ func (s *protectedStoreServer) handleGetCaptainAvailability(w http.ResponseWrite
 	if !ok {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return
@@ -33,7 +33,7 @@ func (s *protectedStoreServer) handleSetCaptainAvailability(w http.ResponseWrite
 	if !ok {
 		return
 	}
-	operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 	if !ok {
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return

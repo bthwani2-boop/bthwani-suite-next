@@ -3,12 +3,11 @@ package supportsession
 import (
 	"context"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"strings"
 	"time"
-
-	"dsh-api/internal/auth"
 )
 
 var (
@@ -69,7 +68,7 @@ const requestColumns = `
 	created_at, updated_at, reviewed_at, issued_at, revoked_at`
 
 func requireOperatorContext(ctx context.Context) (string, error) {
-	operatorContextID, ok := auth.OperatorContextIDFromContext(ctx)
+	operatorContextID, ok := opctx.OperatorContextIDFromContext(ctx)
 	if !ok {
 		return "", ErrInvalid
 	}

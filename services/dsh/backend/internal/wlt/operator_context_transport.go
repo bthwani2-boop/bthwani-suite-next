@@ -1,32 +1,14 @@
 package wlt
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
+
+	"dsh-api/internal/opctx"
 )
 
 const delegatedOperatorContextHeader = "X-Delegated-Operator-Context"
-
-type operatorContextKey struct{}
-
-// WithOperatorContext attaches an OperatorContext that was resolved by a trusted
-// server-side boundary (Identity session, database-owned outbox row, or another
-// authenticated service). Browser headers and request payloads must never
-// populate this value.
-func WithOperatorContext(ctx context.Context, operatorContextID string) context.Context {
-	return context.WithValue(ctx, operatorContextKey{}, strings.TrimSpace(operatorContextID))
-}
-
-// OperatorContextIDFromContext returns only the trusted OperatorContext installed
-// by a server-side boundary. An empty value is intentionally treated as missing
-// context.
-func OperatorContextIDFromContext(ctx context.Context) (string, bool) {
-	operatorContextID, _ := ctx.Value(operatorContextKey{}).(string)
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	return operatorContextID, operatorContextID != ""
-}
 
 type OperatorContextRoundTripper struct {
 	base http.RoundTripper
@@ -38,7 +20,7 @@ func (transport OperatorContextRoundTripper) RoundTrip(req *http.Request) (*http
 		base = http.DefaultTransport
 	}
 
-	trustedOperatorContextID, hasTrustedOperatorContext := OperatorContextIDFromContext(req.Context())
+	trustedOperatorContextID, hasTrustedOperatorContext := opctx.OperatorContextIDFromContext(req.Context())
 	if !hasTrustedOperatorContext {
 		return nil, fmt.Errorf("trusted OperatorContext context is required for every WLT request")
 	}

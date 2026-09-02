@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -358,7 +359,7 @@ func paymentMatches(input PaymentSessionSagaInput, session *wlt.PaymentSession) 
 }
 
 func executeQuoteSaga(ctx context.Context, db *sql.DB, client *wlt.Client, saga *SpecialRequestSaga, input QuoteSagaInput) error {
-	wltCtx := wlt.WithOperatorContext(ctx, input.OperatorContextID)
+	wltCtx := opctx.WithOperatorContext(ctx, input.OperatorContextID)
 	var quote *wlt.SpecialRequestQuote
 	var err error
 	if saga.State == SagaRemoteApplied {
@@ -405,7 +406,7 @@ func executeQuoteSaga(ctx context.Context, db *sql.DB, client *wlt.Client, saga 
 }
 
 func executePaymentSaga(ctx context.Context, db *sql.DB, client *wlt.Client, saga *SpecialRequestSaga, input PaymentSessionSagaInput) error {
-	wltCtx := wlt.WithOperatorContext(ctx, input.OperatorContextID)
+	wltCtx := opctx.WithOperatorContext(ctx, input.OperatorContextID)
 	var session *wlt.PaymentSession
 	if saga.RemoteReference != "" {
 		session, _ = client.GetPaymentSession(wltCtx, saga.RemoteReference)
@@ -450,7 +451,7 @@ func executePaymentSaga(ctx context.Context, db *sql.DB, client *wlt.Client, sag
 }
 
 func executeCancelSaga(ctx context.Context, db *sql.DB, client *wlt.Client, saga *SpecialRequestSaga, input CancelSagaInput) error {
-	wltCtx := wlt.WithOperatorContext(ctx, input.OperatorContextID)
+	wltCtx := opctx.WithOperatorContext(ctx, input.OperatorContextID)
 	if input.PaymentSessionID != "" {
 		if err := client.ExpireSession(wltCtx, input.PaymentSessionID, input.CorrelationID); err != nil {
 			// Confirm a timeout/ambiguous response through WLT readback before

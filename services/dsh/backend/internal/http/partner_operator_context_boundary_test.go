@@ -1,13 +1,13 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"dsh-api/internal/auth"
-	"dsh-api/internal/partner"
 )
 
 func identitySessionServer(t *testing.T, identity auth.ActorIdentity) *httptest.Server {
@@ -37,7 +37,7 @@ func TestTrustedPartnerOperatorContextComesFromIdentity(t *testing.T) {
 	called := false
 	handler := protected.withTrustedPartnerOperatorContext(func(w http.ResponseWriter, r *http.Request) {
 		called = true
-		operatorContextID, ok := partner.OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok || operatorContextID != "OperatorContext-a" {
 			t.Fatalf("trusted OperatorContext = %q, ok=%v", operatorContextID, ok)
 		}
@@ -100,7 +100,7 @@ func TestTrustedPartnerOperatorContextUsesIdentityOperatorContextInsteadOfProces
 	called := false
 	handler := protected.withTrustedPartnerOperatorContext(func(w http.ResponseWriter, r *http.Request) {
 		called = true
-		operatorContextID, ok := partner.OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok || operatorContextID != "OperatorContext-b" {
 			t.Fatalf("trusted OperatorContext = %q, ok=%v", operatorContextID, ok)
 		}

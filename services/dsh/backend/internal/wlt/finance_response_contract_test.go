@@ -2,6 +2,7 @@ package wlt
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -116,7 +117,7 @@ func TestExecuteFinanceRejectsOversizedBody(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	ctx := WithOperatorContext(context.Background(), "operator-1")
+	ctx := opctx.WithOperatorContext(context.Background(), "operator-1")
 	if _, _, err := client.ExecuteFinanceRead(ctx, "finance.refunds.read", nil, nil, "corr-1", "operator-1"); err == nil || !strings.Contains(err.Error(), "exceeds") {
 		t.Fatalf("expected oversized-body rejection, got %v", err)
 	}

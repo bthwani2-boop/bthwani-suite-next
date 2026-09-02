@@ -1,6 +1,7 @@
 package http
 
 import (
+	"dsh-api/internal/opctx"
 	"errors"
 	"net/http"
 	"strings"
@@ -48,7 +49,7 @@ func (s *protectedStoreServer) handleCaptainCreateTopUpSession(w http.ResponseWr
 		return
 	}
 	status, body, err := s.wlt.CreateCaptainTopUpSession(
-		wlt.WithOperatorContext(r.Context(), actor.OperatorContextID), actor.ID, input.TopUpReference, input.AmountMinorUnits, input.Currency,
+		opctx.WithOperatorContext(r.Context(), actor.OperatorContextID), actor.ID, input.TopUpReference, input.AmountMinorUnits, input.Currency,
 		correlationID, idempotencyKey, actor.OperatorContextID,
 	)
 	writeWltActorFinanceResponse(w, status, body, err)
@@ -64,7 +65,7 @@ func (s *protectedStoreServer) handleCaptainReadTopUpSession(w http.ResponseWrit
 		return
 	}
 	status, body, err := s.wlt.ReadCaptainTopUpSession(
-		wlt.WithOperatorContext(r.Context(), actor.OperatorContextID), r.PathValue("topUpSessionId"), actor.ID,
+		opctx.WithOperatorContext(r.Context(), actor.OperatorContextID), r.PathValue("topUpSessionId"), actor.ID,
 		correlationID, actor.OperatorContextID,
 	)
 	if errors.Is(err, wlt.ErrCaptainTopUpNotOwned) {
@@ -93,7 +94,7 @@ func (s *protectedStoreServer) handleCaptainMutateTopUpSession(w http.ResponseWr
 		return
 	}
 	status, body, err := s.wlt.MutateCaptainTopUpSession(
-		wlt.WithOperatorContext(r.Context(), actor.OperatorContextID), r.PathValue("topUpSessionId"), operation, correlationID,
+		opctx.WithOperatorContext(r.Context(), actor.OperatorContextID), r.PathValue("topUpSessionId"), operation, correlationID,
 		idempotencyKey, actor.ID, actor.OperatorContextID,
 	)
 	if errors.Is(err, wlt.ErrCaptainTopUpNotOwned) {

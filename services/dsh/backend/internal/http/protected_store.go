@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -139,7 +140,7 @@ type storeActorContextKeyType struct{}
 func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {
 	ctx := r.Context()
 	if strings.TrimSpace(actor.OperatorContextID) != "" {
-		ctx = partner.WithOperatorContext(ctx, actor.OperatorContextID)
+		ctx = opctx.WithOperatorContext(ctx, actor.OperatorContextID)
 	}
 	surface := strings.TrimSpace(actor.SessionSurface)
 	if surface == "" {
@@ -568,7 +569,7 @@ func (s *protectedStoreServer) requirePermission(
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "session has no executable operator context")
 		return store.StoreActor{}, false
 	}
-	*r = *r.WithContext(auth.WithOperatorContext(r.Context(), identity.OperatorContextID))
+	*r = *r.WithContext(opctx.WithOperatorContext(r.Context(), identity.OperatorContextID))
 	if surface != dshActorSurface("operator") || identity.SessionSurface != surface {
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "control-panel session is required")
 		return store.StoreActor{}, false

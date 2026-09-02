@@ -3,13 +3,13 @@ package supportsession
 import (
 	"context"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"errors"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
-	"dsh-api/internal/auth"
 	_ "github.com/lib/pq"
 )
 
@@ -73,7 +73,7 @@ func TestSupportRequestsAreTenantLocalInDB(t *testing.T) {
 		"objective3-dsh-tenant-b-" + token,
 	}
 	for _, operatorContextID := range operatorContextIDs {
-		ctx := auth.WithOperatorContext(context.Background(), operatorContextID)
+		ctx := opctx.WithOperatorContext(context.Background(), operatorContextID)
 		request, err := CreateRequest(ctx, db, targetID, requesterID, "objective 3 isolation proof", 5)
 		if err != nil {
 			t.Fatalf("create request for %s: %v", operatorContextID, err)

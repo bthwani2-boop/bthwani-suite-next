@@ -1,6 +1,7 @@
 package partner
 
 import (
+	"dsh-api/internal/opctx"
 	"net/http/httptest"
 	"testing"
 )
@@ -30,7 +31,7 @@ func TestOperatorContextIDFromContextIgnoresSpoofableHeadersAndQuery(t *testing.
 	req.Header.Set("X-Operator-Context-ID", "spoofed-header")
 	req.Header.Set("X-Organization-ID", "spoofed-organization")
 
-	if operatorContextID, ok := OperatorContextIDFromContext(req.Context()); ok || operatorContextID != "" {
+	if operatorContextID, ok := opctx.OperatorContextIDFromContext(req.Context()); ok || operatorContextID != "" {
 		t.Fatalf("OperatorContextIDFromContext must ignore client-controlled OperatorContext selectors, got operatorContextID=%q ok=%v", operatorContextID, ok)
 	}
 }

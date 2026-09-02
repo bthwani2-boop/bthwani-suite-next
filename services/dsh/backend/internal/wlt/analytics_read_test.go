@@ -2,6 +2,7 @@ package wlt
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,7 +35,7 @@ func TestReadAnalyticsFinancialSnapshotIsAuthenticatedReadOnly(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	trustedContext := WithOperatorContext(context.Background(), operatorContextID)
+	trustedContext := opctx.WithOperatorContext(context.Background(), operatorContextID)
 	snapshot, err := client.ReadAnalyticsFinancialSnapshot(trustedContext)
 	if err != nil {
 		t.Fatal(err)

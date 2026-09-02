@@ -3,6 +3,7 @@ package wltoutbox
 import (
 	"context"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"fmt"
 	"log"
 	"time"
@@ -94,7 +95,7 @@ func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string,
 	if event.OperatorContextID == "" {
 		return "", fmt.Errorf("WLT outbox event %s has no OperatorContext context", event.ID)
 	}
-	ctx = wlt.WithOperatorContext(ctx, event.OperatorContextID)
+	ctx = opctx.WithOperatorContext(ctx, event.OperatorContextID)
 
 	switch event.EventType {
 	case EventTypeDeliveryCompleted:

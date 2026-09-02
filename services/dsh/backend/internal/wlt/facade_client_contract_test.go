@@ -2,6 +2,7 @@ package wlt
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -41,14 +42,14 @@ func TestExecuteFinanceWriteEnforcesCanonicalRequirements(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }))
 	defer server.Close()
 	c := NewClient(server.URL, "service-token")
-	ctx := auth.WithAuthorizationContext(WithOperatorContext(context.Background(), "operator-1"), "finance.manage", "all")
+	ctx := auth.WithAuthorizationContext(opctx.WithOperatorContext(context.Background(), "operator-1"), "finance.manage", "all")
 	if _, _, err := c.ExecuteFinanceWrite(ctx, "finance.reconciliation.resolve", map[string]string{"caseId": "case-1"}, []byte(`{}`), "corr-1", "", "operator-1", "actor-1"); err == nil || !strings.Contains(err.Error(), "requires an idempotency key") {
 		t.Fatalf("expected idempotency rejection, got %v", err)
 	}
 	if _, _, err := c.ExecuteFinanceWrite(ctx, "finance.reconciliation.resolve", map[string]string{"caseId": "case-1"}, []byte(`{}`), "corr-1", "idem-1", "operator-1", ""); err == nil || !strings.Contains(err.Error(), "delegated finance principal") {
 		t.Fatalf("expected delegation rejection, got %v", err)
 	}
-	wrong := auth.WithAuthorizationContext(WithOperatorContext(context.Background(), "operator-1"), "finance.read", "all")
+	wrong := auth.WithAuthorizationContext(opctx.WithOperatorContext(context.Background(), "operator-1"), "finance.read", "all")
 	if _, _, err := c.ExecuteFinanceWrite(wrong, "finance.reconciliation.resolve", map[string]string{"caseId": "case-1"}, []byte(`{}`), "corr-1", "idem-1", "operator-1", "actor-1"); err == nil || !strings.Contains(err.Error(), "requires permission") {
 		t.Fatalf("expected permission rejection, got %v", err)
 	}
@@ -67,7 +68,7 @@ func TestExecuteFinanceWriteUsesRegistryMethodAndPath(t *testing.T) {
 	}))
 	defer server.Close()
 	c := NewClient(server.URL, "service-token")
-	ctx := auth.WithAuthorizationContext(WithOperatorContext(context.Background(), "operator-1"), "finance.manage", "all")
+	ctx := auth.WithAuthorizationContext(opctx.WithOperatorContext(context.Background(), "operator-1"), "finance.manage", "all")
 	if _, _, err := c.ExecuteFinanceWrite(ctx, "finance.reconciliation.resolve", map[string]string{"caseId": "case-1"}, []byte(`{}`), "corr-1", "idem-1", "operator-1", "actor-1"); err != nil {
 		t.Fatal(err)
 	}

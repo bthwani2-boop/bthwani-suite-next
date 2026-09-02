@@ -2,6 +2,7 @@ package wlt
 
 import (
 	"bytes"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"io"
@@ -55,7 +56,7 @@ func TestCreateCaptainTopUpSessionBindsActorAndMutationHeaders(t *testing.T) {
 
 	client := NewClient(server.URL, "service-token")
 	status, body, err := client.CreateCaptainTopUpSession(
-		WithOperatorContext(t.Context(), "operator-context-1"), "captain-1", "reference-1", 5000, "yer",
+		opctx.WithOperatorContext(t.Context(), "operator-context-1"), "captain-1", "reference-1", 5000, "yer",
 		"correlation-1", "idempotency-1", "operator-context-1",
 	)
 	if err != nil {
@@ -69,7 +70,7 @@ func TestCreateCaptainTopUpSessionBindsActorAndMutationHeaders(t *testing.T) {
 func TestCreateCaptainTopUpSessionRejectsOperatorContextMismatch(t *testing.T) {
 	client := NewClient("http://127.0.0.1:1", "service-token")
 	_, _, err := client.CreateCaptainTopUpSession(
-		WithOperatorContext(t.Context(), "trusted-operator-context"), "captain-1", "reference-1", 5000, "YER",
+		opctx.WithOperatorContext(t.Context(), "trusted-operator-context"), "captain-1", "reference-1", 5000, "YER",
 		"correlation-1", "idempotency-1", "different-operator-context",
 	)
 	if err == nil || !strings.Contains(err.Error(), "does not match trusted request context") {
@@ -89,7 +90,7 @@ func TestReadCaptainTopUpSessionRejectsAnotherCaptain(t *testing.T) {
 
 	client := NewClient(server.URL, "service-token")
 	status, _, err := client.ReadCaptainTopUpSession(
-		WithOperatorContext(t.Context(), "operator-context-1"), "topup-session-1", "captain-attacker", "correlation-2", "operator-context-1",
+		opctx.WithOperatorContext(t.Context(), "operator-context-1"), "topup-session-1", "captain-attacker", "correlation-2", "operator-context-1",
 	)
 	if !errors.Is(err, ErrCaptainTopUpNotOwned) {
 		t.Fatalf("err=%v, want ErrCaptainTopUpNotOwned", err)
@@ -136,7 +137,7 @@ func TestMutateCaptainTopUpSessionReadsOwnershipBeforePosting(t *testing.T) {
 
 	client := NewClient(server.URL, "service-token")
 	status, body, err := client.MutateCaptainTopUpSession(
-		WithOperatorContext(t.Context(), "operator-context-1"), "topup-session-1", "capture", "capture-correlation",
+		opctx.WithOperatorContext(t.Context(), "operator-context-1"), "topup-session-1", "capture", "capture-correlation",
 		"capture-idempotency", "captain-1", "operator-context-1",
 	)
 	if err != nil {

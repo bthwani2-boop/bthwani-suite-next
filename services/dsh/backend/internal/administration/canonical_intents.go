@@ -3,6 +3,7 @@ package administration
 import (
 	"context"
 	"database/sql"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -494,7 +495,7 @@ func reconcileRoleAssignmentIntent(ctx context.Context, db *sql.DB, identityClie
 	if err != nil || operatorContextID != current.operatorContextID {
 		return markIntentTerminal(ctx, db, current, "invalid role-assignment operator context")
 	}
-	scopedCtx := auth.WithOperatorContext(ctx, operatorContextID)
+	scopedCtx := opctx.WithOperatorContext(ctx, operatorContextID)
 
 	var targetActorID, roleName, actionType, requestedBy, status string
 	var expectedRoleVersion int
@@ -551,7 +552,7 @@ func reconcileRoleRollbackIntent(ctx context.Context, db *sql.DB, identityClient
 	if err != nil || operatorContextID != current.operatorContextID {
 		return markIntentTerminal(ctx, db, current, "invalid role-rollback operator context")
 	}
-	scopedCtx := auth.WithOperatorContext(ctx, operatorContextID)
+	scopedCtx := opctx.WithOperatorContext(ctx, operatorContextID)
 
 	var targetActorID, roleName, inverseActionType, requestedBy, status, sourceApprovedBy string
 	var expectedRoleVersion int
@@ -678,7 +679,7 @@ func reconcileRoleDefinitionIntent(ctx context.Context, db *sql.DB, identityClie
 	if err != nil || operatorContextID != current.operatorContextID {
 		return markIntentTerminal(ctx, db, current, "invalid role-definition operator context")
 	}
-	scopedCtx := auth.WithOperatorContext(ctx, operatorContextID)
+	scopedCtx := opctx.WithOperatorContext(ctx, operatorContextID)
 
 	var roleName, description, requestedBy, status string
 	var active bool

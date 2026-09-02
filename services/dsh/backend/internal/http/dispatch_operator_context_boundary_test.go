@@ -2,19 +2,18 @@ package http
 
 import (
 	"bytes"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"dsh-api/internal/wlt"
 )
 
 func TestDispatchGovernanceHandlersRejectSpoofedOperatorContext(t *testing.T) {
 	// A dummy handler simulating dispatch handlers (e.g. handleCreateGovernedDispatchAssignment)
 	// which must read only from the server-trusted context injected by identity/auth boundary.
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok {
 			http.Error(w, "missing operator context", http.StatusBadRequest)
 			return
@@ -31,7 +30,7 @@ func TestDispatchGovernanceHandlersRejectSpoofedOperatorContext(t *testing.T) {
 	// Wrap handler in middleware simulating the auth pipeline's behavior
 	// that injects the trusted server-side operator context ID.
 	trustedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := wlt.WithOperatorContext(r.Context(), "trusted-server-id")
+		ctx := opctx.WithOperatorContext(r.Context(), "trusted-server-id")
 		handler.ServeHTTP(w, r.WithContext(ctx))
 	})
 
@@ -75,7 +74,7 @@ func TestDispatchReadHandlersRejectSpoofedQueryParam(t *testing.T) {
 	// A dummy list handler that mirrors the new pattern: reads OperatorContext
 	// from server-trusted context and must never observe the client query value.
 	listHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := wlt.OperatorContextIDFromContext(r.Context())
+		operatorContextID, ok := opctx.OperatorContextIDFromContext(r.Context())
 		if !ok {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusForbidden)
@@ -90,7 +89,7 @@ func TestDispatchReadHandlersRejectSpoofedQueryParam(t *testing.T) {
 	})
 
 	trustedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := wlt.WithOperatorContext(r.Context(), "server-trusted-context")
+		ctx := opctx.WithOperatorContext(r.Context(), "server-trusted-context")
 		listHandler.ServeHTTP(w, r.WithContext(ctx))
 	})
 

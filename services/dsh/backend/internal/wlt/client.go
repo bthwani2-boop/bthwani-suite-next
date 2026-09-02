@@ -3,6 +3,7 @@ package wlt
 import (
 	"bytes"
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -109,7 +110,7 @@ func (c *Client) Configured() bool {
 // propagate the canonical OperatorContext to WLT after service authentication.
 func (c *Client) resolveDelegatedOperatorContext(ctx context.Context, requested string) (string, error) {
 	requested = strings.TrimSpace(requested)
-	delegatedOperatorContextID, hasDelegatedOperatorContext := OperatorContextIDFromContext(ctx)
+	delegatedOperatorContextID, hasDelegatedOperatorContext := opctx.OperatorContextIDFromContext(ctx)
 	if !hasDelegatedOperatorContext {
 		return "", fmt.Errorf("trusted OperatorContext context is required for this WLT request")
 	}

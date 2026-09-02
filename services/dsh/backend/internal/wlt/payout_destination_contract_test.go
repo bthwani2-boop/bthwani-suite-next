@@ -2,6 +2,7 @@ package wlt
 
 import (
 	"context"
+	"dsh-api/internal/opctx"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -72,7 +73,7 @@ func TestGetPayoutDestinationRejectsAnotherActorsDestination(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-test-token")
-	ctx := WithOperatorContext(context.Background(), "OperatorContext-test")
+	ctx := opctx.WithOperatorContext(context.Background(), "OperatorContext-test")
 	if _, err := client.GetPayoutDestination(ctx, "partner-1"); err == nil {
 		t.Fatal("readback accepted a destination owned by a different actor")
 	}
