@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"dsh-api/internal/providers"
+	resilience "github.com/bthwani2-boop/bthwani-shared-resilience"
 )
 
 func TestHealthReturnsOnlyMapProviderState(t *testing.T) {
@@ -66,7 +66,7 @@ func TestClientLifecycleSharesBreakerAcrossRequestsAndRecovers(t *testing.T) {
 	defer server.Close()
 
 	client := NewClientWithTimeout(server.URL, time.Second)
-	client.breaker = providers.NewCircuitBreaker(providers.CircuitBreakerConfig{
+	client.breaker = resilience.NewCircuitBreaker(resilience.CircuitBreakerConfig{
 		FailureThreshold: 5,
 		SuccessThreshold: 2,
 		Timeout:          time.Millisecond,

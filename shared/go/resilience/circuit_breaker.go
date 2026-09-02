@@ -1,4 +1,4 @@
-package provider
+package resilience
 
 import (
 	"errors"
@@ -14,9 +14,7 @@ const (
 	StateHalfOpen
 )
 
-var (
-	ErrCircuitOpen = errors.New("circuit breaker is OPEN")
-)
+var ErrCircuitOpen = errors.New("circuit breaker is OPEN")
 
 type CircuitBreaker struct {
 	mu sync.Mutex

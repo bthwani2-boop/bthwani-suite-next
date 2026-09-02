@@ -67,9 +67,10 @@ test("partner self/readiness state is isolated across store, session, and unmoun
 
 test("partner native wiring leaves inbound URL navigation to Expo Router", async () => {
   const source = await read("apps/app-partner/runtime/src/platform/dsh-capabilities.tsx");
+  const sharedCapabilities = await read("tools/mobile/runtime-shared/dsh-capabilities.ts");
 
   assert.doesNotMatch(source, /configureDshLinkingAdapter|getInitialURL|getInitialUrl|addUrlListener|addEventListener\("url"/);
-  assert.match(source, /configureDshMobileNotificationRuntime\(createDshExpoNotificationRuntime/);
+  assert.match(sharedCapabilities, /configureDshMobileNotificationRuntime\(createDshExpoNotificationRuntime/);
   assert.match(source, /linking: Linking/);
 });
 

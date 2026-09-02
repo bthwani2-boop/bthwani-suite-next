@@ -10,12 +10,14 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	resilience "github.com/bthwani2-boop/bthwani-shared-resilience"
 )
 
 type Client struct {
 	baseURL      string
 	httpClient   *http.Client
-	breaker      *CircuitBreaker
+	breaker      *resilience.CircuitBreaker
 	reg          *Registry
 	providerType string
 	environment  string
@@ -35,7 +37,7 @@ func newClient(config Config, reg *Registry, providerType, environment string) *
 		environment:  strings.TrimSpace(environment),
 		// The timeout will be dynamically overridden per-request
 		httpClient: &http.Client{Timeout: config.TimeoutBudget},
-		breaker: NewCircuitBreaker(CircuitBreakerConfig{
+		breaker: resilience.NewCircuitBreaker(resilience.CircuitBreakerConfig{
 			FailureThreshold: 5,
 			SuccessThreshold: 2,
 			Timeout:          30 * time.Second,
@@ -97,7 +99,7 @@ func (c *Client) do(ctx context.Context, method string, path string, body any, m
 		if resp != nil {
 			_ = resp.Body.Close()
 		}
-		if errors.Is(execErr, ErrCircuitOpen) {
+		if errors.Is(execErr, resilience.ErrCircuitOpen) {
 			return ProviderResult{}, fmt.Errorf("provider circuit breaker is OPEN")
 		}
 		return ProviderResult{}, execErr

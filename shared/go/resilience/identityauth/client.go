@@ -1,6 +1,6 @@
-// Package auth resolves end-user sessions against core/identity by
-// forwarding the caller's bearer token, mirroring the DSH auth client.
-package auth
+// Package identityauth resolves authenticated end-user sessions against the
+// canonical Identity service for backend consumers.
+package identityauth
 
 import (
 	"context"
@@ -43,6 +43,8 @@ func NewClient(baseURL string) *Client {
 	}
 }
 
+// Resolve accepts only an authenticated Identity assertion with an explicit
+// operator context. Identity owns context membership and session validity.
 func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, error) {
 	if c.baseURL == "" {
 		return Identity{}, ErrIdentityUnavailable
@@ -70,7 +72,9 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 	if err := json.NewDecoder(resp.Body).Decode(&identity); err != nil {
 		return Identity{}, ErrIdentityUnavailable
 	}
-	if identity.AuthState != "authenticated" || identity.Subject == "" || strings.TrimSpace(identity.OperatorContextID) == "" {
+	identity.Subject = strings.TrimSpace(identity.Subject)
+	identity.OperatorContextID = strings.TrimSpace(identity.OperatorContextID)
+	if identity.AuthState != "authenticated" || identity.Subject == "" || identity.OperatorContextID == "" {
 		return Identity{}, ErrUnauthenticated
 	}
 	return identity, nil

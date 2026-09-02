@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"dsh-api/internal/providers"
+	resilience "github.com/bthwani2-boop/bthwani-shared-resilience"
 )
 
 var (
@@ -29,7 +29,7 @@ const defaultRequestTimeout = 8 * time.Second
 type Client struct {
 	baseURL string
 	http    *http.Client
-	breaker *providers.CircuitBreaker
+	breaker *resilience.CircuitBreaker
 }
 
 type SearchInput struct {
@@ -102,7 +102,7 @@ func NewClientWithTimeout(baseURL string, timeout time.Duration) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
 		http:    &http.Client{Timeout: timeout},
-		breaker: providers.NewCircuitBreaker(providers.CircuitBreakerConfig{
+		breaker: resilience.NewCircuitBreaker(resilience.CircuitBreakerConfig{
 			FailureThreshold: 5,
 			SuccessThreshold: 2,
 			Timeout:          30 * time.Second,
@@ -298,7 +298,7 @@ func (c *Client) do(req *http.Request, output any) error {
 	})
 
 	if execErr != nil {
-		if errors.Is(execErr, providers.ErrCircuitOpen) {
+		if errors.Is(execErr, resilience.ErrCircuitOpen) {
 			return ErrUnavailable
 		}
 		return execErr

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	resilience "github.com/bthwani2-boop/bthwani-shared-resilience"
 )
 
 // Capability enumerates the finite set of financial-rail operations a
@@ -91,7 +93,7 @@ func NewFinancialRailRouter(registry *Registry, environment string) (*FinancialR
 		httpClient: &http.Client{
 			Timeout: timeoutBudget,
 		},
-		breaker: NewCircuitBreaker(CircuitBreakerConfig{
+		breaker: resilience.NewCircuitBreaker(resilience.CircuitBreakerConfig{
 			FailureThreshold: 5,
 			SuccessThreshold: 2,
 			Timeout:          30 * time.Second,
