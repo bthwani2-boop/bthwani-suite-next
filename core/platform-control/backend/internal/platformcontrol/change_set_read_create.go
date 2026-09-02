@@ -63,7 +63,7 @@ LIMIT 100`)
 	for rows.Next() {
 		changeSet, scanErr := scanChangeSet(rows)
 		if scanErr != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, scanErr
 		}
 		changeSets = append(changeSets, changeSet)
