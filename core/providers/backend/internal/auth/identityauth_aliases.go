@@ -1,6 +1,6 @@
 package auth
 
-import identityauth "github.com/bthwani2-boop/bthwani-shared-resilience/identityauth"
+import identityauth "github.com/bthwani2-boop/bthwani-shared-identityauth"
 
 var (
 	ErrUnauthenticated     = identityauth.ErrUnauthenticated
