@@ -732,50 +732,88 @@ func providerPermissions(surface string) ([]byte, error) {
 	})
 }
 
-// SuspendActor suspends authentication for an actor in one transaction.
-func (r *Repository) SuspendActor(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
-	actorID = strings.TrimSpace(actorID)
-	requestedByActorID = strings.TrimSpace(requestedByActorID)
-	reason = strings.TrimSpace(reason)
-	correlationID = strings.TrimSpace(correlationID)
-	if actorID == "" || requestedByActorID == "" || reason == "" || correlationID == "" || len(reason) > 500 || len(correlationID) > 128 {
-		return ErrInvalidActorTransition
+type actorLifecycleTransition struct {
+	actorID            string
+	requestedByActorID string
+	reason             string
+	correlationID      string
+	status             ActorLifecycleStatus
+	operatorContextID  string
+}
+
+func (r *Repository) beginActorLifecycleTransition(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) (*sql.Tx, actorLifecycleTransition, error) {
+	transition := actorLifecycleTransition{
+		actorID:            strings.TrimSpace(actorID),
+		requestedByActorID: strings.TrimSpace(requestedByActorID),
+		reason:             strings.TrimSpace(reason),
+		correlationID:      strings.TrimSpace(correlationID),
+	}
+	if transition.actorID == "" || transition.requestedByActorID == "" || transition.reason == "" || transition.correlationID == "" || len(transition.reason) > 500 || len(transition.correlationID) > 128 {
+		return nil, actorLifecycleTransition{}, ErrInvalidActorTransition
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, actorLifecycleTransition{}, err
+	}
+	rollback := func(err error) (*sql.Tx, actorLifecycleTransition, error) {
+		_ = tx.Rollback()
+		return nil, actorLifecycleTransition{}, err
+	}
+	var roles pq.StringArray
+	err = tx.QueryRowContext(ctx, `
+		SELECT status, operator_context_id, roles
+		FROM identity_actors
+		WHERE id = $1
+		FOR UPDATE`, transition.actorID).Scan(&transition.status, &transition.operatorContextID, &roles)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return rollback(ErrActorNotFound)
+		}
+		return rollback(err)
+	}
+	if !hasAnyRole([]string(roles), "field", "captain", "employee") {
+		return rollback(ErrForbidden)
+	}
+	if err := requireLifecycleRequester(ctx, tx, transition.requestedByActorID, transition.operatorContextID); err != nil {
+		return rollback(err)
+	}
+	return tx, transition, nil
+}
+
+func actorLifecycleReplayExistsTx(ctx context.Context, tx *sql.Tx, transition actorLifecycleTransition, status string) (bool, error) {
+	var replay bool
+	err := tx.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM identity_actor_lifecycle_events
+			WHERE actor_id = $1 AND status = $2
+			  AND requested_by_actor_id = $3 AND reason = $4 AND correlation_id = $5
+		)`, transition.actorID, status, transition.requestedByActorID, transition.reason, transition.correlationID).Scan(&replay)
+	return replay, err
+}
+
+func recordActorLifecycleEventTx(ctx context.Context, tx *sql.Tx, transition actorLifecycleTransition, status string) error {
+	eventID, err := randomToken(16)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO identity_actor_lifecycle_events
+			(id, actor_id, status, requested_by_actor_id, reason, correlation_id)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		eventID, transition.actorID, status, transition.requestedByActorID, transition.reason, transition.correlationID)
+	return err
+}
+
+// SuspendActor suspends authentication for an actor in one transaction.
+func (r *Repository) SuspendActor(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
+	tx, transition, err := r.beginActorLifecycleTransition(ctx, actorID, requestedByActorID, reason, correlationID)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-
-	var status ActorLifecycleStatus
-	var version int
-	var operatorContextID string
-	var roles pq.StringArray
-	err = tx.QueryRowContext(ctx, `
-		SELECT status, version, operator_context_id, roles
-		FROM identity_actors
-		WHERE id = $1
-		FOR UPDATE`, actorID).Scan(&status, &version, &operatorContextID, &roles)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrActorNotFound
-		}
-		return err
-	}
-	if !hasAnyRole([]string(roles), "field", "captain", "employee") {
-		return ErrForbidden
-	}
-	if err := requireLifecycleRequester(ctx, tx, requestedByActorID, operatorContextID); err != nil {
-		return err
-	}
-	if status != ActorStatusActive {
-		var replay bool
-		if err := tx.QueryRowContext(ctx, `
-			SELECT EXISTS (
-				SELECT 1 FROM identity_actor_lifecycle_events
-				WHERE actor_id = $1 AND status = 'suspended'
-				  AND requested_by_actor_id = $2 AND reason = $3 AND correlation_id = $4
-			)`, actorID, requestedByActorID, reason, correlationID).Scan(&replay); err != nil {
+	if transition.status != ActorStatusActive {
+		replay, err := actorLifecycleReplayExistsTx(ctx, tx, transition, "suspended")
+		if err != nil {
 			return err
 		}
 		if replay {
@@ -783,82 +821,35 @@ func (r *Repository) SuspendActor(ctx context.Context, actorID, requestedByActor
 		}
 		return ErrActorAlreadyDeactivated
 	}
-
-	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = 'SUSPENDED', version = version + 1, updated_at = now() WHERE id = $1`, actorID)
-	if err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = 'SUSPENDED', version = version + 1, updated_at = now() WHERE id = $1`, transition.actorID); err != nil {
 		return err
 	}
-
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE identity_sessions SET revoked_at = now()
-		WHERE actor_id = $1 AND revoked_at IS NULL`, actorID); err != nil {
+		WHERE actor_id = $1 AND revoked_at IS NULL`, transition.actorID); err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE identity_activation_challenges SET status = 'revoked', updated_at = now()
-		WHERE actor_id = $1 AND status = 'pending'`, actorID); err != nil {
+		WHERE actor_id = $1 AND status = 'pending'`, transition.actorID); err != nil {
 		return err
 	}
-
-	eventID, err := randomToken(16)
-	if err != nil {
+	if err := recordActorLifecycleEventTx(ctx, tx, transition, "suspended"); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO identity_actor_lifecycle_events
-			(id, actor_id, status, requested_by_actor_id, reason, correlation_id)
-		VALUES ($1, $2, 'suspended', $3, $4, $5)`,
-		eventID, actorID, requestedByActorID, reason, correlationID); err != nil {
-		return err
-	}
-
 	return tx.Commit()
 }
 
 // ReactivateActor restores authentication for a previously activated actor.
 func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByActorID, reason, correlationID string) error {
-	actorID = strings.TrimSpace(actorID)
-	requestedByActorID = strings.TrimSpace(requestedByActorID)
-	reason = strings.TrimSpace(reason)
-	correlationID = strings.TrimSpace(correlationID)
-	if actorID == "" || requestedByActorID == "" || reason == "" || correlationID == "" || len(reason) > 500 || len(correlationID) > 128 {
-		return ErrInvalidActorTransition
-	}
-	tx, err := r.db.BeginTx(ctx, nil)
+	tx, transition, err := r.beginActorLifecycleTransition(ctx, actorID, requestedByActorID, reason, correlationID)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-
-	var status ActorLifecycleStatus
-	var version int
-	var operatorContextID string
-	var roles pq.StringArray
-	err = tx.QueryRowContext(ctx, `
-		SELECT status, version, operator_context_id, roles
-		FROM identity_actors
-		WHERE id = $1
-		FOR UPDATE`, actorID).Scan(&status, &version, &operatorContextID, &roles)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrActorNotFound
-		}
-		return err
-	}
-	if !hasAnyRole([]string(roles), "field", "captain", "employee") {
-		return ErrForbidden
-	}
-	if err := requireLifecycleRequester(ctx, tx, requestedByActorID, operatorContextID); err != nil {
-		return err
-	}
-	if status == ActorStatusActive {
-		var replay bool
-		if err := tx.QueryRowContext(ctx, `
-			SELECT EXISTS (
-				SELECT 1 FROM identity_actor_lifecycle_events
-				WHERE actor_id = $1 AND status = 'reactivated'
-				  AND requested_by_actor_id = $2 AND reason = $3 AND correlation_id = $4
-			)`, actorID, requestedByActorID, reason, correlationID).Scan(&replay); err != nil {
+	if transition.status == ActorStatusActive {
+		replay, err := actorLifecycleReplayExistsTx(ctx, tx, transition, "reactivated")
+		if err != nil {
 			return err
 		}
 		if replay {
@@ -866,26 +857,15 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByAc
 		}
 		return ErrActorAlreadyActive
 	}
-	if status != ActorStatusSuspended {
+	if transition.status != ActorStatusSuspended {
 		return ErrInvalidActorTransition
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = 'ACTIVE', version = version + 1, updated_at = now() WHERE id = $1`, actorID)
-	if err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = 'ACTIVE', version = version + 1, updated_at = now() WHERE id = $1`, transition.actorID); err != nil {
 		return err
 	}
-
-	eventID, err := randomToken(16)
-	if err != nil {
+	if err := recordActorLifecycleEventTx(ctx, tx, transition, "reactivated"); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO identity_actor_lifecycle_events
-			(id, actor_id, status, requested_by_actor_id, reason, correlation_id)
-		VALUES ($1, $2, 'reactivated', $3, $4, $5)`,
-		eventID, actorID, requestedByActorID, reason, correlationID); err != nil {
-		return err
-	}
-
 	return tx.Commit()
 }
 
