@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strings"
 
-	"wlt-api/internal/ledger"
 	"wlt-api/internal/shared"
 )
 
@@ -117,38 +116,8 @@ func applyGovernedCommissionLifecycleIdempotent(
 		if commission.Status != "pending" {
 			return nil, ErrCommissionNotInExpectedState
 		}
-		walletEffect, walletErr := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
-		if walletErr != nil {
-			return nil, walletErr
-		}
-		if walletEffect {
-			lines := []ledger.LedgerLine{
-				{
-					AccountType:      "wallet",
-					ActorType:        commission.BeneficiaryActorType,
-					ActorID:          commission.BeneficiaryActorID,
-					DebitCredit:      "debit",
-					AmountMinorUnits: commission.AmountMinorUnits,
-					Currency:         commission.Currency,
-				},
-				{
-					AccountType:      "platform_commission_receivable",
-					DebitCredit:      "credit",
-					AmountMinorUnits: commission.AmountMinorUnits,
-					Currency:         commission.Currency,
-				},
-			}
-			if _, postErr := ledger.PostLedgerTransaction(
-				ctx,
-				tx,
-				"commission_rejected",
-				"commission",
-				commission.ID,
-				lines,
-				ledger.Actor{ID: operatorID, Type: "operator"},
-			); postErr != nil {
-				return nil, postErr
-			}
+		if err := postCommissionWalletEffectTx(ctx, tx, operatorContextID, commission, "commission_rejected", operatorID); err != nil {
+			return nil, err
 		}
 		row := tx.QueryRowContext(ctx, `
 			UPDATE wlt_commissions
@@ -163,38 +132,8 @@ func applyGovernedCommissionLifecycleIdempotent(
 		if commission.Status != "settled" {
 			return nil, ErrCommissionNotInExpectedState
 		}
-		walletEffect, walletErr := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
-		if walletErr != nil {
-			return nil, walletErr
-		}
-		if walletEffect {
-			lines := []ledger.LedgerLine{
-				{
-					AccountType:      "wallet",
-					ActorType:        commission.BeneficiaryActorType,
-					ActorID:          commission.BeneficiaryActorID,
-					DebitCredit:      "debit",
-					AmountMinorUnits: commission.AmountMinorUnits,
-					Currency:         commission.Currency,
-				},
-				{
-					AccountType:      "platform_commission_receivable",
-					DebitCredit:      "credit",
-					AmountMinorUnits: commission.AmountMinorUnits,
-					Currency:         commission.Currency,
-				},
-			}
-			if _, postErr := ledger.PostLedgerTransaction(
-				ctx,
-				tx,
-				"commission_reversed",
-				"commission",
-				commission.ID,
-				lines,
-				ledger.Actor{ID: operatorID, Type: "operator"},
-			); postErr != nil {
-				return nil, postErr
-			}
+		if err := postCommissionWalletEffectTx(ctx, tx, operatorContextID, commission, "commission_reversed", operatorID); err != nil {
+			return nil, err
 		}
 		row := tx.QueryRowContext(ctx, `
 			UPDATE wlt_commissions

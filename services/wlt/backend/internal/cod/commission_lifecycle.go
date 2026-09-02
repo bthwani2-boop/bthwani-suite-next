@@ -60,6 +60,41 @@ func commissionHasWalletEffectTx(
 	return governed, err
 }
 
+func postCommissionWalletEffectTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	operatorContextID string,
+	commission *Commission,
+	action string,
+	operatorID string,
+) error {
+	walletEffect, err := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
+	if err != nil || !walletEffect {
+		return err
+	}
+	lines := []ledger.LedgerLine{
+		{
+			AccountType:      "wallet",
+			ActorType:        commission.BeneficiaryActorType,
+			ActorID:          commission.BeneficiaryActorID,
+			DebitCredit:      "debit",
+			AmountMinorUnits: commission.AmountMinorUnits,
+			Currency:         commission.Currency,
+		},
+		{
+			AccountType:      "platform_commission_receivable",
+			DebitCredit:      "credit",
+			AmountMinorUnits: commission.AmountMinorUnits,
+			Currency:         commission.Currency,
+		},
+	}
+	_, err = ledger.PostLedgerTransaction(
+		ctx, tx, action, "commission", commission.ID, lines,
+		ledger.Actor{ID: operatorID, Type: "operator"},
+	)
+	return err
+}
+
 func appendCommissionAudit(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -168,13 +203,16 @@ func SettleGovernedCommission(
 	return updated, nil
 }
 
-func RejectGovernedCommission(
+func applyGovernedCommissionResolution(
 	ctx context.Context,
 	db *sql.DB,
 	commissionID string,
 	operatorID string,
 	reason string,
 	correlationID string,
+	expectedStatus string,
+	targetStatus string,
+	resolutionAction string,
 ) (*Commission, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
@@ -193,37 +231,45 @@ func RejectGovernedCommission(
 	if err != nil || commission == nil {
 		return commission, err
 	}
-	if commission.Status != "pending" {
+	if commission.Status != expectedStatus {
 		return nil, ErrCommissionNotInExpectedState
 	}
-	walletEffect, err := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
-	if err != nil {
+	if err := postCommissionWalletEffectTx(ctx, tx, operatorContextID, commission, resolutionAction, operatorID); err != nil {
 		return nil, err
 	}
-	if walletEffect {
-		lines := []ledger.LedgerLine{
-			{AccountType: "wallet", ActorType: commission.BeneficiaryActorType, ActorID: commission.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: commission.AmountMinorUnits, Currency: commission.Currency},
-			{AccountType: "platform_commission_receivable", DebitCredit: "credit", AmountMinorUnits: commission.AmountMinorUnits, Currency: commission.Currency},
-		}
-		if _, err := ledger.PostLedgerTransaction(ctx, tx, "commission_rejected", "commission", commission.ID, lines, ledger.Actor{ID: operatorID, Type: "operator"}); err != nil {
-			return nil, err
-		}
-	}
-	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
+	updateSQL := `UPDATE wlt_commissions
 		SET status='rejected',rejected_at=NOW(),resolution_note=$3,updated_at=NOW()
 		WHERE operator_context_id=$1 AND id=$2 AND status='pending'
-		RETURNING `+commissionCols, operatorContextID, commission.ID, reason)
+		RETURNING ` + commissionCols
+	if targetStatus == "reversed" {
+		updateSQL = `UPDATE wlt_commissions
+			SET status='reversed',reversed_at=NOW(),resolution_note=$3,updated_at=NOW()
+			WHERE operator_context_id=$1 AND id=$2 AND status='settled'
+			RETURNING ` + commissionCols
+	}
+	row := tx.QueryRowContext(ctx, updateSQL, operatorContextID, commission.ID, reason)
 	updated, err := scanCommission(row)
 	if err != nil {
 		return nil, err
 	}
-	if err := appendCommissionAudit(ctx, tx, operatorContextID, commission.ID, "commission_rejected", operatorID, reason, correlationID); err != nil {
+	if err := appendCommissionAudit(ctx, tx, operatorContextID, commission.ID, resolutionAction, operatorID, reason, correlationID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 	return updated, nil
+}
+
+func RejectGovernedCommission(
+	ctx context.Context,
+	db *sql.DB,
+	commissionID string,
+	operatorID string,
+	reason string,
+	correlationID string,
+) (*Commission, error) {
+	return applyGovernedCommissionResolution(ctx, db, commissionID, operatorID, reason, correlationID, "pending", "rejected", "commission_rejected")
 }
 
 func ReverseGovernedCommission(
@@ -234,54 +280,7 @@ func ReverseGovernedCommission(
 	reason string,
 	correlationID string,
 ) (*Commission, error) {
-	operatorContextID, err := shared.RequireOperatorContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	reason = strings.TrimSpace(reason)
-	if reason == "" {
-		return nil, fmt.Errorf("reason is required")
-	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, operatorContextID, strings.TrimSpace(commissionID))
-	if err != nil || commission == nil {
-		return commission, err
-	}
-	if commission.Status != "settled" {
-		return nil, ErrCommissionNotInExpectedState
-	}
-	walletEffect, err := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
-	if err != nil {
-		return nil, err
-	}
-	if walletEffect {
-		lines := []ledger.LedgerLine{
-			{AccountType: "wallet", ActorType: commission.BeneficiaryActorType, ActorID: commission.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: commission.AmountMinorUnits, Currency: commission.Currency},
-			{AccountType: "platform_commission_receivable", DebitCredit: "credit", AmountMinorUnits: commission.AmountMinorUnits, Currency: commission.Currency},
-		}
-		if _, err := ledger.PostLedgerTransaction(ctx, tx, "commission_reversed", "commission", commission.ID, lines, ledger.Actor{ID: operatorID, Type: "operator"}); err != nil {
-			return nil, err
-		}
-	}
-	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
-		SET status='reversed',reversed_at=NOW(),resolution_note=$3,updated_at=NOW()
-		WHERE operator_context_id=$1 AND id=$2 AND status='settled'
-		RETURNING `+commissionCols, operatorContextID, commission.ID, reason)
-	updated, err := scanCommission(row)
-	if err != nil {
-		return nil, err
-	}
-	if err := appendCommissionAudit(ctx, tx, operatorContextID, commission.ID, "commission_reversed", operatorID, reason, correlationID); err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return updated, nil
+	return applyGovernedCommissionResolution(ctx, db, commissionID, operatorID, reason, correlationID, "settled", "reversed", "commission_reversed")
 }
 
 func GetGovernedCommissionDetail(
