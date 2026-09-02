@@ -1,4 +1,4 @@
-package reference
+package payment
 
 import (
 	"database/sql"
@@ -66,4 +66,8 @@ func validateTrustedPaymentSessionInput(w http.ResponseWriter, input *CreatePaym
 		return false
 	}
 	return true
+}
+
+func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
+	return handleCreatePaymentSession(db, validateCheckoutPaymentSessionInput)
 }

@@ -10,7 +10,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"wlt-api/internal/ledger"
-	"wlt-api/internal/reference"
+	"wlt-api/internal/payment"
 	"wlt-api/internal/shared"
 	"wlt-api/internal/testsupport"
 )
@@ -42,7 +42,7 @@ func collateralTestDB(t *testing.T) *sql.DB {
 
 func seedCapturedCaptainTopUp(t *testing.T, db *sql.DB, ctx context.Context, contextID, captainID string, amount int64) string {
 	t.Helper()
-	session, err := reference.CreateTopUpSession(db, reference.CreateTopUpSessionInput{
+	session, err := payment.CreateTopUpSession(db, payment.CreateTopUpSessionInput{
 		ActorType: "captain", ActorID: captainID, TopUpReference: testsupport.UniqueID("collateral-topup"),
 		OperatorContextID: contextID, AmountMinorUnits: amount, Currency: "YER",
 		IdempotencyKey: testsupport.UniqueID("collateral-create"), CorrelationID: testsupport.UniqueID("collateral-corr"),

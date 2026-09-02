@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"wlt-api/internal/ledger"
+	"wlt-api/internal/payment"
 	"wlt-api/internal/pricing"
-	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
 )
 
@@ -96,7 +96,7 @@ func TestMixedTenderReservationHoldsWalletPart(t *testing.T) {
 
 	checkoutIntentID := fmt.Sprintf("ci-wt-%d", time.Now().UnixNano())
 	quoteID := issueWalletTenderQuote(t, db, operatorContextID, checkoutIntentID, clientID, "store-wt", 5000)
-	session, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
+	session, err := payment.CreatePaymentSession(db, payment.CreatePaymentSessionInput{
 		CheckoutIntentID:  checkoutIntentID,
 		OperatorContextID: operatorContextID,
 		ClientID:          clientID,
@@ -141,7 +141,7 @@ func TestSecondCheckoutCannotDoubleSpendReservedTender(t *testing.T) {
 
 	firstIntent := fmt.Sprintf("ci-wt-a-%d", time.Now().UnixNano())
 	quoteA := issueWalletTenderQuote(t, db, operatorContextID, firstIntent, clientID, "store-wt", 5000)
-	first, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
+	first, err := payment.CreatePaymentSession(db, payment.CreatePaymentSessionInput{
 		CheckoutIntentID:  firstIntent,
 		OperatorContextID: operatorContextID,
 		ClientID:          clientID,
@@ -163,7 +163,7 @@ func TestSecondCheckoutCannotDoubleSpendReservedTender(t *testing.T) {
 
 	secondIntent := fmt.Sprintf("ci-wt-b-%d", time.Now().UnixNano())
 	quoteB := issueWalletTenderQuote(t, db, operatorContextID, secondIntent, clientID, "store-wt", 3000)
-	second, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
+	second, err := payment.CreatePaymentSession(db, payment.CreatePaymentSessionInput{
 		CheckoutIntentID:  secondIntent,
 		OperatorContextID: operatorContextID,
 		ClientID:          clientID,
@@ -223,7 +223,7 @@ func TestMixedFinalizationCollectsWalletTender(t *testing.T) {
 
 	checkoutIntentID := fmt.Sprintf("ci-wt-fin-%d", time.Now().UnixNano())
 	quoteID := issueWalletTenderQuote(t, db, operatorContextID, checkoutIntentID, clientID, "store-wt", 5000)
-	session, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
+	session, err := payment.CreatePaymentSession(db, payment.CreatePaymentSessionInput{
 		CheckoutIntentID:  checkoutIntentID,
 		OperatorContextID: operatorContextID,
 		ClientID:          clientID,
@@ -300,7 +300,7 @@ func TestExpiredSessionReleasesWalletTenderHold(t *testing.T) {
 
 	checkoutIntentID := fmt.Sprintf("ci-wt-exp-%d", time.Now().UnixNano())
 	quoteID := issueWalletTenderQuote(t, db, operatorContextID, checkoutIntentID, clientID, "store-wt", 5000)
-	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
+	if _, err := payment.CreatePaymentSession(db, payment.CreatePaymentSessionInput{
 		CheckoutIntentID:  checkoutIntentID,
 		OperatorContextID: operatorContextID,
 		ClientID:          clientID,

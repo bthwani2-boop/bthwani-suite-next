@@ -5,7 +5,6 @@ import (
         "errors"
         "fmt"
         "net/http"
-        "time"
 
         "wlt-api/internal/dshoutbox"
         "wlt-api/internal/provider"
@@ -37,27 +36,6 @@ var ErrSessionClaimConflict = errors.New("payment session could not be claimed f
 // as its status update, and a background worker drains the outbox and calls
 // dshnotify.Client.Notify with retry. This keeps the WLT transition itself
 // free of any dependency on DSH being reachable.
-
-type PaymentSession struct {
-        ID                string  `json:"id"`
-        CheckoutIntentID  *string `json:"checkoutIntentId"`
-        SpecialRequestID  *string `json:"specialRequestId"`
-        OperatorContextID string  `json:"operatorContextId"`
-        ClientID          string  `json:"clientId"`
-        StoreID           string  `json:"storeId"`
-        PaymentMethod     string  `json:"paymentMethod"`
-        Status            string  `json:"status"`
-        ProviderReference string  `json:"providerReference"`
-        AmountMinorUnits  int64   `json:"amountMinorUnits"`
-        Currency          string  `json:"currency"`
-        // FinancialPurpose is the server-derived accounting meaning of this
-        // session. It is set once at creation and is never rewritten by a
-        // lifecycle transition, so it stays a stable audit fact.
-        FinancialPurpose string     `json:"financialPurpose"`
-        CapturedAt       *time.Time `json:"capturedAt,omitempty"`
-        CreatedAt        time.Time  `json:"createdAt"`
-        UpdatedAt        time.Time  `json:"updatedAt"`
-}
 
 // strOrEmpty dereferences a nullable text-column pointer (CheckoutIntentID /
 // SpecialRequestID), returning "" for nil rather than requiring every caller

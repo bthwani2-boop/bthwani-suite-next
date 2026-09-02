@@ -89,8 +89,8 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
         mutation("PUT /wlt/captain-collateral-policy", collateral.HandleUpsertPolicy(db))
         mutation("POST /wlt/captain-collateral/allocate", collateral.HandleAllocate(db))
         mutation("POST /wlt/captain-collateral/release", collateral.HandleRelease(db))
-        mutation("POST /wlt/payment-sessions", reference.HandleCreatePaymentSessionTrustedDsh(db))
-        read("GET /wlt/payment-sessions/{paymentSessionId}", reference.HandleGetPaymentSessionTrustedDsh(db))
+        mutation("POST /wlt/payment-sessions", payment.HandleCreatePaymentSessionTrustedDsh(db))
+        read("GET /wlt/payment-sessions/{paymentSessionId}", payment.HandleGetPaymentSessionTrustedDsh(db))
 
         read("GET /wlt/payment-sessions/{paymentSessionId}/timeline", payment.HandleGetPaymentSessionTimeline(db))
 
@@ -99,7 +99,7 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
         mutation("POST /wlt/payment-sessions/{paymentSessionId}/refresh-provider-status", payment.HandleGovernedPaymentOperation(db, "provider_status_refresh", payment.HandleRefreshProviderStatus(db, rail)))
         mutation("POST /wlt/payment-sessions/{paymentSessionId}/expire", payment.HandleOperatorContextScopedPaymentSession(db, payment.HandleExpireSession(db)))
 
-        mutation("POST /wlt/topup-sessions", reference.HandleCreateTopUpSessionTrustedDsh(db))
+        mutation("POST /wlt/topup-sessions", payment.HandleCreateTopUpSessionTrustedDsh(db))
         mutation("POST /wlt/topup-sessions/{paymentSessionId}/authorize", payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeTopUpSession(db, rail)))
         mutation("POST /wlt/topup-sessions/{paymentSessionId}/capture", payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureTopUpSession(db, rail)))
         providerMutation("POST /wlt/provider/webhooks/payment", payment.HandlePaymentProviderWebhook(db))

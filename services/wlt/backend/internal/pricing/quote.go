@@ -9,8 +9,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"wlt-api/internal/payment"
 )
 
 type QuoteInputLine struct {
@@ -68,8 +66,8 @@ type WltPricingQuote struct {
 	FundingRefs           []string                 `json:"fundingRefs"`
 	Hash                  string                   `json:"hash"`
 	Version               int                      `json:"version"`
-	ExpiresAt             *time.Time               `json:"expiresAt"`
-	Allocation            []payment.AllocationLine `json:"allocation,omitempty"`
+	ExpiresAt             *time.Time       `json:"expiresAt"`
+	Allocation            []AllocationLine `json:"allocation,omitempty"`
 }
 
 type PricingQuoteResponse struct {

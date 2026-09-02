@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"wlt-api/internal/reference"
+	"wlt-api/internal/payment"
 	"wlt-api/internal/shared"
 )
 
@@ -31,7 +31,7 @@ func bindCanonicalCommissionFinancialTruth(
 		if checkoutIntentID == "" {
 			return ErrCommissionSourceFinancialTruthMissing
 		}
-		session, err := reference.GetPaymentSessionByCheckoutIntentForOperatorContext(db, operatorContextID, checkoutIntentID)
+		session, err := payment.GetPaymentSessionByCheckoutIntentForOperatorContext(db, operatorContextID, checkoutIntentID)
 		if errors.Is(err, sql.ErrNoRows) || session == nil {
 			return ErrCommissionSourceFinancialTruthMissing
 		}

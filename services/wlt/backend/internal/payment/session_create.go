@@ -1,4 +1,4 @@
-package reference
+package payment
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"wlt-api/internal/payment"
 	"wlt-api/internal/pricing"
 	"wlt-api/internal/shared"
 )
@@ -46,15 +45,15 @@ type PaymentSession struct {
 	// FinancialPurpose is server-derived and read-only to every caller. It is
 	// exposed so an auditor can see why the money moved without joining back to
 	// whichever source system created the session.
-	FinancialPurpose      string                   `json:"financialPurpose"`
-	PricingQuoteID        string                   `json:"pricingQuoteId,omitempty"`
-	PricingQuoteHash      string                   `json:"pricingQuoteHash,omitempty"`
-	PricingQuoteVersion   int                      `json:"pricingQuoteVersion,omitempty"`
-	PricingQuoteExpiresAt *time.Time               `json:"pricingQuoteExpiresAt,omitempty"`
-	Allocation            []payment.AllocationLine `json:"allocation,omitempty"`
-	CapturedAt            *time.Time               `json:"capturedAt,omitempty"`
-	CreatedAt             time.Time                `json:"createdAt"`
-	UpdatedAt             time.Time                `json:"updatedAt"`
+	FinancialPurpose      string           `json:"financialPurpose"`
+	PricingQuoteID        string           `json:"pricingQuoteId,omitempty"`
+	PricingQuoteHash      string           `json:"pricingQuoteHash,omitempty"`
+	PricingQuoteVersion   int              `json:"pricingQuoteVersion,omitempty"`
+	PricingQuoteExpiresAt *time.Time       `json:"pricingQuoteExpiresAt,omitempty"`
+	Allocation            []AllocationLine `json:"allocation,omitempty"`
+	CapturedAt            *time.Time       `json:"capturedAt,omitempty"`
+	CreatedAt             time.Time        `json:"createdAt"`
+	UpdatedAt             time.Time        `json:"updatedAt"`
 }
 
 type TenderAllocation struct {
@@ -96,9 +95,9 @@ type CreatePaymentSessionInput struct {
 	// what an order costs and therefore supplies the numbers; WLT owns what
 	// those numbers mean and rejects any set that does not conserve the total.
 	// Omitting it is allowed and records no breakdown.
-	Allocation     []payment.AllocationLine `json:"allocation,omitempty"`
-	IdempotencyKey string                   `json:"-"`
-	CorrelationID  string                   `json:"-"`
+	Allocation     []AllocationLine `json:"allocation,omitempty"`
+	IdempotencyKey string           `json:"-"`
+	CorrelationID  string           `json:"-"`
 }
 
 func sourceCount(input CreatePaymentSessionInput) int {
@@ -193,7 +192,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 
 	// The purpose is resolved from the source identity the caller has already
 	// been validated against, never from anything it could set directly.
-	purpose, err := payment.DerivePaymentSessionPurpose(payment.SessionSource{
+	purpose, err := DerivePaymentSessionPurpose(SessionSource{
 		CheckoutIntentID:       input.CheckoutIntentID,
 		SpecialRequestID:       input.SpecialRequestID,
 		SubscriptionPurchaseID: input.SubscriptionPurchaseID,
@@ -217,7 +216,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		input.PricingQuoteExpiresAt = quote.ExpiresAt.UTC().Format(time.RFC3339Nano)
 		input.Allocation = quote.Allocation
 	}
-	if err := payment.ValidatePaymentAllocation(input.Allocation, input.AmountMinorUnits); err != nil {
+	if err := ValidatePaymentAllocation(input.Allocation, input.AmountMinorUnits); err != nil {
 		return nil, err
 	}
 	var existing *PaymentSession
@@ -304,7 +303,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		input.PricingQuoteVersion = quote.QuoteVersion
 		input.PricingQuoteExpiresAt = quote.ExpiresAt.UTC().Format(time.RFC3339Nano)
 	}
-	if err := payment.ValidatePaymentAllocation(input.Allocation, input.AmountMinorUnits); err != nil {
+	if err := ValidatePaymentAllocation(input.Allocation, input.AmountMinorUnits); err != nil {
 		return nil, err
 	}
 	tenderAllocation, err := deriveCheckoutTenderAllocation(context.Background(), tx, input)
@@ -358,7 +357,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-	session.Allocation = append([]payment.AllocationLine(nil), input.Allocation...)
+	session.Allocation = append([]AllocationLine(nil), input.Allocation...)
 	session.TenderAllocation = tenderAllocation
 	return session, nil
 }
@@ -427,14 +426,11 @@ func tenderAmount(allocation *TenderAllocation, kind string) any {
 	return allocation.CashOnDeliveryAmountMinorUnits
 }
 
-// sameAllocation compares two breakdowns as sets: the wire order of components
-// carries no financial meaning, so reordering the same numbers is still the
-// same claim and must replay rather than conflict.
-func sameAllocation(left, right []payment.AllocationLine) bool {
+func sameAllocation(left, right []AllocationLine) bool {
 	if len(left) != len(right) {
 		return false
 	}
-	byComponent := make(map[payment.AllocationComponent]int64, len(left))
+	byComponent := make(map[AllocationComponent]int64, len(left))
 	for _, line := range left {
 		byComponent[line.Component] = line.AmountMinorUnits
 	}
@@ -447,9 +443,7 @@ func sameAllocation(left, right []payment.AllocationLine) bool {
 	return true
 }
 
-// loadAllocation reads the persisted breakdown for a session. Components are
-// ordered by name so a readback is stable for auditing and comparison.
-func loadAllocation(db *sql.DB, sessionID string) ([]payment.AllocationLine, error) {
+func loadAllocation(db *sql.DB, sessionID string) ([]AllocationLine, error) {
 	rows, err := db.Query(`
                 SELECT component, amount_minor_units
                 FROM wlt_payment_allocation_components
@@ -460,9 +454,9 @@ func loadAllocation(db *sql.DB, sessionID string) ([]payment.AllocationLine, err
 	}
 	defer rows.Close()
 
-	var lines []payment.AllocationLine
+	var lines []AllocationLine
 	for rows.Next() {
-		var line payment.AllocationLine
+		var line AllocationLine
 		if err := rows.Scan(&line.Component, &line.AmountMinorUnits); err != nil {
 			return nil, err
 		}
@@ -471,9 +465,6 @@ func loadAllocation(db *sql.DB, sessionID string) ([]payment.AllocationLine, err
 	return lines, rows.Err()
 }
 
-// attachAllocation fills in the breakdown on a session that was just read.
-// A nil session is passed through so callers can chain it onto a lookup that
-// legitimately found nothing.
 func attachAllocation(db *sql.DB, session *PaymentSession, err error) (*PaymentSession, error) {
 	if err != nil || session == nil {
 		return session, err
@@ -507,10 +498,6 @@ func GetPaymentSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		return nil, nil
 	}
 	return attachAllocation(db, session, err)
-}
-
-func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
-	return handleCreatePaymentSession(db, validateCheckoutPaymentSessionInput)
 }
 
 func getPaymentSessionByCheckoutIntent(db *sql.DB, operatorContextID string, checkoutIntentID string) (*PaymentSession, error) {

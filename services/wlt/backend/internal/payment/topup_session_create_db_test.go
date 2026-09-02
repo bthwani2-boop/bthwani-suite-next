@@ -1,4 +1,4 @@
-package reference
+package payment
 
 import (
 	"database/sql"
@@ -10,7 +10,7 @@ import (
 	"wlt-api/internal/testsupport"
 )
 
-func getTestDB(t *testing.T) *sql.DB {
+func getTopUpSessionTestDB(t *testing.T) *sql.DB {
 	dbURL := os.Getenv("DATABASE_URL")
 	requireDB := os.Getenv("WLT_REQUIRE_DB_TESTS") == "true"
 	if dbURL == "" {
@@ -34,26 +34,29 @@ func getTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func uniqueID(prefix string) string {
+func uniqueTopUpID(prefix string) string {
 	return testsupport.UniqueID(prefix)
 }
 
 func TestCreateTopUpSession_CustomerDerivesCustomerTopUpPurpose(t *testing.T) {
-	db := getTestDB(t)
+	db := getTopUpSessionTestDB(t)
+	if db == nil {
+		return
+	}
 	defer db.Close()
 
-	opCtx := uniqueID("op")
-	actorID := uniqueID("customer")
+	opCtx := uniqueTopUpID("op")
+	actorID := uniqueTopUpID("customer")
 
 	session, err := CreateTopUpSession(db, CreateTopUpSessionInput{
 		ActorType:         "customer",
 		ActorID:           actorID,
-		TopUpReference:    uniqueID("topup"),
+		TopUpReference:    uniqueTopUpID("topup"),
 		OperatorContextID: opCtx,
 		AmountMinorUnits:  5000,
 		Currency:          "YER",
-		IdempotencyKey:    uniqueID("idem"),
-		CorrelationID:     uniqueID("corr"),
+		IdempotencyKey:    uniqueTopUpID("idem"),
+		CorrelationID:     uniqueTopUpID("corr"),
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -73,18 +76,21 @@ func TestCreateTopUpSession_CustomerDerivesCustomerTopUpPurpose(t *testing.T) {
 }
 
 func TestCreateTopUpSession_CaptainDerivesCaptainTopUpPurpose(t *testing.T) {
-	db := getTestDB(t)
+	db := getTopUpSessionTestDB(t)
+	if db == nil {
+		return
+	}
 	defer db.Close()
 
 	session, err := CreateTopUpSession(db, CreateTopUpSessionInput{
 		ActorType:         "captain",
-		ActorID:           uniqueID("captain"),
-		TopUpReference:    uniqueID("topup"),
-		OperatorContextID: uniqueID("op"),
+		ActorID:           uniqueTopUpID("captain"),
+		TopUpReference:    uniqueTopUpID("topup"),
+		OperatorContextID: uniqueTopUpID("op"),
 		AmountMinorUnits:  2500,
 		Currency:          "YER",
-		IdempotencyKey:    uniqueID("idem"),
-		CorrelationID:     uniqueID("corr"),
+		IdempotencyKey:    uniqueTopUpID("idem"),
+		CorrelationID:     uniqueTopUpID("corr"),
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -95,18 +101,21 @@ func TestCreateTopUpSession_CaptainDerivesCaptainTopUpPurpose(t *testing.T) {
 }
 
 func TestCreateTopUpSession_RejectsUnsupportedActorType(t *testing.T) {
-	db := getTestDB(t)
+	db := getTopUpSessionTestDB(t)
+	if db == nil {
+		return
+	}
 	defer db.Close()
 
 	_, err := CreateTopUpSession(db, CreateTopUpSessionInput{
 		ActorType:         "partner",
-		ActorID:           uniqueID("partner"),
-		TopUpReference:    uniqueID("topup"),
-		OperatorContextID: uniqueID("op"),
+		ActorID:           uniqueTopUpID("partner"),
+		TopUpReference:    uniqueTopUpID("topup"),
+		OperatorContextID: uniqueTopUpID("op"),
 		AmountMinorUnits:  1000,
 		Currency:          "YER",
-		IdempotencyKey:    uniqueID("idem"),
-		CorrelationID:     uniqueID("corr"),
+		IdempotencyKey:    uniqueTopUpID("idem"),
+		CorrelationID:     uniqueTopUpID("corr"),
 	})
 	if err == nil {
 		t.Fatal("expected an error for unsupported actor type")
@@ -114,18 +123,21 @@ func TestCreateTopUpSession_RejectsUnsupportedActorType(t *testing.T) {
 }
 
 func TestCreateTopUpSession_ReplayWithSameReferenceReturnsSameSession(t *testing.T) {
-	db := getTestDB(t)
+	db := getTopUpSessionTestDB(t)
+	if db == nil {
+		return
+	}
 	defer db.Close()
 
 	input := CreateTopUpSessionInput{
 		ActorType:         "customer",
-		ActorID:           uniqueID("customer"),
-		TopUpReference:    uniqueID("topup"),
-		OperatorContextID: uniqueID("op"),
+		ActorID:           uniqueTopUpID("customer"),
+		TopUpReference:    uniqueTopUpID("topup"),
+		OperatorContextID: uniqueTopUpID("op"),
 		AmountMinorUnits:  3000,
 		Currency:          "YER",
-		IdempotencyKey:    uniqueID("idem"),
-		CorrelationID:     uniqueID("corr"),
+		IdempotencyKey:    uniqueTopUpID("idem"),
+		CorrelationID:     uniqueTopUpID("corr"),
 	}
 
 	first, err := CreateTopUpSession(db, input)
@@ -142,12 +154,15 @@ func TestCreateTopUpSession_ReplayWithSameReferenceReturnsSameSession(t *testing
 }
 
 func TestCreateTopUpSession_DifferentAmountSameReferenceConflicts(t *testing.T) {
-	db := getTestDB(t)
+	db := getTopUpSessionTestDB(t)
+	if db == nil {
+		return
+	}
 	defer db.Close()
 
-	ref := uniqueID("topup")
-	opCtx := uniqueID("op")
-	actorID := uniqueID("customer")
+	ref := uniqueTopUpID("topup")
+	opCtx := uniqueTopUpID("op")
+	actorID := uniqueTopUpID("customer")
 
 	_, err := CreateTopUpSession(db, CreateTopUpSessionInput{
 		ActorType:         "customer",
@@ -156,8 +171,8 @@ func TestCreateTopUpSession_DifferentAmountSameReferenceConflicts(t *testing.T) 
 		OperatorContextID: opCtx,
 		AmountMinorUnits:  3000,
 		Currency:          "YER",
-		IdempotencyKey:    uniqueID("idem"),
-		CorrelationID:     uniqueID("corr"),
+		IdempotencyKey:    uniqueTopUpID("idem"),
+		CorrelationID:     uniqueTopUpID("corr"),
 	})
 	if err != nil {
 		t.Fatalf("unexpected error on first create: %v", err)
@@ -170,8 +185,8 @@ func TestCreateTopUpSession_DifferentAmountSameReferenceConflicts(t *testing.T) 
 		OperatorContextID: opCtx,
 		AmountMinorUnits:  4000,
 		Currency:          "YER",
-		IdempotencyKey:    uniqueID("idem"),
-		CorrelationID:     uniqueID("corr"),
+		IdempotencyKey:    uniqueTopUpID("idem"),
+		CorrelationID:     uniqueTopUpID("corr"),
 	})
 	if err != ErrIdempotencyConflict {
 		t.Fatalf("expected ErrIdempotencyConflict, got %v", err)

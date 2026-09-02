@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"wlt-api/internal/reference"
+	"wlt-api/internal/payment"
 	"wlt-api/internal/shared"
 )
 
@@ -24,7 +24,7 @@ func CreateSubscriptionPaymentSession(
 	input CreateSubscriptionPaymentSessionInput,
 	idempotencyKey string,
 	correlationID string,
-) (*reference.PaymentSession, error) {
+) (*payment.PaymentSession, error) {
 	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
 	if contextErr != nil {
 		return nil, ErrInvalid
@@ -56,7 +56,7 @@ func CreateSubscriptionPaymentSession(
 	if input.PaymentMethod == "cod" {
 		return nil, ErrInvalid
 	}
-	return reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
+	return payment.CreatePaymentSession(db, payment.CreatePaymentSessionInput{
 		SubscriptionPurchaseID:     input.SubscriptionPurchaseID,
 		CommercialProductReference: input.ProductReference,
 		OperatorContextID:          input.OperatorContextID,

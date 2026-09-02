@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"wlt-api/internal/payment"
 )
 
 var (
@@ -30,24 +28,24 @@ type CheckoutQuote struct {
 	CartSnapshotHash  string
 }
 
-func checkoutAllocation(quote *WltPricingQuote) ([]payment.AllocationLine, error) {
-	lines := make([]payment.AllocationLine, 0, 6)
-	appendPositive := func(component payment.AllocationComponent, amount int64) {
+func checkoutAllocation(quote *WltPricingQuote) ([]AllocationLine, error) {
+	lines := make([]AllocationLine, 0, 6)
+	appendPositive := func(component AllocationComponent, amount int64) {
 		if amount > 0 {
-			lines = append(lines, payment.AllocationLine{Component: component, AmountMinorUnits: amount})
+			lines = append(lines, AllocationLine{Component: component, AmountMinorUnits: amount})
 		}
 	}
-	appendPositive(payment.AllocationGoodsSubtotal, quote.SubtotalMinorUnits)
-	appendPositive(payment.AllocationDeliveryFee, quote.DeliveryFeeMinorUnits)
-	appendPositive(payment.AllocationServiceFee, quote.ServiceFeeMinorUnits)
-	appendPositive(payment.AllocationTax, quote.TaxMinorUnits)
+	appendPositive(AllocationGoodsSubtotal, quote.SubtotalMinorUnits)
+	appendPositive(AllocationDeliveryFee, quote.DeliveryFeeMinorUnits)
+	appendPositive(AllocationServiceFee, quote.ServiceFeeMinorUnits)
+	appendPositive(AllocationTax, quote.TaxMinorUnits)
 	if quote.DiscountMinorUnits > 0 {
-		lines = append(lines, payment.AllocationLine{Component: payment.AllocationDiscount, AmountMinorUnits: -quote.DiscountMinorUnits})
+		lines = append(lines, AllocationLine{Component: AllocationDiscount, AmountMinorUnits: -quote.DiscountMinorUnits})
 	}
 	if quote.RoundingMinorUnits != 0 {
 		return nil, fmt.Errorf("quote rounding requires an explicit payment allocation component")
 	}
-	if err := payment.ValidatePaymentAllocation(lines, quote.TotalMinorUnits); err != nil {
+	if err := ValidatePaymentAllocation(lines, quote.TotalMinorUnits); err != nil {
 		return nil, fmt.Errorf("derive quote allocation: %w", err)
 	}
 	return lines, nil

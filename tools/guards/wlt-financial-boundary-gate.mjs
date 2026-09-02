@@ -398,8 +398,8 @@ function requireCommercialText(file, text, message) {
   if (!source.includes(text)) violations.push({ file, line: 0, message });
   return source;
 }
-const genericHandler = requireCommercialText("services/wlt/backend/internal/reference/payment_session_create_handler.go", "subscription purchases must use /wlt/commercial/payment-sessions", "GENERIC_PAYMENT_ROUTE_ACCEPTS_SUBSCRIPTION");
-if (!genericHandler.includes("input.SubscriptionPurchaseID") || !genericHandler.includes("input.CommercialProductReference")) violations.push({ file: "services/wlt/backend/internal/reference/payment_session_create_handler.go", line: 0, message: "GENERIC_PAYMENT_ROUTE_SOURCE_GUARD_MISSING" });
+const genericHandler = requireCommercialText("services/wlt/backend/internal/payment/session_create_handler.go", "subscription purchases must use /wlt/commercial/payment-sessions", "GENERIC_PAYMENT_ROUTE_ACCEPTS_SUBSCRIPTION");
+if (!genericHandler.includes("input.SubscriptionPurchaseID") || !genericHandler.includes("input.CommercialProductReference")) violations.push({ file: "services/wlt/backend/internal/payment/session_create_handler.go", line: 0, message: "GENERIC_PAYMENT_ROUTE_SOURCE_GUARD_MISSING" });
 const commercialRouter = requireCommercialText("services/wlt/backend/internal/http/server.go", "POST /wlt/commercial/payment-sessions", "SUBSCRIPTION_PAYMENT_ROUTE_NOT_REGISTERED");
 if (!commercialRouter.includes("commercial.HandleCreateSubscriptionPaymentSession")) violations.push({ file: "services/wlt/backend/internal/http/server.go", line: 0, message: "SUBSCRIPTION_PAYMENT_HANDLER_NOT_BOUND" });
 requireCommercialText("services/wlt/contracts/wlt.commercial.openapi.yaml", "/wlt/commercial/payment-sessions:", "SUBSCRIPTION_PAYMENT_ROUTE_NOT_CONTRACTED");

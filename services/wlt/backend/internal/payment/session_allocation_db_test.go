@@ -1,4 +1,4 @@
-package reference
+package payment
 
 import (
 	"context"
@@ -14,7 +14,6 @@ import (
 
 	_ "github.com/lib/pq"
 	"wlt-api/internal/ledger"
-	"wlt-api/internal/payment"
 	"wlt-api/internal/pricing"
 	"wlt-api/internal/shared"
 )
@@ -103,8 +102,8 @@ func TestCreatePaymentSession_DerivesPurposeAndPersistsConservingAllocation(t *t
 	if err != nil {
 		t.Fatalf("CreatePaymentSession: %v", err)
 	}
-	if session.FinancialPurpose != string(payment.PurposeOrderPayment) {
-		t.Fatalf("expected server-derived purpose %q, got %q", payment.PurposeOrderPayment, session.FinancialPurpose)
+	if session.FinancialPurpose != string(PurposeOrderPayment) {
+		t.Fatalf("expected server-derived purpose %q, got %q", PurposeOrderPayment, session.FinancialPurpose)
 	}
 	if session.Status != "cod_pending" {
 		t.Fatalf("expected COD session to enter cod_pending, got %q", session.Status)
@@ -201,8 +200,8 @@ func TestCreatePaymentSession_RejectsNonConservingAllocation(t *testing.T) {
 		PricingQuoteID:    quote.ID,
 		IdempotencyKey:    "idem-alloc-e2e-bad",
 		CorrelationID:     "corr-alloc-e2e-bad",
-		Allocation: []payment.AllocationLine{
-			{Component: payment.AllocationGoodsSubtotal, AmountMinorUnits: 4000},
+		Allocation: []AllocationLine{
+			{Component: AllocationGoodsSubtotal, AmountMinorUnits: 4000},
 		},
 	})
 	if err == nil {

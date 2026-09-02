@@ -15,7 +15,7 @@ const (
         wltMigrationServiceName = "wlt"
         // The latest active manifest migration is the readiness gate: no instance
         // is ready while the canonical schema has not reached this cutover.
-        wltLatestMigration  = "wlt-964_commission_adjustment_idempotency_single_arbiter.sql"
+        wltLatestMigration  = "wlt-965_drop_wallet_compatibility_views.sql"
         wltReadinessTimeout = 2 * time.Second
 )
 

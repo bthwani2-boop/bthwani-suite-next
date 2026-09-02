@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
-	"wlt-api/internal/payment"
 )
 
 const pricingTestSecret = "pricing-test-secret"
@@ -144,10 +142,10 @@ func TestCheckoutAllocationDerivesOnlyPositiveTenderComponents(t *testing.T) {
 	if len(allocation) != 5 {
 		t.Fatalf("allocation length=%d, want 5: %#v", len(allocation), allocation)
 	}
-	if allocation[0].Component != payment.AllocationGoodsSubtotal || allocation[0].AmountMinorUnits != 1000 {
+	if allocation[0].Component != AllocationGoodsSubtotal || allocation[0].AmountMinorUnits != 1000 {
 		t.Fatalf("goods allocation was not preserved: %#v", allocation[0])
 	}
-	if allocation[4].Component != payment.AllocationDiscount || allocation[4].AmountMinorUnits != -50 {
+	if allocation[4].Component != AllocationDiscount || allocation[4].AmountMinorUnits != -50 {
 		t.Fatalf("discount allocation was not represented as a negative line: %#v", allocation[4])
 	}
 
@@ -189,7 +187,7 @@ func TestRequireCheckoutQuoteRequestRequiresScopedImmutableInputs(t *testing.T) 
 func TestScanCheckoutQuoteDecodesCanonicalJSON(t *testing.T) {
 	expires := time.Now().UTC().Add(time.Hour)
 	linesJSON, _ := json.Marshal([]QuoteOutputLine{{MasterProductID: "product-1", Quantity: 1, UnitPriceMinorUnits: 100, TotalMinorUnits: 100}})
-	allocationJSON, _ := json.Marshal([]payment.AllocationLine{{Component: payment.AllocationGoodsSubtotal, AmountMinorUnits: 100}})
+	allocationJSON, _ := json.Marshal([]AllocationLine{{Component: AllocationGoodsSubtotal, AmountMinorUnits: 100}})
 	row := fakeCheckoutQuoteScanner{values: []any{"quote-1", "context-1", "intent-1", "client-1", "store-1", "snapshot-1", "hash-1", 1, expires, int64(100), int64(0), int64(0), int64(0), int64(0), int64(0), int64(100), "YER", linesJSON, allocationJSON}}
 	quote, err := scanCheckoutQuote(row)
 	if err != nil {
