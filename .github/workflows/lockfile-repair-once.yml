@@ -13,7 +13,7 @@ permissions:
 jobs:
   repair:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout immutable trigger candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -42,12 +42,55 @@ jobs:
         with:
           node-version: 24.17.0
 
-      - name: Remove trust-downgraded dependency paths
+      - name: Resolve attested MIT ua-parser v1 and remove trust-downgraded dependency paths
         shell: bash
         run: |
           set -euo pipefail
           node <<'NODE'
           const fs = require('node:fs')
+          const { execFileSync } = require('node:child_process')
+
+          function npmJson(args) {
+            const out = execFileSync('npm', ['view', ...args, '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+            return out ? JSON.parse(out) : null
+          }
+          function semverParts(v) {
+            return v.split('.').map((x) => Number(x))
+          }
+          function compareDesc(a, b) {
+            const aa = semverParts(a), bb = semverParts(b)
+            for (let i = 0; i < 3; i++) if (aa[i] !== bb[i]) return bb[i] - aa[i]
+            return 0
+          }
+
+          const fbjsRange = npmJson(['fbjs@3.0.5', 'dependencies.ua-parser-js'])
+          console.log(`fbjs@3.0.5 ua-parser-js range: ${fbjsRange}`)
+          if (typeof fbjsRange !== 'string' || !fbjsRange.includes('1.0.')) {
+            throw new Error(`unexpected fbjs ua-parser-js range: ${JSON.stringify(fbjsRange)}`)
+          }
+
+          const versions = npmJson(['ua-parser-js', 'versions'])
+            .filter((v) => /^1\.0\.\d+$/.test(v))
+            .sort(compareDesc)
+
+          let selected = null
+          for (const version of versions) {
+            let license, attestations
+            try {
+              license = npmJson([`ua-parser-js@${version}`, 'license'])
+              attestations = npmJson([`ua-parser-js@${version}`, 'dist.attestations'])
+            } catch {
+              continue
+            }
+            const hasAttestations = attestations && typeof attestations === 'object' && Object.keys(attestations).length > 0
+            console.log(`candidate ua-parser-js@${version}: license=${license} attestations=${hasAttestations ? 'yes' : 'no'}`)
+            if (license === 'MIT' && hasAttestations) {
+              selected = version
+              break
+            }
+          }
+          if (!selected) throw new Error('no MIT ua-parser-js v1 release with npm provenance attestations was found')
+          console.log(`selected ua-parser-js@${selected}`)
 
           const packagePath = 'package.json'
           const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
@@ -57,11 +100,10 @@ jobs:
 
           const workspacePath = 'pnpm-workspace.yaml'
           let workspace = fs.readFileSync(workspacePath, 'utf8')
-          if (!workspace.includes('\n  ua-parser-js: 1.0.40\n')) {
-            const anchor = "  shell-quote@<=1.8.4: '>=1.9.0'\n"
-            if (!workspace.includes(anchor)) throw new Error('pnpm override anchor not found')
-            workspace = workspace.replace(anchor, "  ua-parser-js: 1.0.40\n" + anchor)
-          }
+          workspace = workspace.replace(/^  ua-parser-js: .*\n/m, '')
+          const anchor = "  shell-quote@<=1.8.4: '>=1.9.0'\n"
+          if (!workspace.includes(anchor)) throw new Error('pnpm override anchor not found')
+          workspace = workspace.replace(anchor, `  ua-parser-js: ${selected}\n${anchor}`)
           fs.writeFileSync(workspacePath, workspace)
           NODE
 
@@ -76,12 +118,13 @@ jobs:
           [[ "${#changed[@]}" -eq 3 ]] || { echo "::error::Unexpected changed-file count"; git status --short; exit 1; }
           for i in 0 1 2; do [[ "${changed[$i]}" == "${expected[$i]}" ]] || { echo "::error::Unexpected changed files"; git status --short; exit 1; }; done
 
-      - name: Prove frozen workspace installation and size-limit executable
+      - name: Prove frozen workspace installation and dependency executables
         shell: bash
         run: |
           set -euo pipefail
           pnpm install --frozen-lockfile --ignore-scripts --reporter=append-only
           pnpm exec size-limit --help >/dev/null
+          pnpm exec node -e "require('ua-parser-js')"
 
       - name: Commit verified dependency repair and remove one-shot executor
         id: commit
@@ -97,7 +140,7 @@ jobs:
           git add package.json pnpm-lock.yaml pnpm-workspace.yaml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m "fix(deps): restore provenance-safe dependency graph and canonical lockfile"
+          git commit -m "fix(deps): restore attested dependency graph and canonical lockfile"
           git push origin HEAD:g
           new_sha="$(git rev-parse HEAD)"
           echo "sha=${new_sha}" >> "${GITHUB_OUTPUT}"
