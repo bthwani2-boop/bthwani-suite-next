@@ -77,7 +77,7 @@ func DeliveryExceptionGovernanceMiddleware(
 				"/resolve",
 			); ok {
 				r.SetPathValue("exceptionId", exceptionID)
-				governed.handleResolveDeliveryExceptionGoverned(w, r)
+				governed.handleResolveDeliveryException(w, r)
 				return
 			}
 		}
@@ -133,50 +133,4 @@ func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.Resp
 		return
 	}
 	store.SendJSON(w, http.StatusCreated, map[string]any{"exception": marshalDeliveryException(item)})
-}
-
-// handleResolveDeliveryExceptionGoverned enforces the acknowledge/ownership
-// gate before any retry, reassignment, return, or cancellation decision. A
-// resolved item remains eligible only for the domain layer's idempotent replay.
-func (s *protectedStoreServer) handleResolveDeliveryExceptionGoverned(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.ActorFromContext(r.Context())
-	if !ok {
-		return
-	}
-	idempotencyKey, correlationID, ok := requireOperatorCommandIdentity(w, r)
-	if !ok {
-		return
-	}
-	w.Header().Set("X-Correlation-ID", correlationID)
-
-	var body struct {
-		ExpectedVersion int    `json:"expectedVersion"`
-		Action          string `json:"action"`
-		Note            string `json:"note"`
-		NewCaptainID    string `json:"newCaptainId"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-
-	var item *dispatch.DeliveryException
-	var err error
-	switch body.Action {
-	case "retry_same_captain":
-		item, err = dispatch.ResolveDeliveryExceptionRetrySameCaptainIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
-	case "reassign_captain":
-		item, err = dispatch.ResolveDeliveryExceptionReassignCaptainIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.NewCaptainID, body.Note, actor.ID, idempotencyKey, correlationID)
-	case "return_to_store":
-		item, err = dispatch.ResolveDeliveryExceptionReturnToStoreIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
-	case "cancel_order":
-		item, err = dispatch.ResolveDeliveryExceptionCancelOrderIdempotentForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("exceptionId"), body.ExpectedVersion, body.Note, actor.ID, idempotencyKey, correlationID)
-	default:
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported delivery exception resolution action")
-		return
-	}
-	if err != nil {
-		writeDeliveryExceptionError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
 }
