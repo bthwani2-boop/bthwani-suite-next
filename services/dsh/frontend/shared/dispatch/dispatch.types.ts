@@ -51,28 +51,6 @@ export type DshReassignAssignmentInput = DshReassignAssignmentRequest & {
 export type DshDispatchDecision =
   operations["listDispatchDecisions"]["responses"][200]["content"]["application/json"]["decisions"][number];
 
-export type DshDispatchListState =
-  | { readonly kind: "idle" }
-  | { readonly kind: "loading" }
-  | { readonly kind: "success"; readonly assignments: readonly DshDispatchAssignment[] }
-  | { readonly kind: "empty" }
-  | { readonly kind: "error"; readonly message: string };
-
-export type DshDispatchActionState =
-  | { readonly kind: "idle" }
-  | { readonly kind: "submitting" }
-  | { readonly kind: "success"; readonly assignment: DshDispatchAssignment }
-  | { readonly kind: "error"; readonly message: string };
-
-export type DshTrackingState =
-  | { readonly kind: "idle" }
-  | { readonly kind: "loading" }
-  | { readonly kind: "tracking_active"; readonly assignment: DshDispatchAssignment }
-  | { readonly kind: "delivered"; readonly assignment: DshDispatchAssignment }
-  | { readonly kind: "returned_to_store"; readonly assignment: DshDispatchAssignment }
-  | { readonly kind: "cancelled"; readonly assignment: DshDispatchAssignment }
-  | { readonly kind: "error"; readonly message: string };
-
 export const DELIVERY_STATUS_LABELS: Record<DshDeliveryStatus, string> = {
   assigned: "تم إنشاء المهمة",
   driver_assigned: "الكابتن مستلم المهمة",

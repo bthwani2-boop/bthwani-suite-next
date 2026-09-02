@@ -188,25 +188,6 @@ export type DshRejectOrderInput = {
   readonly reason: string;
 };
 
-export type DshOrderDetailState =
-  | { readonly kind: "idle" }
-  | { readonly kind: "loading" }
-  | { readonly kind: "success"; readonly order: DshOrder }
-  | { readonly kind: "error"; readonly message: string };
-
-export type DshOrdersListState =
-  | { readonly kind: "idle" }
-  | { readonly kind: "loading" }
-  | { readonly kind: "success"; readonly orders: readonly DshOrder[] }
-  | { readonly kind: "empty" }
-  | { readonly kind: "error"; readonly message: string };
-
-export type DshOrderActionState =
-  | { readonly kind: "idle" }
-  | { readonly kind: "submitting" }
-  | { readonly kind: "success"; readonly order: DshOrder }
-  | { readonly kind: "error"; readonly message: string };
-
 export const CANCELLATION_ORDER_STATUSES: readonly DshOrderStatus[] = [
   "cancelled_by_client",
   "cancelled_by_store",

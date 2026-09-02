@@ -75,12 +75,10 @@
         "tools/verification/**/*.mjs",
         "tools/dev/get-code.mjs",
         "tools/dev/local-dev-session-broker.mjs",
-        "tools/dev/verify-local-identity-bootstrap.mjs",
-        "plans/diagnose-implementing/*.mjs"
+        "tools/dev/verify-local-identity-bootstrap.mjs"
       ],
       "project": [
         "tools/**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}",
-        "plans/diagnose-implementing/**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}",
         "eslint.config.mjs"
       ],
       "ignoreFiles": [
@@ -135,7 +133,6 @@
         "frontend/app-*/**/*Sheet.tsx",
         "frontend/app-*/**/*Header.tsx",
         "frontend/app-*/**/*context.tsx",
-        "frontend/app-*/*.navigation-bridge.ts",
         "frontend/app-partner/account/PartnerHubNav.tsx",
         "frontend/app-partner/dsh-partner-binding.contracts.ts",
         "frontend/control-panel/**/index.{ts,tsx}",
@@ -149,9 +146,7 @@
         "frontend/control-panel/**/*.helpers.ts",
         "frontend/control-panel/finance/RepresentativeWalletLookup.tsx",
         "frontend/control-panel/hr/SupervisorPicker.tsx",
-        "frontend/control-panel/hr/WorkforceScopeManager.tsx",
         "frontend/control-panel/hr/ZonePicker.tsx",
-        "frontend/control-panel/platform/DshPlatformWorkspaces.tsx",
         "frontend/shared/**/index.{ts,tsx}",
         "frontend/shared/**/*.registry.ts",
         "frontend/shared/**/*contract*.ts",
@@ -170,8 +165,6 @@
         "frontend/shared/**/*classifier.ts",
         "frontend/shared/**/*image-source.ts",
         "frontend/shared/**/*notification-action.ts",
-        "frontend/shared/_kernel/DshDevDiagnostic.tsx",
-        "frontend/shared/operations/dsh-operational-runtime-adapter.ts",
         "frontend/shared/partner-delivery/PartnerDeliveryStatusCard.tsx",
         "frontend/shared/partner/operator-delivery-pricing.tsx",
         "frontend/shared/workforce/WorkforceErrorState.tsx",
