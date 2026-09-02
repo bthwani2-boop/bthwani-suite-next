@@ -576,6 +576,13 @@
       "sha256": "e5c84b884e1607dacdca885a8563f97fbee69fe620423adfafab914de8167d52",
       "historicalPrefix": "1081",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 323,
+      "file": "dsh-1082_catalog_financial_policy_write_fence.sql",
+      "sha256": "e5db66ee14971e7a81b37397e315493bc7a1049a8cb39b8bc4e88b54c63614a8",
+      "historicalPrefix": "1082",
+      "state": "ACTIVE"
     }
   ]
 }
