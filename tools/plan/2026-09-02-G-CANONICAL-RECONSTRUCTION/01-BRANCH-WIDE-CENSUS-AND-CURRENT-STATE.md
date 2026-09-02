@@ -1,8 +1,8 @@
-# 01 — BRANCH-WIDE CENSUS, AUTHORITY REGISTRY, DISPOSITION LEDGER, AND CAPABILITY COVERAGE
+# 01 — BRANCH-WIDE CENSUS, AUTHORITY REGISTRY, DISPOSITION LEDGER, FILE/CONTAINER VERDICTS, AND CAPABILITY COVERAGE
 
 ## Purpose
 
-Build the complete evidence-backed inventory of branch `g` before any structural root selection or semantic mutation. The census classifies ownership, semantic authority, boundary responsibility, reachability, survival disposition, and end-to-end capability coverage across the actual tracked tree.
+Build the complete evidence-backed inventory of branch `g` before structural root selection. The census classifies ownership, semantic authority, boundary responsibility, reachability, survival disposition, end-to-end capability coverage, and whether each file/directory/package deserves to exist as a container.
 
 ## Exact live pin
 
@@ -14,13 +14,39 @@ Traverse the actual tracked tree. No hardcoded directory list may act as a scope
 
 Cover all material source/runtime code, apps/surfaces, screens/routes/components, frontend data/query/mutation/store/view-model layers, domains/services/backend handlers/use-cases, `core/**`, `shared/**`, packages/modules, database/schema/migrations, APIs/events/contracts/generated bindings, runtime/config/env, `infra/**`, `tools/**`, scripts/CLI, `.github/**`, tests/fixtures/mocks/snapshots, dependencies/plugins, assets/manifests, and live authoritative documents.
 
-Any uncensused tracked area blocks the baseline unless explicitly proven non-material and recorded as such.
+## 2. Semantic discovery is independent of names and paths
 
-## 2. Fast garbage elimination during census — explicit exception
+Do not infer responsibility from filenames or current paths. For every material code/data/config artifact ask:
 
-The census is read-only for structural/semantic work, but it may delete proven low-risk garbage immediately.
+```text
+WHAT DECISION DOES THIS MAKE?
+WHAT BUSINESS MEANING DOES IT REPRESENT?
+WHAT DATA DOES IT READ?
+WHAT DATA DOES IT WRITE?
+WHAT STATE DOES IT INTERPRET OR TRANSITION?
+WHAT POLICY/VALIDATION/DEFAULT/MAPPING DOES IT APPLY?
+WHO CALLS IT?
+WHO CONSUMES ITS OUTPUT?
+WHAT CONTRACT/EVENT/ROUTE DOES IT IMPLEMENT?
+WHAT SCREEN/JOURNEY/OPERATION DEPENDS ON IT?
+WHAT OTHER ARTIFACT PRODUCES THE SAME MATERIAL OUTCOME?
+```
 
-An artifact is eligible for `DELETE_NOW` when all are proven:
+Compare artifacts even when they have different names, directories, packages, languages, apps, or layers.
+
+```text
+DIFFERENT_NAME != DIFFERENT_RESPONSIBILITY
+DIFFERENT_PATH != DIFFERENT_RESPONSIBILITY
+SAME_MATERIAL_RESPONSIBILITY → SAME_STRUCTURAL_CLUSTER
+```
+
+Use call/import graphs, data flow, DB reads/writes, contracts, enum/status semantics, state machines, tests, screen behavior, runtime routes, config keys, and generated lineage as evidence. Graph/name similarity alone is insufficient.
+
+## 3. Fast garbage elimination during census — highest safe granularity
+
+The census is read-only for structural/semantic work, but may delete proven low-risk garbage immediately.
+
+An artifact is `DELETE_NOW` eligible when all are proven:
 
 ```text
 NOT_REQUIRED_BY_CURRENT_PRODUCT_SYSTEM
@@ -34,33 +60,27 @@ NO_SECURITY_OR_COMPLIANCE_ROLE
 NO_GENERATED_LINEAGE_REQUIREMENT
 ```
 
-This applies to a line/symbol/file/directory/package/script/workflow/dependency/test/fixture/mock/snapshot/wrapper/screen/route/binding/API artifact.
+Before deleting the first dead line/symbol, evaluate upward:
 
-Before deleting backend/API/data artifacts, search all possible required consumers: every app/surface, control panel, mobile client, runtime route/call, integration, event/webhook, script/tool, supported operation, and external consumer.
+```text
+FOUND DEAD LINE
+→ CHECK WHOLE SYMBOL
+→ CHECK WHOLE FILE
+→ CHECK PARENT DIRECTORY
+→ CHECK PACKAGE/BOUNDARY
+→ DELETE/COLLAPSE AT HIGHEST SAFE CANONICAL GRANULARITY
+→ RE-EVALUATE PARENT RECURSIVELY
+```
 
-Execute:
+Do not leave a responsibility-less file because only one dead symbol was initially discovered.
 
-`QUICK ALL-CONSUMER / REFERENCE / REACHABILITY CHECK → DELETE_NOW → SEARCH AGAIN → AFFECTED VERIFY`.
-
-Do not wait for Root Graph synthesis and do not create a separate cleanup root for proven low-risk garbage.
-
-When several nearby garbage artifacts are proven together, batch them into one coherent fast-cleanup checkpoint. After that batch:
-
-`COMMIT/PUSH g → VERIFY REMOTE SHA → RE-PIN → REFRESH AFFECTED CENSUS`.
-
-If candidate deletion exposes or changes semantic authority, end-to-end parity, ownership, contract, data, runtime, or required consumer behavior, it is **not** low-risk garbage; stop and defer it to canonical root execution.
-
-## 3. Artifact Disposition Ledger — mandatory
+## 4. Artifact Disposition Ledger — mandatory
 
 Every in-scope material artifact receives exactly one current disposition:
 
 `KEEP_PROVEN | HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | DELETE_NOW | BOUNDED_RETIREMENT`.
 
-Coverage includes as applicable:
-
-`directory | package | module | file | material symbol | screen | route | component | frontend consumer | API | event | contract | schema object | generated binding/boundary | runtime/config entry | script | workflow | dependency | test | fixture | mock | snapshot | authoritative document`.
-
-Required ledger fields:
+Required fields:
 
 ```text
 ARTIFACT=
@@ -76,103 +96,53 @@ SEMANTIC_MEANING_OWNED=
 DUPLICATE_PARALLEL_SHADOW_RELATIONSHIP=
 NAME_PATH_BOUNDARY_VERDICT=
 RIGHT_TO_EXIST_PROOF=
+CAN_BE_ABSORBED_BY_CANONICAL_CONTAINER=YES|NO
 TARGET_OWNER=
 TARGET_NAME_PATH_BOUNDARY=
+TARGET_CANONICAL_CONTAINER=
 DISPOSITION=
 MIGRATION_CUTOVER_DEPENDENCIES=
 DELETION_RISK_CLASS=LOW|STATEFUL|CONTRACTUAL|RUNTIME|SECURITY|MIGRATION
-DELETION_SAFETY_REQUIREMENTS=
 ```
 
-Before structural root mutation:
-
-```text
-UNREVIEWED_TRACKED_ARTIFACTS=0
-UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
-UNKNOWN_KEEP=0
-```
-
-## 4. Semantic Authority Registry — mandatory
+## 5. Semantic Authority Registry — mandatory
 
 Inventory material meanings independently of filenames and implementations:
 
 `permission | eligibility | serviceability | financial truth | state/status interpretation | transition | allowed action | validation | default | mapping | vocabulary | error-to-state semantics | location | pricing/fees | runtime/config meaning | retry/idempotency | contract semantics`.
 
-For every meaning record:
+For every meaning record all current authorities/writers/readers, including frontend/backend local interpretations, then identify canonical owner/writer and candidate winners/losers.
+
+## 6. File Responsibility Census — mandatory
+
+Every material file must answer:
 
 ```text
-SEMANTIC_MEANING=
-CURRENT_AUTHORITIES=
-CURRENT_MUTABLE_WRITERS=
-CURRENT_READERS_CONSUMERS=
-FRONTEND_LOCAL_INTERPRETATIONS=
-BACKEND_LOCAL_INTERPRETATIONS=
-CANONICAL_OWNER_CANDIDATE=
-CANONICAL_WRITER_CANDIDATE=
-DUPLICATE_PARALLEL_SHADOW_STATE=
-WINNING_AUTHORITY=
-LOSING_AUTHORITIES=
+DOES_THIS_FILE_OWN_A_UNIQUE_COHESIVE_RESPONSIBILITY?
+IS_THAT_RESPONSIBILITY_CORRECTLY_OWNED_HERE?
+IS_THIS_FILE_A_JUSTIFIED_MEMBER_OF_THE_MINIMUM_CANONICAL_FILE_SET?
+CAN_ITS_REQUIRED_VALUE_BE_ABSORBED_INTO_ANOTHER_CANONICAL_FILE?
+IS_IT_REEXPORT_ONLY / PASS_THROUGH_ONLY / FORWARDER_ONLY / SHIM_ONLY / ALIAS_ONLY?
+IS_IT_A_HISTORICAL_CONTAINER?
+IS_IT_DUPLICATING_A_RESPONSIBILITY_FOUND_ELSEWHERE_UNDER_DIFFERENT_NAMES_OR_PATHS?
 ```
 
-Any meaning with multiple mutable writers or authorities remains unresolved until winner/loser treatment is defined.
-
-## 5. Capability / journey coverage census — mandatory
-
-Inventory every material capability/journey represented anywhere in `g`, including backend-only, frontend-only, data-only, contract-only, and partially connected implementations.
-
-For each candidate identify enough evidence to feed `02A`:
+Verdicts:
 
 ```text
-CAPABILITY
-ACTOR
-JOURNEY
-STATES_TRANSITIONS
-DOMAIN_OWNER
-DB_STORAGE_TRUTH
-BACKEND_SERVICE_USE_CASE
-API_EVENT_COMMAND
-CONTRACT
-GENERATED_BINDING
-FRONTEND_CONSUMER
-COMPONENTS
-SCREENS_ROUTES
-USER_ACTIONS
-MUTATION
-PERSISTED_READBACK
-VISIBLE_FINAL_STATE
+UNIQUE_CORRECT_FILE → KEEP/HARDEN
+REQUIRED_VALUE_BUT_WRONG_CONTAINER → REHOME/MERGE → DELETE_OLD_FILE
+DUPLICATE_RESPONSIBILITY_FILE → SELECT_CANONICAL_CONTAINER → MIGRATE → DELETE_LOSER_FILE
+NO_UNIQUE_RESPONSIBILITY → DELETE_NOW IF LOW-RISK; OTHERWISE ABSORB REQUIRED VALUE → DELETE
+REEXPORT/PASS_THROUGH/FORWARDER/SHIM/ALIAS_ONLY → DELETE AFTER INTERNAL CONSUMER MIGRATION UNLESS BOUNDED EXTERNAL COMPAT IS PROVEN
+MIXED_UNRELATED_RESPONSIBILITIES → SPLIT INTO TRUE OWNERS → DELETE_OLD_CONTAINER
 ```
 
-Explicitly find:
+Before structural root mutation: `UNRESOLVED_FILE_VERDICTS=0`.
 
-```text
-SCREEN_WITHOUT_BACKEND_CAPABILITY
-BACKEND_CAPABILITY_WITHOUT_REQUIRED_UI_CONSUMER
-API_WITHOUT_REQUIRED_CONSUMER
-CONTRACT_WITHOUT_IMPLEMENTATION_OR_CONSUMER
-GENERATED_BINDING_WITHOUT_REQUIRED_CONSUMER
-DB_TRUTH_WITHOUT_REQUIRED_OWNER_CONSUMER
-MOCK_OR_HARDCODED_UI_PRETENDING_TO_BE_BUSINESS_TRUTH
-MANUAL_FRONTEND_DTO_ENUM_STATUS_MAP
-MANUAL_BACKEND_CONTRACT_MIRROR
-```
+## 7. Directory / Package Responsibility Census — mandatory
 
-Do not decide that backend and frontend are consistent merely because each compiles independently.
-
-Before `03`, `02A` must classify every material capability and parity break.
-
-## 6. Directory / Package Responsibility Census — mandatory
-
-Every material directory/package boundary must answer:
-
-```text
-ONE_UNIQUE_COHESIVE_RESPONSIBILITY?
-OWNER_IMPLIED_BY_PATH_CORRECT?
-DUPLICATED_ELSEWHERE?
-MIXING_UNRELATED_RESPONSIBILITIES?
-PASS_THROUGH_ONLY?
-HISTORICAL_COMPATIBILITY_ONLY?
-NAME_TRUTHFUL?
-```
+Every material directory/package boundary must answer whether it owns one unique cohesive responsibility, is correctly owned, duplicates another tree, mixes responsibilities, or exists only as pass-through/historical compatibility.
 
 Verdicts:
 
@@ -182,42 +152,49 @@ NO_UNIQUE_RESPONSIBILITY → DELETE_AFTER_MIGRATION OR DELETE_NOW IF UNUSED/DEAD
 DUPLICATE_RESPONSIBILITY → SELECT_WINNER → MIGRATE → DELETE_LOSER
 MIXED_RESPONSIBILITIES → SPLIT_BY_TRUE_OWNER
 WRONG_OWNER → REHOME
-PASS_THROUGH_ONLY → DELETE_NOW IF UNCONSUMED; OTHERWISE REMOVE AFTER MIGRATION
+PASS_THROUGH_ONLY → REMOVE
 HISTORICAL_COMPAT_ONLY → REMOVE AFTER BOUNDED CUTOVER
 MISLEADING_NAME_PATH → RENAME/REHOME
 ```
 
-Before structural root mutation:
+## 8. Capability / journey coverage census — mandatory
 
-`UNRESOLVED_DIRECTORY_PACKAGE_VERDICTS=0`.
+Inventory every material capability/journey represented anywhere in `g`, including backend-only, frontend-only, data-only, contract-only, and partially connected implementations. Feed `02A` with actor/journey/state/domain/data/backend/API/contract/generated/frontend/screen/action/mutation/readback evidence.
 
-## 7. Heightened `core/**` and `shared/**` review
+## 9. Candidate Canonical Container Map inputs
 
-Every material artifact under `core/**` or `shared/**` must prove why it is genuinely cross-cutting and why a precise domain cannot own it. If not: `REHOME | SPLIT | MERGE | DELETE`.
+For each semantic responsibility/cluster record candidate:
 
-Unused/unconsumed artifacts in these trees are not protected by the folder name; if low-risk, `DELETE_NOW`.
+```text
+SEMANTIC_RESPONSIBILITY=
+CURRENT_FILES_DIRECTORIES_PACKAGES=
+CURRENT_NAMES_PATHS=
+CURRENT_CONSUMERS=
+CANONICAL_OWNER_CANDIDATE=
+CANONICAL_PACKAGE_CANDIDATE=
+CANONICAL_DIRECTORY_CANDIDATE=
+CANONICAL_FILE_SET_CANDIDATE=
+CANONICAL_SYMBOLS_CANDIDATE=
+LOSING_CONTAINER_CANDIDATES=
+```
 
-## 8. First-class support surfaces
+This feeds `02B`.
 
-`infra/**`, `tools/**`, `.github/**`, scripts, workflows, runtime/config, tests, fixtures, mocks, and dependencies are not exempt. Establish:
+## 10. Heightened support surfaces
 
-`CURRENT PURPOSE | CANONICAL OWNER | WRITER/DERIVED STATUS | INVOCATIONS/CONSUMERS | REACHABILITY | DUPLICATION | TARGET DISPOSITION`.
-
-For `.github/workflows/**`, specifically census:
-- Which workflows support on-demand `workflow_dispatch` on `g` (e.g. `ci-check.yml`, `final-closure.yml`).
-- Accepted dispatch inputs (`expected_head_sha`, `expected_base_sha`, `verify_from_sha`, `full_scope`, `pr_number`).
-- Which workflows are required on-demand for remote-owned analysis (SonarQube Cloud, CodeQL, remote security).
-
-Unused/unconsumed support artifacts with no required role are `DELETE_NOW` candidates. Do not delete workflow dispatch mechanisms needed for on-demand verification.
-
-## 9. Symbol/line-level discovery
-
-Within files that own or duplicate material semantics, descend to symbols/branches/lines sufficiently to expose:
-
-`dead symbol | unused export | duplicate validation/default/mapping | shadow local policy | obsolete branch | stale flag | unnecessary wrapper | misleading symbol | unjustified suppression | stale TODO/FIXME/HACK`.
-
-Any dead/unconsumed symbol with no required semantic role is deleted immediately through the fast lane.
+`core/**`, `shared/**`, `infra/**`, `tools/**`, `.github/**`, scripts/workflows/config/tests/dependencies are first-class architecture. Generic buckets, forwarding shells, manual mirrors, stale tooling and redundant tests do not receive preservation bias.
 
 ## Baseline output
 
-The census must produce complete inputs for `CURRENT g`, the Artifact Disposition Ledger, Semantic Authority Registry, Directory/Package Verdicts, candidate winning/losing authority map, and complete capability/journey inventory consumed by `02` and `02A`.
+Before structural root mutation require:
+
+```text
+UNREVIEWED_TRACKED_ARTIFACTS=0
+UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
+UNKNOWN_KEEP=0
+UNRESOLVED_FILE_VERDICTS=0
+UNRESOLVED_DIRECTORY_PACKAGE_VERDICTS=0
+UNRESOLVED_SEMANTIC_AUTHORITIES=0
+```
+
+The census must produce complete inputs for `CURRENT g`, Artifact Ledger, Semantic Authority Registry, File/Directory/Package Verdicts, capability inventory, candidate winner/loser map, and Canonical Container Map.

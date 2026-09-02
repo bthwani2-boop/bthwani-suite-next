@@ -1,16 +1,14 @@
-# 04 — ELIMINATION, DELETION, LINE/FILE/DIRECTORY/SCREEN FINISHING
+# 04 — ELIMINATION, DELETION, HIGHEST-GRANULARITY PRUNING, AND LINE/FILE/DIRECTORY/SCREEN FINISHING
 
 ## Purpose
 
-Make cleanup destructive where safe, proportional to risk, and inseparable from structural and end-to-end parity closure. This file applies to every Closure Unit and final qualification.
+Make cleanup destructive where safe, proportional to risk, and inseparable from structural/end-to-end closure. Remove losing containers, not only losing lines.
 
-## Deletion risk classes
-
-Use the lightest proof that is still safe.
+## 1. Deletion risk classes
 
 ### LOW-RISK / NOISE
 
-Examples: dead line/symbol, unused helper/export, obsolete file, empty/useless directory, dead pass-through wrapper, stale script, unused workflow, unused dependency, redundant fixture/mock/snapshot, temporary/copied artifact, orphan screen/route/binding/API with no required consumer or authority.
+Examples: dead line/symbol, unused helper/export, obsolete file, empty/useless directory, dead pass-through wrapper, stale script, unused workflow/dependency, redundant fixture/mock/snapshot, temporary/copied artifact, orphan screen/route/binding/API with no required consumer or authority.
 
 Required proof:
 
@@ -25,110 +23,176 @@ NO_REQUIRED_MIGRATION_OR_UPGRADE_ROLE
 NO_SECURITY_OR_COMPLIANCE_ROLE
 ```
 
-For backend/API/data artifacts, consumer proof must cover all apps/surfaces, control panel, mobile clients, integrations, events/webhooks, runtime calls, scripts/tools, operations, and supported external consumers.
-
-Then immediately:
-
-`DELETE_NOW → SEARCH REFERENCES AGAIN → AFFECTED VERIFY`.
-
-No migration plan, compatibility layer, archival folder, or lengthy ceremony is required.
+Then do not blindly delete only the discovered line/symbol. Apply `HIGHEST_SAFE_DELETION_GRANULARITY` first.
 
 ### STATEFUL / CONTRACTUAL / RUNTIME / SECURITY / MIGRATION-SENSITIVE
 
-Use the fuller safety proof appropriate to the risk:
+Use fuller consumer/data/contract/runtime/generated/security/upgrade/readback proof, then delete the losing structure as soon as cutover is proven.
 
-`consumer inventory | data migration/backfill | contract cutover | runtime route transition | generated regeneration | security/integrity proof | supported upgrade path | persisted readback`.
+## 2. Highest Safe Deletion Granularity — mandatory
 
-Then delete the losing structure as soon as cutover is proven.
+```text
+FOUND DEAD LINE
+→ CAN THE WHOLE SYMBOL DIE?
+→ CAN THE WHOLE FILE DIE OR BE ABSORBED?
+→ CAN THE WHOLE DIRECTORY DIE OR BE COLLAPSED?
+→ CAN THE WHOLE PACKAGE/BOUNDARY DIE OR BE CONSOLIDATED?
+→ DELETE AT HIGHEST SAFE CANONICAL GRANULARITY
+```
 
-## Every affected artifact gets a realized disposition
+The discovered granularity is not the required deletion granularity.
 
-Every material artifact in the affected cone must end with one actual state matching the ledger:
+## 3. File Responsibility Death Test — mandatory
 
-`KEEP_PROVEN | HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | DELETE_NOW | BOUNDED_RETIREMENT`.
+Every affected file must prove:
 
-`LEDGER_SAYS_DELETE + ARTIFACT_STILL_PRESENT=ROOT_OPEN`.
+```text
+UNIQUE_COHESIVE_RESPONSIBILITY=YES
+OR JUSTIFIED_MEMBER_OF_MINIMUM_CANONICAL_FILE_SET=YES
+```
 
-## Directory/package death test
+If not:
 
-For every affected directory/package:
+```text
+ABSORB/MOVE REQUIRED VALUE
+→ MIGRATE ALL CONSUMERS
+→ DELETE FILE
+```
+
+A file is not preserved because it has callers. `HAS_CALLERS != DESERVES_TO_EXIST`.
+
+## 4. Directory/package death test
 
 ```text
 UNIQUE_COHESIVE_RESPONSIBILITY? YES → KEEP/HARDEN
 NO RESPONSIBILITY → DELETE
 DUPLICATE RESPONSIBILITY → MIGRATE TO WINNER → DELETE LOSER
-MIXED RESPONSIBILITIES → SPLIT BY TRUE OWNER
-WRONG OWNER → REHOME
+MIXED RESPONSIBILITIES → SPLIT BY TRUE OWNER → DELETE OLD MIXED CONTAINER
+WRONG OWNER → REHOME → DELETE OLD PATH
 PASS-THROUGH ONLY → REMOVE
 HISTORICAL COMPAT ONLY → REMOVE AFTER BOUNDED CUTOVER
 MISLEADING NAME/PATH → RENAME/REHOME
 ```
 
-Do not keep an empty or responsibility-less directory merely because imports once pointed there.
+## 5. Upward Recursive Pruning
 
-## Winner/Loser elimination
+After every delete, merge, split, or rehome:
 
-For duplicate/parallel/shadow truth:
+```text
+RE-EVALUATE SURVIVING FILE
+→ RE-EVALUATE PARENT DIRECTORY
+→ RE-EVALUATE PACKAGE/BOUNDARY
+→ DELETE/COLLAPSE ANY PARENT THAT NO LONGER OWNS UNIQUE RESPONSIBILITY
+→ REPEAT UNTIL FIRST JUSTIFIED CANONICAL PARENT
+```
+
+Do not leave empty, single-shell, or responsibility-less parents.
+
+## 6. Semantic duplication is not filename duplication
+
+Search for same responsibility/meaning even across unrelated names, paths, packages, layers, or languages. Evidence includes data reads/writes, decisions, state transitions, contracts, consumers, screen outcomes, and runtime behavior.
+
+```text
+DIFFERENT_NAME != DIFFERENT_RESPONSIBILITY
+DIFFERENT_PATH != DIFFERENT_RESPONSIBILITY
+```
+
+## 7. Winner/Loser elimination — authority + containers
 
 ```text
 SELECT WINNER
+→ IDENTIFY CANONICAL CONTAINER SET
 → INVENTORY LOSER WRITERS/READERS/CONSUMERS
+→ ABSORB REQUIRED VALUE
 → MIGRATE
 → CUT OVER
 → DISABLE LOSER WRITES
 → ZERO LOSER READERS
-→ DELETE LOSER FILES/DIRECTORIES/PACKAGES/CONFIG/CONTRACTS/MANUAL MODELS
-→ REMOVE IMPORTS/EXPORTS/ROUTES/DEPENDENCIES
+→ DELETE LOSER SYMBOLS/FILES/DIRECTORIES/PACKAGES/CONFIG/CONTRACTS/MANUAL MODELS
+→ REMOVE IMPORTS/EXPORTS/BARRELS/ALIASES/ROUTES/DEPENDENCIES
+→ MIGRATE/DELETE OLD TESTS/FIXTURES/MOCKS/SNAPSHOTS
+→ RECURSIVELY PRUNE PARENTS
 → PROVE ZERO LOSER REACHABILITY
 ```
 
-`KEEP_BOTH`, permanent mirrors, and keep-in-sync layers are forbidden final states.
+`KEEP_BOTH`, permanent mirrors, keep-in-sync layers, and internal old-path forwarders are forbidden final states.
 
-## Backend/frontend mirror elimination
+## 8. Internal migration shells forbidden by default
 
-When domain/contract semantics are canonical, eliminate manual cross-layer mirrors that restate the same business truth:
-
-`manual DTO | manual enum | manual status map | manual permission map | manual allowed-action map | manual validation/default | direct generated repair | frontend business-state copy`.
-
-Canonical treatment:
-
-`DOMAIN SEMANTICS → CONTRACT → REGENERATE WHERE APPLICABLE → MIGRATE CONSUMERS → DELETE MIRROR → ZERO OLD REFERENCES`.
-
-Presentation-only transformations may remain when they are truly derived and do not claim business authority.
-
-## Screen / route / frontend-flow finishing
-
-Every affected screen/route/flow must prove:
+Flag and remove after consumer migration:
 
 ```text
-REQUIRED_CAPABILITY_JOURNEY
-REQUIRED_ACTOR
-CANONICAL_BACKEND_SUPPORT_OR_VALID_FRONTEND_ONLY_PURPOSE
-CANONICAL_API_CONTRACT_BINDING_WHERE_APPLICABLE
-CANONICAL_QUERY_MUTATION_STORE
-NO_HARDCODED_OR_MOCKED_BUSINESS_TRUTH_HIDING_A_GAP
-NO_DUPLICATE_SCREEN/FLOW_WITH_SAME_RESPONSIBILITY
-REQUIRED_LOADING_SUCCESS_EMPTY_ERROR_RETRY_AUTH_OFFLINE_STATES
-REQUIRED_USER_ACTION_TO_MUTATION_TO_READBACK_CHAIN
+REEXPORT_ONLY_FILE
+PASS_THROUGH_FILE
+FORWARDER_ONLY_FILE
+SHIM_ONLY_FILE
+ALIAS_ONLY_FILE
+OLD_PATH_COMPAT_FILE
+BARREL_PRESERVING_DEAD_PATH
 ```
 
-If no current capability/journey requires the screen and deletion is low-risk: `DELETE_NOW`.
+Retention requires proven bounded external compatibility, exact consumers, no second writer, and removal trigger.
 
-If duplicate: `SELECT WINNER → MIGRATE NAVIGATION/CONSUMERS → DELETE LOSER`.
+## 9. MERGE completion
 
-If required but backend/contract support is missing: `ROOT_OPEN`; do not mask with local fake truth.
+```text
+MERGE_COMPLETE
+IFF
+REQUIRED_VALUE_ABSORBED
+AND ALL_CONSUMERS_MIGRATED
+AND LOSING_CONTAINERS_DELETED
+AND OLD_FILE_PATHS=0
+AND OLD_IMPORT_PATHS=0
+AND OLD_EXPORT_NAMES=0
+AND OLD_BARREL_REEXPORTS=0
+AND OLD_ALIASES=0
+AND OLD_ROUTE_REGISTRATIONS=0
+```
 
-## Compatibility is exceptional
+## 10. Anti-fragmentation finishing
 
-`COMPATIBILITY=FORBIDDEN_BY_DEFAULT`.
+For every affected responsibility require:
 
-It may remain only with proven unavoidable live consumer, exact owner/consumers, no second mutable writer, explicit cutover condition, explicit removal trigger, and bounded lifetime.
+```text
+UNJUSTIFIED_SINGLE_SYMBOL_FILES=0
+REEXPORT_ONLY_INTERNAL_FILES=0
+PASS_THROUGH_ONLY_FILES=0
+FORWARDER_ONLY_FILES=0
+SHIM_ONLY_FILES=0
+ALIAS_ONLY_FILES=0
+DUPLICATE_RESPONSIBILITY_FILES=0
+RESPONSIBILITY_LESS_FILES=0
+EMPTY_OR_RESPONSIBILITY_LESS_DIRECTORIES=0
+UNJUSTIFIED_FILE_FRAGMENTATION=0
+```
 
-Otherwise: `MIGRATE NOW → DELETE NOW`.
+Do not collapse distinct cohesive responsibilities into God files merely to reduce count.
 
-## File/symbol/line finishing pass
+## 11. Backend/frontend mirror elimination
 
-Every file materially touched by a Closure Unit receives a finishing pass for:
+When domain/contract semantics are canonical, eliminate manual DTO/enum/status/permission/allowed-action/validation/default/error maps and direct generated repairs that restate the same truth. Presentation-only derived transformations may remain.
+
+## 12. Screen / route / frontend-flow finishing
+
+If duplicate screens/flows serve the same material responsibility without justified actor/journey/state distinction:
+
+`SELECT CANONICAL FLOW → MIGRATE NAVIGATION/REQUIRED UI VALUE → DELETE LOSING SCREEN FILES/ROUTES → RECURSIVELY PRUNE PARENTS`.
+
+If no current capability requires the screen and deletion is low-risk: `DELETE_NOW`.
+
+## 13. Generated / database exceptions
+
+Generated code may legitimately be many files when derived from one canonical source. Do not merge generated outputs merely to reduce file count; eliminate competing/manual truth.
+
+Normalized DB design may legitimately use many tables/columns. Do not merge storage merely to reduce count; eliminate duplicate mutable storage authority for the same business meaning.
+
+## 14. Test/mock residue follows canonical ownership
+
+When a losing production container disappears, its tests/fixtures/mocks/snapshots/helpers must be deleted or migrated to the canonical owner. Historical test names/paths must not keep old structure alive.
+
+## 15. File/symbol/line finishing pass
+
+Every touched surviving file receives:
 
 ```text
 DEAD_SYMBOLS=0
@@ -137,62 +201,34 @@ DUPLICATE_LOCAL_SEMANTICS=0
 SHADOW_LOCAL_POLICY=0
 OBSOLETE_BRANCHES=0
 UNNECESSARY_WRAPPERS=0
-STALE_FEATURE_FLAGS=0_OR_PROVEN
 UNJUSTIFIED_SUPPRESSIONS=0
 STALE_TODO_FIXME_HACK=0
 MISLEADING_SYMBOL_NAMES=0
 DUPLICATE_DEFAULTS_VALIDATIONS_MAPPINGS=0
+UNIQUE_FILE_RESPONSIBILITY_OR_JUSTIFIED_FILE_SET_MEMBERSHIP=PASS
 ```
 
-Do not perform style churn unrelated to structure/correctness. Do remove real residue at line/symbol level.
+## 16. No cosmetic cleanup
 
-## Heightened `core/**` and `shared/**` finishing
+Forbidden outcomes include:
 
-For every affected artifact there re-prove why it is truly cross-cutting. Domain/business truth without a cross-cutting justification must be rehomed to its true owner. Generic buckets must not hide ownership.
+`legacy → archive`, `old → history`, `duplicate → common`, `multiple truths → shared`, `two authorities → wrapper around both`, `old path → permanent reexport`, `dead lines removed → responsibility-less file retained`, `losing file deleted → responsibility-less parent retained`.
 
-## `infra/**`, `tools/**`, `.github/**`, scripts/workflows/config
-
-Treat these as first-class architecture. Delete dead or duplicate runtime/config/tooling authorities, obsolete scripts, stale automation, parallel environment truth, manual mirrors, duplicate generated repair, and unused workflows/dependencies.
-
-## No cosmetic cleanup
-
-Forbidden outcomes:
-
-`legacy → archive`, `old → history`, `duplicate → common`, `multiple truths → shared`, `misc → utils`, `two authorities → wrapper around both`, `missing backend → frontend mock presented as real`, `contract drift → local manual type repair`.
-
-Correct cleanup fixes ownership, restores the canonical vertical chain, and deletes the losing structure.
-
-## Noise hit disposition
-
-Search affected cones and final branch for materially suspicious terms/patterns such as:
-
-`old | legacy | obsolete | deprecated | superseded | archive | backup | copy | tmp | temp | v2 | v3 | compat | fallback | mirror | shadow | duplicate | prototype | experimental | mock | hardcoded | TODO | FIXME | HACK | ts-ignore | eslint-disable | keep in sync`.
-
-A hit is not automatic deletion, but every material hit must be classified `KEEP_PROVEN`, transformed, or deleted. No unclassified material hit remains.
-
-## Deletion suspicion
-
-If a root corrects duplication/replacement/ownership/parity yet removes zero old writer/path/file/directory/wrapper/manual mirror/orphan artifact, trigger:
-
-`CLOSURE_SUSPICION → RE-AUDIT FOR ADDITIVE PATCHING OR UNRESOLVED PARITY`.
-
-## Per-root elimination proof
+## 17. Per-root elimination proof
 
 Before closure answer:
 
 ```text
-WHAT_GARBAGE_WAS_DELETE_NOW?
-WHAT_OLD_AUTHORITY_DISAPPEARED?
-WHAT_DUPLICATE_WRITER/READER/MAPPING/MANUAL_MIRROR_DISAPPEARED?
-WHAT_FILES_DIRECTORIES_PACKAGES_DISAPPEARED?
-WHAT_ORPHAN_SCREENS_ROUTES_ENDPOINTS_BINDINGS_DATA_ARTIFACTS_DISAPPEARED?
-WHAT_SCRIPTS_WORKFLOWS_CONFIG_DEPENDENCIES_DISAPPEARED?
-WHAT_LINE/SYMBOL_RESIDUE_DISAPPEARED?
-WHICH_NAMES_PATHS_BOUNDARIES_ARE_NOW_CANONICAL?
-WHAT_PROVES_OLD_REFERENCES=0?
-WHAT_PROVES_REQUIRED_VERTICAL_SLICES_ARE_CONTINUOUS?
-WHAT_COMPATIBILITY_REMAINS, WHY, AND WHAT REMOVES_IT?
-WHAT_PROVES_NO_THIRD_AUTHORITY?
+WHAT_GARBAGE_WAS_DELETED_AT_HIGHEST_SAFE_GRANULARITY?
+WHAT_REQUIRED_VALUE_WAS_ABSORBED?
+WHAT_LOSING_FILES_DISAPPEARED?
+WHAT_LOSING_DIRECTORIES_DISAPPEARED?
+WHAT_LOSING_PACKAGES_DISAPPEARED?
+WHAT_OLD_PATHS_IMPORTS_EXPORTS_BARRELS_ALIASES_ROUTES_DISAPPEARED?
+WHAT_TEST_FIXTURE_MOCK_SNAPSHOT_RESIDUE_DISAPPEARED?
+WHAT_PARENT_CONTAINERS_WERE_REEVALUATED_AND_PRUNED?
+WHAT_PROVES_EACH_SURVIVING_FILE_HAS_UNIQUE_JUSTIFIED_RESPONSIBILITY?
+WHAT_PROVES_NO_UNJUSTIFIED_FRAGMENTATION_REMAINS?
 ```
 
 `ROOT FIXED + MATERIAL RESIDUE = ROOT OPEN`.

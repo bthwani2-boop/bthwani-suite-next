@@ -1,8 +1,8 @@
-# 02 — CANONICAL TARGET, WINNER/LOSER MAP, STRUCTURAL DELTA, AND PARITY INPUTS
+# 02 — CANONICAL TARGET, WINNER/LOSER MAP, STRUCTURAL DELTA, AND CANONICAL CONTAINER TARGET
 
 ## Purpose
 
-Turn the complete census into a complete canonical target and executable structural delta before any mutation, and provide the canonical ownership/contract/data targets required by `02A` for vertical parity proof.
+Turn the complete census into a complete canonical target and executable structural delta before mutation, including the exact canonical container topology for every material responsibility.
 
 ## Branch-wide canonical target
 
@@ -12,8 +12,11 @@ For every material responsibility define:
 CANONICAL_RESPONSIBILITY=
 CANONICAL_OWNER=
 CANONICAL_WRITER_OR_DERIVED_STATUS=
-CANONICAL_PACKAGE_DIRECTORY_BOUNDARY=
-CANONICAL_NAME_AND_PATH=
+CANONICAL_PACKAGE_BOUNDARY=
+CANONICAL_DIRECTORY=
+MINIMUM_NECESSARY_CANONICAL_FILE_SET=
+CANONICAL_SYMBOLS=
+CANONICAL_NAME_PATHS=
 DEPENDENCY_DIRECTION=
 DATA_SCHEMA_OWNER=
 CONTRACT_GENERATED_OWNER=
@@ -24,128 +27,133 @@ TARGET_DISPOSITION_OF_CURRENT_ARTIFACTS=
 
 Ask:
 
-`IF BUILT TODAY FROM CURRENT PROVEN TRUTH, WHAT IS THE SMALLEST CORRECT STRUCTURE, WHO OWNS IT, WHAT WRITES IT, WHAT CONSUMES IT, HOW DOES IT CONNECT END-TO-END, AND WHAT SHOULD NOT EXIST?`
+`IF BUILT TODAY FROM CURRENT PROVEN TRUTH, WHAT IS THE SMALLEST CORRECT COHESIVE CONTAINER SET, WHO OWNS IT, WHAT WRITES IT, WHAT CONSUMES IT, HOW DOES IT CONNECT END-TO-END, AND WHICH CURRENT CONTAINERS SHOULD CEASE TO EXIST?`
 
-## Canonical cross-layer target
+## Semantic responsibility over current topology
 
-For every material product meaning/capability define where applicable:
+Do not preserve topology merely because responsibilities are spread under different names or paths.
 
 ```text
-PRODUCT_MEANING=
-ACTOR_JOURNEY=
-CANONICAL_STATE_TRANSITIONS=
-CANONICAL_DOMAIN_OWNER=
-CANONICAL_DB_STORAGE_TRUTH=
-CANONICAL_MUTABLE_WRITER=
-CANONICAL_BACKEND_SERVICE_USE_CASE=
-CANONICAL_API_EVENT_COMMAND=
-CANONICAL_REQUEST_RESPONSE_ERROR_CONTRACT=
-CANONICAL_GENERATED_BINDING=
-CANONICAL_FRONTEND_CONSUMER=
-CANONICAL_COMPONENT_SCREEN_ROUTE=
-CANONICAL_USER_ACTION_MUTATION=
-CANONICAL_PERSISTED_READBACK=
-CANONICAL_VISIBLE_FINAL_STATE=
+SAME RESPONSIBILITY + DIFFERENT FILE NAMES = ONE CLUSTER
+SAME RESPONSIBILITY + DIFFERENT PATHS = ONE CLUSTER
+SAME RESPONSIBILITY + DIFFERENT PACKAGES = ONE CLUSTER
+SAME RESPONSIBILITY + DIFFERENT LAYERS = ONE CROSS-LAYER CLUSTER WHEN SEMANTICS OVERLAP
 ```
 
-Do not create one truth model for backend and another for frontend. `02A` must prove that these canonical targets form one continuous chain.
+## Mandatory Canonical Container Map
 
-## Mandatory Winner/Loser Authority Map
+For every material semantic responsibility produce:
 
-For every proven duplicate/parallel/shadow semantic authority:
+```text
+SEMANTIC_RESPONSIBILITY=
+CANONICAL_OWNER=
+CANONICAL_PACKAGE_OR_BOUNDARY=
+CANONICAL_DIRECTORY=
+CANONICAL_FILE_SET=
+CANONICAL_SYMBOLS=
+WHY_THIS_FILE_SET_IS_MINIMUM_NECESSARY=
+CURRENT_CONTAINER_SET=
+CONTAINERS_TO_KEEP=
+CONTAINERS_TO_REHOME=
+CONTAINERS_TO_MERGE=
+CONTAINERS_TO_SPLIT=
+CONTAINERS_TO_DELETE=
+OLD_PATHS_NAMES_ALIASES_TO_ELIMINATE=
+```
+
+`CANONICAL_FILE_SET` may contain one or multiple files. Multiple files are valid only when each owns a distinct cohesive sub-responsibility or is required by framework/generated conventions.
+
+## Mandatory Winner/Loser Authority + Container Map
+
+For every duplicate/parallel/shadow semantic authority:
 
 ```text
 SEMANTIC_MEANING=
 WINNING_AUTHORITY=
-WHY_WINNER=
+WINNING_CONTAINER_SET=
 LOSING_AUTHORITIES=
+LOSING_CONTAINERS=
 LOSING_WRITERS=
 LOSING_READERS_CONSUMERS=
 MIGRATION_PATH=
 CUTOVER_CONDITION=
 DELETION_TARGETS=
+OLD_PATH_ALIAS_REEXPORT_TARGETS=
 ZERO_REFERENCE_PROOF=
 ```
 
-No unresolved `COEXIST`, `KEEP_BOTH`, or permanent `SYNC` outcome is valid.
-
-```text
-DUPLICATE_AUTHORITY_WITHOUT_WINNER_LOSER=BASELINE_FAIL
-LOSING_AUTHORITY_WITHOUT_DELETION_TARGET=BASELINE_FAIL
-```
-
-Frontend/backend manual mirrors of the same business truth participate in the same winner/loser law.
+No unresolved `COEXIST`, `KEEP_BOTH`, permanent `SYNC`, or internal forwarding shell is a valid target.
 
 ## Artifact disposition realization matrix
 
-Translate every census disposition into target work:
-
 ```text
-KEEP_PROVEN → no structural change; proof retained
-HARDEN/REFACTOR → semantics remain canonical; structure/code corrected
-REHOME/RENAME → exact target owner/name/path + complete reference migration
-MERGE → winner + value to absorb + losing tree deletion
-SPLIT → exact responsibilities + exact target owners
-REWRITE → old abstraction encodes wrong semantics; target replaces it
-REGENERATE → canonical source defined; manual repair deleted
-MIGRATE → consumers/data/contracts/runtime moved to target
-DELETE_NOW → low-risk proven garbage; no migration ceremony
-DELETE → deletion after required migration/cutover proof
-BOUNDED_RETIREMENT → exceptional live external compatibility only
+KEEP_PROVEN → unique canonical responsibility proven
+HARDEN/REFACTOR → same canonical responsibility/container remains valid
+REHOME/RENAME → move to exact canonical owner/name/path; delete old path
+MERGE → absorb required value into canonical container; migrate consumers; delete losing container
+SPLIT → move distinct responsibilities to exact owners; delete mixed old container
+REWRITE → replace wrong abstraction/container semantics
+REGENERATE → canonical source defined; generated outputs derived; manual repair deleted
+MIGRATE → consumers/data/contracts/runtime moved to canonical target
+DELETE_NOW → low-risk proven garbage at highest safe granularity
+DELETE → delete after required migration/cutover
+BOUNDED_RETIREMENT → exceptional external compatibility only
 ```
 
-## Compatibility forbidden by default
+## MERGE completion law
 
-`COMPATIBILITY=FORBIDDEN_BY_DEFAULT`.
-
-Bounded retention requires all:
+A merge is incomplete unless:
 
 ```text
-EXTERNAL_OR_UNAVOIDABLE_LIVE_CONSUMER=PROVEN
-ATOMIC_MIGRATION_NOT_CURRENTLY_POSSIBLE=PROVEN
-EXACT_OWNER=KNOWN
-EXACT_CONSUMERS=KNOWN
-NO_SECOND_MUTABLE_WRITER=PASS
-CUTOVER_CONDITION=DEFINED
-REMOVAL_TRIGGER=DEFINED
-EXPIRY_OR_BOUND=DEFINED
+REQUIRED_VALUE_ABSORBED=YES
+ALL_REQUIRED_CONSUMERS_MIGRATED=YES
+LOSING_FILE_DIRECTORY_PACKAGE_DELETED=YES_OR_PROVEN_NA
+OLD_IMPORT_PATHS=0
+OLD_EXPORT_NAMES=0
+OLD_BARREL_REEXPORTS=0
+OLD_ALIASES=0
+OLD_ROUTE_REGISTRATIONS=0
 ```
 
-Otherwise: `MIGRATE NOW → DELETE NOW`.
+## Generated and database exceptions
 
-## Complete Structural Delta
+Do not force generated outputs into one file. Require `ONE CANONICAL SOURCE → MANY DERIVED GENERATED FILES` when the generator/framework legitimately emits multiple files.
 
-Compare `CURRENT g` with `CANONICAL g` and enumerate all material deltas:
+Do not collapse normalized database structure into one table. Require one canonical mutable truth per business meaning; multiple normalized tables/columns are valid when they own distinct normalized facts and do not duplicate mutable authority.
 
-`wrong owner/writer | wrong boundary | misplaced artifact | misleading name/path | duplicate responsibility tree | parallel/shadow truth | duplicate mutable writer | duplicate decision/policy/validation/state/mapping/DTO/enum/default | frontend/backend semantic divergence | manual frontend business mirror | manual backend contract mirror | orphan screen/API/binding/data truth | unnecessary wrapper/adapter | contract/generated repair | data/schema parallel authority | runtime/config duplication | dead package/file/route/symbol | dead script/workflow | legacy path | unused dependency | stale test/fixture/mock | unbounded compatibility | patch-shaped architecture | obsolete residue`.
+## Complete Structural + Container Delta
 
-Every delta must reference its ledger entries and authority map. Do not create roots directly from individual deltas until causal collapsing is complete.
+Compare `CURRENT g` with `CANONICAL g` and enumerate:
 
-## Handoff to `02A`
+`wrong owner/writer | wrong boundary | misplaced artifact | misleading name/path | duplicate responsibility tree | same responsibility across different names/paths | redundant file | responsibility-less file | unjustified single-symbol file | reexport/pass-through/forwarder/shim/alias-only file | parallel/shadow truth | duplicate mutable writer | duplicate decision/policy/state/mapping/DTO/enum/default | frontend/backend semantic divergence | orphan screen/API/binding/data truth | unnecessary wrapper/adapter | contract/generated repair | data/schema parallel authority | runtime/config duplication | dead package/file/route/symbol | dead script/workflow | legacy path | unused dependency | stale test/fixture/mock | unbounded compatibility | patch-shaped architecture | obsolete residue`.
 
-After `CURRENT g`, `CANONICAL g`, winner/loser map, and Structural Delta are complete, build the full Cross-Layer Capability Matrix in `02A`.
+Every delta references its ledger entry, semantic cluster, and canonical container target.
 
-Every backend/frontend/data/contract/generated/UI parity break found by `02A` must be added back into the Structural Delta and assigned a causal owner before root synthesis.
+## Handoff
+
+`02A` proves vertical parity. `02B` proves canonical container consolidation and anti-fragmentation. Every gap from either is added back to the Structural Delta before root synthesis.
 
 ## Pre-mutation completeness gate
-
-Before root synthesis:
 
 ```text
 CURRENT_G_COMPLETE=PASS
 CANONICAL_G_COMPLETE=PASS
 ARTIFACT_DISPOSITION_LEDGER_COMPLETE=PASS
 SEMANTIC_AUTHORITY_REGISTRY_COMPLETE=PASS
+FILE_VERDICTS_COMPLETE=PASS
 DIRECTORY_PACKAGE_VERDICTS_COMPLETE=PASS
 WINNER_LOSER_MAP_COMPLETE=PASS
+CANONICAL_CONTAINER_MAP_COMPLETE=PASS
 STRUCTURAL_DELTA_COMPLETE=PASS
 END_TO_END_CAPABILITY_MATRIX_COMPLETE=PASS
 UNREVIEWED_TRACKED_ARTIFACTS=0
 UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
+UNRESOLVED_FILE_VERDICTS=0
 UNRESOLVED_DIRECTORY_PACKAGE_VERDICTS=0
 UNRESOLVED_SEMANTIC_AUTHORITIES=0
-UNMAPPED_MATERIAL_CAPABILITIES=0
+UNRESOLVED_CANONICAL_CONTAINER_MAP_ENTRIES=0
+UNRESOLVED_FRAGMENTATION_CLUSTERS=0
 UNRESOLVED_E2E_PARITY_GAPS=0
 ```
 
-Only then proceed to `03`.
+Only then proceed through `02B` into `03`.

@@ -1,14 +1,12 @@
-# 06 — FINAL ADVERSARIAL QUALIFICATION AND ZERO-RESIDUE / ZERO-PARITY-GAP FIXED POINT
+# 06 — FINAL ADVERSARIAL QUALIFICATION AND ZERO-RESIDUE / ZERO-FRAGMENTATION / ZERO-PARITY-GAP FIXED POINT
 
 ## Purpose
 
-Prove that branch `g` has reached the intended canonical fixed point after all dynamic roots appear closed. This is not merge readiness; it qualifies `g` itself.
+Prove that branch `g` reached the intended canonical fixed point after all dynamic roots appear closed. This qualifies `g` itself, not merge readiness.
 
 ## Fresh exact-SHA re-census
 
-Pin the exact final candidate and repeat a fresh traversal over the actual tracked tree. Do not rely only on previous root scopes, ledgers, capability maps, or classifications.
-
-Rebuild and challenge:
+Pin the exact final candidate and repeat a fresh traversal over the actual tracked tree. Rebuild and challenge:
 
 ```text
 CURRENT_G_MODEL
@@ -16,10 +14,13 @@ CANONICAL_G_TARGET
 CURRENT_TO_CANONICAL_STRUCTURAL_DELTA
 ARTIFACT_DISPOSITION_LEDGER
 SEMANTIC_AUTHORITY_REGISTRY
+FILE_VERDICTS
 DIRECTORY_PACKAGE_VERDICTS
 WINNER_LOSER_AUTHORITY_MAP
+CANONICAL_CONTAINER_MAP
 END_TO_END_CAPABILITY_JOURNEY_MATRIX
 EVERY_ARTIFACT_RIGHT_TO_EXIST
+EVERY_SURVIVING_FILE_RIGHT_TO_EXIST
 CANONICAL_OWNER_WRITER_UNIQUENESS
 NAMING_PATH_TOPOLOGY
 DEAD_STALE_OBSOLETE_RESIDUE
@@ -33,23 +34,22 @@ Any material finding reopens the dynamic root graph and returns execution to `03
 
 ## Final artifact reconciliation
 
-Require:
-
 ```text
 UNREVIEWED_TRACKED_ARTIFACTS=0
 UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
 UNKNOWN_KEEP=0
+UNRESOLVED_FILE_VERDICTS=0
 UNRESOLVED_DIRECTORY_PACKAGE_VERDICTS=0
 UNRESOLVED_SEMANTIC_AUTHORITIES=0
 UNRESOLVED_WINNER_LOSER_DECISIONS=0
+UNRESOLVED_CANONICAL_CONTAINER_MAP_ENTRIES=0
+UNRESOLVED_FRAGMENTATION_CLUSTERS=0
 LEDGER_DISPOSITION_NOT_REALIZED=0
 ```
 
-Every tracked material artifact must either prove survival or have been transformed/deleted as planned.
-
 ## Final semantic authority reconciliation
 
-For every material meaning require:
+For every material meaning:
 
 ```text
 CANONICAL_OWNER_COUNT=1
@@ -64,9 +64,85 @@ BACKEND_SHADOW_BUSINESS_TRUTH=0
 MANUAL_PARALLEL_DTO_ENUM_MAPPING=0
 ```
 
+## Final same-responsibility clustering — independent of names/paths
+
+Re-run branch-wide clustering using business meaning, data reads/writes, decisions, state transitions, contracts, caller/consumer outcomes, screen behavior, runtime/config behavior, and generated lineage.
+
+Do not rely on filename/path similarity.
+
+```text
+DIFFERENT_NAME != DIFFERENT_RESPONSIBILITY
+DIFFERENT_PATH != DIFFERENT_RESPONSIBILITY
+UNRESOLVED_SAME_RESPONSIBILITY_CROSS_PATH_CLUSTERS=0
+```
+
+## Final Canonical Container Map reconciliation
+
+For every material responsibility prove:
+
+```text
+CANONICAL_OWNER=PROVEN
+CANONICAL_PACKAGE_BOUNDARY=PROVEN
+CANONICAL_DIRECTORY=PROVEN
+MINIMUM_NECESSARY_CANONICAL_FILE_SET=PROVEN
+EVERY_SURVIVING_FILE_HAS_DISTINCT_COHESIVE_ROLE=PASS
+LOSING_CONTAINERS_REMAINING=0
+```
+
+The target is minimum necessary files, not minimum possible files.
+
+## Final File Death Test / anti-fragmentation gate
+
+Require:
+
+```text
+RESPONSIBILITY_LESS_FILES=0
+REDUNDANT_FILES=0
+DUPLICATE_RESPONSIBILITY_FILES=0
+UNJUSTIFIED_SINGLE_SYMBOL_FILES=0
+UNJUSTIFIED_FILE_FRAGMENTATION=0
+REEXPORT_ONLY_INTERNAL_FILES=0
+PASS_THROUGH_ONLY_FILES=0
+FORWARDER_ONLY_FILES=0
+SHIM_ONLY_FILES=0
+ALIAS_ONLY_FILES=0
+OLD_PATH_COMPAT_FILES_WITHOUT_BOUNDED_EXTERNAL_PROOF=0
+EMPTY_OR_RESPONSIBILITY_LESS_DIRECTORIES=0
+UNOWNED_PACKAGES=0
+DUPLICATE_RESPONSIBILITY_TREES=0
+```
+
+A surviving file must prove unique responsibility or justified membership in the canonical file set.
+
+## Final upward recursive pruning proof
+
+For every deleted/merged/rehome lineage, prove that parent containers were re-evaluated upward until a justified canonical parent remained.
+
+```text
+UNPRUNED_RESPONSIBILITY_LESS_PARENT_FILES=0
+UNPRUNED_RESPONSIBILITY_LESS_DIRECTORIES=0
+UNPRUNED_RESPONSIBILITY_LESS_PACKAGES=0
+```
+
+## Final old-path / alias elimination
+
+Require:
+
+```text
+OLD_FILE_PATHS=0
+OLD_IMPORT_PATHS=0
+OLD_EXPORT_NAMES=0
+OLD_BARREL_REEXPORTS=0
+OLD_INTERNAL_ALIASES=0
+OLD_ROUTE_REGISTRATIONS=0
+OLD_TEST_FIXTURE_MOCK_SNAPSHOT_PATHS=0
+```
+
+Bounded external compatibility is the only exception and must have exact consumers, owner, expiry/removal trigger, and no duplicate mutable writer.
+
 ## Final end-to-end vertical parity sweep
 
-Re-enumerate every material capability/journey from the actual final tree and prove the canonical chain where applicable:
+Re-enumerate every material capability/journey and prove the canonical chain where applicable:
 
 ```text
 PRODUCT_MEANING
@@ -85,56 +161,15 @@ PRODUCT_MEANING
 → VISIBLE FINAL STATE
 ```
 
-Require:
+Require zero unmapped required screens/endpoints/bindings/data truths, zero unresolved parity gaps, and all applicable parity checks PASS.
 
-```text
-UNMAPPED_MATERIAL_CAPABILITIES=0
-UNMAPPED_REQUIRED_SCREENS=0
-UNMAPPED_REQUIRED_ENDPOINTS=0
-UNMAPPED_REQUIRED_BINDINGS=0
-UNRESOLVED_E2E_PARITY_GAPS=0
-ORPHAN_REQUIRED_ENDPOINTS=0
-ORPHAN_REQUIRED_SCREENS=0
-ORPHAN_REQUIRED_BINDINGS=0
-ORPHAN_REQUIRED_DB_TRUTH=0
-DATABASE_TO_BACKEND_PARITY=PASS_OR_NA
-BACKEND_TO_API_PARITY=PASS_OR_NA
-API_TO_CONTRACT_PARITY=PASS_OR_NA
-CONTRACT_TO_GENERATED_PARITY=PASS_OR_NA
-GENERATED_TO_FRONTEND_PARITY=PASS_OR_NA
-FRONTEND_TO_SCREEN_PARITY=PASS_OR_NA
-SCREEN_ACTION_TO_MUTATION_PARITY=PASS_OR_NA
-MUTATION_TO_PERSISTED_READBACK=PASS_OR_NA
-VISIBLE_FINAL_STATE_PARITY=PASS_OR_NA
-ERROR_STATE_PARITY=PASS_OR_NA
-AUTH_PERMISSION_PARITY=PASS_OR_NA
-STATE_TRANSITION_PARITY=PASS_OR_NA
-END_TO_END_PRODUCT_DATA_CONTRACT_UI_PARITY=PASS
-```
+## Generated/database conformance
 
-`CLEAN_BACKEND + CLEAN_FRONTEND + BROKEN_SEMANTIC_CHAIN = NOT_CLOSED`.
+Generated outputs may be multiple files only when derived from one canonical source/generator lineage. Require competing/manual generated truth = 0.
 
-## Final filesystem / package topology reconciliation
-
-Require:
-
-```text
-UNOWNED_PACKAGES=0
-RESPONSIBILITY_LESS_DIRECTORIES=0
-DUPLICATE_RESPONSIBILITY_TREES=0
-MISLEADING_FILENAMES=0
-MISLEADING_DIRECTORY_NAMES=0
-MISPLACED_FILES=0
-AMBIGUOUS_GENERIC_BUCKETS=0_OR_PROVEN
-OLD_NAME_PATH_REFS=0
-KNOWN_NONCANONICAL_MATERIAL_TOPOLOGY=0
-```
-
-`core/**` and `shared/**` receive a fresh heightened cross-cutting justification pass. `infra/**`, `tools/**`, `.github/**`, scripts/workflows/config/tests/dependencies receive the same final structural scrutiny as product code.
+Database may remain normalized across multiple tables/columns only when each owns distinct normalized facts. Require duplicate mutable storage authorities for the same business meaning = 0.
 
 ## Final line/symbol/screen residue sweep
-
-Across materially changed and structurally suspicious code require:
 
 ```text
 DEAD_SYMBOLS=0
@@ -152,81 +187,15 @@ MOCK_HARDCODED_BUSINESS_TRUTH=0
 
 ## Final garbage/noise sweep
 
-Search branch-wide for dead/stale/obsolete/superseded/temp/copy/backup/legacy/compat/mirror/shadow/duplicate/prototype/experimental/mock/hardcoded artifacts and suspicious TODO/FIXME/HACK/suppression patterns.
-
-Every material hit receives a proven disposition. Proven low-risk garbage is deleted immediately using the fast-delete path; do not retain it merely because final qualification has begun.
-
-```text
-MATERIAL_NOISE_HITS_UNDISPOSITIONED=0
-PROVEN_LOW_RISK_GARBAGE_REMAINING=0
-MATERIAL_DEAD_STALE_OBSOLETE_RESIDUE=0
-MATERIAL_FILESYSTEM_NOISE=0
-```
-
-## Compatibility fixed-point rule
-
-Require:
-
-```text
-UNBOUNDED_COMPATIBILITY=0
-BOUNDED_COMPAT_WITHOUT_EXPLICIT_OWNER=0
-BOUNDED_COMPAT_WITHOUT_EXACT_CONSUMERS=0
-BOUNDED_COMPAT_WITHOUT_REMOVAL_TRIGGER=0
-BOUNDED_COMPAT_WITH_SECOND_MUTABLE_WRITER=0
-```
+Search branch-wide for dead/stale/obsolete/superseded/temp/copy/backup/legacy/compat/mirror/shadow/duplicate/prototype/experimental/mock/hardcoded artifacts and suspicious TODO/FIXME/HACK/suppression patterns. Every material hit receives a proven disposition. Proven low-risk garbage is deleted at the highest safe canonical granularity, followed by recursive parent pruning.
 
 ## Best-practice material conformance
 
-Require:
-
-```text
-CLEAR_OWNERSHIP=PASS
-LOW_UNJUSTIFIED_COUPLING=PASS
-HIGH_COHESION=PASS
-PREDICTABLE_PATHS=PASS
-FRAMEWORK_NATIVE_STRUCTURE=PASS_OR_JUSTIFIED_EXCEPTION
-NO_CIRCULAR_OWNERSHIP=PASS
-EXPLICIT_CONTRACTS=PASS
-GENERATED_CODE_DERIVED_FROM_CANONICAL_SOURCE=PASS
-MINIMUM_NECESSARY_LAYERS=PASS
-CLEAR_RUNTIME_COMPOSITION=PASS
-TESTABILITY=PASS
-OBSERVABILITY=PASS_OR_JUSTIFIED_NA
-SECURITY=PASS
-DATA_INTEGRITY=PASS
-MAINTAINABILITY=PASS
-```
+Require clear ownership, low unjustified coupling, high cohesion, predictable paths, framework-native structure or justified exception, no circular ownership, explicit contracts, generated derivation from canonical source, minimum necessary layers/files, clear runtime composition, testability, observability where applicable, security, data integrity, and maintainability.
 
 ## Final trusted Exact-HEAD CI
 
-Dispatch and verify trusted full-scope GitHub Actions CI on the exact immutable final `g` SHA:
-
-```bash
-# Dispatch full-scope verification on g:
-gh workflow run ci-check.yml --ref g -f expected_head_sha=<EXACT_FINAL_SHA> -f full_scope=true
-
-# Await completion:
-gh run watch <RUN_ID> --exit-status
-```
-
-When remote security analysis (SonarQube Cloud / CodeQL / remote security) is applicable, dispatch and await those runs:
-
-```bash
-gh workflow run security-remote.yml --ref g -f head_sha=<EXACT_FINAL_SHA> -f base_sha=<BASE_SHA>
-```
-
-Require:
-
-```text
-FINAL_FULL_SCOPE_EXACT_HEAD_CI=PASS
-FINAL_CI_SHA_MATCH=PASS
-STALE_CI_EVIDENCE_USED=0
-FAILED_REQUIRED_CLAIMS=0
-UNKNOWN_REQUIRED_CLAIMS=0
-CI_EVIDENCE_PROVENANCE=PASS
-```
-
-`GREEN_CI != CLOSED`; CI is only one evidence plane.
+Run required full-scope exact-HEAD remote verification on the immutable final `g` SHA. `GREEN_CI != CLOSED`; CI is only one evidence plane.
 
 ## Exact fixed-point gate
 
@@ -244,6 +213,21 @@ PARALLEL_TRUTHS=0
 SHADOW_AUTHORITIES=0
 DUPLICATE_MUTABLE_WRITERS=0
 LOSING_AUTHORITIES_REMAINING=0
+LOSING_CONTAINERS_REMAINING=0
+UNRESOLVED_FILE_VERDICTS=0
+UNRESOLVED_CANONICAL_CONTAINER_MAP_ENTRIES=0
+UNRESOLVED_FRAGMENTATION_CLUSTERS=0
+RESPONSIBILITY_LESS_FILES=0
+REDUNDANT_FILES=0
+UNJUSTIFIED_FILE_FRAGMENTATION=0
+REEXPORT_ONLY_INTERNAL_FILES=0
+PASS_THROUGH_ONLY_FILES=0
+FORWARDER_ONLY_FILES=0
+SHIM_ONLY_FILES=0
+ALIAS_ONLY_FILES=0
+EMPTY_OR_RESPONSIBILITY_LESS_DIRECTORIES=0
+UNPRUNED_RESPONSIBILITY_LESS_PARENT_CONTAINERS=0
+OLD_PATH_IMPORT_EXPORT_ALIAS_ROUTE_REFS=0
 UNMAPPED_MATERIAL_CAPABILITIES=0
 UNRESOLVED_E2E_PARITY_GAPS=0
 FRONTEND_SHADOW_BUSINESS_TRUTH=0
@@ -262,16 +246,16 @@ KNOWN_MATERIAL_PATCH_SHAPED_ARCHITECTURE=0
 KNOWN_NONCANONICAL_MATERIAL_TOPOLOGY=0
 FINAL_CURRENT_CANONICAL_STRUCTURAL_DELTA=0_UNRESOLVED_MATERIAL_ITEMS
 END_TO_END_PRODUCT_DATA_CONTRACT_UI_PARITY=PASS
-CLEANUP_OBLIGATIONS=0
-MATERIAL_REGRESSIONS=0
 FRESH_BRANCH_WIDE_ADVERSARIAL_REAUDIT=PASS
 BEST_PRACTICE_MATERIAL_CONFORMANCE=PASS
 NEGATIVE_SPACE=PASS
+FINAL_FULL_SCOPE_EXACT_HEAD_CI=PASS
+FINAL_CI_SHA_MATCH=PASS
 ```
 
 ## Plan self-cleanup
 
-The plan itself has no permanent survival right. Before completion remove stale status/evidence/root registries, obsolete campaign files, copied governance, and any temporary planning residue not required after closure.
+The plan itself has no permanent survival right. Remove stale status/evidence/root registries, obsolete campaign files, copied governance, and temporary planning residue not required after closure.
 
 ## Final output
 
@@ -284,12 +268,14 @@ LEVEL_4_EVIDENCE_STATE=PASS
 ROOT_CORRECTNESS_STATE=PASS
 STRUCTURAL_RECONSTRUCTION_STATE=PASS
 CANONICAL_UNIQUENESS_STATE=PASS
+CANONICAL_CONTAINER_CONSOLIDATION_STATE=PASS
+ANTI_FRAGMENTATION_STATE=PASS
 CANONICAL_NAMING_PATH_TOPOLOGY_STATE=PASS
 END_TO_END_PRODUCT_DATA_CONTRACT_UI_PARITY_STATE=PASS
 BEST_PRACTICE_MATERIAL_CONFORMANCE_STATE=PASS
 TRUSTED_EXACT_HEAD_CI_STATE=PASS
-FINAL_FULL_SCOPE_CI_STATE=PASS
 ZERO_PARALLEL_TRUTH_STATE=PASS
+ZERO_LOSING_CONTAINER_STATE=PASS
 ZERO_RESIDUE_STATE=PASS
 G_NOISE_BUDGET=ZERO_KNOWN_MATERIAL_NOISE
 KNOWN_REMAINING_ROOTS=0
