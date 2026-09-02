@@ -13,7 +13,7 @@ permissions:
 jobs:
   repair:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout immutable trigger candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -28,7 +28,7 @@ jobs:
           set -euo pipefail
           remote_head="$(git ls-remote origin refs/heads/g | awk '{print $1}')"
           [[ "${remote_head}" == "${GITHUB_SHA}" ]] || {
-            echo "::error::g advanced before lockfile repair: trigger=${GITHUB_SHA} remote=${remote_head}"
+            echo "::error::g advanced before dependency repair: trigger=${GITHUB_SHA} remote=${remote_head}"
             exit 1
           }
 
@@ -42,40 +42,54 @@ jobs:
         with:
           node-version: 24.17.0
 
-      - name: Regenerate canonical lockfile only
+      - name: Replace legacy size-limit chain with current provenance-bearing release
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs')
+          const path = 'package.json'
+          const pkg = JSON.parse(fs.readFileSync(path, 'utf8'))
+          pkg.devDependencies['@size-limit/file'] = '13.0.3'
+          pkg.devDependencies['size-limit'] = '13.0.3'
+          fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n')
+          NODE
+
+      - name: Regenerate canonical pnpm 10.34.0 lockfile
         shell: bash
         run: |
           set -euo pipefail
           pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts --reporter=append-only
-          mapfile -t changed < <(git diff --name-only)
-          printf 'Changed by pnpm:\n%s\n' "${changed[*]:-<none>}"
-          [[ "${#changed[@]}" -eq 1 && "${changed[0]}" == "pnpm-lock.yaml" ]] || {
-            echo "::error::Lockfile regeneration changed unexpected tracked files"
+          mapfile -t changed < <(git diff --name-only | sort)
+          printf 'Changed by canonical regeneration:\n%s\n' "${changed[*]:-<none>}"
+          [[ "${#changed[@]}" -eq 2 && "${changed[0]}" == "package.json" && "${changed[1]}" == "pnpm-lock.yaml" ]] || {
+            echo "::error::Dependency repair changed unexpected tracked files"
             git status --short
             exit 1
           }
 
-      - name: Prove frozen workspace installation
+      - name: Prove frozen workspace installation and size-limit executable
         shell: bash
         run: |
           set -euo pipefail
           pnpm install --frozen-lockfile --ignore-scripts --reporter=append-only
+          pnpm exec size-limit --help >/dev/null
 
-      - name: Commit verified lockfile and remove one-shot executor
+      - name: Commit verified dependency repair and remove one-shot executor
         id: commit
         shell: bash
         run: |
           set -euo pipefail
           remote_head="$(git ls-remote origin refs/heads/g | awk '{print $1}')"
           [[ "${remote_head}" == "${GITHUB_SHA}" ]] || {
-            echo "::error::g advanced during lockfile verification: trigger=${GITHUB_SHA} remote=${remote_head}"
+            echo "::error::g advanced during dependency verification: trigger=${GITHUB_SHA} remote=${remote_head}"
             exit 1
           }
           git rm .github/workflows/lockfile-repair-once.yml
-          git add pnpm-lock.yaml
+          git add package.json pnpm-lock.yaml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m "fix(lockfile): regenerate canonical pnpm 10.34.0 snapshot"
+          git commit -m "fix(deps): upgrade size-limit chain and regenerate canonical lockfile"
           git push origin HEAD:g
           new_sha="$(git rev-parse HEAD)"
           echo "sha=${new_sha}" >> "${GITHUB_OUTPUT}"
