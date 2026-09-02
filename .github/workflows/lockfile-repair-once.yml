@@ -13,24 +13,14 @@ permissions:
 jobs:
   repair:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
-      - name: Checkout immutable trigger candidate
+      - name: Checkout latest live g
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.sha }}
-          fetch-depth: 1
+          ref: g
+          fetch-depth: 0
           persist-credentials: true
-
-      - name: Verify branch has not advanced
-        shell: bash
-        run: |
-          set -euo pipefail
-          remote_head="$(git ls-remote origin refs/heads/g | awk '{print $1}')"
-          [[ "${remote_head}" == "${GITHUB_SHA}" ]] || {
-            echo "::error::g advanced before dependency repair: trigger=${GITHUB_SHA} remote=${remote_head}"
-            exit 1
-          }
 
       - name: Setup repository-pinned PNPM
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
@@ -56,7 +46,7 @@ jobs:
           const attest = attestRaw ? JSON.parse(attestRaw) : null
           if (fbjsRange !== '^1.0.35') throw new Error(`unexpected fbjs parser range: ${fbjsRange}`)
           if (license !== 'MIT') throw new Error(`unexpected ua-parser-js@1.0.41 license: ${license}`)
-          if (attest && typeof attest === 'object' && Object.keys(attest).length) throw new Error('ua-parser-js@1.0.41 unexpectedly gained attestations; remove the trust exception instead')
+          if (attest && typeof attest === 'object' && Object.keys(attest).length) throw new Error('ua-parser-js@1.0.41 gained attestations; remove trustPolicyExclude instead')
 
           const packagePath = 'package.json'
           const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
@@ -98,29 +88,47 @@ jobs:
           pnpm exec size-limit --help >/dev/null
           pnpm --dir apps/control-panel/runtime exec node -e "const UAParser=require('ua-parser-js'); if (typeof UAParser !== 'function') process.exit(1)"
 
-      - name: Commit verified dependency repair and remove one-shot executor
+      - name: Commit, rebase over unrelated live advances, reverify, and push
         id: commit
         shell: bash
         run: |
           set -euo pipefail
-          remote_head="$(git ls-remote origin refs/heads/g | awk '{print $1}')"
-          [[ "${remote_head}" == "${GITHUB_SHA}" ]] || {
-            echo "::error::g advanced during dependency verification: trigger=${GITHUB_SHA} remote=${remote_head}"
-            exit 1
-          }
           git rm .github/workflows/lockfile-repair-once.yml
           git add package.json pnpm-lock.yaml pnpm-workspace.yaml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git commit -m "fix(deps): restore strict trusted lockfile resolution"
-          git push origin HEAD:g
+
+          for attempt in 1 2 3 4; do
+            git fetch origin g
+            remote_head="$(git rev-parse origin/g)"
+            parent="$(git rev-parse HEAD^)"
+            if [[ "${remote_head}" != "${parent}" ]]; then
+              echo "Rebasing verified dependency repair over live g=${remote_head} (attempt ${attempt})"
+              git rebase origin/g
+              pnpm install --frozen-lockfile --ignore-scripts --reporter=append-only
+              pnpm exec size-limit --help >/dev/null
+              pnpm --dir apps/control-panel/runtime exec node -e "const UAParser=require('ua-parser-js'); if (typeof UAParser !== 'function') process.exit(1)"
+            fi
+            if git push origin HEAD:g; then
+              break
+            fi
+            if [[ "${attempt}" -eq 4 ]]; then
+              echo "::error::g kept advancing and verified repair could not be pushed safely"
+              exit 1
+            fi
+          done
+
           new_sha="$(git rev-parse HEAD)"
+          base_sha="$(git rev-parse HEAD^)"
           echo "sha=${new_sha}" >> "${GITHUB_OUTPUT}"
+          echo "base_sha=${base_sha}" >> "${GITHUB_OUTPUT}"
 
       - name: Dispatch full-scope CI from trusted g control plane
         env:
           GH_TOKEN: ${{ github.token }}
           CANDIDATE_SHA: ${{ steps.commit.outputs.sha }}
+          BASE_SHA: ${{ steps.commit.outputs.base_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -128,6 +136,6 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --ref g \
             -f expected_head_sha="${CANDIDATE_SHA}" \
-            -f verify_from_sha="${GITHUB_SHA}" \
+            -f verify_from_sha="${BASE_SHA}" \
             -f full_scope=true
           echo "Dispatched BThwani CI for ${CANDIDATE_SHA} from g"
