@@ -74,7 +74,7 @@ func (r *Repository) ProvisionActorGoverned(ctx context.Context, input Provision
 	if err != nil {
 		return ActorAdminView{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	lockKeys := []string{"identity:phone:" + phone, "identity:username:" + username}
 	if requestedActorID != "" {
@@ -254,7 +254,7 @@ func (r *Repository) SearchActorsGoverned(ctx context.Context, input ActorSearch
 	if err != nil {
 		return ActorSearchPage{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	page := ActorSearchPage{Items: []ActorAdminView{}, Limit: limit}
 	for rows.Next() {
 		var view ActorAdminView
