@@ -26,9 +26,12 @@ x-bthwani-contracts:
   captainCollateral: ./wlt.captain-collateral.openapi.yaml
   commercial: ./wlt.commercial.openapi.yaml
   commercialSummary: ./wlt.commercial-summary.openapi.yaml
+  dispatchFinancialEligibility: ./wlt.dispatch-financial-eligibility.openapi.yaml
   promotionFunding: ./wlt.promotion-funding.openapi.yaml
   workforceFinance: ./wlt.workforce-finance.openapi.yaml
   pricingQuotes: ./wlt.pricing-quotes.openapi.yaml
+  specialRequestQuotes: ./wlt.special-request-quotes.openapi.yaml
+  storeOnboardingFee: ./wlt.store-onboarding-fee.openapi.yaml
 servers:
   - url: http://localhost:18083
 paths:
