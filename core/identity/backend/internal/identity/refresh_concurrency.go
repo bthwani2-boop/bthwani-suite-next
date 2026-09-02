@@ -66,7 +66,7 @@ func (r *Repository) refreshGoverned(ctx context.Context, refreshToken, deviceFi
 	if err != nil {
 		return TokenPair{}, err
 	}
-	defer lockTx.Rollback()
+	defer func() { _ = lockTx.Rollback() }()
 
 	if _, err := lockTx.ExecContext(
 		ctx,
