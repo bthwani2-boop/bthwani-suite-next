@@ -83,7 +83,7 @@ func (r *Repository) beginIdentityBoundaryCase(ctx context.Context, in identityB
 	if err != nil {
 		return identityBoundaryCase{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var existing identityBoundaryCase
 	err = tx.QueryRowContext(ctx, `
@@ -166,19 +166,6 @@ func completeIdentityBoundaryTx(ctx context.Context, tx *sql.Tx, commandID strin
 		return errIdentityBoundaryLeaseLost
 	}
 	return nil
-}
-
-func (r *Repository) failIdentityBoundary(ctx context.Context, commandID, code string, cause error) error {
-	message := ""
-	if cause != nil {
-		message = cause.Error()
-	}
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE workforce_provisioning_cases
-		SET lifecycle_state='RETRY_SCHEDULED', status='RETRY_SCHEDULED', last_error_code=$2,
-			last_error=$3, next_retry_at=now()+interval '15 seconds', updated_at=now()
-		WHERE id=$1::uuid AND lifecycle_state IN ('INTENT_RECORDED','REMOTE_APPLIED','RETRY_SCHEDULED')`, commandID, code, message)
-	return err
 }
 
 func identityBoundaryContext(ctx context.Context, command identityBoundaryCase) context.Context {
