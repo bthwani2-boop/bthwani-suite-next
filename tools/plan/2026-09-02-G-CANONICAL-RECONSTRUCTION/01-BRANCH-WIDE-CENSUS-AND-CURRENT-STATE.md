@@ -2,121 +2,77 @@
 
 ## Purpose
 
-Build an evidence-backed model of what branch `g` actually contains **before any reconstruction mutation begins**.
+Maintain an evidence-backed view of what branch `g` contains and continuously discover structural roots.
 
-This is not bug triage. It is branch-wide structural discovery.
+The census is **not** a global pre-mutation blocker. A root that independently passes the `ROOT-CORRECT EXECUTION GATE` in `00-START-HERE.md` may be executed before the branch-wide census is complete.
 
-## Step 0 — exact live pin
+## Exact live pin
 
-Before census:
+Before relying on census evidence:
 
-`FETCH g → RESOLVE EXACT REMOTE G SHA → LOAD ORCHESTRATOR 00–05 + MATERIAL FOCUS MODULES → LOAD THIS PLAN → RECORD PINNED SHA`.
+`FETCH g → RESOLVE EXACT REMOTE G SHA → LOAD LIVE AUTHORITIES → RECORD PINNED SHA`.
 
-No product/code mutation during this stage.
+Evidence invalidated by a changed ref must be rechecked.
 
-## Step 1 — traverse the actual tracked tree
+## Branch-wide discovery
 
-Do not use a hardcoded expected-directory list as the census boundary. Traverse the actual tracked tree of the pinned SHA, including every material top-level entry and every material subtree.
+Traverse the actual tracked tree rather than a hardcoded expected-directory list. Cover material source/runtime code, apps/surfaces, domains/services, shared/core/packages, database/schema/migrations, contracts/generated bindings, runtime/config/env, infra, scripts/tooling, workflows/CI, tests/fixtures/mocks, dependencies/plugins, material assets, and live authoritative documents.
 
-Cover as applicable:
-
-- source/runtime code;
-- apps/surfaces;
-- domains/services;
-- shared/core/packages/modules;
-- database/schema/migrations/seeds/bootstrap;
-- contracts/generated bindings;
-- runtime/config/env/manifests;
-- infra/container/topology;
-- scripts/CLI/tooling/hooks;
-- workflows/actions/CI control paths;
-- tests/fixtures/mocks/snapshots;
-- dependencies/devDependencies/plugins;
-- assets where runtime/security/build material;
-- documents/plans only when they act as live authority or execution machinery.
-
-Generated/vendor/binary/asset families are not silently skipped: disposition them as scan-required or justified exclusion based on materiality.
-
-## Per-artifact/tree census questions
-
-Establish where applicable:
+For each material artifact/tree establish where applicable:
 
 ```text
 WHAT_EXISTS?
 WHY_DOES_IT_EXIST?
 CURRENT_RESPONSIBILITY?
-CURRENT_OWNER?
-CURRENT_WRITER?
-READERS?
-CONSUMERS?
-DEPENDENCIES?
-DEPENDENCY_DIRECTION?
-CYCLES?
+CURRENT_OWNER_AND_WRITER?
+READERS_AND_CONSUMERS?
+DEPENDENCIES_AND_DIRECTION?
 RUNTIME_REACHABILITY?
-DATA_SCHEMA_AUTHORITY?
-CONTRACT_GENERATED_AUTHORITY?
-SCRIPT_WORKFLOW_TOOLING_OWNER?
-NAME_TRUTHFUL?
-PATH_CANONICAL?
+DATA_CONTRACT_CONFIG_AUTHORITY?
+NAME_AND_PATH_TRUTHFUL?
 BOUNDARY_CORRECT?
-DUPLICATED_ELSEWHERE?
-PARALLEL_OR_SHADOW_AUTHORITY?
-DEAD_STALE_OBSOLETE_UNREACHABLE?
+DUPLICATED_OR_SHADOWED?
+DEAD_STALE_OBSOLETE?
 STILL_REQUIRED?
 ```
 
-Use `graphify`, repository search, call/dependency graphs, runtime/config inspection, contract/schema inspection, and other read-only evidence to establish relationships. Tool output is evidence only; it does not select execution order.
+Use graph/search/runtime/schema/contract/config evidence. Tool output is evidence only.
 
-## No clean-as-you-go
+## Two census modes
 
-During this entire file's work:
+### 1. Continuous branch-wide discovery
 
-```text
-MATERIAL_MUTATION=NO
-DELETE_AS_DISCOVERED=NO
-RENAME_AS_DISCOVERED=NO
-REFACTOR_AS_DISCOVERED=NO
-PATCH_AS_DISCOVERED=NO
-```
+Runs throughout the campaign to discover additional or higher roots. It may remain incomplete while an independently proven root is executed.
 
-Reason: changing the branch while its structural model is incomplete can hide higher roots, corrupt comparison, and produce partial migrations.
+Do not mutate an artifact merely because census discovered it; first pass the root-correct gate.
 
-## Step 2 — build `CURRENT g`
+### 2. Root-scoped affected-cone census
 
-Build one coherent current-state architecture model covering:
+Before mutating a selected root, census its complete affected cone deeply enough to prove:
 
 ```text
-OWNERSHIP_AND_RESPONSIBILITY_BOUNDARIES
-WRITERS_READERS_CONSUMERS
-PACKAGE_DIRECTORY_TOPOLOGY
-DEPENDENCY_DIRECTION_AND_CYCLES
-DATA_SCHEMA_OWNERSHIP
-CONTRACT_GENERATED_LINEAGE
-RUNTIME_CONFIG_ENV_COMPOSITION
-SCRIPT_WORKFLOW_TOOLING_OWNERSHIP
-CROSS_BOUNDARY_COUPLING
-NAMES_PATHS_BOUNDARIES
-PARALLEL_SHADOW_DUPLICATE_AUTHORITIES
-DEAD_STALE_OBSOLETE_UNREACHABLE_STRUCTURE
+SOURCE_OF_DEFECT
+SOURCE_OF_FIX
+CANONICAL_OWNER_WRITER
+ALL_MATERIAL_WRITERS_READERS_CONSUMERS
+DATA_SCHEMA_IMPACT
+CONTRACT_GENERATED_IMPACT
+RUNTIME_CONFIG_TOOLING_IMPACT
+TEST_FIXTURE_MOCK_DEPENDENCY_IMPACT
+MIGRATION_CUTOVER_REQUIREMENTS
+LOSING_AUTHORITIES_AND_RESIDUE
 ```
 
-The model is campaign evidence, not a new durable project authority.
+This root-scoped census **is mandatory** for execution safety.
 
-## Completion gate
+## `CURRENT g` model
 
-Do not continue to `02` until:
+Maintain `CURRENT g` incrementally as campaign evidence. Update affected portions after each closure and broaden it whenever discovery exposes a higher structural relationship.
 
-```text
-EXACT_G_PIN=PASS
-ALL_MATERIAL_TOP_LEVEL_ENTRIES_VISITED=YES
-ALL_MATERIAL_SUBTREES_CAPABLE_OF_CHANGING_ROOT_RANKING_VISITED=YES
-WORKSPACE_PACKAGE_MODULE_ROOTS_DISCOVERED=YES
-MATERIAL_WRITER_READER_CONSUMER_RELATIONSHIPS_MAPPED=YES
-MATERIAL_RUNTIME_REACHABILITY_MAPPED=YES
-MATERIAL_DATA_CONTRACT_CONFIG_TOOLING_OWNERSHIP_MAPPED=YES
-MATERIAL_NAMING_PATH_BOUNDARY_REVIEW=COMPLETE_ENOUGH
-TOOL_BLIND_SPOTS_RECORDED=YES
-CURRENT_G_MODEL=ESTABLISHED
-```
+A complete branch-wide `CURRENT g` model is required for final adversarial qualification in `06`, not before every root execution.
 
-If an unresolved current-state unknown could change the winning owner, target boundary, migration direction, or highest root, this stage is not complete.
+## Preemption rule
+
+If unresolved evidence could change the canonical owner, migration direction, affected cone, or reveal a higher causal root for the root about to be changed, that root is **not executable yet**.
+
+If an unrelated part of the repository remains uncensused and cannot change those facts, it does not block the proven root.
