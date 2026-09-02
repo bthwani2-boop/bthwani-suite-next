@@ -7,10 +7,10 @@ import (
 
 func TestWltPaymentEventIdentityUsesStableDerivedKey(t *testing.T) {
 	input := WltPaymentEventEnvelope{
-		OperatorContextID:         " OperatorContext-a ",
-		CheckoutIntentID: "11111111-1111-1111-1111-111111111111",
-		PaymentSessionID: " session-a ",
-		Status:           " captured ",
+		OperatorContextID: " OperatorContext-a ",
+		CheckoutIntentID:  "11111111-1111-1111-1111-111111111111",
+		PaymentSessionID:  " session-a ",
+		Status:            " captured ",
 	}
 	firstKey, firstHash, err := WltPaymentEventIdentity(input)
 	if err != nil {
@@ -30,11 +30,11 @@ func TestWltPaymentEventIdentityUsesStableDerivedKey(t *testing.T) {
 
 func TestWltPaymentEventIdentityHonorsAuthorityEventID(t *testing.T) {
 	key, _, err := WltPaymentEventIdentity(WltPaymentEventEnvelope{
-		EventID:          "evt-authority-0001",
-		OperatorContextID:         "OperatorContext-a",
-		CheckoutIntentID: "11111111-1111-1111-1111-111111111111",
-		PaymentSessionID: "session-a",
-		Status:           "authorized",
+		EventID:           "evt-authority-0001",
+		OperatorContextID: "OperatorContext-a",
+		CheckoutIntentID:  "11111111-1111-1111-1111-111111111111",
+		PaymentSessionID:  "session-a",
+		Status:            "authorized",
 	})
 	if err != nil {
 		t.Fatalf("identity failed: %v", err)
@@ -46,10 +46,10 @@ func TestWltPaymentEventIdentityHonorsAuthorityEventID(t *testing.T) {
 
 func TestWltPaymentEventIdentityRejectsUnsupportedStatus(t *testing.T) {
 	_, _, err := WltPaymentEventIdentity(WltPaymentEventEnvelope{
-		OperatorContextID:         "OperatorContext-a",
-		CheckoutIntentID: "11111111-1111-1111-1111-111111111111",
-		PaymentSessionID: "session-a",
-		Status:           "invented",
+		OperatorContextID: "OperatorContext-a",
+		CheckoutIntentID:  "11111111-1111-1111-1111-111111111111",
+		PaymentSessionID:  "session-a",
+		Status:            "invented",
 	})
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)
@@ -58,11 +58,11 @@ func TestWltPaymentEventIdentityRejectsUnsupportedStatus(t *testing.T) {
 
 func TestWltPaymentEventIdentityRejectsShortAuthorityEventID(t *testing.T) {
 	_, _, err := WltPaymentEventIdentity(WltPaymentEventEnvelope{
-		EventID:          "tiny",
-		OperatorContextID:         "OperatorContext-a",
-		CheckoutIntentID: "11111111-1111-1111-1111-111111111111",
-		PaymentSessionID: "session-a",
-		Status:           "captured",
+		EventID:           "tiny",
+		OperatorContextID: "OperatorContext-a",
+		CheckoutIntentID:  "11111111-1111-1111-1111-111111111111",
+		PaymentSessionID:  "session-a",
+		Status:            "captured",
 	})
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid, got %v", err)

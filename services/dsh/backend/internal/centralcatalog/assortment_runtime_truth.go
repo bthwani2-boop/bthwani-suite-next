@@ -28,26 +28,6 @@ type assortmentRuntimeTruth struct {
 	assortmentInventoryTruth
 }
 
-func readAssortmentInventoryTruth(ctx context.Context, q assortmentRuntimeTruthQuerier, assortmentID string) (assortmentInventoryTruth, error) {
-	var out assortmentInventoryTruth
-	err := q.QueryRowContext(ctx, `
-		SELECT policy_type, quantity, reserved_quantity,
-		       min_order_quantity, max_order_quantity, step_quantity
-		FROM dsh_store_assortment_inventory
-		WHERE store_assortment_id = $1`, assortmentID).Scan(
-		&out.PolicyType,
-		&out.Quantity,
-		&out.ReservedQuantity,
-		&out.MinOrderQuantity,
-		&out.MaxOrderQuantity,
-		&out.StepQuantity,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return assortmentInventoryTruth{}, ErrNotFound
-	}
-	return out, err
-}
-
 func readAssortmentRuntimeTruth(ctx context.Context, q assortmentRuntimeTruthQuerier, assortmentID string) (assortmentRuntimeTruth, error) {
 	var out assortmentRuntimeTruth
 	err := q.QueryRowContext(ctx, `

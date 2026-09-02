@@ -170,7 +170,7 @@ func ClearOwnerPayoutDestinationProjection(
 	       )
 	FROM dsh_partners
 	WHERE operator_context_id = $1 AND owner_actor_id = $2`,
-	operatorContextID, ownerActorID, payoutDestinationVerificationStatusWhenAbsent,
+		operatorContextID, ownerActorID, payoutDestinationVerificationStatusWhenAbsent,
 	).Scan(&total, &clear); err != nil {
 		return err
 	}

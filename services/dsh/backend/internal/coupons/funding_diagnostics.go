@@ -14,7 +14,7 @@ type FundingLifecycleDiagnostic struct {
 	RedemptionID             string `json:"redemptionId"`
 	CouponID                 string `json:"couponId"`
 	CheckoutIntentID         string `json:"checkoutIntentId"`
-	OperatorContextID                 string `json:"operatorContextId"`
+	OperatorContextID        string `json:"operatorContextId"`
 	PartnerID                string `json:"partnerId,omitempty"`
 	PlatformFundedMinorUnits int64  `json:"platformFundedMinorUnits"`
 	PartnerFundedMinorUnits  int64  `json:"partnerFundedMinorUnits"`

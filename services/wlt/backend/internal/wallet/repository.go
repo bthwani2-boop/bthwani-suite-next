@@ -1,12 +1,12 @@
 package wallet
 
 import (
-        "context"
-        "database/sql"
-        "fmt"
-        "strings"
+	"context"
+	"database/sql"
+	"fmt"
+	"strings"
 
-        "wlt-api/internal/shared"
+	"wlt-api/internal/shared"
 )
 
 const walletCols = `id, actor_id, actor_type, status, currency,
@@ -53,87 +53,87 @@ const walletCols = `id, actor_id, actor_type, status, currency,
 
 // walletScanner is satisfied by both *sql.Row and *sql.Rows.
 type walletScanner interface {
-        Scan(dest ...any) error
+	Scan(dest ...any) error
 }
 
 func scanWallet(s walletScanner) (*Wallet, error) {
-        var w Wallet
-        var lastLedgerEntryAt sql.NullString
-        err := s.Scan(
-                &w.ID, &w.ActorID, &w.ActorType, &w.Status, &w.Currency,
-                &w.AvailableBalanceMinorUnits, &w.PendingBalanceMinorUnits, &w.HeldBalanceMinorUnits,
-                &w.WalletReservedBalanceMinorUnits, &w.CollateralReservedBalanceMinorUnits,
-                &w.EarnedTotalMinorUnits, &w.SettledTotalMinorUnits, &w.PaidTotalMinorUnits,
-                &lastLedgerEntryAt, &w.UpdatedAt,
-                &w.ProtectedMinimumCollateralMinorUnits, &w.OutstandingDebtMinorUnits,
-                &w.ActiveCollateralPositionCount, &w.ReleasableCollateralExcessMinorUnits,
-        )
-        if err != nil {
-                return nil, err
-        }
-        if lastLedgerEntryAt.Valid {
-                w.LastLedgerEntryAt = &lastLedgerEntryAt.String
-        }
-        return &w, nil
+	var w Wallet
+	var lastLedgerEntryAt sql.NullString
+	err := s.Scan(
+		&w.ID, &w.ActorID, &w.ActorType, &w.Status, &w.Currency,
+		&w.AvailableBalanceMinorUnits, &w.PendingBalanceMinorUnits, &w.HeldBalanceMinorUnits,
+		&w.WalletReservedBalanceMinorUnits, &w.CollateralReservedBalanceMinorUnits,
+		&w.EarnedTotalMinorUnits, &w.SettledTotalMinorUnits, &w.PaidTotalMinorUnits,
+		&lastLedgerEntryAt, &w.UpdatedAt,
+		&w.ProtectedMinimumCollateralMinorUnits, &w.OutstandingDebtMinorUnits,
+		&w.ActiveCollateralPositionCount, &w.ReleasableCollateralExcessMinorUnits,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if lastLedgerEntryAt.Valid {
+		w.LastLedgerEntryAt = &lastLedgerEntryAt.String
+	}
+	return &w, nil
 }
 
 func GetWalletForOperatorContext(db *sql.DB, operatorContextID, actorType, actorID string) (*Wallet, error) {
-        operatorContextID = strings.TrimSpace(operatorContextID)
-        if operatorContextID == "" {
-                return nil, fmt.Errorf("operatorContextId is required")
-        }
-        const q = `
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("operatorContextId is required")
+	}
+	const q = `
                 SELECT ` + walletCols + `
                 FROM wlt_wallets
                 WHERE operator_context_id = $1 AND actor_type = $2 AND actor_id = $3
                 LIMIT 1`
 
-        row := db.QueryRow(q, operatorContextID, actorType, actorID)
-        w, err := scanWallet(row)
-        if err == sql.ErrNoRows {
-                return nil, nil
-        }
-        if err != nil {
-                return nil, fmt.Errorf("get OperatorContext wallet: %w", err)
-        }
-        return w, nil
+	row := db.QueryRow(q, operatorContextID, actorType, actorID)
+	w, err := scanWallet(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get OperatorContext wallet: %w", err)
+	}
+	return w, nil
 }
 
 // EnsureWalletForOperatorContextTx creates or locks exactly one wallet inside the
 // authenticated OperatorContext. Currency is authoritative on creation and must remain
 // stable for subsequent calls.
 func EnsureWalletForOperatorContextTx(ctx context.Context, tx *sql.Tx, actorType, actorID, currency string) (*Wallet, error) {
-        operatorContextID, err := shared.RequireOperatorContext(ctx)
-        if err != nil {
-                return nil, err
-        }
-        actorType = strings.TrimSpace(actorType)
-        actorID = strings.TrimSpace(actorID)
-        currency = strings.ToUpper(strings.TrimSpace(currency))
-        if actorType == "" || actorID == "" || len(currency) != 3 {
-                return nil, fmt.Errorf("actorType, actorId and a three-letter currency are required")
-        }
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	actorType = strings.TrimSpace(actorType)
+	actorID = strings.TrimSpace(actorID)
+	currency = strings.ToUpper(strings.TrimSpace(currency))
+	if actorType == "" || actorID == "" || len(currency) != 3 {
+		return nil, fmt.Errorf("actorType, actorId and a three-letter currency are required")
+	}
 
-        const insertQ = `
+	const insertQ = `
                 INSERT INTO wlt_wallets (operator_context_id, actor_id, actor_type, status, currency)
                 VALUES ($1, $3, $2, 'active', $4)
                 ON CONFLICT (operator_context_id, actor_type, actor_id) DO NOTHING`
-        if _, err := tx.ExecContext(ctx, insertQ, operatorContextID, actorType, actorID, currency); err != nil {
-                return nil, fmt.Errorf("ensure OperatorContext wallet: insert: %w", err)
-        }
+	if _, err := tx.ExecContext(ctx, insertQ, operatorContextID, actorType, actorID, currency); err != nil {
+		return nil, fmt.Errorf("ensure OperatorContext wallet: insert: %w", err)
+	}
 
-        const selectQ = `
+	const selectQ = `
                 SELECT ` + walletCols + `
                 FROM wlt_wallets
                 WHERE operator_context_id = $1 AND actor_type = $2 AND actor_id = $3
                 FOR UPDATE`
-        row := tx.QueryRowContext(ctx, selectQ, operatorContextID, actorType, actorID)
-        w, err := scanWallet(row)
-        if err != nil {
-                return nil, fmt.Errorf("ensure OperatorContext wallet: select: %w", err)
-        }
-        if w.Currency != currency {
-                return nil, fmt.Errorf("wallet currency %s does not match requested currency %s", w.Currency, currency)
-        }
-        return w, nil
+	row := tx.QueryRowContext(ctx, selectQ, operatorContextID, actorType, actorID)
+	w, err := scanWallet(row)
+	if err != nil {
+		return nil, fmt.Errorf("ensure OperatorContext wallet: select: %w", err)
+	}
+	if w.Currency != currency {
+		return nil, fmt.Errorf("wallet currency %s does not match requested currency %s", w.Currency, currency)
+	}
+	return w, nil
 }

@@ -16,34 +16,34 @@ func TestCompletedTransitionMatches(t *testing.T) {
 		want    bool
 	}{
 		{
-			name: "commit retry matches original order",
+			name:    "commit retry matches original order",
 			current: Reservation{Status: "committed", OrderID: &orderID, CommitLedgerTransactionID: &commitLedgerTransactionID},
-			target: "committed", input: TransitionInput{OrderID: "order-1"}, want: true,
+			target:  "committed", input: TransitionInput{OrderID: "order-1"}, want: true,
 		},
 		{
-			name: "commit retry rejects different order",
+			name:    "commit retry rejects different order",
 			current: Reservation{Status: "committed", OrderID: &orderID, CommitLedgerTransactionID: &commitLedgerTransactionID},
-			target: "committed", input: TransitionInput{OrderID: "order-2"}, want: false,
+			target:  "committed", input: TransitionInput{OrderID: "order-2"}, want: false,
 		},
 		{
-			name: "release retry matches original reason",
+			name:    "release retry matches original reason",
 			current: Reservation{Status: "released", ReleaseReason: "checkout_expired"},
-			target: "released", input: TransitionInput{Reason: "checkout_expired"}, want: true,
+			target:  "released", input: TransitionInput{Reason: "checkout_expired"}, want: true,
 		},
 		{
-			name: "release retry rejects changed reason",
+			name:    "release retry rejects changed reason",
 			current: Reservation{Status: "released", ReleaseReason: "checkout_expired"},
-			target: "released", input: TransitionInput{Reason: "operator_cancelled"}, want: false,
+			target:  "released", input: TransitionInput{Reason: "operator_cancelled"}, want: false,
 		},
 		{
-			name: "reverse retry matches order and reason",
+			name:    "reverse retry matches order and reason",
 			current: Reservation{Status: "reversed", OrderID: &orderID, ReversalReason: "refund_completed", CommitLedgerTransactionID: &commitLedgerTransactionID, ReversalLedgerTransactionID: &reversalLedgerTransactionID},
-			target: "reversed", input: TransitionInput{OrderID: "order-1", Reason: "refund_completed"}, want: true,
+			target:  "reversed", input: TransitionInput{OrderID: "order-1", Reason: "refund_completed"}, want: true,
 		},
 		{
-			name: "reverse retry rejects changed reason",
+			name:    "reverse retry rejects changed reason",
 			current: Reservation{Status: "reversed", OrderID: &orderID, ReversalReason: "refund_completed", CommitLedgerTransactionID: &commitLedgerTransactionID, ReversalLedgerTransactionID: &reversalLedgerTransactionID},
-			target: "reversed", input: TransitionInput{OrderID: "order-1", Reason: "manual_override"}, want: false,
+			target:  "reversed", input: TransitionInput{OrderID: "order-1", Reason: "manual_override"}, want: false,
 		},
 	}
 

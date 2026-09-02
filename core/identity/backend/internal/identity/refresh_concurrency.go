@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	ErrRefreshAlreadyRotated    = errors.New("refresh token was already rotated concurrently")
+	ErrRefreshAlreadyRotated     = errors.New("refresh token was already rotated concurrently")
 	ErrDeviceFingerprintRequired = errors.New("device fingerprint is required for this session")
 	ErrDeviceFingerprintMismatch = errors.New("device fingerprint does not match the session")
 )

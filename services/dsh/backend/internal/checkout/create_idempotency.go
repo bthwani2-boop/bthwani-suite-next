@@ -10,7 +10,7 @@ import (
 var ErrIdempotencyConflict = errors.New("checkout idempotency key was reused for a different request")
 
 type CreateIdempotencyRecord struct {
-	IntentID          string
+	IntentID           string
 	RequestFingerprint string
 }
 

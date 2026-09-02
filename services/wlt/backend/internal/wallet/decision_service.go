@@ -10,9 +10,9 @@ import (
 const FinanceMutationKillSwitchEnv = "WLT_FINANCE_MUTATION_KILL_SWITCH"
 
 var (
-	ErrDecisionConfigMissing = errors.New("financial kill-switch configuration is required")
-	ErrDecisionConfigInvalid = errors.New("financial kill-switch configuration must be true or false")
-	ErrUnsupportedCapability = errors.New("unsupported financial kill-switch capability")
+	ErrDecisionConfigMissing    = errors.New("financial kill-switch configuration is required")
+	ErrDecisionConfigInvalid    = errors.New("financial kill-switch configuration must be true or false")
+	ErrUnsupportedCapability    = errors.New("unsupported financial kill-switch capability")
 	ErrUnsupportedDecisionActor = errors.New("unsupported financial kill-switch actor")
 )
 

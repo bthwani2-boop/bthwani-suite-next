@@ -22,17 +22,17 @@ type Client struct {
 }
 
 type Event struct {
-	EventID          string
-	CorrelationID    string
-	OperatorContextID         string
-	CheckoutIntentID *string
-	SpecialRequestID *string
-	PaymentSessionID string
-	PaymentMethod    string
-	Status           string
-	OrderID          string
-	RefundReference  string
-	Reason           string
+	EventID           string
+	CorrelationID     string
+	OperatorContextID string
+	CheckoutIntentID  *string
+	SpecialRequestID  *string
+	PaymentSessionID  string
+	PaymentMethod     string
+	Status            string
+	OrderID           string
+	RefundReference   string
+	Reason            string
 }
 
 func NewClient(baseURL, serviceToken string) *Client {
@@ -91,10 +91,14 @@ func (c *Client) NotifyEvent(ctx context.Context, event Event) error {
 	switch {
 	case event.CheckoutIntentID != nil && *event.CheckoutIntentID != "":
 		payload["checkoutIntentId"] = *event.CheckoutIntentID
-		if correlationID == "" { correlationID = *event.CheckoutIntentID }
+		if correlationID == "" {
+			correlationID = *event.CheckoutIntentID
+		}
 	case event.SpecialRequestID != nil && *event.SpecialRequestID != "":
 		payload["specialRequestId"] = *event.SpecialRequestID
-		if correlationID == "" { correlationID = *event.SpecialRequestID }
+		if correlationID == "" {
+			correlationID = *event.SpecialRequestID
+		}
 	}
 	if correlationID != "" {
 		payload["correlationId"] = correlationID

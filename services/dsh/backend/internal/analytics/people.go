@@ -3,13 +3,13 @@ package analytics
 import "database/sql"
 
 type CaptainPerformanceRow struct {
-	CaptainID             string  `json:"captainId"`
-	Assignments           int     `json:"assignments"`
-	Accepted              int     `json:"accepted"`
-	Declined              int     `json:"declined"`
-	Completed             int     `json:"completed"`
-	AcceptanceRate        float64 `json:"acceptanceRate"`
-	CompletionRate        float64 `json:"completionRate"`
+	CaptainID              string  `json:"captainId"`
+	Assignments            int     `json:"assignments"`
+	Accepted               int     `json:"accepted"`
+	Declined               int     `json:"declined"`
+	Completed              int     `json:"completed"`
+	AcceptanceRate         float64 `json:"acceptanceRate"`
+	CompletionRate         float64 `json:"completionRate"`
 	AverageResponseSeconds float64 `json:"averageResponseSeconds"`
 }
 
@@ -71,11 +71,11 @@ func GetCaptainPerformance(db *sql.DB, window Window, limit int) (CaptainPerform
 }
 
 type FieldPerformanceRow struct {
-	FieldAgentID       string  `json:"fieldAgentId"`
-	Visits             int     `json:"visits"`
-	Completed          int     `json:"completed"`
-	Escalated          int     `json:"escalated"`
-	CompletionRate     float64 `json:"completionRate"`
+	FieldAgentID        string  `json:"fieldAgentId"`
+	Visits              int     `json:"visits"`
+	Completed           int     `json:"completed"`
+	Escalated           int     `json:"escalated"`
+	CompletionRate      float64 `json:"completionRate"`
 	AverageVisitMinutes float64 `json:"averageVisitMinutes"`
 }
 

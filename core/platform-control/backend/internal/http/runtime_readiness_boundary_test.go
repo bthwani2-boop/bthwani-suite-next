@@ -36,12 +36,12 @@ func healthyPlatformControlRuntimeStore() platformControlRuntimeTestStore {
 		migrationID: platformControlLatestMigration,
 		success:     true,
 		relations: map[string]bool{
-			"platform_variables":         true,
-			"platform_feature_flags":     true,
-			"platform_change_sets":       true,
-			"platform_change_set_items":  true,
-			"platform_audit_events":      true,
-			"platform_rollouts":          true,
+			"platform_variables":        true,
+			"platform_feature_flags":    true,
+			"platform_change_sets":      true,
+			"platform_change_set_items": true,
+			"platform_audit_events":     true,
+			"platform_rollouts":         true,
 		},
 		databaseTime: time.Now(),
 	}

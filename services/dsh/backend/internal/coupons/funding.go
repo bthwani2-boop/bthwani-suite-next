@@ -15,7 +15,7 @@ type FundingProjection struct {
 	CouponID                 string
 	CheckoutIntentID         string
 	ClientActorID            string
-	OperatorContextID                 string
+	OperatorContextID        string
 	PartnerID                string
 	PlatformFundedMinorUnits int64
 	PartnerFundedMinorUnits  int64

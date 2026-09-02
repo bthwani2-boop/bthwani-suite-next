@@ -13,9 +13,9 @@ type WorkforceReferenceOption struct {
 }
 
 type SovereignLeadershipReferenceData struct {
-	EmploymentClasses []WorkforceReferenceOption                       `json:"employmentClasses"`
-	Departments       []WorkforceReferenceOption                       `json:"departments"`
-	OfficeLocations   []WorkforceReferenceOption                       `json:"officeLocations"`
+	EmploymentClasses []WorkforceReferenceOption                          `json:"employmentClasses"`
+	Departments       []WorkforceReferenceOption                          `json:"departments"`
+	OfficeLocations   []WorkforceReferenceOption                          `json:"officeLocations"`
 	PermissionBundles []identityclient.EmployeePermissionBundleDescriptor `json:"permissionBundles"`
 }
 

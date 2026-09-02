@@ -18,18 +18,18 @@ var (
 )
 
 type Record struct {
-	ID           string          `json:"id"`
-	OperatorContextID     string          `json:"-"`
-	EntityType   string          `json:"entityType"`
-	EntityID     string          `json:"entityId,omitempty"`
-	OwnerActorID string          `json:"-"`
-	Source       string          `json:"source"`
-	Stage        string          `json:"stage"`
-	Title        string          `json:"title"`
-	Metadata     json.RawMessage `json:"metadata,omitempty"`
-	SubmittedAt  time.Time       `json:"submittedAt"`
-	UpdatedAt    time.Time       `json:"updatedAt"`
-	AuditTrail   []AuditEntry    `json:"auditTrail,omitempty"`
+	ID                string          `json:"id"`
+	OperatorContextID string          `json:"-"`
+	EntityType        string          `json:"entityType"`
+	EntityID          string          `json:"entityId,omitempty"`
+	OwnerActorID      string          `json:"-"`
+	Source            string          `json:"source"`
+	Stage             string          `json:"stage"`
+	Title             string          `json:"title"`
+	Metadata          json.RawMessage `json:"metadata,omitempty"`
+	SubmittedAt       time.Time       `json:"submittedAt"`
+	UpdatedAt         time.Time       `json:"updatedAt"`
+	AuditTrail        []AuditEntry    `json:"auditTrail,omitempty"`
 }
 
 type AuditEntry struct {
@@ -70,14 +70,14 @@ var allowedTransitions = map[string]map[string]bool{
 }
 
 type CreateInput struct {
-	OperatorContextID     string
-	EntityType   string
-	EntityID     string
-	OwnerActorID string
-	Source       string
-	Stage        string
-	Title        string
-	Metadata     json.RawMessage
+	OperatorContextID string
+	EntityType        string
+	EntityID          string
+	OwnerActorID      string
+	Source            string
+	Stage             string
+	Title             string
+	Metadata          json.RawMessage
 }
 
 func Create(db *sql.DB, input CreateInput) (Record, error) {

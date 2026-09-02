@@ -49,11 +49,11 @@ func (input *CatalogPolicyPatchInput) UnmarshalJSON(data []byte) error {
 		RequiresUnit                   *bool      `json:"requiresUnit"`
 		ProductDataQualityMinimumScore *float64   `json:"productDataQualityMinimumScore"`
 		MaxGalleryImages               *int       `json:"maxGalleryImages"`
-		ManualRequestMode               *bool      `json:"manualRequestMode"`
-		IsActive                        *bool      `json:"isActive"`
-		Notes                           *string    `json:"notes"`
-		ExpectedVersion                 *int       `json:"expectedVersion"`
-		EffectiveFrom                   *time.Time `json:"effectiveFrom"`
+		ManualRequestMode              *bool      `json:"manualRequestMode"`
+		IsActive                       *bool      `json:"isActive"`
+		Notes                          *string    `json:"notes"`
+		ExpectedVersion                *int       `json:"expectedVersion"`
+		EffectiveFrom                  *time.Time `json:"effectiveFrom"`
 	}
 
 	var decoded wireInput
@@ -74,9 +74,9 @@ func (input *CatalogPolicyPatchInput) UnmarshalJSON(data []byte) error {
 			RequiresUnit:                   decoded.RequiresUnit,
 			ProductDataQualityMinimumScore: decoded.ProductDataQualityMinimumScore,
 			MaxGalleryImages:               decoded.MaxGalleryImages,
-			ManualRequestMode:               decoded.ManualRequestMode,
-			IsActive:                        decoded.IsActive,
-			Notes:                           decoded.Notes,
+			ManualRequestMode:              decoded.ManualRequestMode,
+			IsActive:                       decoded.IsActive,
+			Notes:                          decoded.Notes,
 		},
 		ExpectedVersion: decoded.ExpectedVersion,
 		EffectiveFrom:   decoded.EffectiveFrom,
@@ -90,54 +90,30 @@ func (input *CatalogPolicyPatchInput) UnmarshalJSON(data []byte) error {
 // them after this cutover.
 func (policy CatalogPolicy) MarshalJSON() ([]byte, error) {
 	type publicPolicy struct {
-		Version                         int       `json:"version"`
-		ID                              string    `json:"id"`
-		DomainID                        *string   `json:"domainId"`
-		NodeID                          *string   `json:"nodeId"`
-		PolicyScope                     string    `json:"policyScope"`
-		AllowsStoreProductCustomImage   bool      `json:"allowsStoreProductCustomImage"`
-		AllowsProductProposal           bool      `json:"allowsProductProposal"`
-		RequiresBarcode                 bool      `json:"requiresBarcode"`
-		RequiresCatalogReview           bool      `json:"requiresCatalogReview"`
-		RequiresMarketingReview         bool      `json:"requiresMarketingReview"`
-		RequiresProductImage            bool      `json:"requiresProductImage"`
-		RequiresCategoryImage           bool      `json:"requiresCategoryImage"`
-		RequiresDescription             bool      `json:"requiresDescription"`
-		RequiresBrand                   bool      `json:"requiresBrand"`
-		RequiresUnit                    bool      `json:"requiresUnit"`
-		ProductDataQualityMinimumScore  float64   `json:"productDataQualityMinimumScore"`
-		MaxGalleryImages                int       `json:"maxGalleryImages"`
-		ManualRequestMode               bool      `json:"manualRequestMode"`
-		IsActive                        bool      `json:"isActive"`
-		EffectiveFrom                   time.Time `json:"effectiveFrom"`
-		Notes                           string    `json:"notes"`
-		CreatedAt                       time.Time `json:"createdAt"`
-		UpdatedAt                       time.Time `json:"updatedAt"`
+		Version                        int       `json:"version"`
+		ID                             string    `json:"id"`
+		DomainID                       *string   `json:"domainId"`
+		NodeID                         *string   `json:"nodeId"`
+		PolicyScope                    string    `json:"policyScope"`
+		AllowsStoreProductCustomImage  bool      `json:"allowsStoreProductCustomImage"`
+		AllowsProductProposal          bool      `json:"allowsProductProposal"`
+		RequiresBarcode                bool      `json:"requiresBarcode"`
+		RequiresCatalogReview          bool      `json:"requiresCatalogReview"`
+		RequiresMarketingReview        bool      `json:"requiresMarketingReview"`
+		RequiresProductImage           bool      `json:"requiresProductImage"`
+		RequiresCategoryImage          bool      `json:"requiresCategoryImage"`
+		RequiresDescription            bool      `json:"requiresDescription"`
+		RequiresBrand                  bool      `json:"requiresBrand"`
+		RequiresUnit                   bool      `json:"requiresUnit"`
+		ProductDataQualityMinimumScore float64   `json:"productDataQualityMinimumScore"`
+		MaxGalleryImages               int       `json:"maxGalleryImages"`
+		ManualRequestMode              bool      `json:"manualRequestMode"`
+		IsActive                       bool      `json:"isActive"`
+		EffectiveFrom                  time.Time `json:"effectiveFrom"`
+		Notes                          string    `json:"notes"`
+		CreatedAt                      time.Time `json:"createdAt"`
+		UpdatedAt                      time.Time `json:"updatedAt"`
 	}
 
-	return json.Marshal(publicPolicy{
-		Version:                        policy.Version,
-		ID:                             policy.ID,
-		DomainID:                       policy.DomainID,
-		NodeID:                         policy.NodeID,
-		PolicyScope:                    policy.PolicyScope,
-		AllowsStoreProductCustomImage:  policy.AllowsStoreProductCustomImage,
-		AllowsProductProposal:          policy.AllowsProductProposal,
-		RequiresBarcode:                policy.RequiresBarcode,
-		RequiresCatalogReview:          policy.RequiresCatalogReview,
-		RequiresMarketingReview:        policy.RequiresMarketingReview,
-		RequiresProductImage:           policy.RequiresProductImage,
-		RequiresCategoryImage:          policy.RequiresCategoryImage,
-		RequiresDescription:            policy.RequiresDescription,
-		RequiresBrand:                  policy.RequiresBrand,
-		RequiresUnit:                   policy.RequiresUnit,
-		ProductDataQualityMinimumScore: policy.ProductDataQualityMinimumScore,
-		MaxGalleryImages:               policy.MaxGalleryImages,
-		ManualRequestMode:               policy.ManualRequestMode,
-		IsActive:                        policy.IsActive,
-		EffectiveFrom:                  policy.EffectiveFrom,
-		Notes:                          policy.Notes,
-		CreatedAt:                      policy.CreatedAt,
-		UpdatedAt:                      policy.UpdatedAt,
-	})
+	return json.Marshal(publicPolicy(policy))
 }

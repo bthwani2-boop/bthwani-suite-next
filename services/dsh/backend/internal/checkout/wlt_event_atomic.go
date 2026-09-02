@@ -13,12 +13,12 @@ import (
 var ErrWltEventReplayConflict = errors.New("wlt payment event replay conflict")
 
 type WltPaymentEventEnvelope struct {
-	EventID          string
-	OperatorContextID         string
-	CheckoutIntentID string
-	PaymentSessionID string
-	Status           string
-	CorrelationID    string
+	EventID           string
+	OperatorContextID string
+	CheckoutIntentID  string
+	PaymentSessionID  string
+	Status            string
+	CorrelationID     string
 }
 
 func normalizeWltPaymentEventEnvelope(input WltPaymentEventEnvelope) WltPaymentEventEnvelope {

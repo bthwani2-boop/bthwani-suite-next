@@ -11,7 +11,7 @@ import (
 )
 
 type GovernedCommissionQuery struct {
-	OperatorContextID             string
+	OperatorContextID    string
 	SourceID             string
 	BeneficiaryActorID   string
 	BeneficiaryActorType string
@@ -106,7 +106,7 @@ func HandleListGovernedCommissions(db *sql.DB) http.HandlerFunc {
 			limit = parsed
 		}
 		commissions, err := ListGovernedCommissions(db, GovernedCommissionQuery{
-			OperatorContextID:             strings.TrimSpace(values.Get("operatorContextId")),
+			OperatorContextID:    strings.TrimSpace(values.Get("operatorContextId")),
 			SourceID:             sourceID,
 			BeneficiaryActorID:   beneficiaryActorID,
 			BeneficiaryActorType: beneficiaryActorType,

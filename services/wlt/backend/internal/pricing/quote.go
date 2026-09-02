@@ -52,22 +52,22 @@ type QuoteOutputLine struct {
 }
 
 type WltPricingQuote struct {
-	ID                    string                   `json:"id,omitempty"`
-	CartSnapshotHash      string                   `json:"cartSnapshotHash,omitempty"`
-	Lines                 []QuoteOutputLine        `json:"lines"`
-	SubtotalMinorUnits    int64                    `json:"subtotalMinorUnits"`
-	DeliveryFeeMinorUnits int64                    `json:"deliveryFeeMinorUnits"`
-	ServiceFeeMinorUnits  int64                    `json:"serviceFeeMinorUnits"`
-	TaxMinorUnits         int64                    `json:"taxMinorUnits"`
-	DiscountMinorUnits    int64                    `json:"discountMinorUnits"`
-	RoundingMinorUnits    int64                    `json:"roundingMinorUnits"`
-	TotalMinorUnits       int64                    `json:"totalMinorUnits"`
-	Currency              string                   `json:"currency"`
-	FundingRefs           []string                 `json:"fundingRefs"`
-	Hash                  string                   `json:"hash"`
-	Version               int                      `json:"version"`
-	ExpiresAt             *time.Time       `json:"expiresAt"`
-	Allocation            []AllocationLine `json:"allocation,omitempty"`
+	ID                    string            `json:"id,omitempty"`
+	CartSnapshotHash      string            `json:"cartSnapshotHash,omitempty"`
+	Lines                 []QuoteOutputLine `json:"lines"`
+	SubtotalMinorUnits    int64             `json:"subtotalMinorUnits"`
+	DeliveryFeeMinorUnits int64             `json:"deliveryFeeMinorUnits"`
+	ServiceFeeMinorUnits  int64             `json:"serviceFeeMinorUnits"`
+	TaxMinorUnits         int64             `json:"taxMinorUnits"`
+	DiscountMinorUnits    int64             `json:"discountMinorUnits"`
+	RoundingMinorUnits    int64             `json:"roundingMinorUnits"`
+	TotalMinorUnits       int64             `json:"totalMinorUnits"`
+	Currency              string            `json:"currency"`
+	FundingRefs           []string          `json:"fundingRefs"`
+	Hash                  string            `json:"hash"`
+	Version               int               `json:"version"`
+	ExpiresAt             *time.Time        `json:"expiresAt"`
+	Allocation            []AllocationLine  `json:"allocation,omitempty"`
 }
 
 type PricingQuoteResponse struct {

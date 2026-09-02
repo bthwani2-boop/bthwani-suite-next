@@ -52,7 +52,7 @@ func TestCanonicalSpecialRequestStagesAreKnownToService(t *testing.T) {
 
 func TestDefaultWorkflowStageMatchesCustomerAndDeliveryReadback(t *testing.T) {
 	tests := []struct {
-		name       string
+		name        string
 		requestType RequestType
 		status      RequestStatus
 		want        string

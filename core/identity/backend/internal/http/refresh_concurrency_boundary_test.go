@@ -14,10 +14,10 @@ import (
 )
 
 type fakeGovernedRefreshRepository struct {
-	pair        identity.TokenPair
-	err         error
-	seenToken   string
-	seenDevice  string
+	pair       identity.TokenPair
+	err        error
+	seenToken  string
+	seenDevice string
 }
 
 func (f *fakeGovernedRefreshRepository) RefreshGovernedForDevice(

@@ -166,8 +166,8 @@ func TestOperatorAllowedActionsMirrorEveryTransition(t *testing.T) {
 
 func TestPartnerStateViewMasksPayoutDataAndIncludesPolicy(t *testing.T) {
 	view := BuildPartnerStateView(Partner{
-		ActivationStatus:    StatusClientVisible,
-		DestinationMethod:   "bank",
+		ActivationStatus:           StatusClientVisible,
+		DestinationMethod:          "bank",
 		MaskedDestinationReference: "*****1234",
 	}, "app-partner")
 	if view.MaskedDestinationReference != "*****1234" {

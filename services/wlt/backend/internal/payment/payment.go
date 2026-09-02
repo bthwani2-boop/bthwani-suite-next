@@ -1,15 +1,15 @@
 package payment
 
 import (
-        "database/sql"
-        "errors"
-        "fmt"
-        "net/http"
+	"database/sql"
+	"errors"
+	"fmt"
+	"net/http"
 
-        "wlt-api/internal/dshoutbox"
-        "wlt-api/internal/provider"
-        "wlt-api/internal/refund"
-        "wlt-api/internal/shared"
+	"wlt-api/internal/dshoutbox"
+	"wlt-api/internal/provider"
+	"wlt-api/internal/refund"
+	"wlt-api/internal/shared"
 )
 
 // ErrNotAuthorizable is returned when AuthorizeSessionWithProvider is called
@@ -43,47 +43,47 @@ var ErrSessionClaimConflict = errors.New("payment session could not be claimed f
 // request payload); the JSON-marshaled PaymentSession itself keeps the
 // pointer so a nil source identity serializes as null, not "".
 func strOrEmpty(s *string) string {
-        if s == nil {
-                return ""
-        }
-        return *s
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 func scanSession(row *sql.Row) (*PaymentSession, error) {
-        var s PaymentSession
-        err := row.Scan(
-                &s.ID,
-                &s.CheckoutIntentID,
-                &s.SpecialRequestID,
-                &s.OperatorContextID,
-                &s.ClientID,
-                &s.StoreID,
-                &s.PaymentMethod,
-                &s.Status,
-                &s.ProviderReference,
-                &s.AmountMinorUnits,
-                &s.Currency,
-                &s.FinancialPurpose,
-                &s.CapturedAt,
-                &s.CreatedAt,
-                &s.UpdatedAt,
-        )
-        if err != nil {
-                return nil, err
-        }
-        return &s, nil
+	var s PaymentSession
+	err := row.Scan(
+		&s.ID,
+		&s.CheckoutIntentID,
+		&s.SpecialRequestID,
+		&s.OperatorContextID,
+		&s.ClientID,
+		&s.StoreID,
+		&s.PaymentMethod,
+		&s.Status,
+		&s.ProviderReference,
+		&s.AmountMinorUnits,
+		&s.Currency,
+		&s.FinancialPurpose,
+		&s.CapturedAt,
+		&s.CreatedAt,
+		&s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
 }
 
 func getSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
-        if sessionID == "" {
-                return nil, fmt.Errorf("paymentSessionId is required")
-        }
-        row := db.QueryRow(selectCols, sessionID)
-        s, err := scanSession(row)
-        if err == sql.ErrNoRows {
-                return nil, nil
-        }
-        return s, err
+	if sessionID == "" {
+		return nil, fmt.Errorf("paymentSessionId is required")
+	}
+	row := db.QueryRow(selectCols, sessionID)
+	s, err := scanSession(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return s, err
 }
 
 // sessionCols is the single column list every payment-session read and
@@ -115,40 +115,40 @@ const selectCols = `
 // -- so at most one caller can ever successfully claim a session for a given
 // operation, closing the authorize/capture double-call race.
 func claimSession(db *sql.DB, sessionID string, allowedFrom []string, pendingStatus string) (*PaymentSession, error) {
-        tx, err := db.Begin()
-        if err != nil {
-                return nil, err
-        }
-        defer tx.Rollback()
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 
-        row := tx.QueryRow(selectCols+` FOR UPDATE`, sessionID)
-        s, err := scanSession(row)
-        if err == sql.ErrNoRows {
-                return nil, nil
-        }
-        if err != nil {
-                return nil, err
-        }
+	row := tx.QueryRow(selectCols+` FOR UPDATE`, sessionID)
+	s, err := scanSession(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
 
-        allowed := false
-        for _, st := range allowedFrom {
-                if s.Status == st {
-                        allowed = true
-                        break
-                }
-        }
-        if !allowed {
-                return nil, ErrSessionClaimConflict
-        }
+	allowed := false
+	for _, st := range allowedFrom {
+		if s.Status == st {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return nil, ErrSessionClaimConflict
+	}
 
-        if _, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = $2, updated_at = NOW() WHERE id = $1`, sessionID, pendingStatus); err != nil {
-                return nil, err
-        }
-        if err := tx.Commit(); err != nil {
-                return nil, err
-        }
-        s.Status = pendingStatus
-        return s, nil
+	if _, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = $2, updated_at = NOW() WHERE id = $1`, sessionID, pendingStatus); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	s.Status = pendingStatus
+	return s, nil
 }
 
 // AuthorizeSessionWithProvider authorizes sessionID with the payment
@@ -183,8 +183,8 @@ func claimSession(db *sql.DB, sessionID string, allowedFrom []string, pendingSta
 //     naive retry re-fire the same provider call risks a double charge.
 //     Both cases are treated as ambiguous here.
 func isAmbiguousProviderError(err error) bool {
-        var providerErr provider.Error
-        return !errors.As(err, &providerErr)
+	var providerErr provider.Error
+	return !errors.As(err, &providerErr)
 }
 
 // markSessionFailedAndNotify marks sessionID failed and enqueues the DSH
@@ -198,41 +198,41 @@ func isAmbiguousProviderError(err error) bool {
 // original error alone would leave an ambiguous session without a durable
 // recovery record and would invite an unsafe retry.
 func withDurableRecoveryError(cause error, recovery func() error) error {
-        if recoveryErr := recovery(); recoveryErr != nil {
-                return errors.Join(cause, fmt.Errorf("durable provider recovery failed: %w", recoveryErr))
-        }
-        return cause
+	if recoveryErr := recovery(); recoveryErr != nil {
+		return errors.Join(cause, fmt.Errorf("durable provider recovery failed: %w", recoveryErr))
+	}
+	return cause
 }
 
 func recoverAfterFinalizationFailure(tx *sql.Tx, cause error, recovery func() error) error {
-        if tx != nil {
-                if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
-                        return errors.Join(cause, fmt.Errorf("rollback of failed financial finalization failed: %w", rollbackErr))
-                }
-        }
-        return withDurableRecoveryError(cause, recovery)
+	if tx != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
+			return errors.Join(cause, fmt.Errorf("rollback of failed financial finalization failed: %w", rollbackErr))
+		}
+	}
+	return withDurableRecoveryError(cause, recovery)
 }
 
 func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession, expectedStatus string) error {
-        if session == nil {
-                return nil
-        }
-        tx, err := db.Begin()
-        if err != nil {
-                return err
-        }
-        defer tx.Rollback()
-        res, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'failed', last_provider_status = 'failed', updated_at = NOW() WHERE id = $1 AND status = $2`, session.ID, expectedStatus)
-        if err != nil {
-                return err
-        }
-        if affected, _ := res.RowsAffected(); affected == 0 {
-                return fmt.Errorf("session %s was no longer %s when marking failed", session.ID, expectedStatus)
-        }
-        if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.OperatorContextID, session.CheckoutIntentID, session.SpecialRequestID); err != nil {
-                return err
-        }
-        return tx.Commit()
+	if session == nil {
+		return nil
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'failed', last_provider_status = 'failed', updated_at = NOW() WHERE id = $1 AND status = $2`, session.ID, expectedStatus)
+	if err != nil {
+		return err
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		return fmt.Errorf("session %s was no longer %s when marking failed", session.ID, expectedStatus)
+	}
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.OperatorContextID, session.CheckoutIntentID, session.SpecialRequestID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // markSessionResultUnknownAndOpenCase marks sessionID 'provider_result_unknown'
@@ -249,33 +249,33 @@ func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession, expectedSta
 // final state through the existing authorize/capture/expire paths -- do not
 // "fix" this by adding a notification here.
 func markSessionResultUnknownAndOpenCase(db *sql.DB, session *PaymentSession, operation string, cause error, expectedStatus string) error {
-        if session == nil {
-                return nil
-        }
-        tx, err := db.Begin()
-        if err != nil {
-                return err
-        }
-        defer tx.Rollback()
-        res, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'provider_result_unknown', last_provider_status = 'unknown', updated_at = NOW() WHERE id = $1 AND status = $2`, session.ID, expectedStatus)
-        if err != nil {
-                return err
-        }
-        if affected, _ := res.RowsAffected(); affected == 0 {
-                return fmt.Errorf("session %s was no longer %s when marking provider_result_unknown", session.ID, expectedStatus)
-        }
-        reason := ""
-        if cause != nil {
-                reason = cause.Error()
-        }
-        if _, err := tx.Exec(`
+	if session == nil {
+		return nil
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'provider_result_unknown', last_provider_status = 'unknown', updated_at = NOW() WHERE id = $1 AND status = $2`, session.ID, expectedStatus)
+	if err != nil {
+		return err
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		return fmt.Errorf("session %s was no longer %s when marking provider_result_unknown", session.ID, expectedStatus)
+	}
+	reason := ""
+	if cause != nil {
+		reason = cause.Error()
+	}
+	if _, err := tx.Exec(`
                 INSERT INTO wlt_reconciliation_cases (payment_session_id, operation, trigger_reason)
                 VALUES ($1, $2, $3)`,
-                session.ID, operation, reason,
-        ); err != nil {
-                return err
-        }
-        return tx.Commit()
+		session.ID, operation, reason,
+	); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // captureSessionAndNotify commits the captured transition and enqueues the
@@ -289,25 +289,25 @@ func markSessionResultUnknownAndOpenCase(db *sql.DB, session *PaymentSession, op
 // expired, failed, or COD-finalized, etc.) returns ErrNotExpirable instead of
 // unconditionally overwriting the session's true status.
 func ExpireSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
-        if sessionID == "" {
-                return nil, fmt.Errorf("paymentSessionId is required")
-        }
-        tx, err := db.Begin()
-        if err != nil {
-                return nil, err
-        }
-        defer tx.Rollback()
-        s, err := expireSessionTx(tx, sessionID)
-        if err != nil {
-                return nil, err
-        }
-        if s == nil {
-                return nil, nil
-        }
-        if err := tx.Commit(); err != nil {
-                return nil, err
-        }
-        return s, nil
+	if sessionID == "" {
+		return nil, fmt.Errorf("paymentSessionId is required")
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	s, err := expireSessionTx(tx, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, nil
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // expireSessionTx performs the guarded expire transition within an
@@ -315,63 +315,63 @@ func ExpireSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 // branch of CancelOrderFinanciallyWithContext so the guard/UPDATE/outbox-enqueue
 // SQL is defined in exactly one place.
 func expireSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
-        var status string
-        err := tx.QueryRow(`SELECT status FROM wlt_payment_sessions WHERE id = $1 FOR UPDATE`, sessionID).Scan(&status)
-        if err == sql.ErrNoRows {
-                return nil, nil
-        }
-        if err != nil {
-                return nil, err
-        }
-        if status != "reference_created" && status != "pending_provider" && status != "authorized" {
-                return nil, ErrNotExpirable
-        }
-        const q = `
+	var status string
+	err := tx.QueryRow(`SELECT status FROM wlt_payment_sessions WHERE id = $1 FOR UPDATE`, sessionID).Scan(&status)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if status != "reference_created" && status != "pending_provider" && status != "authorized" {
+		return nil, ErrNotExpirable
+	}
+	const q = `
                 UPDATE wlt_payment_sessions
                 SET status = 'expired', updated_at = NOW()
                 WHERE id = $1
                 RETURNING ` + sessionCols
-        row := tx.QueryRow(q, sessionID)
-        s, err := scanSession(row)
-        if err == sql.ErrNoRows {
-                return nil, nil
-        }
-        if err != nil {
-                return nil, err
-        }
-        if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeExpired, s.ID, s.OperatorContextID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
-                return nil, err
-        }
-        return s, nil
+	row := tx.QueryRow(q, sessionID)
+	s, err := scanSession(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeExpired, s.ID, s.OperatorContextID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // CancelForOrderResult is the response shape for CancelOrderFinanciallyWithContext: the
 // action taken ("expired", "refund_requested", or "none") plus whichever of
 // PaymentSession/Refund/SessionStatus is relevant for that action.
 type CancelForOrderResult struct {
-        Action         string          `json:"action"`
-        PaymentSession *PaymentSession `json:"paymentSession,omitempty"`
-        Refund         *refund.Refund  `json:"refund,omitempty"`
-        SessionStatus  string          `json:"sessionStatus,omitempty"`
+	Action         string          `json:"action"`
+	PaymentSession *PaymentSession `json:"paymentSession,omitempty"`
+	Refund         *refund.Refund  `json:"refund,omitempty"`
+	SessionStatus  string          `json:"sessionStatus,omitempty"`
 }
 
 // HTTP handlers
 
 func HandleExpireSession(db *sql.DB) http.HandlerFunc {
-        return func(w http.ResponseWriter, r *http.Request) {
-                session, err := ExpireSession(db, r.PathValue("paymentSessionId"))
-                if errors.Is(err, ErrNotExpirable) {
-                        shared.SendError(w, http.StatusConflict, "NOT_EXPIRABLE", "payment session is not in an expirable state")
-                        return
-                }
-                if err != nil {
-                        shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-                        return
-                }
-                if session == nil {
-                        shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
-                        return
-                }
-                shared.SendJSON(w, http.StatusOK, map[string]any{"paymentSession": session})
-        }
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, err := ExpireSession(db, r.PathValue("paymentSessionId"))
+		if errors.Is(err, ErrNotExpirable) {
+			shared.SendError(w, http.StatusConflict, "NOT_EXPIRABLE", "payment session is not in an expirable state")
+			return
+		}
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
+		}
+		if session == nil {
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
+			return
+		}
+		shared.SendJSON(w, http.StatusOK, map[string]any{"paymentSession": session})
+	}
 }

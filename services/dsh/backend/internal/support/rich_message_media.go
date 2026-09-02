@@ -13,15 +13,15 @@ const (
 )
 
 type RichMessageAttachmentInput struct {
-	MediaAssetID         string
-	FileName             string
-	MimeType             string
-	SizeBytes            int64
-	Kind                 string
-	DurationMs           *int64
+	MediaAssetID          string
+	FileName              string
+	MimeType              string
+	SizeBytes             int64
+	Kind                  string
+	DurationMs            *int64
 	ThumbnailMediaAssetID string
-	WaveformRef          string
-	UploadStatus         string
+	WaveformRef           string
+	UploadStatus          string
 }
 
 type RichMessageAttachment struct {

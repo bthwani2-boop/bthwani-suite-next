@@ -52,8 +52,12 @@ func scanSettlementBatch(row *sql.Row) (*SettlementBatch, error) {
 	err := row.Scan(&b.ID, &b.ProviderID, &b.Currency, &b.BatchHash,
 		&b.ControlTotalMinorUnits, &b.RowCount, &b.Status, &b.CreatedAt,
 		&b.FrozenAt, &b.CreatedByOperatorID)
-	if errors.Is(err, sql.ErrNoRows) { return nil, nil }
-	if err != nil { return nil, err }
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
 	return &b, nil
 }
 
@@ -72,14 +76,24 @@ func settlementReplay(ctx context.Context, tx *sql.Tx, operatorContextID, operat
 		FROM wlt_settlement_mutation_requests
 		WHERE operator_context_id=$1 AND operation=$2 AND idempotency_key=$3`,
 		operatorContextID, operation, idempotencyKey).Scan(&storedHash, &batchID)
-	if errors.Is(err, sql.ErrNoRows) { return nil, false, nil }
-	if err != nil { return nil, false, err }
-	if storedHash != requestHash { return nil, false, ErrIdempotencyConflict }
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	if storedHash != requestHash {
+		return nil, false, ErrIdempotencyConflict
+	}
 	batch, err := scanSettlementBatch(tx.QueryRowContext(ctx,
 		`SELECT `+settlementBatchCols+` FROM wlt_settlement_batches WHERE operator_context_id=$1 AND id=$2`,
 		operatorContextID, batchID))
-	if err != nil { return nil, false, err }
-	if batch == nil { return nil, false, fmt.Errorf("idempotency record points to missing settlement batch") }
+	if err != nil {
+		return nil, false, err
+	}
+	if batch == nil {
+		return nil, false, fmt.Errorf("idempotency record points to missing settlement batch")
+	}
 	batch.IdempotentReplay = true
 	return batch, true, nil
 }
@@ -94,9 +108,13 @@ func recordSettlementMutation(ctx context.Context, tx *sql.Tx, operatorContextID
 
 func CreateSettlementBatch(ctx context.Context, db *sql.DB, input CreateSettlementBatchInput, correlationID string) (*SettlementBatch, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	operatorID, err := shared.RequireDelegatedFinancePrincipal(ctx)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	input.ProviderID = strings.ToLower(strings.TrimSpace(input.ProviderID))
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
@@ -107,18 +125,26 @@ func CreateSettlementBatch(ctx context.Context, db *sql.DB, input CreateSettleme
 	requestHash := settlementMutationHash(operatorContextID, "batch_create", input.ProviderID, input.Currency, operatorID)
 
 	tx, err := db.BeginTx(ctx, nil)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer tx.Rollback() //nolint:errcheck
-	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, operatorContextID+"\x1fsettlement-create\x1f"+input.IdempotencyKey); err != nil { return nil, err }
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, operatorContextID+"\x1fsettlement-create\x1f"+input.IdempotencyKey); err != nil {
+		return nil, err
+	}
 	if replay, ok, err := settlementReplay(ctx, tx, operatorContextID, "batch_create", input.IdempotencyKey, requestHash); err != nil {
 		return nil, err
 	} else if ok {
-		if err := tx.Commit(); err != nil { return nil, err }
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
 		return replay, nil
 	}
 	// Serialize snapshot selection for a provider/currency so two distinct
 	// idempotency keys cannot race the same approved snapshot into two batches.
-	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, operatorContextID+"\x1f"+input.ProviderID+"\x1f"+input.Currency+"\x1fsettlement-selection"); err != nil { return nil, err }
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, operatorContextID+"\x1f"+input.ProviderID+"\x1f"+input.Currency+"\x1fsettlement-selection"); err != nil {
+		return nil, err
+	}
 
 	rows, err := tx.QueryContext(ctx, `
 		SELECT s.id, s.amount_minor_units, s.snapshot_hash
@@ -135,7 +161,9 @@ func CreateSettlementBatch(ctx context.Context, db *sql.DB, input CreateSettleme
 		ORDER BY s.created_at ASC, s.id ASC
 		FOR UPDATE OF s,p
 	`, operatorContextID, input.Currency, input.ProviderID)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 
 	var snapshotIDs []string
@@ -144,14 +172,22 @@ func CreateSettlementBatch(ctx context.Context, db *sql.DB, input CreateSettleme
 	for rows.Next() {
 		var id, hash string
 		var amount int64
-		if err := rows.Scan(&id, &amount, &hash); err != nil { return nil, err }
-		if amount <= 0 || totalAmount > math.MaxInt64-amount { return nil, fmt.Errorf("approved snapshot amount is invalid or control total overflows int64") }
+		if err := rows.Scan(&id, &amount, &hash); err != nil {
+			return nil, err
+		}
+		if amount <= 0 || totalAmount > math.MaxInt64-amount {
+			return nil, fmt.Errorf("approved snapshot amount is invalid or control total overflows int64")
+		}
 		snapshotIDs = append(snapshotIDs, id)
 		totalAmount += amount
 		hashData = append(hashData, id, fmt.Sprintf("%d", amount), hash)
 	}
-	if err := rows.Err(); err != nil { return nil, err }
-	if len(snapshotIDs) == 0 { return nil, ErrNoApprovedPayoutsFound }
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(snapshotIDs) == 0 {
+		return nil, ErrNoApprovedPayoutsFound
+	}
 
 	batchHash := settlementMutationHash(hashData...)
 	batch, err := scanSettlementBatch(tx.QueryRowContext(ctx, `INSERT INTO wlt_settlement_batches
@@ -159,25 +195,39 @@ func CreateSettlementBatch(ctx context.Context, db *sql.DB, input CreateSettleme
 		VALUES($1,$2,$3,$4,$5,$6,$7)
 		RETURNING `+settlementBatchCols,
 		operatorContextID, input.ProviderID, input.Currency, batchHash, totalAmount, len(snapshotIDs), operatorID))
-	if err != nil { return nil, err }
-	for _, snapID := range snapshotIDs {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_settlement_batch_rows(batch_id,approved_snapshot_id) VALUES($1,$2)`, batch.ID, snapID); err != nil { return nil, err }
+	if err != nil {
+		return nil, err
 	}
-	if err := recordSettlementMutation(ctx, tx, operatorContextID, "batch_create", input.IdempotencyKey, requestHash, batch.ID, operatorID, correlationID); err != nil { return nil, err }
+	for _, snapID := range snapshotIDs {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_settlement_batch_rows(batch_id,approved_snapshot_id) VALUES($1,$2)`, batch.ID, snapID); err != nil {
+			return nil, err
+		}
+	}
+	if err := recordSettlementMutation(ctx, tx, operatorContextID, "batch_create", input.IdempotencyKey, requestHash, batch.ID, operatorID, correlationID); err != nil {
+		return nil, err
+	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_finance_audit_events
 		(operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)
 		VALUES($1,'settlement_batch',$2,'batch_created',$3,'operator',$4,
 		jsonb_build_object('providerId',$5::text,'currency',$6::text,'rowCount',$7::integer,'controlTotalMinorUnits',$8::bigint,'monetarySource','approved_snapshots'))`,
-		operatorContextID, batch.ID, operatorID, correlationID, input.ProviderID, input.Currency, batch.RowCount, batch.ControlTotalMinorUnits); err != nil { return nil, err }
-	if err := tx.Commit(); err != nil { return nil, err }
+		operatorContextID, batch.ID, operatorID, correlationID, input.ProviderID, input.Currency, batch.RowCount, batch.ControlTotalMinorUnits); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 	return batch, nil
 }
 
 func FreezeSettlementBatch(ctx context.Context, db *sql.DB, batchID, idempotencyKey, correlationID string) (*SettlementBatch, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	operatorID, err := shared.RequireDelegatedFinancePrincipal(ctx)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	batchID = strings.TrimSpace(batchID)
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	correlationID = strings.TrimSpace(correlationID)
@@ -186,33 +236,55 @@ func FreezeSettlementBatch(ctx context.Context, db *sql.DB, batchID, idempotency
 	}
 	requestHash := settlementMutationHash(operatorContextID, "batch_freeze", batchID, operatorID)
 	tx, err := db.BeginTx(ctx, nil)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	defer tx.Rollback() //nolint:errcheck
-	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, operatorContextID+"\x1fsettlement-freeze\x1f"+idempotencyKey); err != nil { return nil, err }
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, operatorContextID+"\x1fsettlement-freeze\x1f"+idempotencyKey); err != nil {
+		return nil, err
+	}
 	if replay, ok, err := settlementReplay(ctx, tx, operatorContextID, "batch_freeze", idempotencyKey, requestHash); err != nil {
 		return nil, err
 	} else if ok {
-		if replay.ID != batchID { return nil, ErrIdempotencyConflict }
-		if err := tx.Commit(); err != nil { return nil, err }
+		if replay.ID != batchID {
+			return nil, ErrIdempotencyConflict
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
 		return replay, nil
 	}
 
 	var status string
 	if err := tx.QueryRowContext(ctx, `SELECT status FROM wlt_settlement_batches WHERE id=$1 AND operator_context_id=$2 FOR UPDATE`, batchID, operatorContextID).Scan(&status); err != nil {
-		if errors.Is(err, sql.ErrNoRows) { return nil, fmt.Errorf("settlement batch not found") }
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("settlement batch not found")
+		}
 		return nil, err
 	}
-	if status == "frozen" || status == "execution_in_progress" || status == "awaiting_verification" || status == "completed" { return nil, ErrBatchAlreadyFrozen }
-	if status == "cancelled" { return nil, fmt.Errorf("cannot freeze a cancelled batch") }
+	if status == "frozen" || status == "execution_in_progress" || status == "awaiting_verification" || status == "completed" {
+		return nil, ErrBatchAlreadyFrozen
+	}
+	if status == "cancelled" {
+		return nil, fmt.Errorf("cannot freeze a cancelled batch")
+	}
 
 	batch, err := scanSettlementBatch(tx.QueryRowContext(ctx, `UPDATE wlt_settlement_batches SET status='frozen',frozen_at=now()
 		WHERE id=$1 AND operator_context_id=$2 RETURNING `+settlementBatchCols, batchID, operatorContextID))
-	if err != nil { return nil, err }
-	if err := recordSettlementMutation(ctx, tx, operatorContextID, "batch_freeze", idempotencyKey, requestHash, batch.ID, operatorID, correlationID); err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
+	if err := recordSettlementMutation(ctx, tx, operatorContextID, "batch_freeze", idempotencyKey, requestHash, batch.ID, operatorID, correlationID); err != nil {
+		return nil, err
+	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_finance_audit_events
 		(operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)
-		VALUES($1,'settlement_batch',$2,'batch_frozen',$3,'operator',$4,'{}')`, operatorContextID, batch.ID, operatorID, correlationID); err != nil { return nil, err }
-	if err := tx.Commit(); err != nil { return nil, err }
+		VALUES($1,'settlement_batch',$2,'batch_frozen',$3,'operator',$4,'{}')`, operatorContextID, batch.ID, operatorID, correlationID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 	return batch, nil
 }
 
@@ -221,16 +293,29 @@ func HandleCreateSettlementBatch(db *sql.DB) http.HandlerFunc {
 		var input CreateSettlementBatchInput
 		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
 		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil { shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid"); return }
-		if input.IdempotencyKey == "" { input.IdempotencyKey = r.Header.Get("Idempotency-Key") }
+		if err := decoder.Decode(&input); err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+			return
+		}
+		if input.IdempotencyKey == "" {
+			input.IdempotencyKey = r.Header.Get("Idempotency-Key")
+		}
 		batch, err := CreateSettlementBatch(r.Context(), db, input, r.Header.Get("X-Correlation-ID"))
 		switch {
-		case errors.Is(err, ErrNoApprovedPayoutsFound): shared.SendError(w, http.StatusBadRequest, "NO_PAYOUTS", err.Error()); return
-		case errors.Is(err, ErrIdempotencyConflict): shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error()); return
-		case err != nil: shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error()); return
+		case errors.Is(err, ErrNoApprovedPayoutsFound):
+			shared.SendError(w, http.StatusBadRequest, "NO_PAYOUTS", err.Error())
+			return
+		case errors.Is(err, ErrIdempotencyConflict):
+			shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
+			return
+		case err != nil:
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
 		}
 		status := http.StatusCreated
-		if batch.IdempotentReplay { status = http.StatusOK }
+		if batch.IdempotentReplay {
+			status = http.StatusOK
+		}
 		shared.SendJSON(w, status, map[string]any{"settlementBatch": batch})
 	}
 }
@@ -240,12 +325,21 @@ func HandleFreezeSettlementBatch(db *sql.DB) http.HandlerFunc {
 		var input struct{}
 		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024))
 		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil { shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body must be an empty object"); return }
+		if err := decoder.Decode(&input); err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body must be an empty object")
+			return
+		}
 		batch, err := FreezeSettlementBatch(r.Context(), db, r.PathValue("batchId"), r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"))
 		switch {
-		case errors.Is(err, ErrBatchAlreadyFrozen): shared.SendError(w, http.StatusConflict, "CONFLICT", err.Error()); return
-		case errors.Is(err, ErrIdempotencyConflict): shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error()); return
-		case err != nil: shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error()); return
+		case errors.Is(err, ErrBatchAlreadyFrozen):
+			shared.SendError(w, http.StatusConflict, "CONFLICT", err.Error())
+			return
+		case errors.Is(err, ErrIdempotencyConflict):
+			shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
+			return
+		case err != nil:
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
 		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"settlementBatch": batch})
 	}

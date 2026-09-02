@@ -330,7 +330,7 @@ func CheckGovernedServiceability(
 	if err != nil {
 		return GovernedServiceabilityResult{}, err
 	}
-	result.ServiceabilityResult.AvailableModes = availableModes
+	result.AvailableModes = availableModes
 
 	if requestedMode != "" {
 		modeAvailable := false

@@ -462,9 +462,11 @@ func markPushReconciled(db *sql.DB, delivery unknownPushDelivery, result PushRec
 	var sentAt any
 	if result.Present {
 		status = "sent"
-		providerMessageID = strings.TrimSpace(result.ProviderMessageID)
-		if providerMessageID == nil || providerMessageID == "" {
+		trimmedProviderMessageID := strings.TrimSpace(result.ProviderMessageID)
+		if trimmedProviderMessageID == "" {
 			providerMessageID = delivery.ProviderIdempotencyKey
+		} else {
+			providerMessageID = trimmedProviderMessageID
 		}
 		sentAt = time.Now().UTC()
 	}

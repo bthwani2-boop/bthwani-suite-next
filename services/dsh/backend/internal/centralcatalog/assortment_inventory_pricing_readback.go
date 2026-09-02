@@ -9,7 +9,7 @@ import (
 
 type StoreAssortmentCommercialReadback struct {
 	Inventory StoreAssortmentInventory `json:"inventory"`
-	Prices    []StoreAssortmentPrice    `json:"prices"`
+	Prices    []StoreAssortmentPrice   `json:"prices"`
 }
 
 // resolveStoreAssortmentID resolves the canonical assortment identity for a

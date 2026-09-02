@@ -24,15 +24,15 @@ func canonicalDestinationRequestHash(operatorContextID, actorType, actorID, oper
 		Reason                    string `json:"reason"`
 		EvidenceReference         string `json:"evidenceReference"`
 	}{
-		OperatorContextID: operatorContextID,
-		ActorType: actorType,
-		ActorID: actorID,
-		BeneficiaryName: input.BeneficiaryName,
+		OperatorContextID:         operatorContextID,
+		ActorType:                 actorType,
+		ActorID:                   actorID,
+		BeneficiaryName:           input.BeneficiaryName,
 		OfficialWalletProviderKey: input.OfficialWalletProviderKey,
-		DestinationReference: input.DestinationReference,
-		OperatorID: operatorID,
-		Reason: input.Reason,
-		EvidenceReference: input.EvidenceReference,
+		DestinationReference:      input.DestinationReference,
+		OperatorID:                operatorID,
+		Reason:                    input.Reason,
+		EvidenceReference:         input.EvidenceReference,
 	}
 	encoded, _ := json.Marshal(canonical)
 	sum := sha256.Sum256(encoded)
@@ -51,9 +51,13 @@ func scanCanonicalDestination(tx *sql.Tx, operatorContextID, destinationID strin
 func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requirePayoutOperatorContext(w, r)
-		if !ok { return }
+		if !ok {
+			return
+		}
 		operatorID, ok := requireDelegatedFinancePrincipal(w, r)
-		if !ok { return }
+		if !ok {
+			return
+		}
 		actorType, actorID, err := normalizeGovernedOwner(r.PathValue("actorType"), r.PathValue("actorId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
@@ -165,14 +169,16 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		action := "destination.unchanged"
-		if created { action = "destination.version_created" }
+		if created {
+			action = "destination.version_created"
+		}
 		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", destination.ID, action, operatorID, "operator", input.Reason, correlationID, map[string]any{
-			"ownerActorId": actorID,
-			"ownerActorType": actorType,
+			"ownerActorId":              actorID,
+			"ownerActorType":            actorType,
 			"officialWalletProviderKey": destination.OfficialWalletProviderKey,
-			"destinationVersion": destination.DestinationVersion,
-			"verificationStatus": destination.DestinationVerificationStatus,
-			"evidenceReference": input.EvidenceReference,
+			"destinationVersion":        destination.DestinationVersion,
+			"verificationStatus":        destination.DestinationVerificationStatus,
+			"evidenceReference":         input.EvidenceReference,
 		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout destination")
 			return
@@ -182,7 +188,9 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		status := http.StatusOK
-		if created { status = http.StatusCreated }
+		if created {
+			status = http.StatusCreated
+		}
 		shared.SendJSON(w, status, map[string]any{"payoutDestination": destination})
 	}
 }
@@ -197,9 +205,13 @@ type destinationVerificationInput struct {
 func HandleVerifyCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requirePayoutOperatorContext(w, r)
-		if !ok { return }
+		if !ok {
+			return
+		}
 		operatorID, ok := requireDelegatedFinancePrincipal(w, r)
-		if !ok { return }
+		if !ok {
+			return
+		}
 		actorType, actorID, err := normalizeGovernedOwner(r.PathValue("actorType"), r.PathValue("actorId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
@@ -282,12 +294,12 @@ func HandleVerifyCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", updated.ID, "destination."+input.Decision, operatorID, "operator", input.Reason, correlationID, map[string]any{
-			"ownerActorId": actorID,
-			"ownerActorType": actorType,
+			"ownerActorId":              actorID,
+			"ownerActorType":            actorType,
 			"officialWalletProviderKey": updated.OfficialWalletProviderKey,
-			"destinationVersion": updated.DestinationVersion,
-			"verificationStatus": updated.DestinationVerificationStatus,
-			"evidenceReference": input.EvidenceReference,
+			"destinationVersion":        updated.DestinationVersion,
+			"verificationStatus":        updated.DestinationVerificationStatus,
+			"evidenceReference":         input.EvidenceReference,
 		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit destination verification")
 			return
