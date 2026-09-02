@@ -7,6 +7,7 @@ import {
   extractGoRoutes,
   routeKey,
 } from "./lib/go-route-extractor.mjs";
+import { dshContractRegistrations } from "../scripts/contract-client-metadata.mjs";
 
 const guardId = "backend-api-binding-gate";
 const violations = [];
@@ -29,31 +30,28 @@ function isNonActiveContract(file) {
   }
   return nonActiveStates.has(draftContractStateCache.get(file));
 }
-const dshRegistryFile = "services/dsh/contracts/contract-registry.ts";
+const dshRegistryFile = "services/dsh/contracts/contract.manifest.yaml";
 const routeClassificationFile =
   "services/dsh/contracts/backend-route-classification.json";
 const dshPrimary = "services/dsh/contracts/dsh.openapi.yaml";
 
 function registeredDshContracts() {
-  const source = read(dshRegistryFile);
-  const entries = [];
-  const pattern =
-    /\{[\s\S]*?path:\s*["'](contracts\/[^"']+\.openapi\.yaml)["'][\s\S]*?clientStrategy:\s*["']([^"']+)["'][\s\S]*?\n\s*\},/g;
-  for (const match of source.matchAll(pattern)) {
-    entries.push({
-      file: `services/dsh/${match[1]}`,
-      strategy: match[2],
-    });
-  }
-  if (entries.length === 0) {
+  try {
+    const entries = dshContractRegistrations().map(({ file, strategy }) => ({ file, strategy }));
+    if (entries.length > 0) return entries;
+  } catch (error) {
     violations.push({
       file: dshRegistryFile,
       line: 0,
-      message:
-        "DSH_RUNTIME_CONTRACT_REGISTRY_EMPTY: no DSH contracts were discovered",
+      message: `DSH_CONTRACT_MANIFEST_INVALID: ${error.message}`,
     });
   }
-  return entries;
+  violations.push({
+    file: dshRegistryFile,
+    line: 0,
+    message: "DSH_RUNTIME_CONTRACT_MANIFEST_EMPTY: no DSH contracts were discovered",
+  });
+  return [];
 }
 
 function loadRouteClassifications() {

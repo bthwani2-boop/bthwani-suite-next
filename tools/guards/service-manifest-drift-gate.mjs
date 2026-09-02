@@ -2,21 +2,27 @@ import fs from "node:fs";
 import path from "node:path";
 import { fail, read, repoRoot, toPosix } from "./_guard-utils.mjs";
 import { parseOpenApiContract } from "./_openapi-utils.mjs";
+import { dshContractRegistrations } from "../scripts/contract-client-metadata.mjs";
 
 const guardId = "service-manifest-drift-gate";
 const violations = [];
 const serviceRoot = "services/dsh";
 const manifestFile = `${serviceRoot}/service.manifest.ts`;
 const runtimeMapFile = `${serviceRoot}/runtime-map.ts`;
-const registryFile = `${serviceRoot}/contracts/contract-registry.ts`;
+const registryFile = `${serviceRoot}/contracts/contract.manifest.yaml`;
 const capabilityFiles = [`${serviceRoot}/capability-map.ts`, `${serviceRoot}/capability-map.extensions.ts`];
 const manifest = read(manifestFile);
 const runtimeMap = read(runtimeMapFile);
-const registrySource = read(registryFile);
+let registry = [];
+try {
+  registry = dshContractRegistrations();
+} catch (error) {
+  violations.push({ file: registryFile, message: `INVALID_DSH_CONTRACT_MANIFEST: ${error.message}` });
+}
 
 for (const [marker, message] of [
   ["capabilities: DSH_CAPABILITIES", "MANIFEST_CAPABILITY_DRIFT"],
-  ["contracts: DSH_CONTRACT_REGISTRY.map", "MANIFEST_CONTRACT_DRIFT"],
+  ["currentTruth: {", "MANIFEST_CURRENT_TRUTH_DRIFT"],
   ["contractOperations: DSH_CONTRACT_OPERATIONS", "MANIFEST_OPERATION_DRIFT"],
   ["sameCommitRuntimeEvidenceReady", "MANIFEST_SAME_COMMIT_EVIDENCE_DERIVATION_MISSING"],
   ["DSH_RUNTIME_MAP.every", "MANIFEST_RUNTIME_DERIVATION_MISSING"],
@@ -48,32 +54,19 @@ for (const [pattern, message] of [
   if (pattern.test(runtimeMap)) violations.push({ file: runtimeMapFile, message });
 }
 
-function registrations(source) {
-  return (source.match(/\{\s*id:\s*"[^"]+"[\s\S]*?\n\s*\}/g) ?? []).map((block) => ({
-    id: block.match(/id:\s*"([^"]+)"/)?.[1] ?? "",
-    path: block.match(/path:\s*"([^"]+)"/)?.[1] ?? "",
-    state: block.match(/state:\s*"([^"]+)"/)?.[1] ?? "",
-    strategy: block.match(/clientStrategy:\s*"([^"]+)"/)?.[1] ?? "",
-    generatedClient: block.match(/generatedClient:\s*"([^"]+)"/)?.[1] ?? "",
-    adapterOwner: block.match(/adapterOwner:\s*"([^"]+)"/)?.[1] ?? "",
-  }));
-}
-
-const registry = registrations(registrySource);
 const ids = new Set();
 const paths = new Set();
 for (const item of registry) {
-  if (!item.id || !item.path || !item.strategy) {
+  if (!item.id || !item.file || !item.strategy) {
     violations.push({ file: registryFile, message: "MALFORMED_CONTRACT_REGISTRATION" });
     continue;
   }
   if (ids.has(item.id)) violations.push({ file: registryFile, message: `DUPLICATE_CONTRACT_ID:${item.id}` });
   ids.add(item.id);
-  const relative = toPosix(path.join(serviceRoot, item.path));
+  const relative = item.file;
   if (paths.has(relative)) violations.push({ file: registryFile, message: `DUPLICATE_CONTRACT_PATH:${relative}` });
   paths.add(relative);
   if (!fs.existsSync(path.join(repoRoot, relative))) violations.push({ file: registryFile, message: `REGISTERED_CONTRACT_MISSING:${relative}` });
-  if (item.state !== "CONTRACT_ACTIVE") violations.push({ file: registryFile, message: `NON_CANONICAL_CONTRACT_STATE:${item.state}` });
 }
 
 const contractsDir = path.join(repoRoot, serviceRoot, "contracts");
@@ -86,7 +79,7 @@ for (const name of fs.readdirSync(contractsDir).filter((entry) => entry.endsWith
 
 const primaryItems = registry.filter((item) => item.strategy === "PRIMARY_GENERATED");
 if (primaryItems.length !== 1) violations.push({ file: registryFile, message: `PRIMARY_CONTRACT_COUNT_INVALID:${primaryItems.length}` });
-const primaryPath = primaryItems[0] ? toPosix(path.join(serviceRoot, primaryItems[0].path)) : "";
+const primaryPath = primaryItems[0]?.file ?? "";
 const primaryOps = primaryPath && fs.existsSync(path.join(repoRoot, primaryPath))
   ? parseOpenApiContract(primaryPath).map((operation) => operation.operationId).filter(Boolean)
   : [];
@@ -97,7 +90,7 @@ const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_S
 const manualStrategies = new Set(["MANUAL_TYPED_ADAPTER", "STANDALONE_MANUAL_TYPED_ADAPTER"]);
 
 for (const item of registry) {
-  const relative = toPosix(path.join(serviceRoot, item.path));
+  const relative = item.file;
   if (!fs.existsSync(path.join(repoRoot, relative))) continue;
   const source = read(relative);
   const operations = parseOpenApiContract(relative).map((operation) => operation.operationId).filter(Boolean);
@@ -115,7 +108,7 @@ for (const item of registry) {
     if (!item.generatedClient) {
       violations.push({ file: registryFile, message: `GENERATED_CLIENT_PATH_REQUIRED:${item.id}` });
     } else {
-      const clientPath = toPosix(path.join(serviceRoot, item.generatedClient));
+      const clientPath = item.generatedClient;
       if (!fs.existsSync(path.join(repoRoot, clientPath))) {
         violations.push({ file: registryFile, message: `GENERATED_CLIENT_MISSING:${clientPath}` });
       } else {
@@ -130,7 +123,7 @@ for (const item of registry) {
   if (manualStrategies.has(item.strategy)) {
     if (!item.adapterOwner) {
       violations.push({ file: registryFile, message: `MANUAL_ADAPTER_OWNER_REQUIRED:${item.id}` });
-    } else if (!fs.existsSync(path.join(repoRoot, serviceRoot, item.adapterOwner))) {
+    } else if (!fs.existsSync(path.join(repoRoot, item.adapterOwner))) {
       violations.push({ file: registryFile, message: `MANUAL_ADAPTER_OWNER_MISSING:${item.adapterOwner}` });
     }
   }
@@ -171,8 +164,8 @@ for (const [operationId, operationOwners] of owners) {
   if (operationOwners.size > 1) violations.push({ file: capabilityFiles.join(","), message: `DUPLICATE_OPERATION_OWNERSHIP:${operationId}` });
 }
 
-// The contract registry is the complete operation inventory. The capability
-// map is a curated business taxonomy and is therefore validated for non-empty,
+// The canonical DSH manifest is the contract inventory. The capability map is
+// a curated business taxonomy and is therefore validated for non-empty,
 // canonical, non-duplicated ownership without pretending to enumerate every
 // endpoint in the primary generated contract. Runtime/evidence readiness is
 // separately fail-closed above: historical reports cannot grant current PASS.

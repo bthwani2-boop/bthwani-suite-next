@@ -51,7 +51,7 @@ func TestNotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 	t.Parallel()
 
 	contract := readNotificationGovernanceFixture(t, "../../../contracts/dsh.notifications-governance.openapi.yaml")
-	registry := readNotificationGovernanceFixture(t, "../../../contracts/contract-registry.ts")
+	manifest := readNotificationGovernanceFixture(t, "../../../contracts/contract.manifest.yaml")
 	capabilities := readNotificationGovernanceFixture(t, "../../../capability-map.extensions.ts")
 	frontendTypes := readNotificationGovernanceFixture(t, "../../../frontend/shared/notifications/notifications.types.ts")
 	migration := readNotificationGovernanceFixture(t, "../../../database/migrations/dsh-088_notification_delivery_policy.sql")
@@ -76,12 +76,12 @@ func TestNotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 	}
 
 	for _, snippet := range []string{
-		"id: \"dsh-notifications-governance\"",
-		"path: \"contracts/dsh.notifications-governance.openapi.yaml\"",
-		"clientStrategy: \"STANDALONE_MANUAL_TYPED_ADAPTER\"",
-		"adapterOwner: \"frontend/shared/notifications\"",
+		"id: dsh-notifications-governance",
+		"contract: ./dsh.notifications-governance.openapi.yaml",
+		"clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER",
+		"adapterOwner: ../frontend/shared/notifications",
 	} {
-		requireNotificationGovernanceSnippet(t, registry, snippet)
+		requireNotificationGovernanceSnippet(t, manifest, snippet)
 	}
 
 	for _, snippet := range []string{

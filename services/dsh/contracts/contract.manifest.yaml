@@ -50,3 +50,156 @@ modules:
 overlays:
   - ./dsh.store-operational-context.overlay.yaml
   - ./dsh.operational-policy-permissions.overlay.yaml
+
+# Per-contract client strategy is canonical metadata owned by this manifest.
+# The OpenAPI documents remain the source for contract state and runtime flags.
+clientMetadata:
+  - id: dsh-main
+    contract: ./dsh.openapi.yaml
+    clientStrategy: PRIMARY_GENERATED
+    generatedClient: ../clients/generated/dsh-api.ts
+  - id: dsh-administration
+    contract: ./dsh.administration.openapi.yaml
+    clientStrategy: PARENT_GENERATED_SUBSET
+    generatedClient: ../clients/generated/dsh-api.ts
+  - id: dsh-analytics-extensions
+    contract: ./dsh.analytics-extensions.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/analytics
+  - id: dsh-reels
+    contract: ./dsh.reels.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/catalog/reels.api.ts
+  - id: dsh-runtime-extensions
+    contract: ./dsh.runtime-extensions.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/dispatch
+  - id: dsh-catalog-governance
+    contract: ./dsh.catalog-governance.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/catalog/catalog-governance.api.ts
+  - id: dsh-client-address-privacy
+    contract: ./dsh.client-address-privacy.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/privacy
+  - id: dsh-workforce-scopes
+    contract: ./dsh.workforce-scopes.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/workforce
+  - id: dsh-checkout
+    contract: ./dsh.checkout.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/checkout
+  - id: dsh-order-truth
+    contract: ./dsh.order-truth.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/order-truth
+  - id: dsh-order-workboards
+    contract: ./dsh.order-workboards.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/orders
+  - id: dsh-operational-policy
+    contract: ./dsh.operational-policy.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/platform
+  - id: dsh-representative-finance
+    contract: ./dsh.representative-finance.openapi.yaml
+    clientStrategy: PARENT_GENERATED_SUBSET
+    generatedClient: ../clients/generated/dsh-api.ts
+  - id: dsh-refunds
+    contract: ./dsh.refunds.openapi.yaml
+    clientStrategy: PARENT_GENERATED_SUBSET
+    generatedClient: ../clients/generated/dsh-api.ts
+  - id: dsh-partner-onboarding
+    contract: ./dsh.partner-onboarding.openapi.yaml
+    clientStrategy: PARENT_GENERATED_SUBSET
+    generatedClient: ../clients/generated/dsh-api.ts
+    adapterOwner: ../frontend/shared/partner
+  - id: dsh-payment-sessions
+    contract: ./dsh.payment-sessions.openapi.yaml
+    clientStrategy: PARENT_GENERATED_SUBSET
+    generatedClient: ../clients/generated/dsh-api.ts
+  - id: dsh-settlement-commissions
+    contract: ./dsh.settlements-commissions.openapi.yaml
+    clientStrategy: PARENT_GENERATED_SUBSET
+    generatedClient: ../clients/generated/dsh-api.ts
+  - id: dsh-payout-destinations
+    contract: ./dsh.payouts-destinations.openapi.yaml
+    clientStrategy: PARENT_GENERATED_SUBSET
+    generatedClient: ../clients/generated/dsh-api.ts
+  - id: dsh-marketing-commercial
+    contract: ./dsh.marketing-commercial.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/marketing
+  - id: dsh-partner-commercial
+    contract: ./dsh.partner-commercial-closure.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/marketing
+  - id: dsh-partner-fleet
+    contract: ./dsh.partner-fleet.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/partner/partner-fleet.api.ts
+  - id: dsh-partner-delivery
+    contract: ./dsh.partner-delivery.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/partner-delivery
+  - id: dsh-home-marketing-governance
+    contract: ./dsh.home-marketing-governance.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/home-discovery
+  - id: dsh-home-marketing-events
+    contract: ./dsh.home-marketing-events.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/home-discovery
+  - id: dsh-client-address
+    contract: ./dsh.client-address.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/client-address
+  - id: dsh-client-map
+    contract: ./dsh.client-map.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/client-map
+  - id: dsh-platform-policies
+    contract: ./dsh.platform-policies.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/platform
+  - id: dsh-support-governance
+    contract: ./dsh.support-governance.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/support
+  - id: dsh-support-message-delivery
+    contract: ./dsh.support-message-delivery.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/support
+  - id: dsh-notifications-governance
+    contract: ./dsh.notifications-governance.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/notifications
+  - id: dsh-incident-governance
+    contract: ./dsh.incident-governance.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/support/incident-governance.api.ts
+  - id: dsh-order-rescue
+    contract: ./dsh.order-rescue.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/support/order-rescue.api.ts
+  - id: dsh-dispatch-governance
+    contract: ./dsh.dispatch-governance.openapi.yaml
+    clientStrategy: PARENT_GENERATED_SUBSET
+    generatedClient: ../clients/generated/dsh-api.ts
+  - id: dsh-captain-financial-eligibility
+    contract: ./dsh.captain-financial-eligibility.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/dispatch
+  - id: dsh-live-tracking
+    contract: ./dsh.live-tracking.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/dispatch
+  - id: dsh-delivery-proof-media
+    contract: ./dsh.delivery-proof-media.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/media/pod/delivery-proof-media.api.ts
+  - id: dsh-delivery-proof-completion
+    contract: ./dsh.delivery-proof-completion.openapi.yaml
+    clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
+    adapterOwner: ../frontend/shared/delivery-proof

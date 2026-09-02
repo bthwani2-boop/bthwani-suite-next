@@ -4,12 +4,13 @@ import Ajv from "ajv";
 import { fail, repoRoot, toPosix } from "./_guard-utils.mjs";
 import { parseOpenApiContract } from "./_openapi-utils.mjs";
 import { cleanupGoRouteExtractor, extractGoRoutes, routeKey } from "./lib/go-route-extractor.mjs";
+import { dshContractRegistrations } from "../scripts/contract-client-metadata.mjs";
 
 const guardId = "frontend-feature-binding-gate";
 const violations = [];
 const registryFile = "tools/verification/frontend-binding-registry.json";
 const schemaFile = "tools/verification/frontend-binding-registry.schema.json";
-const contractRegistryFile = "services/dsh/contracts/contract-registry.ts";
+const contractManifestFile = "services/dsh/contracts/contract.manifest.yaml";
 const routerDir = "services/dsh/backend/internal/http";
 const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 
@@ -106,14 +107,16 @@ function reaches(start, target) {
 }
 
 function operationIds() {
-  const files = new Set(["services/dsh/contracts/dsh.openapi.yaml"]);
-  const source = readText(contractRegistryFile);
-  const matcher = /path:\s*["'](contracts\/[^"']+\.openapi\.yaml)["']/g;
-  for (const match of source.matchAll(matcher)) files.add(`services/dsh/${match[1]}`);
+  const files = new Set();
+  try {
+    for (const { file } of dshContractRegistrations()) files.add(file);
+  } catch (error) {
+    violations.push({ file: contractManifestFile, message: `INVALID_DSH_CONTRACT_MANIFEST ${error.message}` });
+  }
   const ids = new Set();
   for (const file of files) {
     if (!readText(file)) {
-      violations.push({ file: contractRegistryFile, message: `REGISTERED_CONTRACT_MISSING ${file}` });
+      violations.push({ file: contractManifestFile, message: `REGISTERED_CONTRACT_MISSING ${file}` });
       continue;
     }
     for (const operation of parseOpenApiContract(file)) {
@@ -184,7 +187,7 @@ try {
     if (readText(entry.screen) && readText(entry.controller) && !reaches(entry.screen, entry.controller)) {
       violations.push({ file: entry.screen, message: `SCREEN_CONTROLLER_DEPENDENCY_UNREACHABLE ${entry.id} -> ${entry.controller}` });
     }
-    if (!operations.has(entry.operationId)) violations.push({ file: contractRegistryFile, message: `OPENAPI_OPERATION_MISSING ${entry.id} -> ${entry.operationId}` });
+    if (!operations.has(entry.operationId)) violations.push({ file: contractManifestFile, message: `OPENAPI_OPERATION_MISSING ${entry.id} -> ${entry.operationId}` });
     if (!routes.has(entry.route)) violations.push({ file: routerDir, message: `BACKEND_ROUTE_MISSING ${entry.id} -> ${entry.route}` });
     if (!capabilities.has(entry.capabilityId)) violations.push({ file: "services/dsh/capability-map.ts", message: `SERVICE_MANIFEST_CAPABILITY_MISSING ${entry.id} -> ${entry.capabilityId}` });
   }

@@ -42,7 +42,6 @@
         "services/dsh/capability-map.extensions.ts",
         "services/dsh/capability-map.ts",
         "services/dsh/capabilities.ts",
-        "services/dsh/contracts/contract-registry.ts",
         "services/dsh/frontend/",
         "services/dsh/runtime-map.ts",
         "services/dsh/service.manifest.ts",
