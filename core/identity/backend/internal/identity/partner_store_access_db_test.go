@@ -21,10 +21,16 @@ func openIdentityDBIntegration(t *testing.T) *sql.DB {
 		t.Fatal(err)
 	}
 	if err := db.PingContext(t.Context()); err != nil {
-		db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			t.Fatalf("close Identity database after failed ping: %v (ping: %v)", closeErr, err)
+		}
 		t.Skipf("Identity database is unavailable: %v", err)
 	}
-	t.Cleanup(func() { _ = db.Close() })
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close Identity database: %v", err)
+		}
+	})
 	return db
 }
 

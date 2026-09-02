@@ -27,18 +27,24 @@ func supportSessionIdentityTestDB(t *testing.T) *sql.DB {
 		t.Skipf("skipping identity DB test: %v", err)
 	}
 	if err := db.Ping(); err != nil {
-		_ = db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			t.Fatalf("close identity test db after failed ping: %v (ping: %v)", closeErr, err)
+		}
 		if requireDB {
 			t.Fatalf("ping identity test db: %v", err)
 		}
 		t.Skipf("skipping identity DB test: %v", err)
 	}
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close identity test db: %v", err)
+		}
+	})
 	return db
 }
 
 func TestSupportSessionReplayRotatesUsableCredentialInDB(t *testing.T) {
 	db := supportSessionIdentityTestDB(t)
-	defer db.Close()
 	stamp := time.Now().UnixNano()
 	requestID := fmt.Sprintf("objective3-support-request-%d", stamp)
 	targetID := fmt.Sprintf("objective3-target-%d", stamp)

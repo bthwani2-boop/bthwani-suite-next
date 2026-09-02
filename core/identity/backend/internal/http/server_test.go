@@ -31,7 +31,9 @@ func TestClientIPFallsBackToRemoteAddr(t *testing.T) {
 
 func TestAllowedCorsOriginsDefaultsToLocalDev(t *testing.T) {
 	t.Setenv("IDENTITY_CORS_ALLOWED_ORIGINS", "")
-	os.Unsetenv("IDENTITY_CORS_ALLOWED_ORIGINS")
+	if err := os.Unsetenv("IDENTITY_CORS_ALLOWED_ORIGINS"); err != nil {
+		t.Fatalf("unset IDENTITY_CORS_ALLOWED_ORIGINS: %v", err)
+	}
 
 	allowed := allowedCorsOrigins()
 	if !allowed["http://localhost:13000"] {
