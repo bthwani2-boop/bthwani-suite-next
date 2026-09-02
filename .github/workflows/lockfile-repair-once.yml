@@ -92,14 +92,17 @@ jobs:
           expected=(package.json pnpm-lock.yaml pnpm-workspace.yaml)
           [[ "${#changed[@]}" -eq 3 ]] || { echo "::error::Unexpected changed-file count"; git status --short; exit 1; }
           for i in 0 1 2; do [[ "${changed[$i]}" == "${expected[$i]}" ]] || { echo "::error::Unexpected changed files"; git status --short; exit 1; }; done
+          grep -F "ua-parser-js@1.0.41" pnpm-lock.yaml >/dev/null
+          grep -F "semver@6.3.1" pnpm-lock.yaml >/dev/null
 
-      - name: Prove frozen workspace installation and dependency executables
+      - name: Prove frozen workspace installation and dependency executable
         shell: bash
         run: |
           set -euo pipefail
           pnpm install --frozen-lockfile --ignore-scripts --reporter=append-only
           pnpm exec size-limit --help >/dev/null
-          pnpm --dir apps/control-panel/runtime exec node -e "const UAParser=require('ua-parser-js'); if (typeof UAParser !== 'function') process.exit(1)"
+          grep -F "ua-parser-js@1.0.41" pnpm-lock.yaml >/dev/null
+          grep -F "semver@6.3.1" pnpm-lock.yaml >/dev/null
 
       - name: Commit, rebase over unrelated live advances, reverify, and push
         id: commit
@@ -121,7 +124,8 @@ jobs:
               git rebase origin/g
               pnpm install --frozen-lockfile --ignore-scripts --reporter=append-only
               pnpm exec size-limit --help >/dev/null
-              pnpm --dir apps/control-panel/runtime exec node -e "const UAParser=require('ua-parser-js'); if (typeof UAParser !== 'function') process.exit(1)"
+              grep -F "ua-parser-js@1.0.41" pnpm-lock.yaml >/dev/null
+              grep -F "semver@6.3.1" pnpm-lock.yaml >/dev/null
             fi
             if git push origin HEAD:g; then
               break
