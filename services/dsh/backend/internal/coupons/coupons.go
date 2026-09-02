@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -353,112 +352,17 @@ func Update(db *sql.DB, id string, input UpdateInput) (Coupon, error) {
 }
 
 func ReserveTx(ctx context.Context, tx *sql.Tx, input ReserveInput) (*Reservation, error) {
-	if strings.TrimSpace(input.Code) == "" {
-		return nil, nil
-	}
-	if input.ClientActorID == "" || input.CartID == "" || input.CheckoutIntentID == "" || input.StoreID == "" || input.SubtotalMinorUnits <= 1 {
-		return nil, ErrInvalid
-	}
-	if input.Currency == "" {
-		input.Currency = "YER"
-	}
-	code, err := validateCode(input.Code)
-	if err != nil {
-		return nil, err
-	}
-	var coupon Coupon
-	var storeID, startsAt, endsAt, approvedAt sql.NullString
-	var modes pq.StringArray
-	err = tx.QueryRowContext(ctx, `SELECT `+couponSelectColumns+` FROM dsh_coupons
-		WHERE code_hash=$1 AND archived_at IS NULL FOR UPDATE`, HashCode(code)).Scan(
-		&coupon.ID, &coupon.NameAr, &coupon.Description, &coupon.CodeLast4, &storeID,
-		&coupon.DiscountType, &coupon.DiscountPercent, &coupon.FixedDiscountMinorUnits,
-		&coupon.MaxDiscountMinorUnits, &coupon.MinSubtotalMinorUnits,
-		&coupon.GlobalUsageLimit, &coupon.PerClientUsageLimit, &modes,
-		&startsAt, &endsAt, &coupon.Status, &coupon.CreatedByActorID,
-		&coupon.ApprovedByActorID, &approvedAt, &coupon.Version,
-		&coupon.CreatedAt, &coupon.UpdatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	coupon.StoreID = nullableString(storeID)
-	coupon.StartsAt = nullableString(startsAt)
-	coupon.EndsAt = nullableString(endsAt)
-	coupon.ApprovedAt = nullableString(approvedAt)
-	coupon.EligibleFulfillmentModes = []string(modes)
-	now := time.Now().UTC()
-	if coupon.Status != "active" || coupon.ApprovedAt == nil {
-		return nil, ErrInactive
-	}
-	if coupon.StartsAt != nil {
-		start, parseErr := time.Parse(time.RFC3339, *coupon.StartsAt)
-		if parseErr != nil || now.Before(start) {
-			return nil, ErrInactive
-		}
-	}
-	if coupon.EndsAt != nil {
-		end, parseErr := time.Parse(time.RFC3339, *coupon.EndsAt)
-		if parseErr != nil || !now.Before(end) {
-			return nil, ErrInactive
-		}
-	}
-	if coupon.StoreID != nil && *coupon.StoreID != input.StoreID {
-		return nil, ErrNotEligible
-	}
-	eligibleMode := false
-	for _, mode := range coupon.EligibleFulfillmentModes {
-		if mode == input.FulfillmentMode {
-			eligibleMode = true
-			break
-		}
-	}
-	if !eligibleMode || input.SubtotalMinorUnits < coupon.MinSubtotalMinorUnits {
-		return nil, ErrNotEligible
-	}
-	var globalUsed, clientUsed int
-	if err := tx.QueryRowContext(ctx, `SELECT
-		COUNT(*) FILTER (WHERE status='committed' OR (status='reserved' AND reserved_until>NOW())),
-		COUNT(*) FILTER (WHERE client_actor_id=$2 AND (status='committed' OR (status='reserved' AND reserved_until>NOW())))
-		FROM dsh_coupon_redemptions WHERE coupon_id=$1::uuid`, coupon.ID, input.ClientActorID).Scan(&globalUsed, &clientUsed); err != nil {
-		return nil, err
-	}
-	if (coupon.GlobalUsageLimit > 0 && globalUsed >= coupon.GlobalUsageLimit) || clientUsed >= coupon.PerClientUsageLimit {
-		return nil, ErrUsageLimit
-	}
-	var discount int64
-	if coupon.DiscountType == "percent" {
-		discount = int64(math.Round(float64(input.SubtotalMinorUnits) * coupon.DiscountPercent / 100))
-	} else {
-		discount = coupon.FixedDiscountMinorUnits
-	}
-	if coupon.MaxDiscountMinorUnits > 0 && discount > coupon.MaxDiscountMinorUnits {
-		discount = coupon.MaxDiscountMinorUnits
-	}
-	if discount >= input.SubtotalMinorUnits {
-		discount = input.SubtotalMinorUnits - 1
-	}
-	if discount <= 0 {
-		return nil, ErrNotEligible
-	}
-	reservation := &Reservation{CouponID: coupon.ID, ClientActorID: input.ClientActorID, CartID: input.CartID,
-		CheckoutIntentID: input.CheckoutIntentID, Status: "reserved", SubtotalMinorUnits: input.SubtotalMinorUnits,
-		DiscountMinorUnits: discount, TotalMinorUnits: input.SubtotalMinorUnits - discount, Currency: input.Currency,
-		CouponCodeLast4: coupon.CodeLast4}
-	reservedUntil := now.Add(30 * time.Minute)
-	err = tx.QueryRowContext(ctx, `INSERT INTO dsh_coupon_redemptions
-		(coupon_id,client_actor_id,cart_id,checkout_intent_id,status,subtotal_minor_units,
-		discount_minor_units,total_minor_units,currency,idempotency_key,reserved_until)
-		VALUES ($1::uuid,$2,$3::uuid,$4::uuid,'reserved',$5,$6,$7,$8,$9,$10)
-		RETURNING id::text,reserved_until::text`, coupon.ID, input.ClientActorID, input.CartID,
-		input.CheckoutIntentID, input.SubtotalMinorUnits, discount, reservation.TotalMinorUnits,
-		input.Currency, "checkout:"+input.CheckoutIntentID, reservedUntil).Scan(&reservation.ID, &reservation.ReservedUntil)
-	if err != nil {
-		return nil, err
-	}
-	return reservation, nil
+	return ReservePricedTx(ctx, tx, ReservePricedInput{
+		Code:                  input.Code,
+		ClientActorID:         input.ClientActorID,
+		CartID:                input.CartID,
+		CheckoutIntentID:      input.CheckoutIntentID,
+		StoreID:               input.StoreID,
+		FulfillmentMode:       input.FulfillmentMode,
+		SubtotalMinorUnits:    input.SubtotalMinorUnits,
+		DeliveryFeeMinorUnits: 0,
+		Currency:              input.Currency,
+	})
 }
 
 func ReleaseByIntentTx(ctx context.Context, tx *sql.Tx, intentID, reason string) error {

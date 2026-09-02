@@ -2189,67 +2189,7 @@ func syncProductImageProjectionsForAsset(ctx context.Context, tx *sql.Tx, assetI
 }
 
 func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input AssetReviewInput) (CatalogAsset, error) {
-	if !validAssetStatus[input.Decision] {
-		return CatalogAsset{}, ErrInvalid
-	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return CatalogAsset{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	var currentStatus string
-	if err := tx.QueryRowContext(ctx, `SELECT status FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id).Scan(&currentStatus); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return CatalogAsset{}, ErrNotFound
-		}
-		return CatalogAsset{}, err
-	}
-	if !assetReviewTransitions[currentStatus][input.Decision] {
-		return CatalogAsset{}, ErrConflict
-	}
-
-	result, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_assets SET
-		status=$1, reviewed_by=$2, review_note=$3, updated_at=now(), version = version + 1 WHERE id=$4 AND status=$5`,
-		input.Decision, actorID, input.ReviewNote, id, currentStatus)
-	if err != nil {
-		return CatalogAsset{}, err
-	}
-	if n, _ := result.RowsAffected(); n != 1 {
-		return CatalogAsset{}, NewConflictError(tx, ctx, "dsh_catalog_assets", id, input.ExpectedVersion)
-	}
-	switch input.Decision {
-	case "approved":
-		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
-			status='approved', updated_at=now(), version = version + 1 WHERE asset_id=$1 AND status='pending_review'`, id); err != nil {
-			return CatalogAsset{}, err
-		}
-		if err := syncStoreImageProjectionsForAsset(ctx, tx, id); err != nil {
-			return CatalogAsset{}, err
-		}
-		if err := syncProductImageProjectionsForAsset(ctx, tx, id); err != nil {
-			return CatalogAsset{}, err
-		}
-	case "rejected", "archived":
-		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
-			status=$1, is_primary=false, updated_at=now(), version = version + 1 WHERE asset_id=$2 AND status <> 'archived'`, input.Decision, id); err != nil {
-			return CatalogAsset{}, err
-		}
-		if err := syncStoreImageProjectionsForAsset(ctx, tx, id); err != nil {
-			return CatalogAsset{}, err
-		}
-		if err := syncProductImageProjectionsForAsset(ctx, tx, id); err != nil {
-			return CatalogAsset{}, err
-		}
-	}
-	asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, id))
-	if err != nil {
-		return CatalogAsset{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return CatalogAsset{}, err
-	}
-	return asset, nil
+	return ReviewAssetAtomicExpected(ctx, db, actorID, id, input)
 }
 
 type CatalogAssetLink struct {
