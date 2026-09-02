@@ -6,6 +6,12 @@ Prove that branch `g` has reached the intended canonical fixed point after all d
 
 This is not a merge-readiness check. It qualifies `g` only.
 
+## Final authority boundary
+
+This plan owns the final `g` campaign sequence and terminal state. The live orchestrator is applied here only for applicable cross-cutting verification/closure invariants, evidence validity, exact-candidate discipline, negative-space proof, and `GREEN != CLOSED`.
+
+Do not replace this final sequence with generic merge readiness, PR readiness, AUTO/NEXT selection, or another branch lifecycle. This campaign ends only at the `g`-specific fixed point defined below.
+
 ## Step 10 — fresh branch-wide adversarial re-census
 
 Pin the exact candidate SHA and repeat a fresh read-only branch-wide structural census over the actual tracked tree.
@@ -127,7 +133,7 @@ NEGATIVE_SPACE=PASS
 
 ## Plan self-cleanup
 
-This plan is subordinate execution context, not permanent project truth. Before final completion, verify the plan package itself is not leaving obsolete duplicate authority, stale status files, historical root registries, or temporary campaign evidence that should be removed.
+This plan owns campaign sequencing only; it is not Product/System/Data truth and not a permanent parallel governance authority. Before final completion, verify the plan package itself is not leaving obsolete duplicate authority, stale status files, historical root registries, temporary campaign evidence, or copied orchestrator laws that should instead remain referenced from their canonical owner.
 
 The final live tree must be cleaner because of the campaign, including its tooling/planning residue.
 

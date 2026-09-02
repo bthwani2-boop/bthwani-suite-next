@@ -6,6 +6,14 @@ Prevent the campaign from becoming a one-pass rewrite or a mechanical march thro
 
 After each coherent Closure Unit, update live truth and select the next unit from the **new** structure.
 
+## Campaign sequencing authority
+
+This plan continues to own the `g` campaign sequence after every Closure Unit. The live orchestrator remains applicable only as the cross-cutting source of root-correctness, affected-cone, exact-HEAD, evidence, migration/cutover, verification, and closure invariants.
+
+Do not hand sequencing back to generic `AUTO/NEXT` or a historical queue after a commit. The next root must be derived from the refreshed:
+
+`CURRENT_G_MODEL → CANONICAL_G_TARGET → STRUCTURAL_DELTA → DYNAMIC_ROOT_GRAPH`.
+
 ## Step 8 — verify and checkpoint the completed root
 
 Before commit:

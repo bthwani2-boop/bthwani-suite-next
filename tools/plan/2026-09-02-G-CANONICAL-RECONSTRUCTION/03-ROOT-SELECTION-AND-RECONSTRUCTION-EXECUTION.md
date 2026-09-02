@@ -4,6 +4,16 @@
 
 Turn the complete structural delta into true causal roots, choose the highest proven executable Closure Unit, and execute it end-to-end.
 
+## Campaign authority boundary
+
+This file may be entered **only after** `00`, `01`, and `02` have completed the initial `g` reconstruction baseline:
+
+`CENSUS → CURRENT g → CANONICAL g → STRUCTURAL DELTA`.
+
+The `g` reconstruction plan owns this campaign sequencing. The live orchestrator is applied here only for applicable cross-cutting invariants such as root proof, Source-of-Defect/Source-of-Fix, canonical owner/writer, affected-cone completeness, migration/cutover safety, exact-HEAD safety, evidence validity, verification, and closure.
+
+Do not use orchestrator `AUTO/NEXT`, generic objective discovery, historical-root order, or pre-census root ranking to enter this file early or select a Closure Unit before the reconstruction baseline exists.
+
 ## Step 5 — synthesize true roots
 
 Do not create one root per file, tool finding, screen, test failure, or historical label.
