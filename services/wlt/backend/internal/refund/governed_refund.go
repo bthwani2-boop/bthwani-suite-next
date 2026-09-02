@@ -587,7 +587,11 @@ func finalizeGovernedRefundSuccess(ctx context.Context, db *sql.DB, refundID, ac
         if err != nil {
                 return nil, err
         }
-        if _, err := ledger.PostLedgerTransaction(ctx, tx, "refund_completed", "refund", updated.ID, lines, ledger.Actor{ID: actorID, Type: actorType}); err != nil {
+        postCtx := ctx
+        if _, ok := shared.OperatorContextIDFromContext(ctx); !ok {
+                postCtx = shared.WithOperatorContext(ctx, updated.OperatorContextID)
+        }
+        if _, err := ledger.PostLedgerTransaction(postCtx, tx, "refund_completed", "refund", updated.ID, lines, ledger.Actor{ID: actorID, Type: actorType}); err != nil {
                 return nil, fmt.Errorf("post refund journal: %w", err)
         }
         refundRefStatus, paymentRefStatus, err := completedReferenceStatusTx(ctx, tx, updated)

@@ -3,7 +3,6 @@ package ledger
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -65,7 +64,7 @@ type sqlTestReference struct {
 	operatorContextID string
 }
 
-func TestPostLedgerTransactionDerivesRefundOperatorContextFromPersistedTruth(t *testing.T) {
+func TestPostLedgerTransactionRequiresRefundOperatorContextInContext(t *testing.T) {
 	fixture, cleanup := seedRefundLedgerReference(t, "OperatorContext-refund-ledger")
 	defer cleanup()
 	if fixture == nil {
@@ -75,9 +74,16 @@ func TestPostLedgerTransactionDerivesRefundOperatorContextFromPersistedTruth(t *
 		{AccountType: "platform_payable", DebitCredit: "debit", AmountMinorUnits: 1000, Currency: "YER"},
 		{AccountType: "provider_clearing", DebitCredit: "credit", AmountMinorUnits: 1000, Currency: "YER"},
 	}
-	transactionID, err := PostLedgerTransaction(context.Background(), fixture.tx, "refund_completed", "refund", fixture.refundID, lines, Actor{ID: "wlt", Type: "service"})
+	// Unscoped context must fail closed: no database derivation fallback exists
+	if _, err := PostLedgerTransaction(context.Background(), fixture.tx, "refund_completed", "refund", fixture.refundID, lines, Actor{ID: "wlt", Type: "service"}); err == nil {
+		t.Fatalf("expected error when posting refund ledger transaction without operator context")
+	}
+
+	// Scoped context succeeds
+	ctx := shared.WithOperatorContext(context.Background(), fixture.operatorContextID)
+	transactionID, err := PostLedgerTransaction(ctx, fixture.tx, "refund_completed", "refund", fixture.refundID, lines, Actor{ID: "wlt", Type: "service"})
 	if err != nil {
-		t.Fatalf("refund ledger OperatorContext derivation failed: %v", err)
+		t.Fatalf("refund ledger posting with OperatorContext failed: %v", err)
 	}
 	var operatorContextID string
 	if err := fixture.tx.QueryRow(`SELECT operator_context_id FROM wlt_ledger_transactions WHERE id=$1`, transactionID).Scan(&operatorContextID); err != nil {
@@ -85,21 +91,5 @@ func TestPostLedgerTransactionDerivesRefundOperatorContextFromPersistedTruth(t *
 	}
 	if operatorContextID != fixture.operatorContextID {
 		t.Fatalf("ledger OperatorContext=%q want %q", operatorContextID, fixture.operatorContextID)
-	}
-}
-
-func TestPostLedgerTransactionRejectsRefundOperatorContextMismatch(t *testing.T) {
-	fixture, cleanup := seedRefundLedgerReference(t, "OperatorContext-refund-owner")
-	defer cleanup()
-	if fixture == nil {
-		return
-	}
-	ctx := shared.WithOperatorContext(context.Background(), "OperatorContext-refund-attacker")
-	lines := []LedgerLine{
-		{AccountType: "platform_payable", DebitCredit: "debit", AmountMinorUnits: 1000, Currency: "YER"},
-		{AccountType: "provider_clearing", DebitCredit: "credit", AmountMinorUnits: 1000, Currency: "YER"},
-	}
-	if _, err := PostLedgerTransaction(ctx, fixture.tx, "refund_completed", "refund", fixture.refundID, lines, Actor{ID: "wlt", Type: "service"}); !errors.Is(err, ErrLedgerOperatorContextConflict) {
-		t.Fatalf("expected ErrLedgerOperatorContextConflict, got %v", err)
 	}
 }

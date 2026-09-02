@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
 	"wlt-api/internal/shared"
 )
@@ -30,44 +29,20 @@ type Actor struct {
 	Type string
 }
 
-// resolveLedgerOperatorContext keeps request context as the primary OperatorContext
-// authority. Refund compatibility calls may omit it only because WLT can derive
-// the OperatorContext from its own persisted refund row. A supplied mismatched OperatorContext is
-// always rejected; no local/default OperatorContext is invented.
+// resolveLedgerOperatorContext keeps request context as the sole OperatorContext
+// authority. All ledger postings strictly require an authenticated OperatorContext.
+// No domain queries or compatibility fallbacks exist in the ledger kernel.
 func resolveLedgerOperatorContext(ctx context.Context, tx *sql.Tx, referenceType, referenceID string) (context.Context, string, error) {
 	trustedOperatorContext, hasTrustedOperatorContext := shared.OperatorContextIDFromContext(ctx)
-	if referenceType != "refund" {
-		if !hasTrustedOperatorContext {
-			_, err := shared.RequireOperatorContext(ctx)
-			return ctx, "", err
-		}
-		return ctx, trustedOperatorContext, nil
+	if !hasTrustedOperatorContext {
+		_, err := shared.RequireOperatorContext(ctx)
+		return ctx, "", err
 	}
-
-	var persistedOperatorContext string
-	if err := tx.QueryRowContext(ctx, `SELECT operator_context_id FROM wlt_refunds WHERE id=$1`, referenceID).Scan(&persistedOperatorContext); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ctx, "", fmt.Errorf("refund ledger reference not found")
-		}
-		return ctx, "", fmt.Errorf("resolve refund ledger OperatorContext: %w", err)
-	}
-	persistedOperatorContext = strings.TrimSpace(persistedOperatorContext)
-	if persistedOperatorContext == "" {
-		return ctx, "", fmt.Errorf("refund ledger OperatorContext is missing")
-	}
-	if hasTrustedOperatorContext {
-		if trustedOperatorContext != persistedOperatorContext {
-			return ctx, "", ErrLedgerOperatorContextConflict
-		}
-		return ctx, trustedOperatorContext, nil
-	}
-	trustedCtx := shared.WithOperatorContext(ctx, persistedOperatorContext)
-	return trustedCtx, persistedOperatorContext, nil
+	return ctx, trustedOperatorContext, nil
 }
 
 // PostLedgerTransaction is the only write path for the double-entry ledger.
-// OperatorContext ownership comes from authenticated context. A refund-only compatibility
-// seam may derive it from WLT's canonical refund row, never from caller input.
+// OperatorContext ownership comes strictly from authenticated context.
 // Account identity, transaction idempotency and lines are all OperatorContext-scoped.
 func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, referenceType, referenceID string, lines []LedgerLine, createdBy Actor) (string, error) {
 	if transactionType == "" {

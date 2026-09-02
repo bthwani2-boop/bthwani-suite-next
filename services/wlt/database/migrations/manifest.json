@@ -942,6 +942,13 @@
       "sha256": "7e995870b5b995b90a2ce3ec5cbb36c0da541e8e3fd6f9c57d71cca1a89cced0",
       "historicalPrefix": "964",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 135,
+      "file": "wlt-965_drop_wallet_compatibility_views.sql",
+      "sha256": "e8cde339a37780465935869e8a7dfd4575bd6a7ec78dce029a29f893f7effa09",
+      "historicalPrefix": "965",
+      "state": "ACTIVE"
     }
   ]
 }
