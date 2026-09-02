@@ -146,7 +146,7 @@ func (r *Repository) replaceActorAccess(ctx context.Context, actorID string, rol
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := setActorAccessTx(ctx, tx, actorID, roles, permissions, grantedBy); err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (r *Repository) UpsertActorWithAccess(ctx context.Context, input ActorAcces
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.ExecContext(ctx, `
 INSERT INTO identity_actors
