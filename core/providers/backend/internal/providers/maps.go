@@ -265,7 +265,7 @@ func executeMapJSON(ctx context.Context, providerCode, endpoint string, params m
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
 		return fmt.Errorf("map provider %s returned status %d", providerCode, resp.StatusCode)
