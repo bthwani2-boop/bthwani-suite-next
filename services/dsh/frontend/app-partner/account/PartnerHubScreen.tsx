@@ -144,6 +144,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     appearance,
     onOpenStoreCourierSetup,
     onOpenCommercialModel,
+    onOpenPromotions,
     canonicalStoreId,
     dshClientId,
     walletBalanceLabel,
@@ -552,6 +553,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           onBack={() => updateSection("hub")}
           {...(onOpenStoreCourierSetup ? { onOpenStoreCourierSetup } : {})}
           {...(onOpenCommercialModel ? { onOpenCommercialModel } : {})}
+          {...(onOpenPromotions ? { onOpenPromotions } : {})}
           {...(props.onOpenTeamManagement
             ? { onOpenTeamManagement: props.onOpenTeamManagement }
             : {})}

@@ -483,6 +483,7 @@ export type DshPartnerRoute =
   | 'product-media'
   | 'product-controls'
   | 'commercial-model'
+  | 'promotions'
   | 'team';
 
 export type PartnerHubSection = 'hub' | 'profile' | 'operations' | 'inventory' | 'wallet' | 'analytics' | 'settings';

@@ -21,6 +21,7 @@ import { PartnerTeamManagementScreen } from "./team/PartnerTeamManagementScreen"
 import { PartnerEntryScreen } from "./account/PartnerEntryScreen";
 import { PartnerSupportScreen } from "./account/PartnerSupportScreen";
 import { PartnerCommercialSummaryScreen } from "./account/PartnerCommercialSummaryScreen";
+import { PromotionsScreen } from "./account/PromotionsScreen";
 import { PartnerCatalogManagementScreen } from "./catalog/PartnerCatalogManagementScreen";
 import { ProductEditScreen } from "./catalog/ProductEditScreen";
 import { CategoryManagementScreen } from "./catalog/CategoryManagementScreen";
@@ -92,6 +93,7 @@ const STORE_SCOPED_ROUTES = new Set<DshPartnerNavigationRoute["kind"]>([
   "product-controls",
   "store-courier",
   "team",
+  "promotions",
 ]);
 
 const ORDER_BOUND_SUPPORT_ROUTES = new Set<DshPartnerSupportRouteId>([
@@ -269,6 +271,7 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
         onOpenStoreCourierSetup={() => navigation.navigate({ kind: "store-courier" })}
         onOpenTeamManagement={() => navigation.navigate({ kind: "team" })}
         onOpenCommercialModel={() => navigation.navigate({ kind: "commercial-model" })}
+        onOpenPromotions={() => navigation.navigate({ kind: "promotions" })}
         canonicalStoreId={scopedStoreId}
         dshClientId={dshClientId ?? null}
       />,
@@ -362,6 +365,18 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
   if (route.kind === "commercial-model") {
     return renderSurfaceShell(
       <PartnerCommercialSummaryScreen storeId={scopedStoreId || null} onBack={() => openAccountHub("operations")} />,
+    );
+  }
+
+  if (route.kind === "promotions") {
+    return renderSurfaceShell(
+      <PromotionsScreen
+        storeId={scopedStoreId}
+        storeName={runtimePartnerProfile.storeName}
+        branchLabel={runtimePartnerProfile.branchLabel}
+        activeZoneLabel={runtimePartnerProfile.activeZoneLabel}
+        todayHoursLabel={runtimePartnerProfile.todayHoursLabel}
+      />,
     );
   }
 

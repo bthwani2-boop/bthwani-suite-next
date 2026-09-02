@@ -72,6 +72,7 @@ export type DshPartnerHubSurfaceProps = {
   onOpenStoreCourierSetup?: () => void;
   onOpenTeamManagement?: () => void;
   onOpenCommercialModel?: () => void;
+  onOpenPromotions?: () => void;
   teamMembers?: readonly PartnerTeamMember[];
   onToggleAvailability?: (isAvailable: boolean) => void;
   canonicalStoreId?: string;

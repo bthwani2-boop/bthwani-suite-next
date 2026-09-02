@@ -89,6 +89,10 @@ const DSH_PARTNER_BINDING_CONTRACT_DEFINITIONS = {
     bindingName: 'partner-commercial-model-binding',
     description: 'DSH-owned commercial policy and store operating-model readback bridge.',
   },
+  promotions: {
+    bindingName: 'partner-promotions-binding',
+    description: 'Partner self-offer submission, review-state tracking, and visibility-gate bridge.',
+  },
 } satisfies Record<DshPartnerSurfaceId, DshPartnerBindingContractDefinition>;
 
 export const DSH_PARTNER_BINDING_CONTRACTS: DshPartnerBindingContracts = (

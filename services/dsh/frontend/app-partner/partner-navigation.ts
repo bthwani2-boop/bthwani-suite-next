@@ -52,6 +52,7 @@ export type DshPartnerNavigationRoute =
   | { readonly kind: "product-media"; readonly productId: string }
   | { readonly kind: "product-controls"; readonly productId: string }
   | { readonly kind: "commercial-model" }
+  | { readonly kind: "promotions" }
   | { readonly kind: "team" };
 
 export type DshPartnerNavigationMode = "push" | "replace";
@@ -117,6 +118,7 @@ export function dshPartnerRouteToPath(route: DshPartnerNavigationRoute): string 
     case "product-media": return `/catalog/products/${segment(route.productId)}/media`;
     case "product-controls": return `/catalog/products/${segment(route.productId)}/controls`;
     case "commercial-model": return "/commercial";
+    case "promotions": return "/promotions";
     case "team": return "/team";
   }
 }
