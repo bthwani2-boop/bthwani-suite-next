@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@bthwani/ui-kit";
 
-import { useMemo, useState } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import {
   CpBadge,
   CpDescriptionList,
@@ -24,6 +24,12 @@ import {
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useControlPanelSession } from "../session";
+
+const PlatformNotificationConfigScreen = lazy(() =>
+  import("./PlatformNotificationConfigScreen").then((module) => ({
+    default: module.PlatformNotificationConfigScreen,
+  })),
+);
 import {
   useOperatorTicketController,
   useSupportIncidentController,
@@ -151,8 +157,18 @@ export function SupportDashboardScreen() {
           ) : null}
         </div>
       }
-      stateView={isLoading ? <CpStateView kind="loading" title="جاري تحميل دعم DSH…" /> : undefined}
+      stateView={isLoading && mainTab !== "notifications" ? <CpStateView kind="loading" title="جاري تحميل دعم DSH…" /> : undefined}
     >
+      {mainTab === "notifications" ? (
+        <div style={{ marginTop: "0.5rem" }}>
+          <Suspense
+            fallback={<CpStateView kind="loading" title="جاري تحميل إعدادات الإشعارات…" />}
+          >
+            <PlatformNotificationConfigScreen />
+          </Suspense>
+        </div>
+      ) : (
+        <>
       {supportMetricsProven && metrics ? (
         <CpKpiStrip>
           <CpKpiCard label="صفوف مقترحة" value={metrics.suggestedQueues} />
@@ -335,6 +351,8 @@ export function SupportDashboardScreen() {
           ) : null}
         </>
       ) : null}
+        </>
+      )}
 
       <div
         dir="rtl"

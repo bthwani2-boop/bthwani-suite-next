@@ -17,7 +17,8 @@ import type {
 
 export type SupportMainTabId =
   | "queues"
-  | "escalation";
+  | "escalation"
+  | "notifications";
 
 export type SupportMainTabMeta = {
   readonly id: SupportMainTabId;
@@ -27,6 +28,7 @@ export type SupportMainTabMeta = {
 export const SUPPORT_MAIN_TABS: readonly SupportMainTabMeta[] = [
   { id: "queues",           label: "صفوف الدعم والنزاعات" },
   { id: "escalation",       label: "التصاعد"              },
+  { id: "notifications",    label: "الإشعارات والتسليم"   },
 ] as const;
 
 // ─── Queue Sub-filter Registry ────────────────────────────────────────────────
@@ -249,6 +251,9 @@ export function buildSupportBreadcrumb(
   count: number,
 ): string {
   const tabLabel   = SUPPORT_MAIN_TABS.find((t) => t.id === mainTab)?.label   ?? "الدعم";
+  if (mainTab === "notifications") {
+    return `الدعم › ${tabLabel}`;
+  }
   const filterLabel = SUPPORT_QUEUE_FILTERS.find((f) => f.id === queueFilter)?.label ?? "الكل";
   return `الدعم › ${tabLabel} › ${filterLabel} (${count} سجل)`;
 }
