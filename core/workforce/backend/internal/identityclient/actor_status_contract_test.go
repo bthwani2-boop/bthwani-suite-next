@@ -35,7 +35,7 @@ func TestActorDecodesCanonicalIdentityLifecycleWithoutLegacyActiveField(t *testi
 	if actor.Status != "ACTIVE" {
 		t.Fatalf("expected ACTIVE status, got %q", actor.Status)
 	}
-	if !actor.IsActive() {
+	if !IsActorActive(actor) {
 		t.Fatalf("canonical ACTIVE status must be treated as active: %#v", actor)
 	}
 }
@@ -44,7 +44,7 @@ func TestActorLifecycleFailsClosedForNonActiveStatuses(t *testing.T) {
 	for _, status := range []string{"", "PROVISIONED", "PENDING_ACTIVATION", "SUSPENDED", "DEACTIVATED"} {
 		t.Run(status, func(t *testing.T) {
 			actor := ActorView{Status: status}
-			if actor.IsActive() {
+			if IsActorActive(actor) {
 				t.Fatalf("status %q must not be treated as active", status)
 			}
 		})
@@ -53,7 +53,7 @@ func TestActorLifecycleFailsClosedForNonActiveStatuses(t *testing.T) {
 
 func TestActorLifecycleActiveComparisonIsCanonicalAndCaseInsensitive(t *testing.T) {
 	actor := ActorView{Status: " active "}
-	if !actor.IsActive() {
+	if !IsActorActive(actor) {
 		t.Fatal("ACTIVE lifecycle status should tolerate transport whitespace/case")
 	}
 }

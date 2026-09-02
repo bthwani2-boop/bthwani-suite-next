@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	identityauth "github.com/bthwani2-boop/bthwani-identityauth"
 	workforceauth "workforce-api/internal/auth"
 )
 
@@ -69,30 +70,13 @@ func trustedOperatorContext(ctx context.Context, requested string) (string, erro
 	return operatorContextID, nil
 }
 
-type ActorView struct {
-	ActorID   string   `json:"actorId"`
-	Username  string   `json:"username"`
-	PhoneE164 string   `json:"phoneE164"`
-	Roles     []string `json:"roles"`
-	Version   int      `json:"version"`
-	Status    string   `json:"status"`
-	// Created is true only when this Provision call created the actor. A
-	// replayed provision is intentionally false so callers can compensate only
-	// resources they actually created.
-	Created bool `json:"created,omitempty"`
-}
+type ActorView = identityauth.ActorAdminView
+type ActorSearchPage = identityauth.ActorSearchPage
 
-// IsActive derives lifecycle truth exclusively from Identity's canonical
+// IsActorActive derives lifecycle truth exclusively from Identity's canonical
 // status field. Identity does not expose a parallel JSON "active" boolean.
-func (a ActorView) IsActive() bool {
-	return strings.EqualFold(strings.TrimSpace(a.Status), "ACTIVE")
-}
-
-type ActorSearchPage struct {
-	Items      []ActorView `json:"items"`
-	Limit      int         `json:"limit"`
-	NextCursor string      `json:"nextCursor,omitempty"`
-	Total      int         `json:"total"`
+func IsActorActive(actor ActorView) bool {
+	return strings.EqualFold(strings.TrimSpace(actor.Status), "ACTIVE")
 }
 
 type ProvisionInput struct {

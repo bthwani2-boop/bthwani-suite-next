@@ -109,7 +109,7 @@ func (s *Service) resolveLeadershipBundle(ctx context.Context, code, employmentC
 		return identityclient.EmployeePermissionBundleDescriptor{}, err
 	}
 	for _, bundle := range bundles {
-		if bundle.Code != code {
+		if string(bundle.Code) != code {
 			continue
 		}
 		if !containsString(bundle.AllowedEmploymentClasses, employmentClass) {
@@ -265,7 +265,7 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 	if err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
 	}
-	input.PermissionBundle = bundle.Code
+	input.PermissionBundle = string(bundle.Code)
 	if input.GuaranteeType == "" {
 		input.GuaranteeType = "none"
 	}

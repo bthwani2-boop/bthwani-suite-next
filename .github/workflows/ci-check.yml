@@ -50,6 +50,7 @@ jobs:
       dsh: ${{ steps.scope.outputs.dsh }}
       wlt: ${{ steps.scope.outputs.wlt }}
       identity: ${{ steps.scope.outputs.identity }}
+      identity_client: ${{ steps.scope.outputs.identity_client }}
       workforce: ${{ steps.scope.outputs.workforce }}
       providers: ${{ steps.scope.outputs.providers }}
       database_changed: ${{ steps.scope.outputs.database_changed }}
@@ -465,6 +466,7 @@ jobs:
       dsh: ${{ needs.context.outputs.dsh }}
       wlt: ${{ needs.context.outputs.wlt }}
       identity: ${{ needs.context.outputs.identity }}
+      identity_client: ${{ needs.context.outputs.identity_client }}
       workforce: ${{ needs.context.outputs.workforce }}
       platform: ${{ needs.context.outputs.platform }}
       providers: ${{ needs.context.outputs.providers }}

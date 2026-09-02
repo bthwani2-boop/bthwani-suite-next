@@ -140,6 +140,17 @@ for (const file of listCodeFiles()) {
   }
 }
 
+const controlPanelButtonAdapter = "shared/control-panel/src/components/CpButton.tsx";
+if (listCodeFiles().includes(controlPanelButtonAdapter)) {
+  const source = read(controlPanelButtonAdapter);
+  if (!/from ["']@bthwani\/ui-kit["']/u.test(source) || /<button\b/u.test(source)) {
+    violations.push({
+      file: controlPanelButtonAdapter,
+      message: "CpButton must remain a compatibility adapter over the canonical @bthwani/ui-kit Button",
+    });
+  }
+}
+
 // Removes custom-property *names* only, so that a token reference such as
 // `var(--cp-border)` scans clean while the fallback in `var(--cp-border, #E2E8F0)`
 // stays visible. A literal inside a fallback is still a hardcoded color: it is

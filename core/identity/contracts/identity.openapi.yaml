@@ -1182,7 +1182,7 @@ components:
     ActorAdminView:
       type: object
       additionalProperties: false
-      required: [ actorId, username, phoneE164, roles, active ]
+      required: [ actorId, username, phoneE164, roles, status, version ]
       properties:
         actorId:
           type: string
@@ -1195,7 +1195,13 @@ components:
           type: array
           items:
             type: string
-        active:
+        status:
+          type: string
+          enum: [ PROVISIONED, PENDING_ACTIVATION, ACTIVE, INACTIVE, SUSPENDED, DEACTIVATED ]
+        version:
+          type: integer
+          minimum: 1
+        created:
           type: boolean
     IssueActivationForActorRequest:
       type: object

@@ -8,6 +8,7 @@ import { StyledButton } from "../_shared";
 export type ButtonProps = {
   children?: ReactNode | undefined;
   label?: string | undefined;
+  type?: ("button" | "submit" | "reset") | undefined;
   size?: ("sm" | "md" | "lg") | undefined;
   tone?: ("primary" | "secondary" | "ghost" | "danger" | "success" | "brand") | undefined;
   loading?: boolean | undefined;
@@ -32,6 +33,7 @@ export type ButtonProps = {
 export function Button({
   children,
   label,
+  type = "button",
   size = "md",
   loading = false,
   disabled,
@@ -77,6 +79,7 @@ export function Button({
   return (
     <StyledButton
       {...accessibilityProps}
+      type={Platform.OS === "web" ? type : undefined}
       disabled={resolvedDisabled}
       uiSize={size}
       icon={loading ? <Spinner size="small" color="currentColor" /> : leading}

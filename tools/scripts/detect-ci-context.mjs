@@ -27,6 +27,8 @@ const isWltFinancialPath = (file) =>
   /^services\/wlt\/(backend|database|contracts)\//u.test(file);
 const isIdentityPath = (file) =>
   file.startsWith("core/identity/");
+const isIdentityGoClientPath = (file) =>
+  file.startsWith("core/identity/clients/go/");
 const isSchemaRuntimePath = (file) =>
   /\/database\/(migrations|tests)\//u.test(file);
 const isMigrationPath = (file) => /\/database\/migrations\//u.test(file);
@@ -171,7 +173,7 @@ export function classifyFiles(inputFiles, options = {}) {
   );
   const typedLintRequired = fullScope || hasPath(files, (file) => /\.(?:ts|tsx|mts|cts)$/u.test(file));
   const contracts = fullScope || hasPath(files, (file) =>
-    file.startsWith("contracts/") || file.endsWith(".openapi.yaml") || file.includes("/contracts/") || file.includes("/clients/generated/"),
+    file.startsWith("contracts/") || file.endsWith(".openapi.yaml") || file.includes("/contracts/") || file.includes("/clients/generated/") || isIdentityGoClientPath(file),
   );
   // Migration-authority files govern every service's ledger truth, so they
   // route to the full backend matrix and its database verification.
@@ -198,12 +200,14 @@ export function classifyFiles(inputFiles, options = {}) {
   const renderedWebRequired = fullScope || hasPath(files, isRenderedWebExperiencePath);
   const mobileEvidenceRequired = fullScope || hasPath(files, isMobileExperiencePath);
 
-  const dsh = moduleChanged(["services/dsh/backend/", "services/dsh/database/"]) || migrationAuthority;
+  const identityClient = fullScope || hasPath(files, isIdentityGoClientPath);
+  const identityConsumerChanged = identityClient;
+  const dsh = moduleChanged(["services/dsh/backend/", "services/dsh/database/"]) || migrationAuthority || identityConsumerChanged;
   const wlt = moduleChanged(["services/wlt/backend/", "services/wlt/database/"]) || migrationAuthority;
-  const identity = moduleChanged(["core/identity/backend/", "core/identity/database/"]) || migrationAuthority;
-  const workforce = moduleChanged(["core/workforce/backend/", "core/workforce/database/"]) || migrationAuthority;
-  const platform = moduleChanged(["core/platform-control/backend/", "core/platform-control/database/"]) || migrationAuthority;
-  const providers = moduleChanged(["core/providers/backend/", "core/providers/database/"]) || migrationAuthority;
+  const identity = moduleChanged(["core/identity/backend/", "core/identity/database/"]) || identityClient || migrationAuthority;
+  const workforce = moduleChanged(["core/workforce/backend/", "core/workforce/database/"]) || migrationAuthority || identityConsumerChanged;
+  const platform = moduleChanged(["core/platform-control/backend/", "core/platform-control/database/"]) || migrationAuthority || identityConsumerChanged;
+  const providers = moduleChanged(["core/providers/backend/", "core/providers/database/"]) || migrationAuthority || identityConsumerChanged;
   const backend = dsh || wlt || identity || workforce || platform || providers;
 
   const node = fullScope || frontend || contracts || ciControlPlane || dependencyChanged;
@@ -256,6 +260,7 @@ export function classifyFiles(inputFiles, options = {}) {
     dsh,
     wlt,
     identity,
+    identity_client: identityClient,
     workforce,
     platform,
     providers,

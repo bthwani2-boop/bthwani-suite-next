@@ -148,6 +148,26 @@ test("backend changes cannot become green by skipping backend verification", () 
   assert.doesNotMatch(workflow, /run_assurance/u);
 });
 
+test("Identity Go client changes have a first-class backend job and pinned generator toolchain", () => {
+  const router = read("tools/scripts/detect-ci-context.mjs");
+  const check = read(".github/workflows/ci-check.yml");
+  const backends = read(".github/workflows/ci-backends.yml");
+  const node = read(".github/workflows/ci-node-verification.yml");
+  assert.match(router, /identity_client/u);
+  assert.match(check, /identity_client: \$\{\{ needs\.context\.outputs\.identity_client \}\}/u);
+  assert.match(backends, /identity-client:[\s\S]*?core\/identity\/clients\/go\/identityauth\/go\.mod/u);
+  assert.match(node, /Set up locked Go runtime for generated Go contracts[\s\S]*?go-version-file: core\/identity\/clients\/go\/identityauth\/go\.mod/u);
+});
+
+test("control-panel CpButton is only a compatibility adapter over the canonical UI kit Button", () => {
+  const adapter = read("shared/control-panel/src/components/CpButton.tsx");
+  const button = read("shared/ui-kit/src/components/Button/Button.tsx");
+  assert.match(adapter, /from ["']@bthwani\/ui-kit["']/u);
+  assert.doesNotMatch(adapter, /<button\b/u);
+  assert.match(button, /type\?: \("button" \| "submit" \| "reset"\)/u);
+  assert.match(button, /type=\{Platform\.OS === "web" \? type : undefined\}/u);
+});
+
 test("final closure resolves once then collects independent analyzers and experience evidence in parallel", () => {
   const workflow = read(".github/workflows/final-closure.yml");
   assert.match(workflow, /workflow_dispatch:/u);

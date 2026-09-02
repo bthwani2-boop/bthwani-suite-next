@@ -3,6 +3,8 @@ package identityclient
 import (
 	"context"
 	"net/http"
+
+	identityauth "github.com/bthwani2-boop/bthwani-identityauth"
 )
 
 // EmployeeProvisionInput requests one server-owned administrative permission
@@ -19,14 +21,7 @@ type EmployeeProvisionInput struct {
 // EmployeePermissionBundleDescriptor is supplied by Identity. Workforce may
 // use it to validate organisational assignments and render reference choices,
 // but must not expand the bundle into effective permissions.
-type EmployeePermissionBundleDescriptor struct {
-	Code                       string   `json:"code"`
-	NameAr                     string   `json:"nameAr"`
-	NameEn                     string   `json:"nameEn"`
-	AllowedEmploymentClasses   []string `json:"allowedEmploymentClasses"`
-	DefaultDepartmentScope     string   `json:"defaultDepartmentScope,omitempty"`
-	DepartmentSelectionAllowed bool     `json:"departmentSelectionAllowed"`
-}
+type EmployeePermissionBundleDescriptor = identityauth.EmployeePermissionBundleDescriptor
 
 func (c *Client) EmployeePermissionBundles(ctx context.Context) ([]EmployeePermissionBundleDescriptor, error) {
 	var response struct {

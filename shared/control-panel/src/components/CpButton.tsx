@@ -1,6 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { cpRadius, cpSpace, cpType } from "./cpScale";
-import { shadowToBoxShadow, useCpTokens } from "./cpTokens";
+import { Button } from "@bthwani/ui-kit";
 
 export type CpButtonVariant = "primary" | "brand" | "secondary" | "ghost" | "danger";
 
@@ -23,29 +22,16 @@ export function CpButton({
   "aria-label": ariaLabel,
   children,
 }: CpButtonProps) {
-  const { tokens } = useCpTokens();
-  const state = disabled ? tokens.components.buttons[variant].disabled : tokens.components.buttons[variant].default;
-  const buttonStyle: CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "0.375rem",
-    padding: `${cpSpace[2]} ${cpSpace[4]}`,
-    borderRadius: cpRadius.md,
-    fontSize: cpType.body.fontSize,
-    fontWeight: 600,
-    cursor: disabled ? "not-allowed" : "pointer",
-    backgroundColor: state.backgroundColor,
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: state.borderColor,
-    color: state.textColor,
-    boxShadow: state.shadow ? shadowToBoxShadow(state.shadow) : undefined,
-    ...style,
-  };
   return (
-    <button type={type} onClick={onClick} style={buttonStyle} disabled={disabled} aria-label={ariaLabel}>
+    <Button
+      type={type}
+      onPress={onClick}
+      style={style}
+      disabled={disabled}
+      tone={variant}
+      accessibilityLabel={ariaLabel}
+    >
       {children}
-    </button>
+    </Button>
   );
 }

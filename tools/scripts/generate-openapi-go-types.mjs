@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
+const identityGoModuleFile = path.resolve(scriptDirectory, "../../core/identity/clients/go/identityauth/go.mod");
 
 const INITIALISMS = new Map([
   ["api", "API"],
@@ -49,26 +50,46 @@ function refName(reference) {
   return String(reference).split("/").at(-1) ?? "Value";
 }
 
-function primitiveType(schema) {
+function unsupportedSchema(contractPath, schemaPath, schema) {
+  const keys = schema && typeof schema === "object" ? Object.keys(schema).sort().join(",") : "non-object";
+  throw new Error(`${contractPath}: unsupported OpenAPI schema at ${schemaPath} (${keys || "empty schema"}).`);
+}
+
+function rejectUnsupportedKeywords(schema, contractPath, schemaPath) {
+  for (const keyword of ["oneOf", "anyOf", "allOf", "not", "if", "then", "else", "patternProperties", "dependentSchemas"]) {
+    if (Object.hasOwn(schema, keyword)) unsupportedSchema(contractPath, `${schemaPath}.${keyword}`, schema);
+  }
+}
+
+function primitiveType(schema, contractPath, schemaPath) {
+  rejectUnsupportedKeywords(schema, contractPath, schemaPath);
   if (schema?.const !== undefined) {
     if (typeof schema.const === "boolean") return "bool";
     if (typeof schema.const === "number") return Number.isInteger(schema.const) ? "int" : "float64";
-    return "string";
+    if (typeof schema.const === "string") return "string";
+    unsupportedSchema(contractPath, schemaPath, schema);
   }
   if (schema?.type === "integer") return "int";
   if (schema?.type === "number") return "float64";
   if (schema?.type === "boolean") return "bool";
   if (schema?.type === "string") return schema.format === "date-time" ? "time.Time" : "string";
-  return "any";
+  unsupportedSchema(contractPath, schemaPath, schema);
 }
 
-function inlineObjectType(schema) {
+function inlineObjectType(schema, contractPath, schemaPath) {
+  rejectUnsupportedKeywords(schema, contractPath, schemaPath);
   const properties = Object.entries(schema?.properties ?? {}).sort(([left], [right]) => left.localeCompare(right));
-  if (properties.length === 0) return schema?.additionalProperties === false ? "struct{}" : "map[string]any";
+  if (properties.length === 0) {
+    if (schema?.additionalProperties === false) return "struct{}";
+    if (schema?.additionalProperties && typeof schema.additionalProperties === "object") {
+      return `map[string]${goType(schema.additionalProperties, false, contractPath, `${schemaPath}.additionalProperties`)}`;
+    }
+    return "map[string]any";
+  }
 
   const required = new Set(schema.required ?? []);
   const fields = properties.map(([property, propertySchema]) => {
-    const fieldType = goType(propertySchema, !required.has(property));
+    const fieldType = goType(propertySchema, !required.has(property), contractPath, `${schemaPath}.properties.${property}`);
     const optional = !required.has(property);
     const tag = optional ? `json:"${property},omitempty"` : `json:"${property}"`;
     return `\t${goIdentifier(property)} ${fieldType} \`${tag}\``;
@@ -76,17 +97,28 @@ function inlineObjectType(schema) {
   return `struct {\n${fields.join("\n")}\n}`;
 }
 
-function goType(schema, optional = false) {
+function goType(schema, optional = false, contractPath = "OpenAPI contract", schemaPath = "schema") {
   let type;
-  if (!schema || typeof schema !== "object") type = "any";
-  else if (schema.$ref) type = refName(schema.$ref);
-  else if (schema.type === "array") type = `[]${goType(schema.items)}`;
+  if (!schema || typeof schema !== "object" || Array.isArray(schema)) unsupportedSchema(contractPath, schemaPath, schema);
+  rejectUnsupportedKeywords(schema, contractPath, schemaPath);
+  if (schema.$ref) {
+    if (typeof schema.$ref !== "string" || schema.$ref.trim() === "") unsupportedSchema(contractPath, schemaPath, schema);
+    type = refName(schema.$ref);
+  } else if (schema.type === "array") {
+    if (!Object.hasOwn(schema, "items")) unsupportedSchema(contractPath, schemaPath, schema);
+    type = `[]${goType(schema.items, false, contractPath, `${schemaPath}.items`)}`;
+  }
   else if (schema.type === "object") {
-    if (schema.properties) type = inlineObjectType(schema);
+    if (schema.properties !== undefined && (!schema.properties || typeof schema.properties !== "object" || Array.isArray(schema.properties))) {
+      unsupportedSchema(contractPath, `${schemaPath}.properties`, schema.properties);
+    }
+    if (schema.properties !== undefined) type = inlineObjectType(schema, contractPath, schemaPath);
     else if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
-      type = `map[string]${goType(schema.additionalProperties)}`;
-    } else type = "map[string]any";
-  } else type = primitiveType(schema);
+      type = `map[string]${goType(schema.additionalProperties, false, contractPath, `${schemaPath}.additionalProperties`)}`;
+    } else if (schema.additionalProperties === false) type = "struct{}";
+    else if (schema.additionalProperties === true || schema.additionalProperties === undefined) type = "map[string]any";
+    else unsupportedSchema(contractPath, `${schemaPath}.additionalProperties`, schema);
+  } else type = primitiveType(schema, contractPath, schemaPath);
 
   if (optional && type === "time.Time") {
     return `*${type}`;
@@ -122,11 +154,40 @@ function schemaNeedsTime(schema) {
   });
 }
 
-function renderNamedSchema(name, schema) {
-  if (schema?.type === "object") {
-    return `// ${name} defines model for ${name}.\ntype ${name} ${inlineObjectType(schema)}\n`;
+function formatWithPinnedGoToolchain(source, contractPath) {
+  const moduleSource = fs.readFileSync(identityGoModuleFile, "utf8");
+  const pinnedVersion = moduleSource.match(/^go\s+(\d+\.\d+\.\d+)\s*$/mu)?.[1];
+  if (!pinnedVersion) {
+    throw new Error(`${contractPath}: Identity Go module must declare an exact Go version for deterministic formatting.`);
   }
-  return `// ${name} defines model for ${name}.\ntype ${name} ${goType(schema)}\n`;
+
+  let goEnv;
+  try {
+    goEnv = execFileSync("go", ["env", "GOVERSION", "GOROOT"], {
+      encoding: "utf8",
+      env: { ...process.env, GOTOOLCHAIN: "local" },
+    }).trim().split(/\r?\n/u);
+  } catch (error) {
+    throw new Error(`${contractPath}: pinned Go toolchain is unavailable: ${error.message}`);
+  }
+  const [goVersion, goRoot] = goEnv;
+  if (goVersion !== `go${pinnedVersion}` || !goRoot) {
+    throw new Error(`${contractPath}: expected Go ${pinnedVersion}, found ${goVersion || "unknown"}.`);
+  }
+  const gofmt = path.join(goRoot, "bin", process.platform === "win32" ? "gofmt.exe" : "gofmt");
+  if (!fs.existsSync(gofmt)) throw new Error(`${contractPath}: pinned gofmt is missing at ${gofmt}.`);
+  return execFileSync(gofmt, [], {
+    input: source,
+    encoding: "utf8",
+    env: { ...process.env, GOTOOLCHAIN: "local" },
+  });
+}
+
+function renderNamedSchema(name, schema, contractPath) {
+  if (schema?.type === "object") {
+    return `// ${name} defines model for ${name}.\ntype ${name} ${inlineObjectType(schema, contractPath, `components.schemas.${name}`)}\n`;
+  }
+  return `// ${name} defines model for ${name}.\ntype ${name} ${goType(schema, false, contractPath, `components.schemas.${name}`)}\n`;
 }
 
 export function generateGoTypesFromDocument(document, contractPath = "OpenAPI contract") {
@@ -147,11 +208,11 @@ export function generateGoTypesFromDocument(document, contractPath = "OpenAPI co
     output.push('import "time"', "");
   }
   for (const [name, schema] of [...schemas.entries()].sort(([left], [right]) => left.localeCompare(right))) {
-    output.push(renderNamedSchema(name, schema), "");
+    output.push(renderNamedSchema(name, schema, contractPath), "");
   }
 
   const unformatted = `${output.join("\n").trimEnd()}\n`;
-  return execFileSync("gofmt", [], { input: unformatted, encoding: "utf8" });
+  return formatWithPinnedGoToolchain(unformatted, contractPath);
 }
 
 export function generateGoTypesFromFile(inputPath, contractPath = inputPath) {

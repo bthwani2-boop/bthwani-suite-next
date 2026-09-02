@@ -35,6 +35,21 @@ test("contract changes require diagnostics and node verification", () => {
   assert.deepEqual(result.required_jobs, ["diagnostics", "node"]);
 });
 
+test("Identity Go client changes route to first-class contract, backend, and runtime proof", () => {
+  const result = classifyFiles(["core/identity/clients/go/identityauth/client.go"]);
+  assert.equal(result.identity_client, true);
+  assert.equal(result.identity, true);
+  for (const key of ["dsh", "workforce", "platform", "providers"]) {
+    assert.equal(result[key], true, key);
+    assert.ok(result.required_claims.includes(`backend:${key === "platform" ? "platform-control" : key}`), key);
+  }
+  assert.equal(result.wlt, false);
+  assert.equal(result.contracts, true);
+  assert.equal(result.backend_required, true);
+  assert.equal(result.runtime_required, true);
+  assert.deepEqual(result.required_jobs, ["diagnostics", "node", "backends", "runtime"]);
+});
+
 test("database changes route to the owning backend, database checks, and the runtime consumer", () => {
   const result = classifyFiles(["services/dsh/database/migrations/0002_add_column.sql"]);
   assert.equal(result.dsh, true);

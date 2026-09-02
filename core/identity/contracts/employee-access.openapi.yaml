@@ -163,23 +163,3 @@ components:
         departmentScope:
           type: string
           pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
-    ActorAdminView:
-      type: object
-      additionalProperties: false
-      required: [actorId, username, phoneE164, roles, active, status]
-      properties:
-        actorId:
-          type: string
-        username:
-          type: string
-        phoneE164:
-          type: string
-        roles:
-          type: array
-          items:
-            type: string
-        active:
-          type: boolean
-        status:
-          type: string
-          enum: [PROVISIONED, PENDING_ACTIVATION, ACTIVE, INACTIVE]

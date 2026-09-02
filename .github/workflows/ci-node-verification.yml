@@ -70,6 +70,11 @@ jobs:
           restore-keys: |
             nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
             nx-
+      - name: Set up locked Go runtime for generated Go contracts
+        if: ${{ inputs.contracts == 'true' }}
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: core/identity/clients/go/identityauth/go.mod
       - name: Materialize contracts when affected
         id: materialize
         if: ${{ inputs.contracts == 'true' }}

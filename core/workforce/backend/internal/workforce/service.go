@@ -53,7 +53,7 @@ func (s *Service) validateSupervisor(ctx context.Context, supervisorActorID, wor
 		}
 		return err
 	}
-	if !actor.IsActive() {
+	if !identityclient.IsActorActive(actor) {
 		return ErrInvalidSupervisor
 	}
 	expectedRole := "workforce.supervise.field"
@@ -104,7 +104,7 @@ func (s *Service) SearchSupervisors(ctx context.Context, kind, query string) ([]
 			ActorID:  actor.ActorID,
 			Username: actor.Username,
 			Phone:    maskPhone(actor.PhoneE164),
-			Active:   actor.IsActive(),
+			Active:   identityclient.IsActorActive(actor),
 		})
 	}
 	return candidates, nil
@@ -1002,7 +1002,7 @@ func (s *Service) FieldAgentByID(ctx context.Context, actorID string) (FieldAgen
 	}
 	if actor, err := s.identity.Actor(ctx, actorID); err == nil {
 		detail.PhoneMasked = maskPhone(actor.PhoneE164)
-		detail.AuthActive = actor.IsActive()
+		detail.AuthActive = identityclient.IsActorActive(actor)
 		if readiness, readinessErr := s.repo.GovernedActivationReadiness(ctx, actorID); readinessErr == nil {
 			detail.ReadyToIssue = person.EngagementStatus == "pending_activation" && readiness.Ready && strings.TrimSpace(actor.PhoneE164) != ""
 		}

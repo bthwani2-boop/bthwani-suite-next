@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"workforce-api/internal/identityclient"
 )
 
 var ErrCurrentProviderReadinessDependencyUnavailable = errors.New("workforce current provider readiness dependency unavailable")
@@ -50,7 +52,7 @@ func (s *Service) EvaluateCurrentProviderReadiness(ctx context.Context, actorID 
 	if err != nil {
 		return nil, fmt.Errorf("%w: identity: %v", ErrCurrentProviderReadinessDependencyUnavailable, err)
 	}
-	if reason, blocked := identityCurrentProviderReadinessBlocker(actor.IsActive()); blocked {
+	if reason, blocked := identityCurrentProviderReadinessBlocker(identityclient.IsActorActive(actor)); blocked {
 		readiness.BlockerReasons = append(readiness.BlockerReasons, reason)
 	}
 

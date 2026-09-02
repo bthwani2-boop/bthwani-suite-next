@@ -8,8 +8,8 @@
   "scripts": {
     "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs identity",
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/identity.bundle.openapi.yaml -o clients/generated/identity-api.ts",
-    "test": "cd backend && go test ./... && cd .. && node --test tests/*.test.mjs",
-    "build": "node ../../tools/scripts/verify-go-build.mjs backend",
+    "test": "cd backend && go test ./... && cd .. && go test -C clients/go/identityauth ./... && node --test tests/*.test.mjs",
+    "build": "node ../../tools/scripts/verify-go-build.mjs backend && go build -C clients/go/identityauth ./...",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "typecheck:ts": "tsc --noEmit -p tsconfig.json",
     "typecheck:ts6:compat": "tsc6 --noEmit -p tsconfig.json",

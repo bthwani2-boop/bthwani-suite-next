@@ -50,7 +50,7 @@ func TestSearchActorsDecodesGovernedPageAndSendsServiceIdentity(t *testing.T) {
 	if len(actors) != 1 || actors[0].ActorID != "field-1" {
 		t.Fatalf("unexpected actors %#v", actors)
 	}
-	if !actors[0].IsActive() {
+	if !IsActorActive(actors[0]) {
 		t.Fatalf("expected canonical ACTIVE status to be active, got %#v", actors[0])
 	}
 	if nextCursor != "abc" {

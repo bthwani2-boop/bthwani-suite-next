@@ -3,6 +3,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import openapiTS, { astToString } from "openapi-typescript";
 import { composeAllContexts, repositoryRoot } from "./openapi-context-composer.mjs";
@@ -20,6 +21,7 @@ const materializerPath = fileURLToPath(import.meta.url);
 const composerPath = path.join(repositoryRoot, "tools/scripts/openapi-context-composer.mjs");
 const clientMetadataPath = path.join(repositoryRoot, "tools/scripts/contract-client-metadata.mjs");
 const goTypesGeneratorPath = path.join(repositoryRoot, "tools/scripts/generate-openapi-go-types.mjs");
+const identityGoModulePath = path.join(repositoryRoot, "core/identity/clients/go/identityauth/go.mod");
 const lockfilePath = path.join(repositoryRoot, "pnpm-lock.yaml");
 const stampPath = path.join(repositoryRoot, ".artifacts/openapi/materialization.json");
 
@@ -72,6 +74,27 @@ function sameHashes(expected, actual, relativePaths) {
 function fail(message) {
   console.error(`openapi-materialization: FAIL ${message}`);
   process.exit(1);
+}
+
+function pinnedGoToolchainDigest() {
+  const moduleSource = fs.readFileSync(identityGoModulePath, "utf8");
+  const pinnedVersion = moduleSource.match(/^go\s+(\d+\.\d+\.\d+)\s*$/mu)?.[1];
+  if (!pinnedVersion) fail("Identity Go module must declare an exact Go version for contract materialization");
+
+  let actualVersion;
+  try {
+    actualVersion = execFileSync("go", ["env", "GOVERSION"], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      env: { ...process.env, GOTOOLCHAIN: "local" },
+    }).trim();
+  } catch (error) {
+    fail(`pinned Go toolchain is unavailable: ${error.message}`);
+  }
+  if (actualVersion !== `go${pinnedVersion}`) {
+    fail(`expected Go ${pinnedVersion}, found ${actualVersion || "unknown"}`);
+  }
+  return sha256(JSON.stringify({ pinnedVersion, actualVersion }));
 }
 
 function writeComposedBundles(composition) {
@@ -140,6 +163,7 @@ const toolchainDigests = {
   composer: sha256File(composerPath),
   clientMetadata: sha256File(clientMetadataPath),
   goTypesGenerator: sha256File(goTypesGeneratorPath),
+  goToolchain: pinnedGoToolchainDigest(),
 };
 const clientMetadataDigest = sha256(JSON.stringify(generatedClients));
 const materializationKey = sha256(JSON.stringify({

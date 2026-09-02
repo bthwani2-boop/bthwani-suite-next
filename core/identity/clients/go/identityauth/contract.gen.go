@@ -24,12 +24,13 @@ type ActivationChallengeMetadata struct {
 
 // ActorAdminView defines model for ActorAdminView.
 type ActorAdminView struct {
-	Active    bool     `json:"active"`
 	ActorID   string   `json:"actorId"`
+	Created   bool     `json:"created,omitempty"`
 	PhoneE164 string   `json:"phoneE164"`
 	Roles     []string `json:"roles"`
 	Status    string   `json:"status"`
 	Username  string   `json:"username"`
+	Version   int      `json:"version"`
 }
 
 // ActorIdentity defines model for ActorIdentity.
@@ -49,26 +50,16 @@ type ActorIdentity struct {
 
 // ActorSearchPage defines model for ActorSearchPage.
 type ActorSearchPage struct {
-	Items  []ActorAdminView `json:"items"`
-	Limit  int              `json:"limit"`
-	Offset int              `json:"offset"`
-	Total  int              `json:"total"`
+	Items      []ActorAdminView `json:"items"`
+	Limit      int              `json:"limit"`
+	NextCursor string           `json:"nextCursor,omitempty"`
+	Total      int              `json:"total"`
 }
 
 // ApiError defines model for ApiError.
 type ApiError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
-}
-
-// EmployeeAccessActorAdminView defines model for EmployeeAccessActorAdminView.
-type EmployeeAccessActorAdminView struct {
-	Active    bool     `json:"active"`
-	ActorID   string   `json:"actorId"`
-	PhoneE164 string   `json:"phoneE164"`
-	Roles     []string `json:"roles"`
-	Status    string   `json:"status"`
-	Username  string   `json:"username"`
 }
 
 // EmployeePermissionBundleCode defines model for EmployeePermissionBundleCode.

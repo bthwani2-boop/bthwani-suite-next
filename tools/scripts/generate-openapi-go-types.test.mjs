@@ -19,3 +19,21 @@ test("generates deterministic Go models for component and inline response schema
   assert.match(first, /type ResolveActorPermissionsResponse struct/);
   assert.doesNotMatch(first, /type Identity struct/);
 });
+
+test("fails closed instead of emitting any for unsupported OpenAPI schemas", () => {
+  assert.throws(
+    () => generateGoTypesFromDocument({ components: { schemas: { Unsupported: { type: "null" } } } }, "unsupported-null.yaml"),
+    /unsupported-null\.yaml: unsupported OpenAPI schema at components\.schemas\.Unsupported/,
+  );
+  assert.throws(
+    () => generateGoTypesFromDocument({ components: { schemas: { Unsupported: { oneOf: [{ type: "string" }, { type: "integer" }] } } } }, "unsupported-union.yaml"),
+    /unsupported-union\.yaml: unsupported OpenAPI schema at components\.schemas\.Unsupported\.oneOf/,
+  );
+});
+
+test("formats with the exact Identity Go toolchain instead of ambient gofmt", () => {
+  const generator = fs.readFileSync("tools/scripts/generate-openapi-go-types.mjs", "utf8");
+  assert.match(generator, /GOVERSION/);
+  assert.match(generator, /GOTOOLCHAIN:\s*"local"/);
+  assert.doesNotMatch(generator, /execFileSync\("gofmt"/);
+});

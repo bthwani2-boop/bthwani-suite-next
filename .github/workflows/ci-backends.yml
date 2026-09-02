@@ -24,6 +24,9 @@ on:
       identity:
         type: string
         required: true
+      identity_client:
+        type: string
+        required: true
       workforce:
         type: string
         required: true
@@ -41,6 +44,60 @@ env:
   CANDIDATE_SHA: ${{ inputs.candidate_sha }}
 
 jobs:
+  identity-client:
+    name: Verify Identity Go client
+    if: ${{ inputs.identity_client == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+      GOWORK: off
+    steps:
+      - name: Verify routed candidate identity
+        shell: bash
+        env:
+          ROUTED_CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          set -euo pipefail
+          [[ "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ && "${ROUTED_CANDIDATE_SHA}" == "${CANDIDATE_SHA}" ]] || {
+            echo "::error::Invalid routed Identity Go client candidate SHA"; exit 1;
+          }
+      - name: Checkout immutable source candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+          show-progress: false
+      - name: Verify exact candidate
+        uses: ./.github/actions/fetch-exact-commits
+        with:
+          base_sha: ${{ inputs.base_sha }}
+          head_sha: ${{ env.CANDIDATE_SHA }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: core/identity/clients/go/identityauth/go.mod
+      - name: Collect Identity Go client test, vet, and build evidence
+        working-directory: core/identity/clients/go/identityauth
+        shell: bash
+        run: |
+          set +e
+          failures=()
+          go test ./... -count=1
+          (( $? == 0 )) || failures+=("go-test")
+          go vet ./...
+          (( $? == 0 )) || failures+=("go-vet")
+          go build ./...
+          (( $? == 0 )) || failures+=("go-build")
+          if (( ${#failures[@]} )); then
+            echo "::error::Identity Go client verification failed: $(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+          echo "Identity Go client test, vet, and build passed."
+
   plan:
     name: Select affected backends
     runs-on: ubuntu-24.04
