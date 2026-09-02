@@ -1,172 +1,159 @@
-# 04 — CLEANUP, DELETION, NAMING AND TOPOLOGY
+# 04 — ELIMINATION, DELETION, LINE/FILE/DIRECTORY FINISHING
 
 ## Purpose
 
-Ensure reconstruction removes the inherited structural debt instead of wrapping it.
+Make cleanup destructive where safe, proportional to risk, and inseparable from root closure. This file applies to every Closure Unit and final qualification.
 
-This file applies during execution of each selected Closure Unit and again during final branch-wide qualification.
+## Deletion risk classes
 
-## Every artifact must justify survival
+Use the lightest proof that is still safe.
 
-Every material artifact in the affected cone must end with one proven disposition:
+### LOW-RISK / NOISE
 
-`KEEP_PROVEN | HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | BOUNDED_RETIREMENT`.
+Examples: dead line/symbol, unused helper/export, obsolete file, empty/useless directory, dead pass-through wrapper, stale script, unused workflow, unused dependency, redundant fixture/mock/snapshot, temporary/copied artifact with no authority.
 
-There is no final `IGNORE`, `KEEP_JUST_IN_CASE`, `HISTORICAL_KEEP`, permanent `TEMP`, or `MAYBE_USED`.
-
-Git history is the archive. Live `g` is not an archive.
-
-## Old/stale artifact law
-
-For every old/legacy/stale/obsolete/superseded file, folder, package, script, workflow, config, route, test, fixture, mock, snapshot, dependency, generated repair, copy/backup/temp/prototype, or compatibility shell, prove at least one:
-
-- unique current canonical responsibility;
-- current required runtime consumer;
-- current required build/test/tooling/operations consumer;
-- required generated/derived status from canonical source;
-- supported bounded migration with explicit removal trigger;
-- required evidence under live governance.
-
-If none is proven after consumer/data safety proof: `DELETE`.
-
-Do not relocate garbage into `archive`, `history`, `legacy`, `backup`, `old`, or similar live folders.
-
-## Names and paths are architecture
-
-For every materially affected file/directory/package/module/script/workflow/config/test/generated/data boundary prove:
+Required proof:
 
 ```text
-NAME_MATCHES_ACTUAL_RESPONSIBILITY
-PATH_MATCHES_CANONICAL_OWNER
-DIRECTORY_LEVEL_JUSTIFIED
-PACKAGE_MODULE_BOUNDARY_HAS_UNIQUE_RESPONSIBILITY
-APPLICABLE_LANGUAGE_FRAMEWORK_CONVENTION=PASS_OR_JUSTIFIED_EXCEPTION
-DOMAIN_VOCABULARY_CONSISTENT
-NO_MISLEADING_GENERIC_BUCKET_WHEN_REAL_OWNER_EXISTS
-NO_TRANSITIONAL_NAME_AS_PERMANENT_STRUCTURE
-NO_DUPLICATE_TREE_FOR_SAME_RESPONSIBILITY
-NO_FALSE_OWNER_IMPLIED_BY_PATH
-NO_OBSOLETE_NAME_AFTER_CUTOVER
+NO_CANONICAL_AUTHORITY
+NO_MUTABLE_STATE
+NO_REQUIRED_RUNTIME_ROUTE
+NO_REQUIRED_EXTERNAL_CONTRACT
+NO_REQUIRED_IMPORT/CALLER/CONSUMER
+NO_REQUIRED_MIGRATION_OR_UPGRADE_ROLE
+NO_SECURITY_OR_COMPLIANCE_ROLE
 ```
 
-Permanent architecture must not preserve patch chronology (`old`, `new`, `legacy`, `v2`, `v3`, `tmp`, `copy`, `backup`, `fixed`, `final`) unless that term has real product/domain/version semantics.
+Then immediately:
 
-Generic buckets (`common`, `utils`, `helpers`, `misc`, `shared`, `core`) require precise canonical purpose; otherwise rehome/split/delete.
+`DELETE_NOW → SEARCH REFERENCES AGAIN → AFFECTED VERIFY`.
 
-## Semantic duplication
+No migration plan, compatibility layer, archival folder, or lengthy ceremony is required.
 
-Duplication is semantic, not textual.
+### STATEFUL / CONTRACTUAL / RUNTIME / SECURITY / MIGRATION-SENSITIVE
 
-Search for duplicate meaning in:
+Use the fuller safety proof appropriate to the risk:
 
-`eligibility | permission | serviceability | financial truth | state/status interpretation | allowed actions | retry/idempotency | state transitions | defaults/fallbacks | validation | normalization | locale/currency | role/capability vocabulary | address/location | pricing/fees | contract semantics | error-to-state mapping | runtime/config decisions | operational scripts/tooling`.
+`consumer inventory | data migration/backfill | contract cutover | runtime route transition | security/integrity proof | supported upgrade path | persisted readback`.
 
-When proven:
+Then delete the losing structure as soon as cutover is proven.
 
-`SELECT CANONICAL OWNER → MIGRATE WRITERS/READERS/CONSUMERS → CUT OVER → DELETE LOSING AUTHORITY`.
+## Every affected artifact gets a realized disposition
 
-Never solve two authorities by creating a third mapper/wrapper/registry.
+Every material artifact in the affected cone must end with one actual state matching the ledger:
 
-## Collapse before add
+`KEEP_PROVEN | HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | DELETE_NOW | BOUNDED_RETIREMENT`.
 
-Before adding a package, directory, shared layer, adapter, mapper, wrapper, service, registry, abstraction, compatibility path, config source, script, workflow, test utility, or dependency, prove an existing canonical owner cannot absorb the responsibility.
+`LEDGER_SAYS_DELETE + ARTIFACT_STILL_PRESENT=ROOT_OPEN`.
 
-Prefer elimination/consolidation over another layer.
+## Directory/package death test
 
-## Directory/package treatment
-
-If a directory/package has no unique responsibility:
-
-`INVENTORY CONSUMERS → MOVE REQUIRED CONTENT → MIGRATE REFERENCES → DELETE TREE`.
-
-If mixed responsibilities: `SPLIT BY CANONICAL OWNER`.
-
-If duplicate responsibility trees:
-
-`SELECT CANONICAL TARGET → MIGRATE COMPLETE CONE → MERGE REQUIRED VALUE → DELETE LOSER`.
-
-If the winning implementation has a misleading name/path, rename/rehome it rather than preserving historical topology.
-
-## Script/tool/workflow treatment
-
-Every script/tool/workflow must prove:
-
-`CURRENT PURPOSE | CANONICAL OWNER | CANONICAL NAME/PATH | SUPPORTED INVOCATION | CURRENT CONSUMERS | WHY CANONICAL TOOLING CANNOT ABSORB IT`.
-
-Duplicate responsibility must consolidate to one. Product/runtime/config truth must not live independently in scripts. Unsupported/dead scripts/workflows are deleted.
-
-## Data/schema cleanup
-
-Schema/data restructuring must prove target constraints, clean install/bootstrap, migration order, existing-data backfill/reconciliation, writer cutover, readback, idempotency/atomicity where material, recovery semantics, and safe removal of obsolete mutable storage after zero consumers.
-
-No permanent parallel mutable columns/tables representing the same truth.
-
-## Contract/generated cleanup
-
-`AUTHORITATIVE SEMANTICS → CANONICAL CONTRACT → REGENERATE → MIGRATE ALL CONSUMERS → DELETE MANUAL REPAIR → ZERO UNEXPECTED GENERATED DIFF`.
-
-Investigate handwritten DTO/enum copies, repair intersections, generated overlays, direct generated edits, keep-in-sync comments, runtime coercions hiding drift, and non-canonical generated paths.
-
-## Tests/dependencies cleanup
-
-Tests are evidence consumers, not alternate product authorities. Delete tests/fixtures/mocks/snapshots tied only to superseded behavior. Never weaken assertions to manufacture green.
-
-After each migration, remove obsolete dependencies/devDependencies/plugins/config/scripts/workflows and prove no accidental transitive reliance remains.
-
-## Deletion proof
-
-Before deleting a material artifact prove as applicable:
+For every affected directory/package:
 
 ```text
-ZERO_REQUIRED_IMPORTS
-ZERO_REQUIRED_EXPORTS_REEXPORTS
-ZERO_REQUIRED_CALLERS
-ZERO_RUNTIME_ROUTES
-ZERO_MUTABLE_WRITERS
-ZERO_REQUIRED_READERS
-ZERO_CONFIG_REFERENCES
-ZERO_SCRIPT_WORKFLOW_INVOCATIONS
-ZERO_CONTRACT_GENERATED_REFERENCES
-ZERO_REQUIRED_TEST_FIXTURE_MOCK_DEPENDENCY
-ZERO_REQUIRED_DATA_MIGRATION_DEPENDENCY
-ZERO_SUPPORTED_UPGRADE_OPERATIONS_DEPENDENCY
+UNIQUE_COHESIVE_RESPONSIBILITY? YES → KEEP/HARDEN
+NO RESPONSIBILITY → DELETE
+DUPLICATE RESPONSIBILITY → MIGRATE TO WINNER → DELETE LOSER
+MIXED RESPONSIBILITIES → SPLIT BY TRUE OWNER
+WRONG OWNER → REHOME
+PASS-THROUGH ONLY → REMOVE
+HISTORICAL COMPAT ONLY → REMOVE AFTER BOUNDED CUTOVER
+MISLEADING NAME/PATH → RENAME/REHOME
 ```
 
-After deletion rerun reference and negative-space searches.
+Do not keep an empty or responsibility-less directory merely because imports once pointed there.
 
-## Move/rename proof
+## Winner/Loser elimination
 
-`TRUE RESPONSIBILITY → TRUE OWNER → CANONICAL NAME → CANONICAL PATH → CORRECT BOUNDARY → NO DUPLICATE AUTHORITY → MOVE/RENAME → MIGRATE ALL REFERENCES → DELETE OLD PATH → SEARCH OLD PATH/NAME/VOCABULARY → ZERO REQUIRED REFERENCES`.
+For duplicate/parallel/shadow truth:
 
-No unbounded forwarding shell remains merely to reduce migration effort.
+```text
+SELECT WINNER
+→ INVENTORY LOSER WRITERS/READERS/CONSUMERS
+→ MIGRATE
+→ CUT OVER
+→ DISABLE LOSER WRITES
+→ ZERO LOSER READERS
+→ DELETE LOSER FILES/DIRECTORIES/PACKAGES/CONFIG/CONTRACTS
+→ REMOVE IMPORTS/EXPORTS/ROUTES/DEPENDENCIES
+→ PROVE ZERO LOSER REACHABILITY
+```
+
+`KEEP_BOTH`, permanent mirrors, and keep-in-sync layers are forbidden final states.
+
+## Compatibility is exceptional
+
+`COMPATIBILITY=FORBIDDEN_BY_DEFAULT`.
+
+It may remain only with proven unavoidable live consumer, exact owner/consumers, no second mutable writer, explicit cutover condition, explicit removal trigger, and bounded lifetime.
+
+Otherwise: `MIGRATE NOW → DELETE NOW`.
+
+## File/symbol/line finishing pass
+
+Every file materially touched by a Closure Unit receives a finishing pass for:
+
+```text
+DEAD_SYMBOLS=0
+UNUSED_EXPORTS=0
+DUPLICATE_LOCAL_SEMANTICS=0
+SHADOW_LOCAL_POLICY=0
+OBSOLETE_BRANCHES=0
+UNNECESSARY_WRAPPERS=0
+STALE_FEATURE_FLAGS=0_OR_PROVEN
+UNJUSTIFIED_SUPPRESSIONS=0
+STALE_TODO_FIXME_HACK=0
+MISLEADING_SYMBOL_NAMES=0
+DUPLICATE_DEFAULTS_VALIDATIONS_MAPPINGS=0
+```
+
+Do not perform style churn unrelated to structure/correctness. Do remove real residue at line/symbol level.
+
+## Heightened `core/**` and `shared/**` finishing
+
+For every affected artifact there re-prove why it is truly cross-cutting. Domain/business truth without a cross-cutting justification must be rehomed to its true owner. Generic buckets must not hide ownership.
+
+## `infra/**`, `tools/**`, `.github/**`, scripts/workflows/config
+
+Treat these as first-class architecture. Delete dead or duplicate runtime/config/tooling authorities, obsolete scripts, stale automation, parallel environment truth, manual mirrors, duplicate generated repair, and unused workflows/dependencies.
 
 ## No cosmetic cleanup
 
-Forbidden final outcomes:
+Forbidden outcomes:
 
-- moving `legacy` to `archive` while keeping it live;
-- renaming clutter without correcting ownership;
-- duplicate truths hidden behind `shared/common`;
-- old scripts collected instead of deleted;
-- new canonical implementation while old writer remains reachable;
-- wrapper/adapter layers whose only purpose is preserving wrong topology;
-- leaving names/paths wrong because changing imports is inconvenient.
+`legacy → archive`, `old → history`, `duplicate → common`, `multiple truths → shared`, `misc → utils`, `two authorities → wrapper around both`.
 
-## Per-root cleanup proof
+Correct cleanup fixes ownership and deletes the losing structure.
 
-Before root closure answer with evidence:
+## Noise hit disposition
+
+Search affected cones and final branch for materially suspicious terms/patterns such as:
+
+`old | legacy | obsolete | deprecated | superseded | archive | backup | copy | tmp | temp | v2 | v3 | compat | fallback | mirror | shadow | duplicate | prototype | experimental | TODO | FIXME | HACK | ts-ignore | eslint-disable | keep in sync`.
+
+A hit is not automatic deletion, but every material hit must be classified `KEEP_PROVEN`, transformed, or deleted. No unclassified material hit remains.
+
+## Deletion suspicion
+
+If a root corrects duplication/replacement/ownership yet removes zero old writer/path/file/directory/wrapper, trigger:
+
+`CLOSURE_SUSPICION → RE-AUDIT FOR ADDITIVE PATCHING`.
+
+## Per-root elimination proof
+
+Before closure answer:
 
 ```text
+WHAT_GARBAGE_WAS_DELETE_NOW?
 WHAT_OLD_AUTHORITY_DISAPPEARED?
-WHAT_DUPLICATE_WRITER_READER_MAPPING_DISAPPEARED?
-WHAT_OBSOLETE_FILES_DIRECTORIES_PACKAGES_DISAPPEARED?
-WHAT_OBSOLETE_SCRIPTS_WORKFLOWS_CONFIG_TOOLING_DISAPPEARED?
-WHAT_TEST_FIXTURE_MOCK_DEPENDENCY_RESIDUE_DISAPPEARED?
+WHAT_DUPLICATE_WRITER/READER/MAPPING_DISAPPEARED?
+WHAT_FILES_DIRECTORIES_PACKAGES_DISAPPEARED?
+WHAT_SCRIPTS_WORKFLOWS_CONFIG_DEPENDENCIES_DISAPPEARED?
+WHAT_LINE/SYMBOL_RESIDUE_DISAPPEARED?
 WHICH_NAMES_PATHS_BOUNDARIES_ARE_NOW_CANONICAL?
-WHAT_PROVES_OLD_NAMES_PATHS_HAVE_ZERO_REQUIRED_REFS?
-WHAT_COMPATIBILITY_REMAINS_AND_WHAT_REMOVES_IT?
+WHAT_PROVES_OLD_REFERENCES=0?
+WHAT_COMPATIBILITY_REMAINS, WHY, AND WHAT REMOVES_IT?
 WHAT_PROVES_NO_THIRD_AUTHORITY?
-WHAT_PROVES_NO_REQUIRED_DATA_BEHAVIOR_OPERATIONS_LOSS?
 ```
 
-Replacement with no old-structure removal is `CLOSURE_SUSPICION` unless bounded retention is explicitly proven.
+`ROOT FIXED + MATERIAL RESIDUE = ROOT OPEN`.

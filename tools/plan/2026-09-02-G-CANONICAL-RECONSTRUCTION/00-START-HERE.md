@@ -2,7 +2,7 @@
 
 ## Mission
 
-Execute radical root-correct cleanup and reconstruction on isolated branch `g`. A complete branch-wide reconstruction baseline is a hard prerequisite for every material mutation.
+Reconstruct isolated branch `g` into the smallest correct canonical structure that preserves required Product/System/Data truth and eliminates unjustified inherited structure.
 
 ```text
 TARGET_BRANCH=g
@@ -12,139 +12,132 @@ PR=FORBIDDEN
 MERGE=FORBIDDEN
 AUTO_SYNC=FORBIDDEN
 PERIODIC_REBASE=FORBIDDEN
-MUTATION_AUTHORITY=ONE
+FORCE_PUSH=FORBIDDEN
+MATERIAL_MUTATION_AUTHORITY=ONE
 ```
 
 ## Authority model
 
-This plan owns the `g` campaign sequence only. The live `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`, routed `01–05`, and materially applicable focus modules remain the canonical source of cross-cutting execution, safety, evidence, migration, verification, and closure invariants.
-
 ```text
-PRODUCT_SYSTEM_DATA_TRUTH=CANONICAL_OWNER
-G_RECONSTRUCTION_PLAN=CAMPAIGN_SEQUENCE
-ORCHESTRATOR=CROSS_CUTTING_EXECUTION_INVARIANTS
-TOOLS_TESTS_SCANNERS=EVIDENCE_ONLY
-HISTORICAL_PLANS_FINDINGS=EVIDENCE_ONLY
+PRODUCT_SYSTEM_DATA_TRUTH=CANONICAL_CORRECTNESS_AUTHORITY
+G_RECONSTRUCTION_PLAN=CAMPAIGN_SEQUENCE_DRIVER
+ORCHESTRATOR=CROSS_CUTTING_INVARIANTS_ONLY
+TRUSTED_CI_TESTS_SCANNERS=EXACT_SHA_EVIDENCE_ONLY
+HISTORICAL_PLANS_FINDINGS=EVIDENCE_AND_FALSIFICATION_ONLY
 ```
 
-No tool finding, historical root ID, CI red, scanner result, compiler error, or easy diff may become execution authority by itself.
+The orchestrator does not own pre-census objective discovery, AUTO/NEXT selection, historical-root scheduling, or pre-census root ranking in this campaign.
 
-## Governing principle
-
-`PRESERVE REQUIRED TRUTH, NOT EXISTING STRUCTURE`.
-
-The inherited tree is not sacred. Preserve only proven required product/system behavior, persisted data/integrity, externally required contracts, security guarantees, and genuinely canonical implementation value.
-
-When evidence proves the current shape is wrong, the allowed treatment is:
-
-`HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | BOUNDED_RETIREMENT`.
-
-## Primary execution loop
+## Supreme doctrine
 
 ```text
-PIN CURRENT HEAD
-↓
-COMPLETE BRANCH-WIDE CENSUS
-↓
-BUILD COMPLETE `CURRENT g`
-↓
-DEFINE COMPLETE `CANONICAL g`
-↓
-COMPUTE COMPLETE STRUCTURAL DELTA
-↓
-SYNTHESIZE / RANK TRUE ROOT GRAPH
-↓
-FIND / CONFIRM HIGHEST PROVEN ROOT
-↓
-CONFIRM CANONICAL OWNER + SOURCE OF FIX
-↓
-MAP COMPLETE AFFECTED CONE
-↓
-CONFIRM INTENDED FINAL STATE
-↓
-EXECUTE ROOT CORRECTION
-↓
-MIGRATE / CUT OVER / CLEAN UP
-↓
-VERIFY + FALSIFY
-↓
-RE-PIN / RE-DIAGNOSE
-↓
-REPEAT
+PRESERVE REQUIRED TRUTH.
+RECONSTRUCT REQUIRED STRUCTURE.
+ELIMINATE EVERYTHING ELSE.
 ```
 
-## MANDATORY PRE-MUTATION RECONSTRUCTION GATE
+`CURRENT EXISTENCE DOES NOT CREATE A PRESUMPTION TO KEEP.`
 
-No material mutation may occur until the following ordered baseline is complete for the exact pinned candidate:
+Every tracked artifact starts as:
+
+`DEFAULT_DISPOSITION=UNJUSTIFIED_UNTIL_PROVEN`.
+
+The current file/path/package/API/directory/wrapper/script/workflow/test/config/schema/generated repair/dependency/abstraction has no survival right merely because it exists or currently works.
+
+Allowed final dispositions:
+
+`KEEP_PROVEN | HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | DELETE_NOW | BOUNDED_RETIREMENT`.
+
+There is no final `UNKNOWN`, `NOT_REVIEWED`, `MAYBE`, `LATER`, `KEEP_JUST_IN_CASE`, `HISTORICAL_KEEP`, or permanent temporary state.
+
+## P0 — destructive canonicalization / elimination mandate
+
+This is a burden-of-proof rule against preservation bias, not permission for unsafe deletion.
 
 ```text
-STEP 0  PIN EXACT LIVE `g`
-STEP 1  COMPLETE BRANCH-WIDE STRUCTURAL CENSUS
-STEP 2  BUILD COMPLETE `CURRENT g`
-STEP 3  DEFINE COMPLETE `CANONICAL g`
-STEP 4  COMPUTE COMPLETE CURRENT→CANONICAL STRUCTURAL DELTA
-STEP 5  SYNTHESIZE AND RANK THE TRUE CAUSAL ROOT GRAPH
-STEP 6  SELECT A ROOT ONLY FROM THAT COMPLETE MODEL
+ONE MATERIAL MEANING
+→ ONE CANONICAL OWNER
+→ ONE CANONICAL WRITER
+→ ONE CANONICAL CONTRACT/STORAGE TRUTH WHERE APPLICABLE
+→ DERIVED CONSUMERS ONLY
+→ ZERO LOSING AUTHORITY
+→ ZERO MATERIAL RESIDUE
 ```
 
-`PRE_MUTATION_RECONSTRUCTION_BASELINE=PASS` is mandatory before the first mutation and before every later material mutation. A changed ref, material topology, owner, contract, data boundary, runtime composition, or tool/workflow authority invalidates the affected baseline and requires the sequence to be rerun before proceeding. There is no exception for an apparently independent, easy, historical, or already-proven root.
+Any proven duplicate/parallel/shadow authority requires a winner and loser. The loser must be migrated away, cut over, and deleted unless a bounded external compatibility requirement is proven.
 
-## ROOT-CORRECT EXECUTION GATE
+`LOSING_AUTHORITY_SURVIVES_AFTER_CUTOVER=ROOT_OPEN`.
 
-Material mutation is allowed only when the complete pre-mutation reconstruction gate and the selected-root gate both pass:
+## Fast garbage deletion law
+
+Deletion ceremony is proportional to risk.
+
+If an artifact is proven to be only noise/dead/unreferenced/obsolete/superseded/non-authoritative and has no persisted-data, external-contract, live-runtime, supported-migration, or required consumer dependency, do not create a large migration project for it.
+
+Use:
 
 ```text
-1. PRE_MUTATION_RECONSTRUCTION_BASELINE=PASS
-2. PIN_HEAD=PASS
-3. CANONICAL_OWNER_CONFIRMED=PASS
-4. CURRENT_DEFECT_AND_CAUSAL_ROOT_PROVEN=PASS
-5. COMPLETE_AFFECTED_CONE_IDENTIFIED=PASS
-6. INTENDED_FINAL_STATE_CONFIRMED=PASS
-7. ROOT_CORRECTION_EXECUTABLE=YES
-8. MIGRATION_CUTOVER_PLAN_COMPLETE=PASS_OR_NA
-9. LOSING_AUTHORITY_AND_RESIDUE_CLEANUP_DEFINED=PASS
-10. VERIFICATION_AND_NEGATIVE_SPACE_DEFINED=PASS
-11. REOPEN_CONDITIONS_DEFINED=PASS
+CLASSIFY PROVEN_NOISE
+→ QUICK REFERENCE/REACHABILITY CHECK
+→ DELETE_NOW
+→ SEARCH AGAIN
+→ RUN AFFECTED VERIFICATION
 ```
 
-Core law:
-
-> **NO MATERIAL MUTATION BEFORE A COMPLETE BRANCH-WIDE RECONSTRUCTION BASELINE AND A PROVEN ROOT; NO ROOT MAY BYPASS CENSUS, CURRENT, CANONICAL, DELTA, OR TRUE ROOT SYNTHESIS/RANKING.**
-
-A root is not proven merely because an error exists. The proof must establish the actual Source-of-Defect, Source-of-Fix, canonical owner/writer where applicable, and enough of the affected cone to prevent partial migration, dual authority, hidden consumers, or unsafe deletion.
-
-## Branch-wide census role
-
-Branch-wide census is the mandatory **pre-mutation reconstruction gate** and remains a continuous revalidation mechanism after every closure.
-
-Use it to:
-
-- discover additional roots and higher causal parents;
-- challenge current ownership/boundary assumptions;
-- find shadow/parallel truth and duplicate writers;
-- find dead/stale/obsolete residue;
-- find naming/path/topology defects;
-- detect roots capable of preempting a planned descendant fix.
-
-No material root execution may run in parallel with an incomplete or stale branch-wide baseline. If the census discovers a higher root or invalidates the selected treatment, stop selection, rebuild the model, and promote the higher root only after the complete gate passes again.
-
-## Historical findings
-
-Historical findings are probes only. For each candidate:
+This applies equally to a dead line/symbol, obsolete file, useless directory, stale script, unused workflow, unused dependency, redundant test fixture, temporary artifact, or empty/pass-through wrapper.
 
 ```text
-PROVE LIVE ROOT → EXECUTE WHEN GATE PASSES
-DESCENDANT OF HIGHER ROOT → ATTACH / PREEMPT
-ALREADY FIXED → SUPERSEDED
-INCORRECT CLAIM → FALSE_POSITIVE
-INSUFFICIENT PROOF → EVIDENCE_ONLY
+PROVEN_LOW_RISK_GARBAGE=DELETE_NOW
+NO_MIGRATION_CEREMONY_REQUIRED
+NO_KEEP_JUST_IN_CASE
 ```
 
-Numeric order, age, and previous labels have zero scheduling authority.
+Escalate deletion proof only when the artifact can carry state, external compatibility, runtime routing, mutable authority, migration history, generated lineage, security semantics, or required consumers.
 
-## Exact-HEAD safety
+## Mandatory pre-mutation baseline
 
-Immediately before every commit/push:
+No product/code/architecture mutation before all stages pass on one exact pinned `g` SHA:
+
+```text
+STEP 0  PIN EXACT LIVE g
+STEP 1  FULL TRACKED-TREE CENSUS
+STEP 2  SEMANTIC AUTHORITY CENSUS
+STEP 3  ARTIFACT RIGHT-TO-EXIST + DISPOSITION LEDGER
+STEP 4  DIRECTORY/PACKAGE RESPONSIBILITY VERDICTS
+STEP 5  BUILD COMPLETE CURRENT g
+STEP 6  DEFINE COMPLETE CANONICAL g
+STEP 7  IDENTIFY WINNING/LOSING AUTHORITIES
+STEP 8  COMPUTE COMPLETE CURRENT→CANONICAL STRUCTURAL DELTA
+STEP 9  SYNTHESIZE/RANK TRUE CAUSAL ROOTS
+STEP 10 SELECT HIGHEST PROVEN EXECUTABLE STRUCTURAL ROOT
+ONLY THEN FIRST MATERIAL MUTATION
+```
+
+The baseline fails if any in-scope material artifact or boundary remains `UNREVIEWED`, `UNDISPOSITIONED`, or unknown in a way that can change owner, writer, target topology, migration direction, deletion safety, or root ranking.
+
+## No preservation bias
+
+Never retain wrong structure because of smaller diff, familiar path, existing internal API, compatibility just-in-case, possible future use, cost of renaming imports, or fear of deleting many files.
+
+Measure treatments by causal correctness, canonical ownership, structural simplicity, migration completeness, deletion completeness, verification strength, and long-term reduction of failure surfaces.
+
+## Structural rewrite escalation
+
+If three or more signals cluster around one responsibility—duplicate owners/writers/mappings, multiple wrappers, parallel directories, conflicting defaults, multiple config sources, duplicated state logic, manual generated repairs, repeated patches, unbounded compatibility—escalate from local repair to structural-root investigation.
+
+If a common root is proven:
+
+`STOP PATCHING DESCENDANTS → RECONSTRUCT ROOT`.
+
+## High-risk topology zones
+
+`core/**` and `shared/**` require heightened justification; non-cross-cutting domain truth must be rehomed.
+
+`infra/**`, `tools/**`, `.github/**`, scripts, workflows, runtime/config, tests, fixtures, mocks, and dependencies are first-class structural surfaces and receive the same owner/writer/purpose/reachability/disposition treatment as product code.
+
+## Exact-HEAD and CI law
+
+Before every material push:
 
 `EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA`.
 
@@ -152,20 +145,33 @@ If false:
 
 `FETCH → COMPARE → INVALIDATE AFFECTED EVIDENCE → RE-PIN → RE-DIAGNOSE → REAPPLY ONLY IF STILL VALID`.
 
-Never force-push over unseen work.
+Never force-push unseen work.
 
-## Per-root closure
+After each material push, obtain trusted Exact-HEAD CI evidence. CI is evidence only.
 
-A root closes only after all applicable writers/readers/consumers are migrated, cutover is complete, obsolete authority/residue is removed, targeted verification passes, and negative-space searches prove the old path/authority is no longer required or reachable.
+`CI_FAILURE != EXECUTION_ROOT` and `GREEN_CI != CLOSED`.
 
-`GREEN != CLOSED`.
+## Closure suspicion
 
-## Final campaign qualification
+A structural replacement/duplication/ownership root that removes no losing writer/path/file/directory/wrapper triggers `CLOSURE_SUSPICION` unless evidence proves no losing structure existed.
 
-After no proven executable root remains on a complete and fresh baseline, run the additional fresh branch-wide adversarial qualification in `06-FINAL-ADVERSARIAL-QUALIFICATION.md`. That final qualification is stricter than the mandatory pre-mutation baseline and is where exact fixed-point proof is established.
+## Final success meaning
 
-## Success meaning
+```text
+UNREVIEWED_TRACKED_ARTIFACTS=0
+UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
+UNRESOLVED_DIRECTORY_PACKAGE_VERDICTS=0
+UNRESOLVED_SEMANTIC_AUTHORITIES=0
+LOSING_AUTHORITIES_REMAINING=0
+PARALLEL_TRUTHS=0
+SHADOW_AUTHORITIES=0
+DUPLICATE_MUTABLE_WRITERS=0
+REACHABLE_SUPERSEDED_STRUCTURE=0
+MISLEADING_NAMES_PATHS=0
+KNOWN_NONCANONICAL_TOPOLOGY=0
+MATERIAL_DEAD_STALE_OBSOLETE_RESIDUE=0
+UNBOUNDED_COMPATIBILITY=0
+FINAL_CURRENT_CANONICAL_STRUCTURAL_DELTA=0_UNRESOLVED_MATERIAL_ITEMS
+```
 
-The target is:
-
-`CLEAR OWNERSHIP + UNIQUE WRITERS + CORRECT BOUNDARIES + TRUTHFUL NAMES/PATHS + COMPLETE MIGRATIONS + NO PARALLEL/SHADOW TRUTH + NO DEAD/STALE/OBSOLETE RESIDUE + NO PATCH-SHAPED ARCHITECTURE + ZERO KNOWN MATERIAL NOISE`.
+Only then may `G_RADICAL_CLEANUP_COMPLETE` be emitted.

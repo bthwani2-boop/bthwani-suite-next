@@ -1,29 +1,23 @@
-# 06 — FINAL ADVERSARIAL QUALIFICATION
+# 06 — FINAL ADVERSARIAL QUALIFICATION AND ZERO-RESIDUE FIXED POINT
 
 ## Purpose
 
-Prove that branch `g` has reached the intended canonical fixed point after all dynamic roots appear closed.
+Prove that branch `g` has reached the intended canonical fixed point after all dynamic roots appear closed. This is not merge readiness; it qualifies `g` itself.
 
-This is not a merge-readiness check. It qualifies `g` only.
+## Fresh exact-SHA re-census
 
-## Final authority boundary
+Pin the exact final candidate and repeat a fresh read-only traversal over the actual tracked tree. Do not rely only on previous root scopes, ledgers, or classifications.
 
-This plan owns the final `g` campaign sequence and terminal state. The live orchestrator is applied here only for applicable cross-cutting verification/closure invariants, evidence validity, exact-candidate discipline, negative-space proof, and `GREEN != CLOSED`.
-
-Do not replace this final sequence with generic merge readiness, PR readiness, AUTO/NEXT selection, or another branch lifecycle. This campaign ends only at the `g`-specific fixed point defined below.
-
-## Step 10 — fresh branch-wide adversarial re-census
-
-Pin the exact candidate SHA and repeat a fresh read-only branch-wide structural census over the actual tracked tree.
-
-Do not rely only on previous affected cones or old root lists.
-
-Rebuild/validate:
+Rebuild and challenge:
 
 ```text
 CURRENT_G_MODEL
 CANONICAL_G_TARGET
 CURRENT_TO_CANONICAL_STRUCTURAL_DELTA
+ARTIFACT_DISPOSITION_LEDGER
+SEMANTIC_AUTHORITY_REGISTRY
+DIRECTORY_PACKAGE_VERDICTS
+WINNER_LOSER_AUTHORITY_MAP
 EVERY_ARTIFACT_RIGHT_TO_EXIST
 CANONICAL_OWNER_WRITER_UNIQUENESS
 NAMING_PATH_TOPOLOGY
@@ -33,17 +27,100 @@ DATA_SCHEMA_CONTRACT_GENERATED_AUTHORITY
 DEPENDENCIES_TESTS_FIXTURES_MOCKS
 ```
 
-Any material finding reopens the dynamic Root Graph and returns execution to `03`.
+Any material finding reopens the dynamic root graph and returns execution to `03`.
 
-## Final structural sweep
+## Final artifact reconciliation
 
-Run, where materially applicable:
+Require:
 
-`semantic duplicate scan → mutable-writer uniqueness → canonical-owner uniqueness → every-artifact right-to-exist proof → naming/path/topology review → dependency/cycle review → data/schema authority → contract/generated authority → runtime/config/env authority → script/tool/workflow authority → state-machine/policy/default/mapping duplication → dead/unreachable scan → legacy/history/archive/backup/copy/temp scan → compatibility residue → unused dependency/export/config/route/script/workflow → test/fixture/mock residue → reachable old authority → patch-shaped architecture scan → undispositioned artifact scan`.
+```text
+UNREVIEWED_TRACKED_ARTIFACTS=0
+UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
+UNKNOWN_KEEP=0
+UNRESOLVED_DIRECTORY_PACKAGE_VERDICTS=0
+UNRESOLVED_SEMANTIC_AUTHORITIES=0
+UNRESOLVED_WINNER_LOSER_DECISIONS=0
+LEDGER_DISPOSITION_NOT_REALIZED=0
+```
+
+Every tracked material artifact must either prove survival or have been transformed/deleted as planned.
+
+## Final semantic authority reconciliation
+
+For every material meaning require:
+
+```text
+CANONICAL_OWNER_COUNT=1
+CANONICAL_MUTABLE_WRITER_COUNT=1_OR_NA
+LOSING_AUTHORITIES_REMAINING=0
+LOSING_WRITERS_REMAINING=0
+UNMIGRATED_LOSER_CONSUMERS=0
+THIRD_AUTHORITY=0
+KEEP_IN_SYNC_PARALLEL_LAYER=0
+```
+
+## Final filesystem / package topology reconciliation
+
+Require:
+
+```text
+UNOWNED_PACKAGES=0
+RESPONSIBILITY_LESS_DIRECTORIES=0
+DUPLICATE_RESPONSIBILITY_TREES=0
+MISLEADING_FILENAMES=0
+MISLEADING_DIRECTORY_NAMES=0
+MISPLACED_FILES=0
+AMBIGUOUS_GENERIC_BUCKETS=0_OR_PROVEN
+OLD_NAME_PATH_REFS=0
+KNOWN_NONCANONICAL_MATERIAL_TOPOLOGY=0
+```
+
+`core/**` and `shared/**` receive a fresh heightened cross-cutting justification pass. `infra/**`, `tools/**`, `.github/**`, scripts/workflows/config/tests/dependencies receive the same final structural scrutiny as product code.
+
+## Final line/symbol residue sweep
+
+Across materially changed and structurally suspicious code require:
+
+```text
+DEAD_SYMBOLS=0
+UNUSED_EXPORTS=0
+DUPLICATE_LOCAL_SEMANTICS=0
+SHADOW_LOCAL_POLICY=0
+OBSOLETE_BRANCHES=0
+UNNECESSARY_WRAPPERS=0
+UNJUSTIFIED_SUPPRESSIONS=0
+STALE_TODO_FIXME_HACK=0_OR_EXPLICITLY_PROVEN_NONMATERIAL
+DUPLICATE_DEFAULTS_VALIDATIONS_MAPPINGS=0
+```
+
+## Final garbage/noise sweep
+
+Search branch-wide for dead/stale/obsolete/superseded/temp/copy/backup/legacy/compat/mirror/shadow/duplicate/prototype/experimental artifacts and suspicious TODO/FIXME/HACK/suppression patterns.
+
+Every material hit receives a proven disposition. Proven low-risk garbage is deleted immediately using the fast-delete path; do not retain it merely because final qualification has begun.
+
+```text
+MATERIAL_NOISE_HITS_UNDISPOSITIONED=0
+PROVEN_LOW_RISK_GARBAGE_REMAINING=0
+MATERIAL_DEAD_STALE_OBSOLETE_RESIDUE=0
+MATERIAL_FILESYSTEM_NOISE=0
+```
+
+## Compatibility fixed-point rule
+
+Require:
+
+```text
+UNBOUNDED_COMPATIBILITY=0
+BOUNDED_COMPAT_WITHOUT_EXPLICIT_OWNER=0
+BOUNDED_COMPAT_WITHOUT_EXACT_CONSUMERS=0
+BOUNDED_COMPAT_WITHOUT_REMOVAL_TRIGGER=0
+BOUNDED_COMPAT_WITH_SECOND_MUTABLE_WRITER=0
+```
 
 ## Best-practice material conformance
 
-Require material outcomes:
+Require:
 
 ```text
 CLEAR_OWNERSHIP=PASS
@@ -63,36 +140,22 @@ DATA_INTEGRITY=PASS
 MAINTAINABILITY=PASS
 ```
 
-This is not style churn. Material non-standard structure that harms ownership, tooling, correctness, maintainability, security, or integrity must be corrected or strongly justified.
+## Final trusted Exact-HEAD CI
 
-## Negative-space gate
-
-Require as applicable:
+Run trusted full-scope CI on the exact immutable final `g` SHA and require:
 
 ```text
-OLD_WRITERS=0
-OLD_READERS=0
-OLD_IMPORTS_REEXPORTS=0
-OLD_ROUTES=0
-OLD_CONFIG_REFS=0
-OLD_SCRIPT_WORKFLOW_REFS=0
-OLD_RUNTIME_REACHABILITY=0
-OLD_NAME_PATH_REFS=0
-UNMIGRATED_CONSUMERS=0
-UNEXPECTED_GENERATED_DIFF=0
-UNBOUNDED_COMPATIBILITY=0
-THIRD_AUTHORITY=0
-EXPECTED_DELETIONS_MISSING=0
-UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
-MISLEADING_MATERIAL_FILENAMES=0
-MISLEADING_MATERIAL_DIRECTORY_NAMES=0
-MISPLACED_MATERIAL_ARTIFACTS=0
-DUPLICATE_MATERIAL_RESPONSIBILITY_TREES=0
-UNBOUNDED_OLD_PATH_ALIASES=0
-KNOWN_NONCANONICAL_MATERIAL_TOPOLOGY=0
+FINAL_FULL_SCOPE_EXACT_HEAD_CI=PASS
+FINAL_CI_SHA_MATCH=PASS
+STALE_CI_EVIDENCE_USED=0
+FAILED_REQUIRED_CLAIMS=0
+UNKNOWN_REQUIRED_CLAIMS=0
+CI_EVIDENCE_PROVENANCE=PASS
 ```
 
-## Exact final qualification
+`GREEN_CI != CLOSED`; CI is only one evidence plane.
+
+## Exact fixed-point gate
 
 Do not finish while any applicable value is unknown or nonzero:
 
@@ -107,20 +170,12 @@ REACHABLE_OLD_AUTHORITIES=0
 PARALLEL_TRUTHS=0
 SHADOW_AUTHORITIES=0
 DUPLICATE_MUTABLE_WRITERS=0
+LOSING_AUTHORITIES_REMAINING=0
 UNBOUNDED_COMPATIBILITY=0
 MATERIAL_DEAD_STALE_OBSOLETE_RESIDUE=0
 MATERIAL_UNUSED_SCRIPT_WORKFLOW_TOOLING=0
 MATERIAL_UNUSED_DEPENDENCY_CONFIG_ROUTE=0
 MATERIAL_FILESYSTEM_NOISE=0
-MISLEADING_FILENAMES=0
-MISLEADING_DIRECTORY_NAMES=0
-MISPLACED_FILES=0
-AMBIGUOUS_DIRECTORIES=0
-DUPLICATE_RESPONSIBILITY_TREES=0
-UNBOUNDED_COMPAT_PATHS=0
-UNOWNED_PACKAGES=0
-DEAD_SCRIPTS=0
-UNUSED_DEPENDENCIES=0
 KNOWN_MATERIAL_PATCH_SHAPED_ARCHITECTURE=0
 KNOWN_NONCANONICAL_MATERIAL_TOPOLOGY=0
 FINAL_CURRENT_CANONICAL_STRUCTURAL_DELTA=0_UNRESOLVED_MATERIAL_ITEMS
@@ -133,9 +188,7 @@ NEGATIVE_SPACE=PASS
 
 ## Plan self-cleanup
 
-This plan owns campaign sequencing only; it is not Product/System/Data truth and not a permanent parallel governance authority. Before final completion, verify the plan package itself is not leaving obsolete duplicate authority, stale status files, historical root registries, temporary campaign evidence, or copied orchestrator laws that should instead remain referenced from their canonical owner.
-
-The final live tree must be cleaner because of the campaign, including its tooling/planning residue.
+The plan itself has no permanent survival right. Before completion remove stale status/evidence/root registries, obsolete campaign files, copied governance, and any temporary planning residue not required after closure.
 
 ## Final output
 
@@ -150,6 +203,8 @@ STRUCTURAL_RECONSTRUCTION_STATE=PASS
 CANONICAL_UNIQUENESS_STATE=PASS
 CANONICAL_NAMING_PATH_TOPOLOGY_STATE=PASS
 BEST_PRACTICE_MATERIAL_CONFORMANCE_STATE=PASS
+TRUSTED_EXACT_HEAD_CI_STATE=PASS
+FINAL_FULL_SCOPE_CI_STATE=PASS
 ZERO_PARALLEL_TRUTH_STATE=PASS
 ZERO_RESIDUE_STATE=PASS
 G_NOISE_BUDGET=ZERO_KNOWN_MATERIAL_NOISE

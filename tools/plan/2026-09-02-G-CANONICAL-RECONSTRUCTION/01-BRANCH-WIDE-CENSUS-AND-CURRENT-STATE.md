@@ -1,78 +1,164 @@
-# 01 — BRANCH-WIDE CENSUS AND CURRENT-STATE MODEL
+# 01 — BRANCH-WIDE CENSUS, AUTHORITY REGISTRY, AND DISPOSITION LEDGER
 
 ## Purpose
 
-Build and maintain the complete evidence-backed view of what branch `g` contains before any material root selection or mutation.
-
-The census is a hard global pre-mutation gate. No root may be selected or executed before this branch-wide census is complete for the exact pinned candidate.
+Build the complete evidence-backed inventory of branch `g` before any material root selection or mutation. The census must classify ownership, semantic authority, boundary responsibility, reachability, and survival disposition across the actual tracked tree.
 
 ## Exact live pin
 
-Before relying on census evidence:
+`FETCH g → RESOLVE EXACT REMOTE G SHA → PIN SHA → LOAD LIVE PLAN + APPLICABLE ORCHESTRATOR INVARIANTS → INVALIDATE STALE SHA-SPECIFIC EVIDENCE`.
 
-`FETCH g → RESOLVE EXACT REMOTE G SHA → LOAD LIVE AUTHORITIES → RECORD PINNED SHA`.
+## 1. Full tracked-tree census
 
-Evidence invalidated by a changed ref must be rechecked.
+Traverse the actual tracked tree. No hardcoded directory list may act as a scope boundary.
 
-## Branch-wide discovery
+Cover all material source/runtime code, apps/surfaces, domains/services, `core/**`, `shared/**`, packages/modules, database/schema/migrations, contracts/generated bindings, runtime/config/env, `infra/**`, `tools/**`, scripts/CLI, `.github/**`, tests/fixtures/mocks/snapshots, dependencies/plugins, assets/manifests, and live authoritative documents.
 
-Traverse the actual tracked tree rather than a hardcoded expected-directory list. Cover material source/runtime code, apps/surfaces, domains/services, shared/core/packages, database/schema/migrations, contracts/generated bindings, runtime/config/env, infra, scripts/tooling, workflows/CI, tests/fixtures/mocks, dependencies/plugins, material assets, and live authoritative documents.
+Any uncensused tracked area blocks the baseline unless explicitly proven non-material and recorded as such.
 
-For each material artifact/tree establish where applicable:
+## 2. Artifact Disposition Ledger — mandatory
 
-```text
-WHAT_EXISTS?
-WHY_DOES_IT_EXIST?
-CURRENT_RESPONSIBILITY?
-CURRENT_OWNER_AND_WRITER?
-READERS_AND_CONSUMERS?
-DEPENDENCIES_AND_DIRECTION?
-RUNTIME_REACHABILITY?
-DATA_CONTRACT_CONFIG_AUTHORITY?
-NAME_AND_PATH_TRUTHFUL?
-BOUNDARY_CORRECT?
-DUPLICATED_OR_SHADOWED?
-DEAD_STALE_OBSOLETE?
-STILL_REQUIRED?
-```
+Every in-scope material artifact receives exactly one current disposition:
 
-Use graph/search/runtime/schema/contract/config evidence. Tool output is evidence only.
+`KEEP_PROVEN | HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | DELETE_NOW | BOUNDED_RETIREMENT`.
 
-## Two census modes
+Coverage includes as applicable:
 
-### 1. Complete branch-wide reconstruction census
+`directory | package | module | file | material symbol | route | API | contract | schema object | generated boundary | runtime/config entry | script | workflow | dependency | test | fixture | mock | snapshot | authoritative document`.
 
-Runs before the first mutation and is rebuilt after every material closure or invalidating ref/topology change. It must cover the actual tracked tree and produce the complete `CURRENT g` input, not an informal sample.
-
-Do not mutate an artifact merely because the census discovered it. Complete the current-state model, canonical target, structural delta, and true root synthesis/ranking first.
-
-### 2. Root-scoped affected-cone census
-
-Before mutating a selected root, census its complete affected cone deeply enough to prove:
+Required ledger fields:
 
 ```text
-SOURCE_OF_DEFECT
-SOURCE_OF_FIX
-CANONICAL_OWNER_WRITER
-ALL_MATERIAL_WRITERS_READERS_CONSUMERS
-DATA_SCHEMA_IMPACT
-CONTRACT_GENERATED_IMPACT
-RUNTIME_CONFIG_TOOLING_IMPACT
-TEST_FIXTURE_MOCK_DEPENDENCY_IMPACT
-MIGRATION_CUTOVER_REQUIREMENTS
-LOSING_AUTHORITIES_AND_RESIDUE
+ARTIFACT=
+TYPE=
+CURRENT_PATH=
+CURRENT_RESPONSIBILITY=
+CURRENT_OWNER=
+CURRENT_WRITER_OR_DERIVED_STATUS=
+CURRENT_CONSUMERS=
+RUNTIME_OR_BUILD_REACHABILITY=
+SEMANTIC_MEANING_OWNED=
+DUPLICATE_PARALLEL_SHADOW_RELATIONSHIP=
+NAME_PATH_BOUNDARY_VERDICT=
+RIGHT_TO_EXIST_PROOF=
+TARGET_OWNER=
+TARGET_NAME_PATH_BOUNDARY=
+DISPOSITION=
+MIGRATION_CUTOVER_DEPENDENCIES=
+DELETION_RISK_CLASS=LOW|STATEFUL|CONTRACTUAL|RUNTIME|SECURITY|MIGRATION
+DELETION_SAFETY_REQUIREMENTS=
 ```
 
-This root-scoped census **is mandatory** for execution safety.
+Before first mutation:
 
-## `CURRENT g` model
+```text
+UNREVIEWED_TRACKED_ARTIFACTS=0
+UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
+UNKNOWN_KEEP=0
+```
 
-Build `CURRENT g` completely from the branch-wide census before the first mutation. Refresh the complete model after every material closure, branch movement, or discovery that can change ownership, topology, contracts, data, runtime, tooling, or root ranking.
+## 3. Semantic Authority Registry — mandatory
 
-A complete branch-wide `CURRENT g` model is required before every root selection and every material mutation, and is revalidated again during final adversarial qualification in `06`.
+Inventory material meanings independently of filenames and implementations:
 
-## Preemption rule
+`permission | eligibility | serviceability | financial truth | state/status interpretation | transition | allowed action | validation | default | mapping | vocabulary | error-to-state semantics | location | pricing/fees | runtime/config meaning | retry/idempotency | contract semantics`.
 
-If unresolved evidence could change the canonical owner, migration direction, affected cone, or reveal a higher causal root for the root about to be changed, that root is **not executable yet**.
+For every meaning record:
 
-Any uncensused material tracked area blocks the pre-mutation baseline. Only explicitly proven non-material or out-of-scope content may be excluded, with the exclusion recorded in the census and root graph.
+```text
+SEMANTIC_MEANING=
+CURRENT_AUTHORITIES=
+CURRENT_MUTABLE_WRITERS=
+CURRENT_READERS_CONSUMERS=
+CANONICAL_OWNER_CANDIDATE=
+CANONICAL_WRITER_CANDIDATE=
+DUPLICATE_PARALLEL_SHADOW_STATE=
+WINNING_AUTHORITY=
+LOSING_AUTHORITIES=
+```
+
+Any meaning with multiple mutable writers or authorities remains unresolved until winner/loser treatment is defined.
+
+## 4. Directory / Package Responsibility Census — mandatory
+
+Every material directory/package boundary must answer:
+
+```text
+ONE_UNIQUE_COHESIVE_RESPONSIBILITY?
+OWNER_IMPLIED_BY_PATH_CORRECT?
+DUPLICATED_ELSEWHERE?
+MIXING_UNRELATED_RESPONSIBILITIES?
+PASS_THROUGH_ONLY?
+HISTORICAL_COMPATIBILITY_ONLY?
+NAME_TRUTHFUL?
+```
+
+Verdicts:
+
+```text
+UNIQUE_CORRECT_RESPONSIBILITY → KEEP/HARDEN
+NO_UNIQUE_RESPONSIBILITY → DELETE_AFTER_MIGRATION OR DELETE_NOW IF EMPTY/DEAD
+DUPLICATE_RESPONSIBILITY → SELECT_WINNER → MIGRATE → DELETE_LOSER
+MIXED_RESPONSIBILITIES → SPLIT_BY_TRUE_OWNER
+WRONG_OWNER → REHOME
+PASS_THROUGH_ONLY → REMOVE
+HISTORICAL_COMPAT_ONLY → REMOVE AFTER BOUNDED CUTOVER
+MISLEADING_NAME_PATH → RENAME/REHOME
+```
+
+Before first mutation:
+
+`UNRESOLVED_DIRECTORY_PACKAGE_VERDICTS=0`.
+
+## 5. Fast garbage classification
+
+Do not burden obvious low-risk garbage with stateful migration ceremony.
+
+An artifact qualifies `DELETE_NOW` when all are proven:
+
+```text
+NO_CANONICAL_AUTHORITY
+NO_MUTABLE_STATE
+NO_REQUIRED_RUNTIME_ROUTE
+NO_REQUIRED_EXTERNAL_CONTRACT
+NO_REQUIRED_IMPORT/CALLER/CONSUMER
+NO_REQUIRED_MIGRATION_OR_UPGRADE_ROLE
+NO_SECURITY_OR_COMPLIANCE_ROLE
+```
+
+Then:
+
+`QUICK REFERENCE/REACHABILITY CHECK → DELETE_NOW → SEARCH AGAIN → AFFECTED VERIFY`.
+
+Examples: dead line/symbol, unused helper/export, obsolete file, empty/useless folder, stale script, unused workflow, unused dependency, redundant fixture/mock/snapshot, dead pass-through wrapper.
+
+## 6. Heightened `core/**` and `shared/**` review
+
+Every material artifact under `core/**` or `shared/**` must additionally prove:
+
+```text
+WHY_IS_THIS_CROSS_CUTTING?
+WHY_CANNOT_A_PRECISE_DOMAIN_OWN_IT?
+WHO_ARE_ALL_CURRENT_CONSUMERS?
+DOES_IT_CONTAIN_BUSINESS_OR_DOMAIN_POLICY?
+DOES_IT_DUPLICATE_SERVICE_LOGIC_OR_CONTRACTS?
+DOES_IT_HIDE_A_MORE_PRECISE_OWNER?
+```
+
+If not genuinely cross-cutting: `REHOME | SPLIT | MERGE | DELETE`.
+
+## 7. First-class support surfaces
+
+`infra/**`, `tools/**`, `.github/**`, scripts, workflows, runtime/config, tests, fixtures, mocks, and dependencies are not exempt. Establish:
+
+`CURRENT PURPOSE | CANONICAL OWNER | WRITER/DERIVED STATUS | INVOCATIONS/CONSUMERS | REACHABILITY | DUPLICATION | TARGET DISPOSITION`.
+
+## 8. Symbol/line-level discovery
+
+Within files that own or duplicate material semantics, descend to symbols/branches/lines sufficiently to expose:
+
+`dead symbol | unused export | duplicate validation/default/mapping | shadow local policy | obsolete branch | stale flag | unnecessary wrapper | misleading symbol | unjustified suppression | stale TODO/FIXME/HACK`.
+
+## Baseline output
+
+The census must produce complete inputs for `CURRENT g`, the Artifact Disposition Ledger, Semantic Authority Registry, Directory/Package Verdicts, and the candidate winning/losing authority map used by `02`.

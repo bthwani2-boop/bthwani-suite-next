@@ -1,96 +1,108 @@
-# 05 — REVERIFY, REDIAGNOSE AND REPEAT
+# 05 — REVERIFY, EXACT-HEAD CI, REDIAGNOSE, AND REPEAT
 
 ## Purpose
 
-After each coherent Closure Unit, verify the result, rebuild the complete branch-wide truth model, continue discovery, and choose the next highest proven executable root.
+After each coherent Closure Unit, verify exact results, push safely, obtain trusted Exact-HEAD CI evidence, rebuild branch-wide truth, and select the next root only from the refreshed model.
 
-Do not turn historical findings into a static queue; every next root requires a complete repository-wide model before selection or mutation.
+## Pre-push verification
 
-## Verify and checkpoint the completed root
+Before commit/push:
 
-Before closure/commit:
-
-- run targeted tests/checks for invalidated claims;
-- prove migration/backfill/readback where material;
-- prove contract/generated parity where material;
-- confirm canonical owner/writer/name/path/topology in the affected cone;
-- confirm required deletions and old-path removals;
-- run reference and negative-space searches;
-- independently attempt to falsify closure;
-- confirm no unrelated accidental diff.
+```text
+TARGETED_VERIFY=PASS
+MIGRATION_BACKFILL_READBACK=PASS_OR_NA
+CONTRACT_GENERATED_PARITY=PASS_OR_NA
+ARTIFACT_DISPOSITIONS_REALIZED=PASS
+DIRECTORY_PACKAGE_VERDICTS_REALIZED=PASS
+WINNER_LOSER_ELIMINATION=PASS_OR_NA
+FILE_LEVEL_FINISHING=PASS
+EXPECTED_DELETIONS=PASS
+OLD_REFERENCE_SEARCH=PASS
+NEGATIVE_SPACE=PASS
+INDEPENDENT_FALSIFICATION=PASS
+NO_UNRELATED_ACCIDENTAL_DIFF=PASS
+```
 
 Immediately before push require:
 
 `EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA`.
 
-Then:
+If false:
 
-`COMMIT COHERENT CLOSURE UNIT → PUSH DIRECTLY TO g → FETCH → VERIFY REMOTE HEAD → RE-PIN`.
+`FETCH → COMPARE → IDENTIFY OVERLAP → INVALIDATE AFFECTED EVIDENCE → RE-PIN → RE-DIAGNOSE → REAPPLY ONLY IF STILL VALID`.
 
 No force push.
 
-## Refresh only what changed or can invalidate the next decision
+## Commit / push / exact-head evidence
 
-After every closure:
+`COMMIT ONE COHERENT CLOSURE UNIT → PUSH g → FETCH → VERIFY REMOTE HEAD → PIN EXACT PUSHED SHA`.
+
+Then obtain trusted Exact-HEAD CI evidence for that pushed SHA. The trusted workflow definition remains outside the candidate where required by repository trust policy.
+
+```text
+CI_ROLE=EVIDENCE_ONLY
+CI_FAILURE_AS_AUTOMATIC_ROOT=NO
+STALE_SHA_CI_EVIDENCE=INVALID
+```
+
+Normal material closure may use affected routing. Escalate to full-scope verification when topology, major package boundaries, canonical ownership, shared/core/service boundaries, schema/migrations, contracts/generated, runtime/config, dependency direction, CI control plane, security boundary, infra topology, or cross-surface contract changes materially.
+
+## Evidence ingestion
+
+For every material CI/test/scanner/runtime result:
+
+`INGEST → VERIFY ACTUAL HEAD SHA/BASE/WORKFLOW PROVENANCE → DEDUPLICATE → CORRELATE TO CURRENT g/CANONICAL g/DELTA → IDENTIFY CAUSAL PARENT → UPDATE EVIDENCE VALIDITY`.
+
+`CI FAILURE != EXECUTION ROOT`.
+
+## Mandatory branch-wide refresh
+
+After every root and before every next material mutation:
 
 ```text
 RE-PIN
-→ INGEST NEW EVIDENCE
-→ REFRESH AFFECTED CURRENT STATE
-→ REFRESH AFFECTED CANONICAL TARGET
-→ REFRESH AFFECTED STRUCTURAL DELTA
-→ CONTINUE BRANCH-WIDE DISCOVERY
-→ RE-DIAGNOSE ROOT CANDIDATES
+→ FULL TRACKED-TREE RE-CENSUS
+→ REFRESH ARTIFACT DISPOSITION LEDGER
+→ REFRESH SEMANTIC AUTHORITY REGISTRY
+→ REFRESH DIRECTORY/PACKAGE VERDICTS
+→ REFRESH CURRENT g
+→ RECHECK CANONICAL g
+→ REFRESH WINNER/LOSER MAP
+→ REFRESH STRUCTURAL DELTA
+→ RE-SYNTHESIZE/RANK ROOT GRAPH
 ```
 
-A full branch-wide Current/Canonical/Delta/Root Graph rebuild is mandatory after every root and before any next material mutation. No stale or affected-cone-only model may authorize the next root.
+Any newly introduced or exposed artifact begins `UNJUSTIFIED_UNTIL_PROVEN`.
 
-The complete re-census is always required. Broaden and invalidate it immediately when a closure or new evidence changes material topology, canonical owner, data/schema authority, contract/generated authority, runtime/config composition, dependency direction, tooling authority, or reveals a higher root capable of invalidating current treatment.
-
-## Next-root rule
-
-The next root may execute only after `01`→`02`→complete true Root Graph synthesis/ranking refresh has passed, and it also passes the `ROOT-CORRECT EXECUTION GATE` from `00`:
+No next root may execute while:
 
 ```text
-PINNED
-PRE_MUTATION_RECONSTRUCTION_BASELINE=PASS
-COMPLETE_BRANCH_WIDE_CENSUS=PASS
-CURRENT_G_COMPLETE=PASS
-CANONICAL_G_COMPLETE=PASS
-STRUCTURAL_DELTA_COMPLETE=PASS
-TRUE_ROOT_GRAPH_SYNTHESIZED_AND_RANKED=PASS
-CANONICAL_OWNER_CONFIRMED
-CAUSAL_ROOT_PROVEN
-COMPLETE_AFFECTED_CONE_MAPPED
-FINAL_STATE_CONFIRMED
-MIGRATION_CUTOVER_CLEANUP_DEFINED
-VERIFICATION_DEFINED
+UNREVIEWED_TRACKED_ARTIFACTS>0
+UNDISPOSITIONED_MATERIAL_ARTIFACTS>0
+UNRESOLVED_DIRECTORY_PACKAGE_VERDICTS>0
+UNRESOLVED_SEMANTIC_AUTHORITIES>0
 ```
 
-Any uncensused material repository area blocks that root. Only explicitly proven non-material or out-of-scope content may be excluded from the baseline.
+## Re-baseline triggers
 
-## Root preemption law
+Immediately broaden invalidation if a closure changes top-level topology, package boundaries, canonical owner/writer, `core/shared/service` ownership, data/schema authority, contract/generated authority, runtime/config composition, dependency direction, tooling/workflow authority, or exposes a higher structural root.
 
-If re-diagnosis proves a higher root that invalidates descendant treatment:
+## Next-root law
 
-`STOP DESCENDANT QUEUE → PROMOTE HIGHER ROOT → REDEFINE CANONICAL TARGET/AFFECTED CONE → EXECUTE HIGHER ROOT WHEN GATE PASSES`.
+Do not return to Orchestrator AUTO/NEXT or historical order.
 
-## Historical probe law
+The next root comes only from:
 
-Old findings remain evidence only. They may become:
+`REFRESHED CURRENT g → REFRESHED CANONICAL g → REFRESHED STRUCTURAL DELTA → REFRESHED DYNAMIC ROOT GRAPH`.
 
-`PROMOTED LIVE ROOT | DESCENDANT OF HIGHER ROOT | SUPERSEDED | FALSE_POSITIVE | EVIDENCE_ONLY`.
+If new evidence proves a higher root that invalidates descendant treatment:
 
-They never become a static queue.
+`STOP DESCENDANT WORK → PROMOTE HIGHER ROOT → REBUILD TARGET/AFFECTED CONE → EXECUTE ONLY AFTER GATES PASS`.
 
 ## Repeat condition
 
-If at least one proven executable root exists, return to `01`, rebuild the complete census/current/canonical/delta model, return to `03`, close the highest ranked causal root, verify, and return here.
+While at least one proven executable root remains:
 
-Continue branch-wide census/discovery throughout the campaign; newly exposed roots must be inserted into a refreshed complete Root Graph and reranked before any mutation.
+`SELECT HIGHEST ROOT → RECONSTRUCT → MIGRATE/CUTOVER → DELETE LOSERS/GARBAGE → FINISH FILES/DIRECTORIES → VERIFY → PUSH → EXACT-HEAD CI → RE-CENSUS → RE-RANK`.
 
-## Final transition
-
-When no proven executable root remains, do **not** declare completion from queue state alone.
-
-Transition to `06-FINAL-ADVERSARIAL-QUALIFICATION.md` for the fresh complete branch-wide re-census and exact fixed-point proof. Any material finding from that final qualification reopens execution at `03`.
+When the root graph first becomes empty, do not declare completion. Transition to `06`.

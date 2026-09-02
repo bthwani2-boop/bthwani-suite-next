@@ -1,57 +1,35 @@
-# 03 — ROOT SELECTION AND RECONSTRUCTION EXECUTION
+# 03 — ROOT SELECTION AND CANONICAL RECONSTRUCTION EXECUTION
 
 ## Purpose
 
-Select the highest **proven executable** causal root from the complete branch-wide reconstruction baseline and close its complete affected cone end-to-end.
+Collapse the complete branch-wide structural delta into the highest proven causal roots, then execute one causally complete reconstruction unit at a time.
 
-This file may be entered for root selection only after `01` has completed the branch-wide census, `02` has completed `CURRENT g`/`CANONICAL g`/Structural Delta, and the true causal Root Graph has been synthesized and ranked. The `ROOT-CORRECT EXECUTION GATE` cannot bypass that prerequisite.
+## Root synthesis law
 
-## Root selection law
+Do not create one root per bug/file/test/finding. Cluster deltas under their highest causal parents and prefer the root that removes the most structural causes with the smallest causally complete target.
 
-Do not create one root per file, tool finding, screen, test failure, or historical label.
-
-For each candidate:
-
-1. cluster symptoms under causal parents;
-2. prove the actual Source-of-Defect;
-3. prove the canonical Source-of-Fix and owner/writer;
-4. identify any higher root already supported by evidence;
-5. map the complete affected writers/readers/consumers/data/contracts/runtime/tooling;
-6. prove migration/cutover/deletion safety;
-7. synthesize and rank the complete true Root Graph before choosing the highest root;
-8. execute only when the complete pre-mutation reconstruction gate and root-correct gate both pass.
-
-Among currently proven executable roots, prefer the highest causal/leverage root using:
+Rank by:
 
 `CAUSAL DEPTH × BLOCKING POWER × CANONICAL IMPORTANCE × PRODUCT/DATA/SECURITY/FINANCIAL RISK × FANOUT × STRUCTURAL LEVERAGE × EXECUTABLE PROOF`.
 
-Never rank by numeric ID, age, easiest diff, first red check, file count, or finding count.
+Historical findings and CI/scanner failures remain evidence only.
 
-A complete branch-wide causal ranking is required before selecting the root. A locally complete affected cone cannot waive the global reconstruction baseline or ranking requirement.
+## Structural rewrite escalation
 
-## Historical findings are probes only
+If one responsibility shows three or more of:
 
-For every historical finding:
+`duplicate owners | duplicate writers | duplicate mappings | wrappers/adapters | parallel directories | conflicting defaults | multiple config sources | duplicated state logic | generated/manual repairs | repeated patches | compatibility layers`,
 
-```text
-LIVE PROVEN ROOT? → ELIGIBLE WHEN GATE PASSES
-DESCENDANT OF HIGHER ROOT? → ATTACH / PREEMPT
-ALREADY FIXED? → SUPERSEDED
-INCORRECT? → FALSE_POSITIVE
-INSUFFICIENT PROOF? → EVIDENCE_ONLY
-```
+classify it as `POTENTIAL_STRUCTURAL_ROOT` and stop local descendant patching until the structural diagnosis is complete.
 
-Historical order has zero scheduling authority.
-
-## Declare one Closure Unit
-
-Select the smallest **causally complete** root or tightly coupled root cluster that can reach honest closure without exporting dual authority, half migration, deferred cutover, cleanup debt, unmigrated consumers, or unresolved ownership decisions.
+## Selected Closure Unit record
 
 Before mutation record:
 
 ```text
 PINNED_REMOTE_G_SHA=
 PRIMARY_CAUSAL_ROOT=
+WHY_HIGHEST=
 ACTUAL_SOURCE_OF_DEFECT=
 ACTUAL_SOURCE_OF_FIX=
 CANONICAL_RESPONSIBILITY=
@@ -59,52 +37,85 @@ CANONICAL_OWNER=
 CANONICAL_WRITER=
 TARGET_CANONICAL_NAME_PATH_BOUNDARY=
 COMPLETE_AFFECTED_CONE=
-WRITERS_READERS_CONSUMERS=
+WINNING_AUTHORITIES=
+LOSING_AUTHORITIES=
+LOSING_WRITERS_READERS_CONSUMERS=
+ARTIFACT_DISPOSITIONS_TO_REALIZE=
+DIRECTORY_PACKAGE_VERDICTS_TO_REALIZE=
 DATA_SCHEMA_IMPACT=
 CONTRACT_GENERATED_IMPACT=
 RUNTIME_CONFIG_TOOLING_IMPACT=
 TEST_FIXTURE_MOCK_DEPENDENCY_IMPACT=
 MIGRATION_BACKFILL_RECONCILIATION=
 CUTOVER=
-LOSING_AUTHORITIES_TO_DELETE=
+DELETE_NOW_TARGETS=
+POST_CUTOVER_DELETION_TARGETS=
 OLD_NAMES_PATHS_TO_DELETE=
 NEGATIVE_SPACE_SEARCH=
+FILE_LEVEL_FINISHING_SCOPE=
 TARGETED_VERIFICATION=
+CI_VERIFICATION_MODE=INCREMENTAL|FULL_SCOPE
 REOPEN_CONDITIONS=
 ```
 
-This is a mandatory pre-mutation record and gate. Blank, stale, or locally inferred fields block execution.
+Blank or stale fields block execution.
 
-## Execute canonical reconstruction
+## Root-correct treatment order
 
-Treatment order:
+```text
+CANONICAL SEMANTICS
+→ CANONICAL OWNER/WRITER
+→ TARGET NAME/PATH/BOUNDARY
+→ DELETE_NOW LOW-RISK GARBAGE IN AFFECTED CONE
+→ DATA/SCHEMA
+→ CONTRACT/GENERATED
+→ READERS/CONSUMERS
+→ RUNTIME/CONFIG/TOOLING
+→ MIGRATION/BACKFILL/RECONCILIATION
+→ CUTOVER
+→ DISABLE OLD WRITERS
+→ ZERO OLD READERS/REFERENCES
+→ DELETE LOSING AUTHORITIES
+→ DELETE OLD FILES/DIRECTORIES/PACKAGES/PATHS
+→ FILE/SYMBOL/LINE FINISHING
+→ DIRECTORY/PACKAGE FINISHING
+→ VERIFY
+→ FALSIFY
+```
 
-`CANONICAL SEMANTICS → CANONICAL OWNER/WRITER → TARGET NAME/PATH/BOUNDARY → DATA/SCHEMA → CONTRACT → GENERATED → READERS → CONSUMERS → RUNTIME/CONFIG/TOOLING → PRODUCT JOURNEY/STATE → CUTOVER → DISABLE OLD WRITES → ZERO OLD READERS/REFS → DELETE LOSING AUTHORITY → DELETE OLD PATHS/RESIDUE → VERIFY → FALSIFY`.
+No minimal-diff requirement exists.
 
-When proven necessary, rewrite, move, rename, merge, split, regenerate, migrate, or delete across the full affected cone. No minimal-diff requirement exists. Do not solve duplicate authority by adding another wrapper/mapper/compatibility layer.
+## Fast-delete lane inside execution
 
-`04-CLEANUP-DELETION-NAMING-AND-TOPOLOGY.md` applies to every Closure Unit.
+Any affected-cone artifact already classified `DELETE_NOW` is removed without a separate migration project. Required proof is limited to its low-risk classification plus quick reference/reachability check.
 
-## Exact-HEAD mutation lock
+Do not postpone proven garbage to a later cleanup batch.
 
-Immediately before commit/push:
+`PROVEN_GARBAGE_DISCOVERED_IN_EXECUTING_CONE → DELETE_IN_SAME_CLOSURE_UNIT`.
 
-`EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA`.
+## Winner/Loser enforcement
 
-If false:
+For every duplicated authority in the root:
 
-`FETCH → COMPARE → IDENTIFY OVERLAP → INVALIDATE AFFECTED EVIDENCE → RE-PIN → RE-DIAGNOSE → REAPPLY ONLY IF STILL VALID`.
+`WINNER CANONICALIZED → LOSER CONSUMERS MIGRATED → CUTOVER → LOSER WRITES DISABLED → LOSER DELETED → ZERO LOSER REFERENCES`.
 
-Never force-push over unseen work.
+`LOSING_AUTHORITY_SURVIVES_AFTER_CUTOVER=ROOT_OPEN`.
 
-## Per-root closure condition
+Never create a third wrapper/mapper/registry to preserve two competing authorities.
 
-A root remains open until all applicable conditions pass:
+## No preservation bias
+
+Do not retain an old internal API, package, directory, wrapper, adapter, route, script, test, config, or generated repair merely to reduce churn. If the canonical target makes it unnecessary, migrate consumers and remove it.
+
+## Root closure gate
 
 ```text
 CANONICAL_OWNER_PROOF=PASS
 CANONICAL_WRITER_PROOF=PASS_OR_NA
 COMPLETE_CONSUMER_MIGRATION=PASS
+ARTIFACT_DISPOSITIONS_REALIZED=PASS
+DIRECTORY_PACKAGE_VERDICTS_REALIZED=PASS
+WINNER_LOSER_CUTOVER=PASS_OR_NA
 DATA_MIGRATION_READBACK=PASS_OR_NA
 CONTRACT_GENERATED_PARITY=PASS_OR_NA
 OLD_WRITERS=0
@@ -113,18 +124,25 @@ OLD_IMPORTS_REEXPORTS=0
 OLD_ROUTES_CONFIG_SCRIPT_WORKFLOW_REFS=0
 OLD_NAME_PATH_REFS=0
 OLD_RUNTIME_REACHABILITY=0
+LOSING_AUTHORITIES_REMAINING=0
 SUPERSEDED_STRUCTURE_DELETED=YES
 UNBOUNDED_COMPATIBILITY=0
 THIRD_AUTHORITY=0
+FILE_LEVEL_FINISHING=PASS
+DIRECTORY_PACKAGE_FINISHING=PASS
 TARGETED_VERIFICATION=PASS
 NEGATIVE_SPACE=PASS
 AFFECTED_CONE_EVIDENCE_DEBT=0
 ```
 
-Then commit the coherent Closure Unit, push directly to `g`, verify the remote SHA, re-pin, and continue with `05`.
+A structural replacement/duplication root that removes no losing structure triggers mandatory `CLOSURE_SUSPICION` and re-audit before closure.
 
-## Preemption
+## Exact-HEAD lock
 
-If new census/evidence proves a higher root that invalidates the selected treatment:
+Immediately before commit/push require:
 
-`STOP DESCENDANT WORK → PROMOTE HIGHER ROOT → REMAP AFFECTED CONE → REDEFINE TARGET → EXECUTE ONLY AFTER GATE PASSES`.
+`EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA`.
+
+If false: `FETCH → COMPARE → INVALIDATE → RE-PIN → RE-DIAGNOSE → REAPPLY ONLY IF STILL VALID`.
+
+Never force-push unseen work.
