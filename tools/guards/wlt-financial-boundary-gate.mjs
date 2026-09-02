@@ -470,4 +470,19 @@ for (const forbidden of [
   }
 }
 
+// 6. DSH orders backend must not maintain shadow financial adjustment tables or writes.
+// WLT is the sole owner of adjustments, refunds and financial obligations.
+for (const filePath of listGoFiles(dshBackendRoot)) {
+  const file = path.relative(repoRoot, filePath).replaceAll(path.sep, "/");
+  if (file.endsWith("_test.go")) continue;
+  const source = fs.readFileSync(filePath, "utf8");
+  if (source.includes("dsh_order_wlt_adjustments")) {
+    violations.push({
+      file,
+      line: lineNumber(source, source.indexOf("dsh_order_wlt_adjustments")),
+      message: "DSH_ORDER_WLT_ADJUSTMENTS_SHADOW_TABLE_FORBIDDEN: adjustments belong to WLT only",
+    });
+  }
+}
+
 fail(guardId, violations);

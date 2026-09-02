@@ -479,9 +479,6 @@ func DecidePreparationIssue(db *sql.DB, input DecidePreparationIssueInput) (*Pre
 	if err != nil {
 		return nil, err
 	}
-	if err := enqueueWLTAdjustmentForDecisionTx(tx, decided.ID, decided.OrderID, decided.StoreID, input.Decision, input.CorrelationID); err != nil {
-		return nil, err
-	}
 	payload, _ := json.Marshal(map[string]any{
 		"issueId":          decided.ID,
 		"orderId":          decided.OrderID,

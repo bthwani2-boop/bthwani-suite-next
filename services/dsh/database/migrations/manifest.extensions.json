@@ -590,6 +590,13 @@
       "sha256": "cbf45bf0e0abccf985b503c992af8edf45f3ffceecbe562ab652e8372898629d",
       "historicalPrefix": "1083",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 325,
+      "file": "dsh-1084_drop_order_wlt_adjustments_residue.sql",
+      "sha256": "8634bd7c8791839bf55c2d74b1af471b2cb862ca6d6b98bc9fb3c78dec40986f",
+      "historicalPrefix": "1084",
+      "state": "ACTIVE"
     }
   ]
 }
