@@ -2,9 +2,11 @@ go 1.26.4
 
 use (
 	./core/identity/backend
+	./core/identity/clients/go/identityauth
 	./core/platform-control/backend
 	./core/providers/backend
 	./core/workforce/backend
 	./services/dsh/backend
 	./services/wlt/backend
+	./shared/resilience
 )

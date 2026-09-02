@@ -1,6 +1,7 @@
 FROM golang:1.26.5-alpine AS build
-WORKDIR /src
+WORKDIR /src/core/providers/backend
 COPY core/providers/backend/go.mod core/providers/backend/go.sum* ./
+COPY core/identity/clients/go/identityauth/ /src/core/identity/clients/go/identityauth/
 RUN go mod download
 COPY core/providers/backend/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/providers-api ./cmd/providers-api

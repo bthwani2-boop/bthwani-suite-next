@@ -3,7 +3,8 @@ module dsh-api
 go 1.26.4
 
 require (
-	github.com/bthwani2-boop/bthwani-shared-resilience v0.0.0
+	github.com/bthwani2-boop/bthwani-identityauth v0.0.0
+	github.com/bthwani2-boop/bthwani-resilience v0.0.0
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.12.3
 	github.com/minio/minio-go/v7 v7.2.1
@@ -12,7 +13,9 @@ require (
 	golang.org/x/image v0.45.0
 )
 
-replace github.com/bthwani2-boop/bthwani-shared-resilience => ../../../shared/go/resilience
+replace github.com/bthwani2-boop/bthwani-resilience => ../../../shared/resilience
+
+replace github.com/bthwani2-boop/bthwani-identityauth => ../../../core/identity/clients/go/identityauth
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

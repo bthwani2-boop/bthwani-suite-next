@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"providers-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 )
 
 func TestProvidersReadinessIsPublicAndFailsClosedWithoutDatabase(t *testing.T) {

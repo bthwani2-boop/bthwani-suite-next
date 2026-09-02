@@ -12,7 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"workforce-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 	"workforce-api/internal/availabilityoutbox"
 	"workforce-api/internal/dshclient"
 	workforcehttp "workforce-api/internal/http"

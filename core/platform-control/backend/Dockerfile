@@ -1,6 +1,7 @@
 FROM golang:1.26.5-alpine AS build
-WORKDIR /src
+WORKDIR /src/core/platform-control/backend
 COPY core/platform-control/backend/go.mod core/platform-control/backend/go.sum* ./
+COPY core/identity/clients/go/identityauth/ /src/core/identity/clients/go/identityauth/
 RUN go mod download
 COPY core/platform-control/backend/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/platform-control-api ./cmd/platform-control-api

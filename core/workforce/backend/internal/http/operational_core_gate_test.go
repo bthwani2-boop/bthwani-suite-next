@@ -6,7 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"workforce-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
+	workforceauth "workforce-api/internal/auth"
 )
 
 func TestBindIdentityRequestContextUsesIdentityOwnedOperatorContext(t *testing.T) {
@@ -28,7 +29,7 @@ func TestBindIdentityRequestContextUsesIdentityOwnedOperatorContext(t *testing.T
 	if !bound {
 		t.Fatal("authenticated Identity context was not bound")
 	}
-	if got, ok := auth.OperatorContextIDFromContext(boundRequest.Context()); !ok || got != "context-main" {
+	if got, ok := workforceauth.OperatorContextIDFromContext(boundRequest.Context()); !ok || got != "context-main" {
 		t.Fatalf("expected Identity-owned context-main, got %q (ok=%v)", got, ok)
 	}
 }
@@ -48,7 +49,7 @@ func TestBindIdentityRequestContextFailsClosedWithoutIdentityContext(t *testing.
 	if bound {
 		t.Fatal("request without Identity-owned context must not be bound")
 	}
-	if _, ok := auth.OperatorContextIDFromContext(boundRequest.Context()); ok {
+	if _, ok := workforceauth.OperatorContextIDFromContext(boundRequest.Context()); ok {
 		t.Fatal("caller context must not gain an operator context after failed binding")
 	}
 }

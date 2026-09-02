@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"workforce-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 	"workforce-api/internal/workforce"
 )
 

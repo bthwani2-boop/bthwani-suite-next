@@ -1,8 +1,8 @@
 package http
 
 import (
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 	"testing"
-	"workforce-api/internal/auth"
 	"workforce-api/internal/workforce"
 )
 

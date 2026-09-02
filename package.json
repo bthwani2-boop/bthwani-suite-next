@@ -121,6 +121,7 @@
     "openapi:generate:all": "node tools/scripts/materialize-openapi-artifacts.mjs",
     "guard:api-binding": "node tools/guards/api-binding-gate.mjs",
     "guard:backend-api-binding": "node tools/guards/backend-api-binding-gate.mjs",
+    "guard:go-module-topology": "node tools/guards/go-module-topology-gate.mjs",
     "guard:service-manifest-drift": "node tools/guards/service-manifest-drift-gate.mjs",
     "guard:frontend-feature-binding": "node tools/guards/frontend-feature-binding-gate.mjs",
     "guard:control-panel-architecture": "node tools/guards/control-panel-architecture-gate.mjs",

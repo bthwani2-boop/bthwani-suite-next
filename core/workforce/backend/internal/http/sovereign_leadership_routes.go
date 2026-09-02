@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"workforce-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
+	workforceauth "workforce-api/internal/auth"
 	"workforce-api/internal/workforce"
 )
 
@@ -45,7 +46,7 @@ func (s *sovereignLeadershipServer) withIdentity(next guardedHandler) http.Handl
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
-		boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
+		boundContext, bindErr := workforceauth.BindIdentityContext(r.Context(), identity)
 		if bindErr != nil {
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity operator context is missing")
 			return

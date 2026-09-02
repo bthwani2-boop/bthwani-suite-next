@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"workforce-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 	"workforce-api/internal/dshclient"
 	"workforce-api/internal/workforce"
 )

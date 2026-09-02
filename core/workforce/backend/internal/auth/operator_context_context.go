@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"strings"
+
+	identityauth "github.com/bthwani2-boop/bthwani-identityauth"
 )
 
 type operatorContextKey struct{}
@@ -26,10 +28,10 @@ func OperatorContextIDFromContext(ctx context.Context) (string, bool) {
 
 // BindIdentityContext installs the context carried by an authenticated
 // Identity response and fails closed when Identity did not provide one.
-func BindIdentityContext(ctx context.Context, identity Identity) (context.Context, error) {
+func BindIdentityContext(ctx context.Context, identity identityauth.ActorIdentity) (context.Context, error) {
 	operatorContextID := strings.TrimSpace(identity.OperatorContextID)
 	if operatorContextID == "" {
-		return ctx, ErrUnauthenticated
+		return ctx, identityauth.ErrUnauthenticated
 	}
 	return WithOperatorContext(ctx, operatorContextID), nil
 }

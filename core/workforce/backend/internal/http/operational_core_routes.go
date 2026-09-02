@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"workforce-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
+	workforceauth "workforce-api/internal/auth"
 	"workforce-api/internal/workforce"
 )
 
@@ -48,7 +49,7 @@ func (s *operationalCoreServer) withIdentity(next guardedHandler) http.HandlerFu
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
-		boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
+		boundContext, bindErr := workforceauth.BindIdentityContext(r.Context(), identity)
 		if bindErr != nil {
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity operator context is missing")
 			return
@@ -133,7 +134,7 @@ func (s *operationalCoreServer) createOwnAvailabilityNotice(w http.ResponseWrite
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	input.OperatorContextID, _ = auth.OperatorContextIDFromContext(r.Context())
+	input.OperatorContextID, _ = workforceauth.OperatorContextIDFromContext(r.Context())
 	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	notice, err := s.repo.CreateAvailabilityNotice(r.Context(), identity.Subject, identity.Subject, firstRole(identity), correlationID, idempotencyKey, input)
@@ -159,7 +160,7 @@ func (s *operationalCoreServer) updateOwnAvailabilityNotice(w http.ResponseWrite
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	input.OperatorContextID, _ = auth.OperatorContextIDFromContext(r.Context())
+	input.OperatorContextID, _ = workforceauth.OperatorContextIDFromContext(r.Context())
 	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	notice, err := s.repo.UpdateAvailabilityNotice(r.Context(), identity.Subject, r.PathValue("noticeId"), identity.Subject, firstRole(identity), correlationID, idempotencyKey, input)
@@ -328,7 +329,7 @@ func bindIdentityRequestContext(r *http.Request, authClient *auth.Client) (*http
 	if err != nil {
 		return r, auth.Identity{}, false
 	}
-	boundContext, err := auth.BindIdentityContext(r.Context(), identity)
+	boundContext, err := workforceauth.BindIdentityContext(r.Context(), identity)
 	if err != nil {
 		return r, auth.Identity{}, false
 	}

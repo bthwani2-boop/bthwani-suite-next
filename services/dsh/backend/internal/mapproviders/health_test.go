@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	resilience "github.com/bthwani2-boop/bthwani-shared-resilience"
+	resilience "github.com/bthwani2-boop/bthwani-resilience"
 )
 
 func TestHealthReturnsOnlyMapProviderState(t *testing.T) {

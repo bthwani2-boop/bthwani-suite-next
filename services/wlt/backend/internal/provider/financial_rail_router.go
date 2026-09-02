@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	resilience "github.com/bthwani2-boop/bthwani-shared-resilience"
+	resilience "github.com/bthwani2-boop/bthwani-resilience"
 )
 
 // Capability enumerates the finite set of financial-rail operations a

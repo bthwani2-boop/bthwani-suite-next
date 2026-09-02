@@ -3,7 +3,7 @@ package http
 import (
 	"net/http"
 
-	"providers-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 	"providers-api/internal/providers"
 )
 

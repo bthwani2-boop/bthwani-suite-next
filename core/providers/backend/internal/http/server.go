@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"providers-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 	"providers-api/internal/providers"
 )
 

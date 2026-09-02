@@ -12,35 +12,23 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	identityauth "github.com/bthwani2-boop/bthwani-identityauth"
 )
 
 var (
-	ErrUnauthenticated     = errors.New("unauthenticated")
-	ErrIdentityUnavailable = errors.New("identity unavailable")
+	ErrUnauthenticated     = identityauth.ErrUnauthenticated
+	ErrIdentityUnavailable = identityauth.ErrIdentityUnavailable
 )
 
-type Permission struct {
-	Service string `json:"service"`
-	Surface string `json:"surface"`
-	Action  string `json:"action"`
-	Scope   string `json:"scope"`
-}
-
-type Identity struct {
-	Subject           string       `json:"subject"`
-	OperatorContextID string       `json:"operatorContextId"`
-	PhoneE164         string       `json:"phoneE164"`
-	Roles             []string     `json:"roles"`
-	Permissions       []Permission `json:"permissions"`
-	AuthState         string       `json:"authState"`
-	SessionID         string       `json:"sessionId"`
-	SessionSurface    string       `json:"sessionSurface"`
-}
+type Permission = identityauth.Permission
+type Identity = identityauth.ActorIdentity
 
 type Client struct {
 	baseURL              string
 	internalServiceToken string
 	http                 *http.Client
+	session              *identityauth.Client
 
 	mu                   sync.RWMutex
 	partnerBundles       []PartnerPermissionBundleDescriptor
@@ -61,6 +49,7 @@ func NewClientWithInternalAccess(baseURL, serviceToken, _ string) *Client {
 		baseURL:              strings.TrimRight(strings.TrimSpace(baseURL), "/"),
 		internalServiceToken: strings.TrimSpace(serviceToken),
 		http:                 &http.Client{Timeout: 3 * time.Second},
+		session:              identityauth.NewClient(baseURL),
 	}
 }
 
@@ -68,65 +57,10 @@ func NewClientWithInternalAccess(baseURL, serviceToken, _ string) *Client {
 // operator context. The Identity session is the operator-context authority; a
 // process-wide default is never used to select or reject a valid scoped session.
 func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, error) {
-	if c.baseURL == "" {
+	if c == nil || c.session == nil {
 		return Identity{}, ErrIdentityUnavailable
 	}
-	if !strings.HasPrefix(strings.TrimSpace(authorization), "Bearer ") {
-		return Identity{}, ErrUnauthenticated
-	}
-	for attempt := 1; attempt <= identityResolveAttempts; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/auth/session", nil)
-		if err != nil {
-			return Identity{}, ErrIdentityUnavailable
-		}
-		req.Header.Set("Authorization", authorization)
-		resp, err := c.http.Do(req)
-		if err != nil {
-			if attempt < identityResolveAttempts && ctx.Err() == nil {
-				continue
-			}
-			return Identity{}, ErrIdentityUnavailable
-		}
-
-		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-			_ = resp.Body.Close()
-			return Identity{}, ErrUnauthenticated
-		}
-		if resp.StatusCode != http.StatusOK {
-			_, _ = io.Copy(io.Discard, resp.Body)
-			_ = resp.Body.Close()
-			if attempt < identityResolveAttempts && (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= http.StatusInternalServerError) {
-				continue
-			}
-			return Identity{}, ErrIdentityUnavailable
-		}
-
-		var identity Identity
-		decodeErr := json.NewDecoder(resp.Body).Decode(&identity)
-		_ = resp.Body.Close()
-		if decodeErr != nil {
-			if attempt < identityResolveAttempts && ctx.Err() == nil {
-				continue
-			}
-			return Identity{}, ErrIdentityUnavailable
-		}
-		if identity.AuthState != "authenticated" || strings.TrimSpace(identity.Subject) == "" || strings.TrimSpace(identity.OperatorContextID) == "" {
-			return Identity{}, ErrUnauthenticated
-		}
-		identity.Subject = strings.TrimSpace(identity.Subject)
-		identity.OperatorContextID = strings.TrimSpace(identity.OperatorContextID)
-		return identity, nil
-	}
-	return Identity{}, ErrIdentityUnavailable
-}
-
-func (i Identity) HasRole(role string) bool {
-	for _, current := range i.Roles {
-		if current == role {
-			return true
-		}
-	}
-	return false
+	return c.session.Resolve(ctx, authorization)
 }
 
 type PartnerPermissionBundleDescriptor struct {

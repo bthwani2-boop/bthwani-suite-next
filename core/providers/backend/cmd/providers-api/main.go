@@ -12,7 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"providers-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 	providershttp "providers-api/internal/http"
 	"providers-api/internal/providers"
 )

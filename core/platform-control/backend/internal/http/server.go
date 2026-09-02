@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"platform-control-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 	"platform-control-api/internal/platformcontrol"
 )
 

@@ -12,7 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"platform-control-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 	platformhttp "platform-control-api/internal/http"
 	"platform-control-api/internal/platformcontrol"
 )

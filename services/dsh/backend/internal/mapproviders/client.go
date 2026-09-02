@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	resilience "github.com/bthwani2-boop/bthwani-shared-resilience"
+	resilience "github.com/bthwani2-boop/bthwani-resilience"
 )
 
 var (

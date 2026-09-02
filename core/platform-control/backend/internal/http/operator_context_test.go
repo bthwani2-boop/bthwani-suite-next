@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"platform-control-api/internal/auth"
+	auth "github.com/bthwani2-boop/bthwani-identityauth"
 )
 
 func TestOperatorContextAcceptsIdentityOwnedContext(t *testing.T) {

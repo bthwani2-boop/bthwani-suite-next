@@ -2,6 +2,8 @@ FROM golang:1.26.5-alpine AS build
 WORKDIR /app
 
 COPY services/dsh/backend/go.mod services/dsh/backend/go.sum ./services/dsh/backend/
+COPY core/identity/clients/go/identityauth/ ./core/identity/clients/go/identityauth/
+COPY shared/resilience/ ./shared/resilience/
 WORKDIR /app/services/dsh/backend
 RUN go mod download
 

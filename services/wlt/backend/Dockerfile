@@ -2,6 +2,7 @@ FROM golang:1.26.5-alpine AS build
 WORKDIR /app
 
 COPY services/wlt/backend/go.mod services/wlt/backend/go.sum ./services/wlt/backend/
+COPY shared/resilience/ ./shared/resilience/
 WORKDIR /app/services/wlt/backend
 RUN go mod download
 
