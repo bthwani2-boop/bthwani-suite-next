@@ -247,7 +247,7 @@ func (r *Repository) ListPeople(ctx context.Context, filter ListFilter) ([]Perso
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	people := []Person{}
 	for rows.Next() {
 		person, err := scanPerson(rows)
@@ -293,7 +293,7 @@ func (r *Repository) ListShifts(ctx context.Context, includeInactive bool) ([]Sh
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	shifts := []Shift{}
 	for rows.Next() {
 		var shift Shift
