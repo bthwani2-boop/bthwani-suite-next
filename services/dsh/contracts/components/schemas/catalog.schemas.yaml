@@ -676,18 +676,13 @@ DshCatalogAssetLinkWithAsset:
 
 DshCatalogPlatformPolicy:
   type: object
-  required: [id, version, policyScope, platformCommissionRate, fieldPartnerOnboardingCommissionAmount, fieldPartnerOnboardingCommissionCurrency, storeOnboardingFeeAmount, storeOnboardingFeeCurrency, allowsStoreProductCustomImage, allowsProductProposal, requiresBarcode, requiresCatalogReview, requiresMarketingReview, requiresProductImage, requiresCategoryImage, requiresDescription, requiresBrand, requiresUnit, productDataQualityMinimumScore, maxGalleryImages, manualRequestMode, isActive, effectiveFrom, notes, createdAt, updatedAt]
+  required: [id, version, policyScope, allowsStoreProductCustomImage, allowsProductProposal, requiresBarcode, requiresCatalogReview, requiresMarketingReview, requiresProductImage, requiresCategoryImage, requiresDescription, requiresBrand, requiresUnit, productDataQualityMinimumScore, maxGalleryImages, manualRequestMode, isActive, effectiveFrom, notes, createdAt, updatedAt]
   properties:
     id: { type: string }
     version: { type: integer, minimum: 1 }
     domainId: { type: [string, "null"] }
     nodeId: { type: [string, "null"] }
     policyScope: { type: string, enum: [default, domain, node] }
-    platformCommissionRate: { type: number, minimum: 0, maximum: 1 }
-    fieldPartnerOnboardingCommissionAmount: { type: number, minimum: 0 }
-    fieldPartnerOnboardingCommissionCurrency: { type: string }
-    storeOnboardingFeeAmount: { type: number, minimum: 0 }
-    storeOnboardingFeeCurrency: { type: string }
     allowsStoreProductCustomImage: { type: boolean }
     allowsProductProposal: { type: boolean }
     requiresBarcode: { type: boolean }
@@ -713,11 +708,6 @@ DshCatalogPlatformPolicyUpdateInput:
   required: [expectedVersion]
   properties:
     expectedVersion: { type: integer, minimum: 1 }
-    platformCommissionRate: { type: number, minimum: 0, maximum: 1 }
-    fieldPartnerOnboardingCommissionAmount: { type: number, minimum: 0 }
-    fieldPartnerOnboardingCommissionCurrency: { type: string }
-    storeOnboardingFeeAmount: { type: number, minimum: 0 }
-    storeOnboardingFeeCurrency: { type: string }
     allowsStoreProductCustomImage: { type: boolean }
     allowsProductProposal: { type: boolean }
     requiresBarcode: { type: boolean }

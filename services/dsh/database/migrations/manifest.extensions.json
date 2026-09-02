@@ -583,6 +583,13 @@
       "sha256": "e5db66ee14971e7a81b37397e315493bc7a1049a8cb39b8bc4e88b54c63614a8",
       "historicalPrefix": "1082",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 324,
+      "file": "dsh-1083_central_catalog_financial_sovereignty_closure.sql",
+      "sha256": "cbf45bf0e0abccf985b503c992af8edf45f3ffceecbe562ab652e8372898629d",
+      "historicalPrefix": "1083",
+      "state": "ACTIVE"
     }
   ]
 }

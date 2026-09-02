@@ -1144,39 +1144,32 @@ func ListStoreAssortment(ctx context.Context, db *sql.DB, storeID string) ([]Sto
 // ── Platform catalog policy (commission/fee/capability flags per category) ─
 
 type CatalogPolicy struct {
-	Version                                  int       `json:"version"`
-	ID                                       string    `json:"id"`
-	DomainID                                 *string   `json:"domainId"`
-	NodeID                                   *string   `json:"nodeId"`
-	PolicyScope                              string    `json:"policyScope"`
-	PlatformCommissionRate                   float64   `json:"platformCommissionRate"`
-	FieldPartnerOnboardingCommissionAmount   float64   `json:"fieldPartnerOnboardingCommissionAmount"`
-	FieldPartnerOnboardingCommissionCurrency string    `json:"fieldPartnerOnboardingCommissionCurrency"`
-	StoreOnboardingFeeAmount                 float64   `json:"storeOnboardingFeeAmount"`
-	StoreOnboardingFeeCurrency               string    `json:"storeOnboardingFeeCurrency"`
-	AllowsStoreProductCustomImage            bool      `json:"allowsStoreProductCustomImage"`
-	AllowsProductProposal                    bool      `json:"allowsProductProposal"`
-	RequiresBarcode                          bool      `json:"requiresBarcode"`
-	RequiresCatalogReview                    bool      `json:"requiresCatalogReview"`
-	RequiresMarketingReview                  bool      `json:"requiresMarketingReview"`
-	RequiresProductImage                     bool      `json:"requiresProductImage"`
-	RequiresCategoryImage                    bool      `json:"requiresCategoryImage"`
-	RequiresDescription                      bool      `json:"requiresDescription"`
-	RequiresBrand                            bool      `json:"requiresBrand"`
-	RequiresUnit                             bool      `json:"requiresUnit"`
-	ProductDataQualityMinimumScore           float64   `json:"productDataQualityMinimumScore"`
-	MaxGalleryImages                         int       `json:"maxGalleryImages"`
-	ManualRequestMode                        bool      `json:"manualRequestMode"`
-	IsActive                                 bool      `json:"isActive"`
-	EffectiveFrom                            time.Time `json:"effectiveFrom"`
-	Notes                                    string    `json:"notes"`
-	CreatedAt                                time.Time `json:"createdAt"`
-	UpdatedAt                                time.Time `json:"updatedAt"`
+	Version                        int       `json:"version"`
+	ID                             string    `json:"id"`
+	DomainID                       *string   `json:"domainId"`
+	NodeID                         *string   `json:"nodeId"`
+	PolicyScope                    string    `json:"policyScope"`
+	AllowsStoreProductCustomImage  bool      `json:"allowsStoreProductCustomImage"`
+	AllowsProductProposal          bool      `json:"allowsProductProposal"`
+	RequiresBarcode                bool      `json:"requiresBarcode"`
+	RequiresCatalogReview          bool      `json:"requiresCatalogReview"`
+	RequiresMarketingReview        bool      `json:"requiresMarketingReview"`
+	RequiresProductImage           bool      `json:"requiresProductImage"`
+	RequiresCategoryImage          bool      `json:"requiresCategoryImage"`
+	RequiresDescription            bool      `json:"requiresDescription"`
+	RequiresBrand                  bool      `json:"requiresBrand"`
+	RequiresUnit                   bool      `json:"requiresUnit"`
+	ProductDataQualityMinimumScore float64   `json:"productDataQualityMinimumScore"`
+	MaxGalleryImages               int       `json:"maxGalleryImages"`
+	ManualRequestMode              bool      `json:"manualRequestMode"`
+	IsActive                       bool      `json:"isActive"`
+	EffectiveFrom                  time.Time `json:"effectiveFrom"`
+	Notes                          string    `json:"notes"`
+	CreatedAt                      time.Time `json:"createdAt"`
+	UpdatedAt                      time.Time `json:"updatedAt"`
 }
 
-const policyColumns = `id, domain_id, node_id, policy_scope, platform_commission_rate,
-	field_partner_onboarding_commission_amount, field_partner_onboarding_commission_currency,
-	store_onboarding_fee_amount, store_onboarding_fee_currency, allows_store_product_custom_image,
+const policyColumns = `id, domain_id, node_id, policy_scope, allows_store_product_custom_image,
 	allows_product_proposal, requires_barcode, requires_catalog_review, requires_marketing_review,
 	requires_product_image, requires_category_image, requires_description, requires_brand, requires_unit,
 	product_data_quality_minimum_score, max_gallery_images, manual_request_mode, is_active, effective_from, notes,
@@ -1184,9 +1177,8 @@ const policyColumns = `id, domain_id, node_id, policy_scope, platform_commission
 
 func scanPolicy(scanner interface{ Scan(...any) error }) (CatalogPolicy, error) {
 	var p CatalogPolicy
-	err := scanner.Scan(&p.ID, &p.DomainID, &p.NodeID, &p.PolicyScope, &p.PlatformCommissionRate,
-		&p.FieldPartnerOnboardingCommissionAmount, &p.FieldPartnerOnboardingCommissionCurrency,
-		&p.StoreOnboardingFeeAmount, &p.StoreOnboardingFeeCurrency, &p.AllowsStoreProductCustomImage,
+	err := scanner.Scan(&p.ID, &p.DomainID, &p.NodeID, &p.PolicyScope,
+		&p.AllowsStoreProductCustomImage,
 		&p.AllowsProductProposal, &p.RequiresBarcode, &p.RequiresCatalogReview, &p.RequiresMarketingReview,
 		&p.RequiresProductImage, &p.RequiresCategoryImage, &p.RequiresDescription, &p.RequiresBrand, &p.RequiresUnit,
 		&p.ProductDataQualityMinimumScore, &p.MaxGalleryImages, &p.ManualRequestMode, &p.IsActive,
@@ -1216,58 +1208,43 @@ func ListCatalogPolicies(ctx context.Context, db *sql.DB) ([]CatalogPolicy, erro
 }
 
 type CatalogPolicyInput struct {
-	PlatformCommissionRate                   *float64 `json:"platformCommissionRate"`
-	FieldPartnerOnboardingCommissionAmount   *float64 `json:"fieldPartnerOnboardingCommissionAmount"`
-	FieldPartnerOnboardingCommissionCurrency *string  `json:"fieldPartnerOnboardingCommissionCurrency"`
-	StoreOnboardingFeeAmount                 *float64 `json:"storeOnboardingFeeAmount"`
-	StoreOnboardingFeeCurrency               *string  `json:"storeOnboardingFeeCurrency"`
-	AllowsStoreProductCustomImage            *bool    `json:"allowsStoreProductCustomImage"`
-	AllowsProductProposal                    *bool    `json:"allowsProductProposal"`
-	RequiresBarcode                          *bool    `json:"requiresBarcode"`
-	RequiresCatalogReview                    *bool    `json:"requiresCatalogReview"`
-	RequiresMarketingReview                  *bool    `json:"requiresMarketingReview"`
-	RequiresProductImage                     *bool    `json:"requiresProductImage"`
-	RequiresCategoryImage                    *bool    `json:"requiresCategoryImage"`
-	RequiresDescription                      *bool    `json:"requiresDescription"`
-	RequiresBrand                            *bool    `json:"requiresBrand"`
-	RequiresUnit                             *bool    `json:"requiresUnit"`
-	ProductDataQualityMinimumScore           *float64 `json:"productDataQualityMinimumScore"`
-	MaxGalleryImages                         *int     `json:"maxGalleryImages"`
-	ManualRequestMode                        *bool    `json:"manualRequestMode"`
-	IsActive                                 *bool    `json:"isActive"`
-	Notes                                    *string  `json:"notes"`
+	AllowsStoreProductCustomImage  *bool    `json:"allowsStoreProductCustomImage"`
+	AllowsProductProposal          *bool    `json:"allowsProductProposal"`
+	RequiresBarcode                *bool    `json:"requiresBarcode"`
+	RequiresCatalogReview          *bool    `json:"requiresCatalogReview"`
+	RequiresMarketingReview        *bool    `json:"requiresMarketingReview"`
+	RequiresProductImage           *bool    `json:"requiresProductImage"`
+	RequiresCategoryImage          *bool    `json:"requiresCategoryImage"`
+	RequiresDescription            *bool    `json:"requiresDescription"`
+	RequiresBrand                  *bool    `json:"requiresBrand"`
+	RequiresUnit                   *bool    `json:"requiresUnit"`
+	ProductDataQualityMinimumScore *float64 `json:"productDataQualityMinimumScore"`
+	MaxGalleryImages               *int     `json:"maxGalleryImages"`
+	ManualRequestMode              *bool    `json:"manualRequestMode"`
+	IsActive                       *bool    `json:"isActive"`
+	Notes                          *string  `json:"notes"`
 }
 
 func UpdateCatalogPolicy(ctx context.Context, db *sql.DB, id string, input CatalogPolicyInput) (CatalogPolicy, error) {
-	if input.PlatformCommissionRate != nil && (*input.PlatformCommissionRate < 0 || *input.PlatformCommissionRate > 1) {
-		return CatalogPolicy{}, ErrInvalid
-	}
 	result, err := db.ExecContext(ctx, `UPDATE dsh_catalog_platform_policies SET
-		platform_commission_rate=COALESCE($1, platform_commission_rate),
-		field_partner_onboarding_commission_amount=COALESCE($2, field_partner_onboarding_commission_amount),
-		field_partner_onboarding_commission_currency=COALESCE($3, field_partner_onboarding_commission_currency),
-		store_onboarding_fee_amount=COALESCE($4, store_onboarding_fee_amount),
-		store_onboarding_fee_currency=COALESCE($5, store_onboarding_fee_currency),
-		allows_store_product_custom_image=COALESCE($6, allows_store_product_custom_image),
-		allows_product_proposal=COALESCE($7, allows_product_proposal),
-		requires_barcode=COALESCE($8, requires_barcode),
-		requires_catalog_review=COALESCE($9, requires_catalog_review),
-		requires_marketing_review=COALESCE($10, requires_marketing_review),
-		requires_product_image=COALESCE($11, requires_product_image),
-		requires_category_image=COALESCE($12, requires_category_image),
-		requires_description=COALESCE($13, requires_description),
-		requires_brand=COALESCE($14, requires_brand),
-		requires_unit=COALESCE($15, requires_unit),
-		product_data_quality_minimum_score=COALESCE($16, product_data_quality_minimum_score),
-		max_gallery_images=COALESCE($17, max_gallery_images),
-		manual_request_mode=COALESCE($18, manual_request_mode),
-		is_active=COALESCE($19, is_active),
-		notes=COALESCE($20, notes),
+		allows_store_product_custom_image=COALESCE($1, allows_store_product_custom_image),
+		allows_product_proposal=COALESCE($2, allows_product_proposal),
+		requires_barcode=COALESCE($3, requires_barcode),
+		requires_catalog_review=COALESCE($4, requires_catalog_review),
+		requires_marketing_review=COALESCE($5, requires_marketing_review),
+		requires_product_image=COALESCE($6, requires_product_image),
+		requires_category_image=COALESCE($7, requires_category_image),
+		requires_description=COALESCE($8, requires_description),
+		requires_brand=COALESCE($9, requires_brand),
+		requires_unit=COALESCE($10, requires_unit),
+		product_data_quality_minimum_score=COALESCE($11, product_data_quality_minimum_score),
+		max_gallery_images=COALESCE($12, max_gallery_images),
+		manual_request_mode=COALESCE($13, manual_request_mode),
+		is_active=COALESCE($14, is_active),
+		notes=COALESCE($15, notes),
 		updated_at=now(), version = version + 1
-		WHERE id=$21`,
-		input.PlatformCommissionRate, input.FieldPartnerOnboardingCommissionAmount,
-		input.FieldPartnerOnboardingCommissionCurrency, input.StoreOnboardingFeeAmount,
-		input.StoreOnboardingFeeCurrency, input.AllowsStoreProductCustomImage, input.AllowsProductProposal,
+		WHERE id=$16`,
+		input.AllowsStoreProductCustomImage, input.AllowsProductProposal,
 		input.RequiresBarcode, input.RequiresCatalogReview, input.RequiresMarketingReview, input.RequiresProductImage,
 		input.RequiresCategoryImage, input.RequiresDescription, input.RequiresBrand, input.RequiresUnit,
 		input.ProductDataQualityMinimumScore, input.MaxGalleryImages, input.ManualRequestMode,

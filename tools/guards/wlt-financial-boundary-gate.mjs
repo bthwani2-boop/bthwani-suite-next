@@ -441,4 +441,33 @@ for (const [routePath, methods] of Object.entries(dshBundle.paths ?? {})) {
 }
 for (const route of [...registeredFinancialRoutes].sort()) if (!declaredDshOperations.has(route)) violations.push({ file: "services/dsh/contracts/dsh.openapi.yaml", line: 0, message: `UNDECLARED_FINANCIAL_ROUTE ${route} -- financial routes require a contract operation, not an allowlist exception` });
 
+// 5. Central catalog policy must remain purely operational and free of financial truth.
+// WLT is the sole canonical financial owner of commissions and fees.
+const catalogSchemaFile = "services/dsh/contracts/components/schemas/catalog.schemas.yaml";
+const catalogSchemaContent = readCanonicalSource(catalogSchemaFile);
+const catalogBackendFile = "services/dsh/backend/internal/centralcatalog/centralcatalog.go";
+const catalogBackendContent = readCanonicalSource(catalogBackendFile);
+for (const forbidden of [
+  "platformCommissionRate",
+  "fieldPartnerOnboardingCommissionAmount",
+  "fieldPartnerOnboardingCommissionCurrency",
+  "storeOnboardingFeeAmount",
+  "storeOnboardingFeeCurrency",
+]) {
+  if (catalogSchemaContent.includes(forbidden)) {
+    violations.push({
+      file: catalogSchemaFile,
+      line: lineNumber(catalogSchemaContent, catalogSchemaContent.indexOf(forbidden)),
+      message: `CATALOG_PARALLEL_FINANCIAL_TRUTH_FORBIDDEN: ${forbidden} belongs to WLT only`,
+    });
+  }
+  if (catalogBackendContent.includes(forbidden)) {
+    violations.push({
+      file: catalogBackendFile,
+      line: lineNumber(catalogBackendContent, catalogBackendContent.indexOf(forbidden)),
+      message: `CATALOG_PARALLEL_FINANCIAL_TRUTH_FORBIDDEN: ${forbidden} belongs to WLT only`,
+    });
+  }
+}
+
 fail(guardId, violations);

@@ -9,14 +9,9 @@ import (
 
 func TestCatalogPolicyMarshalOmitsWLTFinancialAuthorityFields(t *testing.T) {
 	policy := CatalogPolicy{
-		ID:                                       "policy-1",
-		PolicyScope:                              "default",
-		PlatformCommissionRate:                   0.25,
-		FieldPartnerOnboardingCommissionAmount:   100,
-		FieldPartnerOnboardingCommissionCurrency: "YER",
-		StoreOnboardingFeeAmount:                 200,
-		StoreOnboardingFeeCurrency:               "YER",
-		AllowsProductProposal:                    true,
+		ID:                    "policy-1",
+		PolicyScope:           "default",
+		AllowsProductProposal: true,
 	}
 
 	payload, err := json.Marshal(policy)

@@ -152,6 +152,28 @@ describe("DSH/WLT frontend truth authority", () => {
         `catalog OCC client must not mutate financial policy authority: ${marker}`,
       );
     }
+
+    const catalogSchema = read("services/dsh/contracts/components/schemas/catalog.schemas.yaml");
+    const centralCatalogGo = read("services/dsh/backend/internal/centralcatalog/centralcatalog.go");
+
+    for (const forbidden of [
+      "platformCommissionRate",
+      "fieldPartnerOnboardingCommissionAmount",
+      "fieldPartnerOnboardingCommissionCurrency",
+      "storeOnboardingFeeAmount",
+      "storeOnboardingFeeCurrency",
+    ]) {
+      assert.equal(
+        catalogSchema.includes(forbidden),
+        false,
+        `catalog OpenAPI schema must not define parallel financial truth: ${forbidden}`,
+      );
+      assert.equal(
+        centralCatalogGo.includes(forbidden),
+        false,
+        `centralcatalog Go model must not define parallel financial truth: ${forbidden}`,
+      );
+    }
   });
 
   it("keeps partner order mapping free of local capability and financial-total authority", () => {
