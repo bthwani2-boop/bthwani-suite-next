@@ -37,6 +37,17 @@ func NewService(repo *Repository, identity *identityclient.Client, dsh *dshclien
 	return &Service{repo: repo, identity: identity, dsh: dsh}
 }
 
+func supervisorRoleForWorkforceKind(workforceKind string) string {
+	switch workforceKind {
+	case "captain":
+		return "workforce.supervise.captain"
+	case "employee":
+		return "workforce.supervise.employee"
+	default:
+		return "workforce.supervise.field"
+	}
+}
+
 // validateSupervisor confirms a supervisor actor (when supplied) exists and
 // is active, has the correct supervisor role, and is not the workforce member itself.
 func (s *Service) validateSupervisor(ctx context.Context, supervisorActorID, workforceActorID, workforceKind string) error {
@@ -56,12 +67,7 @@ func (s *Service) validateSupervisor(ctx context.Context, supervisorActorID, wor
 	if !identityclient.IsActorActive(actor) {
 		return ErrInvalidSupervisor
 	}
-	expectedRole := "workforce.supervise.field"
-	if workforceKind == "captain" {
-		expectedRole = "workforce.supervise.captain"
-	} else if workforceKind == "employee" {
-		expectedRole = "workforce.supervise.employee"
-	}
+	expectedRole := supervisorRoleForWorkforceKind(workforceKind)
 	hasRole := false
 	for _, r := range actor.Roles {
 		if r == expectedRole {
@@ -88,12 +94,7 @@ type SupervisorCandidate struct {
 // returns raw actor IDs for free-text entry, only a searchable, validated
 // candidate list.
 func (s *Service) SearchSupervisors(ctx context.Context, kind, query string) ([]SupervisorCandidate, error) {
-	expectedRole := "workforce.supervise.field"
-	if kind == "captain" {
-		expectedRole = "workforce.supervise.captain"
-	} else if kind == "employee" {
-		expectedRole = "workforce.supervise.employee"
-	}
+	expectedRole := supervisorRoleForWorkforceKind(kind)
 	actors, _, err := s.identity.SearchActors(ctx, expectedRole, query, "")
 	if err != nil {
 		return nil, err
