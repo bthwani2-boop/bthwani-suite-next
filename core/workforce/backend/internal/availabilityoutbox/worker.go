@@ -75,7 +75,7 @@ func claimBatchWithLease(ctx context.Context, db *sql.DB, limit int, lease time.
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer func() { _ = tx.Rollback() }()
 
 	rows, err := tx.QueryContext(ctx, `
 		SELECT outbox.id::text, outbox.notice_id::text,
@@ -120,7 +120,7 @@ func claimBatchWithLease(ctx context.Context, db *sql.DB, limit int, lease time.
 			&item.ReconciliationEligible, &item.CanonicalSourceVersion,
 			&item.ActorOperatorContextID,
 		); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, fmt.Errorf("scan Workforce availability outbox event: %w", err)
 		}
 		wasProcessing = item.LifecycleState == "processing"
@@ -128,10 +128,12 @@ func claimBatchWithLease(ctx context.Context, db *sql.DB, limit int, lease time.
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return nil, err
 	}
-	rows.Close()
+	if err := rows.Close(); err != nil {
+		return nil, fmt.Errorf("close Workforce availability outbox rows: %w", err)
+	}
 
 	for index := range items {
 		items[index].LeaseToken = uuid.NewString()
@@ -168,7 +170,7 @@ func markSent(ctx context.Context, db *sql.DB, item event, result dshclient.Avai
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer func() { _ = tx.Rollback() }()
 	updated, err := markLeaseTransition(tx, item.ID, item.LeaseToken, `
 		UPDATE workforce_dsh_availability_outbox
 		SET lifecycle_state='sent', last_error='', failure_disposition='none',
@@ -196,7 +198,7 @@ func markDeliveryFailure(ctx context.Context, db *sql.DB, item event, cause erro
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer func() { _ = tx.Rollback() }()
 
 	var query string
 	var args []any
@@ -247,7 +249,7 @@ func markUnknown(ctx context.Context, db *sql.DB, item event, cause error, readb
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer func() { _ = tx.Rollback() }()
 
 	var query string
 	var args []any
@@ -291,7 +293,7 @@ func markPermanentFailure(ctx context.Context, db *sql.DB, item event, cause err
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer func() { _ = tx.Rollback() }()
 	updated, err := markLeaseTransition(tx, item.ID, item.LeaseToken, `
 		UPDATE workforce_dsh_availability_outbox
 		SET lifecycle_state='failed', last_error=$3, failure_disposition=$4,
@@ -322,7 +324,7 @@ func requeueFromCanonicalSource(ctx context.Context, db *sql.DB, item event) (bo
 	if err != nil {
 		return false, err
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer func() { _ = tx.Rollback() }()
 	result, err := tx.ExecContext(ctx, `
 		UPDATE workforce_dsh_availability_outbox outbox
 		SET operator_context_id=notice.operator_context_id,
