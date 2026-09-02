@@ -7,10 +7,18 @@ import { secureCorrelationId } from "./secure-random.ts";
 
 export type DshRequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
+export type DshMutationAuth = {
+  readonly accessToken?: string;
+  readonly idempotencyKey: string;
+  readonly correlationId: string;
+};
+
 export type DshRequestOptions = {
   readonly method?: DshRequestMethod;
   readonly body?: unknown;
+  readonly query?: Readonly<Record<string, string | undefined>>;
   readonly token?: string | undefined;
+  readonly auth?: DshMutationAuth;
   readonly idempotencyKey?: string | undefined;
   readonly correlationId?: string | undefined;
   readonly expectedVersion?: number | undefined;
@@ -74,20 +82,109 @@ function isRelativeBaseUrl(baseUrl: string): boolean {
   return baseUrl.startsWith("/");
 }
 
-function resolveRequestUrl(path: string, baseUrl: string): string | URL {
-  return isRelativeBaseUrl(baseUrl)
+function resolveRequestUrl(
+  path: string,
+  baseUrl: string,
+  query?: Readonly<Record<string, string | undefined>>,
+): string | URL {
+  const requestUrl = isRelativeBaseUrl(baseUrl)
     ? `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`
     : new URL(path, baseUrl);
+
+  if (!query) return requestUrl;
+
+  const params =
+    requestUrl instanceof URL ? requestUrl.searchParams : new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) params.set(key, value);
+  }
+  if (requestUrl instanceof URL) return requestUrl;
+
+  const queryString = params.toString();
+  return queryString
+    ? `${requestUrl}${requestUrl.includes("?") ? "&" : "?"}${queryString}`
+    : requestUrl;
 }
 
 function requestCredentials(cookieMode: boolean) {
   return cookieMode ? ({ credentials: "include" as const } as const) : {};
 }
 
-export function createDshHttpClient(
+type DshClientPolicy = {
+  readonly authMode: "required" | "optional" | "public";
+  readonly noCache: boolean;
+  readonly retryUnauthorized: boolean;
+};
+
+function validateRequestOptions(options: DshRequestOptions): void {
+  if (
+    options.expectedVersion !== undefined &&
+    (!Number.isInteger(options.expectedVersion) || options.expectedVersion < 1)
+  ) {
+    throw {
+      kind: "invalid_request",
+      message: "expectedVersion must be a positive integer",
+    };
+  }
+}
+
+async function executeDshFetch(
+  path: string,
+  baseUrl: string,
+  cookieMode: boolean,
+  timeoutMs: number,
+  options: DshRequestOptions,
+  policy: DshClientPolicy,
+  correlationId: string,
+): Promise<Response> {
+  const token =
+    policy.authMode === "public"
+      ? undefined
+      : options.auth !== undefined
+        ? options.auth.accessToken
+        : options.token ??
+          (policy.authMode === "required" && !cookieMode
+            ? getIdentityAccessToken()
+            : undefined);
+
+  if (policy.authMode === "required" && !cookieMode && !token) {
+    return new Response(null, { status: 401 });
+  }
+
+  const requestBody =
+    options.body !== undefined ? JSON.stringify(options.body) : undefined;
+  const idempotencyKey = options.auth?.idempotencyKey ?? options.idempotencyKey;
+
+  return fetch(resolveRequestUrl(path, baseUrl, options.query), {
+    method: options.method ?? "GET",
+    headers: {
+      Accept: "application/json",
+      ...(policy.noCache
+        ? { "Cache-Control": "no-cache", Pragma: "no-cache" }
+        : {}),
+      ...(!cookieMode && token ? { Authorization: `Bearer ${token}` } : {}),
+      "X-Correlation-ID": correlationId,
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+      ...(options.expectedVersion !== undefined
+        ? { "If-Match-Version": String(options.expectedVersion) }
+        : {}),
+      ...(options.deviceId ? { "X-Dsh-Device-Id": options.deviceId } : {}),
+      ...(options.sessionId ? { "X-Dsh-Session-Id": options.sessionId } : {}),
+      ...(requestBody !== undefined
+        ? { "Content-Type": "application/json" }
+        : {}),
+    },
+    ...(requestBody !== undefined ? { body: requestBody } : {}),
+    ...requestCredentials(cookieMode),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+}
+
+function createDshJsonClient(
   baseUrl: string,
   corrPrefix: string,
-  timeoutMs = 10000,
+  timeoutMs: number,
+  policy: DshClientPolicy,
 ) {
   const cookieMode = isRelativeBaseUrl(baseUrl);
 
@@ -95,51 +192,26 @@ export function createDshHttpClient(
     path: string,
     options: DshRequestOptions = {},
   ): Promise<T> {
-    if (
-      options.expectedVersion !== undefined &&
-      (!Number.isInteger(options.expectedVersion) || options.expectedVersion < 1)
-    ) {
-      throw {
-        kind: "invalid_request",
-        message: "expectedVersion must be a positive integer",
-      };
-    }
+    validateRequestOptions(options);
 
-    const requestUrl = resolveRequestUrl(path, baseUrl);
-    const correlationId = options.correlationId ?? corrId(corrPrefix);
-    const requestBody =
-      options.body !== undefined ? JSON.stringify(options.body) : undefined;
-    const execute = () => {
-      const token = options.token ?? (cookieMode ? undefined : getIdentityAccessToken());
-      if (!cookieMode && !token) return Promise.resolve(new Response(null, { status: 401 }));
-
-      return fetch(requestUrl, {
-        method: options.method ?? "GET",
-        headers: {
-          Accept: "application/json",
-          ...(!cookieMode && token ? { Authorization: `Bearer ${token}` } : {}),
-          "X-Correlation-ID": correlationId,
-          ...(options.idempotencyKey
-            ? { "Idempotency-Key": options.idempotencyKey }
-            : {}),
-          ...(options.expectedVersion !== undefined
-            ? { "If-Match-Version": String(options.expectedVersion) }
-            : {}),
-          ...(options.deviceId ? { "X-Dsh-Device-Id": options.deviceId } : {}),
-          ...(options.sessionId ? { "X-Dsh-Session-Id": options.sessionId } : {}),
-          ...(requestBody !== undefined
-            ? { "Content-Type": "application/json" }
-            : {}),
-        },
-        ...(requestBody !== undefined ? { body: requestBody } : {}),
-        ...requestCredentials(cookieMode),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-    };
+    const correlationId =
+      options.auth?.correlationId ?? options.correlationId ?? corrId(corrPrefix);
+    const execute = () =>
+      executeDshFetch(
+        path,
+        baseUrl,
+        cookieMode,
+        timeoutMs,
+        options,
+        policy,
+        correlationId,
+      );
 
     let response: Response;
     try {
-      response = await fetchWithControlPanelSessionRetry(execute, cookieMode);
+      response = policy.retryUnauthorized
+        ? await fetchWithControlPanelSessionRetry(execute, cookieMode)
+        : await execute();
     } catch (error) {
       if (
         typeof error === "object" &&
@@ -159,6 +231,18 @@ export function createDshHttpClient(
   }
 
   return { request };
+}
+
+export function createDshHttpClient(
+  baseUrl: string,
+  corrPrefix: string,
+  timeoutMs = 10000,
+) {
+  return createDshJsonClient(baseUrl, corrPrefix, timeoutMs, {
+    authMode: "required",
+    noCache: false,
+    retryUnauthorized: true,
+  });
 }
 
 export function createDshSessionHttpClient(
@@ -205,150 +289,20 @@ export function createDshPublicHttpClient(
   baseUrl: string,
   timeoutMs = 10000,
 ) {
-  const cookieMode = isRelativeBaseUrl(baseUrl);
-  async function request<T>(path: string): Promise<T> {
-    const correlationId = corrId("dsh-public");
-    let response: Response;
-    try {
-      response = await fetch(resolveRequestUrl(path, baseUrl), {
-        headers: { Accept: "application/json", "X-Correlation-ID": correlationId },
-        ...requestCredentials(cookieMode),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-    } catch (error) {
-      throw {
-        kind: "network",
-        message: error instanceof Error ? error.message : "network error",
-        correlationId,
-      };
-    }
-    return parseResponse<T>(response, correlationId);
-  }
-  return { request };
+  return createDshJsonClient(baseUrl, "dsh-public", timeoutMs, {
+    authMode: "public",
+    noCache: false,
+    retryUnauthorized: false,
+  });
 }
-
-export type DshMutationAuth = {
-  readonly accessToken?: string;
-  readonly idempotencyKey: string;
-  readonly correlationId: string;
-};
-
-export type DshFlexibleRequestOptions = {
-  readonly method?: DshRequestMethod;
-  readonly body?: unknown;
-  readonly query?: Record<string, string | undefined>;
-  readonly token?: string;
-  readonly auth?: DshMutationAuth;
-};
 
 export function createDshFlexibleHttpClient(
   baseUrl: string,
   timeoutMs = 10000,
 ) {
-  const cookieMode = isRelativeBaseUrl(baseUrl);
-
-  async function request<T>(
-    path: string,
-    options: DshFlexibleRequestOptions = {},
-  ): Promise<T> {
-    let requestUrl = resolveRequestUrl(path, baseUrl);
-    if (options.query) {
-      const params =
-        requestUrl instanceof URL
-          ? requestUrl.searchParams
-          : new URLSearchParams();
-      for (const [key, value] of Object.entries(options.query)) {
-        if (value !== undefined) params.set(key, value);
-      }
-      if (!(requestUrl instanceof URL)) {
-        const qs = params.toString();
-        requestUrl = qs
-          ? `${requestUrl}${requestUrl.includes("?") ? "&" : "?"}${qs}`
-          : requestUrl;
-      }
-    }
-
-    const correlationId = options.auth?.correlationId ?? corrId("dsh-flexible");
-    let response: Response;
-    try {
-      response = await fetch(requestUrl, {
-        method: options.method ?? "GET",
-        headers: {
-          Accept: "application/json",
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-          "X-Correlation-ID": correlationId,
-          ...(options.body !== undefined
-            ? { "Content-Type": "application/json" }
-            : {}),
-          ...(!cookieMode && options.token !== undefined
-            ? { Authorization: `Bearer ${options.token}` }
-            : {}),
-          ...(options.auth !== undefined
-            ? {
-                ...(!cookieMode && options.auth.accessToken
-                  ? { Authorization: `Bearer ${options.auth.accessToken}` }
-                  : {}),
-                "Idempotency-Key": options.auth.idempotencyKey,
-              }
-            : {}),
-        },
-        ...(options.body !== undefined
-          ? { body: JSON.stringify(options.body) }
-          : {}),
-        ...requestCredentials(cookieMode),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-    } catch (error) {
-      throw {
-        kind: "network",
-        message: error instanceof Error ? error.message : "network error",
-        correlationId,
-      };
-    }
-    return parseResponse<T>(response, correlationId);
-  }
-
-  return { request };
-}
-
-export function createDshRawHttpClient(
-  baseUrl: string,
-  corrPrefix: string,
-  timeoutMs = 10000,
-) {
-  const cookieMode = isRelativeBaseUrl(baseUrl);
-
-  async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const correlationId = corrId(corrPrefix);
-    const token = cookieMode ? null : getIdentityAccessToken();
-    if (!cookieMode && !token) throw { kind: "http", status: 401, correlationId };
-
-    let response: Response;
-    try {
-      response = await fetch(resolveRequestUrl(path, baseUrl), {
-        ...init,
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          ...(!cookieMode && token
-            ? { Authorization: `Bearer ${token}` }
-            : {}),
-          "X-Correlation-ID": correlationId,
-          ...(init.headers ?? {}),
-        },
-        ...requestCredentials(cookieMode),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-    } catch (error) {
-      throw {
-        kind: "network",
-        message: error instanceof Error ? error.message : "network error",
-        correlationId,
-      };
-    }
-    return parseResponse<T>(response, correlationId);
-  }
-
-  return { req };
+  return createDshJsonClient(baseUrl, "dsh-flexible", timeoutMs, {
+    authMode: "optional",
+    noCache: true,
+    retryUnauthorized: false,
+  });
 }

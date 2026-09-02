@@ -88,9 +88,10 @@ test("identity and service clients switch to cookie transport for relative bases
 
   const kernel = read("services/dsh/frontend/shared/_kernel/dsh-http-request.ts");
   assert.match(kernel, /function resolveRequestUrl/);
+  assert.match(kernel, /async function executeDshFetch/);
   assert.match(kernel, /createDshPublicHttpClient/);
   assert.match(kernel, /createDshFlexibleHttpClient/);
-  assert.match(kernel, /createDshRawHttpClient/);
+  assert.doesNotMatch(kernel, /createDshRawHttpClient/);
   assert.match(kernel, /requestCredentials\(cookieMode\)/);
   assert.match(kernel, /!cookieMode && token/);
 

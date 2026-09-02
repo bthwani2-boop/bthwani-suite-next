@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type { MarketingNewsTickerItem } from "./marketing.types";
 import type { GovernedCampaignWritePayload, GovernedDshCampaign } from "./campaign.types";
 import type {
@@ -19,7 +19,7 @@ import type {
   IssuedCoupon,
 } from "./coupons.types";
 
-const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "mkt");
+const { request: req } = createDshHttpClient(resolveDshApiBaseUrl(), "mkt");
 
 type MarketingTargetFields = {
   targetType?: string;
@@ -43,14 +43,14 @@ export const fetchCampaigns = () =>
 export const createCampaign = (body: CampaignCreatePayload) =>
   req<{ campaign: GovernedDshCampaign }>("/dsh/operator/marketing/campaigns", {
     method: "POST",
-    body: JSON.stringify(body),
+    body,
   });
 export const getCampaign = (id: string) =>
   req<{ campaign: GovernedDshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`);
 export const updateCampaign = (id: string, body: GovernedCampaignWritePayload) =>
   req<{ campaign: GovernedDshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(body),
+    body,
   });
 export const archiveCampaign = (id: string) =>
   req<{ archived: boolean }>(`/dsh/operator/marketing/campaigns/${id}`, { method: "DELETE" });
@@ -64,12 +64,12 @@ export const fetchTickers = () =>
 export const createTicker = (body: MarketingTickerWritePayload & { message: string }) =>
   req<{ ticker: MarketingNewsTickerItem }>("/dsh/operator/marketing/tickers", {
     method: "POST",
-    body: JSON.stringify(body),
+    body,
   });
 export const updateTicker = (id: string, body: MarketingTickerWritePayload) =>
   req<{ ticker: MarketingNewsTickerItem }>(`/dsh/operator/marketing/tickers/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(body),
+    body,
   });
 export const deleteTicker = (id: string) =>
   req<{ deleted: boolean }>(`/dsh/operator/marketing/tickers/${id}`, { method: "DELETE" });
@@ -111,7 +111,7 @@ export const fetchPartnerOffers = () =>
 export const updatePartnerOffer = (id: string, body: PartnerOfferWritePayload) =>
   req<{ offer: import("../partner/dsh-partner-offer-types").PartnerOfferRecord }>(
     `/dsh/operator/marketing/partner-offers/${id}`,
-    { method: "PATCH", body: JSON.stringify(body) },
+    { method: "PATCH", body },
   );
 export const archivePartnerOffer = (id: string) =>
   req<{ archived: boolean }>(`/dsh/operator/marketing/partner-offers/${id}`, { method: "DELETE" });
@@ -123,19 +123,19 @@ export const fetchPartnerSelfOffers = (storeId?: string) =>
 export const submitPartnerSelfOffer = (body: PartnerOfferSubmitPayload, storeId?: string) =>
   req<{ offer: import("../partner/dsh-partner-offer-types").PartnerOfferRecord }>(
     withPartnerStoreScope("/dsh/partner/marketing/offers", storeId),
-    { method: "POST", body: JSON.stringify(body) },
+    { method: "POST", body },
   );
 
 export const fetchCoupons = () => req<CouponListResponse>("/dsh/operator/marketing/coupons");
 export const createCoupon = (body: CouponCreatePayload) =>
   req<{ issued: IssuedCoupon; fundingPolicy: CouponFundingPolicy }>("/dsh/operator/marketing/coupons", {
     method: "POST",
-    body: JSON.stringify(body),
+    body,
   });
 export const updateCoupon = (id: string, body: CouponUpdatePayload) =>
   req<{ coupon: CouponRecord; fundingPolicy: CouponFundingPolicy }>(`/dsh/operator/marketing/coupons/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(body),
+    body,
   });
 
 export type LoyaltyTierCreatePayload = {
@@ -159,12 +159,12 @@ export const fetchLoyaltyTiers = () =>
 export const createLoyaltyTier = (body: LoyaltyTierCreatePayload) =>
   req<{ tier: LoyaltyTierRecord }>("/dsh/operator/marketing/loyalty-tiers", {
     method: "POST",
-    body: JSON.stringify(body),
+    body,
   });
 export const updateLoyaltyTier = (id: string, body: LoyaltyTierUpdatePayload) =>
   req<{ tier: LoyaltyTierRecord }>(`/dsh/operator/marketing/loyalty-tiers/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(body),
+    body,
   });
 
 export type SubscriptionPlanCreatePayload = {
@@ -191,12 +191,12 @@ export const fetchSubscriptionPlans = () =>
 export const createSubscriptionPlan = (body: SubscriptionPlanCreatePayload) =>
   req<{ plan: SubscriptionPlanRecord }>("/dsh/operator/marketing/subscription-plans", {
     method: "POST",
-    body: JSON.stringify(body),
+    body,
   });
 export const updateSubscriptionPlan = (id: string, body: SubscriptionPlanUpdatePayload) =>
   req<{ plan: SubscriptionPlanRecord }>(`/dsh/operator/marketing/subscription-plans/${id}`, {
     method: "PATCH",
-    body: JSON.stringify(body),
+    body,
   });
 
 export const fetchClientBenefits = () =>

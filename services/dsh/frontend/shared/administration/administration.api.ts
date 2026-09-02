@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type { operations } from "../../../clients/generated/dsh-api";
 import type {
   DshRoleAssignmentApprovalStatus,
@@ -56,7 +56,7 @@ type TerminalFailureReplacementInput =
 type AdminAuditResponse =
   operations["listDshAdminAudit"]["responses"][200]["content"]["application/json"];
 
-const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "adm");
+const { request: req } = createDshHttpClient(resolveDshApiBaseUrl(), "adm");
 
 export const fetchRoles = () => req<RolesListResponse>("/dsh/operator/admin/roles");
 
@@ -65,7 +65,7 @@ export const fetchPermissionVocabulary = () =>
 
 export const requestRoleDefinition = (body: RoleDefinitionCreateInput) => req<RoleDefinitionCreateResponse>("/dsh/operator/admin/roles/requests", {
   method: "POST",
-  body: JSON.stringify(body),
+  body,
 });
 
 export const fetchRoleDefinitionRequests = (status: DshAdministrationApprovalStatus | "" = "pending") =>
@@ -78,7 +78,7 @@ export const reviewRoleDefinitionRequest = (
   body: RoleDefinitionReviewInput,
 ) => req<RoleDefinitionReviewResponse>(
   `/dsh/operator/admin/role-requests/${requestId}/review`,
-  { method: "POST", body: JSON.stringify(body) },
+  { method: "POST", body },
 );
 
 export const replaceFailedRoleDefinitionRequest = (
@@ -86,7 +86,7 @@ export const replaceFailedRoleDefinitionRequest = (
   body: TerminalFailureReplacementInput,
 ) => req<RoleDefinitionReplacementResponse>(
   `/dsh/operator/admin/role-requests/${requestId}/replacements`,
-  { method: "POST", body: JSON.stringify(body) },
+  { method: "POST", body },
 );
 
 export const fetchStaff = () => req<StaffListResponse>("/dsh/operator/admin/staff");
@@ -100,7 +100,7 @@ export const requestStaffRoleChange = (
   const body: RoleChangeInput = { roleName, actionType, reason };
   return req<RoleAssignmentCreateResponse>(`/dsh/operator/admin/staff/${staffId}/roles`, {
   method: "POST",
-  body: JSON.stringify(body),
+  body,
   });
 };
 
@@ -114,7 +114,7 @@ export const reviewRoleAssignmentApproval = (
   body: RoleAssignmentReviewInput,
 ) => req<RoleAssignmentReviewResponse>(
   `/dsh/operator/admin/approvals/${approvalId}/review`,
-  { method: "POST", body: JSON.stringify(body) },
+  { method: "POST", body },
 );
 
 export const replaceFailedRoleAssignmentApproval = (
@@ -122,13 +122,13 @@ export const replaceFailedRoleAssignmentApproval = (
   body: TerminalFailureReplacementInput,
 ) => req<RoleAssignmentReplacementResponse>(
   `/dsh/operator/admin/approvals/${approvalId}/replacements`,
-  { method: "POST", body: JSON.stringify(body) },
+  { method: "POST", body },
 );
 
 export const requestDecisionRollback = (approvalId: string, reason: string) =>
   req<RollbackCreateResponse>(
     `/dsh/operator/admin/approvals/${approvalId}/rollback-requests`,
-    { method: "POST", body: JSON.stringify({ reason } satisfies RollbackCreateInput) },
+    { method: "POST", body: { reason } satisfies RollbackCreateInput },
   );
 
 export const fetchRollbackRequests = (status: DshAdministrationApprovalStatus | "" = "pending") =>
@@ -141,7 +141,7 @@ export const reviewRollbackRequest = (
   body: RollbackReviewInput,
 ) => req<RollbackReviewResponse>(
   `/dsh/operator/admin/rollback-requests/${requestId}/review`,
-  { method: "POST", body: JSON.stringify(body) },
+  { method: "POST", body },
 );
 
 export const replaceFailedRollbackRequest = (
@@ -149,7 +149,7 @@ export const replaceFailedRollbackRequest = (
   body: TerminalFailureReplacementInput,
 ) => req<RollbackReplacementResponse>(
   `/dsh/operator/admin/rollback-requests/${requestId}/replacements`,
-  { method: "POST", body: JSON.stringify(body) },
+  { method: "POST", body },
 );
 
 export const fetchAdministrationDiagnostics = () =>

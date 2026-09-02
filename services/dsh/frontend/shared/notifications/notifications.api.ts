@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshNotification,
   DshNotificationDeliveryAttempt,
@@ -14,7 +14,7 @@ import type {
   DshUpsertPlatformNotificationConfigInput,
 } from "./notifications.types";
 
-const { req: request } = createDshRawHttpClient(resolveDshApiBaseUrl(), "notif");
+const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "notif");
 
 export async function fetchNotifications(): Promise<{ notifications: DshNotification[]; unreadCount: number }> {
   return request("/dsh/notifications");
@@ -55,7 +55,7 @@ export async function updateNotificationPreferences(
 
   return request("/dsh/notifications/preferences", {
     method: "PUT",
-    body: JSON.stringify(input),
+    body: input,
   });
 }
 
@@ -64,7 +64,7 @@ export async function upsertNotificationPushEndpoint(
 ): Promise<{ endpoint: DshNotificationPushEndpoint }> {
   return request("/dsh/notifications/push-endpoints", {
     method: "PUT",
-    body: JSON.stringify(input),
+    body: input,
   });
 }
 
@@ -83,7 +83,7 @@ export async function upsertPlatformNotificationConfig(
 ): Promise<{ config: DshPlatformNotificationConfig }> {
   return request("/dsh/operator/notifications/config", {
     method: "PUT",
-    body: JSON.stringify(input),
+    body: input,
   });
 }
 
