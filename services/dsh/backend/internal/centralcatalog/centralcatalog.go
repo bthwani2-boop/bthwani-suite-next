@@ -2652,7 +2652,13 @@ func SimulateAssetScan(ctx context.Context, db *sql.DB, id string, targetStatus 
 	return GetAsset(ctx, db, id)
 }
 
-func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID, idempotencyKey string, input StoreAssortmentPriceInput) (StoreAssortmentPrice, error) {
+func runAssortmentPriceMutation(
+	ctx context.Context,
+	db *sql.DB,
+	storeID, masterProductID, actorID, idempotencyKey, operation string,
+	input StoreAssortmentPriceInput,
+	prepare func(context.Context, *sql.Tx, string, StoreAssortmentPriceInput) error,
+) (StoreAssortmentPrice, error) {
 	storeID = strings.TrimSpace(storeID)
 	masterProductID = strings.TrimSpace(masterProductID)
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
@@ -2661,9 +2667,7 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 		MasterProductID string                    `json:"masterProductId"`
 		Input           StoreAssortmentPriceInput `json:"input"`
 	}{StoreID: strings.TrimSpace(storeID), MasterProductID: strings.TrimSpace(masterProductID), Input: input}
-	tx, mutation, replay, err := beginCatalogCreateMutation(
-		ctx, db, actorID, "assortment_price.create", idempotencyKey, mutationRequest,
-	)
+	tx, mutation, replay, err := beginCatalogCreateMutation(ctx, db, actorID, operation, idempotencyKey, mutationRequest)
 	if err != nil {
 		return StoreAssortmentPrice{}, err
 	}
@@ -2686,6 +2690,11 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 	assortmentID, err := findAssortmentForPriceTx(ctx, tx, storeID, masterProductID)
 	if err != nil {
 		return StoreAssortmentPrice{}, err
+	}
+	if prepare != nil {
+		if err := prepare(ctx, tx, assortmentID, input); err != nil {
+			return StoreAssortmentPrice{}, err
+		}
 	}
 
 	if err := ensureAssortmentPriceScheduleDoesNotOverlap(ctx, tx, assortmentID, input); err != nil {
@@ -2706,69 +2715,26 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 	return price, nil
 }
 
+func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID, idempotencyKey string, input StoreAssortmentPriceInput) (StoreAssortmentPrice, error) {
+	return runAssortmentPriceMutation(ctx, db, storeID, masterProductID, actorID, idempotencyKey, "assortment_price.create", input, nil)
+}
+
 // ReplaceAssortmentPriceAtomic closes the current effective schedule row and
 // creates the requested normalized price under one idempotent command. It is
 // used by field onboarding, where a single form edits the current price rather
 // than appending a future schedule entry. The legacy assortment row is never
 // written.
 func ReplaceAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID, idempotencyKey string, input StoreAssortmentPriceInput) (StoreAssortmentPrice, error) {
-	storeID = strings.TrimSpace(storeID)
-	masterProductID = strings.TrimSpace(masterProductID)
-	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
-	mutationRequest := struct {
-		StoreID         string                    `json:"storeId"`
-		MasterProductID string                    `json:"masterProductId"`
-		Input           StoreAssortmentPriceInput `json:"input"`
-	}{StoreID: storeID, MasterProductID: masterProductID, Input: input}
-	tx, mutation, replay, err := beginCatalogCreateMutation(
-		ctx, db, actorID, "assortment_price.replace", idempotencyKey, mutationRequest,
-	)
-	if err != nil {
-		return StoreAssortmentPrice{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	if replay != nil {
-		price, err := readAssortmentPriceTx(ctx, tx, replay.ResourceID)
-		if err != nil {
-			return StoreAssortmentPrice{}, err
-		}
-		if err := tx.Commit(); err != nil {
-			return StoreAssortmentPrice{}, err
-		}
-		return price, nil
-	}
-
-	if err := validateAssortmentPriceInput(input); err != nil {
-		return StoreAssortmentPrice{}, err
-	}
-	assortmentID, err := findAssortmentForPriceTx(ctx, tx, storeID, masterProductID)
-	if err != nil {
-		return StoreAssortmentPrice{}, err
-	}
-	if _, err := tx.ExecContext(ctx, `
-		UPDATE dsh_store_assortment_prices
-		SET effective_until=$2, version=version+1, updated_at=NOW()
-		WHERE store_assortment_id=$1
-		  AND effective_until IS NULL
-		  AND effective_from < $2`, assortmentID, input.EffectiveFrom); err != nil {
-		return StoreAssortmentPrice{}, err
-	}
-	if err := ensureAssortmentPriceScheduleDoesNotOverlap(ctx, tx, assortmentID, input); err != nil {
-		return StoreAssortmentPrice{}, err
-	}
-
-	id := entityID("price")
-	price, err := insertAssortmentPriceTx(ctx, tx, id, assortmentID, input)
-	if err != nil {
-		return StoreAssortmentPrice{}, err
-	}
-	if err := recordCatalogCreateMutation(ctx, tx, mutation, "assortment_price", id); err != nil {
-		return StoreAssortmentPrice{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return StoreAssortmentPrice{}, err
-	}
-	return price, nil
+	return runAssortmentPriceMutation(ctx, db, storeID, masterProductID, actorID, idempotencyKey, "assortment_price.replace", input,
+		func(ctx context.Context, tx *sql.Tx, assortmentID string, input StoreAssortmentPriceInput) error {
+			_, err := tx.ExecContext(ctx, `
+				UPDATE dsh_store_assortment_prices
+				SET effective_until=$2, version=version+1, updated_at=NOW()
+				WHERE store_assortment_id=$1
+				  AND effective_until IS NULL
+				  AND effective_from < $2`, assortmentID, input.EffectiveFrom)
+			return err
+		})
 }
 
 func readAssortmentPriceTx(ctx context.Context, tx *sql.Tx, id string) (StoreAssortmentPrice, error) {
