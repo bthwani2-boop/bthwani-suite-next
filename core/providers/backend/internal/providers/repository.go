@@ -134,7 +134,7 @@ func (r *Repository) ListProviders(ctx context.Context) ([]ExternalProvider, err
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	list := []ExternalProvider{}
 	for rows.Next() {
