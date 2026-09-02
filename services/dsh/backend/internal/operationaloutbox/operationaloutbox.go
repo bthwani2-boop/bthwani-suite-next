@@ -15,6 +15,8 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const MaxDeliveryAttempts = 10
@@ -113,7 +115,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 			UPDATE dsh_operational_outbox_events
 			SET next_retry_at = NOW() + $2::interval, updated_at = NOW()
 			WHERE id = ANY($1::uuid[])`,
-			pqStringArray(ids), lease.String(),
+			pq.Array(ids), lease.String(),
 		); err != nil {
 			return nil, fmt.Errorf("lease operational outbox batch: %w", err)
 		}
@@ -203,23 +205,4 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 		return err
 	}
 	return tx.Commit()
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// pqStringArray formats a []string as a Postgres array literal for ANY($1::uuid[]).
-func pqStringArray(values []string) string {
-	out := "{"
-	for i, v := range values {
-		if i > 0 {
-			out += ","
-		}
-		out += `"` + v + `"`
-	}
-	return out + "}"
 }

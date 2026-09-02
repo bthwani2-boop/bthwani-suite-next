@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lib/pq"
+
 	"github.com/google/uuid"
 )
 
@@ -328,7 +330,7 @@ func claimPushBatch(db *sql.DB, limit int, lease time.Duration) ([]PushDelivery,
 			    lease_expires_at = NOW() + $3::interval,
 			    attempt_count = attempt_count + 1,
 			    last_attempt_at = NOW(), last_error = NULL, updated_at = NOW()
-			WHERE id = ANY($1::uuid[]) AND status = 'pending'`, pqStringArray(ids), uuid.NewString(), lease.String()); err != nil {
+			WHERE id = ANY($1::uuid[]) AND status = 'pending'`, pq.Array(ids), uuid.NewString(), lease.String()); err != nil {
 			return nil, fmt.Errorf("lease push delivery batch: %w", err)
 		}
 		// The batch UPDATE above must fence each row with its own token. Re-read

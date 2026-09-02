@@ -373,10 +373,3 @@ func RunWorker(ctx context.Context, db *sql.DB, client *wlt.Client, interval tim
 		}
 	}
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

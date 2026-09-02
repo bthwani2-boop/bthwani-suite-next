@@ -635,10 +635,3 @@ func operationalEnqueueCancellation(tx *sql.Tx, requestID, correlationID string,
 		Payload: requestJSON(updated), CorrelationID: correlationID,
 	})
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

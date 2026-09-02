@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const (
@@ -121,7 +123,7 @@ func deliver(ctx context.Context, db *sql.DB, event Event) error {
 		plan.Title,
 		plan.Body,
 		plan.ActionURL,
-		pqStringArray(plan.Channels),
+		pq.Array(plan.Channels),
 	); err != nil {
 		return fmt.Errorf("deliver operational notification %s: %w", event.ID, err)
 	}

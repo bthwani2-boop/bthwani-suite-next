@@ -46,7 +46,7 @@ func ProcessOrderEventBridgeOnce(ctx context.Context, db *sql.DB) error {
 			return ctx.Err()
 		}
 		if err := publishOrderEventToOperationalOutbox(ctx, db, event); err != nil {
-			retryAfter := time.Duration(1<<uint(minOrderBridgeAttempt(event.AttemptCount, 10))) * time.Second
+			retryAfter := time.Duration(1<<uint(min(event.AttemptCount, 10))) * time.Second
 			if markErr := MarkOrderEventRetry(db, event.ID, event.OperatorContextID, err.Error(), retryAfter); markErr != nil {
 				log.Printf("[order-event-bridge] failed to persist retry for %s: %v", event.ID, markErr)
 			}

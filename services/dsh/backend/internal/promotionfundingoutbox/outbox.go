@@ -201,13 +201,6 @@ func MarkRetry(db *sql.DB, id string, attemptCount int, cause error) error {
 	return err
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func formatUUIDArray(values []string) string {
 	parts := make([]string, 0, len(values))
 	for _, value := range values {

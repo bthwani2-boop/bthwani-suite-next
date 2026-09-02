@@ -21,12 +21,12 @@ func TestNotificationTemplateValuesIncludesEnvelopeAndPayload(t *testing.T) {
 		Payload:       []byte(`{"status":"ready","version":2}`),
 	})
 	for key, want := range map[string]string{
-		"eventType": "order.status_changed",
-		"entityType": "order",
-		"entityId": "order-1",
+		"eventType":     "order.status_changed",
+		"entityType":    "order",
+		"entityId":      "order-1",
 		"correlationId": "corr-1",
-		"status": "ready",
-		"version": "2",
+		"status":        "ready",
+		"version":       "2",
 	} {
 		if values[key] != want {
 			t.Fatalf("expected %s=%q, got %q", key, want, values[key])

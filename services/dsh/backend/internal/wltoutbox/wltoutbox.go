@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const (
@@ -153,7 +155,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		if _, err := tx.Exec(`
                         UPDATE dsh_wlt_outbox_events
                         SET status='processing',next_retry_at=NOW()+$2::interval,updated_at=NOW()
-                        WHERE id=ANY($1::uuid[])`, pqStringArray(ids), lease.String()); err != nil {
+                        WHERE id=ANY($1::uuid[])`, pq.Array(ids), lease.String()); err != nil {
 			return nil, fmt.Errorf("lease wlt outbox batch: %w", err)
 		}
 	}
@@ -271,23 +273,6 @@ func MarkUnknown(db *sql.DB, id string, attemptCount int, cause error) error {
                     last_readback_at=NOW(),readback_attempt_count=readback_attempt_count+1,updated_at=NOW()
                 WHERE id=$1::uuid AND status='processing'`, id, attemptCount+1, message, MaxReadbackAttempts)
 	return err
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-func pqStringArray(values []string) string {
-	out := "{"
-	for i, value := range values {
-		if i > 0 {
-			out += ","
-		}
-		out += `"` + value + `"`
-	}
-	return out + "}"
 }
 
 // ErrEventNotEligibleForRetry is returned when a retry is requested for a

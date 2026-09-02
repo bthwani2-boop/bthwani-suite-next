@@ -14,6 +14,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 const EventTypeFieldVisitCommission = "field_visit_commission"
@@ -22,7 +24,7 @@ type Event struct {
 	ID                 string
 	EventID            string
 	EventType          string
-	OperatorContextID           string
+	OperatorContextID  string
 	FieldActorID       string
 	VisitID            string
 	StoreID            string
@@ -137,7 +139,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		if _, err := tx.Exec(`
 			UPDATE dsh_field_commission_outbox
 			SET next_retry_at = NOW() + $2::interval, updated_at = NOW()
-			WHERE id = ANY($1::uuid[])`, pqStringArray(ids), lease.String()); err != nil {
+			WHERE id = ANY($1::uuid[])`, pq.Array(ids), lease.String()); err != nil {
 			return nil, fmt.Errorf("lease field commission outbox batch: %w", err)
 		}
 	}
@@ -177,27 +179,9 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 	return err
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func nullableString(s string) *string {
 	if s == "" {
 		return nil
 	}
 	return &s
-}
-
-func pqStringArray(values []string) string {
-	out := "{"
-	for i, value := range values {
-		if i > 0 {
-			out += ","
-		}
-		out += `"` + value + `"`
-	}
-	return out + "}"
 }
