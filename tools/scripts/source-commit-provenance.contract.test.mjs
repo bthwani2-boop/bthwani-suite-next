@@ -19,7 +19,7 @@ const psConsumers = [
   "infra/docker/scripts/invoke-runtime-database-seeds.ps1",
   "infra/docker/scripts/runtime.ps1",
   "infra/docker/scripts/export-runtime-snapshot.ps1",
-  "tools/scripts/run-lian-full-runtime-closure-v2.ps1",
+  "tools/scripts/run-lian-full-runtime-closure.ps1",
 ];
 
 function psQuote(value) {

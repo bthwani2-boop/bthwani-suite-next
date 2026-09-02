@@ -219,12 +219,12 @@ if (
 }
 
 const fullRuntimeClosure = read(
-  "tools/scripts/run-lian-full-runtime-closure-v2.ps1",
+  "tools/scripts/run-lian-full-runtime-closure.ps1",
 );
 
 if (/function\s+Invoke-Compose\b/.test(fullRuntimeClosure)) {
   failures.push(
-    "run-lian-full-runtime-closure-v2.ps1: parallel Compose lifecycle helper is forbidden",
+    "run-lian-full-runtime-closure.ps1: parallel Compose lifecycle helper is forbidden",
   );
 }
 

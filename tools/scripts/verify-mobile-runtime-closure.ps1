@@ -40,7 +40,7 @@ try {
   }
 
   Invoke-VerifiedStep "Four-app multisurface integration matrix" {
-    & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix.ps1
   }
 
   Invoke-VerifiedStep "LAN gateway runtime proof without ADB" {
