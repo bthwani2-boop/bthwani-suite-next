@@ -159,6 +159,14 @@ test("Identity Go client changes have a first-class backend job and pinned gener
   assert.match(node, /Set up locked Go runtime for generated Go contracts[\s\S]*?go-version-file: core\/identity\/clients\/go\/identityauth\/go\.mod/u);
 });
 
+test("exact CI authority is the live target branch g", () => {
+  const workflow = read(".github/workflows/ci-check.yml");
+  assert.match(workflow, /TRUSTED_CI_BRANCH: g/u);
+  assert.match(workflow, /GITHUB_REF_NAME.*TRUSTED_CI_BRANCH/u);
+  assert.match(workflow, /branches\/\$\{TRUSTED_CI_BRANCH\}/u);
+  assert.doesNotMatch(workflow, /github\.event\.repository\.default_branch/u);
+});
+
 test("control-panel CpButton is only a compatibility adapter over the canonical UI kit Button", () => {
   const adapter = read("shared/control-panel/src/components/CpButton.tsx");
   const button = read("shared/ui-kit/src/components/Button/Button.tsx");
