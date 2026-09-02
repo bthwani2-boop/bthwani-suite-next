@@ -40,13 +40,23 @@ jobs:
           const fs = require('node:fs')
           const { execFileSync } = require('node:child_process')
 
-          const fbjsRange = JSON.parse(execFileSync('npm', ['view', 'fbjs@3.0.5', 'dependencies.ua-parser-js', '--json'], {encoding:'utf8'}))
-          const license = JSON.parse(execFileSync('npm', ['view', 'ua-parser-js@1.0.41', 'license', '--json'], {encoding:'utf8'}))
-          const attestRaw = execFileSync('npm', ['view', 'ua-parser-js@1.0.41', 'dist.attestations', '--json'], {encoding:'utf8'}).trim()
-          const attest = attestRaw ? JSON.parse(attestRaw) : null
+          function npmField(spec, field) {
+            const raw = execFileSync('npm', ['view', spec, field, '--json'], {encoding:'utf8'}).trim()
+            return raw ? JSON.parse(raw) : null
+          }
+          function assertLegacyException(spec, expectedLicense) {
+            const license = npmField(spec, 'license')
+            const attest = npmField(spec, 'dist.attestations')
+            if (license !== expectedLicense) throw new Error(`${spec} license changed: ${license}`)
+            if (attest && typeof attest === 'object' && Object.keys(attest).length) {
+              throw new Error(`${spec} gained attestations; remove its trustPolicyExclude entry`)
+            }
+          }
+
+          const fbjsRange = npmField('fbjs@3.0.5', 'dependencies.ua-parser-js')
           if (fbjsRange !== '^1.0.35') throw new Error(`unexpected fbjs parser range: ${fbjsRange}`)
-          if (license !== 'MIT') throw new Error(`unexpected ua-parser-js@1.0.41 license: ${license}`)
-          if (attest && typeof attest === 'object' && Object.keys(attest).length) throw new Error('ua-parser-js@1.0.41 gained attestations; remove trustPolicyExclude instead')
+          assertLegacyException('ua-parser-js@1.0.41', 'MIT')
+          assertLegacyException('semver@6.3.1', 'ISC')
 
           const packagePath = 'package.json'
           const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'))
@@ -65,7 +75,10 @@ jobs:
           workspace = workspace.replace(/\ntrustPolicyExclude:\n(?:  - .*\n)*/g, '\n')
           const trustAnchor = 'trustPolicy: no-downgrade\n'
           if (!workspace.includes(trustAnchor)) throw new Error('trustPolicy anchor not found')
-          workspace = workspace.replace(trustAnchor, trustAnchor + "trustPolicyExclude:\n  - 'ua-parser-js@1.0.41'\n")
+          workspace = workspace.replace(
+            trustAnchor,
+            trustAnchor + "trustPolicyExclude:\n  - 'ua-parser-js@1.0.41'\n  - 'semver@6.3.1'\n",
+          )
           fs.writeFileSync(workspacePath, workspace)
           NODE
 
