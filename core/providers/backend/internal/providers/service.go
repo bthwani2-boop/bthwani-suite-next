@@ -372,7 +372,7 @@ func (s *Service) probeProviderHealth(ctx context.Context, provider ExternalProv
 	if err != nil {
 		return StatusDown, "Provider health probe failed"
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
 	if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
 		return StatusHealthy, fmt.Sprintf("Active provider %s passed its health probe", provider.Code)
