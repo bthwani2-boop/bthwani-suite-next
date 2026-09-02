@@ -13,7 +13,7 @@ import (
 
 const maxPlatformRequestBytes int64 = 1 << 20
 
-func (s *server) getChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) getChangeSet(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	_ = identity
 	changeSet, err := s.service.GetChangeSet(r.Context(), r.PathValue("id"))
 	if err != nil {
@@ -23,7 +23,7 @@ func (s *server) getChangeSet(w http.ResponseWriter, r *http.Request, identity a
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
-func (s *server) createChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) createChangeSet(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input platformcontrol.CreateChangeSetInput
 	if err := decodePlatformJSON(w, r, &input); err != nil {
 		return
@@ -42,7 +42,7 @@ func (s *server) createChangeSet(w http.ResponseWriter, r *http.Request, identit
 	sendJSON(w, http.StatusCreated, map[string]any{"changeSet": changeSet})
 }
 
-func (s *server) validateChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) validateChangeSet(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	changeSet, err := s.service.ValidateChangeSet(
 		r.Context(),
 		r.PathValue("id"),
@@ -57,7 +57,7 @@ func (s *server) validateChangeSet(w http.ResponseWriter, r *http.Request, ident
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
-func (s *server) submitChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) submitChangeSet(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	changeSet, err := s.service.SubmitChangeSet(
 		r.Context(),
 		r.PathValue("id"),
@@ -72,7 +72,7 @@ func (s *server) submitChangeSet(w http.ResponseWriter, r *http.Request, identit
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
-func (s *server) approveChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) approveChangeSet(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	changeSet, err := s.service.ApproveChangeSet(
 		r.Context(),
 		r.PathValue("id"),
@@ -87,7 +87,7 @@ func (s *server) approveChangeSet(w http.ResponseWriter, r *http.Request, identi
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
-func (s *server) rejectChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) rejectChangeSet(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input platformcontrol.RejectChangeSetInput
 	if err := decodePlatformJSON(w, r, &input); err != nil {
 		return
@@ -107,7 +107,7 @@ func (s *server) rejectChangeSet(w http.ResponseWriter, r *http.Request, identit
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
-func (s *server) applyChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) applyChangeSet(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	changeSet, err := s.service.ApplyChangeSet(
 		r.Context(),
 		r.PathValue("id"),
@@ -122,7 +122,7 @@ func (s *server) applyChangeSet(w http.ResponseWriter, r *http.Request, identity
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
-func (s *server) rollbackChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) rollbackChangeSet(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input platformcontrol.RollbackChangeSetInput
 	if err := decodePlatformJSON(w, r, &input); err != nil {
 		return

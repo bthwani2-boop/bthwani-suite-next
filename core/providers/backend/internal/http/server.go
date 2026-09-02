@@ -28,7 +28,7 @@ func NewRouter(db *sql.DB, service *providers.Service, repo *providers.Repositor
 	// Readiness is an unauthenticated infrastructure probe; business provider
 	// routes below remain protected by the operator permission boundary.
 	mux.HandleFunc("GET /providers/readiness", func(w http.ResponseWriter, r *http.Request) {
-		s.providerReadiness(w, r, auth.Identity{})
+		s.providerReadiness(w, r, auth.ActorIdentity{})
 	})
 	mux.HandleFunc("GET /providers", s.operatorOnly("provider:read", s.listProviders))
 	mux.HandleFunc("GET /providers/{providerId}", s.operatorOnly("provider:read", s.getProvider))
@@ -76,10 +76,10 @@ func CorsMiddleware(next http.Handler) http.Handler {
 
 // ---- auth guards ----
 
-type guardedHandler func(w http.ResponseWriter, r *http.Request, identity auth.Identity)
+type guardedHandler func(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity)
 
 func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFunc {
-	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 		if !identity.HasPermission("providers", action, "all") {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "providers service permission is required")
 			return
@@ -89,7 +89,7 @@ func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFu
 }
 
 func (s *server) mapConsumer(next guardedHandler) http.HandlerFunc {
-	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 		allowedRole := identity.HasRole("client") || identity.HasRole("partner") || identity.HasRole("captain") || identity.HasRole("field") || identity.HasRole("operator") || identity.HasRole("admin")
 		allowedPermission := identity.HasPermission("providers", "maps:invoke", "all") || identity.HasPermission("providers", "maps:invoke", "self")
 		if !allowedRole && !allowedPermission {
@@ -118,7 +118,7 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 
 // ---- handlers ----
 
-func (s *server) listProviders(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) listProviders(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	list, err := s.service.ListProviders(r.Context(), operatorOf(r, identity))
 	if err != nil {
 		writeProvidersError(w, err)
@@ -127,7 +127,7 @@ func (s *server) listProviders(w http.ResponseWriter, r *http.Request, identity 
 	sendJSON(w, http.StatusOK, list)
 }
 
-func (s *server) providerHealth(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) providerHealth(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	health, err := s.service.GetHealth(r.Context())
 	if err != nil {
 		sendError(w, http.StatusInternalServerError, "PROVIDERS_HEALTH_UNAVAILABLE", "provider health could not be read")
@@ -136,7 +136,7 @@ func (s *server) providerHealth(w http.ResponseWriter, r *http.Request, identity
 	sendJSON(w, http.StatusOK, health)
 }
 
-func (s *server) providerReadiness(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) providerReadiness(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "application/json")
 
@@ -162,7 +162,7 @@ func (s *server) providerReadiness(w http.ResponseWriter, r *http.Request, ident
 	sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY"})
 }
 
-func (s *server) getProvider(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) getProvider(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	p, err := s.service.GetProvider(r.Context(), r.PathValue("providerId"), operatorOf(r, identity))
 	if err != nil {
 		writeProvidersError(w, err)
@@ -171,7 +171,7 @@ func (s *server) getProvider(w http.ResponseWriter, r *http.Request, identity au
 	sendJSON(w, http.StatusOK, p)
 }
 
-func (s *server) updateProvider(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) updateProvider(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input providers.UpdateProviderInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -193,7 +193,7 @@ func (s *server) updateProvider(w http.ResponseWriter, r *http.Request, identity
 
 // ---- plumbing ----
 
-func operatorOf(r *http.Request, identity auth.Identity) providers.Operator {
+func operatorOf(r *http.Request, identity auth.ActorIdentity) providers.Operator {
 	role := "operator"
 	if len(identity.Roles) > 0 {
 		role = identity.Roles[0]

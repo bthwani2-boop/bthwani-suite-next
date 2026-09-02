@@ -9,13 +9,13 @@ import (
 func TestEmployeePIIRedaction(t *testing.T) {
 	tests := []struct {
 		name           string
-		identity       auth.Identity
+		identity       auth.ActorIdentity
 		person         workforce.Person
 		expectRedacted bool
 	}{
 		{
 			name: "HR with permission can see PII",
-			identity: auth.Identity{
+			identity: auth.ActorIdentity{
 				Subject: "hr-1",
 				Permissions: []auth.Permission{
 					{Service: "workforce", Action: "pii:read", Scope: "all"},
@@ -31,7 +31,7 @@ func TestEmployeePIIRedaction(t *testing.T) {
 		},
 		{
 			name: "Self can see own PII",
-			identity: auth.Identity{
+			identity: auth.ActorIdentity{
 				Subject: "actor-1",
 			},
 			person: workforce.Person{
@@ -44,7 +44,7 @@ func TestEmployeePIIRedaction(t *testing.T) {
 		},
 		{
 			name: "Manager without PII permission cannot see PII",
-			identity: auth.Identity{
+			identity: auth.ActorIdentity{
 				Subject: "manager-1",
 				Permissions: []auth.Permission{
 					{Service: "workforce", Action: "employee:read", Scope: "department:sales"},

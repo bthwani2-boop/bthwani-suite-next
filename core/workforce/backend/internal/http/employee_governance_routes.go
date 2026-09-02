@@ -50,7 +50,7 @@ func (s *employeeGovernanceServer) operatorOnly(action string, next guardedHandl
 	}
 }
 
-func (s *employeeGovernanceServer) get(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *employeeGovernanceServer) get(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	profile, err := s.service.EmployeeGovernanceByActorID(r.Context(), strings.TrimSpace(r.PathValue("actorId")))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -59,7 +59,7 @@ func (s *employeeGovernanceServer) get(w http.ResponseWriter, r *http.Request, _
 	sendJSON(w, http.StatusOK, map[string]any{"employeeGovernance": profile})
 }
 
-func (s *employeeGovernanceServer) put(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *employeeGovernanceServer) put(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	actorID := strings.TrimSpace(r.PathValue("actorId"))
 	var input workforce.UpsertEmployeeGovernanceInput
 	if !decodeJSON(w, r, &input) {

@@ -19,7 +19,7 @@ import (
 
 func unpermittedIdentitySessionServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	return identitySessionServer(t, auth.Identity{
+	return identitySessionServer(t, auth.ActorIdentity{
 		Subject:           "actor-without-permission",
 		OperatorContextID: "OperatorContext-test",
 		Roles:             []string{"client"},

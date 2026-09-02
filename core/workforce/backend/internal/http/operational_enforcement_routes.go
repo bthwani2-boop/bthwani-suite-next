@@ -55,7 +55,7 @@ func (s *operationalEnforcementServer) operatorOnly(action string, next guardedH
 	}
 }
 
-func (s *operationalEnforcementServer) promoteCaptainToBasic(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *operationalEnforcementServer) promoteCaptainToBasic(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.PromoteCaptainInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -71,7 +71,7 @@ func (s *operationalEnforcementServer) promoteCaptainToBasic(w http.ResponseWrit
 	sendJSON(w, http.StatusOK, map[string]any{"operationalCore": core})
 }
 
-func (s *operationalEnforcementServer) transitionProviderIncident(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *operationalEnforcementServer) transitionProviderIncident(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.TransitionProviderIncidentInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -100,7 +100,7 @@ func (s *operationalEnforcementServer) transitionProviderIncident(w http.Respons
 	sendJSON(w, http.StatusOK, map[string]any{"incident": incident})
 }
 
-func (s *operationalEnforcementServer) getProviderPenaltyCommand(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *operationalEnforcementServer) getProviderPenaltyCommand(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	command, err := s.repo.ProviderPenaltyCommandByID(r.Context(), strings.TrimSpace(r.PathValue("commandId")))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -109,7 +109,7 @@ func (s *operationalEnforcementServer) getProviderPenaltyCommand(w http.Response
 	sendJSON(w, http.StatusOK, map[string]any{"financialCommand": command})
 }
 
-func (s *operationalEnforcementServer) listProviderIncidentTransitions(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *operationalEnforcementServer) listProviderIncidentTransitions(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	transitions, err := s.repo.ListProviderIncidentTransitions(r.Context(), strings.TrimSpace(r.PathValue("incidentId")))
 	if err != nil {
 		writeWorkforceError(w, err)

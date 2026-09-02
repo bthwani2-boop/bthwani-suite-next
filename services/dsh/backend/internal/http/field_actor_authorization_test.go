@@ -12,7 +12,7 @@ import (
 func TestRequireActorRejectsWrongSurface(t *testing.T) {
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(auth.Identity{
+		_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 			Subject:           "field-1",
 			Roles:             []string{"field"},
 			SessionSurface:    "app-partner", // wrong surface

@@ -232,14 +232,14 @@ func TestHandleMediaDownloadEndpoint(t *testing.T) {
 		authHeader := r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
 
-		var identity auth.Identity
+		var identity auth.ActorIdentity
 		switch authHeader {
 		case "Bearer operator-token":
-			identity = auth.Identity{Subject: "op-1", OperatorContextID: "OperatorContext-a", Roles: []string{"operator"}, AuthState: "authenticated", SessionSurface: "dsh-portal"}
+			identity = auth.ActorIdentity{Subject: "op-1", OperatorContextID: "OperatorContext-a", Roles: []string{"operator"}, AuthState: "authenticated", SessionSurface: "dsh-portal"}
 		case "Bearer field-owner-token":
-			identity = auth.Identity{Subject: "field-1", OperatorContextID: "OperatorContext-a", Roles: []string{"field"}, AuthState: "authenticated", SessionSurface: "app-field"}
+			identity = auth.ActorIdentity{Subject: "field-1", OperatorContextID: "OperatorContext-a", Roles: []string{"field"}, AuthState: "authenticated", SessionSurface: "app-field"}
 		case "Bearer field-non-owner-token":
-			identity = auth.Identity{Subject: "field-2", OperatorContextID: "OperatorContext-a", Roles: []string{"field"}, AuthState: "authenticated", SessionSurface: "app-field"}
+			identity = auth.ActorIdentity{Subject: "field-2", OperatorContextID: "OperatorContext-a", Roles: []string{"field"}, AuthState: "authenticated", SessionSurface: "app-field"}
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = w.Write([]byte(`{"message":"unauthenticated"}`))
@@ -287,10 +287,10 @@ func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 	mockAuthServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		w.Header().Set("Content-Type", "application/json")
-		var identity auth.Identity
+		var identity auth.ActorIdentity
 		switch authHeader {
 		case "Bearer partner-token":
-			identity = auth.Identity{Subject: "partner-1", OperatorContextID: "local-dsh", Roles: []string{"partner"}, AuthState: "authenticated", SessionSurface: "app-partner"}
+			identity = auth.ActorIdentity{Subject: "partner-1", OperatorContextID: "local-dsh", Roles: []string{"partner"}, AuthState: "authenticated", SessionSurface: "app-partner"}
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
 			return

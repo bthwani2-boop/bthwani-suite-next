@@ -20,7 +20,7 @@ func fieldFinanceServer(t *testing.T, actorID string, wltHandler http.HandlerFun
 	t.Helper()
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(auth.Identity{
+		_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 			Subject:           actorID,
 			OperatorContextID: "dsh",
 			Roles:             []string{"field"},

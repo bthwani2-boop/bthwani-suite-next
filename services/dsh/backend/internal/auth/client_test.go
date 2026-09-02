@@ -33,7 +33,7 @@ func TestResolveSuccess(t *testing.T) {
 			t.Fatalf("expected Authorization header to be forwarded, got %q", r.Header.Get("Authorization"))
 		}
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(Identity{
+		_ = json.NewEncoder(w).Encode(ActorIdentity{
 			Subject:           "user-1",
 			OperatorContextID: "operator-a",
 			Roles:             []string{"client"},
@@ -105,7 +105,7 @@ func TestResolveRetriesTransientIdentityFailure(t *testing.T) {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(Identity{
+		_ = json.NewEncoder(w).Encode(ActorIdentity{
 			Subject:           "user-1",
 			OperatorContextID: "operator-a",
 			Roles:             []string{"captain"},
@@ -127,7 +127,7 @@ func TestResolveRetriesTransientIdentityFailure(t *testing.T) {
 func TestResolveRejectsUnauthenticatedState(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(Identity{Subject: "user-1", OperatorContextID: "operator-a", AuthState: "pending"})
+		_ = json.NewEncoder(w).Encode(ActorIdentity{Subject: "user-1", OperatorContextID: "operator-a", AuthState: "pending"})
 	}))
 	defer server.Close()
 
@@ -141,7 +141,7 @@ func TestResolveRejectsUnauthenticatedState(t *testing.T) {
 func TestResolveRejectsMissingSubject(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(Identity{OperatorContextID: "operator-a", AuthState: "authenticated"})
+		_ = json.NewEncoder(w).Encode(ActorIdentity{OperatorContextID: "operator-a", AuthState: "authenticated"})
 	}))
 	defer server.Close()
 
@@ -154,7 +154,7 @@ func TestResolveRejectsMissingSubject(t *testing.T) {
 
 func TestResolveRejectsMissingOperatorContext(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_ = json.NewEncoder(w).Encode(Identity{Subject: "user-1", AuthState: "authenticated"})
+		_ = json.NewEncoder(w).Encode(ActorIdentity{Subject: "user-1", AuthState: "authenticated"})
 	}))
 	defer server.Close()
 
@@ -167,7 +167,7 @@ func TestResolveRejectsMissingOperatorContext(t *testing.T) {
 func TestResolveAcceptsSessionOperatorContextInsteadOfProcessDefault(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "operator-main")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_ = json.NewEncoder(w).Encode(Identity{
+		_ = json.NewEncoder(w).Encode(ActorIdentity{
 			Subject: "user-2", OperatorContextID: "operator-other", Roles: []string{"client"}, AuthState: "authenticated",
 		})
 	}))
@@ -181,7 +181,7 @@ func TestResolveAcceptsSessionOperatorContextInsteadOfProcessDefault(t *testing.
 }
 
 func TestHasRoleFalseWhenNoRoles(t *testing.T) {
-	identity := Identity{}
+	identity := ActorIdentity{}
 	if identity.HasRole("client") {
 		t.Fatal("expected false for identity with no roles")
 	}

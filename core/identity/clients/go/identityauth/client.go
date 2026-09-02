@@ -43,10 +43,6 @@ type ActorIdentity struct {
 	ExpiresAt         time.Time       `json:"expiresAt"`
 }
 
-// Identity is retained as the canonical package's compatibility name while
-// consumers migrate to the contract-aligned ActorIdentity name.
-type Identity = ActorIdentity
-
 type Client struct {
 	baseURL string
 	http    *http.Client

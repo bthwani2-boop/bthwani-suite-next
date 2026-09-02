@@ -10,7 +10,7 @@ import (
 )
 
 func TestClientProfileConsentsMapsInvalidMutationToBadRequest(t *testing.T) {
-	identityServer := identitySessionServer(t, auth.Identity{
+	identityServer := identitySessionServer(t, auth.ActorIdentity{
 		Subject:           "client-profile-invalid-input",
 		OperatorContextID: "client-profile-context",
 		Roles:             []string{"client"},
@@ -39,7 +39,7 @@ func TestClientProfileConsentsMapsInvalidMutationToBadRequest(t *testing.T) {
 }
 
 func TestClientProfilePreferencesRejectUnknownFields(t *testing.T) {
-	identityServer := identitySessionServer(t, auth.Identity{
+	identityServer := identitySessionServer(t, auth.ActorIdentity{
 		Subject:           "client-profile-unknown-field",
 		OperatorContextID: "client-profile-context",
 		Roles:             []string{"client"},

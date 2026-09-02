@@ -20,7 +20,7 @@ func RegisterSovereignLeadershipReferenceRoutes(handler http.Handler, service *w
 	mux.HandleFunc("GET /workforce/sovereign-leadership/reference-data", s.withIdentity(s.referenceData))
 }
 
-func (s *sovereignLeadershipServer) referenceData(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) referenceData(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	if !identity.HasPermission("workforce", "leadership:read", "all") &&
 		!identity.HasPermission("workforce", "leadership:create", "all") {
 		sendError(w, http.StatusForbidden, "FORBIDDEN", "sovereign leadership reference access is required")

@@ -8,7 +8,7 @@ import (
 	"providers-api/internal/providers"
 )
 
-func (s *server) searchMaps(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) searchMaps(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input providers.MapSearchInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -21,7 +21,7 @@ func (s *server) searchMaps(w http.ResponseWriter, r *http.Request, identity aut
 	sendJSON(w, http.StatusOK, response)
 }
 
-func (s *server) reverseMap(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) reverseMap(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input providers.MapReverseInput
 	if !decodeJSON(w, r, &input) {
 		return

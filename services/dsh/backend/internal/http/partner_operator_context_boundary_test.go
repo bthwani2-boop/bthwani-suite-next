@@ -10,7 +10,7 @@ import (
 	"dsh-api/internal/partner"
 )
 
-func identitySessionServer(t *testing.T, identity auth.Identity) *httptest.Server {
+func identitySessionServer(t *testing.T, identity auth.ActorIdentity) *httptest.Server {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/auth/session" {
@@ -26,7 +26,7 @@ func identitySessionServer(t *testing.T, identity auth.Identity) *httptest.Serve
 
 func TestTrustedPartnerOperatorContextComesFromIdentity(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "OperatorContext-a")
-	identityServer := identitySessionServer(t, auth.Identity{
+	identityServer := identitySessionServer(t, auth.ActorIdentity{
 		Subject:           "operator-a",
 		OperatorContextID: "OperatorContext-a",
 		Roles:             []string{"operator"},
@@ -57,7 +57,7 @@ func TestTrustedPartnerOperatorContextComesFromIdentity(t *testing.T) {
 
 func TestTrustedPartnerOperatorContextRejectsIdentityWithoutOperatorContext(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
-	identityServer := identitySessionServer(t, auth.Identity{
+	identityServer := identitySessionServer(t, auth.ActorIdentity{
 		Subject:   "operator-without-OperatorContext",
 		Roles:     []string{"operator"},
 		AuthState: "authenticated",
@@ -89,7 +89,7 @@ func TestTrustedPartnerOperatorContextRejectsIdentityWithoutOperatorContext(t *t
 
 func TestTrustedPartnerOperatorContextUsesIdentityOperatorContextInsteadOfProcessDefault(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "OperatorContext-a")
-	identityServer := identitySessionServer(t, auth.Identity{
+	identityServer := identitySessionServer(t, auth.ActorIdentity{
 		Subject:           "operator-b",
 		OperatorContextID: "OperatorContext-b",
 		Roles:             []string{"operator"},

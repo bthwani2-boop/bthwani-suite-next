@@ -14,7 +14,7 @@ func TestDocumentReviewAuthenticatesPermissionBeforeDecisionSeparation(t *testin
 	server := fakeIdentityServerWithRBAC(t,
 		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(auth.Identity{
+			_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 				Subject:           "operator-reviewer",
 				OperatorContextID: "operator-context-review",
 				Roles:             []string{"operator"},

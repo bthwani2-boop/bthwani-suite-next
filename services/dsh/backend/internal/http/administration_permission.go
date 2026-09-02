@@ -9,7 +9,7 @@ import (
 	"dsh-api/internal/store"
 )
 
-func controlPanelActorRole(identity auth.Identity) string {
+func controlPanelActorRole(identity auth.ActorIdentity) string {
 	if identity.HasRole("operator") {
 		return "operator"
 	}
@@ -27,7 +27,7 @@ func controlPanelActorRole(identity auth.Identity) string {
 func resolvedControlPanelPermissions(
 	s *protectedStoreServer,
 	r *http.Request,
-	identity auth.Identity,
+	identity auth.ActorIdentity,
 ) ([]auth.Permission, error) {
 	if identity.HasRole("operator") {
 		operatorContextID := strings.TrimSpace(identity.OperatorContextID)

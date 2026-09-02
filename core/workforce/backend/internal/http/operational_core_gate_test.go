@@ -15,7 +15,7 @@ func TestBindIdentityRequestContextUsesIdentityOwnedOperatorContext(t *testing.T
 		if r.Header.Get("Authorization") != "Bearer operator-token" {
 			t.Fatalf("unexpected authorization header %q", r.Header.Get("Authorization"))
 		}
-		_ = json.NewEncoder(w).Encode(auth.Identity{
+		_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 			Subject:           "operator-1",
 			OperatorContextID: "context-main",
 			AuthState:         "authenticated",
@@ -36,7 +36,7 @@ func TestBindIdentityRequestContextUsesIdentityOwnedOperatorContext(t *testing.T
 
 func TestBindIdentityRequestContextFailsClosedWithoutIdentityContext(t *testing.T) {
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_ = json.NewEncoder(w).Encode(auth.Identity{
+		_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 			Subject:   "operator-1",
 			AuthState: "authenticated",
 		})

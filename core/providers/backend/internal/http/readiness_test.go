@@ -35,7 +35,7 @@ func TestProvidersReadinessHandlerFailsClosedWithoutDatabase(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/providers/readiness", nil)
 
 	s := &server{db: nil}
-	identity := auth.Identity{Subject: "test-actor", Roles: []string{"operator"}}
+	identity := auth.ActorIdentity{Subject: "test-actor", Roles: []string{"operator"}}
 	s.providerReadiness(recorder, request, identity)
 
 	if recorder.Code != http.StatusServiceUnavailable {

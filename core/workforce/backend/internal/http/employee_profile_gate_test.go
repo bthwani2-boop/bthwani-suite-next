@@ -11,7 +11,7 @@ import (
 
 func TestEmployeeProfileGate_UnauthorizedSelfEdit(t *testing.T) {
 	// A user attempting to edit their own profile or someone else's without proper scope
-	identity := auth.Identity{
+	identity := auth.ActorIdentity{
 		Subject: "actor-123",
 		Roles:   []string{"employee"},
 		// Missing employee:update permission
@@ -38,7 +38,7 @@ func TestEmployeeProfileGate_UnauthorizedSelfEdit(t *testing.T) {
 func TestEmployeeProfileGate_TerminatedAccess(t *testing.T) {
 	// Terminated/suspended access should reject mutations if we had a middleware for it.
 	// We'll test that standard department scopes prevent cross-department edits.
-	identity := auth.Identity{
+	identity := auth.ActorIdentity{
 		Subject: "manager-1",
 		Roles:   []string{"department_manager"},
 		Permissions: []auth.Permission{

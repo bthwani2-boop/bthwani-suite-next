@@ -56,7 +56,7 @@ func (s *sovereignLeadershipServer) withIdentity(next guardedHandler) http.Handl
 	}
 }
 
-func hasWorkforceScope(identity auth.Identity, action, department string) bool {
+func hasWorkforceScope(identity auth.ActorIdentity, action, department string) bool {
 	if identity.HasPermission("workforce", action, "all") {
 		return true
 	}
@@ -69,7 +69,7 @@ func normalizeDepartmentScope(value string) string {
 	return strings.ReplaceAll(value, " ", "-")
 }
 
-func redactPersonPII(identity auth.Identity, person *workforce.Person) {
+func redactPersonPII(identity auth.ActorIdentity, person *workforce.Person) {
 	if identity.HasPermission("workforce", "pii:read", "all") {
 		return
 	}
@@ -82,7 +82,7 @@ func redactPersonPII(identity auth.Identity, person *workforce.Person) {
 	}
 }
 
-func departmentsForAction(identity auth.Identity, action string) []string {
+func departmentsForAction(identity auth.ActorIdentity, action string) []string {
 	departments := []string{}
 	seen := map[string]struct{}{}
 	for _, permission := range identity.Permissions {
@@ -109,7 +109,7 @@ func employeeDepartment(person workforce.Person) string {
 	return normalizeDepartmentScope(person.EmployeeProfile.Department)
 }
 
-func requireEmployeeTarget(w http.ResponseWriter, identity auth.Identity, action string, person workforce.Person) bool {
+func requireEmployeeTarget(w http.ResponseWriter, identity auth.ActorIdentity, action string, person workforce.Person) bool {
 	department := employeeDepartment(person)
 	if department == "" || !hasWorkforceScope(identity, action, department) {
 		sendError(w, http.StatusForbidden, "EMPLOYEE_SCOPE_FORBIDDEN", "employee is outside the caller department scope")
@@ -118,7 +118,7 @@ func requireEmployeeTarget(w http.ResponseWriter, identity auth.Identity, action
 	return true
 }
 
-func (s *sovereignLeadershipServer) listLeadership(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) listLeadership(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	if !identity.HasPermission("workforce", "leadership:read", "all") {
 		sendError(w, http.StatusForbidden, "FORBIDDEN", "sovereign leadership read permission is required")
 		return
@@ -131,7 +131,7 @@ func (s *sovereignLeadershipServer) listLeadership(w http.ResponseWriter, r *htt
 	sendJSON(w, http.StatusOK, map[string]any{"leadership": records})
 }
 
-func (s *sovereignLeadershipServer) createLeadership(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) createLeadership(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	if !identity.HasPermission("workforce", "leadership:create", "all") {
 		sendError(w, http.StatusForbidden, "FORBIDDEN", "only the project manager may create sovereign leadership assignments")
 		return
@@ -158,7 +158,7 @@ func (s *sovereignLeadershipServer) createLeadership(w http.ResponseWriter, r *h
 	sendJSON(w, status, result)
 }
 
-func (s *sovereignLeadershipServer) listDepartmentEmployees(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) listDepartmentEmployees(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	departments := []string(nil)
 	if !identity.HasPermission("workforce", "employee:read", "all") {
 		departments = departmentsForAction(identity, "employee:read")
@@ -184,7 +184,7 @@ func (s *sovereignLeadershipServer) listDepartmentEmployees(w http.ResponseWrite
 	sendJSON(w, http.StatusOK, map[string]any{"employees": people})
 }
 
-func (s *sovereignLeadershipServer) createDepartmentEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) createDepartmentEmployee(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.CreateEmployeeInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -211,7 +211,7 @@ func (s *sovereignLeadershipServer) createDepartmentEmployee(w http.ResponseWrit
 	sendJSON(w, status, result)
 }
 
-func (s *sovereignLeadershipServer) getDepartmentEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) getDepartmentEmployee(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	person, err := s.service.EmployeeByID(r.Context(), strings.TrimSpace(r.PathValue("actorId")))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -224,7 +224,7 @@ func (s *sovereignLeadershipServer) getDepartmentEmployee(w http.ResponseWriter,
 	sendJSON(w, http.StatusOK, person)
 }
 
-func (s *sovereignLeadershipServer) updateDepartmentEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) updateDepartmentEmployee(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	actorID := strings.TrimSpace(r.PathValue("actorId"))
 	current, err := s.repo.PersonByActorID(r.Context(), actorID)
 	if err != nil {
@@ -261,15 +261,15 @@ func decodeStatusChange(w http.ResponseWriter, r *http.Request) (int, string, bo
 	return input.ExpectedVersion, input.Reason, true
 }
 
-func (s *sovereignLeadershipServer) suspendDepartmentEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) suspendDepartmentEmployee(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	s.changeDepartmentEmployeeStatus(w, r, identity, "employee:suspend", true)
 }
 
-func (s *sovereignLeadershipServer) reactivateDepartmentEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) reactivateDepartmentEmployee(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	s.changeDepartmentEmployeeStatus(w, r, identity, "employee:reactivate", false)
 }
 
-func (s *sovereignLeadershipServer) changeDepartmentEmployeeStatus(w http.ResponseWriter, r *http.Request, identity auth.Identity, action string, suspend bool) {
+func (s *sovereignLeadershipServer) changeDepartmentEmployeeStatus(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity, action string, suspend bool) {
 	actorID := strings.TrimSpace(r.PathValue("actorId"))
 	current, err := s.repo.PersonByActorID(r.Context(), actorID)
 	if err != nil {
@@ -296,7 +296,7 @@ func (s *sovereignLeadershipServer) changeDepartmentEmployeeStatus(w http.Respon
 	sendJSON(w, http.StatusOK, person)
 }
 
-func (s *sovereignLeadershipServer) issueDepartmentEmployeeActivation(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) issueDepartmentEmployeeActivation(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	actorID := strings.TrimSpace(r.PathValue("actorId"))
 	current, err := s.repo.PersonByActorID(r.Context(), actorID)
 	if err != nil {
@@ -321,7 +321,7 @@ func (s *sovereignLeadershipServer) issueDepartmentEmployeeActivation(w http.Res
 	sendJSON(w, http.StatusCreated, code)
 }
 
-func (s *sovereignLeadershipServer) revokeDepartmentEmployeeActivation(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *sovereignLeadershipServer) revokeDepartmentEmployeeActivation(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	actorID := strings.TrimSpace(r.PathValue("actorId"))
 	current, err := s.repo.PersonByActorID(r.Context(), actorID)
 	if err != nil {

@@ -88,10 +88,10 @@ func CorsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-type guardedHandler func(w http.ResponseWriter, r *http.Request, identity auth.Identity)
+type guardedHandler func(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity)
 
 func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFunc {
-	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 		if !identity.HasSurfacePermission("dsh", "control-panel", action, "all") &&
 			!identity.HasSurfacePermission("core", "control-panel", action, "all") {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "control-panel platform permission is required")
@@ -101,7 +101,7 @@ func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFu
 	})
 }
 
-func enforceOperatorContext(w http.ResponseWriter, r *http.Request, identity auth.Identity) bool {
+func enforceOperatorContext(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) bool {
 	identityOperatorContextID := strings.TrimSpace(identity.OperatorContextID)
 
 	if identityOperatorContextID == "" {
@@ -134,7 +134,7 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 	}
 }
 
-func (s *server) runtimeConfig(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) runtimeConfig(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	_ = identity
 	response := struct {
 		platformcontrol.RuntimeSnapshot
@@ -144,7 +144,7 @@ func (s *server) runtimeConfig(w http.ResponseWriter, r *http.Request, identity 
 	sendJSON(w, http.StatusOK, response)
 }
 
-func (s *server) effectiveRuntimeConfig(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) effectiveRuntimeConfig(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	_ = identity
 	config, err := s.service.EffectiveRuntimeConfig(r.Context())
 	if err != nil {
@@ -154,7 +154,7 @@ func (s *server) effectiveRuntimeConfig(w http.ResponseWriter, r *http.Request, 
 	sendJSON(w, http.StatusOK, config)
 }
 
-func (s *server) variables(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) variables(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	_ = identity
 	variables, err := s.service.Variables(r.Context())
 	if err != nil {
@@ -164,7 +164,7 @@ func (s *server) variables(w http.ResponseWriter, r *http.Request, identity auth
 	sendJSON(w, http.StatusOK, map[string]any{"variables": variables})
 }
 
-func (s *server) variable(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) variable(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	_ = identity
 	variable, err := s.service.GetVariable(
 		r.Context(),
@@ -179,7 +179,7 @@ func (s *server) variable(w http.ResponseWriter, r *http.Request, identity auth.
 	sendJSON(w, http.StatusOK, map[string]any{"variable": variable})
 }
 
-func (s *server) featureFlags(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) featureFlags(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	_ = identity
 	flags, err := s.service.FeatureFlags(r.Context())
 	if err != nil {
@@ -189,7 +189,7 @@ func (s *server) featureFlags(w http.ResponseWriter, r *http.Request, identity a
 	sendJSON(w, http.StatusOK, map[string]any{"flags": flags})
 }
 
-func (s *server) services(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) services(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	_ = identity
 	sendJSON(w, http.StatusOK, map[string]any{"services": s.service.Services(r.Context())})
 }
@@ -208,12 +208,12 @@ func (s *server) platformReadiness(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-platform-control"})
 }
 
-func (s *server) health(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) health(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	_ = identity
 	sendJSON(w, http.StatusOK, s.service.Health(r.Context()))
 }
 
-func (s *server) auditEvents(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) auditEvents(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	_ = identity
 	events, err := s.service.AuditEvents(r.Context())
 	if err != nil {
@@ -223,7 +223,7 @@ func (s *server) auditEvents(w http.ResponseWriter, r *http.Request, identity au
 	sendJSON(w, http.StatusOK, map[string]any{"events": events})
 }
 
-func (s *server) changeSets(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) changeSets(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	_ = identity
 	changeSets, err := s.service.ChangeSets(r.Context())
 	if err != nil {

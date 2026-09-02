@@ -60,7 +60,7 @@ func (s *operationalCoreServer) withIdentity(next guardedHandler) http.HandlerFu
 }
 
 func (s *operationalCoreServer) operatorOnly(action string, next guardedHandler) http.HandlerFunc {
-	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 		if !identity.HasPermission("workforce", action, "all") {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
 			return
@@ -70,7 +70,7 @@ func (s *operationalCoreServer) operatorOnly(action string, next guardedHandler)
 }
 
 func (s *operationalCoreServer) providerSelf(action string, next guardedHandler) http.HandlerFunc {
-	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 		if !identity.HasPermission("workforce", action, "own") {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "own provider permission is required")
 			return
@@ -79,7 +79,7 @@ func (s *operationalCoreServer) providerSelf(action string, next guardedHandler)
 	})
 }
 
-func (s *operationalCoreServer) getOperatorCore(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *operationalCoreServer) getOperatorCore(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	actorID := strings.TrimSpace(r.PathValue("actorId"))
 	core, err := s.repo.OperationalCoreByActorID(r.Context(), actorID)
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *operationalCoreServer) getOperatorCore(w http.ResponseWriter, r *http.R
 	sendJSON(w, http.StatusOK, map[string]any{"operationalCore": core, "activationReadiness": readiness})
 }
 
-func (s *operationalCoreServer) patchOperatorCore(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *operationalCoreServer) patchOperatorCore(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	actorID := strings.TrimSpace(r.PathValue("actorId"))
 	var input workforce.OperationalCorePatch
 	if !decodeJSON(w, r, &input) {
@@ -115,7 +115,7 @@ func (s *operationalCoreServer) patchOperatorCore(w http.ResponseWriter, r *http
 	sendJSON(w, http.StatusOK, map[string]any{"operationalCore": core, "activationReadiness": readiness})
 }
 
-func (s *operationalCoreServer) getOwnCore(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *operationalCoreServer) getOwnCore(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	core, err := s.repo.OperationalCoreByActorID(r.Context(), identity.Subject)
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -129,7 +129,7 @@ func (s *operationalCoreServer) getOwnCore(w http.ResponseWriter, r *http.Reques
 	sendJSON(w, http.StatusOK, map[string]any{"operationalCore": core, "activationReadiness": readiness})
 }
 
-func (s *operationalCoreServer) createOwnAvailabilityNotice(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *operationalCoreServer) createOwnAvailabilityNotice(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.CreateAvailabilityNoticeInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -145,7 +145,7 @@ func (s *operationalCoreServer) createOwnAvailabilityNotice(w http.ResponseWrite
 	sendJSON(w, http.StatusCreated, map[string]any{"availabilityNotice": notice})
 }
 
-func (s *operationalCoreServer) listOwnAvailabilityNotices(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *operationalCoreServer) listOwnAvailabilityNotices(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	notices, err := s.repo.ListAvailabilityNotices(r.Context(), identity.Subject, limit)
 	if err != nil {
@@ -155,7 +155,7 @@ func (s *operationalCoreServer) listOwnAvailabilityNotices(w http.ResponseWriter
 	sendJSON(w, http.StatusOK, map[string]any{"availabilityNotices": notices})
 }
 
-func (s *operationalCoreServer) updateOwnAvailabilityNotice(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *operationalCoreServer) updateOwnAvailabilityNotice(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.UpdateAvailabilityNoticeInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -171,7 +171,7 @@ func (s *operationalCoreServer) updateOwnAvailabilityNotice(w http.ResponseWrite
 	sendJSON(w, http.StatusOK, map[string]any{"availabilityNotice": notice})
 }
 
-func (s *operationalCoreServer) createProviderIncident(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *operationalCoreServer) createProviderIncident(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.CreateProviderIncidentInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -189,7 +189,7 @@ func (s *operationalCoreServer) createProviderIncident(w http.ResponseWriter, r 
 	sendJSON(w, http.StatusCreated, map[string]any{"incident": incident})
 }
 
-func (s *operationalCoreServer) listProviderIncidents(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *operationalCoreServer) listProviderIncidents(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	actorID := strings.TrimSpace(r.URL.Query().Get("actorId"))
 	if actorID == "" {
 		sendError(w, http.StatusBadRequest, "INVALID_INPUT", "actorId query parameter is required")
@@ -207,7 +207,7 @@ func (s *operationalCoreServer) listProviderIncidents(w http.ResponseWriter, r *
 	sendJSON(w, http.StatusOK, map[string]any{"incidents": incidents})
 }
 
-func (s *operationalCoreServer) listOwnIncidents(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *operationalCoreServer) listOwnIncidents(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	if !s.isCaptain(w, r, identity.Subject) {
 		return
 	}
@@ -220,7 +220,7 @@ func (s *operationalCoreServer) listOwnIncidents(w http.ResponseWriter, r *http.
 	sendJSON(w, http.StatusOK, map[string]any{"incidents": incidents})
 }
 
-func (s *operationalCoreServer) appealOwnIncident(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *operationalCoreServer) appealOwnIncident(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	if !s.isCaptain(w, r, identity.Subject) {
 		return
 	}
@@ -257,7 +257,7 @@ func (s *operationalCoreServer) isCaptain(w http.ResponseWriter, r *http.Request
 	return true
 }
 
-func firstRole(identity auth.Identity) string {
+func firstRole(identity auth.ActorIdentity) string {
 	if len(identity.Roles) == 0 {
 		return "unknown"
 	}
@@ -321,17 +321,17 @@ func OperationalCoreGateMiddleware(next http.Handler, repo *workforce.Repository
 	})
 }
 
-func bindIdentityRequestContext(r *http.Request, authClient *auth.Client) (*http.Request, auth.Identity, bool) {
+func bindIdentityRequestContext(r *http.Request, authClient *auth.Client) (*http.Request, auth.ActorIdentity, bool) {
 	if r == nil || authClient == nil {
-		return r, auth.Identity{}, false
+		return r, auth.ActorIdentity{}, false
 	}
 	identity, err := authClient.Resolve(r.Context(), r.Header.Get("Authorization"))
 	if err != nil {
-		return r, auth.Identity{}, false
+		return r, auth.ActorIdentity{}, false
 	}
 	boundContext, err := workforceauth.BindIdentityContext(r.Context(), identity)
 	if err != nil {
-		return r, auth.Identity{}, false
+		return r, auth.ActorIdentity{}, false
 	}
 	return r.WithContext(boundContext), identity, true
 }

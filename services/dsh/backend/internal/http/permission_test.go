@@ -35,7 +35,7 @@ func TestRequirePermissionAllowsExactIdentityPermission(t *testing.T) {
 	perm := auth.Permission{Service: "dsh", Surface: "control-panel", Action: FinancePermissionRead, Scope: "all"}
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(auth.Identity{
+		_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 			Subject:           "employee-1",
 			OperatorContextID: "operator-context-1",
 			PhoneE164:         "+967700000001",
@@ -75,7 +75,7 @@ func TestRequirePermissionRejectsWrongServiceSurfaceOrAction(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				_ = json.NewEncoder(w).Encode(auth.Identity{
+				_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 					Subject:           "employee-1",
 					OperatorContextID: "operator-context-1",
 					Roles:             []string{"employee"},
@@ -101,7 +101,7 @@ func TestRequirePermissionRejectsRoleOnlyAuthority(t *testing.T) {
 	s := fakeIdentityServerWithRBAC(t,
 		func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(auth.Identity{
+			_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 				Subject:           "operator-1",
 				OperatorContextID: "operator-context-1",
 				Roles:             []string{"operator", "employee", "permission:" + FinancePermissionRead},
@@ -178,7 +178,7 @@ func TestKnownDshPermissionsAreGrantedExactly(t *testing.T) {
 			s := fakeIdentityServerWithRBAC(t,
 				func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusOK)
-					_ = json.NewEncoder(w).Encode(auth.Identity{
+					_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 						Subject:           "operator-1",
 						OperatorContextID: "operator-context-1",
 						AuthState:         "authenticated",

@@ -22,7 +22,7 @@ var (
 )
 
 type Permission = identityauth.Permission
-type Identity = identityauth.ActorIdentity
+type ActorIdentity = identityauth.ActorIdentity
 
 type Client struct {
 	baseURL              string
@@ -34,8 +34,6 @@ type Client struct {
 	partnerBundles       []PartnerPermissionBundleDescriptor
 	partnerBundlesLoaded bool
 }
-
-const identityResolveAttempts = 3
 
 func NewClient(baseURL string) *Client {
 	return NewClientWithInternalAccess(baseURL, "", "")
@@ -56,9 +54,9 @@ func NewClientWithInternalAccess(baseURL, serviceToken, _ string) *Client {
 // Resolve accepts only authenticated Identity assertions with an explicit
 // operator context. The Identity session is the operator-context authority; a
 // process-wide default is never used to select or reject a valid scoped session.
-func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, error) {
+func (c *Client) Resolve(ctx context.Context, authorization string) (identityauth.ActorIdentity, error) {
 	if c == nil || c.session == nil {
-		return Identity{}, ErrIdentityUnavailable
+		return identityauth.ActorIdentity{}, ErrIdentityUnavailable
 	}
 	return c.session.Resolve(ctx, authorization)
 }

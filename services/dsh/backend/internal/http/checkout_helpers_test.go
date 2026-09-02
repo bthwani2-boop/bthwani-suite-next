@@ -117,7 +117,7 @@ func TestCreateCheckoutIntentRejectsInvalidRequestBeforeDatabaseAccess(t *testin
 		t.Run(tc.name, func(t *testing.T) {
 			s := fakeIdentityServer(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				_ = json.NewEncoder(w).Encode(auth.Identity{
+				_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 					Subject:           "client-1",
 					OperatorContextID: "operator-context-1",
 					Roles:             []string{"client"},

@@ -132,10 +132,10 @@ func (s *server) health(w http.ResponseWriter, _ *http.Request) {
 
 // ---- auth guards ----
 
-type guardedHandler func(w http.ResponseWriter, r *http.Request, identity auth.Identity)
+type guardedHandler func(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity)
 
 func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFunc {
-	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 		if !identity.HasPermission("workforce", action, "all") {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
 			return
@@ -145,7 +145,7 @@ func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFu
 }
 
 func (s *server) providerSelf(action string, next guardedHandler) http.HandlerFunc {
-	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 		if !identity.HasPermission("workforce", action, "own") {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "own provider permission is required")
 			return
@@ -181,7 +181,7 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 
 // ---- field agents ----
 
-func (s *server) createFieldAgent(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) createFieldAgent(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.CreateFieldAgentInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -204,7 +204,7 @@ func (s *server) createFieldAgent(w http.ResponseWriter, r *http.Request, identi
 	sendJSON(w, status, person)
 }
 
-func (s *server) listFieldAgents(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *server) listFieldAgents(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	query := r.URL.Query()
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	offset, _ := strconv.Atoi(query.Get("offset"))
@@ -223,7 +223,7 @@ func (s *server) listFieldAgents(w http.ResponseWriter, r *http.Request, _ auth.
 	sendJSON(w, http.StatusOK, map[string]any{"fieldAgents": people})
 }
 
-func (s *server) getFieldAgent(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *server) getFieldAgent(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	detail, err := s.service.FieldAgentByID(r.Context(), r.PathValue("actorId"))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -232,7 +232,7 @@ func (s *server) getFieldAgent(w http.ResponseWriter, r *http.Request, _ auth.Id
 	sendJSON(w, http.StatusOK, detail)
 }
 
-func (s *server) updateFieldAgent(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) updateFieldAgent(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.UpdateFieldAgentInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -246,7 +246,7 @@ func (s *server) updateFieldAgent(w http.ResponseWriter, r *http.Request, identi
 	sendJSON(w, http.StatusOK, person)
 }
 
-func (s *server) suspendFieldAgent(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) suspendFieldAgent(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input struct {
 		ExpectedVersion int    `json:"expectedVersion"`
 		Reason          string `json:"reason"`
@@ -263,7 +263,7 @@ func (s *server) suspendFieldAgent(w http.ResponseWriter, r *http.Request, ident
 	sendJSON(w, http.StatusOK, person)
 }
 
-func (s *server) reactivateFieldAgent(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) reactivateFieldAgent(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input struct {
 		ExpectedVersion int    `json:"expectedVersion"`
 		Reason          string `json:"reason"`
@@ -280,7 +280,7 @@ func (s *server) reactivateFieldAgent(w http.ResponseWriter, r *http.Request, id
 	sendJSON(w, http.StatusOK, person)
 }
 
-func (s *server) issueActivation(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) issueActivation(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input struct {
 		ExpectedVersion int `json:"expectedVersion"`
 	}
@@ -318,7 +318,7 @@ func activationSurface(r *http.Request) string {
 	return "app-field"
 }
 
-func (s *server) revokeActivation(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) revokeActivation(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	if err := s.service.RevokeActivation(r.Context(), operatorOf(r, identity),
 		r.PathValue("actorId"), r.Header.Get("X-Correlation-ID")); err != nil {
 		writeWorkforceError(w, err)
@@ -329,7 +329,7 @@ func (s *server) revokeActivation(w http.ResponseWriter, r *http.Request, identi
 
 // ---- captains ----
 
-func (s *server) createCaptain(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) createCaptain(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.CreateCaptainInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -352,7 +352,7 @@ func (s *server) createCaptain(w http.ResponseWriter, r *http.Request, identity 
 	sendJSON(w, status, person)
 }
 
-func (s *server) listCaptains(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *server) listCaptains(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	query := r.URL.Query()
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	offset, _ := strconv.Atoi(query.Get("offset"))
@@ -370,7 +370,7 @@ func (s *server) listCaptains(w http.ResponseWriter, r *http.Request, _ auth.Ide
 	sendJSON(w, http.StatusOK, map[string]any{"captains": people})
 }
 
-func (s *server) getCaptain(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *server) getCaptain(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	detail, err := s.service.CaptainByID(r.Context(), r.PathValue("actorId"))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -379,7 +379,7 @@ func (s *server) getCaptain(w http.ResponseWriter, r *http.Request, _ auth.Ident
 	sendJSON(w, http.StatusOK, detail)
 }
 
-func (s *server) updateCaptain(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) updateCaptain(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.UpdateCaptainInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -395,7 +395,7 @@ func (s *server) updateCaptain(w http.ResponseWriter, r *http.Request, identity 
 
 // ---- self ----
 
-func (s *server) me(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) me(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	view, err := s.service.Me(r.Context(), identity.Subject)
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -404,7 +404,7 @@ func (s *server) me(w http.ResponseWriter, r *http.Request, identity auth.Identi
 	sendJSON(w, http.StatusOK, view)
 }
 
-func (s *server) updateMe(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) updateMe(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.UpdateSelfInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -419,7 +419,7 @@ func (s *server) updateMe(w http.ResponseWriter, r *http.Request, identity auth.
 
 // ---- reference data ----
 
-func (s *server) listShifts(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) listShifts(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	shifts, err := s.repo.ListShifts(r.Context(), identity.HasRole("operator") && r.URL.Query().Get("includeInactive") == "true")
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -428,7 +428,7 @@ func (s *server) listShifts(w http.ResponseWriter, r *http.Request, identity aut
 	sendJSON(w, http.StatusOK, map[string]any{"shifts": shifts})
 }
 
-func (s *server) createShift(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *server) createShift(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	var shift workforce.Shift
 	if !decodeJSON(w, r, &shift) {
 		return
@@ -445,7 +445,7 @@ func (s *server) createShift(w http.ResponseWriter, r *http.Request, _ auth.Iden
 	sendJSON(w, http.StatusCreated, shift)
 }
 
-func (s *server) searchSupervisors(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *server) searchSupervisors(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	query := r.URL.Query()
 	candidates, err := s.service.SearchSupervisors(r.Context(), strings.TrimSpace(query.Get("kind")), strings.TrimSpace(query.Get("q")))
 	if err != nil {
@@ -455,7 +455,7 @@ func (s *server) searchSupervisors(w http.ResponseWriter, r *http.Request, _ aut
 	sendJSON(w, http.StatusOK, map[string]any{"supervisors": candidates})
 }
 
-func (s *server) updateShift(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *server) updateShift(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	var shift workforce.Shift
 	if !decodeJSON(w, r, &shift) {
 		return
@@ -468,7 +468,7 @@ func (s *server) updateShift(w http.ResponseWriter, r *http.Request, _ auth.Iden
 	sendJSON(w, http.StatusOK, shift)
 }
 
-func (s *server) appendProviderDocument(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) appendProviderDocument(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	if !identity.HasPermission("workforce", "provider:update", "all") {
 		sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
 		return
@@ -555,28 +555,28 @@ func (s *server) handleAffiliationReplace(w http.ResponseWriter, r *http.Request
 	sendJSON(w, http.StatusOK, map[string]any{"affiliations": scopes})
 }
 
-func (s *server) resolveReferenceOperator(w http.ResponseWriter, r *http.Request, action string) (auth.Identity, bool) {
+func (s *server) resolveReferenceOperator(w http.ResponseWriter, r *http.Request, action string) (auth.ActorIdentity, bool) {
 	identity, err := s.auth.Resolve(r.Context(), r.Header.Get("Authorization"))
 	if err != nil {
 		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
-		return auth.Identity{}, false
+		return auth.ActorIdentity{}, false
 	}
 	boundContext, bindErr := workforceauth.BindIdentityContext(r.Context(), identity)
 	if bindErr != nil {
 		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity operator context is missing")
-		return auth.Identity{}, false
+		return auth.ActorIdentity{}, false
 	}
 	*r = *r.WithContext(boundContext)
 	if !identity.HasPermission("workforce", action, "all") {
 		sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
-		return auth.Identity{}, false
+		return auth.ActorIdentity{}, false
 	}
 	return identity, true
 }
 
 // ---- plumbing ----
 
-func operatorOf(r *http.Request, identity auth.Identity) workforce.Operator {
+func operatorOf(r *http.Request, identity auth.ActorIdentity) workforce.Operator {
 	role := "operator"
 	if len(identity.Roles) > 0 {
 		role = identity.Roles[0]
@@ -661,7 +661,7 @@ func writeWorkforceError(w http.ResponseWriter, err error) {
 	}
 }
 
-func (s *server) createEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) createEmployee(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.CreateEmployeeInput
 	if !decodeJSON(w, r, &input) {
 		return
@@ -684,7 +684,7 @@ func (s *server) createEmployee(w http.ResponseWriter, r *http.Request, identity
 	sendJSON(w, status, person)
 }
 
-func (s *server) listEmployees(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *server) listEmployees(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	query := r.URL.Query()
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	offset, _ := strconv.Atoi(query.Get("offset"))
@@ -702,7 +702,7 @@ func (s *server) listEmployees(w http.ResponseWriter, r *http.Request, _ auth.Id
 	sendJSON(w, http.StatusOK, map[string]any{"employees": people})
 }
 
-func (s *server) getEmployee(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+func (s *server) getEmployee(w http.ResponseWriter, r *http.Request, _ auth.ActorIdentity) {
 	detail, err := s.service.EmployeeByID(r.Context(), r.PathValue("actorId"))
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -711,7 +711,7 @@ func (s *server) getEmployee(w http.ResponseWriter, r *http.Request, _ auth.Iden
 	sendJSON(w, http.StatusOK, detail)
 }
 
-func (s *server) updateEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) updateEmployee(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	var input workforce.UpdateEmployeeInput
 	if !decodeJSON(w, r, &input) {
 		return

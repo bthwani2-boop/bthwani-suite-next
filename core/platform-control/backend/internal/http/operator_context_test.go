@@ -12,7 +12,7 @@ func TestOperatorContextAcceptsIdentityOwnedContext(t *testing.T) {
 	request := httptest.NewRequest("GET", "/platform/v1/runtime-config", nil)
 	response := httptest.NewRecorder()
 
-	ok := enforceOperatorContext(response, request, auth.Identity{
+	ok := enforceOperatorContext(response, request, auth.ActorIdentity{
 		Subject:           "operator-1",
 		OperatorContextID: "platform-main",
 	})
@@ -26,7 +26,7 @@ func TestOperatorContextRejectsMissingIdentityContext(t *testing.T) {
 	request := httptest.NewRequest("GET", "/platform/v1/runtime-config", nil)
 	response := httptest.NewRecorder()
 
-	if enforceOperatorContext(response, request, auth.Identity{Subject: "operator-1"}) {
+	if enforceOperatorContext(response, request, auth.ActorIdentity{Subject: "operator-1"}) {
 		t.Fatal("expected missing identity operator context to fail closed")
 	}
 	if response.Code != 403 || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
@@ -38,7 +38,7 @@ func TestOperatorContextAcceptsAnotherIdentityOwnedContext(t *testing.T) {
 	request := httptest.NewRequest("GET", "/platform/v1/runtime-config", nil)
 	response := httptest.NewRecorder()
 
-	if !enforceOperatorContext(response, request, auth.Identity{Subject: "operator-1", OperatorContextID: "platform-other"}) {
+	if !enforceOperatorContext(response, request, auth.ActorIdentity{Subject: "operator-1", OperatorContextID: "platform-other"}) {
 		t.Fatal("expected Identity-owned operator context to be accepted")
 	}
 	if response.Code != 200 {
@@ -51,7 +51,7 @@ func TestOperatorContextRejectsClientOverride(t *testing.T) {
 	request.Header.Set("X-Operator-Context-ID", "platform-other")
 	response := httptest.NewRecorder()
 
-	if enforceOperatorContext(response, request, auth.Identity{Subject: "operator-1", OperatorContextID: "platform-main"}) {
+	if enforceOperatorContext(response, request, auth.ActorIdentity{Subject: "operator-1", OperatorContextID: "platform-main"}) {
 		t.Fatal("expected client operator-context override to fail closed")
 	}
 	if response.Code != 403 || !strings.Contains(response.Body.String(), "UNTRUSTED_OPERATOR_CONTEXT") {
@@ -64,7 +64,7 @@ func TestOperatorContextDoesNotDependOnProcessConfiguration(t *testing.T) {
 	request := httptest.NewRequest("GET", "/platform/v1/runtime-config", nil)
 	response := httptest.NewRecorder()
 
-	if !enforceOperatorContext(response, request, auth.Identity{Subject: "operator-1", OperatorContextID: "platform-main"}) {
+	if !enforceOperatorContext(response, request, auth.ActorIdentity{Subject: "operator-1", OperatorContextID: "platform-main"}) {
 		t.Fatal("expected Identity-owned operator context to remain authoritative")
 	}
 	if response.Code != 200 {

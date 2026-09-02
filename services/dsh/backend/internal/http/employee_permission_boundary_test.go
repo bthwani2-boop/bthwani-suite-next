@@ -12,7 +12,7 @@ import (
 func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(auth.Identity{
+		_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 			Subject:           "operations-manager-1",
 			OperatorContextID: "OperatorContext-main",
 			Roles:             []string{"employee", "workforce.supervise.employee"},
@@ -73,7 +73,7 @@ func TestEmployeeExactPermissionDoesNotCrossDshDomains(t *testing.T) {
 func TestRegularEmployeeHasNoImplicitOperatorAuthority(t *testing.T) {
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(auth.Identity{
+		_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 			Subject:           "staff-1",
 			OperatorContextID: "OperatorContext-main",
 			Roles:             []string{"employee"},
@@ -96,7 +96,7 @@ func TestRegularEmployeeHasNoImplicitOperatorAuthority(t *testing.T) {
 func TestPermissionWithoutScopeFailsClosed(t *testing.T) {
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(auth.Identity{
+		_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 			Subject:           "scope-less-manager",
 			OperatorContextID: "OperatorContext-main",
 			Roles:             []string{"employee"},
@@ -123,7 +123,7 @@ func TestEmployeePermissionCannotCrossSessionSurface(t *testing.T) {
 	permission := auth.Permission{Service: "dsh", Surface: "control-panel", Action: OperationsPermissionManage, Scope: "all"}
 	s := fakeIdentityServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(auth.Identity{
+		_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 			Subject:           "operations-manager-1",
 			OperatorContextID: "OperatorContext-main",
 			Roles:             []string{"employee"},

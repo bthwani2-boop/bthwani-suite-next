@@ -11,7 +11,7 @@ import (
 // handleGetCurrentProviderReadiness exposes only the Workforce-owned current
 // provider readiness decision. Cross-service operational readiness is composed by the owning
 // journey (for example DSH captain readiness), never fabricated here.
-func (s *server) handleGetCurrentProviderReadiness(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+func (s *server) handleGetCurrentProviderReadiness(w http.ResponseWriter, r *http.Request, identity auth.ActorIdentity) {
 	actorID := r.PathValue("actorId")
 	if actorID == "" {
 		sendError(w, http.StatusBadRequest, "BAD_REQUEST", "missing actorId")

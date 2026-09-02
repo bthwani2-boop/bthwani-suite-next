@@ -43,7 +43,7 @@ func TestCreateFieldOnboardingAssignmentRejectsUnavailableWorkforceAfterValidati
 	s := fakeIdentityServerWithRBAC(t,
 		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(auth.Identity{
+			_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 				Subject: "operator-1", OperatorContextID: "operator-context-1", Roles: []string{"operator"},
 				AuthState: "authenticated", SessionSurface: "control-panel",
 			})
@@ -73,7 +73,7 @@ func fieldAssignmentPermissionServer(t *testing.T, operatorContextID string) *pr
 	return fakeIdentityServerWithRBAC(t,
 		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(auth.Identity{
+			_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 				Subject: "operator-1", OperatorContextID: operatorContextID, Roles: []string{"operator"},
 				AuthState: "authenticated", SessionSurface: "control-panel",
 			})
@@ -122,7 +122,7 @@ func fieldAssignmentFieldServer(t *testing.T, fieldActorID, operatorContextID st
 	t.Helper()
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(auth.Identity{
+		_ = json.NewEncoder(w).Encode(auth.ActorIdentity{
 			Subject: fieldActorID, OperatorContextID: operatorContextID, Roles: []string{"field"},
 			AuthState: "authenticated", SessionSurface: "app-field",
 		})
