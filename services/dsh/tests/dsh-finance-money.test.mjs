@@ -1,19 +1,7 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
-import ts from "@typescript/typescript6";
 
-const testDirectory = path.dirname(fileURLToPath(import.meta.url));
-const source = fs.readFileSync(
-  path.resolve(testDirectory, "../../dsh/frontend/wlt/finance/wlt-money.ts"),
-  "utf8",
-);
-const transpiled = ts.transpileModule(source, {
-  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
-}).outputText;
-const money = await import(`data:text/javascript;base64,${Buffer.from(transpiled).toString("base64")}`);
+const money = await import("../dist/services/dsh/frontend/shared/finance/wlt-money.js");
 
 test("currency fraction digits follow ISO metadata", () => {
   assert.equal(money.resolveWltCurrencyFractionDigits("YER"), 0);

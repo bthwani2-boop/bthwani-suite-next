@@ -9,7 +9,7 @@ import {
   resolveReconciliationCase,
   type FinanceActionResult,
   type ReconciliationCase,
-} from '@bthwani/dsh/wlt';
+} from '@bthwani/dsh/control-panel/finance';
 
 export function ReconciliationCasesPanel({ canManage }: { readonly canManage: boolean }) {
   const [cases, setCases] = useState<readonly ReconciliationCase[] | null>(null);

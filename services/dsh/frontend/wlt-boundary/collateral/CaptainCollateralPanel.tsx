@@ -2,7 +2,7 @@ import React from "react";
 import { View } from "react-native";
 import { Badge, Box, Button, Divider, StateView, Text, spacing, useTheme } from "@bthwani/ui-kit";
 import { corrId } from "../../shared/_kernel/dsh-http-request";
-import { formatWltMoney } from "../finance/wlt-money";
+import { formatWltMoney } from "../../shared/finance/wlt-money";
 import {
   fetchOwnCaptainCollateral,
   releaseCaptainCollateral,

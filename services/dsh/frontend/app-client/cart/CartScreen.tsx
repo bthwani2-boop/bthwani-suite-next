@@ -26,7 +26,7 @@ import type {
 import type { CheckoutToOrderFlowState, DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
 import { getDshDeliveryModeDefinition } from "../../shared/delivery/delivery.contract";
-import { useWltPaymentController } from "@bthwani/dsh/wlt";
+import { useWltPaymentController } from "@bthwani/dsh/wlt-boundary";
 import { useStoreDetailController } from "../../shared/store";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 import { CartConflictSheet } from "./CartConflictSheet";

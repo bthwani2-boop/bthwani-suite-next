@@ -107,7 +107,7 @@ describe("DSH/WLT frontend truth authority", () => {
 
   it("does not restore a retired WLT-side transport authority in the DSH-owned wallet surface", () => {
     const violations = [];
-    for (const absolutePath of listSourceFiles("services/dsh/frontend/wlt")) {
+    for (const absolutePath of listSourceFiles("services/dsh/frontend/wlt-boundary")) {
       const source = fs.readFileSync(absolutePath, "utf8");
       if (/from\s+["'][^"']*(?:\/dsh-http\/|dsh-link\/)/.test(source)) {
         violations.push(relativeToRepository(absolutePath));

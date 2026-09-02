@@ -15,7 +15,7 @@ import {
   useOrderPreparationReadback,
 } from '../../shared/orders';
 import { OrderTruthReadbackSummary } from '../../shared/order-truth';
-import { formatWltMoney } from '@bthwani/dsh/wlt';
+import { formatWltMoney } from '@bthwani/dsh/finance';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
 import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 import { resolveRuntimeOrderStatusTone } from '../shared/ControlPanelDshDecisionBoard';

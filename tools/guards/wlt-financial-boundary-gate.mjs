@@ -31,7 +31,7 @@ function requireCanonicalMarkers(file, source, markers) {
 
 // 0. Applications and the control panel may consume finance only through DSH.
 // WLT remains an internal service-to-service dependency of DSH. The DSH-owned
-// wallet surface (services/dsh/frontend/wlt) consumes WLT contract types only
+// wallet surface (services/dsh/frontend/wlt-boundary) consumes WLT contract types only
 // through the declared public export '@bthwani/wlt/openapi'.
 const directAppWltPatterns = [
   [/from\s+['"]@bthwani\/wlt(?!\/openapi\b)[^'"]*['"]/, "APPLICATION_IMPORTS_WLT_DEEP_PATHS"],

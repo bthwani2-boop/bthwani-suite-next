@@ -11,7 +11,7 @@ import {
   radius,
   spacing,
 } from '@bthwani/ui-kit';
-import { getWltDshPartnerCommissionLabel, wltDshPartnerUiCopy } from '@bthwani/dsh/wlt';
+import { getWltDshPartnerCommissionLabel, wltDshPartnerUiCopy } from '@bthwani/dsh/wlt-boundary';
 import type { PartnerHubSection } from '../dsh-partner.types';
 import type {
   HubNavigationItem,

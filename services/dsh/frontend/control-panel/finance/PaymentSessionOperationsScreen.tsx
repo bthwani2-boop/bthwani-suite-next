@@ -8,16 +8,16 @@ import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpTextInput } from "@bt
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import {
-  formatWltMoney,
   presentWltPaymentSessionStatus,
   requiresWltPaymentReconciliation,
   type WltPaymentSessionTimeline,
-} from '@bthwani/dsh/wlt';
+} from '@bthwani/dsh/wlt-boundary';
+import { formatWltMoney } from '@bthwani/dsh/finance';
 import {
   loadPaymentSessionTimeline,
   refreshPaymentSessionProviderStatus,
   type PaymentSessionRuntimeError,
-} from '@bthwani/dsh/wlt';
+} from '@bthwani/dsh/wlt-boundary';
 
 type ScreenState = "idle" | "loading" | "ready" | "refreshing" | "offline" | "forbidden" | "not_found" | "conflict" | "error";
 

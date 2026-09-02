@@ -1,5 +1,5 @@
 import type { WltDshFieldCommissionReference } from "./wlt-field-commission.types";
-import { formatWltMoney } from "../finance/wlt-money";
+import { formatWltMoney } from "../../shared/finance/wlt-money";
 
 export interface WltFieldCommissionViewModel {
   readonly id: string;

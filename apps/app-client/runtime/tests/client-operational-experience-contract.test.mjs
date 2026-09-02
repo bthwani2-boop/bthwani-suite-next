@@ -526,7 +526,7 @@ test("checkout keeps an unresolved payment intent visible and blocks duplicate s
 
 test("client payment choices honor the provider capability boundary", () => {
   const payment = assertMarkers(
-    "services/dsh/frontend/wlt/payment/use-wlt-payment-controller.tsx",
+    "services/dsh/frontend/wlt-boundary/payment/use-wlt-payment-controller.tsx",
     [
       "providerPaymentsEnabled &&",
       "method === \"wallet\" && (!providerPaymentsEnabled || !hasSufficientWallet)",

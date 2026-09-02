@@ -10,8 +10,8 @@ import {
   rejectPayoutRequest,
   type FinanceActionResult,
   type FinancePayoutRequest,
-  formatWltMoney,
-} from '@bthwani/dsh/wlt';
+} from '@bthwani/dsh/control-panel/finance';
+import { formatWltMoney } from '@bthwani/dsh/finance';
 
 type PayoutRequestsPanelProps = {
   readonly requests: readonly FinancePayoutRequest[];

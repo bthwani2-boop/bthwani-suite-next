@@ -1,5 +1,5 @@
 import type { OrderTruth, OrderTruthEvent } from "./order-truth.types";
-import { formatWltMoney } from "@bthwani/dsh/wlt";
+import { formatWltMoney } from "@bthwani/dsh/finance";
 
 const STATUS_LABELS: Readonly<Record<string, string>> = {
   pending: "بانتظار قبول المتجر",

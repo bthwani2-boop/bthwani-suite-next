@@ -8,7 +8,7 @@ import { configureSecureRandomUuidProvider } from "../dist/services/dsh/frontend
 import {
   clearCommissionAdjustmentAttempt,
   getOrCreateCommissionAdjustmentAttempt,
-} from "../dist/services/dsh/frontend/wlt/commissions/commission-adjustment-attempt.js";
+} from "../dist/services/dsh/frontend/wlt-boundary/commissions/commission-adjustment-attempt.js";
 
 const INSTALLATION_KEY = "@bthwani/installation-id/v1";
 const panelSource = readFileSync(
@@ -16,7 +16,7 @@ const panelSource = readFileSync(
   "utf8",
 );
 const apiSource = readFileSync(
-  resolve(process.cwd(), "services/dsh/frontend/wlt/commissions/commission.api.ts"),
+  resolve(process.cwd(), "services/dsh/frontend/wlt-boundary/commissions/commission.api.ts"),
   "utf8",
 );
 

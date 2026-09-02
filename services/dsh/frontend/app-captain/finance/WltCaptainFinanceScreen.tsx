@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Box, MobileScrollView, TopBar, useTheme } from '@bthwani/ui-kit';
-import { WltDshCaptainBridge, ActorWalletPanel, RepresentativeCommissionPanel, PayoutDestinationPanel, CaptainCashInPanel, CaptainCollateralPanel } from '@bthwani/dsh/wlt';
+import { WltDshCaptainBridge, ActorWalletPanel, RepresentativeCommissionPanel, PayoutDestinationPanel, CaptainCashInPanel, CaptainCollateralPanel } from '@bthwani/dsh/wlt-boundary';
 import { CaptainFinancialEligibilityPanel } from '../../../../dsh/frontend/shared/dispatch';
 import { ProviderIncidentsPanel } from '../../../../dsh/frontend/shared/workforce/ProviderIncidentsPanel';
 import { DshOperationScreen } from '../../../../dsh/frontend/app-captain/DshOperationScreen';

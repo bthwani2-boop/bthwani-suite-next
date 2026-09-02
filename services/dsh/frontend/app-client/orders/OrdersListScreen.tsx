@@ -22,7 +22,7 @@ import {
   useOrderTruthCollectionController,
   type OrderTruth,
 } from "../../shared/order-truth";
-import { OrderRefundStatusCard } from '@bthwani/dsh/wlt';
+import { OrderRefundStatusCard } from '@bthwani/dsh/wlt-boundary';
 
 type StatusTone = "neutral" | "success" | "warning" | "danger" | "info";
 

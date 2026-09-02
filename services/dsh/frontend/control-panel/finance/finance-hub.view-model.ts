@@ -10,7 +10,7 @@ import type {
   WltLedgerEntryKind,
   WltLedgerEntryStatus,
 } from "./finance-hub.types";
-import { formatWltMoney } from "./wlt-money";
+import { formatWltMoney } from "../../shared/finance/wlt-money";
 
 export function formatWltYer(minorUnits: number): string {
   return formatWltMoney(Math.abs(minorUnits), "YER");

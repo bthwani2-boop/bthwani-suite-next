@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Badge, Button, Icon, Surface, Text, alpha, colorRoles, radius, spacing } from "@bthwani/ui-kit";
 import type { DshCart, DshCartItem, DshCartItemValidation, DshFulfillmentMode } from "../../shared/cart";
-import { formatWltMoney } from "@bthwani/dsh/wlt";
+import { formatWltMoney } from "@bthwani/dsh/finance";
 import { getDshDeliveryModeDefinition } from "../../shared/delivery/delivery.contract";
 
 function fulfillmentLabel(mode: DshFulfillmentMode): string {

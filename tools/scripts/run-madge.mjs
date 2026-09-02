@@ -42,7 +42,7 @@ const madgeConfig = {
 try {
   const graph = await madge([
     "services/dsh/frontend",
-    "services/dsh/frontend/wlt",
+    "services/dsh/frontend/wlt-boundary",
     "apps/control-panel/runtime/src",
   ], madgeConfig);
   const circular = graph.circular();

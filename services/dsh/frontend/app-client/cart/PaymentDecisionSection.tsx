@@ -12,7 +12,7 @@ import {
 import type {
   PaymentDecisionOption,
   PaymentMethodKey,
-} from "@bthwani/dsh/wlt";
+} from "@bthwani/dsh/wlt-boundary";
 
 type Props = {
   readonly paymentMethod: PaymentMethodKey;

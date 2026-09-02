@@ -6,7 +6,7 @@ import {
   formatWltMoney,
   minorUnitsToWltMajorInput,
   parseWltMajorInputToMinorUnits,
-} from "@bthwani/dsh/wlt";
+} from "@bthwani/dsh/finance";
 import { CpButton } from "@bthwani/control-panel/components";
 import {
   useLoyaltyPolicyController,

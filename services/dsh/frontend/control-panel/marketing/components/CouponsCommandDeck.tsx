@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
-import { formatWltMoney, parseWltMajorInputToMinorUnits } from "@bthwani/dsh/wlt";
+import { formatWltMoney, parseWltMajorInputToMinorUnits } from "@bthwani/dsh/finance";
 import { CpButton } from "@bthwani/control-panel/components";
 import { useCouponsController } from "../../../shared/marketing/use-coupons-controller";
 import type {

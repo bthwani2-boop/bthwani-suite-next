@@ -5,7 +5,7 @@ import { configureBthwaniDurableStorage } from "@bthwani/data-runtime/storage-ad
 import {
   clearCaptainCashInMutationContext,
   getOrCreateCaptainCashInMutationContext,
-} from "../dist/services/dsh/frontend/wlt/payment/captain-cash-in.api.js";
+} from "../dist/services/dsh/frontend/wlt-boundary/payment/captain-cash-in.api.js";
 
 function memoryDurable() {
   const map = new Map();

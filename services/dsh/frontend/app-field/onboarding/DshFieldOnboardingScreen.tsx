@@ -50,7 +50,7 @@ import {
   markFieldOnboardingRead,
   type OnboardingCollaborationView,
 } from '../../shared/field-assignment';
-import { formatWltMoney } from '@bthwani/dsh/wlt';
+import { formatWltMoney } from '@bthwani/dsh/finance';
 import { OnboardingBasicsSection } from '../components/OnboardingBasicsSection';
 import { OnboardingLocationSection } from '../components/OnboardingLocationSection';
 import {

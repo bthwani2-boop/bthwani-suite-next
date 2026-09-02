@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button, Screen, StateView, Text, TextField, colorRoles, spacing } from "@bthwani/ui-kit";
-import { formatWltMoney } from "@bthwani/dsh/wlt";
+import { formatWltMoney } from "@bthwani/dsh/finance";
 import {
   canClientApproveSpecialRequestQuote,
   canClientCancelSpecialRequest,

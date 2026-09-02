@@ -175,7 +175,7 @@
         "frontend/shared/partner-delivery/PartnerDeliveryStatusCard.tsx",
         "frontend/shared/partner/operator-delivery-pricing.tsx",
         "frontend/shared/workforce/WorkforceErrorState.tsx",
-        "frontend/wlt/index.ts"
+        "frontend/wlt-boundary/index.ts"
       ],
       "ignoreFiles": [
         "frontend/shared/**/generated/**"

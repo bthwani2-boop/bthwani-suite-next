@@ -12,7 +12,7 @@ import {
 } from "@bthwani/ui-kit";
 import type { RepresentativeWalletActorType, RepresentativeLedgerEntry } from "./actor-wallet.api";
 import { useActorWalletController } from "./use-actor-wallet-controller";
-import { formatWltMoney } from "../finance/wlt-money";
+import { formatWltMoney } from "../../shared/finance/wlt-money";
 
 export type ActorWalletPanelProps = {
   readonly actorType: RepresentativeWalletActorType;

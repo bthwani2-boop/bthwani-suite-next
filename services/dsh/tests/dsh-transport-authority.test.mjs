@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const serviceRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const walletRoot = join(serviceRoot, "..", "dsh", "frontend", "wlt");
+const walletRoot = join(serviceRoot, "..", "dsh", "frontend", "wlt-boundary");
 
 function sourceFiles(root) {
   const files = [];

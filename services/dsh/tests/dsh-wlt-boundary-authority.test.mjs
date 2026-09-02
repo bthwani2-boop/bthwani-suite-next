@@ -47,7 +47,7 @@ test("DSH frontend does not own fixed financial or delivery policy truth", () =>
 });
 
 test("WLT DSH-facing transport has one canonical implementation", () => {
-  const root = path.join(repoRoot, "services/dsh/frontend/wlt");
+  const root = path.join(repoRoot, "services/dsh/frontend/wlt-boundary");
   for (const file of listCodeFiles(root)) {
     const source = fs.readFileSync(file, "utf8");
     assert.doesNotMatch(
@@ -58,9 +58,34 @@ test("WLT DSH-facing transport has one canonical implementation", () => {
   }
 });
 
+test("DSH exposes an explicit WLT boundary and WLT stays API-only to frontend consumers", () => {
+  const dshPackage = JSON.parse(read("services/dsh/package.json"));
+  const wltPackage = JSON.parse(read("services/wlt/package.json"));
+
+  assert.equal(
+    dshPackage.exports["./wlt-boundary"],
+    "./frontend/wlt-boundary/index.ts",
+  );
+  assert.equal(
+    Object.hasOwn(dshPackage.exports, "./wlt"),
+    false,
+    "retired ambiguous DSH WLT export must not return",
+  );
+  assert.deepEqual(
+    wltPackage.exports,
+    { "./openapi": "./clients/generated/wlt-api.ts" },
+    "WLT package must expose only its generated contract to frontend consumers",
+  );
+  assert.equal(
+    wltPackage.dependencies && Object.keys(wltPackage.dependencies).length,
+    0,
+    "WLT must not regain frontend application dependencies",
+  );
+});
+
 test("named WLT financial records and lifecycle states come from OpenAPI", () => {
   const boundary = read(
-    "services/dsh/frontend/wlt/finance-boundary/wlt-dsh-boundary.types.ts",
+    "services/dsh/frontend/wlt-boundary/finance-boundary/wlt-dsh-boundary.types.ts",
   );
   for (const marker of [
     'components["schemas"]["PaymentStatus"]',
@@ -87,14 +112,14 @@ test("named WLT financial records and lifecycle states come from OpenAPI", () =>
   }
 
   const commissionApi = read(
-    "services/dsh/frontend/wlt/commissions/commission.api.ts",
+    "services/dsh/frontend/wlt-boundary/commissions/commission.api.ts",
   );
   assert.match(commissionApi, /@bthwani\/wlt\/openapi/);
   assert.doesNotMatch(commissionApi, /export type Commission\s*=\s*\{/);
   assert.doesNotMatch(commissionApi, /export type CommissionDetail\s*=\s*\{/);
 
   const walletApi = read(
-    "services/dsh/frontend/wlt/actor-wallet/actor-wallet.api.ts",
+    "services/dsh/frontend/wlt-boundary/actor-wallet/actor-wallet.api.ts",
   );
   assert.match(walletApi, /components\["schemas"\]\["LedgerEntry"\]/);
   assert.doesNotMatch(

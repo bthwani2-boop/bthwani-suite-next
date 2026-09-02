@@ -5,7 +5,7 @@ import { colorRoles } from "@bthwani/ui-kit";
 import {
   minorUnitsToWltMajorInput,
   parseWltMajorInputToMinorUnits,
-} from "@bthwani/dsh/wlt";
+} from "@bthwani/dsh/finance";
 import { CpButton } from "@bthwani/control-panel/components";
 import type {
   CouponDiscountType,

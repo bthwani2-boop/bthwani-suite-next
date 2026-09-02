@@ -6,7 +6,7 @@ import { Card, StateView, Text } from "@bthwani/ui-kit";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { CpBadge, CpButton, CpKpiCard, CpKpiStrip, CpTabs } from "@bthwani/control-panel/components";
 import { OverviewPageFrame } from "@bthwani/control-panel/shell";
-import { useFinanceController } from '@bthwani/dsh/wlt';
+import { useFinanceController } from './finance.controller';
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { CommissionGovernancePanel } from "./CommissionGovernancePanel";
 import { GovernedSettlementPanel } from "./GovernedSettlementPanel";
@@ -16,7 +16,7 @@ import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
 import { RepresentativeWalletLookup } from "./RepresentativeWalletLookup";
-import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from '@bthwani/dsh/wlt';
+import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from './finance-hub.types';
 
 type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
 

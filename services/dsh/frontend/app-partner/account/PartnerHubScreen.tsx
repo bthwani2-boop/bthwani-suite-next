@@ -18,7 +18,7 @@ import { useIdentitySession } from "@bthwani/core-identity";
 import {
   getWltDshPartnerOperationalModeCommission,
   WltDshPartnerBridge,
-} from "@bthwani/dsh/wlt";
+} from "@bthwani/dsh/wlt-boundary";
 import { useNotificationsController } from "../../shared/notifications";
 import type { DshNotificationPreference } from "../../shared/notifications";
 import { resolveDshStoreClientVisibility } from "../../shared/partner/dsh-client-visibility.model";

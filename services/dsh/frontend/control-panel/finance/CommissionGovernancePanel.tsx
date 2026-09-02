@@ -7,7 +7,7 @@ import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpButton, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
-import { formatWltMoney } from '@bthwani/dsh/wlt';
+import { formatWltMoney } from '@bthwani/dsh/finance';
 import {
   adjustCommission,
   clearCommissionAdjustmentAttempt,
@@ -22,7 +22,7 @@ import {
   type CommissionAdjustmentAttemptIntent,
   type CommissionPolicyInput,
   type RepresentativeActorType,
-} from '@bthwani/dsh/wlt';
+} from '@bthwani/dsh/wlt-boundary';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),

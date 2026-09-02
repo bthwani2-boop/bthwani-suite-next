@@ -8,15 +8,15 @@ import { configureSecureRandomUuidProvider } from "../dist/services/dsh/frontend
 import {
   clearPayoutAttempt,
   getOrCreatePayoutAttempt,
-} from "../dist/services/dsh/frontend/wlt/payouts/payout-attempt.js";
+} from "../dist/services/dsh/frontend/wlt-boundary/payouts/payout-attempt.js";
 
 const INSTALLATION_KEY = "@bthwani/installation-id/v1";
 const panelSource = readFileSync(
-  resolve(process.cwd(), "services/dsh/frontend/wlt/payouts/PayoutDestinationPanel.tsx"),
+  resolve(process.cwd(), "services/dsh/frontend/wlt-boundary/payouts/PayoutDestinationPanel.tsx"),
   "utf8",
 );
 const fieldControllerSource = readFileSync(
-  resolve(process.cwd(), "services/dsh/frontend/wlt/field-finance/use-field-finance-controller.ts"),
+  resolve(process.cwd(), "services/dsh/frontend/wlt-boundary/field-finance/use-field-finance-controller.ts"),
   "utf8",
 );
 
