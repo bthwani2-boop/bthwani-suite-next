@@ -11,7 +11,7 @@ test("Captain delivery exceptions use one durable command identity end to end", 
   const api = read("services/dsh/frontend/shared/dispatch/dispatch.api.ts");
   const domain = read("services/dsh/backend/internal/dispatch/delivery_exceptions.go");
   const handoff = read("services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions.go");
-  const handler = read("services/dsh/backend/internal/http/delivery_exception_governance.go");
+  const handler = read("services/dsh/backend/internal/http/dispatch.go");
   const migration = read("services/dsh/database/migrations/dsh-1067_delivery_exception_command_identity.sql");
   const contract = read("services/dsh/contracts/paths/dispatch.paths.yaml");
 
