@@ -116,7 +116,7 @@ WHERE id = ANY($1)`, pq.Array(fixtureActorIDs()))
 	if err != nil {
 		return false, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	seen := make(map[string]bool, len(fixtures))
 	for rows.Next() {
@@ -198,16 +198,18 @@ ORDER BY role.name`, actorID)
 	for roleRows.Next() {
 		var role string
 		if err := roleRows.Scan(&role); err != nil {
-			roleRows.Close()
+			_ = roleRows.Close()
 			return nil, nil, err
 		}
 		roles = append(roles, role)
 	}
 	if err := roleRows.Err(); err != nil {
-		roleRows.Close()
+		_ = roleRows.Close()
 		return nil, nil, err
 	}
-	roleRows.Close()
+	if err := roleRows.Close(); err != nil {
+		return nil, nil, err
+	}
 
 	permissionRows, err := db.QueryContext(ctx, `
 SELECT vocabulary.service, vocabulary.surface, vocabulary.action, direct_permission.scope
@@ -222,16 +224,18 @@ ORDER BY vocabulary.service, vocabulary.surface, vocabulary.action, direct_permi
 	for permissionRows.Next() {
 		var permission identity.Permission
 		if err := permissionRows.Scan(&permission.Service, &permission.Surface, &permission.Action, &permission.Scope); err != nil {
-			permissionRows.Close()
+			_ = permissionRows.Close()
 			return nil, nil, err
 		}
 		permissions = append(permissions, permission)
 	}
 	if err := permissionRows.Err(); err != nil {
-		permissionRows.Close()
+		_ = permissionRows.Close()
 		return nil, nil, err
 	}
-	permissionRows.Close()
+	if err := permissionRows.Close(); err != nil {
+		return nil, nil, err
+	}
 	return roles, permissions, nil
 }
 
