@@ -87,12 +87,13 @@ func TestGovernedCommissionLifecycleConfirmSettleMovesOperatorContextWalletBucke
         defer db.Close()
         fixture := createGovernedCommissionLifecycleFixture(t, db)
 
-        confirmed, err := ConfirmGovernedCommission(
+        confirmed, err := ConfirmGovernedCommissionIdempotent(
                 fixture.ctx,
                 db,
                 fixture.item.ID,
                 "operator-confirm",
                 "confirm-"+fixture.item.ID,
+                "confirm-idempotency-"+fixture.item.ID,
         )
         if err != nil {
                 t.Fatalf("confirm governed commission: %v", err)
@@ -109,12 +110,13 @@ func TestGovernedCommissionLifecycleConfirmSettleMovesOperatorContextWalletBucke
                 t.Fatalf("unexpected OperatorContext wallet before settle: %+v", before)
         }
 
-        settled, err := SettleGovernedCommission(
+        settled, err := SettleGovernedCommissionIdempotent(
                 fixture.ctx,
                 db,
                 fixture.item.ID,
                 "operator-settle",
                 "settle-"+fixture.item.ID,
+                "settle-idempotency-"+fixture.item.ID,
         )
         if err != nil {
                 t.Fatalf("settle governed commission: %v", err)
@@ -142,12 +144,13 @@ func TestGovernedCommissionLifecycleSettleRequiresConfirmedFirst(t *testing.T) {
         defer db.Close()
         fixture := createGovernedCommissionLifecycleFixture(t, db)
 
-        if _, err := SettleGovernedCommission(
+        if _, err := SettleGovernedCommissionIdempotent(
                 fixture.ctx,
                 db,
                 fixture.item.ID,
                 "operator-settle",
                 "settle-before-confirm-"+fixture.item.ID,
+                "settle-before-confirm-idempotency-"+fixture.item.ID,
         ); err != ErrCommissionNotInExpectedState {
                 t.Fatalf("expected ErrCommissionNotInExpectedState, got %v", err)
         }
@@ -161,13 +164,14 @@ func TestGovernedCommissionLifecycleRejectReversesOperatorContextWalletAndLedger
         defer db.Close()
         fixture := createGovernedCommissionLifecycleFixture(t, db)
 
-        rejected, err := RejectGovernedCommission(
+        rejected, err := RejectGovernedCommissionIdempotent(
                 fixture.ctx,
                 db,
                 fixture.item.ID,
                 "operator-reject",
                 "duplicate visit",
                 "reject-"+fixture.item.ID,
+                "reject-idempotency-"+fixture.item.ID,
         )
         if err != nil {
                 t.Fatalf("reject governed commission: %v", err)
@@ -203,24 +207,27 @@ func TestGovernedCommissionLifecycleReverseAfterSettled(t *testing.T) {
         defer db.Close()
         fixture := createGovernedCommissionLifecycleFixture(t, db)
 
-        if _, err := ConfirmGovernedCommission(
+        if _, err := ConfirmGovernedCommissionIdempotent(
                 fixture.ctx, db, fixture.item.ID, "operator-confirm", "confirm-"+fixture.item.ID,
+                "confirm-idempotency-"+fixture.item.ID,
         ); err != nil {
                 t.Fatalf("confirm governed commission: %v", err)
         }
-        if _, err := SettleGovernedCommission(
+        if _, err := SettleGovernedCommissionIdempotent(
                 fixture.ctx, db, fixture.item.ID, "operator-settle", "settle-"+fixture.item.ID,
+                "settle-idempotency-"+fixture.item.ID,
         ); err != nil {
                 t.Fatalf("settle governed commission: %v", err)
         }
 
-        reversed, err := ReverseGovernedCommission(
+        reversed, err := ReverseGovernedCommissionIdempotent(
                 fixture.ctx,
                 db,
                 fixture.item.ID,
                 "operator-reverse",
                 "fraud confirmed after settlement",
                 "reverse-"+fixture.item.ID,
+                "reverse-idempotency-"+fixture.item.ID,
         )
         if err != nil {
                 t.Fatalf("reverse governed commission: %v", err)
@@ -237,13 +244,14 @@ func TestGovernedCommissionLifecycleReverseAfterSettled(t *testing.T) {
                 t.Fatalf("OperatorContext wallet was not reversed: %+v", after)
         }
 
-        if _, err := ReverseGovernedCommission(
+        if _, err := ReverseGovernedCommissionIdempotent(
                 fixture.ctx,
                 db,
                 fixture.item.ID,
                 "operator-reverse",
                 "double reverse",
                 "double-reverse-"+fixture.item.ID,
+                "double-reverse-idempotency-"+fixture.item.ID,
         ); err != ErrCommissionNotInExpectedState {
                 t.Fatalf("expected ErrCommissionNotInExpectedState on double reverse, got %v", err)
         }
