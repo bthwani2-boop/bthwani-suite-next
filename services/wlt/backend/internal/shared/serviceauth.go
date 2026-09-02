@@ -35,7 +35,7 @@ func DelegatedFinancePrincipalFromContext(ctx context.Context) (string, bool) {
 func RequireDelegatedFinancePrincipal(ctx context.Context) (string, error) {
 	principalID, ok := DelegatedFinancePrincipalFromContext(ctx)
 	if !ok {
-		return "", fmt.Errorf("Identity-authenticated delegated finance principal is required")
+		return "", fmt.Errorf("identity-authenticated delegated finance principal is required")
 	}
 	return principalID, nil
 }
