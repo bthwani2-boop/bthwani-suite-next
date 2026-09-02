@@ -129,7 +129,7 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 	if err != nil {
 		return ActorAdminView{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	existing, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
@@ -213,7 +213,7 @@ func (r *Repository) SetPartnerStoreAccess(ctx context.Context, actorID string, 
 	if err != nil {
 		return ActorAdminView{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	actor, err := actorByIDForUpdateTx(ctx, tx, actorID)
 	if err != nil {
@@ -283,7 +283,7 @@ func (r *Repository) IssuePartnerActivationForActor(
 	if err != nil {
 		return IssueActivationResult{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	actor, err := actorByIDForUpdateTx(ctx, tx, actorID)
 	if err != nil {
