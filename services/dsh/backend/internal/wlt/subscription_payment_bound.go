@@ -23,13 +23,7 @@ func (c *Client) CreateBoundSubscriptionPaymentSession(
 ) (*SubscriptionPaymentSession, error) {
 	return c.CreateSubscriptionPaymentSession(
 		ctx,
-		CreateSubscriptionPaymentSessionInput{
-			SubscriptionPurchaseID: input.SubscriptionPurchaseID,
-			ProductReference:       input.ProductReference,
-			OperatorContextID:      input.OperatorContextID,
-			ClientID:               input.ClientID,
-			PaymentMethod:          input.PaymentMethod,
-		},
+		CreateSubscriptionPaymentSessionInput(input),
 		idempotencyKey,
 		correlationID,
 	)

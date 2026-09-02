@@ -353,36 +353,12 @@ jobs:
           FULL_SCOPE: ${{ inputs.full_scope }}
         run: |
           set -euo pipefail
-          files=()
-          if [[ "${FULL_SCOPE}" == "true" ]]; then
-            while IFS= read -r file; do
-              files+=("${file}")
-            done < <(find "${MIGRATION_DIRECTORY}" -type f -name '*.sql' -print | sort)
-          else
-            while IFS= read -r file; do
-              [[ -f "${file}" ]] && files+=("${file}")
-            done < <(git diff --name-only --diff-filter=ACMR "${BASE_SHA}" "${HEAD_SHA}" -- "${MIGRATION_DIRECTORY}" | grep -E '\.sql$' || true)
-          fi
-
-          if (( ${#files[@]} == 0 )); then
-            echo "Eugene: no applicable SQL migrations."
-            exit 0
-          fi
-
-          failures=()
-          for file in "${files[@]}"; do
-            echo "===== eugene lint ${file} ====="
-            set +e
-            eugene lint "${file}"
-            code=$?
-            set -e
-            (( code == 0 )) || failures+=("${file}:${code}")
-          done
-
-          if (( ${#failures[@]} )); then
-            echo "::error::Eugene migration findings: $(IFS=,; echo "${failures[*]}")"
-            exit 1
-          fi
+          # Bounded-acceptance gate: applied migrations are immutable, so their
+          # lock-safety findings are frozen historical debt recorded in the
+          # checked-in baseline ledger. The gate fails closed on any NEW
+          # finding (new or amended migrations) and detects ledger drift.
+          node tools/scripts/check-eugene-migrations.mjs \
+            --directory "${MIGRATION_DIRECTORY}"
 
       - name: Apply migrations and verify safety contracts
         shell: pwsh

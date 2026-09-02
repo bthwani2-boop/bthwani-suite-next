@@ -2,9 +2,13 @@ package partnerdelivery
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"strconv"
 	"testing"
 	"time"
+
+	"dsh-api/internal/platformpolicies"
 )
 
 func TestPartnerDeliveryCommandReplayDBIntegration(t *testing.T) {
@@ -83,10 +87,91 @@ func TestPartnerDeliveryCommandContextIsolationDBIntegration(t *testing.T) {
 	}
 }
 
+// seedDeliverySLAPolicyChain provisions the canonical service-area geofence,
+// operational zone, and default-category SLA profile for the fixture service
+// area (SAN-1) so RefreshDeliverySLAAlerts resolves governed thresholds
+// through the real platform-policy chain instead of failing closed. It reuses
+// an existing chain when the shared test database already carries one.
+func seedDeliverySLAPolicyChain(t *testing.T, db *sql.DB) string {
+	t.Helper()
+	ctx := context.Background()
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_service_area_geofences (service_area_code, display_name, polygon, active)
+		VALUES ('san-1', 'Partner Delivery SLA Seed Area', ST_GeomFromText('POLYGON((44.18 15.33,44.20 15.33,44.20 15.35,44.18 15.35,44.18 15.33))', 4326), TRUE)
+		ON CONFLICT (service_area_code) DO NOTHING`); err != nil {
+		t.Fatalf("seed service-area geofence: %v", err)
+	}
+
+	var zoneID string
+	err := db.QueryRowContext(ctx, `
+		SELECT id::text FROM dsh_platform_zones WHERE LOWER(service_area_code) = 'san-1'`).Scan(&zoneID)
+	if errors.Is(err, sql.ErrNoRows) {
+		zone, err := platformpolicies.CreateZone(ctx, db, platformpolicies.CreateZoneInput{
+			Name:            "Partner Delivery SLA Zone",
+			ServiceAreaCode: "san-1",
+			Description:     "partner delivery SLA alert test zone",
+		}, platformpolicies.MutationContext{
+			ActorID:        "pd-sla-seeder-" + suffix,
+			ActorSurface:   "control-panel",
+			IdempotencyKey: "pd-sla-create-zone-" + suffix,
+			CorrelationID:  "pd-sla-seed-" + suffix,
+			Reason:         "provision partner delivery SLA zone for alert refresh test",
+		})
+		if err != nil {
+			t.Fatalf("create operational zone: %v", err)
+		}
+		zoneID = zone.ID
+	} else if err != nil {
+		t.Fatalf("read operational zone: %v", err)
+	}
+
+	var profileExists bool
+	if err := db.QueryRowContext(ctx, `
+		SELECT EXISTS (SELECT 1 FROM dsh_platform_sla_rules WHERE zone_id = $1::uuid)`, zoneID).Scan(&profileExists); err != nil {
+		t.Fatalf("read SLA profile presence: %v", err)
+	}
+	if !profileExists {
+		if _, err := platformpolicies.UpsertOperationalProfile(ctx, db, platformpolicies.UpsertOperationalProfileInput{
+			ZoneID:                     zoneID,
+			SlaCategory:                "default",
+			MaxPrepMins:                25,
+			MaxAssignmentMins:          8,
+			MaxDeliveryMins:            55,
+			WarningBeforeMins:          5,
+			PickupNotifyMins:           10,
+			PickupArrivalMins:          60,
+			PickupVerifyMins:           10,
+			DeliveryAssignToPickupMins: 15,
+			DeliveryPickupToDepartMins: 10,
+			DeliveryDepartToArriveMins: 45,
+			DeliveryArriveToProofMins:  15,
+			ExpectedSlaVersion:         0,
+			MaxConcurrentOrders:        10,
+			MaxCaptainsOnline:          20,
+			ThrottleThreshold:          0.8,
+			IsPaused:                   false,
+			PauseReason:                "",
+			ExpectedCapacityVersion:    0,
+		}, platformpolicies.MutationContext{
+			ActorID:        "pd-sla-seeder-" + suffix,
+			ActorSurface:   "control-panel",
+			IdempotencyKey: "pd-sla-create-profile-" + suffix,
+			CorrelationID:  "pd-sla-seed-" + suffix,
+			Reason:         "provision default SLA profile for alert refresh test",
+		}); err != nil {
+			t.Fatalf("upsert operational profile: %v", err)
+		}
+	}
+	return zoneID
+}
+
 func TestPartnerDeliverySLAAlertContextIsolationDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	owner := seedFixture(t, db, "ready_for_pickup")
 	other := seedFixture(t, db, "ready_for_pickup")
+	seedDeliverySLAPolicyChain(t, db)
 	ctx := context.Background()
 	svc := NewService(db, mockWFServer(t))
 	actorID := "partner-sla-context-isolation-test"

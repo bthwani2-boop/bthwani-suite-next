@@ -76,13 +76,3 @@ func publishOrderEventToOperationalOutbox(ctx context.Context, db *sql.DB, event
 	}
 	return nil
 }
-
-func minOrderBridgeAttempt(value, maximum int) int {
-	if value < 1 {
-		return 1
-	}
-	if value > maximum {
-		return maximum
-	}
-	return value
-}
