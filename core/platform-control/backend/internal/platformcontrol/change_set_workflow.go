@@ -16,7 +16,7 @@ func (r *Repository) ValidateChangeSet(ctx context.Context, id, actorID string, 
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	status, err := lockChangeSetStatus(ctx, tx, id)
 	if err != nil {
@@ -92,7 +92,7 @@ func (r *Repository) governedTransitionWithPreconditions(
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	status, err := lockChangeSetStatus(ctx, tx, id)
 	if err != nil {
@@ -132,7 +132,7 @@ func (r *Repository) ApproveChangeSet(ctx context.Context, id, actorID string, r
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var proposer, rawStatus string
 	if err := tx.QueryRowContext(ctx, `
@@ -183,7 +183,7 @@ func (r *Repository) RejectChangeSet(ctx context.Context, id, actorID string, ro
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var proposer, rawStatus string
 	if err := tx.QueryRowContext(ctx, `
