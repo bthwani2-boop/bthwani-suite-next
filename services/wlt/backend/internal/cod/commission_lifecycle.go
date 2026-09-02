@@ -352,22 +352,6 @@ func decodeLifecycleInput(w http.ResponseWriter, r *http.Request) (CommissionLif
 	return input, true
 }
 
-func writeCommissionLifecycleResult(w http.ResponseWriter, commission *Commission, err error) {
-	if errors.Is(err, ErrCommissionNotInExpectedState) {
-		shared.SendError(w, http.StatusConflict, "INVALID_STATE", err.Error())
-		return
-	}
-	if err != nil {
-		shared.SendError(w, http.StatusConflict, "INVALID_STATE", err.Error())
-		return
-	}
-	if commission == nil {
-		shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "commission not found")
-		return
-	}
-	shared.SendJSON(w, http.StatusOK, map[string]any{"commission": commission})
-}
-
 func HandleGetGovernedCommission(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		detail, err := GetGovernedCommissionDetail(r.Context(), db, r.PathValue("commissionId"))
