@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Define the canonical target and structural delta at the scope needed to execute each proven root safely, while allowing the branch-wide model to mature continuously.
+Define the complete branch-wide canonical target and structural delta before root selection or any material mutation, then refine the selected root's affected cone.
 
-A complete branch-wide `CANONICAL g` and complete branch-wide Structural Delta are **not prerequisites for the first mutation**.
+A complete branch-wide `CANONICAL g` and complete branch-wide Structural Delta are mandatory prerequisites for the first mutation and every subsequent material mutation.
 
 ## Root-scoped canonical target
 
@@ -62,15 +62,15 @@ Do not execute a candidate while its **own** canonical target or affected-cone d
 - deletion safety;
 - whether a higher root subsumes the candidate.
 
-Once those facts are proven and the `ROOT-CORRECT EXECUTION GATE` passes, execution may begin even if unrelated branch-wide delta discovery remains incomplete.
+Once those facts are proven, the complete branch-wide reconstruction baseline is fresh, and the `ROOT-CORRECT EXECUTION GATE` passes, execution may begin. Incomplete unrelated material delta discovery is not an allowed execution state.
 
 ## Branch-wide model
 
-Maintain `CANONICAL g` and the Structural Delta incrementally. Use branch-wide census to expand and challenge them throughout the campaign.
+Build `CANONICAL g` and the Structural Delta completely from the branch-wide census before root selection. Refresh both completely after every material closure or invalidating branch/topology/authority change.
 
 If later evidence proves a higher root, preempt descendant work and recompute the affected target/delta.
 
-The **complete** branch-wide Current↔Canonical fixed-point proof belongs to final adversarial qualification in `06`.
+The complete branch-wide Current↔Canonical model is a pre-mutation requirement; the final adversarial qualification in `06` adds the fixed-point proof and zero-unknowns closure standard.
 
 ## Naming/path/topology standard
 

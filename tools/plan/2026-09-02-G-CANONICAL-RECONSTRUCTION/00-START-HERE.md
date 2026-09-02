@@ -2,7 +2,7 @@
 
 ## Mission
 
-Execute radical root-correct cleanup and reconstruction on isolated branch `g` without turning repository-wide discovery into a blocker for already-proven work.
+Execute radical root-correct cleanup and reconstruction on isolated branch `g`. A complete branch-wide reconstruction baseline is a hard prerequisite for every material mutation.
 
 ```text
 TARGET_BRANCH=g
@@ -44,7 +44,17 @@ When evidence proves the current shape is wrong, the allowed treatment is:
 ```text
 PIN CURRENT HEAD
 ↓
-FIND / CONFIRM HIGHEST PROVEN EXECUTABLE ROOT
+COMPLETE BRANCH-WIDE CENSUS
+↓
+BUILD COMPLETE `CURRENT g`
+↓
+DEFINE COMPLETE `CANONICAL g`
+↓
+COMPUTE COMPLETE STRUCTURAL DELTA
+↓
+SYNTHESIZE / RANK TRUE ROOT GRAPH
+↓
+FIND / CONFIRM HIGHEST PROVEN ROOT
 ↓
 CONFIRM CANONICAL OWNER + SOURCE OF FIX
 ↓
@@ -63,34 +73,49 @@ RE-PIN / RE-DIAGNOSE
 REPEAT
 ```
 
-The campaign does **not** require a complete branch-wide census, complete `CURRENT g`, complete `CANONICAL g`, complete Structural Delta, or complete Root Graph before the first proven root may be executed.
+## MANDATORY PRE-MUTATION RECONSTRUCTION GATE
+
+No material mutation may occur until the following ordered baseline is complete for the exact pinned candidate:
+
+```text
+STEP 0  PIN EXACT LIVE `g`
+STEP 1  COMPLETE BRANCH-WIDE STRUCTURAL CENSUS
+STEP 2  BUILD COMPLETE `CURRENT g`
+STEP 3  DEFINE COMPLETE `CANONICAL g`
+STEP 4  COMPUTE COMPLETE CURRENT→CANONICAL STRUCTURAL DELTA
+STEP 5  SYNTHESIZE AND RANK THE TRUE CAUSAL ROOT GRAPH
+STEP 6  SELECT A ROOT ONLY FROM THAT COMPLETE MODEL
+```
+
+`PRE_MUTATION_RECONSTRUCTION_BASELINE=PASS` is mandatory before the first mutation and before every later material mutation. A changed ref, material topology, owner, contract, data boundary, runtime composition, or tool/workflow authority invalidates the affected baseline and requires the sequence to be rerun before proceeding. There is no exception for an apparently independent, easy, historical, or already-proven root.
 
 ## ROOT-CORRECT EXECUTION GATE
 
-Material mutation is allowed only when the selected root passes all applicable items below:
+Material mutation is allowed only when the complete pre-mutation reconstruction gate and the selected-root gate both pass:
 
 ```text
-1. PIN_HEAD=PASS
-2. CANONICAL_OWNER_CONFIRMED=PASS
-3. CURRENT_DEFECT_AND_CAUSAL_ROOT_PROVEN=PASS
-4. COMPLETE_AFFECTED_CONE_IDENTIFIED=PASS
-5. INTENDED_FINAL_STATE_CONFIRMED=PASS
-6. ROOT_CORRECTION_EXECUTABLE=YES
-7. MIGRATION_CUTOVER_PLAN_COMPLETE=PASS_OR_NA
-8. LOSING_AUTHORITY_AND_RESIDUE_CLEANUP_DEFINED=PASS
-9. VERIFICATION_AND_NEGATIVE_SPACE_DEFINED=PASS
-10. REOPEN_CONDITIONS_DEFINED=PASS
+1. PRE_MUTATION_RECONSTRUCTION_BASELINE=PASS
+2. PIN_HEAD=PASS
+3. CANONICAL_OWNER_CONFIRMED=PASS
+4. CURRENT_DEFECT_AND_CAUSAL_ROOT_PROVEN=PASS
+5. COMPLETE_AFFECTED_CONE_IDENTIFIED=PASS
+6. INTENDED_FINAL_STATE_CONFIRMED=PASS
+7. ROOT_CORRECTION_EXECUTABLE=YES
+8. MIGRATION_CUTOVER_PLAN_COMPLETE=PASS_OR_NA
+9. LOSING_AUTHORITY_AND_RESIDUE_CLEANUP_DEFINED=PASS
+10. VERIFICATION_AND_NEGATIVE_SPACE_DEFINED=PASS
+11. REOPEN_CONDITIONS_DEFINED=PASS
 ```
 
 Core law:
 
-> **NO MUTATION WITHOUT A PROVEN ROOT; DO NOT REQUIRE KNOWING EVERY ROOT IN THE REPOSITORY BEFORE CLOSING THE FIRST PROVEN ROOT.**
+> **NO MATERIAL MUTATION BEFORE A COMPLETE BRANCH-WIDE RECONSTRUCTION BASELINE AND A PROVEN ROOT; NO ROOT MAY BYPASS CENSUS, CURRENT, CANONICAL, DELTA, OR TRUE ROOT SYNTHESIS/RANKING.**
 
 A root is not proven merely because an error exists. The proof must establish the actual Source-of-Defect, Source-of-Fix, canonical owner/writer where applicable, and enough of the affected cone to prevent partial migration, dual authority, hidden consumers, or unsafe deletion.
 
 ## Branch-wide census role
 
-Branch-wide census remains required as a **continuous discovery and final qualification mechanism**, not as a pre-mutation hard gate.
+Branch-wide census is the mandatory **pre-mutation reconstruction gate** and remains a continuous revalidation mechanism after every closure.
 
 Use it to:
 
@@ -101,7 +126,7 @@ Use it to:
 - find naming/path/topology defects;
 - detect roots capable of preempting a planned descendant fix.
 
-Census may continue in parallel with root-correct execution on independently proven affected cones. If census discovers a higher root that invalidates the selected treatment, stop the descendant treatment and promote the higher root.
+No material root execution may run in parallel with an incomplete or stale branch-wide baseline. If the census discovers a higher root or invalidates the selected treatment, stop selection, rebuild the model, and promote the higher root only after the complete gate passes again.
 
 ## Historical findings
 
@@ -137,7 +162,7 @@ A root closes only after all applicable writers/readers/consumers are migrated, 
 
 ## Final campaign qualification
 
-After no proven executable root remains, run the fresh branch-wide adversarial qualification in `06-FINAL-ADVERSARIAL-QUALIFICATION.md`. That is where complete branch-wide fixed-point proof is mandatory.
+After no proven executable root remains on a complete and fresh baseline, run the additional fresh branch-wide adversarial qualification in `06-FINAL-ADVERSARIAL-QUALIFICATION.md`. That final qualification is stricter than the mandatory pre-mutation baseline and is where exact fixed-point proof is established.
 
 ## Success meaning
 

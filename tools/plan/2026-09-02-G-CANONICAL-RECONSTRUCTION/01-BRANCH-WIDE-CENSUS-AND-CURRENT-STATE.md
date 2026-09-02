@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Maintain an evidence-backed view of what branch `g` contains and continuously discover structural roots.
+Build and maintain the complete evidence-backed view of what branch `g` contains before any material root selection or mutation.
 
-The census is **not** a global pre-mutation blocker. A root that independently passes the `ROOT-CORRECT EXECUTION GATE` in `00-START-HERE.md` may be executed before the branch-wide census is complete.
+The census is a hard global pre-mutation gate. No root may be selected or executed before this branch-wide census is complete for the exact pinned candidate.
 
 ## Exact live pin
 
@@ -40,11 +40,11 @@ Use graph/search/runtime/schema/contract/config evidence. Tool output is evidenc
 
 ## Two census modes
 
-### 1. Continuous branch-wide discovery
+### 1. Complete branch-wide reconstruction census
 
-Runs throughout the campaign to discover additional or higher roots. It may remain incomplete while an independently proven root is executed.
+Runs before the first mutation and is rebuilt after every material closure or invalidating ref/topology change. It must cover the actual tracked tree and produce the complete `CURRENT g` input, not an informal sample.
 
-Do not mutate an artifact merely because census discovered it; first pass the root-correct gate.
+Do not mutate an artifact merely because the census discovered it. Complete the current-state model, canonical target, structural delta, and true root synthesis/ranking first.
 
 ### 2. Root-scoped affected-cone census
 
@@ -67,12 +67,12 @@ This root-scoped census **is mandatory** for execution safety.
 
 ## `CURRENT g` model
 
-Maintain `CURRENT g` incrementally as campaign evidence. Update affected portions after each closure and broaden it whenever discovery exposes a higher structural relationship.
+Build `CURRENT g` completely from the branch-wide census before the first mutation. Refresh the complete model after every material closure, branch movement, or discovery that can change ownership, topology, contracts, data, runtime, tooling, or root ranking.
 
-A complete branch-wide `CURRENT g` model is required for final adversarial qualification in `06`, not before every root execution.
+A complete branch-wide `CURRENT g` model is required before every root selection and every material mutation, and is revalidated again during final adversarial qualification in `06`.
 
 ## Preemption rule
 
 If unresolved evidence could change the canonical owner, migration direction, affected cone, or reveal a higher causal root for the root about to be changed, that root is **not executable yet**.
 
-If an unrelated part of the repository remains uncensused and cannot change those facts, it does not block the proven root.
+Any uncensused material tracked area blocks the pre-mutation baseline. Only explicitly proven non-material or out-of-scope content may be excluded, with the exclusion recorded in the census and root graph.

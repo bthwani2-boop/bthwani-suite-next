@@ -2,9 +2,9 @@
 
 ## Purpose
 
-After each coherent Closure Unit, verify the result, refresh affected truth, continue discovery, and choose the next highest proven executable root.
+After each coherent Closure Unit, verify the result, rebuild the complete branch-wide truth model, continue discovery, and choose the next highest proven executable root.
 
-Do not turn historical findings into a static queue and do not require a complete repository-wide model before every next root.
+Do not turn historical findings into a static queue; every next root requires a complete repository-wide model before selection or mutation.
 
 ## Verify and checkpoint the completed root
 
@@ -43,16 +43,22 @@ RE-PIN
 → RE-DIAGNOSE ROOT CANDIDATES
 ```
 
-A full branch-wide Current/Canonical/Delta/Root Graph rebuild is **not mandatory after every root**.
+A full branch-wide Current/Canonical/Delta/Root Graph rebuild is mandatory after every root and before any next material mutation. No stale or affected-cone-only model may authorize the next root.
 
-Broaden the re-census when a closure or new evidence changes a material top-level topology, canonical owner, major data/schema authority, contract/generated authority, runtime/config composition, dependency direction, tooling authority, or reveals a higher root capable of invalidating current treatment.
+The complete re-census is always required. Broaden and invalidate it immediately when a closure or new evidence changes material topology, canonical owner, data/schema authority, contract/generated authority, runtime/config composition, dependency direction, tooling authority, or reveals a higher root capable of invalidating current treatment.
 
 ## Next-root rule
 
-The next root may execute when it passes the `ROOT-CORRECT EXECUTION GATE` from `00`:
+The next root may execute only after `01`→`02`→complete true Root Graph synthesis/ranking refresh has passed, and it also passes the `ROOT-CORRECT EXECUTION GATE` from `00`:
 
 ```text
 PINNED
+PRE_MUTATION_RECONSTRUCTION_BASELINE=PASS
+COMPLETE_BRANCH_WIDE_CENSUS=PASS
+CURRENT_G_COMPLETE=PASS
+CANONICAL_G_COMPLETE=PASS
+STRUCTURAL_DELTA_COMPLETE=PASS
+TRUE_ROOT_GRAPH_SYNTHESIZED_AND_RANKED=PASS
 CANONICAL_OWNER_CONFIRMED
 CAUSAL_ROOT_PROVEN
 COMPLETE_AFFECTED_CONE_MAPPED
@@ -61,7 +67,7 @@ MIGRATION_CUTOVER_CLEANUP_DEFINED
 VERIFICATION_DEFINED
 ```
 
-Unrelated uncensused repository areas do not block that root unless they can materially change its owner, Source-of-Fix, affected cone, cutover direction, or causal rank.
+Any uncensused material repository area blocks that root. Only explicitly proven non-material or out-of-scope content may be excluded from the baseline.
 
 ## Root preemption law
 
@@ -79,9 +85,9 @@ They never become a static queue.
 
 ## Repeat condition
 
-If at least one proven executable root exists, return to `03`, close the highest currently proven causal root, verify, and return here.
+If at least one proven executable root exists, return to `01`, rebuild the complete census/current/canonical/delta model, return to `03`, close the highest ranked causal root, verify, and return here.
 
-Continue branch-wide census/discovery throughout the campaign so newly exposed roots can be promoted as evidence becomes sufficient.
+Continue branch-wide census/discovery throughout the campaign; newly exposed roots must be inserted into a refreshed complete Root Graph and reranked before any mutation.
 
 ## Final transition
 

@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Select the highest **proven executable** causal root currently supported by live evidence and close its complete affected cone end-to-end.
+Select the highest **proven executable** causal root from the complete branch-wide reconstruction baseline and close its complete affected cone end-to-end.
 
-This file may be entered as soon as a root passes the `ROOT-CORRECT EXECUTION GATE` in `00-START-HERE.md`. Completion of the entire branch-wide census, `CURRENT g`, `CANONICAL g`, Structural Delta, or Root Graph is not required first.
+This file may be entered for root selection only after `01` has completed the branch-wide census, `02` has completed `CURRENT g`/`CANONICAL g`/Structural Delta, and the true causal Root Graph has been synthesized and ranked. The `ROOT-CORRECT EXECUTION GATE` cannot bypass that prerequisite.
 
 ## Root selection law
 
@@ -18,7 +18,8 @@ For each candidate:
 4. identify any higher root already supported by evidence;
 5. map the complete affected writers/readers/consumers/data/contracts/runtime/tooling;
 6. prove migration/cutover/deletion safety;
-7. execute only when the root-correct gate passes.
+7. synthesize and rank the complete true Root Graph before choosing the highest root;
+8. execute only when the complete pre-mutation reconstruction gate and root-correct gate both pass.
 
 Among currently proven executable roots, prefer the highest causal/leverage root using:
 
@@ -26,7 +27,7 @@ Among currently proven executable roots, prefer the highest causal/leverage root
 
 Never rank by numeric ID, age, easiest diff, first red check, file count, or finding count.
 
-A repository-wide ranking is not required before executing a root whose affected cone is causally complete and cannot be invalidated by known unresolved evidence.
+A complete branch-wide causal ranking is required before selecting the root. A locally complete affected cone cannot waive the global reconstruction baseline or ranking requirement.
 
 ## Historical findings are probes only
 
@@ -72,7 +73,7 @@ TARGETED_VERIFICATION=
 REOPEN_CONDITIONS=
 ```
 
-This is a coordination checkpoint, not an approval gate.
+This is a mandatory pre-mutation record and gate. Blank, stale, or locally inferred fields block execution.
 
 ## Execute canonical reconstruction
 
