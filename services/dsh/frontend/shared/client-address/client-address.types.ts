@@ -1,40 +1,40 @@
-export type DshClientAddress = {
-  readonly id: string;
-  readonly label: string;
-  readonly recipientName: string;
-  readonly phoneE164: string;
-  readonly addressLine: string;
-  readonly serviceAreaCode: string;
-  readonly building: string | null;
-  readonly floor: string | null;
-  readonly unit: string | null;
-  readonly deliveryInstructions: string | null;
-  readonly latitude: number | null;
-  readonly longitude: number | null;
-  readonly isDefault: boolean;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
+import type { paths } from "@bthwani/dsh/openapi";
 
-export type DshClientAddressDraft = {
-  readonly label: string;
-  readonly recipientName: string;
-  readonly phoneE164: string;
-  readonly addressLine: string;
-  readonly serviceAreaCode: string;
-  readonly building?: string;
-  readonly floor?: string;
-  readonly unit?: string;
-  readonly deliveryInstructions?: string;
-  readonly latitude?: number;
-  readonly longitude?: number;
-  readonly makeDefault?: boolean;
-};
+type ClientAddressCollection = paths["/dsh/client/addresses"];
+type ClientAddressItem = paths["/dsh/client/addresses/{addressId}"];
+type ListClientAddressesResponse =
+  ClientAddressCollection["get"]["responses"][200]["content"]["application/json"];
+type CreateClientAddressInput = NonNullable<
+  ClientAddressCollection["post"]["requestBody"]
+>["content"]["application/json"];
+type UpdateClientAddressInput = NonNullable<
+  ClientAddressItem["patch"]["requestBody"]
+>["content"]["application/json"];
 
-export type DshUpdateClientAddressInput = DshClientAddressDraft & {
-  readonly expectedVersion: number;
-};
+/**
+ * Runtime addresses serialize every declared address property. OpenAPI remains
+ * the schema authority; Required only reflects the concrete DSH response
+ * projection consumed by this adapter.
+ */
+export type DshClientAddress = Readonly<
+  Required<ListClientAddressesResponse["addresses"][number]>
+>;
+
+/**
+ * Editable/validation-stage form derived from the canonical create request.
+ * Coordinates may be absent only until validateClientAddressDraft rejects the
+ * incomplete candidate; all other request fields follow OpenAPI directly.
+ */
+export type DshClientAddressDraft = Readonly<
+  Omit<CreateClientAddressInput, "latitude" | "longitude"> &
+  Partial<Pick<CreateClientAddressInput, "latitude" | "longitude">>
+>;
+
+/** Update payload derives from the canonical update request with the same pre-validation coordinate allowance. */
+export type DshUpdateClientAddressInput = Readonly<
+  Omit<UpdateClientAddressInput, "latitude" | "longitude"> &
+  Partial<Pick<UpdateClientAddressInput, "latitude" | "longitude">>
+>;
 
 export type DshAddressMutationContext = {
   readonly idempotencyKey: string;
