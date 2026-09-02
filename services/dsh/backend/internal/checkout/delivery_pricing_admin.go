@@ -165,25 +165,10 @@ func UpsertDeliveryPricing(
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	var before DeliveryPricingRecord
-	var beforeApprovedAt sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT `+deliveryPricingColumns+`
+	before, err := scanDeliveryPricing(tx.QueryRowContext(ctx, `SELECT `+deliveryPricingColumns+`
 		FROM dsh_store_delivery_pricing
 		WHERE store_id=$1 AND fulfillment_mode=$2
-		FOR UPDATE`, storeID, fulfillmentMode).Scan(
-		&before.StoreID,
-		&before.FulfillmentMode,
-		&before.FeeMinorUnits,
-		&before.Currency,
-		&before.Status,
-		&before.PricingSource,
-		&before.CreatedByActorID,
-		&before.ApprovedByActorID,
-		&beforeApprovedAt,
-		&before.Version,
-		&before.CreatedAt,
-		&before.UpdatedAt,
-	)
+		FOR UPDATE`, storeID, fulfillmentMode))
 	create := errors.Is(err, sql.ErrNoRows)
 	if err != nil && !create {
 		return DeliveryPricingRecord{}, err
@@ -203,9 +188,8 @@ func UpsertDeliveryPricing(
 	}
 
 	var record DeliveryPricingRecord
-	var recordApprovedAt sql.NullString
 	if create {
-		err = tx.QueryRowContext(ctx, `
+		record, err = scanDeliveryPricing(tx.QueryRowContext(ctx, `
 			INSERT INTO dsh_store_delivery_pricing
 				(store_id,fulfillment_mode,pricing_mode,fee_minor_units,currency,pricing_config,status,pricing_source,
 				 created_by_actor_id,approved_by_actor_id,approved_at)
@@ -213,24 +197,9 @@ func UpsertDeliveryPricing(
 			RETURNING `+deliveryPricingColumns,
 			storeID, fulfillmentMode, input.PricingMode, input.FeeMinorUnits, input.Currency, input.PricingConfig, input.Status,
 			input.PricingSource, input.ActorID, approvedBy, approvedAt,
-		).Scan(
-			&record.StoreID,
-			&record.FulfillmentMode,
-			&record.PricingMode,
-			&record.FeeMinorUnits,
-			&record.Currency,
-			&record.PricingConfig,
-			&record.Status,
-			&record.PricingSource,
-			&record.CreatedByActorID,
-			&record.ApprovedByActorID,
-			&recordApprovedAt,
-			&record.Version,
-			&record.CreatedAt,
-			&record.UpdatedAt,
-		)
+		))
 	} else {
-		err = tx.QueryRowContext(ctx, `
+		record, err = scanDeliveryPricing(tx.QueryRowContext(ctx, `
 			UPDATE dsh_store_delivery_pricing SET
 				pricing_mode=$3,fee_minor_units=$4,currency=$5,pricing_config=$6,status=$7,pricing_source=$8,
 				approved_by_actor_id=$9,approved_at=$10,
@@ -239,22 +208,7 @@ func UpsertDeliveryPricing(
 			RETURNING `+deliveryPricingColumns,
 			storeID, fulfillmentMode, input.PricingMode, input.FeeMinorUnits, input.Currency, input.PricingConfig, input.Status,
 			input.PricingSource, approvedBy, approvedAt, input.ExpectedVersion,
-		).Scan(
-			&record.StoreID,
-			&record.FulfillmentMode,
-			&record.PricingMode,
-			&record.FeeMinorUnits,
-			&record.Currency,
-			&record.PricingConfig,
-			&record.Status,
-			&record.PricingSource,
-			&record.CreatedByActorID,
-			&record.ApprovedByActorID,
-			&recordApprovedAt,
-			&record.Version,
-			&record.CreatedAt,
-			&record.UpdatedAt,
-		)
+		))
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return DeliveryPricingRecord{}, ErrDeliveryPricingVersionConflict
@@ -262,17 +216,16 @@ func UpsertDeliveryPricing(
 	if err != nil {
 		return DeliveryPricingRecord{}, err
 	}
-	if recordApprovedAt.Valid {
-		value := recordApprovedAt.String
-		record.ApprovedAt = &value
-	}
+
 	action := "create"
 	var fromMode any
+	var fromConfig any
 	var fromFee any
 	var fromStatus any
 	if !create {
 		action = "update"
 		fromMode = before.PricingMode
+		fromConfig = before.PricingConfig
 		fromFee = before.FeeMinorUnits
 		fromStatus = before.Status
 		if before.Status != input.Status {
@@ -282,9 +235,10 @@ func UpsertDeliveryPricing(
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_store_delivery_pricing_audit
 			(store_id,fulfillment_mode,actor_id,actor_surface,action,
-			 from_pricing_mode,to_pricing_mode,from_fee_minor_units,to_fee_minor_units,from_status,to_status,
+			 from_pricing_mode,to_pricing_mode,from_pricing_config,to_pricing_config,
+			 from_fee_minor_units,to_fee_minor_units,from_status,to_status,
 			 reason,correlation_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
 		storeID,
 		fulfillmentMode,
 		input.ActorID,
@@ -292,6 +246,8 @@ func UpsertDeliveryPricing(
 		action,
 		fromMode,
 		input.PricingMode,
+		fromConfig,
+		input.PricingConfig,
 		fromFee,
 		input.FeeMinorUnits,
 		fromStatus,
