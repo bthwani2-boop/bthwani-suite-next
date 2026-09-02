@@ -108,7 +108,7 @@ func (r *Repository) IssueSupportSession(ctx context.Context, requestID, targetA
 	if err != nil {
 		return SupportSessionToken{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var existingFingerprint, existingTarget, existingInitiator string
 	var existingSessionID string
@@ -353,7 +353,7 @@ func (r *Repository) RevokeSupportSession(ctx context.Context, requestID, reason
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var sessionID, targetActorID, initiatorActorID string
 	err = tx.QueryRowContext(ctx, `
