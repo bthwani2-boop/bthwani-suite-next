@@ -164,6 +164,7 @@ test("exact CI authority is the live target branch g", () => {
   assert.match(workflow, /TRUSTED_CI_BRANCH: g/u);
   assert.match(workflow, /GITHUB_REF_NAME.*TRUSTED_CI_BRANCH/u);
   assert.match(workflow, /branches\/\$\{TRUSTED_CI_BRANCH\}/u);
+  assert.match(workflow, /dsh wlt identity identity_client workforce providers/u);
   assert.doesNotMatch(workflow, /github\.event\.repository\.default_branch/u);
 });
 

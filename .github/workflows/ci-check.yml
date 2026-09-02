@@ -282,7 +282,7 @@ jobs:
           echo "verification_base_sha=${effective_base}" >> "${GITHUB_OUTPUT}"
           for key in \
             full_scope dependency_changed platform infrastructure ci_control_plane contracts \
-            dsh wlt identity workforce providers database_changed backend_database_changed \
+            dsh wlt identity identity_client workforce providers database_changed backend_database_changed \
             runtime_required diagnostics_required verification_required backend_required \
             node_contracts node_ci_control_plane node_dependency_changed node_platform node_typed_lint_required \
             required_claims reused_pass_claims replayed_failed_claims; do
