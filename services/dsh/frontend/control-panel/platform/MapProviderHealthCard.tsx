@@ -1,8 +1,8 @@
 "use client";
 
-import { Card, Text, spacing } from "@bthwani/ui-kit";
+import { Button, Card, Text, spacing } from "@bthwani/ui-kit";
 import { WebStyleSheet as StyleSheet, WebView as View } from "@bthwani/ui-kit/web";
-import { CpBadge, CpButton, CpRetryButton, CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
+import { CpBadge, CpRetryButton, CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
 import { useMapProviderHealthController } from "../../shared/client-map";
 
 export function MapProviderHealthCard({ canRead }: { readonly canRead: boolean }) {
@@ -59,7 +59,7 @@ export function MapProviderHealthCard({ canRead }: { readonly canRead: boolean }
       {health.providers.length === 0 ? (
         <Text tone="warning">لم ترجع خدمة Providers حالة مزود خرائط محددة.</Text>
       ) : null}
-      <CpButton variant="secondary" onClick={() => void controller.reload()}>إعادة الفحص</CpButton>
+      <Button variant="secondary" onClick={() => void controller.reload()}>إعادة الفحص</Button>
     </Card>
   );
 }
@@ -68,5 +68,4 @@ const styles = StyleSheet.create({
   card: { margin: spacing[4], padding: spacing[4], gap: spacing[2] },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[3] },
   text: { gap: spacing[1] },
-  providerRow: { flexDirection: "row", alignItems: "center", gap: spacing[2], flexWrap: "wrap" },
-});
+  providerRow: { flexDirection: "row", alignItems: "center", gap: spacing[2], flexWrap: "wrap" } });

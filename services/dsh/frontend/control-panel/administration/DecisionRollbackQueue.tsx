@@ -1,8 +1,8 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import React, { useState } from "react";
 import {
-  CpButton,
   CpMutedInline,
   CpPageHeader,
   CpStatePanel,
@@ -10,13 +10,11 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { QueuePageFrame } from "@bthwani/control-panel/shell";
 import {
   useAdministrationRollbackController,
-  useRoleAssignmentApprovalController,
-} from "../../shared/administration";
+  useRoleAssignmentApprovalController } from "../../shared/administration";
 import { administrationExecutionStatusLabel } from "../../shared/administration/administration-registry";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
@@ -115,22 +113,22 @@ export function DecisionRollbackQueue() {
           placeholder="سبب التراجع — خمسة أحرف على الأقل"
           aria-label="سبب طلب التراجع"
         />
-        <CpButton
+        <Button
           variant="primary"
           disabled={submitting || sourceApprovalId.trim().length < 2 || reason.trim().length < 5}
           onClick={() => void requestRollback()}
         >
           إرسال طلب التراجع
-        </CpButton>
+        </Button>
       </section> : null}
 
       {canRequest && canReadApproved && approvals.state.kind === "success" && approvals.state.data.length > 0 ? (
         <section aria-label="قرارات معتمدة قابلة لطلب التراجع">
           <strong>قرارات معتمدة قابلة لطلب التراجع</strong>
           {approvals.state.data.map((approval) => (
-            <CpButton key={approval.id} variant="ghost" onClick={() => setSourceApprovalId(approval.id)}>
+            <Button key={approval.id} variant="ghost" onClick={() => setSourceApprovalId(approval.id)}>
               {approval.targetActorId} — {approval.roleName} — {approval.actionType}
-            </CpButton>
+            </Button>
           ))}
         </section>
       ) : null}
@@ -180,16 +178,16 @@ export function DecisionRollbackQueue() {
                   />
                 </CpTableCell>
                 <CpTableCell>
-                  <CpButton variant="brand" disabled={submitting || !reviewable} onClick={() => void review(request.id, request.version, "approved")}>
+                  <Button variant="brand" disabled={submitting || !reviewable} onClick={() => void review(request.id, request.version, "approved")}>
                     اعتماد التراجع
-                  </CpButton>{" "}
-                  <CpButton
+                  </Button>{" "}
+                  <Button
                     variant="danger"
                     disabled={submitting || !reviewable || (reviewNotes[request.id] ?? "").trim().length < 5}
                     onClick={() => void review(request.id, request.version, "rejected")}
                   >
                     رفض التراجع
-                  </CpButton>
+                  </Button>
                   {request.executionStatus === "failed_terminal" && canRequest ? <>
                     <CpTextInput
                       value={replacementCode}
@@ -203,13 +201,13 @@ export function DecisionRollbackQueue() {
                       placeholder="سبب الطلب البديل — خمسة أحرف على الأقل"
                       aria-label={`سبب طلب التراجع البديل ${request.id}`}
                     />
-                    <CpButton
+                    <Button
                       variant="primary"
                       disabled={submitting || !/^[a-z][a-z0-9_]{2,63}$/.test(replacementCode.trim()) || replacementReason.trim().length < 5}
                       onClick={() => void replaceTerminalFailure(request.id, request.version)}
                     >
                       تثبيت الفشل وإنشاء طلب بديل
-                    </CpButton>
+                    </Button>
                   </> : null}
                 </CpTableCell>
               </tr>

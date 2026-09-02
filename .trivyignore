@@ -1,3 +1,0 @@
-# .trivyignore
-# Exclude false positives for Trivy scanner
-# Format: <CVE/RuleID> <File>

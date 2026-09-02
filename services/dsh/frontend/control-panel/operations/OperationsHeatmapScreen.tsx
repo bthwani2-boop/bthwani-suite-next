@@ -1,16 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Card, StateView, Text } from '@bthwani/ui-kit';
+import { Button, Card, StateView, Text } from '@bthwani/ui-kit';
 import {
   CpBadge,
-  CpButton,
   CpKpiCard,
   CpKpiStrip,
   CpTable,
   CpTableCell,
-  CpTableHeaderCell,
-} from '@bthwani/control-panel/components';
+  CpTableHeaderCell } from '@bthwani/control-panel/components';
 import { createDshHttpClient } from '../../shared/_kernel/dsh-http-request';
 import { resolveDshApiBaseUrl } from '../../shared/_kernel/dsh-api-base-url';
 import { GoogleMapsWebCanvas, type GoogleMapsWebPoint } from '../maps/GoogleMapsWebCanvas';
@@ -69,8 +67,7 @@ function toMapPoint(cell: OperationsHeatmapCell): GoogleMapsWebPoint {
     latitude: cell.centerLatitude,
     longitude: cell.centerLongitude,
     title: `${cell.captainCount} كابتن`,
-    description: `حديث ${cell.freshCount} · متأخر ${cell.staleCount} · مفقود ${cell.lostCount}`,
-  };
+    description: `حديث ${cell.freshCount} · متأخر ${cell.staleCount} · مفقود ${cell.lostCount}` };
 }
 
 export function OperationsHeatmapScreen(_: OperationsHeatmapScreenProps) {
@@ -117,7 +114,7 @@ export function OperationsHeatmapScreen(_: OperationsHeatmapScreenProps) {
           description="لم يُرجع DSH أي تعيينات مقبولة ذات إحداثيات مسجلة حاليًا. هذه حالة فارغة مثبتة وليست صفراً مصطنعاً."
         />
         <div style={{ marginTop: '1rem' }}>
-          <CpButton variant="secondary" onClick={() => void load()}>تحديث</CpButton>
+          <Button variant="secondary" onClick={() => void load()}>تحديث</Button>
         </div>
       </Card>
     );
@@ -139,7 +136,7 @@ export function OperationsHeatmapScreen(_: OperationsHeatmapScreenProps) {
             الخلايا مشتقة server-side من آخر موقع لكل كابتن ذي تعيين مقبول؛ الخريطة والجدول أدناه يستهلكان نفس response فقط.
           </Text>
         </div>
-        <CpButton variant="secondary" onClick={() => void load()}>تحديث</CpButton>
+        <Button variant="secondary" onClick={() => void load()}>تحديث</Button>
       </div>
 
       <CpKpiStrip>

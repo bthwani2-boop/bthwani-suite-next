@@ -2,30 +2,25 @@
 
 // Control-panel owns the policy definition only. DSH never creates a WLT
 // ledger entry for this fee; WLT remains the sole financial truth owner.
-import { SegmentedControl, Text, spacing } from "@bthwani/ui-kit";
+import { Button, SegmentedControl, Text, spacing } from "@bthwani/ui-kit";
 import {
   WebStyleSheet as StyleSheet,
-  WebView as View,
-} from "@bthwani/ui-kit/web";
+  WebView as View } from "@bthwani/ui-kit/web";
 import {
   CpBadge,
-  CpButton,
   CpRetryButton,
   CpStatePanel,
   CpStateView,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import {
   STORE_ONBOARDING_FEE_APPLIES_TO_ITEMS,
   STORE_ONBOARDING_FEE_CHARGE_TIMING_ITEMS,
   STORE_ONBOARDING_FEE_ENABLED_ITEMS,
-  useStoreOnboardingFeePolicyFormController,
-} from "../../shared/platform";
+  useStoreOnboardingFeePolicyFormController } from "../../shared/platform";
 
 export function StoreOnboardingFeePolicySection({
   canRead,
-  canManage,
-}: {
+  canManage }: {
   readonly canRead: boolean;
   readonly canManage: boolean;
 }) {
@@ -126,13 +121,13 @@ export function StoreOnboardingFeePolicySection({
             <Text tone="danger">{controller.validationError}</Text>
           ) : null}
 
-          <CpButton
+          <Button
             variant="primary"
             disabled={controller.saving}
             onClick={() => void controller.save()}
           >
             {controller.saving ? "جارٍ الحفظ…" : "حفظ السياسة"}
-          </CpButton>
+          </Button>
         </View> : (
           <CpStatePanel
             role="status"
@@ -149,5 +144,4 @@ export function StoreOnboardingFeePolicySection({
 const styles = StyleSheet.create({
   section: { margin: spacing[4], gap: spacing[2] },
   form: { gap: spacing[3] },
-  badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
-});
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] } });

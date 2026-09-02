@@ -1,8 +1,8 @@
 "use client";
 
 import { type CSSProperties } from "react";
-import { colorRoles } from "@bthwani/ui-kit";
-import { CpButton } from "@bthwani/control-panel/components";
+import { Button, colorRoles } from "@bthwani/ui-kit";
+
 import { formatWltMoney } from "@bthwani/dsh/finance";
 import type { CouponFundingLifecycleRecord } from "../../../shared/marketing/coupons.types";
 
@@ -18,8 +18,7 @@ const statusLabel: Record<CouponFundingLifecycleRecord["reconciliationStatus"], 
   mismatch: "اختلاف مالي",
   wlt_unavailable: "تعذر التحقق من WLT",
   incomplete: "غير مكتمل",
-  not_checked: "لم يُتحقق",
-};
+  not_checked: "لم يُتحقق" };
 
 function formatMinorUnits(value: number, currency: string): string {
   return formatWltMoney(value, currency || "YER");
@@ -29,8 +28,7 @@ export function CouponFundingReconciliationPanel({
   records,
   loading,
   error,
-  onReload,
-}: CouponFundingReconciliationPanelProps) {
+  onReload }: CouponFundingReconciliationPanelProps) {
   return (
     <section dir="rtl" aria-labelledby="coupon-funding-reconciliation-title" style={styles.root}>
       <div style={styles.header}>
@@ -38,7 +36,7 @@ export function CouponFundingReconciliationPanel({
           <h3 id="coupon-funding-reconciliation-title" style={styles.title}>مصالحة تمويل العروض</h3>
           <p style={styles.muted}>مقارنة فورية بين إسقاط DSH التشغيلي وحجز WLT المالي، مع حالة صندوق التسليم وإعادة المحاولة.</p>
         </div>
-        <CpButton disabled={loading} onClick={onReload} variant="secondary">إعادة التحقق</CpButton>
+        <Button disabled={loading} onClick={onReload} variant="secondary">إعادة التحقق</Button>
       </div>
 
       {loading ? <p aria-live="polite">جارٍ التحقق من DSH وWLT…</p> : null}
@@ -85,5 +83,4 @@ const styles: Record<string, CSSProperties> = {
   okBadge: { border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "999px", padding: "0.2rem 0.55rem", fontSize: "0.75rem" },
   alertBadge: { border: "1px solid currentColor", borderRadius: "999px", padding: "0.2rem 0.55rem", fontSize: "0.75rem", fontWeight: 700 },
   message: { margin: "0.35rem 0", fontWeight: 600 },
-  error: { margin: "0.35rem 0", color: colorRoles.danger, overflowWrap: "anywhere" },
-};
+  error: { margin: "0.35rem 0", color: colorRoles.danger, overflowWrap: "anywhere" } };

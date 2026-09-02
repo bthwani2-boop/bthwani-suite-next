@@ -1,5 +1,5 @@
-import { CpButton, CpStatePanel, CpDescriptionList, CpDescriptionRow } from "@bthwani/control-panel/components";
-import { neutralScale } from "@bthwani/ui-kit";
+import { CpStatePanel, CpDescriptionList, CpDescriptionRow } from "@bthwani/control-panel/components";
+import { Button, neutralScale } from "@bthwani/ui-kit";
 
 export type PartnerCommercialModelPanelProps = {
   readonly partnerId: string;
@@ -29,8 +29,8 @@ export function PartnerCommercialModelPanel({ partnerId }: PartnerCommercialMode
           تخضع للمراجعة والاعتماد (Maker-Checker) قبل الجدولة.
         </p>
         <div style={{ display: "flex", gap: 8 }}>
-          <CpButton onClick={() => window.alert("انتقل إلى قسم المنصة (Platform) لتقديم مقترح تعديل.")}>طلب تعديل النموذج</CpButton>
-          <CpButton onClick={() => window.alert("انتقل إلى النظام المالي (WLT) لمشاهدة الالتزامات والتسويات.")}>عرض الالتزامات المالية</CpButton>
+          <Button onClick={() => window.alert("انتقل إلى قسم المنصة (Platform) لتقديم مقترح تعديل.")}>طلب تعديل النموذج</Button>
+          <Button onClick={() => window.alert("انتقل إلى النظام المالي (WLT) لمشاهدة الالتزامات والتسويات.")}>عرض الالتزامات المالية</Button>
         </div>
       </section>
     </div>

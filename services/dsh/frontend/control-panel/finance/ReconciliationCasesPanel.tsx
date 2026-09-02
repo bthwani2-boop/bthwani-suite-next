@@ -1,15 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Card, Text } from "@bthwani/ui-kit";
-import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
+import { Button, Card, Text } from "@bthwani/ui-kit";
+import { CpTextInput } from "@bthwani/control-panel/components";
 import {
   assignReconciliationCase,
   loadOpenReconciliationCases,
   resolveReconciliationCase,
   type FinanceActionResult,
-  type ReconciliationCase,
-} from '@bthwani/dsh/control-panel/finance';
+  type ReconciliationCase } from '@bthwani/dsh/control-panel/finance';
 
 export function ReconciliationCasesPanel({ canManage }: { readonly canManage: boolean }) {
   const [cases, setCases] = useState<readonly ReconciliationCase[] | null>(null);
@@ -78,40 +77,40 @@ export function ReconciliationCasesPanel({ canManage }: { readonly canManage: bo
                 <Text role="caption" tone="muted">السبب: {reconciliationCase.triggerReason}</Text>
                 <Text role="caption" tone="muted">مُسندة إلى: {reconciliationCase.assignedToOperatorId || "—"}</Text>
                 {canManage ? <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
-                  <CpButton
+                  <Button
                     variant="secondary"
                     disabled={busy}
                     onClick={() => runAction(reconciliationCase.id, () => assignReconciliationCase(reconciliationCase.id))}
                   >
                     {busy ? "جارٍ التنفيذ…" : "إسناد لنفسي"}
-                  </CpButton>
+                  </Button>
                   <CpTextInput
                     placeholder="ملاحظة القرار"
                     value={note}
                     onChange={(value) => setNoteDrafts((previous) => ({ ...previous, [reconciliationCase.id]: value }))}
                     aria-label={`ملاحظة القرار لقضية ${reconciliationCase.id}`}
                   />
-                  <CpButton
+                  <Button
                     variant="primary"
                     disabled={busy || note.trim().length === 0}
                     onClick={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "confirmed_success", note))}
                   >
                     تأكيد النجاح
-                  </CpButton>
-                  <CpButton
+                  </Button>
+                  <Button
                     variant="danger"
                     disabled={busy || note.trim().length === 0}
                     onClick={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "confirmed_failed", note))}
                   >
                     تأكيد الفشل
-                  </CpButton>
-                  <CpButton
+                  </Button>
+                  <Button
                     variant="secondary"
                     disabled={busy || note.trim().length === 0}
                     onClick={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "manual_adjustment", note))}
                   >
                     تعديل يدوي
-                  </CpButton>
+                  </Button>
                 </div> : <Text role="caption" tone="muted">قراءة فقط — معالجة المطابقة تتطلب finance.manage.</Text>}
               </Card>
             );

@@ -2,8 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { CpBadge, CpButton, CpSelect, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
-import { Text } from "@bthwani/ui-kit";
+import { CpBadge, CpSelect, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { Button, Text } from "@bthwani/ui-kit";
 import {
   cancelFieldOnboardingAssignment,
   addOperatorOnboardingMessage,
@@ -15,8 +15,7 @@ import {
   listOperatorFieldOnboardingAssignments,
   reassignFieldOnboardingAssignment,
   type FieldOnboardingAssignment,
-  type OnboardingCollaborationView,
-} from "../../../shared/field-assignment";
+  type OnboardingCollaborationView } from "../../../shared/field-assignment";
 import { listFieldAgents, type FieldAgent } from "../../../shared/workforce";
 import { GoogleMapsWebCanvas } from "../../maps/GoogleMapsWebCanvas";
 
@@ -24,8 +23,7 @@ const STATUS_LABELS: Record<FieldOnboardingAssignment["status"], string> = {
   assigned: "مسندة",
   in_progress: "قيد التنفيذ",
   draft_linked: "مرتبطة بمسودة",
-  cancelled: "ملغاة",
-};
+  cancelled: "ملغاة" };
 
 function CollaborationPanel({ item }: { readonly item: FieldOnboardingAssignment }) {
   const identity = useIdentitySession();
@@ -62,13 +60,11 @@ function CollaborationPanel({ item }: { readonly item: FieldOnboardingAssignment
         actorId,
         partnerId: item.draftPartnerId,
         assignmentId: item.id,
-        body,
-      };
+        body };
       const attempt = await getOrCreateOnboardingCollaborationMessageAttempt(attemptIntent);
       const message = await addOperatorOnboardingMessage(item.draftPartnerId, {
         body: body.trim(),
-        clientMessageId: attempt.clientMessageId,
-      }, item.id);
+        clientMessageId: attempt.clientMessageId }, item.id);
       if (message.clientMessageId !== attempt.clientMessageId || message.body !== body.trim()) {
         throw new Error("لم تحفظ القراءة المرجعية هوية رسالة المتابعة ومحتواها كما أُرسلا.");
       }
@@ -90,8 +86,7 @@ function CollaborationPanel({ item }: { readonly item: FieldOnboardingAssignment
         targetId: item.draftPartnerId,
         reason: "يرجى استكمال الملاحظات المرفقة ثم إعادة الإرسال للمراجعة.",
         expectedVersion: view.partnerVersion,
-        toStatus: "documents_missing",
-      }, item.id);
+        toStatus: "documents_missing" }, item.id);
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "تعذر إعادة الملف للميداني");
@@ -101,15 +96,15 @@ function CollaborationPanel({ item }: { readonly item: FieldOnboardingAssignment
   if (!item.draftPartnerId) return <Text role="caption" style={{ color: "var(--bthwani-control-panel-text-muted)" }}>يظهر سجل المتابعة بعد ربط المسودة بالمتجر.</Text>;
   return (
     <div style={{ borderTop: "1px solid var(--bthwani-control-panel-border)", paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-      <CpButton disabled={busy} onClick={() => { setOpen((current) => !current); if (!open) void load(); }}>{open ? "إخفاء سجل المتابعة" : "فتح سجل المتابعة"}</CpButton>
+      <Button disabled={busy} onClick={() => { setOpen((current) => !current); if (!open) void load(); }}>{open ? "إخفاء سجل المتابعة" : "فتح سجل المتابعة"}</Button>
       {open ? <>
         {busy && !view ? <Text role="caption">جارٍ تحميل سجل المتابعة…</Text> : null}
         {view?.messages.map((message) => <div key={message.id} style={{ padding: 10, borderRadius: 10, background: "var(--bthwani-control-panel-surface-inset)" }}><Text role="bodySm">{message.body}</Text><Text role="caption" style={{ color: "var(--bthwani-control-panel-text-muted)" }}>{message.senderSurface === "app-field" ? "الميداني" : "المشرف"} · {new Date(message.createdAt).toLocaleString("ar-YE")}</Text></div>)}
         {view && view.messages.length === 0 ? <Text role="caption">لا توجد ملاحظات بعد. اكتب ملاحظة مرتبطة بهذه المسودة.</Text> : null}
         <CpTextInput value={body} onChange={setBody} placeholder="ملاحظة مرتبطة بهذه المسودة" aria-label="ملاحظة المتابعة" />
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <CpButton disabled={busy || !body.trim()} onClick={() => void send()}>إرسال الملاحظة</CpButton>
-          {view ? <CpButton variant="danger" disabled={busy} onClick={() => void returnForChanges()}>إعادة للميداني مع ملاحظات</CpButton> : null}
+          <Button disabled={busy || !body.trim()} onClick={() => void send()}>إرسال الملاحظة</Button>
+          {view ? <Button variant="danger" disabled={busy} onClick={() => void returnForChanges()}>إعادة للميداني مع ملاحظات</Button> : null}
         </div>
         {error ? <Text role="caption" style={{ color: "var(--bthwani-control-panel-danger)" }}>{error}</Text> : null}
       </> : null}
@@ -167,8 +162,7 @@ export function FieldAssignmentWorkspace() {
     id: "new-assignment-location",
     latitude: parsedLatitude,
     longitude: parsedLongitude,
-    title: storeNameHint.trim() || "موقع المتجر",
-  }] : [], [hasCompleteLocation, parsedLatitude, parsedLongitude, storeNameHint]);
+    title: storeNameHint.trim() || "موقع المتجر" }] : [], [hasCompleteLocation, parsedLatitude, parsedLongitude, storeNameHint]);
   const handleMapClick = React.useCallback((coordinate: { readonly latitude: number; readonly longitude: number }) => {
     setLocationLatitude(coordinate.latitude.toFixed(6));
     setLocationLongitude(coordinate.longitude.toFixed(6));
@@ -192,8 +186,7 @@ export function FieldAssignmentWorkspace() {
         storeNameHint: storeNameHint.trim(),
         ...(phoneHint.trim() ? { phoneHint: phoneHint.trim() } : {}),
         ...(addressHint.trim() ? { addressHint: addressHint.trim() } : {}),
-        ...(hasCompleteLocation ? { locationLatitude: parsedLatitude, locationLongitude: parsedLongitude } : {}),
-      };
+        ...(hasCompleteLocation ? { locationLatitude: parsedLatitude, locationLongitude: parsedLongitude } : {}) };
       await createFieldOnboardingAssignment(input);
       setBusinessTaskKey("");
       setStoreNameHint("");
@@ -258,7 +251,7 @@ export function FieldAssignmentWorkspace() {
             <CpTextInput value={locationLongitude} onChange={setLocationLongitude} placeholder="خط الطول مثال 44.1910" aria-label="خط طول موقع المتجر" />
           </div>
         </div>
-        <CpButton variant="primary" disabled={submitting || !selectedActorId || !businessTaskKey.trim() || !storeNameHint.trim() || (!phoneHint.trim() && !addressHint.trim())} onClick={() => void createAssignment()}>إنشاء إسناد</CpButton>
+        <Button variant="primary" disabled={submitting || !selectedActorId || !businessTaskKey.trim() || !storeNameHint.trim() || (!phoneHint.trim() && !addressHint.trim())} onClick={() => void createAssignment()}>إنشاء إسناد</Button>
       </section>
 
       {error ? <CpStatePanel role="alert" title="تعذر تنفيذ العملية" description={error} /> : null}
@@ -278,8 +271,8 @@ export function FieldAssignmentWorkspace() {
           {item.status !== "draft_linked" && item.status !== "cancelled" ? (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <CpSelect value={reassigningId ?? item.fieldActorId} onChange={setReassigningId} options={agentOptions.filter((option) => option.value !== "")} aria-label="إعادة إسناد الميداني" />
-              <CpButton disabled={submitting || !reassigningId || reassigningId === item.fieldActorId} onClick={() => void reassign(item)}>إعادة إسناد</CpButton>
-              <CpButton variant="danger" disabled={submitting} onClick={() => void cancel(item)}>إلغاء</CpButton>
+              <Button disabled={submitting || !reassigningId || reassigningId === item.fieldActorId} onClick={() => void reassign(item)}>إعادة إسناد</Button>
+              <Button variant="danger" disabled={submitting} onClick={() => void cancel(item)}>إلغاء</Button>
             </div>
           ) : null}
         </section>

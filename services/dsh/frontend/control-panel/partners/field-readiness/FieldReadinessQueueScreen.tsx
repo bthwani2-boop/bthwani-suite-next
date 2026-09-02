@@ -1,26 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { neutralScale } from "@bthwani/ui-kit";
+import { Button, neutralScale } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
   CpBadge,
-  CpButton,
   CpMutedInline,
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
   CpStateView,
   CpTabs,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { QueuePageFrame } from "@bthwani/control-panel/shell";
 import {
   useFieldEscalationController,
   ESCALATION_SEVERITY_LABELS,
   ESCALATION_CATEGORY_LABELS,
-  type DshEscalationStatus,
-} from "../../../shared/field-readiness";
+  type DshEscalationStatus } from "../../../shared/field-readiness";
 import { ControlPanelFieldProblemPanel } from "../../shared/ControlPanelFieldProblemPanel";
 import { ChecklistPolicyEditor } from "./ChecklistPolicyEditor";
 
@@ -38,8 +35,7 @@ const STATUS_LABELS: Record<DshEscalationStatus, string> = {
   open: "مفتوح",
   acknowledged: "قيد المراجعة",
   escalated_further: "مصعّد للعمليات",
-  resolved: "محلول",
-};
+  resolved: "محلول" };
 
 function severityTone(severity: "critical" | "high" | "medium" | "low" | string): CpBadgeTone {
   if (severity === "critical") return "danger";
@@ -65,8 +61,7 @@ export function FieldReadinessQueueScreen() {
     if (!followUp || resolutionNote.trim().length < 5) return;
     void resolveEscalation(followUp.id, {
       status: followUp.status,
-      resolutionNote: resolutionNote.trim(),
-    }).then(() => {
+      resolutionNote: resolutionNote.trim() }).then(() => {
       setFollowUp(null);
       setResolutionNote("");
       void loadOperatorEscalations(activeFilter || undefined);
@@ -145,11 +140,11 @@ export function FieldReadinessQueueScreen() {
                   {escalation.status !== "resolved" ? (
                     <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                       {escalation.status === "open" ? (
-                        <CpButton disabled={actionState.kind === "submitting"} onClick={() => handleAcknowledge(escalation.id)}>تأكيد الاستلام</CpButton>
+                        <Button disabled={actionState.kind === "submitting"} onClick={() => handleAcknowledge(escalation.id)}>تأكيد الاستلام</Button>
                       ) : null}
-                      <CpButton variant="brand" onClick={() => openFollowUp(escalation.id, "resolved")}>حل التصعيد</CpButton>
+                      <Button variant="brand" onClick={() => openFollowUp(escalation.id, "resolved")}>حل التصعيد</Button>
                       {escalation.status !== "escalated_further" ? (
-                        <CpButton variant="danger" onClick={() => openFollowUp(escalation.id, "escalated_further")}>تصعيد أعلى</CpButton>
+                        <Button variant="danger" onClick={() => openFollowUp(escalation.id, "escalated_further")}>تصعيد أعلى</Button>
                       ) : null}
                     </div>
                   ) : null}
@@ -163,14 +158,14 @@ export function FieldReadinessQueueScreen() {
                         aria-label="ملاحظة المتابعة"
                       />
                       <div style={{ display: "flex", gap: "0.5rem" }}>
-                        <CpButton
+                        <Button
                           variant={followUp?.status === "resolved" ? "brand" : "danger"}
                           disabled={resolutionNote.trim().length < 5 || actionState.kind === "submitting"}
                           onClick={submitFollowUp}
                         >
                           {actionState.kind === "submitting" ? "جاري الحفظ…" : "تأكيد الإجراء"}
-                        </CpButton>
-                        <CpButton onClick={() => setFollowUp(null)}>إلغاء</CpButton>
+                        </Button>
+                        <Button onClick={() => setFollowUp(null)}>إلغاء</Button>
                       </div>
                     </div>
                   ) : null}

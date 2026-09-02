@@ -1,21 +1,18 @@
 "use client";
 
-import { Card, Text, spacing } from "@bthwani/ui-kit";
+import { Button, Card, Text, spacing } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import {
   CpBadge,
-  CpButton,
   CpPageHeader,
   CpStatePanel,
   CpStateView,
   CpTable,
   CpTableCell,
-  CpTableHeaderCell,
-} from "@bthwani/control-panel/components";
+  CpTableHeaderCell } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import {
-  useProviderRegistryController,
-} from "../../shared/platform";
+  useProviderRegistryController } from "../../shared/platform";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { MapsProviderInspector } from "./MapsProviderInspector";
@@ -25,16 +22,14 @@ const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> 
   inactive: "neutral",
   pending_approval: "warning",
   failed: "danger",
-  disabled_by_policy: "neutral",
-};
+  disabled_by_policy: "neutral" };
 
 const HEALTH_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
   healthy: "success",
   degraded: "warning",
   down: "danger",
   unknown: "neutral",
-  not_configured: "neutral",
-};
+  not_configured: "neutral" };
 
 function credentialLabel(configured: boolean): string {
   return configured ? "مهيأة في الخادم" : "غير مهيأة";
@@ -87,7 +82,7 @@ export function ProviderRegistryPanel() {
         header={header}
         stateView={
           <CpStatePanel role="alert" title="تعذر تحميل سجل المزودين" description={registry.state.message}>
-            <CpButton onClick={registry.reload}>إعادة المحاولة</CpButton>
+            <Button onClick={registry.reload}>إعادة المحاولة</Button>
           </CpStatePanel>
         }
       >
@@ -174,19 +169,19 @@ export function ProviderRegistryPanel() {
                       <CpTableCell>{row.healthMessage ?? "—"}</CpTableCell>
                       <CpTableCell>
                         <View style={styles.actions}>
-                          <CpButton
+                          <Button
                             disabled={mutationLoading}
                             onClick={() => void registry.selectProvider(row.providerId)}
                           >
                             التفاصيل
-                          </CpButton>
+                          </Button>
                           {canUpdate ? (
-                            <CpButton
+                            <Button
                               disabled={mutationLoading}
                               onClick={() => void registry.setProviderActive(row.providerId, !row.active)}
                             >
                               {mutationLoading ? "جارٍ…" : row.active ? "تعطيل" : "تفعيل"}
-                            </CpButton>
+                            </Button>
                           ) : null}
                         </View>
                       </CpTableCell>
@@ -270,5 +265,4 @@ const styles = StyleSheet.create({
   section: { gap: spacing[2] },
   notice: { padding: spacing[3] },
   detail: { padding: spacing[3], gap: spacing[2] },
-  actions: { flexDirection: "row", gap: spacing[1] },
-});
+  actions: { flexDirection: "row", gap: spacing[1] } });

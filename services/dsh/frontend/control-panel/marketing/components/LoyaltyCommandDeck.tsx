@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { colorRoles } from "@bthwani/ui-kit";
-import { CpButton } from "@bthwani/control-panel/components";
+import { Button, colorRoles } from "@bthwani/ui-kit";
+
 import { useLoyaltyTiersController, type LoyaltyTierRecord } from "../../../shared/marketing";
 
 export function LoyaltyCommandDeck() {
@@ -45,7 +45,7 @@ export function LoyaltyCommandDeck() {
           <h3 style={styles.title}>مستويات الولاء</h3>
           <p style={styles.muted}>تعريفات DSH فقط؛ رصيد النقاط والحركات المالية تظل في WLT.</p>
         </div>
-        <CpButton onClick={() => void controller.reload()} variant="secondary">إعادة التحميل</CpButton>
+        <Button onClick={() => void controller.reload()} variant="secondary">إعادة التحميل</Button>
       </div>
 
       <div style={styles.summary}>
@@ -58,7 +58,7 @@ export function LoyaltyCommandDeck() {
         <input value={nameAr} onChange={(event) => setNameAr(event.target.value)} placeholder="اسم المستوى" style={styles.input} />
         <input value={minPoints} onChange={(event) => setMinPoints(event.target.value)} inputMode="numeric" placeholder="الحد الأدنى للنقاط" style={styles.input} />
         <input value={discountPercent} onChange={(event) => setDiscountPercent(event.target.value)} inputMode="decimal" placeholder="نسبة الخصم" style={styles.input} />
-        <CpButton disabled={submitting} onClick={() => void createDraft()} variant="brand">إنشاء مسودة</CpButton>
+        <Button disabled={submitting} onClick={() => void createDraft()} variant="brand">إنشاء مسودة</Button>
       </div>
 
       {controller.state.kind === "loading" ? <p>جارٍ التحميل…</p> : null}
@@ -75,9 +75,9 @@ export function LoyaltyCommandDeck() {
               <p style={styles.muted}>الحالة: {tier.status}</p>
             </div>
             <div style={styles.actions}>
-              {tier.status !== "active" ? <CpButton disabled={submitting} onClick={() => void updateStatus(tier, "active")} variant="brand">طلب اعتماد نشط</CpButton> : null}
-              {tier.status === "active" ? <CpButton disabled={submitting} onClick={() => void updateStatus(tier, "paused")} variant="secondary">إيقاف</CpButton> : null}
-              {tier.status !== "archived" ? <CpButton disabled={submitting} onClick={() => void updateStatus(tier, "archived")} variant="secondary">أرشفة</CpButton> : null}
+              {tier.status !== "active" ? <Button disabled={submitting} onClick={() => void updateStatus(tier, "active")} variant="brand">طلب اعتماد نشط</Button> : null}
+              {tier.status === "active" ? <Button disabled={submitting} onClick={() => void updateStatus(tier, "paused")} variant="secondary">إيقاف</Button> : null}
+              {tier.status !== "archived" ? <Button disabled={submitting} onClick={() => void updateStatus(tier, "archived")} variant="secondary">أرشفة</Button> : null}
             </div>
           </article>
         ))}
@@ -97,5 +97,4 @@ const styles: Record<string, CSSProperties> = {
   error: { color: colorRoles.danger, margin: 0 },
   list: { display: "grid", gap: "0.6rem" },
   card: { display: "flex", justifyContent: "space-between", gap: "1rem", padding: "0.9rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.7rem", background: colorRoles.surfaceBase },
-  actions: { display: "flex", flexWrap: "wrap", gap: "0.45rem", alignItems: "center" },
-};
+  actions: { display: "flex", flexWrap: "wrap", gap: "0.45rem", alignItems: "center" } };

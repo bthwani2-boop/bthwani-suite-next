@@ -4,14 +4,13 @@ import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { corrId } from "../../../shared/_kernel/dsh-http-request";
-import { colorRoles } from "@bthwani/ui-kit";
-import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
+import { Button, colorRoles } from "@bthwani/ui-kit";
+import { CpTextInput } from "@bthwani/control-panel/components";
 import {
   decideStorePublication,
   fetchStorePublicationWorkspace,
   type StorePublicationDecision,
-  type StorePublicationWorkspace,
-} from "../../../shared/marketing";
+  type StorePublicationWorkspace } from "../../../shared/marketing";
 
 function errorMessage(error: unknown): string {
   if (typeof error === "object" && error !== null && "body" in error) {
@@ -90,8 +89,7 @@ export function StorePublicationCommandPanel() {
         decision,
         reason: normalizedReason,
         override: decision === "publish" && override,
-        overrideReason: decision === "publish" && override ? normalizedOverrideReason : "",
-      }, idempotencyKey);
+        overrideReason: decision === "publish" && override ? normalizedOverrideReason : "" }, idempotencyKey);
       const canonical = await fetchStorePublicationWorkspace(storeId);
       setWorkspace(canonical);
       setMessage(decision === "publish" ? "تم نشر المتجر وتحديث القراءة القانونية." : "تم إخفاء المتجر وتحديث القراءة القانونية.");
@@ -121,7 +119,7 @@ export function StorePublicationCommandPanel() {
         <p style={styles.description}>التسويق هو مالك أمر النشر والإخفاء. تُقرأ كل البوابات من DSH وتُطبّق الذرية والتدقيق على معرّف المتجر نفسه.</p>
         <div style={styles.row}>
           <CpTextInput value={storeId} onChange={setStoreId} placeholder="store-id" aria-label="معرف المتجر" disabled={busy} />
-          <CpButton variant="secondary" onClick={() => void load()} disabled={busy || !storeId.trim()}>قراءة البوابات</CpButton>
+          <Button variant="secondary" onClick={() => void load()} disabled={busy || !storeId.trim()}>قراءة البوابات</Button>
         </div>
       </section>
 
@@ -150,8 +148,8 @@ export function StorePublicationCommandPanel() {
           ) : <p style={styles.description}>التجاوز مغلق في سياسة هذا النطاق.</p>}
           {override ? <CpTextInput value={overrideReason} onChange={setOverrideReason} placeholder="مبرر التجاوز (10 أحرف على الأقل)" aria-label="مبرر تجاوز بوابات النشر" disabled={busy} /> : null}
           <div style={styles.row}>
-            <CpButton variant="brand" onClick={() => void decide("publish")} disabled={busy || reason.trim().length < 3 || (override && overrideReason.trim().length < 10)}>نشر</CpButton>
-            <CpButton variant="secondary" onClick={() => void decide("hide")} disabled={busy || reason.trim().length < 3}>إخفاء</CpButton>
+            <Button variant="brand" onClick={() => void decide("publish")} disabled={busy || reason.trim().length < 3 || (override && overrideReason.trim().length < 10)}>نشر</Button>
+            <Button variant="secondary" onClick={() => void decide("hide")} disabled={busy || reason.trim().length < 3}>إخفاء</Button>
           </div>
         </section>
       ) : null}
@@ -172,5 +170,4 @@ const styles: Record<string, CSSProperties> = {
   blockers: { margin: 0, paddingInlineStart: "1.25rem", color: colorRoles.danger, lineHeight: 1.8 },
   success: { margin: 0, color: colorRoles.success, fontWeight: 700 },
   overrideRow: { display: "flex", gap: "0.5rem", alignItems: "center" },
-  message: { margin: 0, padding: "0.75rem 1rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.65rem" },
-};
+  message: { margin: 0, padding: "0.75rem 1rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.65rem" } };

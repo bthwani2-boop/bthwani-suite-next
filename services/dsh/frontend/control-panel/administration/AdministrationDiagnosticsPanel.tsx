@@ -1,14 +1,13 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import React from "react";
 import {
-  CpButton,
   CpKpiCard,
   CpKpiStrip,
   CpMutedInline,
   CpStatePanel,
-  CpStateView,
-} from "@bthwani/control-panel/components";
+  CpStateView } from "@bthwani/control-panel/components";
 import { useAdministrationDiagnosticsController } from "../../shared/administration";
 
 export function AdministrationDiagnosticsPanel({ enabled = true }: { readonly enabled?: boolean }) {
@@ -25,7 +24,7 @@ export function AdministrationDiagnosticsPanel({ enabled = true }: { readonly en
     return (
       <>
         <CpStateView kind="error" title={diagnostics.state.message} />
-        <CpButton onClick={() => void diagnostics.reload()}>إعادة المحاولة</CpButton>
+        <Button onClick={() => void diagnostics.reload()}>إعادة المحاولة</Button>
       </>
     );
   }
@@ -48,7 +47,7 @@ export function AdministrationDiagnosticsPanel({ enabled = true }: { readonly en
       </CpKpiStrip>
       <CpMutedInline tight>آخر تحديث: {data.generatedAt}</CpMutedInline>
       <div>
-        <CpButton onClick={() => void diagnostics.reload()}>تحديث التشخيص</CpButton>
+        <Button onClick={() => void diagnostics.reload()}>تحديث التشخيص</Button>
       </div>
     </section>
   );

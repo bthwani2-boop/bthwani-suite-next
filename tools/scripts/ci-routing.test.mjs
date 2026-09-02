@@ -168,11 +168,9 @@ test("exact CI authority is the live target branch g", () => {
   assert.doesNotMatch(workflow, /github\.event\.repository\.default_branch/u);
 });
 
-test("control-panel CpButton is only a compatibility adapter over the canonical UI kit Button", () => {
-  const adapter = read("shared/control-panel/src/components/CpButton.tsx");
+test("control-panel CpButton is retired in favor of canonical UI kit Button", () => {
+  assert.strictEqual(exists("shared/control-panel/src/components/CpButton.tsx"), false);
   const button = read("shared/ui-kit/src/components/Button/Button.tsx");
-  assert.match(adapter, /from ["']@bthwani\/ui-kit["']/u);
-  assert.doesNotMatch(adapter, /<button\b/u);
   assert.match(button, /type\?: \("button" \| "submit" \| "reset"\)/u);
   assert.match(button, /type=\{Platform\.OS === "web" \? type : undefined\}/u);
 });

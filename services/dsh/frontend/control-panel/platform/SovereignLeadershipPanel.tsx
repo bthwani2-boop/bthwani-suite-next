@@ -3,14 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CpBadge,
-  CpButton,
   CpStatePanel,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
-import { Text } from "@bthwani/ui-kit";
+  CpTextInput } from "@bthwani/control-panel/components";
+import { Button, Text } from "@bthwani/ui-kit";
 import {
   createSovereignLeader,
   getSovereignLeadershipReferenceData,
@@ -20,8 +18,7 @@ import {
   type LeadershipEmploymentClass,
   type SovereignLeadershipCreationResult,
   type SovereignLeadershipRecord,
-  type SovereignLeadershipReferenceData,
-} from "../../shared/workforce";
+  type SovereignLeadershipReferenceData } from "../../shared/workforce";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
@@ -32,14 +29,12 @@ const selectStyle = {
   border: "1px solid var(--bthwani-control-panel-border)",
   background: "var(--bthwani-control-panel-surface)",
   color: "var(--bthwani-control-panel-text)",
-  padding: "0 12px",
-} as const;
+  padding: "0 12px" } as const;
 
 const fieldLabelStyle = {
   display: "flex",
   flexDirection: "column",
-  gap: "6px",
-} as const;
+  gap: "6px" } as const;
 
 function assignmentDateError(startsOn: string, endsOn: string): string | null {
   const start = startsOn.trim();
@@ -205,8 +200,7 @@ export function SovereignLeadershipPanel() {
         ...(trimmedOfficeLocation ? { officeLocation: trimmedOfficeLocation } : {}),
         ...(trimmedStartsOn ? { assignmentStartsOn: trimmedStartsOn } : {}),
         ...(trimmedEndsOn ? { assignmentEndsOn: trimmedEndsOn } : {}),
-        ...(trimmedNotes ? { notes: trimmedNotes } : {}),
-      });
+        ...(trimmedNotes ? { notes: trimmedNotes } : {}) });
       setCreated(result);
       setFullNameAr("");
       setUsername("");
@@ -305,23 +299,23 @@ export function SovereignLeadershipPanel() {
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
               <span>كود تفعيل لوحة التحكم: <strong>{created.activation.code}</strong> — ينتهي في {created.activation.expiresAt}</span>
-              <CpButton variant="secondary" aria-label="نسخ كود التفعيل" onClick={() => void copyActivationCode(created.activation.code)}>
+              <Button variant="secondary" aria-label="نسخ كود التفعيل" onClick={() => void copyActivationCode(created.activation.code)}>
                 {codeCopied ? "تم النسخ" : "نسخ الكود"}
-              </CpButton>
+              </Button>
             </div>
           </CpStatePanel>
         ) : null}
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <CpButton variant="primary" disabled={!canSubmit} onClick={() => void submit()}>
+          <Button variant="primary" disabled={!canSubmit} onClick={() => void submit()}>
             {submitting ? "جارٍ الإنشاء والتفويض…" : "إنشاء الموظف القيادي وإصدار الدعوة"}
-          </CpButton>
+          </Button>
         </div>
       </section> : null}
 
       {canRead ? <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
           <Text role="titleMd">الكادر القيادي الحالي</Text>
-          <CpButton variant="secondary" onClick={() => void reload()} disabled={loading}>تحديث</CpButton>
+          <Button variant="secondary" onClick={() => void reload()} disabled={loading}>تحديث</Button>
         </div>
         {loading ? <CpStatePanel role="status" title="جارٍ تحميل الكادر القيادي…" /> : null}
         {loadError ? <CpStatePanel role="alert" title="تعذر تحميل الكادر القيادي" description={loadError} /> : null}

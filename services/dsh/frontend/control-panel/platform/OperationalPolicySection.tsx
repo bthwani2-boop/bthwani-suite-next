@@ -1,21 +1,18 @@
 "use client";
 
 import React from "react";
-import { Card, Text, spacing } from "@bthwani/ui-kit";
+import { Button, Card, Text, spacing } from "@bthwani/ui-kit";
 import {
   WebStyleSheet as StyleSheet,
-  WebView as View,
-} from "@bthwani/ui-kit/web";
+  WebView as View } from "@bthwani/ui-kit/web";
 import {
   CpBadge,
-  CpButton,
   CpStatePanel,
   CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import {
   evaluateDshOperatorOperationalPolicy,
   fetchDshOperationalDeliveryModes,
@@ -30,8 +27,7 @@ import {
   type DshOperationalDecision,
   type DshOperationalPolicyAuditEvent,
   type DshOperationalProfile,
-  type DshZone,
-} from "../../shared/platform";
+  type DshZone } from "../../shared/platform";
 
 type ProfileForm = {
   slaCategory: string;
@@ -72,14 +68,12 @@ const EMPTY_PROFILE: ProfileForm = {
   throttleThreshold: "0.8",
   isPaused: false,
   pauseReason: "",
-  reason: "",
-};
+  reason: "" };
 
 const MODE_LABELS: Record<DshFulfillmentMode, string> = {
   bthwani_delivery: "توصيل بثواني",
   partner_delivery: "توصيل الشريك",
-  client_pickup: "استلام العميل",
-};
+  client_pickup: "استلام العميل" };
 
 function integer(value: string, label: string, min: number, max: number): number {
   const parsed = Number(value);
@@ -133,8 +127,7 @@ export function OperationalPolicySection({
   canManageDeliveryModes,
   canEvaluate,
   canReadAudit,
-  canRollback,
-}: {
+  canRollback }: {
   readonly canReadZones: boolean;
   readonly canReadProfile: boolean;
   readonly canManageProfile: boolean;
@@ -217,8 +210,7 @@ export function OperationalPolicySection({
           throttleThreshold: String(nextProfile.capacity.throttleThreshold ?? 0.8),
           isPaused: nextProfile.capacity.isPaused,
           pauseReason: nextProfile.capacity.pauseReason ?? "",
-          reason: "",
-        });
+          reason: "" });
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "تعذر تحميل السياسات التشغيلية.");
@@ -260,8 +252,7 @@ export function OperationalPolicySection({
         isPaused: form.isPaused,
         pauseReason: form.isPaused ? form.pauseReason.trim() : "",
         expectedCapacityVersion: profile?.capacity.version ?? 0,
-        reason,
-      });
+        reason });
       await load();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "تعذر حفظ الملف التشغيلي.");
@@ -280,8 +271,7 @@ export function OperationalPolicySection({
           isEnabled: !mode.isEnabled,
           slaCategory: mode.slaCategory,
           expectedVersion: mode.version,
-          reason: `تغيير إتاحة ${MODE_LABELS[mode.fulfillmentMode]} من لوحة السياسات التشغيلية`,
-        });
+          reason: `تغيير إتاحة ${MODE_LABELS[mode.fulfillmentMode]} من لوحة السياسات التشغيلية` });
         await load();
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "تعذر تغيير نمط التوصيل.");
@@ -303,8 +293,7 @@ export function OperationalPolicySection({
         fulfillmentMode: evaluationMode,
         slaCategory: form.slaCategory,
         activeOrders: integer(activeOrders, "الطلبات الحالية", 0, 1_000_000),
-        captainsOnline: integer(captainsOnline, "الكباتن الحاليون", 0, 1_000_000),
-      });
+        captainsOnline: integer(captainsOnline, "الكباتن الحاليون", 0, 1_000_000) });
       setDecision(response.decision);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "تعذر تقييم الأثر التشغيلي.");
@@ -325,8 +314,7 @@ export function OperationalPolicySection({
       setError(null);
       await rollbackDshOperationalPolicy(selectedAudit.id, {
         expectedCurrentVersion: version,
-        reason: requiredReason(rollbackReason),
-      });
+        reason: requiredReason(rollbackReason) });
       setSelectedAudit(null);
       setRollbackReason("");
       await Promise.all([zones.reload(), load()]);
@@ -363,7 +351,7 @@ export function OperationalPolicySection({
             يربط حدود منطقة الخدمة وSLA للتحضير والإسناد والتوصيل والسعة والإيقاف وأنماط التنفيذ بأثر واحد على السلة والدفع والطلب والتوزيع.
           </Text>
         </View>
-        <CpButton variant="secondary" onClick={() => void load()} disabled={loading}>تحديث</CpButton>
+        <Button variant="secondary" onClick={() => void load()} disabled={loading}>تحديث</Button>
       </View>
 
       {error ? <Text tone="danger">{error}</Text> : null}
@@ -423,17 +411,17 @@ export function OperationalPolicySection({
           </View>
           <View style={styles.headerRow}>
             <CpBadge tone={form.isPaused ? "danger" : "success"}>{form.isPaused ? "المنطقة متوقفة" : "المنطقة تعمل"}</CpBadge>
-            <CpButton
+            <Button
               variant={form.isPaused ? "secondary" : "danger"}
               disabled={!canManageProfile}
               onClick={() => setForm((current) => ({ ...current, isPaused: !current.isPaused, pauseReason: current.isPaused ? "" : current.pauseReason }))}
             >
               {form.isPaused ? "إلغاء الإيقاف" : "إيقاف تشغيلي"}
-            </CpButton>
+            </Button>
           </View>
           {form.isPaused ? <CpTextInput disabled={!canManageProfile} aria-label="سبب الإيقاف" value={form.pauseReason} onChange={(pauseReason) => setForm((current) => ({ ...current, pauseReason }))} /> : null}
           <CpTextInput disabled={!canManageProfile} aria-label="سبب تغيير السياسة" value={form.reason} onChange={(reason) => setForm((current) => ({ ...current, reason }))} />
-          <CpButton onClick={() => void saveProfile()} disabled={!canManageProfile || loading}>حفظ SLA والسعة</CpButton>
+          <Button onClick={() => void saveProfile()} disabled={!canManageProfile || loading}>حفظ SLA والسعة</Button>
         </Card>
       ) : null}
 
@@ -469,16 +457,16 @@ export function OperationalPolicySection({
         <Text role="titleSm">محاكاة الأثر على السلة وCheckout والطلب والتوزيع</Text>
         <View style={styles.modeRow}>
           {(Object.keys(MODE_LABELS) as DshFulfillmentMode[]).map((mode) => (
-            <CpButton key={mode} variant={evaluationMode === mode ? "primary" : "secondary"} onClick={() => setEvaluationMode(mode)}>
+            <Button key={mode} variant={evaluationMode === mode ? "primary" : "secondary"} onClick={() => setEvaluationMode(mode)}>
               {MODE_LABELS[mode]}
-            </CpButton>
+            </Button>
           ))}
         </View>
         <View style={styles.grid}>
           <CpTextInput aria-label="الطلبات الحالية" value={activeOrders} onChange={setActiveOrders} />
           <CpTextInput aria-label="الكباتن المتصلون" value={captainsOnline} onChange={setCaptainsOnline} />
         </View>
-        <CpButton onClick={() => void evaluate()} disabled={!canEvaluate || !selectedZoneId || loading}>تقييم القرار</CpButton>
+        <Button onClick={() => void evaluate()} disabled={!canEvaluate || !selectedZoneId || loading}>تقييم القرار</Button>
         {decision ? (
           <View style={styles.result}>
             <CpBadge tone={decision.serviceable ? "success" : "danger"}>{decision.serviceable ? "قابل للخدمة" : decision.decision}</CpBadge>
@@ -521,7 +509,7 @@ export function OperationalPolicySection({
           <View style={styles.result}>
             <Text role="caption">العودة إلى الحدث {selectedAudit.toVersion} من {selectedAudit.aggregateType}</Text>
             <CpTextInput aria-label="سبب التراجع" value={rollbackReason} onChange={setRollbackReason} />
-            <CpButton variant="danger" onClick={() => void rollback()} disabled={loading}>تنفيذ تراجع بإصدار جديد</CpButton>
+            <Button variant="danger" onClick={() => void rollback()} disabled={loading}>تنفيذ تراجع بإصدار جديد</Button>
           </View>
         ) : null}
       </Card>
@@ -536,5 +524,4 @@ const styles = StyleSheet.create({
   grow: { flex: 1, gap: spacing[1] },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: spacing[2] },
   modeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
-  result: { gap: spacing[2] },
-});
+  result: { gap: spacing[2] } });

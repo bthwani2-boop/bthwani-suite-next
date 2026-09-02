@@ -1,20 +1,17 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card, Text, spacing } from "@bthwani/ui-kit";
+import { Button, Card, Text, spacing } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import {
   CpBadge,
-  CpButton,
   CpKpiCard,
   CpKpiStrip,
   CpStatePanel,
-  CpStateView,
-} from "@bthwani/control-panel/components";
+  CpStateView } from "@bthwani/control-panel/components";
 import {
   usePlatformChangeWorkflowController,
-  type PlatformChangeSet,
-} from "../../shared/platform";
+  type PlatformChangeSet } from "../../shared/platform";
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useIdentitySession } from "@bthwani/core-identity";
 
@@ -98,7 +95,7 @@ export function PlatformGovernanceVisual() {
           title="تعذر تحميل دورة التغيير"
           code={workflow.state.message}
         >
-          <CpButton onClick={() => void workflow.reload()}>إعادة المحاولة</CpButton>
+          <Button onClick={() => void workflow.reload()}>إعادة المحاولة</Button>
         </CpStatePanel>
       ) : (
         <>
@@ -161,7 +158,7 @@ export function PlatformGovernanceVisual() {
             <Text role="caption">
               المصدر: GET /platform/v1/change-sets عبر جلسة لوحة التحكم وحد operator_context الموثوق.
             </Text>
-            <CpButton onClick={() => void workflow.reload()}>تحديث القراءة</CpButton>
+            <Button onClick={() => void workflow.reload()}>تحديث القراءة</Button>
           </View>
         </>
       )}
@@ -173,60 +170,49 @@ const styles = StyleSheet.create({
   root: {
     direction: "rtl",
     gap: spacing[4],
-    padding: spacing[4],
-  },
+    padding: spacing[4] },
   headingRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: spacing[3],
-  },
+    gap: spacing[3] },
   headingCopy: {
     flexGrow: 1,
     flexShrink: 1,
-    gap: spacing[1],
-  },
+    gap: spacing[1] },
   lifecycle: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
-    gap: spacing[2],
-  },
+    gap: spacing[2] },
   stageGroup: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing[2],
-  },
+    gap: spacing[2] },
   stageCard: {
     width: 176,
     minHeight: 96,
     justifyContent: "space-between",
     gap: spacing[2],
-    padding: spacing[3],
-  },
+    padding: spacing[3] },
   stageHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: spacing[2],
-  },
+    gap: spacing[2] },
   boundaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing[3],
-  },
+    gap: spacing[3] },
   boundaryCard: {
     width: 220,
     minHeight: 88,
     gap: spacing[2],
-    padding: spacing[3],
-  },
+    padding: spacing[3] },
   footerRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: spacing[3],
-  },
-});
+    gap: spacing[3] } });

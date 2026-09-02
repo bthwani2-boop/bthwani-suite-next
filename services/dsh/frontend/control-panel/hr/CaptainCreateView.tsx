@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
-import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
+import { CpMutedInline, CpPageHeader, CpStatePanel, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
-import { Text } from "@bthwani/ui-kit";
+import { Button, Text } from "@bthwani/ui-kit";
 import { useCaptainCreateController } from "../../shared/workforce";
 import { ZonePicker } from "./ZonePicker";
 
@@ -60,8 +60,7 @@ export function CaptainCreateView(props: {
       engagementType: "independent_contractor",
       vehicleType,
       licenseStatus: "missing",
-      serviceZoneId: zoneId,
-    });
+      serviceZoneId: zoneId });
   };
 
   const resetForm = () => {
@@ -85,7 +84,7 @@ export function CaptainCreateView(props: {
           title="Identity غير جاهزة؛ إنشاء ملف الكابتن متوقف"
           description={identityReason}
         >
-          <CpButton variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</CpButton>
+          <Button variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</Button>
         </CpStatePanel>
       ) : null}
 
@@ -143,20 +142,20 @@ export function CaptainCreateView(props: {
       {createdCaptain ? (
         <CpStatePanel role="status" title="تم إنشاء ملف الكابتن المبدئي" description="يجب استكمال باقي البيانات لتفعيله.">
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
-            <CpButton variant="primary" onClick={() => props.onCreated(createdCaptain.actorId)}>فتح الملف والمتابعة</CpButton>
-            <CpButton variant="secondary" onClick={resetForm}>إضافة كابتن آخر</CpButton>
+            <Button variant="primary" onClick={() => props.onCreated(createdCaptain.actorId)}>فتح الملف والمتابعة</Button>
+            <Button variant="secondary" onClick={resetForm}>إضافة كابتن آخر</Button>
           </div>
         </CpStatePanel>
       ) : (
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
           <div style={{ minWidth: "240px" }}>
-            <CpButton
+            <Button
               variant="primary"
               disabled={!canSubmit}
               onClick={handleSubmit}
             >
               {isSubmitting ? "جارٍ الإنشاء…" : "إنشاء الكابتن"}
-            </CpButton>
+            </Button>
           </div>
         </div>
       )}
@@ -169,7 +168,7 @@ export function CaptainCreateView(props: {
     <EditorPageFrame
       header={
         <CpPageHeader title="إضافة كابتن (تسجيل أولي)">
-          {props.onBack ? <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton> : null}
+          {props.onBack ? <Button variant="ghost" onClick={props.onBack}>رجوع</Button> : null}
         </CpPageHeader>
       }
     >

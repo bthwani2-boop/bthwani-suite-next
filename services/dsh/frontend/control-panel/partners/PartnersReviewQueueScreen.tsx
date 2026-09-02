@@ -1,16 +1,15 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CpBadge,
-  CpButton,
   CpKpiCard,
   CpKpiStrip,
   CpPageHeader,
   CpStatePanel,
-  CpTabs,
-} from "@bthwani/control-panel/components";
+  CpTabs } from "@bthwani/control-panel/components";
 import { QueuePageFrame } from "@bthwani/control-panel/shell";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
@@ -40,13 +39,11 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
     pendingCount,
     adminController,
     handleSelectTab,
-    handleSelectSubTab,
-  } = usePartnersController({
+    handleSelectSubTab } = usePartnersController({
     initialWorkspace: "inbox",
     searchParams: searchParams ?? undefined,
     router: router ?? undefined,
-    authKind: sessionState.kind,
-  });
+    authKind: sessionState.kind });
 
   if (sessionState.kind !== "authenticated") {
     const restoring = sessionState.kind === "restoring" || sessionState.kind === "authenticating";
@@ -98,9 +95,9 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
         <CpPageHeader title="الشركاء والمتاجر">
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
             <CpBadge tone="brand">فول ستاك متعدد المستأجرين</CpBadge>
-            {canManagePartners ? <CpButton variant="primary" onClick={() => setCreateOpen((current) => !current)}>
+            {canManagePartners ? <Button variant="primary" onClick={() => setCreateOpen((current) => !current)}>
               {createOpen ? "إغلاق نموذج الإضافة" : "+ إضافة شريك"}
-            </CpButton> : <CpBadge tone="neutral">قراءة فقط</CpBadge>}
+            </Button> : <CpBadge tone="neutral">قراءة فقط</CpBadge>}
           </div>
         </CpPageHeader>
       )}

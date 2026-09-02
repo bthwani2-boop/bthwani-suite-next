@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CpButton } from "./CpButton";
+import { Button } from "@bthwani/ui-kit";
 import { useCpTokens } from "./cpTokens";
 
 export function CpDetailPanel({ title, onClose, children }: { readonly title: string; readonly onClose: () => void; readonly children: ReactNode }) {
@@ -8,7 +8,7 @@ export function CpDetailPanel({ title, onClose, children }: { readonly title: st
     <div style={styles.detailPanel}>
       <div style={styles.detailPanelHeader}>
         <h2 style={styles.detailPanelTitle}>{title}</h2>
-        <CpButton onClick={onClose} aria-label="إغلاق لوحة التفاصيل" variant="ghost" style={styles.detailPanelCloseButton}>×</CpButton>
+        <Button onClick={onClose} aria-label="إغلاق لوحة التفاصيل" variant="ghost" style={styles.detailPanelCloseButton}>×</Button>
       </div>
       {children}
     </div>

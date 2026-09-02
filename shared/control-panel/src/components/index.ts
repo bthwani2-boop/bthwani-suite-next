@@ -1,6 +1,5 @@
 export * from "./cpScale";
 export * from "./cpTokens";
-export * from "./CpButton";
 export * from "./CpSelect";
 export * from "./CpSearchInput";
 export * from "./CpTextInput";

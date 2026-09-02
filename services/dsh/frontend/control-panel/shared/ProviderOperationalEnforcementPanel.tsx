@@ -3,13 +3,11 @@
 import React from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
-  CpButton,
   CpMutedInline,
   CpStatePanel,
   CpStateView,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
-import { Text } from "@bthwani/ui-kit";
+  CpTextInput } from "@bthwani/control-panel/components";
+import { Button, Text } from "@bthwani/ui-kit";
 import { corrId } from "../../shared/_kernel/dsh-http-request";
 import {
   createProviderIncident,
@@ -20,8 +18,7 @@ import {
   transitionProviderIncident,
   type OperationalCoreResponse,
   type ProviderIncident,
-  type ProviderIncidentStatus,
-} from "../../shared/workforce";
+  type ProviderIncidentStatus } from "../../shared/workforce";
 
 const selectStyle: React.CSSProperties = {
   minHeight: 44,
@@ -29,8 +26,7 @@ const selectStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid var(--bthwani-control-panel-border)",
   background: "var(--bthwani-control-panel-surface)",
-  color: "var(--bthwani-control-panel-text)",
-};
+  color: "var(--bthwani-control-panel-text)" };
 
 const INCIDENT_STATUS_LABELS: Record<ProviderIncidentStatus, string> = {
   reported: "مسجلة",
@@ -41,8 +37,7 @@ const INCIDENT_STATUS_LABELS: Record<ProviderIncidentStatus, string> = {
   rejected: "مرفوضة",
   financial_action_posted: "رُحّل الإجراء المالي",
   closed: "مغلقة",
-  reversed: "معكوسة",
-};
+  reversed: "معكوسة" };
 
 const NEXT_INCIDENT_STATUSES: Record<ProviderIncidentStatus, readonly ProviderIncidentStatus[]> = {
   reported: ["under_review", "provider_notified", "rejected"],
@@ -53,8 +48,7 @@ const NEXT_INCIDENT_STATUSES: Record<ProviderIncidentStatus, readonly ProviderIn
   rejected: ["closed"],
   financial_action_posted: ["closed", "reversed"],
   closed: [],
-  reversed: ["closed"],
-};
+  reversed: ["closed"] };
 
 function parseEvidenceRefs(value: string): readonly string[] {
   return Array.from(new Set(value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean)));
@@ -151,8 +145,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
         completionRateBasisPoints: Math.round(ratePercent * 100),
         severeIncidentFree: true,
         evidenceMediaRefs: evidence,
-        decisionNote: promotionNote.trim(),
-      }, command.id);
+        decisionNote: promotionNote.trim() }, command.id);
       delete commandIds.current[command.key];
       setCore((current) => current ? { ...current, operationalCore: result.operationalCore } : current);
       setSuccess("تم اعتماد انتقال الكابتن من Joker إلى Basic بسجل أدلة.");
@@ -192,8 +185,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
         description: incidentDescription.trim(),
         evidenceMediaRefs: evidence,
         severity: incidentSeverity,
-        policyId: incidentPolicyId.trim() || undefined,
-      }, command.id);
+        policyId: incidentPolicyId.trim() || undefined }, command.id);
       delete commandIds.current[command.key];
       setIncidents((current) => [incident, ...current]);
       setSuccess("تم تسجيل المخالفة كقضية، ولم ينفذ أي خصم مالي.");
@@ -228,8 +220,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
       const result = await transitionProviderIncident(selectedIncidentId, {
         toStatus: nextStatus,
 		resolutionNote: resolutionNote.trim(),
-		expectedVersion: selectedIncident.version,
-      });
+		expectedVersion: selectedIncident.version });
 		const updatedIncident = result.incident;
 		if (updatedIncident) {
 			setIncidents((current) => current.map((incident) => incident.id === updatedIncident.id ? updatedIncident : incident));
@@ -274,7 +265,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
               <CpTextInput value={completionRate} onChange={setCompletionRate} placeholder="نسبة الإكمال من 0 إلى 100" aria-label="نسبة الإكمال" />
               <CpTextInput value={promotionEvidence} onChange={setPromotionEvidence} placeholder="مراجع الأدلة، مفصولة بفاصلة أو سطر" aria-label="أدلة الترقية" />
               <CpTextInput value={promotionNote} onChange={setPromotionNote} placeholder="سبب اعتماد العمليات" aria-label="سبب الترقية" />
-              <CpButton variant="primary" disabled={busy} onClick={() => void promote()}>اعتماد الانتقال إلى Basic</CpButton>
+              <Button variant="primary" disabled={busy} onClick={() => void promote()}>اعتماد الانتقال إلى Basic</Button>
             </>
           ) : classification === "basic" ? <CpStatePanel role="status" title="الكابتن مصنف Basic" /> : null}
         </Section>
@@ -290,7 +281,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
           <CpTextInput value={incidentPolicyId} onChange={setIncidentPolicyId} placeholder="معرف سياسة WLT عند الحاجة" aria-label="سياسة WLT للمخالفة" />
           <CpTextInput value={incidentEvidence} onChange={setIncidentEvidence} placeholder="مراجع الأدلة" aria-label="أدلة المخالفة" />
           <CpMutedInline>المبلغ والعملة لا يدخلهما المستخدم؛ WLT يقرأ السياسة ويحدد الأثر المالي عند اعتماد الإجراء.</CpMutedInline>
-          <CpButton variant="danger" disabled={busy} onClick={() => void createIncident()}>تسجيل القضية دون أثر مالي مباشر</CpButton>
+          <Button variant="danger" disabled={busy} onClick={() => void createIncident()}>تسجيل القضية دون أثر مالي مباشر</Button>
         </Section>
       ) : null}
 
@@ -306,7 +297,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
                 {incident.policyId ? `سياسة WLT: ${incident.policyId}` : "دون سياسة خصم محددة"}
                 {incident.wltLedgerReference ? ` · قيد WLT: ${incident.wltLedgerReference}` : ""}
               </CpMutedInline>
-              {canManage && available.length > 0 ? <CpButton variant="secondary" disabled={busy} onClick={() => selectIncident(incident)}>إدارة القرار</CpButton> : null}
+              {canManage && available.length > 0 ? <Button variant="secondary" disabled={busy} onClick={() => selectIncident(incident)}>إدارة القرار</Button> : null}
             </div>
           );
         })}
@@ -322,8 +313,8 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
             <CpTextInput value={resolutionNote} onChange={setResolutionNote} placeholder="سبب القرار" aria-label="سبب القرار" />
             {nextStatus === "financial_action_posted" ? <CpMutedInline>سيُنشئ WLT مرجع القيد ويعيده؛ لا يُقبل إدخاله من المتصفح.</CpMutedInline> : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <CpButton variant="primary" disabled={busy} onClick={() => void applyIncidentTransition()}>حفظ القرار</CpButton>
-              <CpButton variant="ghost" disabled={busy} onClick={() => setSelectedIncidentId(null)}>إلغاء</CpButton>
+              <Button variant="primary" disabled={busy} onClick={() => void applyIncidentTransition()}>حفظ القرار</Button>
+              <Button variant="ghost" disabled={busy} onClick={() => setSelectedIncidentId(null)}>إلغاء</Button>
             </div>
           </div>
         ) : null}
@@ -331,7 +322,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
 
       {error ? <CpStatePanel role="alert" title="تعذر تنفيذ الإجراء" description={error} /> : null}
       {success ? <CpStatePanel role="status" title={success} /> : null}
-      <CpButton variant="ghost" disabled={busy} onClick={() => void load()}>تحديث البيانات</CpButton>
+      <Button variant="ghost" disabled={busy} onClick={() => void load()}>تحديث البيانات</Button>
     </div>
   );
 }

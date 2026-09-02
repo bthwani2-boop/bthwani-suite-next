@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Card, Text } from "@bthwani/ui-kit";
-import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
+import { Button, Card, Text } from "@bthwani/ui-kit";
+import { CpTextInput } from "@bthwani/control-panel/components";
 import {
   createSettlementFromDeliveredOrders,
   upsertSettlementPolicy,
-  type SettlementActionResult,
-} from '@bthwani/dsh/control-panel/finance';
+  type SettlementActionResult } from '@bthwani/dsh/control-panel/finance';
 
 type GovernedSettlementPanelProps = {
   readonly reload: () => Promise<void>;
@@ -94,8 +93,7 @@ export function GovernedSettlementPanel({ reload, canManage }: GovernedSettlemen
         status: "active",
         cycleDays: parsedCycleDays,
         minimumNetMinorUnits: parsedMinimumNet,
-        changeReason: changeReason.trim(),
-      });
+        changeReason: changeReason.trim() });
       setMessage(resultMessage(result));
       setError(!result.ok);
       if (result.ok) setPolicyReadyForPartner(partnerId.trim());
@@ -121,8 +119,7 @@ export function GovernedSettlementPanel({ reload, canManage }: GovernedSettlemen
       const result = await createSettlementFromDeliveredOrders({
         partnerId: partnerId.trim(),
         periodStart,
-        periodEnd,
-      });
+        periodEnd });
       setMessage(resultMessage(result));
       setError(!result.ok);
       if (result.ok) await reload();
@@ -145,8 +142,7 @@ export function GovernedSettlementPanel({ reload, canManage }: GovernedSettlemen
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "0.75rem",
-        }}
+          gap: "0.75rem" }}
       >
         <CpTextInput
           aria-label="معرف الشريك للتسوية"
@@ -217,12 +213,12 @@ export function GovernedSettlementPanel({ reload, canManage }: GovernedSettlemen
       </div> : null}
 
       {canManage ? <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "1rem" }}>
-        <CpButton variant="secondary" disabled={!policyValid || busy !== null} onClick={savePolicy}>
+        <Button variant="secondary" disabled={!policyValid || busy !== null} onClick={savePolicy}>
           {busy === "policy" ? "جارٍ حفظ السياسة…" : "حفظ إصدار سياسة التسوية في WLT"}
-        </CpButton>
-        <CpButton variant="primary" disabled={!settlementValid || busy !== null} onClick={createSettlement}>
+        </Button>
+        <Button variant="primary" disabled={!settlementValid || busy !== null} onClick={createSettlement}>
           {busy === "settlement" ? "جارٍ احتساب التسوية…" : "إنشاء التسوية من delivered orders"}
-        </CpButton>
+        </Button>
       </div> : null}
 
       {policyReadyForPartner === partnerId.trim() ? (

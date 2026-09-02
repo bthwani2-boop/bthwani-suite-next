@@ -3,26 +3,23 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useIdentitySession } from '@bthwani/core-identity';
-import { Card, Text } from '@bthwani/ui-kit';
+import { Button, Card, Text } from '@bthwani/ui-kit';
 import {
   CpBadge,
-  CpButton,
   CpDetailPanel,
   CpMutedInline,
   CpPageHeader,
   CpRetryButton,
   CpSelect,
   CpStatePanel,
-  CpStateView,
-} from '@bthwani/control-panel/components';
+  CpStateView } from '@bthwani/control-panel/components';
 import { OperationsRoomFrame } from '@bthwani/control-panel/shell';
 import {
   ESCALATION_CATEGORY_LABELS,
   ESCALATION_SEVERITY_LABELS,
   fetchOperatorEscalations,
   updateEscalation,
-  type DshReadinessEscalation,
-} from '../../shared/field-readiness';
+  type DshReadinessEscalation } from '../../shared/field-readiness';
 import {
   acknowledgeDeliveryException,
   fetchOperatorDeliveryExceptions,
@@ -34,14 +31,12 @@ import {
   getOrCreateOperatorDeliveryExceptionCommandAttempt,
   type DshOperatorCommandContext,
   type DshDeliveryException,
-  type OperatorDeliveryExceptionCommandIntent,
-} from '../../shared/dispatch';
+  type OperatorDeliveryExceptionCommandIntent } from '../../shared/dispatch';
 import {
   FINANCIAL_CLOSURE_LABELS,
   executeDurableOrderCancellation,
   fetchOrderCancellation,
-  type DshOrderCancellation,
-} from '../../shared/orders';
+  type DshOrderCancellation } from '../../shared/orders';
 import { listCaptains, type Captain } from '../../shared/workforce';
 import { buildOperationsHref } from './operations.registry';
 import { useOperationsCapabilities } from '../../shared/operations';
@@ -84,8 +79,7 @@ const DELIVERY_EXCEPTION_REASON_LABELS: Record<DshDeliveryException['reasonCode'
   proof_unavailable: 'تعذر إثبات التسليم',
   handoff_shortage: 'نقص في محتوى عهدة المتجر والكابتن',
   handoff_mismatch: 'محتوى العهدة لا يطابق الطلب',
-  other: 'سبب آخر',
-};
+  other: 'سبب آخر' };
 
 function isHandoffException(item: DshDeliveryException): boolean {
   return item.reasonCode === 'handoff_shortage' || item.reasonCode === 'handoff_mismatch';
@@ -182,14 +176,12 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         kind: 'ready',
         readiness,
         delivery: [...open, ...acknowledged],
-        returns,
-      });
+        returns });
       return true;
     } catch (error) {
       setState({
         kind: 'error',
-        message: error instanceof Error ? error.message : 'تعذر تحميل الاستثناءات الحية من DSH.',
-      });
+        message: error instanceof Error ? error.message : 'تعذر تحميل الاستثناءات الحية من DSH.' });
       return false;
     }
   }, []);
@@ -237,16 +229,14 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       setActionState({
         kind: 'error',
         id: item.id,
-        message: 'اعتمد الاستثناء أولًا قبل تنفيذ قرار الحل.',
-      });
+        message: 'اعتمد الاستثناء أولًا قبل تنفيذ قرار الحل.' });
       return;
     }
     if (note.trim().length < 5) {
       setActionState({
         kind: 'error',
         id: item.id,
-        message: 'اكتب قرارًا تشغيليًا واضحًا من خمسة أحرف على الأقل.',
-      });
+        message: 'اكتب قرارًا تشغيليًا واضحًا من خمسة أحرف على الأقل.' });
       return;
     }
     setActionState({ kind: 'submitting', id: item.id });
@@ -266,8 +256,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       setActionState({
         kind: 'error',
         id: item.id,
-        message: error instanceof Error ? error.message : fallbackMessage,
-      });
+        message: error instanceof Error ? error.message : fallbackMessage });
     }
   }, [actorId, canManageOperations, load, note]);
 
@@ -286,8 +275,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         actorId,
         exceptionId: item.id,
         action: 'acknowledge',
-        expectedVersion: item.version,
-      };
+        expectedVersion: item.version };
       const attempt = await getOrCreateOperatorDeliveryExceptionCommandAttempt(intent);
       try {
         await acknowledgeDeliveryException(item.id, item.version, attempt.context);
@@ -303,8 +291,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
       setActionState({
         kind: 'error',
         id: item.id,
-        message: error instanceof Error ? error.message : 'تعذر اعتماد الاستثناء.',
-      });
+        message: error instanceof Error ? error.message : 'تعذر اعتماد الاستثناء.' });
     }
   }, [actorId, canManageOperations, load]);
 
@@ -333,16 +320,14 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         orderId: item.orderId,
         reasonCode: 'operational_failure',
         reasonNote: `إلغاء بعد استلام المرتجع: ${note.trim()}`,
-        ticketReference: `delivery-exception:${item.id}`,
-      });
+        ticketReference: `delivery-exception:${item.id}` });
       setReturnCancellations((current) => ({ ...current, [item.orderId]: response.cancellation }));
       await load();
     } catch (error) {
       setActionState({
         kind: 'error',
         id: item.id,
-        message: error instanceof Error ? error.message : 'تعذر تنفيذ الإلغاء المالي الحاكم.',
-      });
+        message: error instanceof Error ? error.message : 'تعذر تنفيذ الإلغاء المالي الحاكم.' });
     }
   }, [actorId, canManageOperations, load, note]);
 
@@ -362,16 +347,14 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     try {
       await updateEscalation(item.id, {
         status,
-        resolutionNote: note.trim() || 'تم استلام التصعيد وبدء المراجعة التشغيلية.',
-      });
+        resolutionNote: note.trim() || 'تم استلام التصعيد وبدء المراجعة التشغيلية.' });
       setSelectedReadinessId(null);
       await load();
     } catch (error) {
       setActionState({
         kind: 'error',
         id: item.id,
-        message: error instanceof Error ? error.message : 'تعذر حفظ التصعيد.',
-      });
+        message: error instanceof Error ? error.message : 'تعذر حفظ التصعيد.' });
     }
   }, [canManageOperations, load, note]);
 
@@ -411,8 +394,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     { value: '', label: 'اختر كابتنًا بديلًا' },
     ...replacementCaptains.map((captain) => ({
       value: captain.actorId,
-      label: `${captain.fullNameAr} · ${captain.captainProfile?.vehicleType ?? ''} · ${captain.captainProfile?.serviceZoneId ?? ''}`,
-    })),
+      label: `${captain.fullNameAr} · ${captain.captainProfile?.vehicleType ?? ''} · ${captain.captainProfile?.serviceZoneId ?? ''}` })),
   ];
 
   const detailPanel = selectedDelivery ? (
@@ -461,16 +443,16 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         ) : null}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {canManageOperations && selectedDelivery.status === 'open' ? (
-            <CpButton
+            <Button
               variant="secondary"
               disabled={actionState.kind === 'submitting'}
               onClick={() => void acknowledge(selectedDelivery)}
             >
               اعتماد وبدء المراجعة
-            </CpButton>
+            </Button>
           ) : null}
           {canManageOperations && selectedDelivery.status === 'acknowledged' ? (
-            <CpButton
+            <Button
               variant="primary"
               disabled={actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
@@ -480,8 +462,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                   exceptionId: selectedDelivery.id,
                   action: 'retry_same_captain',
                   expectedVersion: selectedDelivery.version,
-                  note: note.trim(),
-                },
+                  note: note.trim() },
                 (mutation) => resolveDeliveryExceptionRetrySameCaptain(
                   selectedDelivery.id,
                   selectedDelivery.version,
@@ -494,10 +475,10 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               {isHandoffException(selectedDelivery)
                 ? 'حل: السماح باستكمال العهدة مع الكابتن نفسه'
                 : 'حل: إعادة المحاولة مع الكابتن نفسه'}
-            </CpButton>
+            </Button>
           ) : null}
           {canManageOperations && selectedDelivery.status === 'acknowledged' && canReassign(selectedDelivery) ? (
-            <CpButton
+            <Button
               variant="secondary"
               disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
@@ -508,8 +489,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                   action: 'reassign_captain',
                   expectedVersion: selectedDelivery.version,
                   newCaptainId: selectedReplacementCaptainId,
-                  note: note.trim(),
-                },
+                  note: note.trim() },
                 (mutation) => resolveDeliveryExceptionReassignCaptain(
                   selectedDelivery.id,
                   selectedDelivery.version,
@@ -521,10 +501,10 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               )}
             >
               حل: إعادة الإسناد للكابتن البديل
-            </CpButton>
+            </Button>
           ) : null}
           {canManageOperations && selectedDelivery.status === 'acknowledged' && canCancelOrder(selectedDelivery) ? (
-            <CpButton
+            <Button
               variant="danger"
               disabled={actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
@@ -534,8 +514,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                   exceptionId: selectedDelivery.id,
                   action: 'cancel_order',
                   expectedVersion: selectedDelivery.version,
-                  note: note.trim(),
-                },
+                  note: note.trim() },
                 (mutation) => resolveDeliveryExceptionCancelOrder(
                   selectedDelivery.id,
                   selectedDelivery.version,
@@ -546,10 +525,10 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               )}
             >
               حل: إلغاء الطلب قبل الاستلام
-            </CpButton>
+            </Button>
           ) : null}
           {canManageOperations && selectedDelivery.status === 'acknowledged' && canReturnToStore(selectedDelivery) ? (
-            <CpButton
+            <Button
               variant="secondary"
               disabled={actionState.kind === 'submitting'}
               onClick={() => void runDeliveryAction(
@@ -559,8 +538,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                   exceptionId: selectedDelivery.id,
                   action: 'return_to_store',
                   expectedVersion: selectedDelivery.version,
-                  note: note.trim(),
-                },
+                  note: note.trim() },
                 (mutation) => resolveDeliveryExceptionReturnToStore(
                   selectedDelivery.id,
                   selectedDelivery.version,
@@ -571,7 +549,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               )}
             >
               حل: إرجاع الطلب إلى المتجر
-            </CpButton>
+            </Button>
           ) : null}
         </div>
       </div>
@@ -595,7 +573,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                 {returnCancellations[selectedReturn.orderId]!.financialFailure}
               </Text>
             ) : null}
-            <CpButton variant="secondary" onClick={() => void load()}>تحديث نتيجة WLT</CpButton>
+            <Button variant="secondary" onClick={() => void load()}>تحديث نتيجة WLT</Button>
           </>
         ) : (
           <>
@@ -621,13 +599,13 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               <Text role="caption" tone="danger">{actionState.message}</Text>
             ) : null}
             {canManageOperations ? (
-              <CpButton
+              <Button
                 variant="danger"
                 disabled={actionState.kind === 'submitting' || note.trim().length < 5}
                 onClick={() => void cancelReturnedOrder(selectedReturn)}
               >
                 إلغاء الطلب وبدء الإغلاق المالي
-              </CpButton>
+              </Button>
             ) : null}
           </>
         )}
@@ -656,14 +634,14 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         ) : null}
         <div style={{ display: 'flex', gap: 8 }}>
           {canManageOperations && selectedReadiness.status === 'open' ? (
-            <CpButton variant="secondary" onClick={() => void resolveReadiness(selectedReadiness, 'acknowledged')}>
+            <Button variant="secondary" onClick={() => void resolveReadiness(selectedReadiness, 'acknowledged')}>
               تأكيد الاستلام
-            </CpButton>
+            </Button>
           ) : null}
           {canManageOperations ? (
-            <CpButton variant="primary" onClick={() => void resolveReadiness(selectedReadiness, 'resolved')}>
+            <Button variant="primary" onClick={() => void resolveReadiness(selectedReadiness, 'resolved')}>
               حل وإغلاق
-            </CpButton>
+            </Button>
           ) : null}
         </div>
       </div>
@@ -683,8 +661,8 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
             <CpMutedInline tight>وضع القراءة فقط: لا تظهر أفعال التعديل أو الإغلاق لهذه الجلسة.</CpMutedInline>
           ) : null}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-            <CpButton variant="secondary" onClick={() => { void load(); void loadCaptains(); }}>تحديث</CpButton>
-            <CpButton variant="ghost" onClick={() => router.push(hubHref)}>العودة لمركز العمليات</CpButton>
+            <Button variant="secondary" onClick={() => { void load(); void loadCaptains(); }}>تحديث</Button>
+            <Button variant="ghost" onClick={() => router.push(hubHref)}>العودة لمركز العمليات</Button>
           </div>
           {captainsState === 'error' ? (
             <div style={{ marginTop: 8 }}>
@@ -733,7 +711,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <CpButton
+                  <Button
                     variant="secondary"
                     onClick={() => {
                       setSelectedReadinessId(null);
@@ -742,9 +720,9 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                     }}
                   >
                     فتح القرار
-                  </CpButton>
+                  </Button>
                    {item.orderId ? (
-                     <CpButton
+                     <Button
                        variant="ghost"
                        onClick={() => {
                          if (item.orderId) {
@@ -753,7 +731,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                        }}
                      >
                        فتح الطلب الحي
-                     </CpButton>
+                     </Button>
                    ) : null}
                 </div>
               </Card>
@@ -772,7 +750,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                   {ESCALATION_SEVERITY_LABELS[item.severity] ?? item.severity}
                 </CpBadge>
                 {item.status !== 'resolved' ? (
-                  <CpButton
+                  <Button
                     variant="secondary"
                     onClick={() => {
                       setSelectedDeliveryId(null);
@@ -781,7 +759,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                     }}
                   >
                     فتح التصعيد
-                  </CpButton>
+                  </Button>
                 ) : null}
               </Card>
             ))}
@@ -821,7 +799,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                 ) : item.returnedAt ? <CpBadge tone="warning">بانتظار قرار الإلغاء المالي</CpBadge> : null}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {item.returnedAt ? (
-                    <CpButton
+                    <Button
                       variant="secondary"
                       onClick={() => {
                         setSelectedDeliveryId(null);
@@ -830,14 +808,14 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                       }}
                     >
                       {cancellation ? 'فتح الإغلاق المالي' : 'بدء الإغلاق المالي'}
-                    </CpButton>
+                    </Button>
                   ) : null}
-                  <CpButton
+                  <Button
                     variant="ghost"
                     onClick={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))}
                   >
                     فتح الطلب الحي
-                  </CpButton>
+                  </Button>
                 </div>
               </Card>
             );

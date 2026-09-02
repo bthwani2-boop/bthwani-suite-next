@@ -1,16 +1,15 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Card, Text } from "@bthwani/ui-kit";
-import type { CpBadgeTone, CpButtonVariant } from "@bthwani/control-panel/components";
-import { CpBadge, CpButton } from "@bthwani/control-panel/components";
+import { Button, Card, Text, type ButtonProps } from "@bthwani/ui-kit";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
+import { CpBadge } from "@bthwani/control-panel/components";
 import {
   approvePayoutRequest,
   completePayoutRequest,
   rejectPayoutRequest,
   type FinanceActionResult,
-  type FinancePayoutRequest,
-} from '@bthwani/dsh/control-panel/finance';
+  type FinancePayoutRequest } from '@bthwani/dsh/control-panel/finance';
 import { formatWltMoney } from '@bthwani/dsh/finance';
 
 type PayoutRequestsPanelProps = {
@@ -23,7 +22,7 @@ type PayoutRequestsPanelProps = {
 type PayoutAction = {
   readonly id: "approve" | "reject" | "complete";
   readonly label: string;
-  readonly tone: CpButtonVariant;
+  readonly tone: ButtonProps["tone"];
   readonly run: (payoutId: string) => Promise<FinanceActionResult>;
 };
 
@@ -38,8 +37,7 @@ const STATUS_META: Record<string, { readonly label: string; readonly tone: CpBad
   // Historical rows from the retired provider-managed Cash-Out model.
   provider_pending: { label: "سجل قديم: قيد الإرسال إلى المزود", tone: "neutral" },
   processing: { label: "سجل قديم: المزود أكد المعالجة", tone: "neutral" },
-  provider_result_unknown: { label: "سجل قديم: نتيجة المزود غير محسومة", tone: "neutral" },
-};
+  provider_result_unknown: { label: "سجل قديم: نتيجة المزود غير محسومة", tone: "neutral" } };
 
 // Execution and independent verification happen against a frozen settlement
 // batch in the settlement workbench, not from this list: the executor must not
@@ -153,14 +151,14 @@ export function PayoutRequestsPanel({ requests, reload, canManage, beneficiaryAc
                         const key = `${request.id}:${action.id}`;
                         const busy = busyKey === key;
                         return (
-                          <CpButton
+                          <Button
                             key={action.id}
                             variant={action.tone}
                             disabled={busyKey !== null}
                             onClick={() => runAction(request, action)}
                           >
                             {busy ? "جارٍ التنفيذ…" : action.label}
-                          </CpButton>
+                          </Button>
                         );
                       })}
                     </div>

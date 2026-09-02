@@ -1,28 +1,24 @@
 "use client";
 
 import React from "react";
-import { Card, Text, spacing } from "@bthwani/ui-kit";
+import { Button, Card, Text, spacing } from "@bthwani/ui-kit";
 import {
   WebStyleSheet as StyleSheet,
-  WebView as View,
-} from "@bthwani/ui-kit/web";
+  WebView as View } from "@bthwani/ui-kit/web";
 import {
   CpBadge,
-  CpButton,
   CpRetryButton,
   CpStatePanel,
   CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { useClientAddressPrivacyController } from "../../shared/privacy";
 
 export function ClientAddressPrivacySection({
   canRead,
-  canManage,
-}: {
+  canManage }: {
   readonly canRead: boolean;
   readonly canManage: boolean;
 }) {
@@ -66,8 +62,7 @@ export function ClientAddressPrivacySection({
         enabled,
         retentionDays: parsed.retention,
         batchLimit: parsed.limit,
-        reason: parsed.normalizedReason,
-      });
+        reason: parsed.normalizedReason });
       if (ok) setReason("");
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : "بيانات سياسة الخصوصية غير صالحة.");
@@ -137,24 +132,24 @@ export function ClientAddressPrivacySection({
 
             {canManage ? (
               <>
-                <CpButton variant={enabled ? "secondary" : "primary"} onClick={() => setEnabled((current) => !current)}>
+                <Button variant={enabled ? "secondary" : "primary"} onClick={() => setEnabled((current) => !current)}>
                   {enabled ? "تعطيل الجدولة" : "تفعيل الجدولة"}
-                </CpButton>
+                </Button>
                 <CpTextInput aria-label="مدة الاحتفاظ بعد الحذف بالأيام" value={retentionDays} onChange={setRetentionDays} />
                 <CpTextInput aria-label="حجم دفعة anonymization" value={batchLimit} onChange={setBatchLimit} />
                 <CpTextInput aria-label="سبب تغيير السياسة" value={reason} onChange={setReason} placeholder="سبب قابل للتدقيق" />
-                <CpButton variant="primary" disabled={controller.mutating} onClick={() => void save()}>
+                <Button variant="primary" disabled={controller.mutating} onClick={() => void save()}>
                   {controller.mutating ? "جارٍ الحفظ…" : "حفظ سياسة الخصوصية"}
-                </CpButton>
+                </Button>
 
                 <Text role="titleSm">تشغيل دفعة الإخفاء المستحقة</Text>
                 <Text role="caption" tone="muted">
                   معرف التشغيل هو مفتاح idempotency وcorrelation الفعلي. استخدم معرفًا جديدًا لكل دفعة، وكرر المعرف نفسه فقط لإعادة محاولة الدفعة نفسها.
                 </Text>
                 <CpTextInput aria-label="معرف التشغيل" value={runId} onChange={setRunId} placeholder="privacy-2026-07-21-run-001" />
-                <CpButton variant="danger" disabled={controller.mutating || controller.state.status.dueCount === 0} onClick={() => void anonymize()}>
+                <Button variant="danger" disabled={controller.mutating || controller.state.status.dueCount === 0} onClick={() => void anonymize()}>
                   {controller.mutating ? "جارٍ التنفيذ…" : "تشغيل anonymization"}
-                </CpButton>
+                </Button>
 
                 {controller.lastResult ? <CpBadge tone="success">{`تم إخفاء ${controller.lastResult.anonymizedCount} عنوانًا`}</CpBadge> : null}
                 {validationError ? <Text tone="danger">{validationError}</Text> : null}
@@ -176,7 +171,7 @@ export function ClientAddressPrivacySection({
                 <Text role="titleSm">سجل تدقيق الخصوصية الآمن</Text>
                 <Text role="caption" tone="muted">يعرض آخر 50 حدثًا من projection لا تحتوي PII خامًا.</Text>
               </View>
-              <CpButton variant="secondary" onClick={() => void controller.reload()}>تحديث</CpButton>
+              <Button variant="secondary" onClick={() => void controller.reload()}>تحديث</Button>
             </View>
             {controller.state.events.length === 0 ? (
               <CpStatePanel role="status" title="لا توجد أحداث خصوصية" description="ستظهر جدولة الحذف وتحديثات السياسة وعمليات الإخفاء هنا." />
@@ -219,5 +214,4 @@ const styles = StyleSheet.create({
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   metrics: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[3] },
-  headerText: { gap: spacing[1] },
-});
+  headerText: { gap: spacing[1] } });

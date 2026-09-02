@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import { colorRoles, radius, spacing } from "@bthwani/ui-kit";
+import { Button, colorRoles, radius, spacing } from "@bthwani/ui-kit";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
 import {
-  CpButton,
   CpEmptyTableMessage,
   CpSelect,
   CpStatePanel,
@@ -12,8 +11,7 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   formatTargetList,
@@ -21,28 +19,23 @@ import {
   useHomeDiscoveryAdminController,
   type DshHomeAdminContentInput,
   type DshHomeAdminKind,
-  type DshHomeAdminTargeting,
-} from "../../../shared/home-discovery";
+  type DshHomeAdminTargeting } from "../../../shared/home-discovery";
 
 const KIND_META = {
   banners: {
     title: "إدارة بنرات الصفحة الرئيسية",
     singular: "بنر",
-    imageLabel: "رابط صورة البنر",
-  },
+    imageLabel: "رابط صورة البنر" },
   promos: {
     title: "إدارة عروض الصفحة الرئيسية",
     singular: "عرض",
-    imageLabel: "رابط صورة العرض",
-  },
-} as const;
+    imageLabel: "رابط صورة العرض" } } as const;
 
 const PUBLICATION_LABELS: Record<string, string> = {
   draft: "مسودة",
   published: "منشور",
   paused: "موقوف",
-  archived: "مؤرشف",
-};
+  archived: "مؤرشف" };
 
 export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAdminKind }) {
   const { state } = useIdentitySession();
@@ -64,7 +57,7 @@ export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAd
   if (controller.state.kind === "error") {
     return (
       <CpStatePanel role="alert" title="تعذر تحميل البيانات" description={controller.state.message}>
-        <CpButton onClick={controller.retry}>إعادة المحاولة</CpButton>
+        <Button onClick={controller.retry}>إعادة المحاولة</Button>
       </CpStatePanel>
     );
   }
@@ -82,8 +75,8 @@ export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAd
             </p>
           </div>
           <div style={styles.actions}>
-            <CpButton onClick={() => controller.select(null)}>إضافة {meta.singular}</CpButton>
-            <CpButton onClick={controller.retry}>تحديث</CpButton>
+            <Button onClick={() => controller.select(null)}>إضافة {meta.singular}</Button>
+            <Button onClick={controller.retry}>تحديث</Button>
           </div>
         </header>
 
@@ -120,8 +113,8 @@ export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAd
                   </CpTableCell>
                   <CpTableCell>
                     <div style={styles.rowActions}>
-                      <CpButton onClick={() => controller.select(item)}>تعديل</CpButton>
-                      <CpButton
+                      <Button onClick={() => controller.select(item)}>تعديل</Button>
+                      <Button
                         disabled={controller.actionState.kind === "submitting"}
                         onClick={() => {
                           if (globalThis.confirm?.(`حذف ${meta.singular} «${item.title}» نهائيًا؟`)) {
@@ -130,7 +123,7 @@ export function MarketingHomeDiscoveryPanel({ kind }: { readonly kind: DshHomeAd
                         }}
                       >
                         حذف
-                      </CpButton>
+                      </Button>
                     </div>
                   </CpTableCell>
                 </tr>
@@ -198,8 +191,7 @@ function HomeDiscoveryEditor({
   editing,
   submitting,
   onSave,
-  onCancel,
-}: {
+  onCancel }: {
   readonly kind: DshHomeAdminKind;
   readonly draft: DshHomeAdminContentInput;
   readonly setDraft: (value: DshHomeAdminContentInput) => void;
@@ -305,8 +297,7 @@ function HomeDiscoveryEditor({
           value={audienceValue}
           onChange={(value) => setTargeting({
             ...targeting,
-            audienceSegments: value === "all" ? [] : [value as "guest" | "authenticated"],
-          })}
+            audienceSegments: value === "all" ? [] : [value as "guest" | "authenticated"] })}
           options={[
             { value: "all", label: "كل الجماهير" },
             { value: "guest", label: "الزوار غير المسجلين" },
@@ -351,10 +342,10 @@ function HomeDiscoveryEditor({
       />
 
       <div style={styles.editorActions}>
-        <CpButton disabled={!canSubmit} onClick={onSave}>
+        <Button disabled={!canSubmit} onClick={onSave}>
           {submitting ? "جاري الحفظ…" : draft.publicationStatus === "published" ? "حفظ الاستهداف ونشر" : "حفظ"}
-        </CpButton>
-        <CpButton onClick={onCancel}>إلغاء</CpButton>
+        </Button>
+        <Button onClick={onCancel}>إلغاء</Button>
       </div>
     </div>
   );
@@ -366,21 +357,18 @@ const styles = WebStyleSheet.create({
     gridTemplateColumns: "minmax(0, 1fr) minmax(20rem, 24rem)",
     gap: spacing[6],
     padding: spacing[4],
-    alignItems: "start",
-  },
+    alignItems: "start" },
   workspaceClosed: {
     display: "grid",
     gridTemplateColumns: "minmax(0, 1fr)",
-    padding: spacing[4],
-  },
+    padding: spacing[4] },
   listPane: { minWidth: 0 },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: spacing[4],
-    marginBottom: spacing[4],
-  },
+    marginBottom: spacing[4] },
   title: { margin: 0, fontSize: "1.1rem", fontWeight: 800, color: colorRoles.textPrimary },
   description: { margin: `${spacing[1]}px 0 0`, fontSize: "0.82rem", color: colorRoles.textSecondary },
   actions: { display: "flex", gap: spacing[2], flexWrap: "wrap" },
@@ -395,8 +383,7 @@ const styles = WebStyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing[5],
     maxHeight: "calc(100vh - 8rem)",
-    overflowY: "auto",
-  },
+    overflowY: "auto" },
   editor: { display: "grid", gap: spacing[3] },
   editorTitle: { margin: 0, fontSize: "1rem", fontWeight: 800, color: colorRoles.textPrimary },
   editorHint: { margin: `${spacing[1]}px 0 0`, fontSize: "0.75rem", color: colorRoles.textSecondary },
@@ -406,8 +393,7 @@ const styles = WebStyleSheet.create({
     overflow: "hidden",
     borderRadius: radius.lg,
     backgroundColor: colorRoles.surfaceInset,
-    border: `1px solid ${colorRoles.borderSubtle}`,
-  },
+    border: `1px solid ${colorRoles.borderSubtle}` },
   previewImage: { width: "100%", height: 180, objectFit: "cover", display: "block" },
   previewPlaceholder: {
     height: 180,
@@ -416,8 +402,7 @@ const styles = WebStyleSheet.create({
     color: colorRoles.textMuted,
     fontSize: "0.8rem",
     padding: spacing[3],
-    textAlign: "center",
-  },
+    textAlign: "center" },
   previewCopy: {
     position: "absolute",
     right: spacing[3],
@@ -428,8 +413,7 @@ const styles = WebStyleSheet.create({
     padding: spacing[2],
     borderRadius: radius.md,
     backgroundColor: colorRoles.surfaceBase,
-    color: colorRoles.textPrimary,
-  },
+    color: colorRoles.textPrimary },
   qualityBox: { padding: spacing[3], backgroundColor: colorRoles.surfaceInset, borderRadius: radius.md },
   qualityHeader: { display: "flex", justifyContent: "space-between", fontSize: "0.75rem", marginBottom: spacing[1] },
   progress: { width: "100%" },
@@ -439,8 +423,6 @@ const styles = WebStyleSheet.create({
     padding: spacing[3],
     backgroundColor: colorRoles.brandStructureSoft,
     borderRadius: radius.md,
-    border: `1px solid ${colorRoles.borderSubtle}`,
-  },
+    border: `1px solid ${colorRoles.borderSubtle}` },
   targetingTitle: { color: colorRoles.textPrimary, fontSize: "0.85rem" },
-  editorActions: { display: "flex", gap: spacing[2], marginTop: spacing[1], flexWrap: "wrap" },
-});
+  editorActions: { display: "flex", gap: spacing[2], marginTop: spacing[1], flexWrap: "wrap" } });

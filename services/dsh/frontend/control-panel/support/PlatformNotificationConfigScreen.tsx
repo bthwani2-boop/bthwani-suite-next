@@ -1,9 +1,9 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import React, { type ReactNode } from "react";
 import {
   CpBadge,
-  CpButton,
   CpFilterBar,
   CpMutedInline,
   CpPageHeader,
@@ -14,28 +14,24 @@ import {
   CpTableCell,
   CpTableHeaderCell,
   CpTextInput,
-  type CpBadgeTone,
-} from "@bthwani/control-panel/components";
+  type CpBadgeTone } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import {
   useNotificationDeliveryAuditController,
-  usePlatformNotificationConfigController,
-} from "../../shared/notifications";
+  usePlatformNotificationConfigController } from "../../shared/notifications";
 import type {
   DshNotificationChannel,
   DshNotificationDeliveryAttempt,
   DshNotificationDeliveryOutcome,
   DshPlatformNotificationConfig,
-  DshPushDeliveryAudit,
-} from "../../shared/notifications";
+  DshPushDeliveryAudit } from "../../shared/notifications";
 
 const OUTCOME_LABELS: Readonly<Record<DshNotificationDeliveryOutcome, string>> = {
   sent: "تم الإرسال",
   retry_scheduled: "إعادة محاولة",
-  dead_letter: "Dead letter",
-};
+  dead_letter: "Dead letter" };
 
 function outcomeTone(outcome: DshNotificationDeliveryOutcome): CpBadgeTone {
   if (outcome === "sent") return "success";
@@ -92,8 +88,7 @@ function LabeledTextArea({
   value,
   onChange,
   placeholder,
-  rows = 3,
-}: {
+  rows = 3 }: {
   readonly label: string;
   readonly value: string;
   readonly onChange: (value: string) => void;
@@ -208,8 +203,7 @@ function PlatformNotificationConfigContent({ canManage }: { readonly canManage: 
         titleEn: titleEn.trim(),
         bodyEn: bodyEn.trim(),
         variables: splitValues(variables),
-        deepLinkPattern: deepLinkPattern.trim(),
-      });
+        deepLinkPattern: deepLinkPattern.trim() });
       setSaveMessage("تم حفظ إعداد الإشعار.");
       setEditingConfig(null);
     } catch {
@@ -272,7 +266,7 @@ function PlatformNotificationConfigContent({ canManage }: { readonly canManage: 
                   <CpTableCell>{row.description}</CpTableCell>
                   <CpTableCell>{row.updatedBy}</CpTableCell>
                   <CpTableCell>
-                    {canManage ? <CpButton onClick={() => startEdit(row)}>تعديل</CpButton> : <CpMutedInline tight>قراءة فقط</CpMutedInline>}
+                    {canManage ? <Button onClick={() => startEdit(row)}>تعديل</Button> : <CpMutedInline tight>قراءة فقط</CpMutedInline>}
                   </CpTableCell>
                 </tr>
               ))}
@@ -308,9 +302,9 @@ function PlatformNotificationConfigContent({ canManage }: { readonly canManage: 
           </LabeledField>
           {saveMessage ? <CpMutedInline tight>{saveMessage}</CpMutedInline> : null}
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <CpButton variant="brand" disabled={isSaving} onClick={() => { void handleSave(true); }}>حفظ مفعّل</CpButton>
-            <CpButton disabled={isSaving} onClick={() => { void handleSave(false); }}>حفظ معطّل</CpButton>
-            {editingConfig ? <CpButton variant="ghost" onClick={resetEditor}>إلغاء</CpButton> : null}
+            <Button variant="brand" disabled={isSaving} onClick={() => { void handleSave(true); }}>حفظ مفعّل</Button>
+            <Button disabled={isSaving} onClick={() => { void handleSave(false); }}>حفظ معطّل</Button>
+            {editingConfig ? <Button variant="ghost" onClick={resetEditor}>إلغاء</Button> : null}
           </div>
         </section> : <CpStatePanel role="status" title="إعدادات الإشعارات للقراءة فقط" description="تتطلب أوامر إنشاء وتعديل القوالب صلاحية support.manage." />}
 
@@ -336,10 +330,10 @@ function PlatformNotificationConfigContent({ canManage }: { readonly canManage: 
                 <CpBadge tone="danger">{`Push فاشل: ${deliveryAudit.state.summary.failedPush}`}</CpBadge>
               </CpFilterBar>
               <CpFilterBar label="فلاتر تدقيق التسليم">
-                <CpButton variant={deliveryAudit.outcome ? "secondary" : "brand"} onClick={() => { void deliveryAudit.filter(); }}>الكل</CpButton>
-                <CpButton variant={deliveryAudit.outcome === "sent" ? "brand" : "secondary"} onClick={() => { void deliveryAudit.filter("sent"); }}>تم الإرسال</CpButton>
-                <CpButton variant={deliveryAudit.outcome === "retry_scheduled" ? "brand" : "secondary"} onClick={() => { void deliveryAudit.filter("retry_scheduled"); }}>إعادة محاولة</CpButton>
-                <CpButton variant={deliveryAudit.outcome === "dead_letter" ? "brand" : "secondary"} onClick={() => { void deliveryAudit.filter("dead_letter"); }}>Dead letter</CpButton>
+                <Button variant={deliveryAudit.outcome ? "secondary" : "brand"} onClick={() => { void deliveryAudit.filter(); }}>الكل</Button>
+                <Button variant={deliveryAudit.outcome === "sent" ? "brand" : "secondary"} onClick={() => { void deliveryAudit.filter("sent"); }}>تم الإرسال</Button>
+                <Button variant={deliveryAudit.outcome === "retry_scheduled" ? "brand" : "secondary"} onClick={() => { void deliveryAudit.filter("retry_scheduled"); }}>إعادة محاولة</Button>
+                <Button variant={deliveryAudit.outcome === "dead_letter" ? "brand" : "secondary"} onClick={() => { void deliveryAudit.filter("dead_letter"); }}>Dead letter</Button>
               </CpFilterBar>
               {deliveryAudit.state.attempts.length === 0 ? (
                 <CpStatePanel role="status" title="لا توجد محاولات Outbox" description="لا توجد محاولات مطابقة للفلتر الحالي." />

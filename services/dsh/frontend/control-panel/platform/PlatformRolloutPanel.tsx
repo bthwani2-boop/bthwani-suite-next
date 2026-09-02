@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, Text, spacing } from "@bthwani/ui-kit";
+import { Button, Card, Text, spacing } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import {
   CpBadge,
-  CpButton,
   CpRetryButton,
   CpSelect,
   CpStatePanel,
@@ -13,8 +12,7 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import {
   fetchPlatformRolloutRecovery,
   usePlatformRolloutController,
@@ -22,8 +20,7 @@ import {
   type PlatformChangeSet,
   type PlatformControlState,
   type PlatformRollout,
-  type PlatformRolloutRecoveryGuide,
-} from "../../shared/platform";
+  type PlatformRolloutRecoveryGuide } from "../../shared/platform";
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useIdentitySession } from "@bthwani/core-identity";
 
@@ -39,8 +36,7 @@ const STATUS_TONE: Record<string, "neutral" | "warning" | "success" | "danger" |
   completed: "success",
   aborted: "danger",
   rolled_back: "neutral",
-  failed: "danger",
-};
+  failed: "danger" };
 
 const TARGET_SCOPE_KEYS = new Set(["audience", "audienceIds", "city", "regions", "surface", "surfaces"]);
 const TARGET_SCOPE_ARRAY_KEYS = new Set(["audienceIds", "regions", "surfaces"]);
@@ -139,8 +135,7 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
       featureFlagKey: selectedFlagKey,
       targetScope,
       steps,
-      healthGate,
-    };
+      healthGate };
     const succeeded = await rollouts.create(input);
     if (succeeded) await refreshAffectedState();
   };
@@ -206,9 +201,9 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
                 <CpTextInput value={targetScopeText} onChange={setTargetScopeText} placeholder='{"surfaces":["app-client"],"regions":["sanaa"]}' aria-label="نطاق الاستهداف بصيغة JSON" />
                 <CpTextInput value={healthGateText} onChange={setHealthGateText} placeholder='{"requiredState":"OPERATIONAL"}' aria-label="بوابة الصحة بصيغة JSON" />
                 <View style={styles.actions}>
-                  <CpButton onClick={() => void createRollout()} disabled={busy || !selectedChangeSet} aria-label="إنشاء إطلاق تدريجي">
+                  <Button onClick={() => void createRollout()} disabled={busy || !selectedChangeSet} aria-label="إنشاء إطلاق تدريجي">
                     {busy ? "جاري الحفظ…" : "إنشاء الإطلاق"}
-                  </CpButton>
+                  </Button>
                 </View>
               </View>
             )}
@@ -308,8 +303,7 @@ function RolloutActions({
   onResume,
   onAbort,
   onRollback,
-  onRecovery,
-}: {
+  onRecovery }: {
   readonly rollout: PlatformRollout;
   readonly canManage: boolean;
   readonly canAdvance: boolean;
@@ -321,19 +315,19 @@ function RolloutActions({
   readonly onRollback: () => void;
   readonly onRecovery: () => void;
 }) {
-  if (!canManage) return <CpButton onClick={onRecovery}>دليل الاستعادة</CpButton>;
+  if (!canManage) return <Button onClick={onRecovery}>دليل الاستعادة</Button>;
   return (
     <View style={styles.actions}>
       {rollout.status === "running" ? (
-        <CpButton onClick={onAdvance} disabled={busy || !canAdvance}>تقدم</CpButton>
+        <Button onClick={onAdvance} disabled={busy || !canAdvance}>تقدم</Button>
       ) : null}
-      {rollout.status === "running" ? <CpButton onClick={onPause} disabled={busy}>إيقاف مؤقت</CpButton> : null}
-      {rollout.status === "paused" ? <CpButton onClick={onResume} disabled={busy || !canAdvance}>استئناف دون تغيير النسبة</CpButton> : null}
+      {rollout.status === "running" ? <Button onClick={onPause} disabled={busy}>إيقاف مؤقت</Button> : null}
+      {rollout.status === "paused" ? <Button onClick={onResume} disabled={busy || !canAdvance}>استئناف دون تغيير النسبة</Button> : null}
       {(rollout.status === "running" || rollout.status === "paused") ? (
-        <CpButton onClick={onAbort} disabled={busy}>إلغاء واستعادة baseline</CpButton>
+        <Button onClick={onAbort} disabled={busy}>إلغاء واستعادة baseline</Button>
       ) : null}
-      {rollout.status === "completed" ? <CpButton onClick={onRollback} disabled={busy}>تراجع كامل</CpButton> : null}
-      <CpButton onClick={onRecovery} disabled={busy}>دليل الاستعادة</CpButton>
+      {rollout.status === "completed" ? <Button onClick={onRollback} disabled={busy}>تراجع كامل</Button> : null}
+      <Button onClick={onRecovery} disabled={busy}>دليل الاستعادة</Button>
       {!['running', 'paused', 'completed'].includes(rollout.status) ? <Text role="caption">الاستعادة مكتملة أو تتطلب مراجعة</Text> : null}
     </View>
   );
@@ -341,21 +335,16 @@ function RolloutActions({
 
 const styles = StyleSheet.create({
   stack: {
-    gap: spacing[4],
-  },
+    gap: spacing[4] },
   cardContent: {
     gap: spacing[3],
-    padding: spacing[4],
-  },
+    padding: spacing[4] },
   formGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing[3],
-  },
+    gap: spacing[3] },
   actions: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing[2],
-    alignItems: "center",
-  },
-});
+    alignItems: "center" } });

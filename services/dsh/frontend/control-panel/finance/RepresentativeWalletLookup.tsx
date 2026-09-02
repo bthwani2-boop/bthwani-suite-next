@@ -1,26 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Card, StateView, Text } from "@bthwani/ui-kit";
+import { Button, Card, StateView, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
   CpBadge,
-  CpButton,
   CpMutedInline,
   CpSelect,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 import { formatWltMoney } from '@bthwani/dsh/finance';
 import type {
   RepresentativeWalletActorType,
   RepresentativeLedgerEntry,
-  RepresentativeWallet,
-} from '@bthwani/dsh/wlt-boundary';
+  RepresentativeWallet } from '@bthwani/dsh/wlt-boundary';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),
@@ -110,8 +107,7 @@ export function RepresentativeWalletLookup({ actorType: initialActorType = "clie
       kind: "loaded",
       wallet: walletResult.value.wallet,
       ledgerEntries: ledgerResult.status === "fulfilled" ? ledgerResult.value.ledgerEntries ?? [] : [],
-      ledgerError: ledgerResult.status === "rejected" ? errorMessage(ledgerResult.reason) : null,
-    });
+      ledgerError: ledgerResult.status === "rejected" ? errorMessage(ledgerResult.reason) : null });
   };
 
   return (
@@ -154,9 +150,9 @@ export function RepresentativeWalletLookup({ actorType: initialActorType = "clie
             placeholder="actor-id"
           />
         </label>
-        <CpButton type="submit" variant="primary" disabled={state.kind === "loading"}>
+        <Button type="submit" variant="primary" disabled={state.kind === "loading"}>
           {state.kind === "loading" ? "جارٍ الاستعلام..." : "استعلام"}
-        </CpButton>
+        </Button>
       </form>
 
       {state.kind === "idle" ? (

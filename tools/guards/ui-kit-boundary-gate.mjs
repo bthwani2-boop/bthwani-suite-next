@@ -142,13 +142,10 @@ for (const file of listCodeFiles()) {
 
 const controlPanelButtonAdapter = "shared/control-panel/src/components/CpButton.tsx";
 if (listCodeFiles().includes(controlPanelButtonAdapter)) {
-  const source = read(controlPanelButtonAdapter);
-  if (!/from ["']@bthwani\/ui-kit["']/u.test(source) || /<button\b/u.test(source)) {
-    violations.push({
-      file: controlPanelButtonAdapter,
-      message: "CpButton must remain a compatibility adapter over the canonical @bthwani/ui-kit Button",
-    });
-  }
+  violations.push({
+    file: controlPanelButtonAdapter,
+    message: "CpButton is retired; consumers must use canonical @bthwani/ui-kit Button directly",
+  });
 }
 
 // Removes custom-property *names* only, so that a token reference such as

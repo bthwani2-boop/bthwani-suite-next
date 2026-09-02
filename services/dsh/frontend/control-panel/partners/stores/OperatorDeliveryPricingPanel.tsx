@@ -1,13 +1,11 @@
 "use client";
 
 import React from "react";
-import { colorRoles } from "@bthwani/ui-kit";
+import { Button, colorRoles } from "@bthwani/ui-kit";
 import {
   minorUnitsToWltMajorInput,
-  parseWltMajorInputToMinorUnits,
-} from "@bthwani/dsh/finance";
+  parseWltMajorInputToMinorUnits } from "@bthwani/dsh/finance";
 import {
-  CpButton,
   CpRetryButton,
   CpSelect,
   CpStatePanel,
@@ -15,15 +13,13 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import {
   findDeliveryPricing,
   useOperatorDeliveryPricingController,
   type DeliveryPricingMode,
   type DeliveryPricingFulfillmentMode,
-  type DeliveryPricingRecord,
-} from "../../../shared/partner/operator-delivery-pricing.public";
+  type DeliveryPricingRecord } from "../../../shared/partner/operator-delivery-pricing.public";
 import { OperatorPartnerFleetPanel } from "./OperatorPartnerFleetPanel";
 
 export type OperatorDeliveryPricingPanelProps = {
@@ -42,16 +38,14 @@ const MODES: readonly DeliveryPricingFulfillmentMode[] = ["bthwani_delivery", "p
 const MODE_LABEL: Record<DeliveryPricingFulfillmentMode, string> = {
   bthwani_delivery: "توصيل بثواني",
   partner_delivery: "توصيل المتجر",
-  pickup: "استلم بنفسك",
-};
+  pickup: "استلم بنفسك" };
 
 export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricingPanelProps) {
   const controller = useOperatorDeliveryPricingController(storeId);
   const [drafts, setDrafts] = React.useState<Record<DeliveryPricingFulfillmentMode, Draft>>({
     bthwani_delivery: { pricingMode: "bthwani_pricing", feeYer: "0", status: "paused", reason: "" },
     partner_delivery: { pricingMode: "partner_fixed_pricing", feeYer: "0", status: "paused", reason: "" },
-    pickup: { pricingMode: "free_delivery", feeYer: "0", status: "active", reason: "" },
-  });
+    pickup: { pricingMode: "free_delivery", feeYer: "0", status: "active", reason: "" } });
 
   React.useEffect(() => {
     const next = {} as Record<DeliveryPricingFulfillmentMode, Draft>;
@@ -63,8 +57,7 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
           ? "0"
           : minorUnitsToWltMajorInput(record?.feeMinorUnits ?? 0, record?.currency ?? "YER"),
         status: record?.status ?? (mode === "pickup" ? "active" : "paused"),
-        reason: "",
-      };
+        reason: "" };
     }
     setDrafts(next);
   }, [controller.records]);
@@ -72,8 +65,7 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
   const patchDraft = (mode: DeliveryPricingFulfillmentMode, patch: Partial<Draft>) => {
     setDrafts((current) => ({
       ...current,
-      [mode]: { ...current[mode], ...patch },
-    }));
+      [mode]: { ...current[mode], ...patch } }));
   };
 
   const save = async (mode: DeliveryPricingFulfillmentMode) => {
@@ -90,8 +82,7 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
       currency: "YER",
       pricingConfig: "{}",
       status: !record && draft.status === "archived" ? "paused" : draft.status,
-      reason: draft.reason.trim(),
-    }, mode);
+      reason: draft.reason.trim() }, mode);
     if (succeeded) patchDraft(mode, { reason: "" });
   };
 
@@ -184,12 +175,12 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
                     />
                   </CpTableCell>
                   <CpTableCell>
-                    <CpButton
+                    <Button
                       disabled={controller.mutationLoading || !draft.reason.trim()}
                       onClick={() => void save(mode)}
                     >
                       {controller.mutationLoading ? "جاري الحفظ…" : record ? "حفظ" : "إنشاء"}
-                    </CpButton>
+                    </Button>
                   </CpTableCell>
                 </tr>
               );

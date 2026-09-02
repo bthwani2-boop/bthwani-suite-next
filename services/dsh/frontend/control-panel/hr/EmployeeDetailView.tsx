@@ -2,17 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  CpButton,
   CpDescriptionList,
   CpDescriptionRow,
   CpPageHeader,
   CpMutedInline,
   CpStateView,
   CpTextInput,
-  CpTabs,
-} from "@bthwani/control-panel/components";
+  CpTabs } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
-import { Text } from "@bthwani/ui-kit";
+import { Button, Text } from "@bthwani/ui-kit";
 
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
@@ -25,8 +23,7 @@ import {
   type EmployeeGovernanceProfile,
   type EmployeeGuaranteeStatus,
   type EmployeeGuaranteeType,
-  type SupervisorCandidate,
-} from "../../shared/workforce";
+  type SupervisorCandidate } from "../../shared/workforce";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
 
@@ -36,8 +33,7 @@ const selectStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid var(--bthwani-control-panel-border)",
   background: "var(--bthwani-control-panel-surface)",
-  color: "var(--bthwani-control-panel-text)",
-};
+  color: "var(--bthwani-control-panel-text)" };
 
 function splitScopes(value: string): string[] {
   return [...new Set(value.split(/[،,\n]/).map((item) => item.trim()).filter(Boolean))];
@@ -86,8 +82,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
         ? {
             actorId: employee.employeeProfile.supervisorActorId,
             username: employee.employeeProfile.supervisorActorId,
-            active: true,
-          }
+            active: true }
         : null,
     );
   }, [employee?.actorId, employee?.version]);
@@ -135,8 +130,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
         guaranteeReference: guaranteeReference.trim(),
         responsibilityScopes: splitScopes(responsibilityScopes),
         managedDepartmentCodes: splitScopes(managedDepartmentCodes),
-        notes: governanceNotes.trim(),
-      });
+        notes: governanceNotes.trim() });
       setGovernance(result);
     } catch (cause) {
       setGovernanceError(cause instanceof Error ? cause.message : "تعذر حفظ نطاق مسؤولية الموظف");
@@ -164,7 +158,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
               isSessionExpired={errorState?.isSessionExpired ?? false}
               onRetry={() => void controller.reload()}
             />
-            <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+            <Button variant="ghost" onClick={props.onBack}>رجوع</Button>
           </div>
         }
       >
@@ -197,8 +191,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
         const mediaRef = await uploadEmployeeMedia(employee.actorId, {
           uri: objectUrl,
           name: file.name,
-          mimeType: file.type || "application/octet-stream",
-        });
+          mimeType: file.type || "application/octet-stream" });
         if (purpose === "photo") {
           await controller.update({ expectedVersion: employee.version, photoMediaRef: mediaRef });
         } else {
@@ -220,7 +213,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
       header={
         <CpPageHeader title="ملف الموظف الإداري">
           <CpMutedInline tight>{employee.workforceCode} · {ENGAGEMENT_STATUS_LABEL_AR[employee.engagementStatus]}</CpMutedInline>
-          <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+          <Button variant="ghost" onClick={props.onBack}>رجوع</Button>
         </CpPageHeader>
       }
     >
@@ -249,7 +242,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
               <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف والتسلسل الإداري</Text>
               <SupervisorPicker kind="employee" selected={supervisor} onSelect={setSupervisor} disabled={!props.canUpdate} />
               {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
-              <CpButton
+              <Button
                 variant="primary"
                 disabled={!canSave}
                 onClick={() => void controller.update({
@@ -260,11 +253,10 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
                   role: role.trim(),
                   ...(officeLocation.trim() ? { officeLocation: officeLocation.trim() } : {}),
                   ...(engagementStartDate.trim() ? { engagementStartDate: engagementStartDate.trim() } : {}),
-                  ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}),
-                })}
+                  ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}) })}
               >
                 {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ البيانات الأساسية"}
-              </CpButton>
+              </Button>
             </div>
 
             <div style={{ marginTop: "1rem" }}>
@@ -302,18 +294,18 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
               <div><Text role="bodySm">رموز الأقسام المُدارة</Text><CpTextInput value={managedDepartmentCodes} onChange={setManagedDepartmentCodes} disabled={!props.canUpdate} placeholder="operations, partners" aria-label="الأقسام المدارة" /></div>
               <div><Text role="bodySm">ملاحظات القرار</Text><CpTextInput value={governanceNotes} onChange={setGovernanceNotes} disabled={!props.canUpdate} aria-label="ملاحظات القرار" /></div>
               {governanceError ? <CpStateView kind="error" title={governanceError} /> : null}
-              <CpButton variant="primary" disabled={!props.canUpdate || governanceBusy || positionTitle.trim().length === 0} onClick={() => void saveGovernance()}>
+              <Button variant="primary" disabled={!props.canUpdate || governanceBusy || positionTitle.trim().length === 0} onClick={() => void saveGovernance()}>
                 {governanceBusy ? "جارٍ الحفظ…" : "حفظ نطاق المسؤولية"}
-              </CpButton>
+              </Button>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               <Text role="titleSm">إدارة الحالة الوظيفية</Text>
               <div><Text role="bodySm">سبب الإيقاف أو إعادة التفعيل *</Text><CpTextInput value={reason} onChange={setReason} disabled={employee.engagementStatus === "suspended" ? !props.canReactivate : !props.canSuspend} placeholder="اكتب سببًا تشغيليًا واضحًا" aria-label="سبب الإيقاف أو إعادة التفعيل" /></div>
               {employee.engagementStatus === "suspended" && props.canReactivate ? (
-                <CpButton variant="primary" disabled={!canChangeStatus} onClick={() => void controller.reactivate(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}>{controller.actionBusy ? "جارٍ التنفيذ…" : "إعادة تفعيل الموظف"}</CpButton>
+                <Button variant="primary" disabled={!canChangeStatus} onClick={() => void controller.reactivate(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}>{controller.actionBusy ? "جارٍ التنفيذ…" : "إعادة تفعيل الموظف"}</Button>
               ) : employee.engagementStatus !== "suspended" && props.canSuspend ? (
-                <CpButton variant="danger" disabled={!canChangeStatus} onClick={() => void controller.suspend(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}>{controller.actionBusy ? "جارٍ التنفيذ…" : "تعليق الموظف"}</CpButton>
+                <Button variant="danger" disabled={!canChangeStatus} onClick={() => void controller.suspend(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}>{controller.actionBusy ? "جارٍ التنفيذ…" : "تعليق الموظف"}</Button>
               ) : <CpMutedInline>لا تملك صلاحية تغيير الحالة الوظيفية.</CpMutedInline>}
             </div>
           </>
@@ -326,8 +318,8 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
             <Text role="bodySm">الوثائق: {profile?.documentMediaRefs.length ?? 0}</Text>
             {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <CpButton variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => pickFile("photo")}>{uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}</CpButton>
-              <CpButton variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => pickFile("document")}>{uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة وظيفية"}</CpButton>
+              <Button variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => pickFile("photo")}>{uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}</Button>
+              <Button variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => pickFile("document")}>{uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة وظيفية"}</Button>
             </div>
           </div>
         )}

@@ -1,16 +1,15 @@
 "use client";
 
 import React from "react";
-import { CpButton, CpMutedInline, CpStatePanel, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
-import { Text } from "@bthwani/ui-kit";
+import { CpMutedInline, CpStatePanel, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
+import { Button, Text } from "@bthwani/ui-kit";
 import { fetchPartners } from "../../shared/partner/partner.api";
 import {
   getProviderOperationalCore,
   listCaptains,
   listEmployees,
   listFieldAgents,
-  patchProviderOperationalCore,
-} from "../../shared/workforce";
+  patchProviderOperationalCore } from "../../shared/workforce";
 import type {
   CaptainActivationCore,
   ContractReviewStatus,
@@ -18,8 +17,7 @@ import type {
   OperationalCoreResponse,
   ProviderKind,
   ProviderOnboardingStage,
-  ReferralSourceType,
-} from "../../shared/workforce";
+  ReferralSourceType } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { useIdentitySession } from "@bthwani/core-identity";
 
@@ -41,8 +39,7 @@ const selectStyle: React.CSSProperties = {
   borderRadius: 8,
   border: "1px solid var(--bthwani-control-panel-border)",
   background: "var(--bthwani-control-panel-surface)",
-  color: "var(--bthwani-control-panel-text)",
-};
+  color: "var(--bthwani-control-panel-text)" };
 
 function Section({ title, children }: { readonly title: string; readonly children: React.ReactNode }) {
   return (
@@ -61,8 +58,7 @@ function MediaUploadField({
   kind,
   accept = "image/*",
   onUploadError,
-  operatorContextId,
-}: {
+  operatorContextId }: {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly placeholder: string;
@@ -87,8 +83,7 @@ function MediaUploadField({
         const mediaRef = await uploadProviderMedia(actorId, "employees", {
           uri: objectUrl,
           name: file.name,
-          mimeType: file.type || "application/octet-stream",
-        }, operatorContextId);
+          mimeType: file.type || "application/octet-stream" }, operatorContextId);
         onChange(mediaRef);
       } catch {
         onUploadError("تعذر رفع الملف — حاول مجدداً");
@@ -105,9 +100,9 @@ function MediaUploadField({
       <div style={{ flex: 1 }}>
         <CpTextInput value={value} onChange={onChange} placeholder={placeholder} aria-label={placeholder} />
       </div>
-      <CpButton variant="secondary" disabled={busy} onClick={() => void pickFile()}>
+      <Button variant="secondary" disabled={busy} onClick={() => void pickFile()}>
         {busy ? "جارٍ الرفع…" : "رفع وثيقة"}
-      </CpButton>
+      </Button>
     </div>
   );
 }
@@ -171,8 +166,7 @@ const EMPTY_FORM: FormState = {
   purchasesStatus: "not_required",
   purchasesReference: "",
   trainingStatus: "pending",
-  accreditationStatus: "pending",
-};
+  accreditationStatus: "pending" };
 
 function activationEvidenceError(form: FormState, kind: IndependentProviderKind): string | null {
   const activationStage = form.onboardingStage === "activation_ready" || form.onboardingStage === "active";
@@ -249,8 +243,7 @@ export function ProviderOperationalCorePanel({ actorId, kind, canUpdate }: { rea
       purchasesStatus: captain?.mandatoryPurchasesStatus ?? "not_required",
       purchasesReference: captain?.mandatoryPurchasesReference ?? "",
       trainingStatus: captain?.trainingStatus ?? "pending",
-      accreditationStatus: captain?.operationsAccreditationStatus ?? "pending",
-    });
+      accreditationStatus: captain?.operationsAccreditationStatus ?? "pending" });
   }, []);
 
   const load = React.useCallback(async () => {
@@ -284,8 +277,7 @@ export function ProviderOperationalCorePanel({ actorId, kind, canUpdate }: { rea
         if (!cancelled) {
           setReferralPartners(result.partners.map((partner) => ({
             partnerId: partner.id,
-            label: `${partner.displayName || partner.legalNameAr} · ${partner.category || "بلا فئة"}`,
-          })));
+            label: `${partner.displayName || partner.legalNameAr} · ${partner.category || "بلا فئة"}` })));
           setReferralPeople([]);
         }
         return;
@@ -298,8 +290,7 @@ export function ProviderOperationalCorePanel({ actorId, kind, canUpdate }: { rea
       if (!cancelled) {
         setReferralPeople(people.map((person) => ({
           actorId: person.actorId,
-          label: `${person.fullNameAr} · ${person.workforceCode}`,
-        })));
+          label: `${person.fullNameAr} · ${person.workforceCode}` })));
         setReferralPartners([]);
       }
     };
@@ -318,8 +309,7 @@ export function ProviderOperationalCorePanel({ actorId, kind, canUpdate }: { rea
       ...current,
       referralSourceType: value,
       referralSourceActorId: ["employee", "captain", "field"].includes(value) ? current.referralSourceActorId : "",
-      referralPartnerId: value === "partner" ? current.referralPartnerId : "",
-    }));
+      referralPartnerId: value === "partner" ? current.referralPartnerId : "" }));
   };
 
   const save = async () => {
@@ -358,10 +348,7 @@ export function ProviderOperationalCorePanel({ actorId, kind, canUpdate }: { rea
             mandatoryPurchasesStatus: form.purchasesStatus,
             mandatoryPurchasesReference: form.purchasesReference.trim(),
             trainingStatus: form.trainingStatus,
-            operationsAccreditationStatus: form.accreditationStatus,
-          },
-        } : {}),
-      });
+            operationsAccreditationStatus: form.accreditationStatus } } : {}) });
       apply(result);
       setSuccess(result.activationReadiness.ready ? "اكتملت بوابة التفعيل." : "حُفظ التقدم وما زالت متطلبات ناقصة.");
     } catch (cause) {
@@ -469,7 +456,7 @@ export function ProviderOperationalCorePanel({ actorId, kind, canUpdate }: { rea
 
       {error ? <CpStatePanel role="alert" title="تعذر الحفظ" description={error} /> : null}
       {success ? <CpStatePanel role="status" title={success} /> : null}
-      <CpButton variant="primary" disabled={saving} onClick={() => void save()}>{saving ? "جارٍ الحفظ…" : "حفظ التقدم وإعادة فحص التفعيل"}</CpButton>
+      <Button variant="primary" disabled={saving} onClick={() => void save()}>{saving ? "جارٍ الحفظ…" : "حفظ التقدم وإعادة فحص التفعيل"}</Button>
       </fieldset>
     </div>
   );

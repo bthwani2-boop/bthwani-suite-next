@@ -1,26 +1,22 @@
 "use client";
 
 import React from "react";
-import { Card, Text, TextField, spacing } from "@bthwani/ui-kit";
+import { Button, Card, Text, TextField, spacing } from "@bthwani/ui-kit";
 import {
   WebStyleSheet as StyleSheet,
-  WebView as View,
-} from "@bthwani/ui-kit/web";
+  WebView as View } from "@bthwani/ui-kit/web";
 import {
   CpBadge,
-  CpButton,
   CpRetryButton,
   CpStatePanel,
   CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import {
   useServiceAreaController,
-  type DshServiceArea,
-} from "../../shared/client-map";
+  type DshServiceArea } from "../../shared/client-map";
 import { GoogleMapsWebCanvas } from "../maps/GoogleMapsWebCanvas";
 
 type FormState = {
@@ -40,8 +36,7 @@ const EMPTY_FORM: FormState = {
   priority: "100",
   active: true,
   expectedVersion: 0,
-  reason: "",
-};
+  reason: "" };
 
 function polygonToText(polygon: DshServiceArea["polygon"]): string {
   return JSON.stringify(polygon, null, 2);
@@ -91,8 +86,7 @@ function formatBounds(area: DshServiceArea): string {
 
 export function ServiceAreaGovernanceSection({
   canRead,
-  canManage,
-}: {
+  canManage }: {
   readonly canRead: boolean;
   readonly canManage: boolean;
 }) {
@@ -108,8 +102,7 @@ export function ServiceAreaGovernanceSection({
       priority: String(area.priority),
       active: area.active,
       expectedVersion: area.version,
-      reason: "",
-    });
+      reason: "" });
     setValidationError(null);
   }, []);
 
@@ -160,8 +153,7 @@ export function ServiceAreaGovernanceSection({
         active: form.active,
         priority,
         expectedVersion: form.expectedVersion,
-        reason,
-      });
+        reason });
       if (saved) reset();
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : "تعذر التحقق من المنطقة.");
@@ -176,8 +168,7 @@ export function ServiceAreaGovernanceSection({
     id: area.serviceAreaCode,
     label: area.displayName,
     points: area.polygon,
-    active: area.active,
-  }));
+    active: area.active }));
 
   if (!canRead) {
     return (
@@ -199,7 +190,7 @@ export function ServiceAreaGovernanceSection({
             Google Maps تعرض المكان؛ DSH هو المصدر الوحيد لاعتماد رمز منطقة الخدمة والتحقق من بنية المضلع.
           </Text>
         </View>
-        {canManage ? <CpButton variant="secondary" onClick={reset}>منطقة جديدة</CpButton> : null}
+        {canManage ? <Button variant="secondary" onClick={reset}>منطقة جديدة</Button> : null}
       </View>
 
       <GoogleMapsWebCanvas
@@ -260,17 +251,17 @@ export function ServiceAreaGovernanceSection({
           <TextField label="المضلع [longitude, latitude]" value={form.polygonText} onChangeText={(polygonText) => setForm((current) => ({ ...current, polygonText }))} multiline placeholder={'[[44.1,15.3],[44.2,15.3],[44.2,15.4]]'} />
           <CpTextInput aria-label="الأولوية عند تداخل المضلعات" value={form.priority} onChange={(priority) => setForm((current) => ({ ...current, priority }))} />
           <View style={styles.actions}>
-            <CpButton variant={form.active ? "primary" : "secondary"} onClick={() => setForm((current) => ({ ...current, active: !current.active }))}>
+            <Button variant={form.active ? "primary" : "secondary"} onClick={() => setForm((current) => ({ ...current, active: !current.active }))}>
               {form.active ? "المنطقة نشطة" : "المنطقة معطلة"}
-            </CpButton>
-            <CpButton variant="secondary" onClick={() => setForm((current) => ({ ...current, polygonText: "[]" }))}>مسح النقاط</CpButton>
+            </Button>
+            <Button variant="secondary" onClick={() => setForm((current) => ({ ...current, polygonText: "[]" }))}>مسح النقاط</Button>
           </View>
           <CpTextInput aria-label="سبب التغيير" value={form.reason} onChange={(reason) => setForm((current) => ({ ...current, reason }))} placeholder="سبب تشغيلي قابل للتدقيق" />
           {validationError ? <Text tone="danger">{validationError}</Text> : null}
           {controller.mutationError ? <Text tone="danger">{controller.mutationError}</Text> : null}
           <View style={styles.actions}>
-            <CpButton variant="primary" disabled={controller.mutating} onClick={() => void save()}>{controller.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}</CpButton>
-            <CpButton variant="ghost" disabled={controller.mutating} onClick={reset}>إلغاء</CpButton>
+            <Button variant="primary" disabled={controller.mutating} onClick={() => void save()}>{controller.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}</Button>
+            <Button variant="ghost" disabled={controller.mutating} onClick={reset}>إلغاء</Button>
           </View>
         </Card>
       ) : (
@@ -290,5 +281,4 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[3] },
   headerText: { gap: spacing[1] },
   formCard: { padding: spacing[4], gap: spacing[3] },
-  actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
-});
+  actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] } });

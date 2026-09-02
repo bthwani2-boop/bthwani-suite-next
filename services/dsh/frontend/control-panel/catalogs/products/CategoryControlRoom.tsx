@@ -1,15 +1,14 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
+import { Button, colorRoles } from '@bthwani/ui-kit';
 import { useMemo, useState } from "react";
-import { CpButton, CpMutedInline, CpTextInput } from "@bthwani/control-panel/components";
+import { CpMutedInline, CpTextInput } from "@bthwani/control-panel/components";
 import type {
   CentralCatalogDomain,
   CentralCatalogNode,
   createCatalogDomain,
   createCatalogNode,
   CatalogDomainUpdateInput,
-  CatalogNodeUpdateInput,
-} from "../../../shared/catalog";
+  CatalogNodeUpdateInput } from "../../../shared/catalog";
 
 // ─── Style constants (static/layout styles reused across the tree) ───────────
 const panelStyle: React.CSSProperties = {
@@ -18,14 +17,12 @@ const panelStyle: React.CSSProperties = {
   flexDirection: "column",
   height: "100%",
   flexShrink: 0,
-  minHeight: 0,
-};
+  minHeight: 0 };
 const toggleButtonRowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  width: "100%",
-};
+  width: "100%" };
 const toggleButtonLabelStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: "6px" };
 const bodyStyle: React.CSSProperties = { padding: "12px 14px", display: "flex", flexDirection: "column", gap: "10px", flex: 1, overflowY: "auto" };
 const errorBoxStyle: React.CSSProperties = {
@@ -38,8 +35,7 @@ const errorBoxStyle: React.CSSProperties = {
   fontWeight: 700,
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "center",
-};
+  alignItems: "center" };
 const toolbarRowStyle: React.CSSProperties = { display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" };
 const formBoxStyle: React.CSSProperties = {
   padding: "10px",
@@ -48,8 +44,7 @@ const formBoxStyle: React.CSSProperties = {
   border: `1px solid ${colorRoles.brandAction}`,
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
-};
+  gap: "8px" };
 const formTitleStyle: React.CSSProperties = { fontSize: "10px", fontWeight: 800, color: colorRoles.brandAction };
 const formActionsRowStyle: React.CSSProperties = { display: "flex", gap: "6px" };
 const editRowStyle: React.CSSProperties = { display: "flex", gap: "0.5rem", flex: 1 };
@@ -69,8 +64,7 @@ const toggleButtonFullStyle: React.CSSProperties = {
   backgroundColor: colorRoles.surfaceBase,
   borderBottom: `1px solid ${colorRoles.surfaceBase}`,
   padding: "10px 14px",
-  cursor: "pointer",
-};
+  cursor: "pointer" };
 const toggleTitleStyle: React.CSSProperties = { fontSize: "11px", fontWeight: 800, color: colorRoles.brandAction };
 const toggleCountStyle: React.CSSProperties = { fontSize: "9px", color: colorRoles.brandStructure };
 const toggleChevronStyle: React.CSSProperties = { fontSize: "9px", color: colorRoles.brandStructure };
@@ -111,8 +105,7 @@ export function CategoryControlRoom({
   onMoveNode,
   onMergeNode,
   onDeprecateNode,
-  canManage,
-}: CategoryControlRoomProps) {
+  canManage }: CategoryControlRoomProps) {
   const [open, setOpen] = useState(true);
   const [catError, setCatError] = useState<string | null>(null);
 
@@ -168,8 +161,7 @@ export function CategoryControlRoom({
         isActive: true,
         isClientVisible: true,
         requiresProductCatalog: false,
-        isManualRequest: false,
-      }),
+        isManualRequest: false }),
     );
   };
 
@@ -194,8 +186,7 @@ export function CategoryControlRoom({
         allowsProductProposal: true,
         allowsStoreProductCustomImage: false,
         requiresCatalogReview: false,
-        requiresProductCatalog: false,
-      }),
+        requiresProductCatalog: false }),
     );
   };
 
@@ -220,8 +211,7 @@ export function CategoryControlRoom({
         allowsProductProposal: true,
         allowsStoreProductCustomImage: false,
         requiresCatalogReview: false,
-        requiresProductCatalog: false,
-      }),
+        requiresProductCatalog: false }),
     );
   };
 
@@ -246,8 +236,7 @@ export function CategoryControlRoom({
         allowsProductProposal: true,
         allowsStoreProductCustomImage: false,
         requiresCatalogReview: false,
-        requiresProductCatalog: false,
-      }),
+        requiresProductCatalog: false }),
     );
   };
 
@@ -336,14 +325,14 @@ export function CategoryControlRoom({
 
           <div style={toolbarRowStyle}>
             {canManage ? (
-              <CpButton
+              <Button
                 onClick={() => {
                   resetForms();
                   setAddingMainCat(true);
                 }}
               >
                 + فئة رئيسية
-              </CpButton>
+              </Button>
             ) : <CpMutedInline>قراءة فقط — تعديل شجرة الكتالوج يتطلب catalog.taxonomy.manage.</CpMutedInline>}
           </div>
 
@@ -353,8 +342,8 @@ export function CategoryControlRoom({
               <CpTextInput value={formLabel} onChange={setFormLabel} placeholder="اسم الفئة *" aria-label="اسم الفئة الرئيسية" />
               <CpTextInput value={formSubtitle} onChange={setFormSubtitle} placeholder="الاسم الانجليزي (اختياري)" aria-label="وصف الفئة الرئيسية" />
               <div style={formActionsRowStyle}>
-                <CpButton onClick={handleAddMainCategory}>تأكيد</CpButton>
-                <CpButton onClick={resetForms}>إلغاء</CpButton>
+                <Button onClick={handleAddMainCategory}>تأكيد</Button>
+                <Button onClick={resetForms}>إلغاء</Button>
               </div>
             </div>
           )}
@@ -424,8 +413,7 @@ function DomainRow({
   onApplyEdit,
   onAddSubCategory,
   onAddMainClassification,
-  onAddSubClassification,
-}: {
+  onAddSubClassification }: {
   domain: CentralCatalogDomain;
   canManage: boolean;
   nodes: readonly CentralCatalogNode[];
@@ -463,7 +451,7 @@ function DomainRow({
         {isEditing && canManage ? (
           <div style={editRowStyle}>
             <CpTextInput value={editLabel} onChange={setEditLabel} aria-label="تعديل اسم الفئة الرئيسية" />
-            <CpButton onClick={onApplyEdit}>حفظ</CpButton>
+            <Button onClick={onApplyEdit}>حفظ</Button>
           </div>
         ) : (
           <>
@@ -474,9 +462,9 @@ function DomainRow({
               )}
             </span>
             {canManage ? <div style={rowActionsStyle}>
-              <CpButton onClick={() => { resetForms(); setAddingSubUnder(isAddingSub ? null : domain.id); }}>+ فرعي</CpButton>
-              <CpButton onClick={() => onStartDomainEdit(domain)}>تعديل</CpButton>
-              <CpButton onClick={() => onToggleDomainActive(domain)}>{domain.isActive ? "إخفاء" : "إظهار"}</CpButton>
+              <Button onClick={() => { resetForms(); setAddingSubUnder(isAddingSub ? null : domain.id); }}>+ فرعي</Button>
+              <Button onClick={() => onStartDomainEdit(domain)}>تعديل</Button>
+              <Button onClick={() => onToggleDomainActive(domain)}>{domain.isActive ? "إخفاء" : "إظهار"}</Button>
             </div> : null}
           </>
         )}
@@ -486,8 +474,8 @@ function DomainRow({
         <div style={formBoxStyle}>
           <CpTextInput value={formLabel} onChange={setFormLabel} placeholder="اسم الفئة الفرعية..." aria-label="اسم الفئة الفرعية" />
           <div style={formActionsRowStyle}>
-            <CpButton onClick={() => onAddSubCategory(domain.id)}>إضافة</CpButton>
-            <CpButton onClick={resetForms}>إلغاء</CpButton>
+            <Button onClick={() => onAddSubCategory(domain.id)}>إضافة</Button>
+            <Button onClick={resetForms}>إلغاء</Button>
           </div>
         </div>
       )}
@@ -549,8 +537,7 @@ function SubNodeRow({
   onStartNodeEdit,
   onApplyEdit,
   onAddMainClassification,
-  onAddSubClassification,
-}: {
+  onAddSubClassification }: {
   domain: CentralCatalogDomain;
   subNode: CentralCatalogNode;
   canManage: boolean;
@@ -584,18 +571,18 @@ function SubNodeRow({
         {isEditing && canManage ? (
           <div style={editRowStyle}>
             <CpTextInput value={editLabel} onChange={setEditLabel} aria-label="تعديل اسم الفئة الفرعية" />
-            <CpButton onClick={onApplyEdit}>حفظ</CpButton>
+            <Button onClick={onApplyEdit}>حفظ</Button>
           </div>
         ) : (
           <>
             <span style={childLabelStyle}>📄 {subNode.nameAr} {!subNode.isActive && "(معطل)"}</span>
             {canManage ? <div style={rowActionsStyle}>
-              <CpButton onClick={() => { resetForms(); setAddingMainClassifUnder(isAdding ? null : { domainId: domain.id, subNodeId: subNode.id }); }}>+ تصنيف</CpButton>
-              <CpButton onClick={() => onStartNodeEdit(subNode)}>تعديل</CpButton>
-              <CpButton onClick={() => onToggleNodeActive(subNode)}>{subNode.isActive ? "إخفاء" : "إظهار"}</CpButton>
-              <CpButton onClick={() => onMoveNode(subNode)}>نقل</CpButton>
-              <CpButton onClick={() => onMergeNode(subNode)}>دمج</CpButton>
-              <CpButton onClick={() => onDeprecateNode(subNode)}>إهمال</CpButton>
+              <Button onClick={() => { resetForms(); setAddingMainClassifUnder(isAdding ? null : { domainId: domain.id, subNodeId: subNode.id }); }}>+ تصنيف</Button>
+              <Button onClick={() => onStartNodeEdit(subNode)}>تعديل</Button>
+              <Button onClick={() => onToggleNodeActive(subNode)}>{subNode.isActive ? "إخفاء" : "إظهار"}</Button>
+              <Button onClick={() => onMoveNode(subNode)}>نقل</Button>
+              <Button onClick={() => onMergeNode(subNode)}>دمج</Button>
+              <Button onClick={() => onDeprecateNode(subNode)}>إهمال</Button>
             </div> : null}
           </>
         )}
@@ -605,8 +592,8 @@ function SubNodeRow({
         <div style={formBoxStyle}>
           <CpTextInput value={formLabel} onChange={setFormLabel} placeholder="اسم التصنيف الرئيسي..." aria-label="اسم التصنيف الرئيسي" />
           <div style={formActionsRowStyle}>
-            <CpButton onClick={() => onAddMainClassification(domain.id, subNode.id)}>إضافة</CpButton>
-            <CpButton onClick={resetForms}>إلغاء</CpButton>
+            <Button onClick={() => onAddMainClassification(domain.id, subNode.id)}>إضافة</Button>
+            <Button onClick={resetForms}>إلغاء</Button>
           </div>
         </div>
       )}
@@ -664,8 +651,7 @@ function MainClassifRow({
   onDeprecateNode,
   onStartNodeEdit,
   onApplyEdit,
-  onAddSubClassification,
-}: {
+  onAddSubClassification }: {
   domain: CentralCatalogDomain;
   subNode: CentralCatalogNode;
   mainClassifNode: CentralCatalogNode;
@@ -697,18 +683,18 @@ function MainClassifRow({
         {isEditing && canManage ? (
           <div style={editRowStyle}>
             <CpTextInput value={editLabel} onChange={setEditLabel} aria-label="تعديل اسم التصنيف الرئيسي" />
-            <CpButton onClick={onApplyEdit}>حفظ</CpButton>
+            <Button onClick={onApplyEdit}>حفظ</Button>
           </div>
         ) : (
           <>
             <span style={childLabelStyle}>🏷️ {mainClassifNode.nameAr} {!mainClassifNode.isActive && "(معطل)"}</span>
             {canManage ? <div style={rowActionsStyle}>
-              <CpButton onClick={() => { resetForms(); setAddingSubClassifUnder(isAdding ? null : { domainId: domain.id, subNodeId: subNode.id, mainClassifNodeId: mainClassifNode.id }); }}>+ فرعي</CpButton>
-              <CpButton onClick={() => onStartNodeEdit(mainClassifNode)}>تعديل</CpButton>
-              <CpButton onClick={() => onToggleNodeActive(mainClassifNode)}>{mainClassifNode.isActive ? "إخفاء" : "إظهار"}</CpButton>
-              <CpButton onClick={() => onMoveNode(mainClassifNode)}>نقل</CpButton>
-              <CpButton onClick={() => onMergeNode(mainClassifNode)}>دمج</CpButton>
-              <CpButton onClick={() => onDeprecateNode(mainClassifNode)}>إهمال</CpButton>
+              <Button onClick={() => { resetForms(); setAddingSubClassifUnder(isAdding ? null : { domainId: domain.id, subNodeId: subNode.id, mainClassifNodeId: mainClassifNode.id }); }}>+ فرعي</Button>
+              <Button onClick={() => onStartNodeEdit(mainClassifNode)}>تعديل</Button>
+              <Button onClick={() => onToggleNodeActive(mainClassifNode)}>{mainClassifNode.isActive ? "إخفاء" : "إظهار"}</Button>
+              <Button onClick={() => onMoveNode(mainClassifNode)}>نقل</Button>
+              <Button onClick={() => onMergeNode(mainClassifNode)}>دمج</Button>
+              <Button onClick={() => onDeprecateNode(mainClassifNode)}>إهمال</Button>
             </div> : null}
           </>
         )}
@@ -718,8 +704,8 @@ function MainClassifRow({
         <div style={formBoxStyle}>
           <CpTextInput value={formLabel} onChange={setFormLabel} placeholder="اسم التصنيف الفرعي..." aria-label="اسم التصنيف الفرعي" />
           <div style={formActionsRowStyle}>
-            <CpButton onClick={() => onAddSubClassification(domain.id, subNode.id, mainClassifNode.id)}>إضافة</CpButton>
-            <CpButton onClick={resetForms}>إلغاء</CpButton>
+            <Button onClick={() => onAddSubClassification(domain.id, subNode.id, mainClassifNode.id)}>إضافة</Button>
+            <Button onClick={resetForms}>إلغاء</Button>
           </div>
         </div>
       )}
@@ -730,11 +716,11 @@ function MainClassifRow({
             <div key={sc.id} style={childRowStyle}>
               <span style={childLabelStyle}>🔖 {sc.nameAr} {!sc.isActive && "(معطل)"}</span>
               {canManage ? <div style={rowActionsStyle}>
-                <CpButton onClick={() => onStartNodeEdit(sc)}>تعديل</CpButton>
-                <CpButton onClick={() => onToggleNodeActive(sc)}>{sc.isActive ? "إخفاء" : "إظهار"}</CpButton>
-                <CpButton onClick={() => onMoveNode(sc)}>نقل</CpButton>
-                <CpButton onClick={() => onMergeNode(sc)}>دمج</CpButton>
-                <CpButton onClick={() => onDeprecateNode(sc)}>إهمال</CpButton>
+                <Button onClick={() => onStartNodeEdit(sc)}>تعديل</Button>
+                <Button onClick={() => onToggleNodeActive(sc)}>{sc.isActive ? "إخفاء" : "إظهار"}</Button>
+                <Button onClick={() => onMoveNode(sc)}>نقل</Button>
+                <Button onClick={() => onMergeNode(sc)}>دمج</Button>
+                <Button onClick={() => onDeprecateNode(sc)}>إهمال</Button>
               </div> : null}
             </div>
           ))}

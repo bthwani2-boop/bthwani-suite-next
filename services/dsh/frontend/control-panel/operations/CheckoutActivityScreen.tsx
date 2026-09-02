@@ -1,8 +1,8 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import {
   CpBadge,
-  CpButton,
   CpFilterBar,
   CpMutedInline,
   CpPageHeader,
@@ -10,8 +10,7 @@ import {
   CpStatePanel,
   CpTable,
   CpTableCell,
-  CpTableHeaderCell,
-} from "@bthwani/control-panel/components";
+  CpTableHeaderCell } from "@bthwani/control-panel/components";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
@@ -22,8 +21,7 @@ import { useOperationsCapabilities } from "../../shared/operations";
 const FULFILLMENT_LABELS: Record<DshFulfillmentMode, string> = {
   bthwani_delivery: "توصيل بثواني",
   partner_delivery: "توصيل المتجر",
-  pickup: "استلم بنفسك",
-};
+  pickup: "استلم بنفسك" };
 
 const STATE_LABELS: Record<DshIntentState, string> = {
   draft: "مسودة",
@@ -33,8 +31,7 @@ const STATE_LABELS: Record<DshIntentState, string> = {
   confirming: "جاري التأكيد",
   confirmed: "مؤكد",
   cancelled: "ملغي",
-  expired: "منتهي",
-};
+  expired: "منتهي" };
 
 export function CheckoutActivityScreen() {
   const controller = useOperatorCheckoutController("authenticated");
@@ -67,15 +64,15 @@ export function CheckoutActivityScreen() {
       )}
       filters={(
         <CpFilterBar label="مرشحات حالة checkout">
-          <CpButton onClick={() => controller.reload()}>كل الحالات</CpButton>
-          <CpButton onClick={() => controller.reload("confirming")}>قيد التأكيد (WLT)</CpButton>
+          <Button onClick={() => controller.reload()}>كل الحالات</Button>
+          <Button onClick={() => controller.reload("confirming")}>قيد التأكيد (WLT)</Button>
         </CpFilterBar>
       )}
       stateView={stateView}
     >
       {controller.reconcileError ? (
         <CpStatePanel role="alert" title="تعذر تنفيذ المصالحة" description={controller.reconcileError}>
-          <CpButton onClick={controller.clearReconcileError} variant="ghost">إغلاق الرسالة</CpButton>
+          <Button onClick={controller.clearReconcileError} variant="ghost">إغلاق الرسالة</Button>
         </CpStatePanel>
       ) : null}
 
@@ -115,8 +112,7 @@ function CheckoutIntentRow({
   intent,
   reconcilingIntentId,
   onReconcile,
-  canManageOperations,
-}: {
+  canManageOperations }: {
   readonly intent: DshCheckoutIntent;
   readonly reconcilingIntentId: string | null;
   readonly onReconcile: (intentId: string) => Promise<boolean>;
@@ -137,7 +133,7 @@ function CheckoutIntentRow({
       <CpTableCell>
         {intent.reconciliationRequired ? (
           canManageOperations ? (
-            <CpButton
+            <Button
               onClick={() => void onReconcile(intent.id)}
               disabled={reconciliationLocked}
               aria-label={`إعادة مصالحة checkout ${intent.id}`}
@@ -145,7 +141,7 @@ function CheckoutIntentRow({
               {isReconciling
                 ? "جاري تنفيذ المصالحة…"
                 : `إعادة المصالحة (${Math.max(0, intent.reconciliationAgeSeconds ?? 0)}ث)`}
-            </CpButton>
+            </Button>
           ) : "قراءة فقط"
         ) : "لا يلزم"}
       </CpTableCell>
@@ -166,11 +162,8 @@ const STATUS_TONE: Record<DshIntentState, CpBadgeTone> = {
   confirming: "info",
   confirmed: "success",
   cancelled: "danger",
-  expired: "neutral",
-};
+  expired: "neutral" };
 
 const styles = WebStyleSheet.create({
   boundaryNote: {
-    maxWidth: "72rem",
-  },
-});
+    maxWidth: "72rem" } });

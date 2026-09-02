@@ -1,16 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Card, StateView, Text } from "@bthwani/ui-kit";
+import { Button, Card, StateView, Text } from "@bthwani/ui-kit";
 import {
   CpBadge,
-  CpButton,
   CpMutedInline,
   CpPageHeader,
   CpTable,
   CpTableCell,
-  CpTableHeaderCell,
-} from "@bthwani/control-panel/components";
+  CpTableHeaderCell } from "@bthwani/control-panel/components";
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
@@ -70,9 +68,9 @@ export function LedgerInspectorScreen() {
           <Text role="body" style={{ marginBottom: "1rem" }}>
             هذه الشاشة توفر وصولاً للقراءة فقط إلى القيود المحاسبية. القيود غير قابلة للتعديل أو الحذف وفقًا لقيود قاعدة البيانات (Immutability Constraints).
           </Text>
-          <CpButton onClick={loadEntries} disabled={state === "loading"}>
+          <Button onClick={loadEntries} disabled={state === "loading"}>
             {state === "loading" ? "جارٍ التحميل..." : "تحديث القيود"}
-          </CpButton>
+          </Button>
         </Card>
       }
     >

@@ -1,28 +1,25 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import { useEffect, useMemo, useState } from "react";
 import {
   CpBadge,
-  CpButton,
   CpMutedInline,
   CpStatePanel,
   CpStateView,
   CpTabs,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   usePlatformChangeWorkflowController,
-  type PlatformVariable,
-} from "../../shared/platform";
+  type PlatformVariable } from "../../shared/platform";
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import {
   formatPlatformVariableValue,
   isSensitivePlatformVariable,
   platformVariableEditorValue,
   platformVariableIdentity,
-  type VarsDomainId,
-} from "../../shared/platform/platform-vars.view-model";
+  type VarsDomainId } from "../../shared/platform/platform-vars.view-model";
 import { usePlatformVarsModel } from "../../shared/platform/platform-vars.model";
 import { isPlatformDesignVar, PLATFORM_VAR_QUICK_PICKS } from "../../shared/platform/platform-vars.policy";
 
@@ -47,8 +44,7 @@ function parseEditorValue(value: string, valueType: string): unknown {
 export function DshPlatformVarsWorkspace({
   variables,
   variablesFailure,
-  onChanged,
-}: DshPlatformVarsWorkspaceProps) {
+  onChanged }: DshPlatformVarsWorkspaceProps) {
   const [activeDomain, setActiveDomain] = useState<VarsDomainId>("dsh");
   const model = usePlatformVarsModel({ activeDomain, variables });
   const { state: sessionState } = useIdentitySession();
@@ -120,9 +116,7 @@ export function DshPlatformVarsWorkspace({
         valueType: selectedVar.valueType || "json",
         classification: selectedVar.classification || "internal",
         expectedRevision: revision,
-        proposedValue,
-      }],
-    });
+        proposedValue }] });
     if (succeeded) {
       setReason("");
       setImpactAssessment("");
@@ -153,13 +147,13 @@ export function DshPlatformVarsWorkspace({
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
           <label style={{ fontSize: "11px", fontWeight: 700 }}>تصفية النطاق:</label>
           <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-            <CpButton variant={model.activeScope === "all" ? "primary" : "ghost"} onClick={() => model.setActiveScope("all")}>
+            <Button variant={model.activeScope === "all" ? "primary" : "ghost"} onClick={() => model.setActiveScope("all")}>
               الكل
-            </CpButton>
+            </Button>
             {model.orderedScopes.map((scope) => (
-              <CpButton key={scope} variant={model.activeScope === scope ? "primary" : "ghost"} onClick={() => model.setActiveScope(scope)}>
+              <Button key={scope} variant={model.activeScope === scope ? "primary" : "ghost"} onClick={() => model.setActiveScope(scope)}>
                 {scope}
-              </CpButton>
+              </Button>
             ))}
           </div>
         </div>
@@ -173,7 +167,7 @@ export function DshPlatformVarsWorkspace({
             model.filteredRecords.map((record) => {
               const id = platformVariableIdentity(record);
               return (
-                <CpButton
+                <Button
                   key={id}
                   variant={model.selectedId === id ? "primary" : "ghost"}
                   onClick={() => model.setSelectedId(id)}
@@ -184,7 +178,7 @@ export function DshPlatformVarsWorkspace({
                     <CpBadge tone="neutral">{record.scopeType}</CpBadge>
                   </div>
                   <CpMutedInline>{formatPlatformVariableValue(record) || "—"}</CpMutedInline>
-                </CpButton>
+                </Button>
               );
             })
           )}
@@ -221,9 +215,9 @@ export function DshPlatformVarsWorkspace({
               {quickPicks.length > 0 ? (
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {quickPicks.map((pick) => (
-                    <CpButton key={pick} disabled={!canPropose || sensitive} variant="ghost" onClick={() => model.setEditVal(pick)}>
+                    <Button key={pick} disabled={!canPropose || sensitive} variant="ghost" onClick={() => model.setEditVal(pick)}>
                       {pick}
-                    </CpButton>
+                    </Button>
                   ))}
                 </div>
               ) : null}
@@ -239,10 +233,10 @@ export function DshPlatformVarsWorkspace({
               <CpTextInput value={rollbackPlan} onChange={setRollbackPlan} placeholder="خطة التراجع" aria-label="خطة التراجع" disabled={!canPropose || sensitive} />
 
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                <CpButton onClick={() => void saveProposal()} disabled={!canPropose || sensitive || workflow.mutationState.kind === "loading"}>
+                <Button onClick={() => void saveProposal()} disabled={!canPropose || sensitive || workflow.mutationState.kind === "loading"}>
                   {workflow.mutationState.kind === "loading" ? "جاري الحفظ…" : "حفظ الاقتراح كمسودة"}
-                </CpButton>
-                <CpButton onClick={cancelProposal} disabled={workflow.mutationState.kind === "loading"}>إلغاء</CpButton>
+                </Button>
+                <Button onClick={cancelProposal} disabled={workflow.mutationState.kind === "loading"}>إلغاء</Button>
               </div>
               <CpMutedInline>{mutationUnavailableReason}</CpMutedInline>
               {formError ? <CpStateView kind="error" title="تعذر تجهيز الاقتراح" code={formError} /> : null}

@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 // Grammar contract reference — required by control-panel grammar guard.
 // density: standard (operational data). hero: forbidden. state: live (Workforce API).
@@ -6,7 +7,7 @@ import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useIdentitySession } from "@bthwani/core-identity";
 import type { ProviderKind } from "../../shared/workforce";
-import { CpBadge, CpButton, CpPageHeader, CpStatePanel, CpTabs } from "@bthwani/control-panel/components";
+import { CpBadge, CpPageHeader, CpStatePanel, CpTabs } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
@@ -57,24 +58,24 @@ function WorkforceHrScreenInner() {
 
   if (view === "create") {
     if (!canCreate) {
-      return <EditorPageFrame header={<CpPageHeader title="إضافة مقدم خدمة"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}><CpStatePanel role="alert" title="الإنشاء غير متاح" description="لا تملك جلسة لوحة التحكم صلاحية provider:create على Workforce." /></EditorPageFrame>;
+      return <EditorPageFrame header={<CpPageHeader title="إضافة مقدم خدمة"><Button variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</Button></CpPageHeader>}><CpStatePanel role="alert" title="الإنشاء غير متاح" description="لا تملك جلسة لوحة التحكم صلاحية provider:create على Workforce." /></EditorPageFrame>;
     }
     if (kind === "employee") {
       return (
-        <EditorPageFrame header={<CpPageHeader title="إضافة موظف إداري"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}>
+        <EditorPageFrame header={<CpPageHeader title="إضافة موظف إداري"><Button variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</Button></CpPageHeader>}>
           <EmployeeCreateView inline onCreated={(caseId) => navigateTo("created-success", "employee", caseId)} />
         </EditorPageFrame>
       );
     }
     if (kind === "captain") {
       return (
-        <EditorPageFrame header={<CpPageHeader title="إضافة كابتن"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}>
+        <EditorPageFrame header={<CpPageHeader title="إضافة كابتن"><Button variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</Button></CpPageHeader>}>
           <CaptainCreateView inline onCreated={(caseId) => navigateTo("created-success", "captain", caseId)} />
         </EditorPageFrame>
       );
     }
     return (
-      <EditorPageFrame header={<CpPageHeader title="إضافة ميداني"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</CpButton></CpPageHeader>}>
+      <EditorPageFrame header={<CpPageHeader title="إضافة ميداني"><Button variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع</Button></CpPageHeader>}>
         <FieldAgentCreateView inline onCreated={(caseId) => navigateTo("created-success", "field", caseId)} />
       </EditorPageFrame>
     );
@@ -82,12 +83,12 @@ function WorkforceHrScreenInner() {
 
   if (view === "created-success") {
     return (
-      <EditorPageFrame header={<CpPageHeader title="تمت الإضافة بنجاح"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع للقائمة</CpButton></CpPageHeader>}>
+      <EditorPageFrame header={<CpPageHeader title="تمت الإضافة بنجاح"><Button variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع للقائمة</Button></CpPageHeader>}>
         <div style={{ display: "flex", flexDirection: "column", gap: "24px", alignItems: "center", justifyContent: "center", padding: "64px 20px" }}>
           <CpBadge tone="success">تمت إضافة {providerKindLabel(kind)} بنجاح!</CpBadge>
-          <CpButton variant="primary" onClick={() => navigateTo("detail", kind, actorId)}>
+          <Button variant="primary" onClick={() => navigateTo("detail", kind, actorId)}>
             تفعيل
-          </CpButton>
+          </Button>
         </div>
       </EditorPageFrame>
     );
@@ -108,7 +109,7 @@ function WorkforceHrScreenInner() {
     <EditorPageFrame
       header={
         <CpPageHeader title="مقدمي الخدمة">
-          {canCreate ? <CpButton variant="primary" onClick={() => navigateTo("create", kind)}>إضافة {kind === "captain" ? "كابتن" : kind === "field" ? "ميداني" : "موظف"}</CpButton> : null}
+          {canCreate ? <Button variant="primary" onClick={() => navigateTo("create", kind)}>إضافة {kind === "captain" ? "كابتن" : kind === "field" ? "ميداني" : "موظف"}</Button> : null}
         </CpPageHeader>
       }
     >

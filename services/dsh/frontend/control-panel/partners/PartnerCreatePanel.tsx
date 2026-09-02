@@ -1,7 +1,8 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { CpButton, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { usePartnerWorkspaceListController } from "../../shared/partner";
 import { fetchCatalogDomains } from "../../shared/catalog/central-catalog.api";
 import type { CentralCatalogDomain } from "../../shared/catalog/central-catalog.types";
@@ -67,8 +68,7 @@ export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
       workforcePersonId: workforcePersonId.trim(),
       primaryPhone: primaryPhone.trim(),
       businessVerticalId: businessVerticalId.trim(),
-      ...(notes.trim() ? { notes: notes.trim() } : {}),
-    });
+      ...(notes.trim() ? { notes: notes.trim() } : {}) });
     if (partner) {
       onCreated?.(partner.id);
       onClose();
@@ -117,14 +117,14 @@ export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
       ) : null}
 
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-        <CpButton
+        <Button
           variant="primary"
           disabled={!valid || controller.mutationState.kind === "loading"}
           onClick={() => void submit()}
         >
           {controller.mutationState.kind === "loading" ? "جاري الإنشاء…" : "إنشاء الشريك والمسودة"}
-        </CpButton>
-        <CpButton onClick={onClose}>إلغاء</CpButton>
+        </Button>
+        <Button onClick={onClose}>إلغاء</Button>
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
+import { Button } from "@bthwani/ui-kit";
 import { useRef, useState } from "react";
 import {
-  CpButton,
   CpDescriptionList,
   CpDescriptionRow,
   CpDetailError,
@@ -8,15 +8,13 @@ import {
   CpDetailPanel,
   CpExternalLink,
   CpInlineCode,
-  CpMutedInline,
-} from "@bthwani/control-panel/components";
+  CpMutedInline } from "@bthwani/control-panel/components";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   formatDeliveryModes,
   type DshStoreAdminDetailState,
   type DshStorePublicationDiagnosticsState,
-  type DshStoreAuditState,
-} from "../../../shared/store";
+  type DshStoreAuditState } from "../../../shared/store";
 import { toUploadFileSource, uploadAndLinkImage } from "../../../shared/catalog";
 import { hasServiceControlPanelPermission } from "../../../shared/session/control-panel-permissions";
 import { StoreServiceAreaPanel } from "./StoreServiceAreaPanel";
@@ -54,8 +52,7 @@ function StoreImageUploadForm({ storeId }: { readonly storeId: string }) {
         entityType: "stores",
         entityId: storeId,
         role,
-        altAr: "",
-      });
+        altAr: "" });
       alert("تم رفع الصورة؛ ستظهر على المتجر بعد اعتمادها من قائمة مراجعة الصور في الكتالوج.");
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error: unknown) {
@@ -74,9 +71,9 @@ function StoreImageUploadForm({ storeId }: { readonly storeId: string }) {
           ))}
         </select>
         <input ref={fileInputRef} type="file" accept="image/*" aria-label="اختيار ملف صورة المتجر" />
-        <CpButton onClick={() => void handleUpload()} disabled={uploading}>
+        <Button onClick={() => void handleUpload()} disabled={uploading}>
           {uploading ? "جارٍ الرفع…" : "رفع وربط"}
-        </CpButton>
+        </Button>
       </div>
     </CpDescriptionRow>
   );
@@ -292,12 +289,10 @@ const STATUS_LABELS: Record<string, string> = {
   active: "نشط",
   inactive: "غير نشط",
   temporarily_closed: "مغلق مؤقتاً",
-  unavailable: "غير متاح",
-};
+  unavailable: "غير متاح" };
 
 const SERVICEABILITY_LABELS: Record<string, string> = {
   serviceable: "قابل للخدمة",
   limited: "خدمة محدودة",
   out_of_area: "خارج نطاق التوصيل",
-  unavailable: "غير متاح",
-};
+  unavailable: "غير متاح" };

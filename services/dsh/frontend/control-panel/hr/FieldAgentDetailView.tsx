@@ -1,16 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpStateView, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
+import { CpMutedInline, CpPageHeader, CpStatePanel, CpStateView, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
-import { Text } from "@bthwani/ui-kit";
+import { Button, Text } from "@bthwani/ui-kit";
 
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
   appendProviderDocument,
   useFieldAgentDetailController,
-  type SupervisorCandidate,
-} from "../../shared/workforce";
+  type SupervisorCandidate } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { ProviderActivationWorkspace } from "../shared";
 import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
@@ -70,7 +69,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
               isSessionExpired={errorState?.isSessionExpired ?? false}
               onRetry={() => void controller.reload()}
             />
-            <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+            <Button variant="ghost" onClick={props.onBack}>رجوع</Button>
           </div>
         }
       >
@@ -95,8 +94,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
         const mediaRef = await uploadProviderMedia(agent.actorId, "field-agents", {
           uri: objectUrl,
           name: file.name,
-          mimeType: file.type || "application/octet-stream",
-        }, operatorContextId);
+          mimeType: file.type || "application/octet-stream" }, operatorContextId);
         if (purpose === "photo") {
           await controller.update({ expectedVersion: agent.version, photoMediaRef: mediaRef });
         } else {
@@ -123,8 +121,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
       ...(fullNameEn.trim() ? { fullNameEn: fullNameEn.trim() } : {}),
       ...(engagementStartDate.trim() ? { engagementStartDate: engagementStartDate.trim() } : {}),
       serviceZoneId: zoneId,
-      ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}),
-    });
+      ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}) });
   };
 
   return (
@@ -132,7 +129,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
       header={
         <CpPageHeader title="ملف الميداني">
           <CpMutedInline tight>{agent.workforceCode} · {ENGAGEMENT_STATUS_LABEL_AR[agent.engagementStatus]}</CpMutedInline>
-          <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+          <Button variant="ghost" onClick={props.onBack}>رجوع</Button>
         </CpPageHeader>
       }
     >
@@ -155,8 +152,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
             background: "var(--bthwani-control-panel-surface)",
             display: "flex",
             flexDirection: "column",
-            gap: "16px",
-          }}>
+            gap: "16px" }}>
             <Text role="titleMd">البيانات الأساسية</Text>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
@@ -180,9 +176,9 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
             </div>
             {controller.actionError ? <CpStatePanel role="alert" title="تعذر حفظ الملف" description={controller.actionError} /> : null}
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <CpButton variant="primary" disabled={!canSave} onClick={() => void saveProfile()}>
+              <Button variant="primary" disabled={!canSave} onClick={() => void saveProfile()}>
                 {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف"}
-              </CpButton>
+              </Button>
             </div>
           </section>
         )}
@@ -194,16 +190,15 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
             background: "var(--bthwani-control-panel-surface)",
             display: "flex",
             flexDirection: "column",
-            gap: "16px",
-          }}>
+            gap: "16px" }}>
             <Text role="titleMd">الوثائق والصور</Text>
             {uploadError ? <CpStatePanel role="alert" title="تعذر رفع الملف" description={uploadError} /> : null}
             <CpMutedInline>
               {agent.photoMediaRef ? "الصورة الشخصية مرفوعة." : "لا توجد صورة شخصية مرفوعة بعد."}
             </CpMutedInline>
-            <CpButton variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => void pickFile("photo")}>
+            <Button variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => void pickFile("photo")}>
               {uploadBusy ? "جارٍ الرفع…" : "رفع الصورة الشخصية"}
-            </CpButton>
+            </Button>
             <Text role="titleSm">المستندات المرتبطة</Text>
             {profile?.documentMediaRefs?.length ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -212,9 +207,9 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
                 ))}
               </div>
             ) : <CpMutedInline>لا توجد مستندات مرفوعة بعد.</CpMutedInline>}
-            <CpButton variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => void pickFile("document")}>
+            <Button variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => void pickFile("document")}>
               {uploadBusy ? "جارٍ الرفع…" : "رفع مستند قانوني"}
-            </CpButton>
+            </Button>
           </section>
         )}
         {activeTab === "ops" && (

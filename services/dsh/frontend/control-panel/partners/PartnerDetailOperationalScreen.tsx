@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { neutralScale } from "@bthwani/ui-kit";
+import { Button, neutralScale } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
   CpBadge,
-  CpButton,
   CpDescriptionList,
   CpDescriptionRow,
   CpPageHeader,
@@ -16,8 +15,7 @@ import {
   CpTableCell,
   CpTableHeaderCell,
   CpTabs,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import {
   usePartnerAuditController,
@@ -28,8 +26,7 @@ import {
   usePartnerVisitsController,
   DOCUMENT_TYPE_LABELS,
   DOCUMENT_REVIEW_STATUS_LABELS,
-  PARTNER_FIELD_VISIT_STATUS_LABELS,
-} from "../../shared/partner";
+  PARTNER_FIELD_VISIT_STATUS_LABELS } from "../../shared/partner";
 import type { DshPartnerActivationStatus } from "../../shared/partner";
 import { OperatorDeliveryPricingPanel } from "./stores/OperatorDeliveryPricingPanel";
 
@@ -43,8 +40,7 @@ const TAB_LABELS: Record<Tab, string> = {
   visits: "الزيارات الميدانية",
   stores: "المتاجر",
   readiness: "الجاهزية",
-  audit: "سجل التدقيق",
-};
+  audit: "سجل التدقيق" };
 const REASON_REQUIRED = new Set<string>(["ops_rejected", "partner_terminated", "client_hidden"]);
 
 function card(title: string, children: ReactNode): ReactNode {
@@ -111,8 +107,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
     if (REASON_REQUIRED.has(transitionTarget) && !reason) return;
     const succeeded = await detail.transition({
       toStatus: transitionTarget as DshPartnerActivationStatus,
-      ...(reason ? { reason } : {}),
-    }, partner.version);
+      ...(reason ? { reason } : {}) }, partner.version);
     if (succeeded) {
       setTransitionTarget(null);
       setTransitionReason("");
@@ -123,8 +118,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
     if (!documentDecision || !documentReason.trim()) return;
     const succeeded = await docs.review(documentDecision.documentId, {
       decision: documentDecision.decision,
-      reason: documentReason.trim(),
-    });
+      reason: documentReason.trim() });
     if (succeeded) {
       setDocumentDecision(null);
       setDocumentReason("");
@@ -147,7 +141,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
       header={(
         <CpPageHeader title={vm.displayName}>
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            {onBack ? <CpButton onClick={onBack}>← رجوع</CpButton> : null}
+            {onBack ? <Button onClick={onBack}>← رجوع</Button> : null}
             <CpBadge tone={toBadgeTone(vm.statusTone)}>{vm.statusLabel}</CpBadge>
           </div>
         </CpPageHeader>
@@ -183,7 +177,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
               <>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {vm.allowedNextStatuses.map((status) => (
-                    <CpButton key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>{status}</CpButton>
+                    <Button key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>{status}</Button>
                   ))}
                 </div>
                 {transitionTarget ? (
@@ -195,10 +189,10 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                       aria-label="سبب انتقال حالة الشريك"
                     />
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <CpButton onClick={() => void confirmTransition()} disabled={detail.mutationState.kind === "loading" || (REASON_REQUIRED.has(transitionTarget) && !transitionReason.trim())}>
+                      <Button onClick={() => void confirmTransition()} disabled={detail.mutationState.kind === "loading" || (REASON_REQUIRED.has(transitionTarget) && !transitionReason.trim())}>
                         {detail.mutationState.kind === "loading" ? "جاري الحفظ…" : "تأكيد القرار"}
-                      </CpButton>
-                      <CpButton onClick={() => { setTransitionTarget(null); setTransitionReason(""); }}>إلغاء</CpButton>
+                      </Button>
+                      <Button onClick={() => { setTransitionTarget(null); setTransitionReason(""); }}>إلغاء</Button>
                     </div>
                   </div>
                 ) : null}
@@ -233,9 +227,9 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                             <CpTableCell>{DOCUMENT_REVIEW_STATUS_LABELS[doc.reviewStatus] ?? "حالة غير معروفة"}</CpTableCell>
                             <CpTableCell>
                               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                <CpButton disabled={docs.actionState.kind === "loading" || doc.reviewStatus === "verified"} onClick={() => { setDocumentDecision({ documentId: doc.id, decision: "approved" }); setDocumentReason(""); }}>اعتماد</CpButton>
-                                <CpButton disabled={docs.actionState.kind === "loading"} onClick={() => { setDocumentDecision({ documentId: doc.id, decision: "rejected" }); setDocumentReason(""); }}>رفض</CpButton>
-                                <CpButton disabled={docs.actionState.kind === "loading"} onClick={() => { setDocumentDecision({ documentId: doc.id, decision: "needs_resubmit" }); setDocumentReason(""); }}>طلب إعادة الرفع</CpButton>
+                                <Button disabled={docs.actionState.kind === "loading" || doc.reviewStatus === "verified"} onClick={() => { setDocumentDecision({ documentId: doc.id, decision: "approved" }); setDocumentReason(""); }}>اعتماد</Button>
+                                <Button disabled={docs.actionState.kind === "loading"} onClick={() => { setDocumentDecision({ documentId: doc.id, decision: "rejected" }); setDocumentReason(""); }}>رفض</Button>
+                                <Button disabled={docs.actionState.kind === "loading"} onClick={() => { setDocumentDecision({ documentId: doc.id, decision: "needs_resubmit" }); setDocumentReason(""); }}>طلب إعادة الرفع</Button>
                               </div>
                             </CpTableCell>
                           </tr>
@@ -246,8 +240,8 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                       <div style={{ display: "grid", gap: 8 }}>
                         <CpTextInput value={documentReason} onChange={setDocumentReason} placeholder="سبب القرار ومتطلبات المعالجة" aria-label="سبب قرار الوثيقة" />
                         <div style={{ display: "flex", gap: 8 }}>
-                          <CpButton disabled={!documentReason.trim() || docs.actionState.kind === "loading"} onClick={() => void confirmDocumentDecision()}>تأكيد القرار</CpButton>
-                          <CpButton onClick={() => { setDocumentDecision(null); setDocumentReason(""); }}>إلغاء</CpButton>
+                          <Button disabled={!documentReason.trim() || docs.actionState.kind === "loading"} onClick={() => void confirmDocumentDecision()}>تأكيد القرار</Button>
+                          <Button onClick={() => { setDocumentDecision(null); setDocumentReason(""); }}>إلغاء</Button>
                         </div>
                       </div>
                     ) : null}
@@ -272,9 +266,9 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
             <section style={{ display: "grid", gap: 8, border: `1px solid ${neutralScale[200]}`, borderRadius: 12, padding: 16 }}>
               <h3 style={{ margin: 0, fontSize: 14 }}>ربط متجر غير مملوك</h3>
               <CpTextInput value={storeIdToLink} onChange={setStoreIdToLink} placeholder="معرف المتجر" aria-label="معرف المتجر المراد ربطه" />
-              <CpButton disabled={!storeIdToLink.trim() || stores.actionState.kind === "loading"} onClick={() => void confirmStoreLink()}>
+              <Button disabled={!storeIdToLink.trim() || stores.actionState.kind === "loading"} onClick={() => void confirmStoreLink()}>
                 {stores.actionState.kind === "loading" ? "جارٍ الربط…" : "ربط المتجر بالشريك"}
-              </CpButton>
+              </Button>
               {stores.actionState.kind === "error" ? <CpStateView kind="error" title={stores.actionState.message} /> : null}
             </section>
             {stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل المتاجر…" />
@@ -292,9 +286,9 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                               <CpTableCell>{store.status}</CpTableCell>
                               <CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell>
                               <CpTableCell>
-                                <CpButton onClick={() => setSelectedPricingStoreId((current) => current === store.id ? null : store.id)}>
+                                <Button onClick={() => setSelectedPricingStoreId((current) => current === store.id ? null : store.id)}>
                                   {selectedPricingStoreId === store.id ? "إغلاق التسعير" : "إدارة التسعير"}
-                                </CpButton>
+                                </Button>
                               </CpTableCell>
                             </tr>
                           ))}

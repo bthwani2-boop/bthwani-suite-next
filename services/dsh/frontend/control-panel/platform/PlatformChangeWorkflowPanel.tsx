@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, Text, spacing } from "@bthwani/ui-kit";
+import { Button, Card, Text, spacing } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import {
   CpBadge,
-  CpButton,
   CpRetryButton,
   CpSelect,
   CpStatePanel,
@@ -13,13 +12,11 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import {
   usePlatformChangeWorkflowController,
   type CreatePlatformChangeSetInput,
-  type PlatformChangeSet,
-} from "../../shared/platform";
+  type PlatformChangeSet } from "../../shared/platform";
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useIdentitySession } from "@bthwani/core-identity";
 
@@ -38,8 +35,7 @@ const STATUS_TONE: Record<string, "neutral" | "warning" | "success" | "danger" |
   rejected: "danger",
   applied: "success",
   rolled_back: "neutral",
-  failed: "danger",
-};
+  failed: "danger" };
 
 const STATUS_OPTIONS = [
   { value: "all", label: "كل الحالات" },
@@ -179,8 +175,7 @@ export function PlatformChangeWorkflowPanel({ onChanged }: PlatformChangeWorkflo
       valueType: targetType === "feature_flag" ? "boolean" : valueType.trim() || "json",
       classification: classification.trim() || "internal",
       expectedRevision: revision,
-      proposedValue: parsedValue,
-    }]);
+      proposedValue: parsedValue }]);
     resetItemForm();
   };
 
@@ -195,8 +190,7 @@ export function PlatformChangeWorkflowPanel({ onChanged }: PlatformChangeWorkflo
       reason: reason.trim(),
       impactAssessment: impactAssessment.trim(),
       rollbackPlan: rollbackPlan.trim(),
-      items: draftItems,
-    });
+      items: draftItems });
     if (succeeded) {
       resetCreateForm();
       await refreshAffectedState();
@@ -264,8 +258,8 @@ export function PlatformChangeWorkflowPanel({ onChanged }: PlatformChangeWorkflo
                 <CpTextInput value={proposedValue} onChange={setProposedValue} placeholder={targetType === "feature_flag" ? "true أو false" : "قيمة JSON مثل {\"limit\":12}"} aria-label="القيمة المقترحة بصيغة JSON" />
               </View>
               <View style={styles.actions}>
-                <CpButton onClick={addDraftItem} disabled={busy}>إضافة العنصر</CpButton>
-                <CpButton onClick={resetItemForm} disabled={busy}>مسح العنصر</CpButton>
+                <Button onClick={addDraftItem} disabled={busy}>إضافة العنصر</Button>
+                <Button onClick={resetItemForm} disabled={busy}>مسح العنصر</Button>
               </View>
               {draftItems.length > 0 ? (
                 <View style={styles.fullWidth}>
@@ -273,14 +267,14 @@ export function PlatformChangeWorkflowPanel({ onChanged }: PlatformChangeWorkflo
                   {draftItems.map((item, index) => (
                     <View key={`${item.targetType}-${item.targetKey}-${index}`} style={styles.itemSummary}>
                       <Text role="caption">{item.targetType} · {item.targetKey} · rev {item.expectedRevision} · {jsonText(item.proposedValue)}</Text>
-                      <CpButton onClick={() => setDraftItems((items) => items.filter((_, itemIndex) => itemIndex !== index))} disabled={busy}>إزالة</CpButton>
+                      <Button onClick={() => setDraftItems((items) => items.filter((_, itemIndex) => itemIndex !== index))} disabled={busy}>إزالة</Button>
                     </View>
                   ))}
                 </View>
               ) : null}
               <View style={styles.actions}>
-                <CpButton onClick={() => void createChangeSet()} disabled={busy || draftItems.length === 0}>{busy ? "جاري التنفيذ…" : "إنشاء مسودة التغيير"}</CpButton>
-                <CpButton onClick={resetCreateForm} disabled={busy}>مسح المسودة</CpButton>
+                <Button onClick={() => void createChangeSet()} disabled={busy || draftItems.length === 0}>{busy ? "جاري التنفيذ…" : "إنشاء مسودة التغيير"}</Button>
+                <Button onClick={resetCreateForm} disabled={busy}>مسح المسودة</Button>
               </View>
             </View>
           ) : (
@@ -319,7 +313,7 @@ export function PlatformChangeWorkflowPanel({ onChanged }: PlatformChangeWorkflo
                     <CpTableCell>{changeSet.version}</CpTableCell>
                     <CpTableCell>
                       <View style={styles.actions}>
-                        <CpButton onClick={() => setSelectedId(changeSet.id)} disabled={busy}>تفاصيل</CpButton>
+                        <Button onClick={() => setSelectedId(changeSet.id)} disabled={busy}>تفاصيل</Button>
                         <ChangeSetActions
                           changeSet={changeSet}
                           subject={subject}
@@ -348,15 +342,15 @@ export function PlatformChangeWorkflowPanel({ onChanged }: PlatformChangeWorkflo
       {selectedChangeSet ? <ChangeSetDetails changeSet={selectedChangeSet} onClose={() => setSelectedId(null)} /> : null}
 
       {rejectTargetId ? (
-        <Card><View style={styles.cardContent}><Text role="titleSm">رفض طلب التغيير</Text><CpTextInput value={rejectReason} onChange={setRejectReason} placeholder="سبب الرفض الإلزامي" aria-label="سبب رفض التغيير" /><View style={styles.actions}><CpButton onClick={() => void rejectChangeSet()} disabled={busy || !rejectReason.trim()}>تأكيد الرفض</CpButton><CpButton onClick={() => { setRejectTargetId(null); setRejectReason(""); }} disabled={busy}>إلغاء</CpButton></View></View></Card>
+        <Card><View style={styles.cardContent}><Text role="titleSm">رفض طلب التغيير</Text><CpTextInput value={rejectReason} onChange={setRejectReason} placeholder="سبب الرفض الإلزامي" aria-label="سبب رفض التغيير" /><View style={styles.actions}><Button onClick={() => void rejectChangeSet()} disabled={busy || !rejectReason.trim()}>تأكيد الرفض</Button><Button onClick={() => { setRejectTargetId(null); setRejectReason(""); }} disabled={busy}>إلغاء</Button></View></View></Card>
       ) : null}
 
       {applyTargetId ? (
-        <Card><View style={styles.cardContent}><Text role="titleSm">تأكيد التطبيق الذري</Text><Text role="caption">سيعاد فحص لقطة التحقق والمراجعة قبل تطبيق جميع العناصر في معاملة واحدة. أي تعارض يلغي العملية كاملة.</Text><View style={styles.actions}><CpButton onClick={() => void applyChangeSet()} disabled={busy}>تأكيد التطبيق</CpButton><CpButton onClick={() => setApplyTargetId(null)} disabled={busy}>إلغاء</CpButton></View></View></Card>
+        <Card><View style={styles.cardContent}><Text role="titleSm">تأكيد التطبيق الذري</Text><Text role="caption">سيعاد فحص لقطة التحقق والمراجعة قبل تطبيق جميع العناصر في معاملة واحدة. أي تعارض يلغي العملية كاملة.</Text><View style={styles.actions}><Button onClick={() => void applyChangeSet()} disabled={busy}>تأكيد التطبيق</Button><Button onClick={() => setApplyTargetId(null)} disabled={busy}>إلغاء</Button></View></View></Card>
       ) : null}
 
       {rollbackTargetId ? (
-        <Card><View style={styles.cardContent}><Text role="titleSm">تراجع إلى النسخة الآمنة</Text><CpTextInput value={rollbackReason} onChange={setRollbackReason} placeholder="سبب التراجع الإلزامي" aria-label="سبب التراجع الإلزامي" /><Text role="caption">سيتم التحقق من المراجعة المطبقة ثم استعادة القيمة والمالك والنوع والتصنيف والحالة والاستهداف المحفوظ.</Text><View style={styles.actions}><CpButton onClick={() => void rollbackChangeSet()} disabled={busy || !rollbackReason.trim()}>تأكيد التراجع</CpButton><CpButton onClick={() => { setRollbackTargetId(null); setRollbackReason(""); }} disabled={busy}>إلغاء</CpButton></View></View></Card>
+        <Card><View style={styles.cardContent}><Text role="titleSm">تراجع إلى النسخة الآمنة</Text><CpTextInput value={rollbackReason} onChange={setRollbackReason} placeholder="سبب التراجع الإلزامي" aria-label="سبب التراجع الإلزامي" /><Text role="caption">سيتم التحقق من المراجعة المطبقة ثم استعادة القيمة والمالك والنوع والتصنيف والحالة والاستهداف المحفوظ.</Text><View style={styles.actions}><Button onClick={() => void rollbackChangeSet()} disabled={busy || !rollbackReason.trim()}>تأكيد التراجع</Button><Button onClick={() => { setRollbackTargetId(null); setRollbackReason(""); }} disabled={busy}>إلغاء</Button></View></View></Card>
       ) : null}
     </View>
   );
@@ -366,7 +360,7 @@ function ChangeSetDetails({ changeSet, onClose }: { readonly changeSet: Platform
   return (
     <Card>
       <View style={styles.cardContent}>
-        <View style={styles.actions}><Text role="titleSm">تفاصيل الطلب والفرق المتوقع</Text><CpButton onClick={onClose}>إغلاق التفاصيل</CpButton></View>
+        <View style={styles.actions}><Text role="titleSm">تفاصيل الطلب والفرق المتوقع</Text><Button onClick={onClose}>إغلاق التفاصيل</Button></View>
         <Text role="caption">المعرف: {changeSet.id}</Text>
         <Text role="caption">السبب: {changeSet.reason}</Text>
         <Text role="caption">الأثر المتوقع: {changeSet.impactAssessment}</Text>
@@ -406,12 +400,12 @@ function ChangeSetActions({ changeSet, subject, canPropose, canApprove, canApply
 }) {
   return (
     <View style={styles.actions}>
-      {changeSet.status === "draft" && canPropose ? <CpButton onClick={onValidate} disabled={busy}>تحقق حي</CpButton> : null}
-      {changeSet.status === "validated" && canPropose ? <CpButton onClick={onSubmit} disabled={busy}>إرسال</CpButton> : null}
-      {changeSet.status === "submitted" && canApprove && changeSet.proposerActorId !== subject ? <><CpButton onClick={onApprove} disabled={busy}>اعتماد</CpButton><CpButton onClick={onReject} disabled={busy}>رفض</CpButton></> : null}
+      {changeSet.status === "draft" && canPropose ? <Button onClick={onValidate} disabled={busy}>تحقق حي</Button> : null}
+      {changeSet.status === "validated" && canPropose ? <Button onClick={onSubmit} disabled={busy}>إرسال</Button> : null}
+      {changeSet.status === "submitted" && canApprove && changeSet.proposerActorId !== subject ? <><Button onClick={onApprove} disabled={busy}>اعتماد</Button><Button onClick={onReject} disabled={busy}>رفض</Button></> : null}
       {changeSet.status === "submitted" && canApprove && changeSet.proposerActorId === subject ? <Text role="caption">لا يمكنك اعتماد أو رفض التغيير الذي اقترحته</Text> : null}
-      {changeSet.status === "approved" && canApply ? <CpButton onClick={onApply} disabled={busy}>تطبيق</CpButton> : null}
-      {changeSet.status === "applied" && canRollback ? <CpButton onClick={onRollback} disabled={busy}>تراجع</CpButton> : null}
+      {changeSet.status === "approved" && canApply ? <Button onClick={onApply} disabled={busy}>تطبيق</Button> : null}
+      {changeSet.status === "applied" && canRollback ? <Button onClick={onRollback} disabled={busy}>تراجع</Button> : null}
       {!['draft', 'validated', 'submitted', 'approved', 'applied'].includes(changeSet.status) ? <Text role="caption">لا يوجد إجراء متاح</Text> : null}
     </View>
   );
@@ -424,5 +418,4 @@ const styles = StyleSheet.create({
   fullWidth: { width: "100%", gap: spacing[2] },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2], alignItems: "center" },
   itemSummary: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[2], padding: spacing[2] },
-  detailItem: { gap: spacing[2], padding: spacing[3] },
-});
+  detailItem: { gap: spacing[2], padding: spacing[3] } });

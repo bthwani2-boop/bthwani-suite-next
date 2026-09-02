@@ -1,12 +1,11 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import { useEffect, useState } from "react";
 import {
-  CpButton,
   CpStatePanel,
   CpStateView,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { createPartnerStore } from "../../../shared/partner";
 import { fetchCatalogDomains } from "../../../shared/catalog/central-catalog.api";
 import type { CentralCatalogDomain } from "../../../shared/catalog/central-catalog.types";
@@ -35,8 +34,7 @@ function describeSubmissionError(error: unknown): string {
 export function PartnerStoreCreateWizard({
   partnerId,
   onStoreCreated,
-  onCancel,
-}: PartnerStoreCreateWizardProps) {
+  onCancel }: PartnerStoreCreateWizardProps) {
   const [displayName, setDisplayName] = useState("");
   const [cityCode, setCityCode] = useState("");
   const [businessVerticalId, setBusinessVerticalId] = useState("");
@@ -82,12 +80,10 @@ export function PartnerStoreCreateWizard({
           Category: "",
           businessVerticalId: normalizedBusinessVerticalId,
           AddressLine: addressLine.trim(),
-          OperatingHours: operatingHours.trim(),
-        },
+          OperatingHours: operatingHours.trim() },
         {
           idempotencyKey: mutationKey,
-          correlationId: mutationKey,
-        },
+          correlationId: mutationKey },
       );
 
       setStatus("success");
@@ -151,13 +147,13 @@ export function PartnerStoreCreateWizard({
       ) : null}
 
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <CpButton onClick={() => void handleSubmit()} disabled={submitting}>
+        <Button onClick={() => void handleSubmit()} disabled={submitting}>
           {submitting ? "جارٍ الإنشاء…" : "إنشاء المتجر"}
-        </CpButton>
+        </Button>
         {onCancel ? (
-          <CpButton onClick={onCancel} disabled={submitting}>
+          <Button onClick={onCancel} disabled={submitting}>
             إلغاء
-          </CpButton>
+          </Button>
         ) : null}
       </div>
     </div>

@@ -1,16 +1,14 @@
 "use client";
 
-import { colorRoles } from "@bthwani/ui-kit";
+import { Button, colorRoles } from "@bthwani/ui-kit";
 import React, { useState } from "react";
 import {
-  CpButton,
   CpTextInput,
   CpSelect,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpEmptyTableMessage,
-} from "@bthwani/control-panel/components";
+  CpEmptyTableMessage } from "@bthwani/control-panel/components";
 import { useCouponsController, useGovernedPartnerOffersController } from "../../../shared/marketing";
 import type { PartnerOfferRecord } from "../../../shared/partner/dsh-partner-offer-types";
 
@@ -23,8 +21,7 @@ const STATUS_LABEL: Record<PartnerOfferRecord["status"], string> = {
   rejected: "مرفوض",
   archived: "مؤرشف",
   expired: "منتهي",
-  exhausted: "مستنفد",
-};
+  exhausted: "مستنفد" };
 
 function statusOptions(current: PartnerOfferRecord["status"]) {
   const values: PartnerOfferRecord["status"][] = (() => {
@@ -124,13 +121,13 @@ export function PartnerOffersCommandDeck() {
                       <CpTableCell><span style={{ opacity: offer.status === "published" ? 1 : 0.6 }}>{STATUS_LABEL[offer.status] ?? offer.status}</span><div style={{ fontSize: "0.7rem", opacity: 0.55 }}>الإصدار {offer.version}</div></CpTableCell>
                       <CpTableCell>
                         <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-                          <CpButton onClick={() => controller.select(offer)}>مراجعة</CpButton>
+                          <Button onClick={() => controller.select(offer)}>مراجعة</Button>
                           {actionLabel ? (
-                            <CpButton disabled={scheduleBlocked || couponPublishBlocked || controller.loading} onClick={() => void controller.toggleStatus(offer.id)}>
+                            <Button disabled={scheduleBlocked || couponPublishBlocked || controller.loading} onClick={() => void controller.toggleStatus(offer.id)}>
                               {actionLabel}
-                            </CpButton>
+                            </Button>
                           ) : null}
-                          <CpButton onClick={() => void controller.remove(offer.id)} style={{ background: colorRoles.surfaceBase, color: colorRoles.brandAction }}>أرشفة</CpButton>
+                          <Button onClick={() => void controller.remove(offer.id)} style={{ background: colorRoles.surfaceBase, color: colorRoles.brandAction }}>أرشفة</Button>
                         </div>
                       </CpTableCell>
                     </tr>
@@ -194,8 +191,8 @@ export function PartnerOffersCommandDeck() {
               ) : null}
 
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-                <CpButton disabled={controller.loading} onClick={handleSave} style={{ background: colorRoles.brandAction, color: "white", flex: 1 }}>حفظ القرار</CpButton>
-                <CpButton onClick={() => controller.select(null)} style={{ flex: 1 }}>إلغاء</CpButton>
+                <Button disabled={controller.loading} onClick={handleSave} style={{ background: colorRoles.brandAction, color: "white", flex: 1 }}>حفظ القرار</Button>
+                <Button onClick={() => controller.select(null)} style={{ flex: 1 }}>إلغاء</Button>
               </div>
             </div>
           </div>

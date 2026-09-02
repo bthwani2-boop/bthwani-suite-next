@@ -1,15 +1,13 @@
 "use client";
-import { colorRoles } from '@bthwani/ui-kit';
+import { Button, colorRoles } from '@bthwani/ui-kit';
 import React, { useState } from "react";
 import {
-  CpButton,
   CpTextInput,
   CpSelect,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpEmptyTableMessage,
-} from "@bthwani/control-panel/components";
+  CpEmptyTableMessage } from "@bthwani/control-panel/components";
 import { useTickersController } from "../../../shared/marketing";
 import type { MarketingNewsTickerItem } from "../../../shared/marketing";
 import { NotBackedNotice } from "./NotBackedNotice";
@@ -48,7 +46,7 @@ export function TickerCommandDeck() {
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <h3 style={{ margin: 0, color: colorRoles.brandAction, fontSize: "1.15rem" }}>إدارة شريط الإعلانات والأخبار (News Tickers)</h3>
-          <CpButton onClick={() => controller.select(null)}>إضافة شريط جديد</CpButton>
+          <Button onClick={() => controller.select(null)}>إضافة شريط جديد</Button>
         </div>
 
         {controller.errorMessage && <NotBackedNotice reason={controller.errorMessage} />}
@@ -85,17 +83,17 @@ export function TickerCommandDeck() {
                   </CpTableCell>
                   <CpTableCell>{item.impressions} مشاهدة / {item.clicks} نقرة</CpTableCell>
                   <CpTableCell>
-                    <CpButton onClick={() => controller.togglePinned(item.id)} disabled={!controller.isBackedByApi} style={{ padding: "0.2rem 0.5rem" }}>
+                    <Button onClick={() => controller.togglePinned(item.id)} disabled={!controller.isBackedByApi} style={{ padding: "0.2rem 0.5rem" }}>
                       {item.pinned ? "📌 مثبت" : "ثبت"}
-                    </CpButton>
+                    </Button>
                   </CpTableCell>
                   <CpTableCell>
                     <div style={{ display: "flex", gap: "0.25rem" }}>
-                      <CpButton onClick={() => controller.select(item)}>تعديل</CpButton>
-                      <CpButton onClick={() => controller.toggleStatus(item.id)} disabled={!controller.isBackedByApi}>
+                      <Button onClick={() => controller.select(item)}>تعديل</Button>
+                      <Button onClick={() => controller.toggleStatus(item.id)} disabled={!controller.isBackedByApi}>
                         {item.status === "published" ? "تعطيل" : "تنشيط"}
-                      </CpButton>
-                      <CpButton onClick={() => controller.remove(item.id)} disabled={!controller.isBackedByApi} style={{ background: colorRoles.surfaceBase, color: colorRoles.brandAction }}>حذف</CpButton>
+                      </Button>
+                      <Button onClick={() => controller.remove(item.id)} disabled={!controller.isBackedByApi} style={{ background: colorRoles.surfaceBase, color: colorRoles.brandAction }}>حذف</Button>
                     </div>
                   </CpTableCell>
                 </tr>
@@ -181,8 +179,8 @@ export function TickerCommandDeck() {
             />
 
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-              <CpButton onClick={handleSave} disabled={!controller.isBackedByApi} style={{ background: colorRoles.brandAction, color: "white", flex: 1 }}>حفظ التعديلات</CpButton>
-              <CpButton onClick={() => controller.select(null)} style={{ flex: 1 }}>إلغاء</CpButton>
+              <Button onClick={handleSave} disabled={!controller.isBackedByApi} style={{ background: colorRoles.brandAction, color: "white", flex: 1 }}>حفظ التعديلات</Button>
+              <Button onClick={() => controller.select(null)} style={{ flex: 1 }}>إلغاء</Button>
             </div>
           </div>
         </div>

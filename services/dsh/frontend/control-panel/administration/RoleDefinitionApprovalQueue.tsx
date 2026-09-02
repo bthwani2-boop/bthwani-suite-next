@@ -1,8 +1,8 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import React, { useState } from "react";
 import {
-  CpButton,
   CpMutedInline,
   CpPageHeader,
   CpStatePanel,
@@ -10,13 +10,11 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { QueuePageFrame } from "@bthwani/control-panel/shell";
 import {
   useAdministrationPermissionVocabularyController,
-  useRoleDefinitionApprovalController,
-} from "../../shared/administration";
+  useRoleDefinitionApprovalController } from "../../shared/administration";
 import { administrationExecutionStatusLabel } from "../../shared/administration/administration-registry";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
@@ -58,8 +56,7 @@ export function RoleDefinitionApprovalQueue() {
         description: description.trim(),
         active,
         permissions,
-        reason: reason.trim(),
-      });
+        reason: reason.trim() });
       setName("");
       setDescription("");
       setReason("");
@@ -136,24 +133,24 @@ export function RoleDefinitionApprovalQueue() {
           placeholder="سبب إنشاء الدور"
           aria-label="سبب إنشاء الدور"
         />
-        <CpButton
+        <Button
           variant={active ? "brand" : "secondary"}
           onClick={() => setActive((value) => !value)}
           aria-pressed={active}
         >
           الدور فعال
-        </CpButton>
+        </Button>
         <strong>صلاحيات العمليات</strong>
         <div role="group" aria-label="صلاحيات الدور">
           {availablePermissions.map((permission) => (
-            <CpButton
+            <Button
               key={permission}
               variant={permissions.includes(permission) ? "brand" : "secondary"}
               onClick={() => togglePermission(permission)}
               aria-pressed={permissions.includes(permission)}
             >
               {permission}
-            </CpButton>
+            </Button>
           ))}
         </div>
         <CpStatePanel
@@ -161,13 +158,13 @@ export function RoleDefinitionApprovalQueue() {
           title="لوحة التحكم سطح إلزامي"
           description="تُختار الصلاحيات من قاموس Identity المعياري، ولوحة التحكم هي سطح الإدارة الوحيد لهذا الدور."
         />
-        <CpButton
+        <Button
           variant="primary"
           disabled={submitting || name.trim().length < 3 || reason.trim().length < 5 || permissions.length === 0}
           onClick={() => void requestRole()}
         >
           إرسال تعريف الدور للمراجعة
-        </CpButton>
+        </Button>
       </section> : null}
 
       {actionError ? <CpStateView kind="error" title={actionError} /> : null}
@@ -215,16 +212,16 @@ export function RoleDefinitionApprovalQueue() {
                   />
                 </CpTableCell>
                 <CpTableCell>
-                  <CpButton variant="brand" disabled={submitting || !reviewable} onClick={() => void review(request.id, request.version, "approved")}>
+                  <Button variant="brand" disabled={submitting || !reviewable} onClick={() => void review(request.id, request.version, "approved")}>
                     اعتماد تعريف الدور
-                  </CpButton>{" "}
-                  <CpButton
+                  </Button>{" "}
+                  <Button
                     variant="danger"
                     disabled={submitting || !reviewable || (reviewNotes[request.id] ?? "").trim().length < 5}
                     onClick={() => void review(request.id, request.version, "rejected")}
                   >
                     رفض التعريف
-                  </CpButton>
+                  </Button>
                   {request.executionStatus === "failed_terminal" && canRequest ? <>
                     <CpTextInput
                       value={replacementCode}
@@ -238,13 +235,13 @@ export function RoleDefinitionApprovalQueue() {
                       placeholder="سبب الطلب البديل — خمسة أحرف على الأقل"
                       aria-label={`سبب الطلب البديل ${request.roleName}`}
                     />
-                    <CpButton
+                    <Button
                       variant="primary"
                       disabled={submitting || !/^[a-z][a-z0-9_]{2,63}$/.test(replacementCode.trim()) || replacementReason.trim().length < 5}
                       onClick={() => void replaceTerminalFailure(request.id, request.version)}
                     >
                       تثبيت الفشل وإنشاء طلب بديل
-                    </CpButton>
+                    </Button>
                   </> : null}
                 </CpTableCell>
               </tr>

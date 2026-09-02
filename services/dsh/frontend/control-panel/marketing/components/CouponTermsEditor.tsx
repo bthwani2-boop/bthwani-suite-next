@@ -1,18 +1,16 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
-import { colorRoles } from "@bthwani/ui-kit";
+import { Button, colorRoles } from "@bthwani/ui-kit";
 import {
   minorUnitsToWltMajorInput,
-  parseWltMajorInputToMinorUnits,
-} from "@bthwani/dsh/finance";
-import { CpButton } from "@bthwani/control-panel/components";
+  parseWltMajorInputToMinorUnits } from "@bthwani/dsh/finance";
+
 import type {
   CouponDiscountType,
   CouponFulfillmentMode,
   CouponRecord,
-  CouponUpdatePayload,
-} from "../../../shared/marketing/coupons.public";
+  CouponUpdatePayload } from "../../../shared/marketing/coupons.public";
 
 type CouponTermsEditorProps = {
   readonly coupon: CouponRecord;
@@ -119,8 +117,7 @@ export function CouponTermsEditor({ coupon, loading, onSave }: CouponTermsEditor
       perClientUsageLimit: perClient,
       eligibleFulfillmentModes: modes,
       startsAt: startsAtValue,
-      endsAt: endsAtValue,
-    });
+      endsAt: endsAtValue });
     if (succeeded) setEditing(false);
   };
 
@@ -132,9 +129,9 @@ export function CouponTermsEditor({ coupon, loading, onSave }: CouponTermsEditor
         <small style={styles.muted}>
           الأنماط: {coupon.eligibleFulfillmentModes.join(" · ")} · البداية: {coupon.startsAt || "فورية"} · النهاية: {coupon.endsAt || "بلا نهاية"}
         </small>
-        <CpButton disabled={disabled} onClick={() => setEditing(true)} variant="secondary">
+        <Button disabled={disabled} onClick={() => setEditing(true)} variant="secondary">
           تعديل الشروط والنطاق
-        </CpButton>
+        </Button>
         {coupon.status === "active" ? <small style={styles.muted}>أوقف الكوبون قبل تعديل الشروط.</small> : null}
       </div>
     );
@@ -169,8 +166,8 @@ export function CouponTermsEditor({ coupon, loading, onSave }: CouponTermsEditor
         </div>
       </div>
       <div style={{ ...styles.full, ...styles.actions }}>
-        <CpButton disabled={disabled} onClick={() => void save()} variant="brand">حفظ الشروط</CpButton>
-        <CpButton disabled={loading} onClick={() => setEditing(false)} variant="secondary">إلغاء</CpButton>
+        <Button disabled={disabled} onClick={() => void save()} variant="brand">حفظ الشروط</Button>
+        <Button disabled={loading} onClick={() => setEditing(false)} variant="secondary">إلغاء</Button>
       </div>
     </div>
   );
@@ -185,5 +182,4 @@ const styles: Record<string, CSSProperties> = {
   modes: { display: "flex", flexWrap: "wrap", gap: "0.75rem", marginTop: "0.35rem" },
   mode: { display: "flex", gap: "0.35rem", alignItems: "center", fontSize: "0.82rem" },
   actions: { display: "flex", gap: "0.45rem", flexWrap: "wrap" },
-  muted: { opacity: 0.68, fontSize: "0.78rem" },
-};
+  muted: { opacity: 0.68, fontSize: "0.78rem" } };

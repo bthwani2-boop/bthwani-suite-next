@@ -1,17 +1,15 @@
 "use client";
 
 import React from "react";
-import { Box, Text, spacing } from "@bthwani/ui-kit";
+import { Button, Box, Text, spacing } from "@bthwani/ui-kit";
 import {
   CpBadge,
-  CpButton,
   CpMutedInline,
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
   CpStateView,
-  CpTabs,
-} from "@bthwani/control-panel/components";
+  CpTabs } from "@bthwani/control-panel/components";
 import { MetricsPageFrame } from "@bthwani/control-panel/shell";
 import { formatWltMoney } from "@bthwani/dsh/finance";
 import {
@@ -27,19 +25,16 @@ import {
   type DshFieldPerformanceAnalytics,
   type DshOperationalAnalyticsDrilldown,
   type DshPreparationSlaAnalytics,
-  type WltAnalyticsFinancialSnapshot,
-} from "../../shared/analytics";
+  type WltAnalyticsFinancialSnapshot } from "../../shared/analytics";
 
 const periodLabels: Record<DshAnalyticsPeriod, string> = {
   today: "اليوم",
   week: "7 أيام",
-  month: "شهر",
-};
+  month: "شهر" };
 
 const PERIOD_TABS = (["today", "week", "month"] as DshAnalyticsPeriod[]).map((value) => ({
   value,
-  label: periodLabels[value],
-}));
+  label: periodLabels[value] }));
 
 // CpTextInput has no date-picker mode; a native <input type="date"> is kept here
 // (structural styling only, no hardcoded color) since a Cp* replacement would
@@ -50,8 +45,7 @@ const dateInputStyle: React.CSSProperties = {
   padding: "0.5rem 0.75rem",
   border: "1px solid currentColor",
   borderRadius: 8,
-  background: "transparent",
-};
+  background: "transparent" };
 
 type State =
   | { kind: "loading" }
@@ -98,16 +92,14 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
             field,
             drilldown,
             finance: finance.value,
-            financeUnavailable: finance.unavailable,
-          });
+            financeUnavailable: finance.unavailable });
         }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
           setState({
             kind: "error",
-            message: error instanceof Error ? error.message : "تعذر تحميل التحليلات التشغيلية الممتدة.",
-          });
+            message: error instanceof Error ? error.message : "تعذر تحميل التحليلات التشغيلية الممتدة." });
         }
       });
     return () => {
@@ -186,9 +178,9 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
       toolbar={
         <Box style={styles.toolbar}>
           <CpTabs items={PERIOD_TABS} value={activePeriodValue} onChange={(value) => applyNamedPeriod(value as DshAnalyticsPeriod)} aria-label="الفترة الزمنية" />
-          <CpButton variant="secondary" onClick={() => void openExport()} disabled={exporting}>
+          <Button variant="secondary" onClick={() => void openExport()} disabled={exporting}>
             {exporting ? "جاري التصدير…" : "تصدير CSV"}
-          </CpButton>
+          </Button>
         </Box>
       }
       summary={
@@ -214,7 +206,7 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
                 style={dateInputStyle}
               />
             </label>
-            <CpButton variant="secondary" onClick={applyCustomRange}>تطبيق النطاق</CpButton>
+            <Button variant="secondary" onClick={applyCustomRange}>تطبيق النطاق</Button>
             <CpBadge tone="info">{`الفترة النشطة: ${activeWindowLabel}`}</CpBadge>
           </Box>
           {filterError ? <CpMutedInline>{filterError}</CpMutedInline> : null}
@@ -296,14 +288,14 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
                   <Box key={record.id} style={styles.row}>
                     <Text role="bodyStrong">{record.id}</Text>
                     <Text role="bodySm">{record.status} • المتجر {record.storeId} • {new Date(record.updatedAt).toLocaleString("ar")}</Text>
-                    <CpButton
+                    <Button
                       variant="ghost"
                       onClick={() => {
                         if (typeof window !== "undefined") window.location.assign(record.detailUrl);
                       }}
                     >
                       فتح السجل
-                    </CpButton>
+                    </Button>
                   </Box>
                 ))}
               </Box>
@@ -360,5 +352,4 @@ const styles = {
   grid: { display: "flex", flexDirection: "row", flexWrap: "wrap", gap: spacing[3], marginTop: spacing[3], marginBottom: spacing[3] },
   metric: { minWidth: 150, flex: 1, gap: spacing[1] },
   rows: { gap: spacing[2], marginTop: spacing[3] },
-  row: { gap: spacing[1], paddingBottom: spacing[2], borderBottomWidth: 1 },
-} as const;
+  row: { gap: spacing[1], paddingBottom: spacing[2], borderBottomWidth: 1 } } as const;

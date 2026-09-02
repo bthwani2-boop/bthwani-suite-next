@@ -1,19 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { neutralScale } from "@bthwani/ui-kit";
+import { Button, neutralScale } from "@bthwani/ui-kit";
 import {
   CpBadge,
-  CpButton,
   CpMutedInline,
   CpStatePanel,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import {
   fetchChecklistPolicy,
   replaceChecklistPolicy,
-  type DshChecklistPolicyItem,
-} from "../../../shared/field-readiness";
+  type DshChecklistPolicyItem } from "../../../shared/field-readiness";
 
 const VERTICALS = [
   { id: "domain-restaurants", label: "المطاعم" },
@@ -63,8 +60,7 @@ export function ChecklistPolicyEditor() {
       required: true,
       critical: false,
       evidenceRequired: true,
-      displayOrder: nextOrder,
-    }]);
+      displayOrder: nextOrder }]);
     setState("ready");
   }
 
@@ -110,17 +106,17 @@ export function ChecklistPolicyEditor() {
             <label><input type="checkbox" checked={item.required} onChange={(event) => updateItem(index, { required: event.target.checked, critical: event.target.checked ? item.critical : false })} /> إلزامي</label>
             <label><input type="checkbox" checked={item.critical} disabled={!item.required} onChange={(event) => updateItem(index, { critical: event.target.checked })} /> حرج</label>
             <label><input type="checkbox" checked={item.evidenceRequired} onChange={(event) => updateItem(index, { evidenceRequired: event.target.checked })} /> يتطلب دليلاً</label>
-            <CpButton variant="danger" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}>حذف</CpButton>
+            <Button variant="danger" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}>حذف</Button>
           </div>
         </div>
       )) : null}
 
       {message ? <CpStatePanel role={state === "error" ? "alert" : "status"} title={message} /> : null}
       <div style={{ display: "flex", gap: "0.5rem" }}>
-        <CpButton onClick={addItem}>إضافة بند</CpButton>
-        <CpButton variant="brand" disabled={state === "loading" || state === "saving" || items.length === 0} onClick={save}>
+        <Button onClick={addItem}>إضافة بند</Button>
+        <Button variant="brand" disabled={state === "loading" || state === "saving" || items.length === 0} onClick={save}>
           {state === "saving" ? "جاري الحفظ…" : "حفظ السياسة"}
-        </CpButton>
+        </Button>
       </div>
     </section>
   );

@@ -1,15 +1,13 @@
+import { Button } from "@bthwani/ui-kit";
 import React, { useEffect, useState } from "react";
 import {
-  CpButton,
   CpStateView,
   CpStatePanel,
-  CpDescriptionRow,
-} from "@bthwani/control-panel/components";
+  CpDescriptionRow } from "@bthwani/control-panel/components";
 import { GoogleMapsWebCanvas } from "../../maps/GoogleMapsWebCanvas";
 import {
   getDshOperatorServiceArea,
-  upsertDshOperatorServiceArea,
-} from "../../../shared/client-map/client-map.api";
+  upsertDshOperatorServiceArea } from "../../../shared/client-map/client-map.api";
 import type { DshServiceArea } from "../../../shared/client-map/client-map.types";
 
 type Props = {
@@ -48,8 +46,7 @@ export function StoreServiceAreaPanel({ serviceAreaCode, canManage }: Props) {
     if (!canManage || state.kind !== "ready") return;
     setState({
       ...state,
-      draftPolygon: [...state.draftPolygon, [coord.longitude, coord.latitude]],
-    });
+      draftPolygon: [...state.draftPolygon, [coord.longitude, coord.latitude]] });
   };
 
   const handleClearDraft = () => {
@@ -88,8 +85,7 @@ export function StoreServiceAreaPanel({ serviceAreaCode, canManage }: Props) {
         active: state.area.active,
         priority: state.area.priority,
         expectedVersion: state.area.version,
-        reason: "تحديث حدود المنطقة الجغرافية من لوحة التحكم",
-      });
+        reason: "تحديث حدود المنطقة الجغرافية من لوحة التحكم" });
       setState({ kind: "ready", area: updated, draftPolygon: updated.polygon });
       alert("تم حفظ المنطقة الجغرافية بنجاح.");
     } catch (err: unknown) {
@@ -126,28 +122,26 @@ export function StoreServiceAreaPanel({ serviceAreaCode, canManage }: Props) {
               id: "draft",
               label: "مسودة",
               points: draftPolygon,
-              active: true,
-            },
+              active: true },
             ...(isDirty && area.polygon.length > 0 ? [{
               id: "original",
               label: "الأصلي",
               points: area.polygon,
-              active: false,
-            }] : []),
+              active: false }] : []),
           ]}
         />
         {canManage ? (
           <>
             <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-              <CpButton onClick={() => void handleSave()} disabled={saving || !isDirty}>
+              <Button onClick={() => void handleSave()} disabled={saving || !isDirty}>
                 {saving ? "جاري الحفظ..." : "حفظ المسودة"}
-              </CpButton>
-              <CpButton onClick={handleClearDraft} disabled={draftPolygon.length === 0} variant="secondary">
+              </Button>
+              <Button onClick={handleClearDraft} disabled={draftPolygon.length === 0} variant="secondary">
                 مسح النقاط
-              </CpButton>
-              <CpButton onClick={handleRevert} disabled={!isDirty} variant="secondary">
+              </Button>
+              <Button onClick={handleRevert} disabled={!isDirty} variant="secondary">
                 إلغاء التعديلات
-              </CpButton>
+              </Button>
             </div>
             <p style={{ marginTop: 8, fontSize: 12, color: "var(--cp-text-muted)" }}>
               انقر على الخريطة لإضافة نقاط المضلع. تأكد من إغلاق المضلع (سيتم إغلاقه تلقائياً عند الحفظ).

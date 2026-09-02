@@ -3,10 +3,9 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { Box, Card, Text, spacing } from "@bthwani/ui-kit";
+import { Button, Box, Card, Text, spacing } from "@bthwani/ui-kit";
 import {
   CpBadge,
-  CpButton,
   CpKpiCard,
   CpKpiStrip,
   CpMutedInline,
@@ -14,8 +13,7 @@ import {
   CpRetryButton,
   CpStatePanel,
   CpStateView,
-  CpTabs,
-} from "@bthwani/control-panel/components";
+  CpTabs } from "@bthwani/control-panel/components";
 import { MetricsPageFrame } from "@bthwani/control-panel/shell";
 import {
   useOperatorAnalyticsDashboardController,
@@ -23,19 +21,16 @@ import {
   buildOrderAnalyticsViewModel,
   buildDeliveryAnalyticsViewModel,
   buildStoreAnalyticsViewModel,
-  type DshAnalyticsPeriod,
-} from "../../shared/analytics";
+  type DshAnalyticsPeriod } from "../../shared/analytics";
 
 const PERIOD_LABELS: Record<DshAnalyticsPeriod, string> = {
   today: "اليوم",
   week: "الأسبوع",
-  month: "الشهر",
-};
+  month: "الشهر" };
 
 const PERIOD_TABS = (["today", "week", "month"] as DshAnalyticsPeriod[]).map((value) => ({
   value,
-  label: PERIOD_LABELS[value],
-}));
+  label: PERIOD_LABELS[value] }));
 
 export function AnalyticsDashboardScreen() {
   const router = useRouter();
@@ -61,9 +56,9 @@ export function AnalyticsDashboardScreen() {
     <MetricsPageFrame
       header={<CpPageHeader title="التحليلات التشغيلية">
         <CpMutedInline tight>لوحة مؤشرات الأداء الرئيسية لمنصة DSH</CpMutedInline>
-        <CpButton variant="secondary" onClick={() => router.push("/dsh/analytics/operational")}>
+        <Button variant="secondary" onClick={() => router.push("/dsh/analytics/operational")}>
           تحليلات SLA والأداء المتقدمة ←
-        </CpButton>
+        </Button>
       </CpPageHeader>}
       toolbar={<CpTabs items={PERIOD_TABS} value={period} onChange={(value) => setPeriod(value as DshAnalyticsPeriod)} aria-label="الفترة الزمنية" />}
     >
@@ -210,5 +205,4 @@ function Freshness({ generatedAt }: { generatedAt: string }) {
 const styles = {
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing[3] },
   statusRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: spacing[3], paddingVertical: spacing[2] },
-  deliveryRates: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: spacing[3], paddingBottom: spacing[3] },
-} as const;
+  deliveryRates: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: spacing[3], paddingBottom: spacing[3] } } as const;

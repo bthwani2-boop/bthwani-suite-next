@@ -1,27 +1,23 @@
 "use client";
 
-import { colorRoles } from "@bthwani/ui-kit";
+import { Button, colorRoles } from "@bthwani/ui-kit";
 import React, { useState } from "react";
 import {
-  CpButton,
   CpTextInput,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpEmptyTableMessage,
-} from "@bthwani/control-panel/components";
+  CpEmptyTableMessage } from "@bthwani/control-panel/components";
 import {
   useGovernedCampaignsController,
-  type GovernedDshCampaign,
-} from "../../../shared/marketing";
+  type GovernedDshCampaign } from "../../../shared/marketing";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "مسودة",
   active: "نشطة",
   paused: "موقوفة",
   completed: "مكتملة",
-  cancelled: "ملغاة",
-};
+  cancelled: "ملغاة" };
 
 const AUDIENCE_OPTIONS = [
   { value: "all", label: "كل العملاء" },
@@ -41,8 +37,7 @@ function CampaignActions({
   campaign,
   onEdit,
   onStatus,
-  onArchive,
-}: {
+  onArchive }: {
   readonly campaign: GovernedDshCampaign;
   readonly onEdit: () => void;
   readonly onStatus: (status: string) => void;
@@ -54,25 +49,25 @@ function CampaignActions({
 
   return (
     <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-      <CpButton onClick={onEdit}>تعديل</CpButton>
+      <Button onClick={onEdit}>تعديل</Button>
       {campaign.status === "draft" && (
-        <CpButton onClick={() => onStatus("active")}>تفعيل</CpButton>
+        <Button onClick={() => onStatus("active")}>تفعيل</Button>
       )}
       {campaign.status === "active" && (
-        <CpButton onClick={() => onStatus("paused")}>إيقاف مؤقت</CpButton>
+        <Button onClick={() => onStatus("paused")}>إيقاف مؤقت</Button>
       )}
       {campaign.status === "paused" && (
-        <CpButton onClick={() => onStatus("active")}>استئناف</CpButton>
+        <Button onClick={() => onStatus("active")}>استئناف</Button>
       )}
       {(campaign.status === "active" || campaign.status === "paused") && (
-        <CpButton onClick={() => onStatus("completed")}>إنهاء</CpButton>
+        <Button onClick={() => onStatus("completed")}>إنهاء</Button>
       )}
-      <CpButton
+      <Button
         onClick={onArchive}
         style={{ background: colorRoles.surfaceBase, color: colorRoles.brandAction }}
       >
         إلغاء وأرشفة
-      </CpButton>
+      </Button>
     </div>
   );
 }
@@ -156,8 +151,7 @@ export function CampaignsCommandDeck() {
     try {
       const regionalTarget = {
         targetCityCode: targetCityCode.trim(),
-        targetServiceAreaCode: targetServiceAreaCode.trim(),
-      };
+        targetServiceAreaCode: targetServiceAreaCode.trim() };
       if (editing) {
         await controller.update(editing, {
           title: title.trim(),
@@ -168,8 +162,7 @@ export function CampaignsCommandDeck() {
           placement,
           targetType,
           targetId,
-          ...regionalTarget,
-        });
+          ...regionalTarget });
         setSuccessMsg("تم حفظ تعديلات الحملة وقراءة الإصدار الجديد من DSH.");
       } else {
         await controller.create({
@@ -181,8 +174,7 @@ export function CampaignsCommandDeck() {
           placement,
           targetType,
           targetId,
-          ...regionalTarget,
-        });
+          ...regionalTarget });
         setSuccessMsg("تم حفظ الحملة كمسودة. لن تظهر للعميل قبل التفعيل.");
       }
       resetForm();
@@ -316,10 +308,10 @@ export function CampaignsCommandDeck() {
           <CpTextInput value={targetId} onChange={setTargetId} placeholder="المعرّف الحاكم في DSH" />
 
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <CpButton onClick={() => void handleSave()} style={{ background: colorRoles.brandAction, color: "white", marginTop: "0.5rem" }}>
+            <Button onClick={() => void handleSave()} style={{ background: colorRoles.brandAction, color: "white", marginTop: "0.5rem" }}>
               {editing ? "حفظ التعديلات" : "حفظ كمسودة"}
-            </CpButton>
-            {editing ? <CpButton onClick={resetForm}>إلغاء التعديل</CpButton> : null}
+            </Button>
+            {editing ? <Button onClick={resetForm}>إلغاء التعديل</Button> : null}
           </div>
         </div>
       </div>

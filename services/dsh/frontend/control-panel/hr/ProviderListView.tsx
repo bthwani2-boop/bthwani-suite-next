@@ -1,10 +1,10 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import React, { useMemo, useState } from "react";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
   CpBadge,
-  CpButton,
   CpFilterBar,
   CpKpiCard,
   CpKpiStrip,
@@ -16,8 +16,7 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTabs,
-} from "@bthwani/control-panel/components";
+  CpTabs } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
@@ -25,8 +24,7 @@ import {
   useCaptainListController,
   useEmployeeListController,
   useFieldAgentListController,
-  useWorkforceReferenceData,
-} from "../../shared/workforce";
+  useWorkforceReferenceData } from "../../shared/workforce";
 import type { EngagementStatus, FieldAgent, ProviderKind } from "../../shared/workforce";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 
@@ -121,8 +119,7 @@ export function ProviderListView(props: {
       total: rows.length,
       pending: rows.filter((r) => r.engagementStatus === "pending_activation").length,
       active: rows.filter((r) => r.engagementStatus === "active").length,
-      suspended: rows.filter((r) => r.engagementStatus === "suspended").length,
-    };
+      suspended: rows.filter((r) => r.engagementStatus === "suspended").length };
   }, [fieldList.state, captainList.state, employeeList.state]);
 
   const reload = () => {
@@ -140,8 +137,8 @@ export function ProviderListView(props: {
   ) : undefined;
   const header = (
     <CpPageHeader title="سجل Workforce الموحد">
-      {props.canCreate ? <CpButton variant="primary" onClick={props.onCreate}>إضافة عضو</CpButton> : null}
-      <CpButton variant="ghost" onClick={props.onReference}>المدن والورديات</CpButton>
+      {props.canCreate ? <Button variant="primary" onClick={props.onCreate}>إضافة عضو</Button> : null}
+      <Button variant="ghost" onClick={props.onReference}>المدن والورديات</Button>
     </CpPageHeader>
   );
 
@@ -197,7 +194,7 @@ export function ProviderListView(props: {
                 <CpBadge tone={statusTone(member.engagementStatus)}>{ENGAGEMENT_STATUS_LABEL_AR[member.engagementStatus]}</CpBadge>
               </CpTableCell>
               <CpTableCell>
-                <CpButton variant="secondary" onClick={() => props.onOpen(member.actorId, member.workforceKind)}>فتح</CpButton>
+                <Button variant="secondary" onClick={() => props.onOpen(member.actorId, member.workforceKind)}>فتح</Button>
               </CpTableCell>
             </tr>
           ))}

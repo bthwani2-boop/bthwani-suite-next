@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
-import { colorRoles } from "@bthwani/ui-kit";
+import { Button, colorRoles } from "@bthwani/ui-kit";
 import { formatWltMoney, parseWltMajorInputToMinorUnits } from "@bthwani/dsh/finance";
-import { CpButton } from "@bthwani/control-panel/components";
+
 import { useCouponsController } from "../../../shared/marketing/use-coupons-controller";
 import type {
   CouponDiscountType,
   CouponFundingPolicy,
   CouponFundingSource,
   CouponRecord,
-  CouponUpdatePayload,
-} from "../../../shared/marketing/coupons.types";
+  CouponUpdatePayload } from "../../../shared/marketing/coupons.types";
 import { CouponFundingReconciliationPanel } from "./CouponFundingReconciliationPanel";
 import { CouponTermsEditor } from "./CouponTermsEditor";
 
@@ -45,8 +44,7 @@ function CouponFundingEditor({ coupon, policy, loading, onSave }: FundingEditorP
     await onSave(coupon, {
       fundingSource: source,
       platformShareBps: Math.round(percent * 100),
-      ...(source === "platform" ? {} : { fundingPartnerId: partnerId.trim() }),
-    });
+      ...(source === "platform" ? {} : { fundingPartnerId: partnerId.trim() }) });
   };
 
   const disabled = loading || coupon.status === "active" || coupon.status === "archived";
@@ -82,9 +80,9 @@ function CouponFundingEditor({ coupon, policy, loading, onSave }: FundingEditorP
           style={styles.input}
         />
       ) : null}
-      <CpButton disabled={disabled} onClick={() => void save()} variant="secondary">
+      <Button disabled={disabled} onClick={() => void save()} variant="secondary">
         حفظ التمويل
-      </CpButton>
+      </Button>
       {coupon.status === "active" ? <small style={styles.muted}>أوقف الكوبون قبل تغيير التمويل.</small> : null}
     </div>
   );
@@ -140,8 +138,7 @@ export function CouponsCommandDeck() {
       maxDiscountMinorUnits: maxDiscount.minorUnits,
       globalUsageLimit: totalLimit,
       perClientUsageLimit: perClient,
-      eligibleFulfillmentModes: ["bthwani_delivery", "partner_delivery", "pickup"],
-    });
+      eligibleFulfillmentModes: ["bthwani_delivery", "partner_delivery", "pickup"] });
     if (succeeded) {
       setNameAr("");
       setCode("");
@@ -171,7 +168,7 @@ export function CouponsCommandDeck() {
           <h3 style={styles.title}>الكوبونات التشغيلية</h3>
           <p style={styles.muted}>الكود مشفر، والخصم يُحسب داخل checkout، وتمويله يُحجز ويُلتزم ويُعكس في WLT.</p>
         </div>
-        <CpButton onClick={() => void controller.reload()} variant="secondary">إعادة التحميل</CpButton>
+        <Button onClick={() => void controller.reload()} variant="secondary">إعادة التحميل</Button>
       </div>
 
       <div style={styles.form}>
@@ -198,14 +195,14 @@ export function CouponsCommandDeck() {
         <input value={maxDiscountYer} onChange={(event) => setMaxDiscountYer(event.target.value)} inputMode="numeric" placeholder="أقصى خصم ر.ي — صفر بلا حد" style={styles.input} />
         <input value={globalLimit} onChange={(event) => setGlobalLimit(event.target.value)} inputMode="numeric" placeholder="الحد الإجمالي — صفر بلا حد" style={styles.input} />
         <input value={clientLimit} onChange={(event) => setClientLimit(event.target.value)} inputMode="numeric" placeholder="حد العميل" style={styles.input} />
-        <CpButton disabled={controller.mutationLoading} onClick={() => void createDraft()} variant="brand">إنشاء مسودة</CpButton>
+        <Button disabled={controller.mutationLoading} onClick={() => void createDraft()} variant="brand">إنشاء مسودة</Button>
       </div>
 
       {controller.issuedCoupon ? (
         <div role="status" style={styles.issued}>
           <strong>الكود الصريح — يظهر الآن فقط:</strong>
           <code style={styles.code}>{controller.issuedCoupon.code}</code>
-          <CpButton onClick={controller.clearIssuedCoupon} variant="secondary">إخفاء</CpButton>
+          <Button onClick={controller.clearIssuedCoupon} variant="secondary">إخفاء</Button>
         </div>
       ) : null}
       {controller.state.kind === "loading" ? <p>جارٍ التحميل…</p> : null}
@@ -247,13 +244,13 @@ export function CouponsCommandDeck() {
               </div>
               <div style={styles.actions}>
                 {coupon.status === "draft" || coupon.status === "paused" ? (
-                  <CpButton disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "active")} variant="brand">اعتماد وتفعيل</CpButton>
+                  <Button disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "active")} variant="brand">اعتماد وتفعيل</Button>
                 ) : null}
                 {coupon.status === "active" ? (
-                  <CpButton disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "paused")} variant="secondary">إيقاف</CpButton>
+                  <Button disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "paused")} variant="secondary">إيقاف</Button>
                 ) : null}
                 {coupon.status !== "archived" ? (
-                  <CpButton disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "archived")} variant="secondary">أرشفة</CpButton>
+                  <Button disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "archived")} variant="secondary">أرشفة</Button>
                 ) : null}
               </div>
             </article>
@@ -286,5 +283,4 @@ const styles: Record<string, CSSProperties> = {
   details: { flex: 1, minWidth: 0 },
   actions: { display: "flex", flexWrap: "wrap", gap: "0.45rem", alignItems: "center" },
   fundingEditor: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: "0.45rem", alignItems: "center", marginTop: "0.65rem" },
-  fundingTitle: { gridColumn: "1 / -1", fontSize: "0.82rem" },
-};
+  fundingTitle: { gridColumn: "1 / -1", fontSize: "0.82rem" } };

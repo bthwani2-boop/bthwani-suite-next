@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Text } from "@bthwani/ui-kit";
+import { Button, Card, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
-import { CpBadge, CpButton, CpTextInput } from "@bthwani/control-panel/components";
+import { CpBadge, CpTextInput } from "@bthwani/control-panel/components";
 import {
   useRefundsByOrderQuery,
   useRefundAuditQuery,
@@ -13,8 +13,7 @@ import {
   useCompleteRefundMutation,
   useReconcileRefundMutation,
   WltRefundResponse,
-  WltRefundAuditResponse,
-} from '@bthwani/dsh/wlt-boundary';
+  WltRefundAuditResponse } from '@bthwani/dsh/wlt-boundary';
 
 function refundTone(refund: WltRefundResponse): CpBadgeTone {
   switch (refund.status) {
@@ -85,8 +84,7 @@ export function RefundsCommandPanel({ canManage }: { readonly canManage: boolean
       clientId: clientId.trim(),
       amountMinorUnits: Number(amountMinorUnits),
       reason: reason.trim(),
-      eligibilityReference: eligibilityReference.trim(),
-    });
+      eligibilityReference: eligibilityReference.trim() });
     await search();
   }
 
@@ -113,8 +111,7 @@ export function RefundsCommandPanel({ canManage }: { readonly canManage: boolean
       refundId: selected.id,
       resolutionAction,
       evidenceNote: evidenceNote.trim(),
-      ...(providerReference.trim() ? { providerReference: providerReference.trim() } : {}),
-    });
+      ...(providerReference.trim() ? { providerReference: providerReference.trim() } : {}) });
     setEvidenceNote("");
     setProviderReference("");
     await search();
@@ -142,14 +139,14 @@ export function RefundsCommandPanel({ canManage }: { readonly canManage: boolean
           </> : null}
         </div>
         <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
-          <CpButton variant="secondary" disabled={busy || !orderId.trim()} onClick={() => void search()}>تحميل الاستردادات</CpButton>
-          {canManage ? <CpButton
+          <Button variant="secondary" disabled={busy || !orderId.trim()} onClick={() => void search()}>تحميل الاستردادات</Button>
+          {canManage ? <Button
             variant="primary"
             disabled={busy || !paymentSessionId.trim() || !clientId.trim() || !reason.trim() || !eligibilityReference.trim()}
             onClick={() => void createRefund()}
           >
             إنشاء طلب استرداد
-          </CpButton> : null}
+          </Button> : null}
         </div>
         {busy ? (
           <div role="status" aria-live="polite">
@@ -203,9 +200,9 @@ export function RefundsCommandPanel({ canManage }: { readonly canManage: boolean
               <Text role="body" tone="muted">{selected.amountMinorUnits} {selected.currency} · {selected.reason ?? "بدون سبب ظاهر"}</Text>
               {canManage ? <CpTextInput aria-label="سبب القرار" placeholder="سبب الاعتماد أو الرفض" value={decisionReason} onChange={setDecisionReason} /> : null}
               {canManage ? <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                <CpButton variant="primary" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("approve")}>اعتماد مستقل</CpButton>
-                <CpButton variant="danger" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("reject")}>رفض</CpButton>
-                <CpButton variant="secondary" disabled={busy || selected.status !== "approved"} onClick={() => void execute()}>تنفيذ لدى المزود</CpButton>
+                <Button variant="primary" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("approve")}>اعتماد مستقل</Button>
+                <Button variant="danger" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("reject")}>رفض</Button>
+                <Button variant="secondary" disabled={busy || selected.status !== "approved"} onClick={() => void execute()}>تنفيذ لدى المزود</Button>
               </div> : <Text role="body" tone="muted">قراءة فقط — لا تملك هذه الجلسة finance.manage لتنفيذ قرار الاسترداد.</Text>}
               {selected.status === "provider_unknown" ? (
                 <div role="region" aria-label="مصالحة النتيجة غير المحسومة" style={{ display: "grid", gap: "0.6rem", paddingTop: "0.5rem" }}>
@@ -221,8 +218,8 @@ export function RefundsCommandPanel({ canManage }: { readonly canManage: boolean
                     style={{ minHeight: "5rem", borderRadius: "0.5rem", padding: "0.7rem", width: "100%" }}
                   />
                   {canManage ? <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                    <CpButton variant="primary" disabled={busy || !providerReference.trim() || !evidenceNote.trim()} onClick={() => void reconcile("confirmed_success")}>تأكيد نجاح موثق</CpButton>
-                    <CpButton variant="danger" disabled={busy || !evidenceNote.trim()} onClick={() => void reconcile("confirmed_failed")}>تأكيد فشل موثق</CpButton>
+                    <Button variant="primary" disabled={busy || !providerReference.trim() || !evidenceNote.trim()} onClick={() => void reconcile("confirmed_success")}>تأكيد نجاح موثق</Button>
+                    <Button variant="danger" disabled={busy || !evidenceNote.trim()} onClick={() => void reconcile("confirmed_failed")}>تأكيد فشل موثق</Button>
                   </div> : null}
                 </div>
               ) : null}

@@ -11,12 +11,14 @@ export type ButtonProps = {
   type?: ("button" | "submit" | "reset") | undefined;
   size?: ("sm" | "md" | "lg") | undefined;
   tone?: ("primary" | "secondary" | "ghost" | "danger" | "success" | "brand") | undefined;
+  variant?: ("primary" | "secondary" | "ghost" | "danger" | "success" | "brand") | undefined;
   loading?: boolean | undefined;
   disabled?: boolean | undefined;
   fullWidth?: boolean | undefined;
   leading?: ReactNode | undefined;
   trailing?: ReactNode | undefined;
   accessibilityLabel?: string | undefined;
+  "aria-label"?: string | undefined;
   accessibilityState?: {
     selected?: boolean | undefined;
     checked?: boolean | undefined;
@@ -25,6 +27,7 @@ export type ButtonProps = {
     busy?: boolean | undefined;
   } | undefined;
   onPress?: (() => void) | undefined;
+  onClick?: (() => void) | undefined;
   circular?: boolean | undefined;
   pill?: boolean | undefined;
   style?: unknown | undefined;
@@ -41,13 +44,19 @@ export function Button({
   trailing,
   fullWidth,
   tone,
+  variant,
   accessibilityLabel,
+  "aria-label": ariaLabel,
   accessibilityState,
   onPress,
+  onClick,
   circular = false,
   pill = false,
   style
 }: ButtonProps) {
+  const resolvedTone = tone ?? variant;
+  const resolvedOnPress = onPress ?? onClick;
+  const resolvedAccessibilityLabel = accessibilityLabel ?? ariaLabel;
   const resolvedDisabled = Boolean(disabled || loading);
   const resolvedAccessibilityState = {
     ...accessibilityState,
@@ -57,7 +66,7 @@ export function Button({
   const accessibilityProps = Platform.OS === "web"
     ? {
         role: "button",
-        ...(accessibilityLabel ? { "aria-label": accessibilityLabel } : {}),
+        ...(resolvedAccessibilityLabel ? { "aria-label": resolvedAccessibilityLabel } : {}),
         "aria-disabled": resolvedDisabled,
         "aria-busy": loading,
         ...(accessibilityState?.expanded === undefined
@@ -72,7 +81,7 @@ export function Button({
       }
     : {
         accessibilityRole: "button",
-        accessibilityLabel,
+        accessibilityLabel: resolvedAccessibilityLabel,
         accessibilityState: resolvedAccessibilityState
       };
 
@@ -87,8 +96,8 @@ export function Button({
       borderRadius={circular || pill ? "$round" : undefined}
       paddingHorizontal={circular ? 0 : undefined}
       fullWidth={fullWidth}
-      tone={tone}
-      onPress={onPress}
+      tone={resolvedTone}
+      onPress={resolvedOnPress}
       style={style}
     >
       {label ?? children}

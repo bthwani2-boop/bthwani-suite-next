@@ -2,22 +2,20 @@
 
 import { useMemo, useState } from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { Card, StateView, Text } from "@bthwani/ui-kit";
+import { Button, Card, StateView, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
-import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpTextInput } from "@bthwani/control-panel/components";
+import { CpBadge, CpMutedInline, CpPageHeader, CpTextInput } from "@bthwani/control-panel/components";
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import {
   presentWltPaymentSessionStatus,
   requiresWltPaymentReconciliation,
-  type WltPaymentSessionTimeline,
-} from '@bthwani/dsh/wlt-boundary';
+  type WltPaymentSessionTimeline } from '@bthwani/dsh/wlt-boundary';
 import { formatWltMoney } from '@bthwani/dsh/finance';
 import {
   loadPaymentSessionTimeline,
   refreshPaymentSessionProviderStatus,
-  type PaymentSessionRuntimeError,
-} from '@bthwani/dsh/wlt-boundary';
+  type PaymentSessionRuntimeError } from '@bthwani/dsh/wlt-boundary';
 
 type ScreenState = "idle" | "loading" | "ready" | "refreshing" | "offline" | "forbidden" | "not_found" | "conflict" | "error";
 
@@ -121,13 +119,13 @@ export function PaymentSessionOperationsScreen() {
             </Card>
           ) : null}
           {canManageFinance ? <div style={{ marginTop: "1rem" }}>
-            <CpButton
+            <Button
               variant="secondary"
               onClick={refreshProvider}
               disabled={state === "refreshing" || capabilities.terminal || capabilities.operationInProgress}
             >
               {state === "refreshing" ? "جارٍ الاستعلام من المزود..." : "تحديث حالة المزود"}
-            </CpButton>
+            </Button>
           </div> : <Text role="body" tone="warning" style={{ marginTop: "1rem" }}>قراءة فقط — تحديث حالة المزود يتطلب finance.manage.</Text>}
         </Card>
 
@@ -186,7 +184,7 @@ export function PaymentSessionOperationsScreen() {
               </label>
             </div>
             <div style={{ marginTop: "1rem" }}>
-              <CpButton type="submit" variant="primary" disabled={!canSubmit}>تحميل الخط الزمني</CpButton>
+              <Button type="submit" variant="primary" disabled={!canSubmit}>تحميل الخط الزمني</Button>
             </div>
           </form>
         </Card>

@@ -1,14 +1,12 @@
+import { Button } from "@bthwani/ui-kit";
 import { useState } from "react";
 import {
-  CpButton,
   CpSelect,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import type {
   DshStoreAdminDetail,
   StoreActionState,
-  OperatorStoreGovernanceRequest,
-} from "../../../shared/store";
+  OperatorStoreGovernanceRequest } from "../../../shared/store";
 
 type Props = {
   readonly store: DshStoreAdminDetail;
@@ -59,8 +57,7 @@ export function StoreGovernanceActions({ store, actionState, canManage, onSubmit
         padding: "1rem",
         border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
         borderRadius: "1rem",
-        background: "Canvas",
-      }}
+        background: "Canvas" }}
     >
       <div>
         <strong>حوكمة {store.displayName}</strong>
@@ -105,7 +102,7 @@ export function StoreGovernanceActions({ store, actionState, canManage, onSubmit
             />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <CpButton
+            <Button
               disabled={
                 reason.trim().length < 3 ||
                 actionState.kind === "submitting"
@@ -114,11 +111,10 @@ export function StoreGovernanceActions({ store, actionState, canManage, onSubmit
                 expectedVersion: store.version,
                 action,
                 value,
-                reason: reason.trim(),
-              })}
+                reason: reason.trim() })}
             >
               {actionState.kind === "submitting" ? "جاري التطبيق…" : "تطبيق الإجراء وتسجيله"}
-            </CpButton>
+            </Button>
             {actionState.kind === "success" && <span role="status">تم التطبيق والتدقيق.</span>}
             {(actionState.kind === "error" || actionState.kind === "conflict") && (
               <span role="alert">{actionState.message}</span>

@@ -1,17 +1,16 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
+import { CpMutedInline, CpPageHeader, CpStateView, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
-import { Text } from "@bthwani/ui-kit";
+import { Button, Text } from "@bthwani/ui-kit";
 
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
   appendProviderDocument,
   useCaptainDetailController,
   type LicenseStatus,
-  type SupervisorCandidate,
-} from "../../shared/workforce";
+  type SupervisorCandidate } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { ProviderActivationWorkspace } from "../shared";
 import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
@@ -27,8 +26,7 @@ const LICENSE_LABEL: Record<LicenseStatus, string> = {
   pending_review: "بانتظار المراجعة",
   valid: "صالحة",
   expired: "منتهية",
-  rejected: "مرفوضة",
-};
+  rejected: "مرفوضة" };
 
 const licenseStatusLabel = (status: string | undefined): string => {
   if (status && Object.hasOwn(LICENSE_LABEL, status)) return LICENSE_LABEL[status as LicenseStatus];
@@ -94,7 +92,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
               isSessionExpired={errorState?.isSessionExpired ?? false}
               onRetry={() => void controller.reload()}
             />
-            <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+            <Button variant="ghost" onClick={props.onBack}>رجوع</Button>
           </div>
         }
       >
@@ -125,8 +123,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
         const mediaRef = await uploadProviderMedia(captain.actorId, "captains", {
           uri: objectUrl,
           name: file.name,
-          mimeType: file.type || "application/octet-stream",
-        }, operatorContextId);
+          mimeType: file.type || "application/octet-stream" }, operatorContextId);
         if (purpose === "photo") {
           await controller.update({ expectedVersion: captain.version, photoMediaRef: mediaRef });
         } else {
@@ -147,8 +144,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
     controller.update({
       expectedVersion: captain.version,
       licenseStatus,
-      ...(licenseExpiresAt.trim() ? { licenseExpiresAt: licenseExpiresAt.trim() } : {}),
-    });
+      ...(licenseExpiresAt.trim() ? { licenseExpiresAt: licenseExpiresAt.trim() } : {}) });
 
   const canSave =
     props.canUpdate &&
@@ -163,7 +159,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
       header={
         <CpPageHeader title="ملف الكابتن">
           <CpMutedInline tight>{captain.workforceCode} · {ENGAGEMENT_STATUS_LABEL_AR[captain.engagementStatus]}</CpMutedInline>
-          <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+          <Button variant="ghost" onClick={props.onBack}>رجوع</Button>
         </CpPageHeader>
       }
     >
@@ -214,7 +210,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
             <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} disabled={!props.canUpdate} />
             {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
 
-            <CpButton
+            <Button
               variant="primary"
               disabled={!canSave}
               onClick={() =>
@@ -228,12 +224,11 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
                   vehicleIdentifier: vehicleIdentifier.trim(),
                   ...(licenseExpiresAt.trim() ? { licenseExpiresAt: licenseExpiresAt.trim() } : {}),
                   ...(operatingScopeCode.trim() ? { operatingScopeCode: operatingScopeCode.trim() } : {}),
-                  ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}),
-                })
+                  ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}) })
               }
             >
               {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف التشغيلي"}
-            </CpButton>
+            </Button>
           </div>
         )}
 
@@ -245,20 +240,20 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
             <Text role="bodySm">حالة الرخصة: {licenseStatusLabel(profile?.licenseStatus)}</Text>
             {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <CpButton variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => pickFile("photo")}>
+              <Button variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => pickFile("photo")}>
                 {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
-              </CpButton>
-              <CpButton variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => pickFile("document")}>
+              </Button>
+              <Button variant="secondary" disabled={uploadBusy || !props.canUpdate} onClick={() => pickFile("document")}>
                 {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة رخصة"}
-              </CpButton>
+              </Button>
             </div>
             {!canApproveLicense ? (
               <CpMutedInline>اعتماد الرخصة يتطلب وثيقة مرتبطة وتاريخ انتهاء صالحًا.</CpMutedInline>
             ) : null}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <CpButton variant="primary" disabled={!canApproveLicense || !props.canUpdate || controller.actionBusy} onClick={() => void updateLicenseStatus("valid")}>اعتماد الرخصة</CpButton>
-              <CpButton variant="danger" disabled={!props.canUpdate || controller.actionBusy} onClick={() => void updateLicenseStatus("rejected")}>رفض الرخصة</CpButton>
-              <CpButton variant="secondary" disabled={!props.canUpdate || controller.actionBusy} onClick={() => void updateLicenseStatus("missing")}>طلب استكمال</CpButton>
+              <Button variant="primary" disabled={!canApproveLicense || !props.canUpdate || controller.actionBusy} onClick={() => void updateLicenseStatus("valid")}>اعتماد الرخصة</Button>
+              <Button variant="danger" disabled={!props.canUpdate || controller.actionBusy} onClick={() => void updateLicenseStatus("rejected")}>رفض الرخصة</Button>
+              <Button variant="secondary" disabled={!props.canUpdate || controller.actionBusy} onClick={() => void updateLicenseStatus("missing")}>طلب استكمال</Button>
             </div>
           </div>
         )}

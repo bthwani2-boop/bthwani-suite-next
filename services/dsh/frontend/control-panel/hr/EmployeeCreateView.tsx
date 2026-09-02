@@ -2,14 +2,13 @@
 
 import React, { useState } from "react";
 import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
-import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
-import { Text } from "@bthwani/ui-kit";
+import { Button, Text } from "@bthwani/ui-kit";
 
 import {
   useEmployeeCreateController,
-  type SupervisorCandidate,
-} from "../../shared/workforce";
+  type SupervisorCandidate } from "../../shared/workforce";
 import { SupervisorPicker } from "./SupervisorPicker";
 
 export function EmployeeCreateView(props: {
@@ -78,7 +77,7 @@ export function EmployeeCreateView(props: {
           title="Identity غير جاهزة؛ إنشاء الموظف الإداري متوقف"
           description={"السبب: " + identityReason}
         >
-          <CpButton variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</CpButton>
+          <Button variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</Button>
         </CpStatePanel>
       ) : null}
 
@@ -146,14 +145,14 @@ export function EmployeeCreateView(props: {
       {createdEmployee ? (
         <CpStatePanel role="status" title="تم إنشاء الموظف الإداري بنجاح." description="جاهز للتفعيل">
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
-            <CpButton variant="primary" onClick={() => props.onCreated(createdEmployee.actorId)}>متابعة</CpButton>
-            <CpButton variant="secondary" onClick={reset}>إضافة موظف آخر</CpButton>
+            <Button variant="primary" onClick={() => props.onCreated(createdEmployee.actorId)}>متابعة</Button>
+            <Button variant="secondary" onClick={reset}>إضافة موظف آخر</Button>
           </div>
         </CpStatePanel>
       ) : (
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
           <div style={{ minWidth: "240px" }}>
-            <CpButton
+            <Button
               variant="primary"
               disabled={!canSubmit}
               onClick={() => {
@@ -168,12 +167,11 @@ export function EmployeeCreateView(props: {
                   role: role.trim(),
                   ...(fullNameEn.trim() ? { fullNameEn: fullNameEn.trim() } : {}),
                   ...(officeLocation.trim() ? { officeLocation: officeLocation.trim() } : {}),
-                  ...(supervisor ? { supervisorActorId: supervisor.actorId } : {}),
-                });
+                  ...(supervisor ? { supervisorActorId: supervisor.actorId } : {}) });
               }}
             >
               {isSubmitting ? "جارٍ الإنشاء…" : "إنشاء الموظف الإداري"}
-            </CpButton>
+            </Button>
           </div>
         </div>
       )}
@@ -186,7 +184,7 @@ export function EmployeeCreateView(props: {
     <EditorPageFrame
       header={
         <CpPageHeader title="إضافة موظف إداري">
-          {props.onBack ? <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton> : null}
+          {props.onBack ? <Button variant="ghost" onClick={props.onBack}>رجوع</Button> : null}
         </CpPageHeader>
       }
     >

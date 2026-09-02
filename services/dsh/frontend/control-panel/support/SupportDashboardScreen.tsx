@@ -1,9 +1,9 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import { useMemo, useState } from "react";
 import {
   CpBadge,
-  CpButton,
   CpDescriptionList,
   CpDescriptionRow,
   CpDetailPanel,
@@ -20,8 +20,7 @@ import {
   CpTableCell,
   CpTableHeaderCell,
   CpTabs,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useControlPanelSession } from "../session";
@@ -40,8 +39,7 @@ import {
   filterTicketsBySearch,
   type SupportMainTabId,
   type SupportQueueFilterId,
-  type DshSupportTicketEvent,
-} from "../../shared/support";
+  type DshSupportTicketEvent } from "../../shared/support";
 
 function formatEvent(event: DshSupportTicketEvent): string {
   const labels: Record<DshSupportTicketEvent["eventType"], string> = {
@@ -49,8 +47,7 @@ function formatEvent(event: DshSupportTicketEvent): string {
     message_added: "إضافة رسالة",
     status_changed: "تغيير الحالة",
     escalated: "تصعيد",
-    closed: "إغلاق",
-  };
+    closed: "إغلاق" };
   const date = new Date(event.createdAt);
   const timestamp = Number.isNaN(date.getTime()) ? event.createdAt : date.toLocaleString("ar");
   return `${labels[event.eventType]} · ${event.actorRole} · ${timestamp}`;
@@ -107,8 +104,7 @@ export function SupportDashboardScreen() {
       await ticketCtrl.operatorUpdateTicket(selectedTicketRaw.id, {
         expectedStatus: selectedTicketRaw.status,
         expectedVersion: selectedTicketRaw.version,
-        status: targetStatus,
-      });
+        status: targetStatus });
     }
   };
 
@@ -117,8 +113,7 @@ export function SupportDashboardScreen() {
     await ticketCtrl.operatorUpdateTicket(selectedTicketRaw.id, {
       expectedStatus: selectedTicketRaw.status,
       expectedVersion: selectedTicketRaw.version,
-      status: "resolved",
-    });
+      status: "resolved" });
     await detailCtrl.reloadDetail();
     await detailCtrl.reloadEvents();
   };
@@ -182,9 +177,9 @@ export function SupportDashboardScreen() {
           wide
           aria-label="بحث في صفوف الدعم"
         />
-        <CpButton onClick={() => { void ticketCtrl.reload(); void incidentCtrl.reload(); }}>
+        <Button onClick={() => { void ticketCtrl.reload(); void incidentCtrl.reload(); }}>
           تحديث
-        </CpButton>
+        </Button>
       </CpFilterBar>
 
       <div dir="rtl" style={{ padding: "0.25rem 1rem" }}>
@@ -281,20 +276,20 @@ export function SupportDashboardScreen() {
                         ملاحظة داخلية لا تظهر لصاحب التذكرة
                       </label>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
-                        <CpButton
+                        <Button
                           disabled={replyBody.trim().length < 1 || detailCtrl.messageActionState.kind === "submitting"}
                           onClick={() => void sendReply()}
                           style={{ flex: 1 }}
                         >
                           إرسال الرد
-                        </CpButton>
-                        <CpButton
+                        </Button>
+                        <Button
                           disabled={selectedTicketRaw.status === "resolved" || selectedTicketRaw.status === "closed" || ticketCtrl.actionState.kind === "submitting"}
                           onClick={() => void resolveSelectedTicket()}
                           style={{ flex: 1 }}
                         >
                           حل التذكرة
-                        </CpButton>
+                        </Button>
                       </div>
                     </> : <CpMutedInline tight>قراءة فقط — الرد وتغيير حالة التذكرة يتطلبان support.manage.</CpMutedInline>}
                     {detailCtrl.messageActionState.kind === "error" ? <p role="alert">{detailCtrl.messageActionState.message}</p> : null}
@@ -330,9 +325,9 @@ export function SupportDashboardScreen() {
               {selectedIncident ? (
                 <CpDetailPanel title={selectedIncident.title} onClose={() => setSelectedIncidentId(undefined)}>
                   <p>{selectedIncident.description}</p>
-                  {canManageSupport ? <CpButton disabled={selectedIncident.status === "resolved" || incidentCtrl.actionState.kind === "submitting"} onClick={() => void resolveSelectedIncident()}>
+                  {canManageSupport ? <Button disabled={selectedIncident.status === "resolved" || incidentCtrl.actionState.kind === "submitting"} onClick={() => void resolveSelectedIncident()}>
                     تعليم الحادث كمحلول
-                  </CpButton> : <CpMutedInline tight>قراءة فقط — تغيير حالة الحادث يتطلب support.manage.</CpMutedInline>}
+                  </Button> : <CpMutedInline tight>قراءة فقط — تغيير حالة الحادث يتطلب support.manage.</CpMutedInline>}
                   {incidentCtrl.actionState.kind === "error" ? <p role="alert">{incidentCtrl.actionState.message}</p> : null}
                 </CpDetailPanel>
               ) : null}
@@ -351,8 +346,7 @@ export function SupportDashboardScreen() {
           opacity: 0.7,
           borderTop: "1px solid color-mix(in srgb, currentColor 10%, transparent)",
           marginTop: "1rem",
-          flexWrap: "wrap",
-        }}
+          flexWrap: "wrap" }}
       >
         <span>المالك: <strong>{SUPPORT_OWNERSHIP.owner}</strong></span>
         <span>المصدر: DSH Runtime</span>

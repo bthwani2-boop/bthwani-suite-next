@@ -2,13 +2,12 @@
 
 import React, { useState } from "react";
 import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
-import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
-import { Text } from "@bthwani/ui-kit";
+import { Button, Text } from "@bthwani/ui-kit";
 import {
   useCanonicalFieldAgentCreateController,
-  type SupervisorCandidate,
-} from "../../shared/workforce";
+  type SupervisorCandidate } from "../../shared/workforce";
 import { SupervisorPicker } from "./SupervisorPicker";
 import { ZonePicker } from "./ZonePicker";
 
@@ -56,8 +55,7 @@ export function FieldAgentCreateView(props: {
       phoneE164: phoneE164.trim(),
       serviceZoneId: zoneId,
       ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}),
-      engagementType: "independent_contractor",
-    });
+      engagementType: "independent_contractor" });
   };
 
   const resetForm = () => {
@@ -78,7 +76,7 @@ export function FieldAgentCreateView(props: {
 
       {!identityReady ? (
         <CpStatePanel role="alert" title="Identity غير جاهزة؛ إنشاء الميداني متوقف" description={identityReason}>
-          <CpButton variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</CpButton>
+          <Button variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</Button>
         </CpStatePanel>
       ) : null}
 
@@ -103,15 +101,15 @@ export function FieldAgentCreateView(props: {
       {createdAgent ? (
         <CpStatePanel role="status" title="تم إنشاء ملف الميداني" description="أكمل المستندات والمراجعة قبل إصدار التفعيل.">
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
-            <CpButton variant="primary" onClick={() => props.onCreated(createdAgent.actorId)}>فتح الملف والمتابعة</CpButton>
-            <CpButton variant="secondary" onClick={resetForm}>إضافة ميداني آخر</CpButton>
+            <Button variant="primary" onClick={() => props.onCreated(createdAgent.actorId)}>فتح الملف والمتابعة</Button>
+            <Button variant="secondary" onClick={resetForm}>إضافة ميداني آخر</Button>
           </div>
         </CpStatePanel>
       ) : (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <CpButton variant="primary" disabled={!canSubmit} onClick={handleSubmit}>
+          <Button variant="primary" disabled={!canSubmit} onClick={handleSubmit}>
             {isSubmitting ? "جارٍ الإنشاء…" : "إنشاء مقدم الخدمة الميداني"}
-          </CpButton>
+          </Button>
         </div>
       )}
     </div>
@@ -121,7 +119,7 @@ export function FieldAgentCreateView(props: {
 
   return (
     <EditorPageFrame
-      header={<CpPageHeader title="إضافة مقدم خدمة ميداني">{props.onBack ? <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton> : null}</CpPageHeader>}
+      header={<CpPageHeader title="إضافة مقدم خدمة ميداني">{props.onBack ? <Button variant="ghost" onClick={props.onBack}>رجوع</Button> : null}</CpPageHeader>}
     >
       {body}
     </EditorPageFrame>

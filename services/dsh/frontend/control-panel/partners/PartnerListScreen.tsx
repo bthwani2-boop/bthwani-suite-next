@@ -1,9 +1,9 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
   CpBadge,
-  CpButton,
   CpFilterBar,
   CpMutedInline,
   CpPageHeader,
@@ -11,8 +11,7 @@ import {
   CpStateView,
   CpTable,
   CpTableCell,
-  CpTableHeaderCell,
-} from "@bthwani/control-panel/components";
+  CpTableHeaderCell } from "@bthwani/control-panel/components";
 import { DataTablePageFrame, PaginationToolbar } from "@bthwani/control-panel/shell";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { usePartnerWorkspaceListController } from "../../shared/partner";
@@ -80,7 +79,7 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
       header={
         <CpPageHeader title="إدارة الشركاء">
           {controller.total > 0 ? <CpMutedInline>{controller.total} شريك</CpMutedInline> : null}
-          {onCreatePartner ? <CpButton onClick={onCreatePartner}>+ إضافة شريك</CpButton> : null}
+          {onCreatePartner ? <Button onClick={onCreatePartner}>+ إضافة شريك</Button> : null}
         </CpPageHeader>
       }
       filters={
@@ -136,7 +135,7 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
                 <CpMutedInline>{row.nextAction}</CpMutedInline>
               </CpTableCell>
               <CpTableCell>
-                <CpButton onClick={() => onSelectPartner?.(row.id)}>عرض التفاصيل</CpButton>
+                <Button onClick={() => onSelectPartner?.(row.id)}>عرض التفاصيل</Button>
               </CpTableCell>
             </tr>
           ))}

@@ -1,22 +1,19 @@
 'use client';
 
 import React from 'react';
-import { Text, TextField } from '@bthwani/ui-kit';
+import { Button, Text, TextField } from '@bthwani/ui-kit';
 import {
   WebControlPanelDecisionRow,
-  WebControlPanelQueue,
-} from '@bthwani/ui-kit/web';
+  WebControlPanelQueue } from '@bthwani/ui-kit/web';
 import {
   CpBadge,
-  CpButton,
   CpDescriptionList,
   CpDescriptionRow,
   CpMutedInline,
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
-  CpStateView,
-} from '@bthwani/control-panel/components';
+  CpStateView } from '@bthwani/control-panel/components';
 import { OperationsRoomFrame } from '@bthwani/control-panel/shell';
 import { useDispatchOperations } from '../../shared/operations';
 import type { DshDispatchDecision } from '../../shared/dispatch';
@@ -29,8 +26,7 @@ const ACTION_LABELS: Record<DshDispatchDecision['action'], string> = {
   cancelled: 'إلغاء المشغل',
   reassigned: 'إعادة الإسناد',
   eligibility_rejected: 'رفض الأهلية',
-  capacity_rejected: 'رفض السعة',
-};
+  capacity_rejected: 'رفض السعة' };
 
 const PAGE_TITLE = 'مراقبة التوزيع وسجل القرارات';
 
@@ -102,13 +98,13 @@ export function DispatchOperationsPanel({ canManageOperations }: { readonly canM
           </CpMutedInline>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
             {canManageOperations ? (
-              <CpButton variant="secondary" disabled={busy} onClick={() => void controller.expire()}>
+              <Button variant="secondary" disabled={busy} onClick={() => void controller.expire()}>
                 {state.mutationKind === 'expiring' ? 'جاري إنهاء المتأخر…' : 'إنهاء العروض المتأخرة'}
-              </CpButton>
+              </Button>
             ) : <span>قراءة فقط — إدارة الإسنادات تتطلب صلاحية operations.manage.</span>}
-            <CpButton variant="ghost" disabled={busy} onClick={() => void controller.reload({ preserveSelection: true })}>
+            <Button variant="ghost" disabled={busy} onClick={() => void controller.reload({ preserveSelection: true })}>
               تحديث
-            </CpButton>
+            </Button>
           </div>
           {state.message ? (
             <div style={{ marginTop: 8 }}>
@@ -148,13 +144,13 @@ export function DispatchOperationsPanel({ canManageOperations }: { readonly canM
                 multiline
                 placeholder="اكتب سببًا تشغيليًا واضحًا"
               />
-              <CpButton
+              <Button
                 variant="danger"
                 disabled={!canManageOperations || busy || reason.trim().length < 3}
                 onClick={() => void controller.cancel(selected.id, reason)}
               >
                 {state.mutationKind === 'cancelling' ? 'جاري الإلغاء…' : 'إلغاء الإسناد'}
-              </CpButton>
+              </Button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -168,23 +164,23 @@ export function DispatchOperationsPanel({ canManageOperations }: { readonly canM
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {state.candidates.map((candidate) => (
-                    <CpButton
+                    <Button
                       key={candidate.captainId}
                       variant={replacementCaptainId === candidate.captainId ? 'brand' : 'secondary'}
                       disabled={!canManageOperations || busy}
                       onClick={() => setReplacementCaptainId(candidate.captainId)}
                     >
                       {`${candidate.captainId} — السعة ${candidate.remainingCapacity}/${candidate.maxActiveAssignments}`}
-                    </CpButton>
+                    </Button>
                   ))}
                 </div>
               )}
-              <CpButton
+              <Button
                 disabled={!canManageOperations || busy || !replacementCaptainId || reason.trim().length < 3}
                 onClick={() => void controller.reassign(selected, replacementCaptainId, reason)}
               >
                 {state.mutationKind === 'reassigning' ? 'جاري إعادة الإسناد…' : 'إعادة الإسناد بأمان'}
-              </CpButton>
+              </Button>
             </div>
 
             <WebControlPanelQueue title="سجل القرار" meta={String(state.decisions.length)}>

@@ -1,16 +1,14 @@
 import React, { useState } from "react";
 import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
-import { Box, Card, Text, TextField } from "@bthwani/ui-kit";
+import { Button, Box, Card, Text, TextField } from "@bthwani/ui-kit";
 import {
   CpBadge,
-  CpButton,
   CpDescriptionList,
   CpDescriptionRow,
   CpMutedInline,
   CpStatePanel,
   CpStateView,
-  CpTabs,
-} from "@bthwani/control-panel/components";
+  CpTabs } from "@bthwani/control-panel/components";
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
   useProviderActivationController,
@@ -18,8 +16,7 @@ import {
   useFieldAgentListController,
   useCaptainListController,
   type EngagementStatus,
-  type FieldAgent,
-} from "../../shared/workforce";
+  type FieldAgent } from "../../shared/workforce";
 import { ProviderOperationalEnforcementPanel } from "./ProviderOperationalEnforcementPanel";
 import { ActorActivationCard } from "./ActorActivationCard";
 
@@ -50,17 +47,14 @@ export function ProviderActivationWorkspace({
   providerKind,
   initialActorId,
   entrySource,
-  onBack,
-}: ProviderActivationWorkspaceProps) {
+  onBack }: ProviderActivationWorkspaceProps) {
   const isHrDetail = entrySource === "hr";
   const [selectedActorId, setSelectedActorId] = useState<string | undefined>(initialActorId);
 
   const fieldList = useFieldAgentListController("pending_activation", {
-    enabled: providerKind === "field" && !isHrDetail,
-  });
+    enabled: providerKind === "field" && !isHrDetail });
   const captainList = useCaptainListController("pending_activation", {
-    enabled: providerKind === "captain" && !isHrDetail,
-  });
+    enabled: providerKind === "captain" && !isHrDetail });
   const reference = useWorkforceReferenceData();
   const controller = providerKind === "captain" ? captainList : fieldList;
   const providers: readonly FieldAgent[] = providerKind === "captain"
@@ -108,12 +102,12 @@ export function ProviderActivationWorkspace({
                           : reference.serviceAreaLabel(provider.fieldProfile?.serviceAreaCode)} · {ENGAGEMENT_STATUS_LABEL_AR[provider.engagementStatus]}
                       </Text>
                     </Box>
-                    <CpButton
+                    <Button
                       variant={selectedActorId === provider.actorId ? "primary" : "secondary"}
                       onClick={() => setSelectedActorId(provider.actorId)}
                     >
                       {selectedActorId === provider.actorId ? "محدد ✓" : "اختيار"}
-                    </CpButton>
+                    </Button>
                   </Box>
                 ))}
               </Box>
@@ -154,8 +148,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
     issueCode,
     revokeCode,
     suspend,
-    reactivate,
-  } = useProviderActivationController(providerKind, actorId);
+    reactivate } = useProviderActivationController(providerKind, actorId);
   const identityRuntime = useIdentityRuntimeStatus();
   const runtimeValue = identityRuntime.state.kind === "resolved"
     ? identityRuntime.state.value
@@ -202,7 +195,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
       <Box gap={3}>
         <Box layoutDirection="row" justify="space-between" align="center">
           <Text role="titleSm">إدارة التفعيل والحالة التشغيلية</Text>
-          {onBack ? <CpButton variant="ghost" onClick={onBack}>رجوع</CpButton> : null}
+          {onBack ? <Button variant="ghost" onClick={onBack}>رجوع</Button> : null}
         </Box>
 
         <CpDescriptionList>
@@ -219,7 +212,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
             title="Identity غير جاهزة؛ عمليات التفعيل متوقفة مغلقًا"
             description={`السبب: ${identityRuntimeReason}. تبقى بيانات مقدم الخدمة متاحة للقراءة ولا تُحذف الجلسات المحفوظة.`}
           >
-            <CpButton variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</CpButton>
+            <Button variant="secondary" onClick={() => void identityRuntime.refresh(true)}>إعادة فحص Identity</Button>
           </CpStatePanel>
         ) : null}
 
@@ -258,21 +251,21 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
             <TextField label="سبب الإيقاف أو إعادة التفعيل" value={reason} onChangeText={setReason} />
             {/* Satisfy contract test: disabled={actionBusy || !identityReady} */}
             {detail.engagementStatus === "suspended" ? (
-              <CpButton
+              <Button
                 variant="primary"
                 disabled={actionBusy || !identityReady || reason.trim().length < 3}
                 onClick={() => void reactivate(reason.trim()).then((success) => { if (success) { setReason(""); void onReloadList(); } })}
               >
                 إعادة التفعيل
-              </CpButton>
+              </Button>
             ) : (
-              <CpButton
+              <Button
                 variant="danger"
                 disabled={actionBusy || !identityReady || reason.trim().length < 3}
                 onClick={() => void suspend(reason.trim()).then((success) => { if (success) { setReason(""); void onReloadList(); } })}
               >
                 إيقاف مقدم الخدمة
-              </CpButton>
+              </Button>
             )}
           </Box>
         ) : null}

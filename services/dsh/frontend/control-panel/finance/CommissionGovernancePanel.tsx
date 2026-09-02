@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { Card, Text } from "@bthwani/ui-kit";
+import { Button, Card, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
-import { CpBadge, CpButton, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
+import { CpBadge, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 import { formatWltMoney } from '@bthwani/dsh/finance';
@@ -21,8 +21,7 @@ import {
   type Commission,
   type CommissionAdjustmentAttemptIntent,
   type CommissionPolicyInput,
-  type RepresentativeActorType,
-} from '@bthwani/dsh/wlt-boundary';
+  type RepresentativeActorType } from '@bthwani/dsh/wlt-boundary';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),
@@ -36,8 +35,7 @@ const STATUS_META: Record<string, { readonly label: string; readonly tone: CpBad
   confirmed: { label: "مؤكدة", tone: "success" },
   settled: { label: "مسوّاة", tone: "success" },
   rejected: { label: "مرفوضة", tone: "danger" },
-  reversed: { label: "معكوسة", tone: "danger" },
-};
+  reversed: { label: "معكوسة", tone: "danger" } };
 
 const BENEFICIARY_OPTIONS = [
   { value: "partner", label: "شريك" },
@@ -107,8 +105,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
     maximumAmountMinorUnits: null,
     currency: "YER",
     status: "active",
-    changeReason: "",
-  });
+    changeReason: "" });
 
   const policyError = useMemo(() => validatePolicy(policy), [policy]);
 
@@ -167,8 +164,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
             operatorActorId,
             commissionId: commission.id,
             deltaMinorUnits,
-            reason,
-          };
+            reason };
           const attempt = await getOrCreateCommissionAdjustmentAttempt(attemptIntent);
           let detail = await fetchCommissionDetail(commission.id);
           if (!detail.adjustments.some((adjustment) => adjustment.idempotencyKey === attempt.idempotencyKey)) {
@@ -205,8 +201,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
         commissionType: policy.commissionType.trim(),
         sourceType: policy.sourceType.trim(),
         currency: policy.currency.trim().toUpperCase(),
-        changeReason: policy.changeReason.trim(),
-      });
+        changeReason: policy.changeReason.trim() });
       setNotice("تم حفظ إصدار سياسة العمولة في WLT مع سبب التغيير.");
       setPolicy((current) => ({ ...current, changeReason: "" }));
       await load();
@@ -224,8 +219,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
           display: "flex",
           justifyContent: "space-between",
           gap: "1rem",
-          flexWrap: "wrap",
-        }}
+          flexWrap: "wrap" }}
       >
         <div>
           <Text role="titleMd">حوكمة العمولات</Text>
@@ -233,9 +227,9 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
             WLT يحسب القيمة من الدليل وإصدار السياسة. تعرض القائمة آخر 100 سجل حاكم دون حساب محلي.
           </Text>
         </div>
-        <CpButton variant="secondary" disabled={loading} onClick={() => void load()}>
+        <Button variant="secondary" disabled={loading} onClick={() => void load()}>
           {loading ? "جارٍ التحديث…" : "تحديث"}
-        </CpButton>
+        </Button>
       </div>
 
       {error ? (
@@ -265,8 +259,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
             gap: "0.75rem",
-            marginTop: "0.75rem",
-          }}
+            marginTop: "0.75rem" }}
         >
           <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">معرف السياسة</Text>
@@ -301,8 +294,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
               onChange={(value) =>
                 setPolicy({
                   ...policy,
-                  beneficiaryActorType: value as RepresentativeActorType,
-                })
+                  beneficiaryActorType: value as RepresentativeActorType })
               }
             />
           </label>
@@ -315,8 +307,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
               onChange={(value) =>
                 setPolicy({
                   ...policy,
-                  calculationType: value as "fixed" | "basis_points",
-                })
+                  calculationType: value as "fixed" | "basis_points" })
               }
             />
           </label>
@@ -364,8 +355,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
               onChange={(value) =>
                 setPolicy({
                   ...policy,
-                  maximumAmountMinorUnits: value.trim() === "" ? null : Number(value) || 0,
-                })
+                  maximumAmountMinorUnits: value.trim() === "" ? null : Number(value) || 0 })
               }
             />
           </label>
@@ -401,9 +391,9 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
           </Text>
         ) : null}
         <div style={{ marginTop: "0.75rem" }}>
-          <CpButton variant="primary" disabled={savingPolicy || policyError !== null} onClick={() => void savePolicy()}>
+          <Button variant="primary" disabled={savingPolicy || policyError !== null} onClick={() => void savePolicy()}>
             {savingPolicy ? "جارٍ حفظ إصدار السياسة…" : "حفظ إصدار السياسة"}
-          </CpButton>
+          </Button>
         </div>
       </Card> : <Text role="body" tone="warning" style={{ marginTop: "1rem" }}>قراءة فقط — حوكمة العمولات تتطلب finance.manage لتنفيذ أي تغيير.</Text>}
 
@@ -412,8 +402,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
           display: "flex",
           flexDirection: "column",
           gap: "0.75rem",
-          marginTop: "1rem",
-        }}
+          marginTop: "1rem" }}
       >
         {loading ? (
           <Text role="body" tone="muted">
@@ -428,8 +417,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
         {commissions.map((commission) => {
           const meta = STATUS_META[commission.status] ?? {
             label: commission.status,
-            tone: "neutral" as const,
-          };
+            tone: "neutral" as const };
           const disabled = busy !== null;
           return (
             <Card key={commission.id} style={{ padding: "1rem" }}>
@@ -439,8 +427,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
                   justifyContent: "space-between",
                   alignItems: "flex-start",
                   gap: "1rem",
-                  flexWrap: "wrap",
-                }}
+                  flexWrap: "wrap" }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                   <div
@@ -448,8 +435,7 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
                       display: "flex",
                       gap: "0.5rem",
                       alignItems: "center",
-                      flexWrap: "wrap",
-                    }}
+                      flexWrap: "wrap" }}
                   >
                     <Text role="body" style={{ fontWeight: "bold" }}>
                       {commission.id}
@@ -478,29 +464,29 @@ export function CommissionGovernancePanel({ canManage }: { readonly canManage: b
                 </div>
                 {canManage ? <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {commission.status === "pending" ? (
-                    <CpButton variant="primary" disabled={disabled} onClick={() => void run(commission, "confirm")}>
+                    <Button variant="primary" disabled={disabled} onClick={() => void run(commission, "confirm")}>
                       تأكيد
-                    </CpButton>
+                    </Button>
                   ) : null}
                   {commission.status === "confirmed" ? (
-                    <CpButton variant="primary" disabled={disabled} onClick={() => void run(commission, "settle")}>
+                    <Button variant="primary" disabled={disabled} onClick={() => void run(commission, "settle")}>
                       تسوية
-                    </CpButton>
+                    </Button>
                   ) : null}
                   {commission.status === "pending" ? (
-                    <CpButton variant="danger" disabled={disabled} onClick={() => void run(commission, "reject")}>
+                    <Button variant="danger" disabled={disabled} onClick={() => void run(commission, "reject")}>
                       رفض
-                    </CpButton>
+                    </Button>
                   ) : null}
                   {commission.status === "settled" ? (
-                    <CpButton variant="danger" disabled={disabled} onClick={() => void run(commission, "reverse")}>
+                    <Button variant="danger" disabled={disabled} onClick={() => void run(commission, "reverse")}>
                       عكس
-                    </CpButton>
+                    </Button>
                   ) : null}
                   {commission.status === "pending" || commission.status === "confirmed" ? (
-                    <CpButton variant="secondary" disabled={disabled} onClick={() => void run(commission, "adjust")}>
+                    <Button variant="secondary" disabled={disabled} onClick={() => void run(commission, "adjust")}>
                       تعديل
-                    </CpButton>
+                    </Button>
                   ) : null}
                 </div> : null}
               </div>

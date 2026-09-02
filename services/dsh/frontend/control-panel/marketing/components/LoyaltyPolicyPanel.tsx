@@ -1,17 +1,15 @@
 "use client";
 
 import React from "react";
-import { colorRoles } from "@bthwani/ui-kit";
+import { Button, colorRoles } from "@bthwani/ui-kit";
 import {
   formatWltMoney,
   minorUnitsToWltMajorInput,
-  parseWltMajorInputToMinorUnits,
-} from "@bthwani/dsh/finance";
-import { CpButton } from "@bthwani/control-panel/components";
+  parseWltMajorInputToMinorUnits } from "@bthwani/dsh/finance";
+
 import {
   useLoyaltyPolicyController,
-  type LoyaltyEarningPolicy,
-} from "../../../shared/marketing/loyalty-policy.public";
+  type LoyaltyEarningPolicy } from "../../../shared/marketing/loyalty-policy.public";
 
 type PolicyTermsDraft = {
   readonly policyId: string;
@@ -47,8 +45,7 @@ export function LoyaltyPolicyPanel() {
       pointsNumerator: numerator,
       eligibleMinorUnitsDenominator: denominator.minorUnits,
       minimumPoints: minimum,
-      maximumPointsPerOrder: maximum,
-    };
+      maximumPointsPerOrder: maximum };
   };
 
   const create = async () => {
@@ -65,8 +62,7 @@ export function LoyaltyPolicyPanel() {
       points: String(policy.pointsNumerator),
       denominatorYer: minorUnitsToWltMajorInput(policy.eligibleMinorUnitsDenominator, "YER"),
       minimumPoints: String(policy.minimumPoints),
-      maximumPoints: String(policy.maximumPointsPerOrder),
-    });
+      maximumPoints: String(policy.maximumPointsPerOrder) });
   };
 
   const patchEdit = (patch: Partial<PolicyTermsDraft>) => {
@@ -100,7 +96,7 @@ export function LoyaltyPolicyPanel() {
         <input value={denominatorYer} onChange={(event) => setDenominatorYer(event.target.value)} inputMode="decimal" placeholder="لكل مبلغ ر.ي" style={inputStyle} />
         <input value={minimumPoints} onChange={(event) => setMinimumPoints(event.target.value)} inputMode="numeric" placeholder="الحد الأدنى" style={inputStyle} />
         <input value={maximumPoints} onChange={(event) => setMaximumPoints(event.target.value)} inputMode="numeric" placeholder="الأقصى لكل طلب — صفر بلا حد" style={inputStyle} />
-        <CpButton disabled={controller.mutationLoading} onClick={() => void create()} variant="brand">إنشاء مسودة سياسة</CpButton>
+        <Button disabled={controller.mutationLoading} onClick={() => void create()} variant="brand">إنشاء مسودة سياسة</Button>
       </div>
 
       {controller.state.kind === "loading" ? <p>جاري تحميل السياسات…</p> : null}
@@ -127,16 +123,16 @@ export function LoyaltyPolicyPanel() {
                 </div>
                 <div style={{ display: "flex", gap: "0.45rem", flexWrap: "wrap" }}>
                   {termsEditable ? (
-                    <CpButton disabled={controller.mutationLoading} onClick={() => beginEdit(policy)} variant="secondary">تعديل الشروط</CpButton>
+                    <Button disabled={controller.mutationLoading} onClick={() => beginEdit(policy)} variant="secondary">تعديل الشروط</Button>
                   ) : null}
                   {policy.status === "draft" || policy.status === "paused" ? (
-                    <CpButton disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "active")} variant="brand">اعتماد وتفعيل</CpButton>
+                    <Button disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "active")} variant="brand">اعتماد وتفعيل</Button>
                   ) : null}
                   {policy.status === "active" ? (
-                    <CpButton disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "paused")} variant="secondary">إيقاف</CpButton>
+                    <Button disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "paused")} variant="secondary">إيقاف</Button>
                   ) : null}
                   {policy.status !== "archived" ? (
-                    <CpButton disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "archived")} variant="secondary">أرشفة</CpButton>
+                    <Button disabled={controller.mutationLoading} onClick={() => void controller.setStatus(policy, "archived")} variant="secondary">أرشفة</Button>
                   ) : null}
                 </div>
               </div>
@@ -149,8 +145,8 @@ export function LoyaltyPolicyPanel() {
                   <input value={editDraft.minimumPoints} onChange={(event) => patchEdit({ minimumPoints: event.target.value })} inputMode="numeric" placeholder="الحد الأدنى" style={inputStyle} />
                   <input value={editDraft.maximumPoints} onChange={(event) => patchEdit({ maximumPoints: event.target.value })} inputMode="numeric" placeholder="الأقصى لكل طلب" style={inputStyle} />
                   <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
-                    <CpButton disabled={controller.mutationLoading} onClick={() => void saveEdit(policy)} variant="brand">حفظ الشروط</CpButton>
-                    <CpButton disabled={controller.mutationLoading} onClick={() => setEditDraft(null)} variant="secondary">إلغاء</CpButton>
+                    <Button disabled={controller.mutationLoading} onClick={() => void saveEdit(policy)} variant="brand">حفظ الشروط</Button>
+                    <Button disabled={controller.mutationLoading} onClick={() => setEditDraft(null)} variant="secondary">إلغاء</Button>
                   </div>
                 </div>
               ) : null}
@@ -166,5 +162,4 @@ const inputStyle: React.CSSProperties = {
   padding: "0.65rem",
   border: `1px solid ${colorRoles.borderSubtle}`,
   borderRadius: "0.5rem",
-  background: colorRoles.surfaceBase,
-};
+  background: colorRoles.surfaceBase };

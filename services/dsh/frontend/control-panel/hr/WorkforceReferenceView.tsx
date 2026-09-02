@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
+import { CpBadge, CpMutedInline, CpPageHeader, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
 import { SettingsPageFrame } from "@bthwani/control-panel/shell";
-import { Text } from "@bthwani/ui-kit";
+import { Button, Text } from "@bthwani/ui-kit";
 import {
   createWorkforceShift,
   updateWorkforceShift,
@@ -62,7 +62,7 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void; rea
     <SettingsPageFrame
       header={
         <CpPageHeader title="مرجعيات Workforce">
-          <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+          <Button variant="ghost" onClick={props.onBack}>رجوع</Button>
         </CpPageHeader>
       }
     >
@@ -93,9 +93,9 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void; rea
                 <Text role="bodySm">{shift.nameAr} ({shift.code}){shift.startsAt ? ` ${shift.startsAt}–${shift.endsAt}` : ""}</Text>
                 <div><CpBadge tone={shift.active === false ? "danger" : "success"}>{shift.active === false ? "معطلة" : "نشطة"}</CpBadge></div>
               </div>
-              {props.canManage ? <CpButton variant={(shift.active ?? true) ? "ghost" : "secondary"} disabled={busy} onClick={() => void toggleShift(shift)}>
+              {props.canManage ? <Button variant={(shift.active ?? true) ? "ghost" : "secondary"} disabled={busy} onClick={() => void toggleShift(shift)}>
                 {(shift.active ?? true) ? "تعطيل" : "تفعيل"}
-              </CpButton> : null}
+              </Button> : null}
             </div>
           ))}
           {props.canManage ? <>
@@ -115,7 +115,7 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void; rea
             <Text role="bodySm">وقت النهاية</Text>
             <CpTextInput value={shiftEndsAt} onChange={setShiftEndsAt} placeholder="23:59" aria-label="وقت النهاية" />
           </div>
-          <CpButton
+          <Button
             variant="primary"
             disabled={busy || !shiftCode.trim() || !shiftName.trim()}
             onClick={() =>
@@ -135,7 +135,7 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void; rea
             }
           >
             إضافة وردية
-          </CpButton>
+          </Button>
           </> : null}
         </div>
       </div>

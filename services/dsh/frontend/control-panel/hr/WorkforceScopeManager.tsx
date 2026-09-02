@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { CpBadge, CpButton, CpMutedInline, CpStateView } from "@bthwani/control-panel/components";
-import { Text } from "@bthwani/ui-kit";
+import { CpBadge, CpMutedInline, CpStateView } from "@bthwani/control-panel/components";
+import { Button, Text } from "@bthwani/ui-kit";
 
 import {
   fetchWorkforceScopeOptions,
@@ -63,7 +63,7 @@ export function WorkforceScopeManager(props: {
     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Text role="titleSm">نطاقات التشغيل (عبر DSH)</Text>
-        <CpButton variant="ghost" disabled={loading} onClick={() => void reload()}>إعادة تحميل</CpButton>
+        <Button variant="ghost" disabled={loading} onClick={() => void reload()}>إعادة تحميل</Button>
       </div>
       <CpMutedInline>
         التعيينات مرتبطة مباشرةً بـ actor_id (نطاقات القراءة فقط في DSH). يتم تصريح المتجر أو المنطقة التشغيلية من خلال Workforce.
@@ -77,13 +77,13 @@ export function WorkforceScopeManager(props: {
           <Text role="bodyStrong">مناطق الخدمة (قراءة فقط)</Text>
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "16px" }}>
             {areas.map((area) => (
-              <CpButton
+              <Button
                 key={area.code}
                 variant={selectedAreaCodes.includes(area.code) ? "primary" : "ghost"}
                 disabled={true}
               >
                 {area.code}
-              </CpButton>
+              </Button>
             ))}
           </div>
         </>

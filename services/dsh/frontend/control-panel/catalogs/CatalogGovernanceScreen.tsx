@@ -1,9 +1,9 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   CpBadge,
-  CpButton,
   CpMutedInline,
   CpPageHeader,
   CpSelect,
@@ -11,8 +11,7 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { OperationsRoomFrame } from "@bthwani/control-panel/shell";
 import {
   createOperatorCatalogAttribute,
@@ -37,21 +36,18 @@ import {
   type CatalogAuditEntry,
   type MasterProductAttributeValue,
   type MasterProductRelationship,
-  type MasterProductRelationshipType,
-} from "../../shared/catalog";
+  type MasterProductRelationshipType } from "../../shared/catalog";
 
 const gridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-  gap: "1rem",
-};
+  gap: "1rem" };
 const panelStyle: CSSProperties = {
   border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
   borderRadius: "0.75rem",
   padding: "1rem",
   display: "grid",
-  gap: "0.75rem",
-};
+  gap: "0.75rem" };
 const rowStyle: CSSProperties = { display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" };
 const codeStyle: CSSProperties = { direction: "ltr", fontFamily: "monospace", fontSize: "0.78rem" };
 
@@ -124,8 +120,7 @@ export function CatalogGovernanceScreen() {
       ...(normalizedEntityType ? { entityType: normalizedEntityType } : {}),
       ...(normalizedEntityId ? { entityId: normalizedEntityId } : {}),
       limit: 100,
-      offset: 0,
-    });
+      offset: 0 });
     setAudit(page.items);
     setAuditTotal(page.total);
   }, [auditEntityId, auditEntityType]);
@@ -211,16 +206,15 @@ export function CatalogGovernanceScreen() {
             options={ATTRIBUTE_DATA_TYPES.map((type) => ({ value: type, label: type }))}
             aria-label="نوع بيانات الخاصية"
           />
-          <CpButton disabled={saving} onClick={() => void runMutation(async () => {
+          <Button disabled={saving} onClick={() => void runMutation(async () => {
             const created = await createOperatorCatalogAttribute({
               code: attributeCode.trim(), nameAr: attributeNameAr.trim(), nameEn: attributeNameEn.trim(),
               dataType: attributeDataType, isFilterable: true, isRequired: false, isVariantAxis: false,
-              isGlobal: true, sortOrder: attributes.length * 10 + 10, isActive: true,
-            });
+              isGlobal: true, sortOrder: attributes.length * 10 + 10, isActive: true });
             setAttributes((items) => [...items, created]);
             setSelectedAttributeId(created.id);
             setAttributeCode(""); setAttributeNameAr(""); setAttributeNameEn("");
-          }, "تم إنشاء الخاصية المركزية.")}>إنشاء خاصية</CpButton>
+          }, "تم إنشاء الخاصية المركزية.")}>إنشاء خاصية</Button>
 
           <CpSelect
             value={selectedAttributeId}
@@ -236,42 +230,39 @@ export function CatalogGovernanceScreen() {
             <>
               <CpTextInput value={optionCode} onChange={setOptionCode} placeholder="رمز الخيار" />
               <CpTextInput value={optionLabelAr} onChange={setOptionLabelAr} placeholder="اسم الخيار بالعربية" />
-              <CpButton disabled={saving || !selectedAttributeId} onClick={() => void runMutation(async () => {
+              <Button disabled={saving || !selectedAttributeId} onClick={() => void runMutation(async () => {
                 const created = await createOperatorCatalogAttributeOption(selectedAttributeId, {
-                  code: optionCode.trim(), labelAr: optionLabelAr.trim(), labelEn: "", sortOrder: options.length * 10 + 10, isActive: true,
-                });
+                  code: optionCode.trim(), labelAr: optionLabelAr.trim(), labelEn: "", sortOrder: options.length * 10 + 10, isActive: true });
                 setOptions((items) => [...items, created]);
                 setOptionCode(""); setOptionLabelAr("");
-              }, "تم إنشاء خيار الخاصية.")}>إضافة خيار</CpButton>
+              }, "تم إنشاء خيار الخاصية.")}>إضافة خيار</Button>
               <div style={rowStyle}>{options.map((item) => <CpBadge key={item.id} tone="neutral">{item.labelAr}</CpBadge>)}</div>
             </>
           ) : null}
           <CpTextInput value={nodeId} onChange={setNodeId} placeholder="معرف فئة L2-L4 لربط الخاصية" />
-          <CpButton disabled={saving || !nodeId.trim() || !selectedAttributeId} onClick={() => void runMutation(async () => {
+          <Button disabled={saving || !nodeId.trim() || !selectedAttributeId} onClick={() => void runMutation(async () => {
             await upsertOperatorCatalogNodeAttributeRule(nodeId.trim(), selectedAttributeId, {
               isRequired: selectedAttribute?.isRequired ?? false,
               isFilterable: selectedAttribute?.isFilterable ?? false,
               isVariantAxis: selectedAttribute?.isVariantAxis ?? false,
-              sortOrder: selectedAttribute?.sortOrder ?? 0,
-            });
-          }, "تم ربط الخاصية بالفئة.")}>ربط الخاصية بالفئة</CpButton>
+              sortOrder: selectedAttribute?.sortOrder ?? 0 });
+          }, "تم ربط الخاصية بالفئة.")}>ربط الخاصية بالفئة</Button>
         </section>
 
         <section style={panelStyle}>
           <h2>قيم المنتج والبدائل</h2>
           <CpTextInput value={productId} onChange={setProductId} placeholder="معرف المنتج المركزي" />
-          <CpButton disabled={loading} onClick={() => void loadProductGovernance()}>تحميل الحقيقة</CpButton>
+          <Button disabled={loading} onClick={() => void loadProductGovernance()}>تحميل الحقيقة</Button>
           <CpTextInput value={valueAttributeId} onChange={setValueAttributeId} placeholder="معرف الخاصية" />
           <CpTextInput value={valueJson} onChange={setValueJson} placeholder={'قيمة JSON مثل "كبير" أو 25'} />
-          <CpButton disabled={saving} onClick={() => void runMutation(async () => {
+          <Button disabled={saving} onClick={() => void runMutation(async () => {
             const parsed: unknown = JSON.parse(valueJson);
             const current = attributeValues.find((item) => item.attributeId === valueAttributeId.trim());
             const saved = await upsertOperatorMasterProductAttributeValue(productId.trim(), valueAttributeId.trim(), {
               value: parsed,
-              ...(current ? { expectedVersion: current.version } : {}),
-            });
+              ...(current ? { expectedVersion: current.version } : {}) });
             setAttributeValues((items) => [...items.filter((item) => item.id !== saved.id), saved]);
-          }, "تم حفظ قيمة الخاصية.")}>حفظ قيمة الخاصية</CpButton>
+          }, "تم حفظ قيمة الخاصية.")}>حفظ قيمة الخاصية</Button>
           <div>{attributeValues.map((item) => <div key={item.id}><code>{item.attributeId}</code>: {JSON.stringify(item.value)} (v{item.version})</div>)}</div>
 
           <CpTextInput value={targetProductId} onChange={setTargetProductId} placeholder="معرف المنتج البديل/المرتبط" />
@@ -282,22 +273,21 @@ export function CatalogGovernanceScreen() {
             aria-label="نوع علاقة المنتج"
           />
           <CpTextInput value={relationshipReason} onChange={setRelationshipReason} placeholder="سبب العلاقة" />
-          <CpButton disabled={saving} onClick={() => void runMutation(async () => {
+          <Button disabled={saving} onClick={() => void runMutation(async () => {
             const current = relationships.find((item) => item.targetMasterProductId === targetProductId.trim() && item.relationshipType === relationshipType);
             const saved = await upsertOperatorMasterProductRelationship(productId.trim(), {
               targetMasterProductId: targetProductId.trim(), relationshipType, priority: current?.priority ?? relationships.length,
               reason: relationshipReason.trim(), isActive: true,
-              ...(current ? { expectedVersion: current.version } : {}),
-            });
+              ...(current ? { expectedVersion: current.version } : {}) });
             setRelationships((items) => [...items.filter((item) => item.id !== saved.id), saved]);
-          }, "تم حفظ علاقة المنتج.")}>حفظ البديل/العلاقة</CpButton>
+          }, "تم حفظ علاقة المنتج.")}>حفظ البديل/العلاقة</Button>
           {relationships.map((item) => (
             <div key={item.id} style={rowStyle}>
               <CpBadge tone="info">{item.relationshipType}</CpBadge><span>{item.targetMasterProductId}</span><CpMutedInline tight>v{item.version}</CpMutedInline>
-              <CpButton disabled={saving} onClick={() => void runMutation(async () => {
+              <Button disabled={saving} onClick={() => void runMutation(async () => {
                 await deleteOperatorMasterProductRelationship(productId.trim(), item.id, item.version);
                 setRelationships((items) => items.filter((candidate) => candidate.id !== item.id));
-              }, "تم حذف علاقة المنتج.")}>حذف</CpButton>
+              }, "تم حذف علاقة المنتج.")}>حذف</Button>
             </div>
           ))}
         </section>
@@ -305,27 +295,26 @@ export function CatalogGovernanceScreen() {
         <section style={panelStyle}>
           <h2>الإيقاف المؤقت للتشكيلة</h2>
           <CpTextInput value={storeId} onChange={setStoreId} placeholder="معرف المتجر" />
-          <CpButton disabled={loading} onClick={() => void loadPauses()}>تحميل حالات التشكيلة</CpButton>
+          <Button disabled={loading} onClick={() => void loadPauses()}>تحميل حالات التشكيلة</Button>
           <CpTextInput value={pauseProductId} onChange={setPauseProductId} placeholder="معرف المنتج المركزي" />
           <CpTextInput value={pauseReason} onChange={setPauseReason} placeholder="سبب الإيقاف المؤقت" />
           <CpTextInput value={pausedUntil} onChange={setPausedUntil} placeholder="وقت الاستئناف ISO اختياري" />
-          <CpButton disabled={saving} onClick={() => void runMutation(async () => {
+          <Button disabled={saving} onClick={() => void runMutation(async () => {
             const current = pauses.find((item) => item.masterProductId === pauseProductId.trim());
             if (!current) throw new Error("حمّل التشكيلة أولاً لتثبيت expectedVersion.");
             const result = await pauseOperatorStoreAssortment(storeId.trim(), pauseProductId.trim(), {
-              reason: pauseReason.trim(), pausedUntil: pausedUntil.trim() || null, expectedVersion: current.version,
-            });
+              reason: pauseReason.trim(), pausedUntil: pausedUntil.trim() || null, expectedVersion: current.version });
             setPauses((items) => [...items.filter((item) => item.masterProductId !== result.pause.masterProductId), result.pause]);
-          }, "تم إيقاف المنتج مؤقتاً.")}>إيقاف مؤقت</CpButton>
+          }, "تم إيقاف المنتج مؤقتاً.")}>إيقاف مؤقت</Button>
           {pauses.map((item) => (
             <div key={item.assortmentId} style={rowStyle}>
               <code>{item.masterProductId}</code>
               <CpBadge tone={item.paused ? "warning" : "success"}>{item.paused ? `موقوف: ${item.reason}` : "يعمل"}</CpBadge>
               <CpMutedInline tight>v{item.version}</CpMutedInline>
-              {item.paused ? <CpButton disabled={saving} onClick={() => void runMutation(async () => {
+              {item.paused ? <Button disabled={saving} onClick={() => void runMutation(async () => {
                 const result = await resumeOperatorStoreAssortment(storeId.trim(), item.masterProductId, item.version);
                 setPauses((items) => [...items.filter((candidate) => candidate.masterProductId !== result.pause.masterProductId), result.pause]);
-              }, "تم استئناف المنتج.")}>استئناف</CpButton> : null}
+              }, "تم استئناف المنتج.")}>استئناف</Button> : null}
             </div>
           ))}
         </section>
@@ -337,7 +326,7 @@ export function CatalogGovernanceScreen() {
           <CpTextInput value={auditEntityType} onChange={setAuditEntityType} placeholder="نوع الكيان" />
           <CpTextInput value={auditEntityId} onChange={setAuditEntityId} placeholder="معرف الكيان" />
           <CpTextInput value={rollbackReason} onChange={setRollbackReason} placeholder="سبب التراجع الإلزامي" />
-          <CpButton disabled={loading} onClick={() => void loadAudit().catch((caught) => setError(caught instanceof Error ? caught.message : String(caught)))}>تحديث السجل</CpButton>
+          <Button disabled={loading} onClick={() => void loadAudit().catch((caught) => setError(caught instanceof Error ? caught.message : String(caught)))}>تحديث السجل</Button>
         </div>
         <CpTable aria-label="سجل تدقيق الكتالوج">
           <thead><tr dir="rtl">
@@ -355,10 +344,10 @@ export function CatalogGovernanceScreen() {
                 <CpTableCell>{entry.actorRole}: {entry.actorId}</CpTableCell>
                 <CpTableCell>{entry.reason || "—"}</CpTableCell>
                 <CpTableCell>{entry.action === "UPDATE" && expectedVersion > 0 ? (
-                  <CpButton disabled={saving || rollbackReason.trim().length < 3} onClick={() => void runMutation(async () => {
+                  <Button disabled={saving || rollbackReason.trim().length < 3} onClick={() => void runMutation(async () => {
                     await rollbackOperatorCatalogAudit(entry.id, { expectedVersion, reason: rollbackReason.trim() });
                     await loadAudit();
-                  }, "تم التراجع المحكوم وسُجّل كحدث جديد.")}>تراجع إلى السابق</CpButton>
+                  }, "تم التراجع المحكوم وسُجّل كحدث جديد.")}>تراجع إلى السابق</Button>
                 ) : "غير قابل للتراجع"}</CpTableCell>
               </tr>;
             })}

@@ -1,6 +1,7 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
-import { CpBadge, CpButton, CpMutedInline, CpRetryButton, CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
+import { CpBadge, CpMutedInline, CpRetryButton, CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
 import { WebCompactSurfaceHeader } from "@bthwani/ui-kit/web";
 import { useOperatorDispatchTrackingAlerts } from "../../shared/dispatch/use-operator-dispatch-tracking-alerts";
 import { GoogleMapsWebCanvas } from "../maps/GoogleMapsWebCanvas";
@@ -44,8 +45,7 @@ export function DispatchTrackingAlertsPanel() {
               latitude: location.latitude,
               longitude: location.longitude,
               title: `الكابتن ${location.captainId}`,
-              description: `الطلب ${location.orderId} · ${freshnessLabel(location.freshnessState)} · منذ ${location.ageSeconds} ثانية`,
-            }))}
+              description: `الطلب ${location.orderId} · ${freshnessLabel(location.freshnessState)} · منذ ${location.ageSeconds} ثانية` }))}
             height={480}
             ariaLabel="خريطة مواقع الكباتن والمهام النشطة"
           />
@@ -93,7 +93,7 @@ export function DispatchTrackingAlertsPanel() {
             </div>
           )}
 
-          <CpButton variant="secondary" onClick={() => void reload()}>تحديث الخريطة والتنبيهات</CpButton>
+          <Button variant="secondary" onClick={() => void reload()}>تحديث الخريطة والتنبيهات</Button>
           <CpMutedInline>
             مواقع العمليات لا تُنشئ حقيقة بديلة؛ المصدر هو آخر عينة GPS قبلها DSH من المهمة النشطة.
           </CpMutedInline>

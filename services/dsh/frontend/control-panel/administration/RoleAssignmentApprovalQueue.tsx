@@ -1,21 +1,19 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import React, { useState } from "react";
 import {
-  CpButton,
   CpPageHeader,
   CpStatePanel,
   CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { QueuePageFrame } from "@bthwani/control-panel/shell";
 import {
   useRoleAssignmentApprovalController,
-  useStaffController,
-} from "../../shared/administration";
+  useStaffController } from "../../shared/administration";
 import { administrationExecutionStatusLabel } from "../../shared/administration/administration-registry";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
@@ -130,12 +128,12 @@ export function RoleAssignmentApprovalQueue() {
           placeholder="سبب التغيير — خمسة أحرف على الأقل"
           aria-label="سبب طلب تغيير الدور"
         />
-        <CpButton variant="primary" disabled={formInvalid} onClick={() => void requestChange("staff_role_assignment")}>
+        <Button variant="primary" disabled={formInvalid} onClick={() => void requestChange("staff_role_assignment")}>
           إرسال طلب إسناد
-        </CpButton>{" "}
-        <CpButton variant="secondary" disabled={formInvalid} onClick={() => void requestChange("staff_role_revocation")}>
+        </Button>{" "}
+        <Button variant="secondary" disabled={formInvalid} onClick={() => void requestChange("staff_role_revocation")}>
           إرسال طلب سحب
-        </CpButton>
+        </Button>
       </section> : null}
 
       {actionError ? <CpStateView kind="error" title={actionError} /> : null}
@@ -177,16 +175,16 @@ export function RoleAssignmentApprovalQueue() {
                   />
                 </CpTableCell>
                 <CpTableCell>
-                  <CpButton variant="brand" disabled={submitting || !reviewable} onClick={() => void review(approval.id, approval.version, "approved")}>
+                  <Button variant="brand" disabled={submitting || !reviewable} onClick={() => void review(approval.id, approval.version, "approved")}>
                     اعتماد من مراجع مستقل
-                  </CpButton>{" "}
-                  <CpButton
+                  </Button>{" "}
+                  <Button
                     variant="danger"
                     disabled={submitting || !reviewable || (reviewNotes[approval.id] ?? "").trim().length < 5}
                     onClick={() => void review(approval.id, approval.version, "rejected")}
                   >
                     رفض
-                  </CpButton>
+                  </Button>
                   {approval.executionStatus === "failed_terminal" && canRequest ? <>
                     <CpTextInput
                       value={replacementCode}
@@ -200,13 +198,13 @@ export function RoleAssignmentApprovalQueue() {
                       placeholder="سبب الطلب البديل — خمسة أحرف على الأقل"
                       aria-label={`سبب الطلب البديل ${approval.id}`}
                     />
-                    <CpButton
+                    <Button
                       variant="primary"
                       disabled={submitting || !/^[a-z][a-z0-9_]{2,63}$/.test(replacementCode.trim()) || replacementReason.trim().length < 5}
                       onClick={() => void replaceTerminalFailure(approval.id, approval.version)}
                     >
                       تثبيت الفشل وإنشاء طلب بديل
-                    </CpButton>
+                    </Button>
                   </> : null}
                 </CpTableCell>
               </tr>

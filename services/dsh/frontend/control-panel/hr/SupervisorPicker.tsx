@@ -4,8 +4,8 @@
 // box. The operator can only pick a validated candidate returned by the
 // server; there is no way to type an arbitrary actor id here.
 import React from "react";
-import { CpButton, CpMutedInline, CpTextInput } from "@bthwani/control-panel/components";
-import { Text } from "@bthwani/ui-kit";
+import { CpMutedInline, CpTextInput } from "@bthwani/control-panel/components";
+import { Button, Text } from "@bthwani/ui-kit";
 import { useSupervisorSearchController } from "../../shared/workforce";
 import type { ProviderKind, SupervisorCandidate } from "../../shared/workforce";
 
@@ -24,7 +24,7 @@ export function SupervisorPicker(props: {
           {props.selected.username}
           {props.selected.phoneMasked ? ` — ${props.selected.phoneMasked}` : ""}
         </Text>
-        {!props.disabled ? <CpButton variant="ghost" onClick={() => props.onSelect(null)}>تغيير</CpButton> : null}
+        {!props.disabled ? <Button variant="ghost" onClick={() => props.onSelect(null)}>تغيير</Button> : null}
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function SupervisorPicker(props: {
                 {candidate.username}
                 {candidate.phoneMasked ? ` — ${candidate.phoneMasked}` : ""}
               </Text>
-              <CpButton variant="secondary" onClick={() => props.onSelect(candidate)}>اختيار</CpButton>
+              <Button variant="secondary" onClick={() => props.onSelect(candidate)}>اختيار</Button>
             </div>
           ))}
         </>

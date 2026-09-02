@@ -1,10 +1,10 @@
 "use client";
+import { Button } from "@bthwani/ui-kit";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
   CpBadge,
-  CpButton,
   CpFilterBar,
   CpMutedInline,
   CpStatePanel,
@@ -13,14 +13,12 @@ import {
   CpTableCell,
   CpTableHeaderCell,
   CpTabs,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import {
   fetchOperatorReelMediaBlob,
   fetchOperatorReels,
   reviewGovernedReel,
-  type GovernedReel,
-} from "../../shared/catalog";
+  type GovernedReel } from "../../shared/catalog";
 
 interface ReelsReviewPanelProps {
   readonly canReview: boolean;
@@ -49,15 +47,13 @@ const STATUS_TAB_LABELS: Record<StatusFilter, string> = {
   pending_review: "بانتظار المراجعة",
   approved: "معتمدة",
   rejected: "مرفوضة",
-  archived: "مؤرشفة",
-};
+  archived: "مؤرشفة" };
 
 const REEL_STATUS_TONE: Record<GovernedReel["status"], CpBadgeTone> = {
   pending_review: "warning",
   approved: "success",
   rejected: "danger",
-  archived: "neutral",
-};
+  archived: "neutral" };
 
 function draftFromReel(reel: GovernedReel): ReelDraft {
   return {
@@ -71,8 +67,7 @@ function draftFromReel(reel: GovernedReel): ReelDraft {
     ctaLabelEn: reel.ctaLabelEn,
     targetId: reel.targetId,
     sortOrder: String(reel.sortOrder),
-    reviewNote: reel.reviewNote,
-  };
+    reviewNote: reel.reviewNote };
 }
 
 export function ReelsReviewPanel({ canReview, canPreview }: ReelsReviewPanelProps) {
@@ -159,8 +154,7 @@ export function ReelsReviewPanel({ canReview, canPreview }: ReelsReviewPanelProp
   const updateDraft = (reelId: string, patch: Partial<ReelDraft>) => {
     setDrafts((current) => ({
       ...current,
-      [reelId]: { ...(current[reelId] ?? draftFromReel(reels.find((item) => item.id === reelId)!)), ...patch },
-    }));
+      [reelId]: { ...(current[reelId] ?? draftFromReel(reels.find((item) => item.id === reelId)!)), ...patch } }));
   };
 
   const handleReview = async (
@@ -199,8 +193,7 @@ export function ReelsReviewPanel({ canReview, canPreview }: ReelsReviewPanelProp
         ctaLabelEn: draft.ctaLabelEn.trim(),
         targetType: reel.targetType,
         targetId: draft.targetId.trim(),
-        sortOrder,
-      });
+        sortOrder });
       await load();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -225,7 +218,7 @@ export function ReelsReviewPanel({ canReview, canPreview }: ReelsReviewPanelProp
           onChange={(value) => setStatusFilter(value as StatusFilter)}
           aria-label="تصفية حالة الريلز"
         />
-        <CpButton onClick={() => void load()} aria-label="تحديث قائمة الريلز">تحديث</CpButton>
+        <Button onClick={() => void load()} aria-label="تحديث قائمة الريلز">تحديث</Button>
       </CpFilterBar>
 
       {error ? <CpStatePanel role="alert" title="تعذر إكمال العملية" description={error} /> : null}
@@ -263,11 +256,11 @@ export function ReelsReviewPanel({ canReview, canPreview }: ReelsReviewPanelProp
                   <CpTextInput disabled={!canReview} value={draft.reviewNote} onChange={(value) => updateDraft(selectedReel.id, { reviewNote: value })} placeholder="ملاحظة المراجعة أو سبب الرفض" aria-label="ملاحظة المراجعة" />
                   <div style={styles.actions}>
                     {canReview ? <>
-                      <CpButton disabled={busy || selectedReel.status !== "pending_review"} onClick={() => void handleReview(selectedReel, "approved")}>اعتماد ونشر مؤهل</CpButton>
-                      <CpButton disabled={busy || selectedReel.status !== "pending_review"} onClick={() => void handleReview(selectedReel, "rejected")}>رفض مع السبب</CpButton>
-                      <CpButton disabled={busy || selectedReel.status !== "approved"} onClick={() => void handleReview(selectedReel, "archived")}>أرشفة</CpButton>
+                      <Button disabled={busy || selectedReel.status !== "pending_review"} onClick={() => void handleReview(selectedReel, "approved")}>اعتماد ونشر مؤهل</Button>
+                      <Button disabled={busy || selectedReel.status !== "pending_review"} onClick={() => void handleReview(selectedReel, "rejected")}>رفض مع السبب</Button>
+                      <Button disabled={busy || selectedReel.status !== "approved"} onClick={() => void handleReview(selectedReel, "archived")}>أرشفة</Button>
                     </> : <CpMutedInline tight>قراءة فقط — قرارات الريلز تتطلب catalog.media.review.</CpMutedInline>}
-                    <CpButton disabled={busy} onClick={() => setSelectedReelId(null)}>إغلاق المعاينة</CpButton>
+                    <Button disabled={busy} onClick={() => setSelectedReelId(null)}>إغلاق المعاينة</Button>
                   </div>
                 </>
               );
@@ -298,7 +291,7 @@ export function ReelsReviewPanel({ canReview, canPreview }: ReelsReviewPanelProp
                 <CpTableCell><code>{reel.sourceStoreId ?? reel.targetId}</code></CpTableCell>
                 <CpTableCell><CpBadge tone={REEL_STATUS_TONE[reel.status]}>{STATUS_TAB_LABELS[reel.status]}</CpBadge></CpTableCell>
                 <CpTableCell>{new Date(reel.createdAt).toLocaleString("ar")}</CpTableCell>
-                <CpTableCell><CpButton onClick={() => setSelectedReelId(reel.id)}>فتح المراجعة</CpButton></CpTableCell>
+                <CpTableCell><Button onClick={() => setSelectedReelId(reel.id)}>فتح المراجعة</Button></CpTableCell>
               </tr>
             ))}
           </tbody>
@@ -316,10 +309,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: "1rem",
     padding: "1rem",
     border: "1px solid color-mix(in srgb, currentColor 16%, transparent)",
-    borderRadius: "0.75rem",
-  },
+    borderRadius: "0.75rem" },
   previewColumn: { display: "grid", gap: "0.5rem", alignContent: "start" },
   editorColumn: { display: "grid", gap: "0.65rem", alignContent: "start" },
   video: { width: "100%", maxHeight: "70vh", aspectRatio: "9 / 16", objectFit: "contain", background: "black", borderRadius: "1rem" },
-  actions: { display: "flex", flexWrap: "wrap", gap: "0.5rem" },
-};
+  actions: { display: "flex", flexWrap: "wrap", gap: "0.5rem" } };

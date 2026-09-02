@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { colorRoles } from "@bthwani/ui-kit";
-import { CpButton } from "@bthwani/control-panel/components";
+import { Button, colorRoles } from "@bthwani/ui-kit";
+
 import { formatWltMoney, parseWltMajorInputToMinorUnits } from "@bthwani/dsh/finance";
 import { useSubscriptionPlansController, type SubscriptionPlanRecord } from "../../../shared/marketing";
 
@@ -22,8 +22,7 @@ export function SubscriptionsCommandDeck() {
         nameAr: nameAr.trim(),
         priceYer: price.minorUnits,
         billingCycle: "monthly",
-        ...(wltProductReference.trim() ? { wltProductReference: wltProductReference.trim() } : {}),
-      });
+        ...(wltProductReference.trim() ? { wltProductReference: wltProductReference.trim() } : {}) });
       setNameAr("");
       setPriceYer("0");
       setWltProductReference("");
@@ -50,7 +49,7 @@ export function SubscriptionsCommandDeck() {
           <h3 style={styles.title}>خطط الاشتراك</h3>
           <p style={styles.muted}>DSH يعرّف العرض فقط؛ المنتج والدفع والاشتراك الفعلي مملوكة لـWLT.</p>
         </div>
-        <CpButton onClick={() => void controller.reload()} variant="secondary">إعادة التحميل</CpButton>
+        <Button onClick={() => void controller.reload()} variant="secondary">إعادة التحميل</Button>
       </div>
 
       <div style={styles.summary}>
@@ -63,7 +62,7 @@ export function SubscriptionsCommandDeck() {
         <input value={nameAr} onChange={(event) => setNameAr(event.target.value)} placeholder="اسم الخطة" style={styles.input} />
         <input value={priceYer} onChange={(event) => setPriceYer(event.target.value)} inputMode="numeric" placeholder="السعر بالريال" style={styles.input} />
         <input value={wltProductReference} onChange={(event) => setWltProductReference(event.target.value)} placeholder="مرجع منتج WLT" style={styles.input} />
-        <CpButton disabled={submitting} onClick={() => void createDraft()} variant="brand">إنشاء مسودة</CpButton>
+        <Button disabled={submitting} onClick={() => void createDraft()} variant="brand">إنشاء مسودة</Button>
       </div>
 
       {controller.state.kind === "loading" ? <p>جارٍ التحميل…</p> : null}
@@ -81,9 +80,9 @@ export function SubscriptionsCommandDeck() {
               <p style={styles.muted}>الحالة: {plan.status}</p>
             </div>
             <div style={styles.actions}>
-              {plan.status !== "active" ? <CpButton disabled={submitting || !plan.wltProductReference} onClick={() => void updateStatus(plan, "active")} variant="brand">طلب اعتماد نشط</CpButton> : null}
-              {plan.status === "active" ? <CpButton disabled={submitting} onClick={() => void updateStatus(plan, "paused")} variant="secondary">إيقاف</CpButton> : null}
-              {plan.status !== "archived" ? <CpButton disabled={submitting} onClick={() => void updateStatus(plan, "archived")} variant="secondary">أرشفة</CpButton> : null}
+              {plan.status !== "active" ? <Button disabled={submitting || !plan.wltProductReference} onClick={() => void updateStatus(plan, "active")} variant="brand">طلب اعتماد نشط</Button> : null}
+              {plan.status === "active" ? <Button disabled={submitting} onClick={() => void updateStatus(plan, "paused")} variant="secondary">إيقاف</Button> : null}
+              {plan.status !== "archived" ? <Button disabled={submitting} onClick={() => void updateStatus(plan, "archived")} variant="secondary">أرشفة</Button> : null}
             </div>
           </article>
         ))}
@@ -103,5 +102,4 @@ const styles: Record<string, CSSProperties> = {
   error: { color: colorRoles.danger, margin: 0 },
   list: { display: "grid", gap: "0.6rem" },
   card: { display: "flex", justifyContent: "space-between", gap: "1rem", padding: "0.9rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.7rem", background: colorRoles.surfaceBase },
-  actions: { display: "flex", flexWrap: "wrap", gap: "0.45rem", alignItems: "center" },
-};
+  actions: { display: "flex", flexWrap: "wrap", gap: "0.45rem", alignItems: "center" } };

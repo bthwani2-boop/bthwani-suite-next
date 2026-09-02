@@ -2,9 +2,9 @@
 
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Card, StateView, Text } from "@bthwani/ui-kit";
+import { Button, Card, StateView, Text } from "@bthwani/ui-kit";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { CpBadge, CpButton, CpKpiCard, CpKpiStrip, CpTabs } from "@bthwani/control-panel/components";
+import { CpBadge, CpKpiCard, CpKpiStrip, CpTabs } from "@bthwani/control-panel/components";
 import { OverviewPageFrame } from "@bthwani/control-panel/shell";
 import { useFinanceController } from './finance.controller';
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
@@ -23,33 +23,25 @@ type FinanceTabItem = { readonly id: string; readonly label: string; readonly ac
 const FINANCE_BLOCK_REASON_COPY: Record<string, { readonly title: string; readonly description: string }> = {
   WLT_NOT_CONFIGURED: {
     title: "WLT غير مُهيّأ (WLT_NOT_CONFIGURED)",
-    description: "لم يتم ضبط تكامل WLT في بيئة DSH الحالية. راجع إعداد رمز خدمة WLT وربط WLT في DSH.",
-  },
+    description: "لم يتم ضبط تكامل WLT في بيئة DSH الحالية. راجع إعداد رمز خدمة WLT وربط WLT في DSH." },
   WLT_UNAVAILABLE: {
     title: "تعذر الوصول إلى WLT (WLT_UNAVAILABLE)",
-    description: "استجاب وكيل DSH المالي لكن فشل الاتصال بخادم WLT. تحقق من أن حاوية WLT تعمل وصحية.",
-  },
+    description: "استجاب وكيل DSH المالي لكن فشل الاتصال بخادم WLT. تحقق من أن حاوية WLT تعمل وصحية." },
   ROUTE_NOT_FOUND: {
     title: "المسار غير مسجّل (ROUTE_NOT_FOUND)",
-    description: "الخادم المستجيب لا يعرّف هذا المسار. تحقق من أن DSH وWLT يشغّلان أحدث كود من الفرع الحالي.",
-  },
+    description: "الخادم المستجيب لا يعرّف هذا المسار. تحقق من أن DSH وWLT يشغّلان أحدث كود من الفرع الحالي." },
   AUTH_MISSING: {
     title: "الجلسة غير مصادق عليها (AUTH_MISSING)",
-    description: "لا يوجد رمز دخول صالح لهذا المشغّل. سجّل الدخول من جديد ثم أعد المحاولة.",
-  },
+    description: "لا يوجد رمز دخول صالح لهذا المشغّل. سجّل الدخول من جديد ثم أعد المحاولة." },
   MISSING_OperatorContext_ID: {
     title: "سياق المستأجر غير مكتمل (MISSING_OperatorContext_ID)",
-    description: "لم تُرجع جلسة المشغّل سياق المستأجر الموثوق. سجّل الدخول من جديد؛ لا تُدخل معرّف مستأجر يدويًا.",
-  },
+    description: "لم تُرجع جلسة المشغّل سياق المستأجر الموثوق. سجّل الدخول من جديد؛ لا تُدخل معرّف مستأجر يدويًا." },
   OperatorContext_MISMATCH: {
     title: "تعارض سياق المستأجر (OperatorContext_MISMATCH)",
-    description: "رُفض الطلب لأن محدد المستأجر لا يطابق سياق جلسة المشغّل الموثوق.",
-  },
+    description: "رُفض الطلب لأن محدد المستأجر لا يطابق سياق جلسة المشغّل الموثوق." },
   RUNTIME_PORT_MISMATCH: {
     title: "تعذر الاتصال بالمنفذ (RUNTIME_PORT_MISMATCH)",
-    description: "فشل الاتصال الشبكي بعنوان/منفذ DSH runtime API. تحقق من تشغيل الخدمة والمنفذ الصحيح.",
-  },
-};
+    description: "فشل الاتصال الشبكي بعنوان/منفذ DSH runtime API. تحقق من تشغيل الخدمة والمنفذ الصحيح." } };
 
 function describeFinanceBlockedReason(error: string | undefined): { readonly title: string; readonly description: string } {
   if (!error) return { title: "Finance Hub runtime غير متاح", description: "تعذر تحديد سبب دقيق للانقطاع." };
@@ -80,8 +72,7 @@ export function FinanceDashboardScreen() {
   const controller = useFinanceController({
     group: "financial-command-center",
     searchParams: searchParams ?? undefined,
-    router: router ?? undefined,
-  });
+    router: router ?? undefined });
   const {
     activeGroup,
     activeGroupMeta,
@@ -94,8 +85,7 @@ export function FinanceDashboardScreen() {
     financeHubView,
     runtimeFinance,
     onTabSelect,
-    onSubTabSelect,
-  } = controller;
+    onSubTabSelect } = controller;
 
   const runtimeSourceLabel = useMemo(() => {
     if (activeState === "loading") return "ملخص Finance Hub: جارٍ التحميل";
@@ -194,7 +184,7 @@ export function FinanceDashboardScreen() {
         <Card style={{ padding: "3rem", alignItems: "center", justifyContent: "center", textAlign: "center", gap: "1rem" }}>
           <CpBadge tone="danger">{blockedReason.title}</CpBadge>
           <Text role="body" tone="muted" style={{ maxWidth: "450px" }}>{blockedReason.description}</Text>
-          <CpButton variant="primary" onClick={reload}>إعادة المحاولة</CpButton>
+          <Button variant="primary" onClick={reload}>إعادة المحاولة</Button>
         </Card>
       );
     }
@@ -241,7 +231,7 @@ export function FinanceDashboardScreen() {
               العملة: <strong>ر.ي (ريال يمني)</strong> · {runtimeSourceLabel}
             </Text>
           </div>
-          <CpButton variant="secondary" onClick={reload}>تحديث ملخص Finance Hub</CpButton>
+          <Button variant="secondary" onClick={reload}>تحديث ملخص Finance Hub</Button>
         </div>
       }
       toolbar={

@@ -1,4 +1,3 @@
-# Align with LEAN_CODE_BASED_CHECK.md exclusions
 node_modules/
 .pnpm-store/
 .next/

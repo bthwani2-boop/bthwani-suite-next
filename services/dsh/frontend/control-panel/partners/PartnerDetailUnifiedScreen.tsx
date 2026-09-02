@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { neutralScale } from "@bthwani/ui-kit";
+import { Button, neutralScale } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
   CpBadge,
-  CpButton,
   CpDescriptionList,
   CpDescriptionRow,
   CpMutedInline,
@@ -17,8 +16,7 @@ import {
   CpTableCell,
   CpTableHeaderCell,
   CpTabs,
-  CpTextInput,
-} from "@bthwani/control-panel/components";
+  CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
@@ -35,8 +33,7 @@ import {
   getDshPartnerActivationStatusLabel,
   DOCUMENT_TYPE_LABELS,
   DOCUMENT_REVIEW_STATUS_LABELS,
-  PARTNER_FIELD_VISIT_STATUS_LABELS,
-} from "../../shared/partner";
+  PARTNER_FIELD_VISIT_STATUS_LABELS } from "../../shared/partner";
 import { OperatorDeliveryPricingPanel } from "./stores/OperatorDeliveryPricingPanel";
 import { PartnerStoreCreateWizard } from "./stores/PartnerStoreCreateWizard";
 import { PartnerCommercialModelPanel } from "./PartnerCommercialModelPanel";
@@ -71,8 +68,7 @@ const TAB_LABELS: Record<Tab, string> = {
   stores: "المتاجر والفروع",
   commercial_model: "النموذج التجاري",
   readiness: "الجاهزية متعددة الفروع",
-  audit: "سجل التدقيق",
-};
+  audit: "سجل التدقيق" };
 const REASON_REQUIRED = new Set<string>(["ops_rejected", "partner_terminated", "client_hidden"]);
 
 function toBadgeTone(tone: "success" | "warning" | "danger" | "info" | "muted"): CpBadgeTone {
@@ -160,8 +156,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
     if (REASON_REQUIRED.has(transitionTarget) && !reason) return;
     const succeeded = await detail.transition({
       toStatus: transitionTarget,
-      ...(reason ? { reason } : {}),
-    }, partner.version);
+      ...(reason ? { reason } : {}) }, partner.version);
     if (succeeded) {
       setTransitionTarget(null);
       setTransitionReason("");
@@ -173,8 +168,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
     if (!canManagePartners || !documentDecision || documentReason.trim().length < 5) return;
     const succeeded = await documents.review(documentDecision.id, {
       decision: documentDecision.decision,
-      reason: documentReason.trim(),
-    });
+      reason: documentReason.trim() });
     if (succeeded) {
       setDocumentDecision(null);
       setDocumentReason("");
@@ -192,8 +186,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
       ...(storeReason.trim() ? { reason: storeReason.trim() } : {}),
       ...(parsedVersion !== undefined && Number.isInteger(parsedVersion) && parsedVersion > 0
         ? { expectedStoreVersion: parsedVersion }
-        : {}),
-    });
+        : {}) });
     if (succeeded) {
       setStoreId("");
       setStoreReason("");
@@ -208,7 +201,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
       header={(
         <CpPageHeader title={viewModel.displayName}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            {onBack ? <CpButton onClick={onBack}>← رجوع</CpButton> : null}
+            {onBack ? <Button onClick={onBack}>← رجوع</Button> : null}
             <CpBadge tone={toBadgeTone(viewModel.statusTone)}>{viewModel.statusLabel}</CpBadge>
           </div>
         </CpPageHeader>
@@ -241,15 +234,15 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
               <div style={{ display: "grid", gap: 10 }}>
                 {canManagePartners ? <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {viewModel.allowedNextStatuses.map((status) => (
-                    <CpButton key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>{getDshPartnerActivationStatusLabel(status)}</CpButton>
+                    <Button key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>{getDshPartnerActivationStatusLabel(status)}</Button>
                   ))}
                 </div> : <CpMutedInline tight>قراءة فقط — انتقالات دورة الحياة تتطلب partners.manage.</CpMutedInline>}
                 {transitionTarget ? (
                   <>
                     <CpTextInput value={transitionReason} onChange={setTransitionReason} placeholder="سبب القرار أو الملاحظة التشغيلية" aria-label="سبب انتقال حالة الشريك" />
                     <div style={{ display: "flex", gap: 8 }}>
-                      <CpButton disabled={detail.mutationState.kind === "loading" || (REASON_REQUIRED.has(transitionTarget) && !transitionReason.trim())} onClick={() => void confirmTransition()}>تأكيد</CpButton>
-                      <CpButton onClick={() => setTransitionTarget(null)}>إلغاء</CpButton>
+                      <Button disabled={detail.mutationState.kind === "loading" || (REASON_REQUIRED.has(transitionTarget) && !transitionReason.trim())} onClick={() => void confirmTransition()}>تأكيد</Button>
+                      <Button onClick={() => setTransitionTarget(null)}>إلغاء</Button>
                     </div>
                   </>
                 ) : null}
@@ -288,9 +281,9 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                           <CpTableCell>{DOCUMENT_TYPE_LABELS[document.documentType as keyof typeof DOCUMENT_TYPE_LABELS] ?? "نوع وثيقة غير معروف"}</CpTableCell>
                           <CpTableCell>{DOCUMENT_REVIEW_STATUS_LABELS[document.reviewStatus] ?? "حالة غير معروفة"}</CpTableCell>
                           <CpTableCell>{canManagePartners ? <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                            <CpButton disabled={document.reviewStatus === "verified" || documents.actionState.kind === "loading"} onClick={() => { setDocumentDecision({ id: document.id, decision: "approved" }); setDocumentReason(""); }}>اعتماد</CpButton>
-                            <CpButton onClick={() => { setDocumentDecision({ id: document.id, decision: "rejected" }); setDocumentReason(""); }}>رفض</CpButton>
-                            <CpButton onClick={() => { setDocumentDecision({ id: document.id, decision: "needs_resubmit" }); setDocumentReason(""); }}>إعادة الرفع</CpButton>
+                            <Button disabled={document.reviewStatus === "verified" || documents.actionState.kind === "loading"} onClick={() => { setDocumentDecision({ id: document.id, decision: "approved" }); setDocumentReason(""); }}>اعتماد</Button>
+                            <Button onClick={() => { setDocumentDecision({ id: document.id, decision: "rejected" }); setDocumentReason(""); }}>رفض</Button>
+                            <Button onClick={() => { setDocumentDecision({ id: document.id, decision: "needs_resubmit" }); setDocumentReason(""); }}>إعادة الرفع</Button>
                           </div> : <CpMutedInline tight>قراءة فقط — مراجعة الوثائق تتطلب partners.manage.</CpMutedInline>}</CpTableCell>
                         </tr>
                       ))}</tbody>
@@ -299,8 +292,8 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                       <div style={{ display: "grid", gap: 8 }}>
                         <CpTextInput value={documentReason} onChange={setDocumentReason} placeholder="سبب القرار، خمسة أحرف على الأقل" aria-label="سبب قرار الوثيقة" />
                         <div style={{ display: "flex", gap: 8 }}>
-                          <CpButton disabled={documentReason.trim().length < 5 || documents.actionState.kind === "loading"} onClick={() => void confirmDocumentReview()}>تأكيد</CpButton>
-                          <CpButton onClick={() => setDocumentDecision(null)}>إلغاء</CpButton>
+                          <Button disabled={documentReason.trim().length < 5 || documents.actionState.kind === "loading"} onClick={() => void confirmDocumentReview()}>تأكيد</Button>
+                          <Button onClick={() => setDocumentDecision(null)}>إلغاء</Button>
                         </div>
                       </div>
                     ) : null}
@@ -326,16 +319,16 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 <CpTextInput value={storeId} onChange={setStoreId} placeholder="معرف المتجر" aria-label="معرف المتجر" />
                 <CpTextInput value={storeReason} onChange={setStoreReason} placeholder="سبب الإسناد أو النقل" aria-label="سبب نقل ملكية المتجر" />
                 <CpTextInput value={storeVersion} onChange={setStoreVersion} placeholder="إصدار المتجر الحالي عند النقل" aria-label="إصدار المتجر المتوقع" />
-                <CpButton disabled={!storeId.trim() || stores.actionState.kind === "loading"} onClick={() => void confirmStoreOwnership()}>
+                <Button disabled={!storeId.trim() || stores.actionState.kind === "loading"} onClick={() => void confirmStoreOwnership()}>
                   {stores.actionState.kind === "loading" ? "جاري التنفيذ…" : "تنفيذ العملية المحكومة"}
-                </CpButton>
+                </Button>
                 {stores.actionState.kind === "error" ? <CpStateView kind="error" title="تعذر تنفيذ ملكية المتجر" code={stores.actionState.message} /> : null}
               </div>
             )) : <CpMutedInline tight>قراءة فقط — إسناد أو نقل ملكية المتجر يتطلب partners.manage.</CpMutedInline>}
             {stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل الفروع…" />
               : stores.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد فروع مرتبطة." />
                 : stores.state.kind === "error" ? <CpStateView kind="error" title="تعذر تحميل الفروع" code={stores.state.message} />
-                : <><CpTable aria-label="فروع الشريك"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell><CpTableHeaderCell>التسعير</CpTableHeaderCell></tr></thead><tbody>{stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell>{canManageOperations ? <CpButton onClick={() => setPricingStoreId((current) => current === store.id ? null : store.id)}>{pricingStoreId === store.id ? "إغلاق" : "إدارة التسعير"}</CpButton> : <CpMutedInline tight>قراءة فقط</CpMutedInline>}</CpTableCell></tr>)}</tbody></CpTable>{pricingStoreId && canManageOperations ? <OperatorDeliveryPricingPanel storeId={pricingStoreId} /> : null}</>
+                : <><CpTable aria-label="فروع الشريك"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>المدينة</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>ظهور العميل</CpTableHeaderCell><CpTableHeaderCell>التسعير</CpTableHeaderCell></tr></thead><tbody>{stores.state.stores.map((store) => <tr key={store.id}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.cityCode}</CpTableCell><CpTableCell>{store.status}</CpTableCell><CpTableCell>{store.isVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell>{canManageOperations ? <Button onClick={() => setPricingStoreId((current) => current === store.id ? null : store.id)}>{pricingStoreId === store.id ? "إغلاق" : "إدارة التسعير"}</Button> : <CpMutedInline tight>قراءة فقط</CpMutedInline>}</CpTableCell></tr>)}</tbody></CpTable>{pricingStoreId && canManageOperations ? <OperatorDeliveryPricingPanel storeId={pricingStoreId} /> : null}</>
             }
           </div>
         ) : null}
