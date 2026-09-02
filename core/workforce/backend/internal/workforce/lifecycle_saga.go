@@ -181,7 +181,7 @@ func (r *Repository) claimStaleLifecycleCommands(ctx context.Context, owner stri
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	commands := []lifecycleCommand{}
 	for rows.Next() {
 		var cmd lifecycleCommand
