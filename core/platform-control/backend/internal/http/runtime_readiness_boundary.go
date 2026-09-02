@@ -87,10 +87,7 @@ func configuredReadinessDuration(name string, fallback time.Duration) (time.Dura
 }
 
 func runtimeConfigurationReady() bool {
-	if !configuredRuntimeSecret("PLATFORM_CONTROL_DSH_SERVICE_TOKEN", minimumInternalServiceTokenLength) {
-		return false
-	}
-	return true
+	return configuredRuntimeSecret("PLATFORM_CONTROL_DSH_SERVICE_TOKEN", minimumInternalServiceTokenLength)
 }
 
 func RuntimeReadinessBoundary(next http.Handler, databases ...*sql.DB) http.Handler {
