@@ -113,6 +113,14 @@ func beginCartMutation(
 		return rollback(err)
 	}
 
+	quarantined, err := mutationOutcomeQuarantinedTx(ctx, tx, clientID, mutation.IdempotencyKey)
+	if err != nil {
+		return rollback(err)
+	}
+	if quarantined {
+		return rollback(ErrMutationOutcomeUnknown)
+	}
+
 	receipt, found, err := loadMutationReceiptTx(ctx, tx, clientID, mutation.IdempotencyKey)
 	if err != nil {
 		return rollback(err)

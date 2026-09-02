@@ -268,7 +268,11 @@ func (s *protectedStoreServer) handleGetCartMutationReceipt(w http.ResponseWrite
 		return
 	}
 
-	receipt, err := cart.FindMutationReceipt(r.Context(), s.db, actor.ID, idempotencyKey)
+	receipt, err := cart.FindMutationReceiptWithOutcome(r.Context(), s.db, actor.ID, idempotencyKey)
+	if errors.Is(err, cart.ErrMutationOutcomeUnknown) {
+		store.SendError(w, http.StatusConflict, "CART_MUTATION_OUTCOME_UNKNOWN", "mutation outcome is preserved for reconciliation and cannot be replayed safely; refresh canonical cart state before taking further action")
+		return
+	}
 	if errors.Is(err, cart.ErrMutationReceiptNotFound) {
 		store.SendError(w, http.StatusNotFound, "MUTATION_NOT_COMMITTED", "no committed cart mutation receipt exists for this actor and key")
 		return
@@ -344,6 +348,10 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		DeviceID:       strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id")),
 		SessionID:      strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id")),
 	})
+	if errors.Is(err, cart.ErrMutationOutcomeUnknown) {
+		store.SendError(w, http.StatusConflict, "CART_MUTATION_OUTCOME_UNKNOWN", "mutation outcome is preserved for reconciliation and cannot be replayed safely; refresh canonical cart state before taking further action")
+		return
+	}
 	if errors.Is(err, cart.ErrStoreConflict) {
 		conflict := &cart.StoreConflictError{}
 		if errors.As(err, &conflict) {
@@ -414,7 +422,10 @@ func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *ht
 		DeviceID:       strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id")),
 		SessionID:      strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id")),
 	})
-	if errors.Is(err, cart.ErrIdempotencyConflict) {
+	if errors.Is(err, cart.ErrMutationOutcomeUnknown) {
+		store.SendError(w, http.StatusConflict, "CART_MUTATION_OUTCOME_UNKNOWN", "mutation outcome is preserved for reconciliation and cannot be replayed safely; refresh canonical cart state before taking further action")
+		return
+	} else if errors.Is(err, cart.ErrIdempotencyConflict) {
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different cart mutation")
 		return
 	} else if errors.Is(err, cart.ErrNotFound) {
@@ -466,7 +477,10 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 		DeviceID:       strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id")),
 		SessionID:      strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id")),
 	})
-	if errors.Is(err, cart.ErrIdempotencyConflict) {
+	if errors.Is(err, cart.ErrMutationOutcomeUnknown) {
+		store.SendError(w, http.StatusConflict, "CART_MUTATION_OUTCOME_UNKNOWN", "mutation outcome is preserved for reconciliation and cannot be replayed safely; refresh canonical cart state before taking further action")
+		return
+	} else if errors.Is(err, cart.ErrIdempotencyConflict) {
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different cart mutation")
 		return
 	} else if errors.Is(err, cart.ErrNotFound) {

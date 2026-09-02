@@ -549,26 +549,33 @@
       "historicalPrefix": "1077",
       "state": "ACTIVE"
     },
-  {
-    "ordinal": 319,
-    "file": "dsh-1078_operational_sla_stage_policy.sql",
-    "sha256": "5fef9a6fb6688b2570f008a73bfc5684d2bfe1c6b8cda9d51c1ca24246edd65e",
-    "historicalPrefix": "1078",
-    "state": "ACTIVE"
-  },
-  {
-    "ordinal": 320,
-    "file": "dsh-1079_push_delivery_unknown_outcome.sql",
-    "sha256": "7ab458f637b31e8cc9fe1d7bb0d2a61939f588ba3a20613cc13b3a079531c152",
-    "historicalPrefix": "1079",
-    "state": "ACTIVE"
-  },
-  {
-    "ordinal": 321,
-    "file": "dsh-1080_client_profile_preferences_domain.sql",
-    "sha256": "62ee9f409864d3e919033d8bb05082733eaace584e3db5e99e0dd1ae0ce82446",
-    "historicalPrefix": "1080",
-    "state": "ACTIVE"
-  }
-]
+    {
+      "ordinal": 319,
+      "file": "dsh-1078_operational_sla_stage_policy.sql",
+      "sha256": "5fef9a6fb6688b2570f008a73bfc5684d2bfe1c6b8cda9d51c1ca24246edd65e",
+      "historicalPrefix": "1078",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 320,
+      "file": "dsh-1079_push_delivery_unknown_outcome.sql",
+      "sha256": "7ab458f637b31e8cc9fe1d7bb0d2a61939f588ba3a20613cc13b3a079531c152",
+      "historicalPrefix": "1079",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 321,
+      "file": "dsh-1080_client_profile_preferences_domain.sql",
+      "sha256": "62ee9f409864d3e919033d8bb05082733eaace584e3db5e99e0dd1ae0ce82446",
+      "historicalPrefix": "1080",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 322,
+      "file": "dsh-1081_cart_mutation_receipt_invariant_closure.sql",
+      "sha256": "e5c84b884e1607dacdca885a8563f97fbee69fe620423adfafab914de8167d52",
+      "historicalPrefix": "1081",
+      "state": "ACTIVE"
+    }
+  ]
 }
