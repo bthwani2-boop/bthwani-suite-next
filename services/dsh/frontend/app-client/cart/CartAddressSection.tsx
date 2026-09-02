@@ -97,6 +97,7 @@ export function CartAddressSection({
   selectedAddress,
   cart,
   storeId,
+  fulfillmentMode,
   serviceabilityState,
   onManageAddresses,
   onCheckServiceability,
@@ -105,6 +106,7 @@ export function CartAddressSection({
   readonly selectedAddress: DshClientAddress | null;
   readonly cart: DshCart | null;
   readonly storeId: string;
+  readonly fulfillmentMode: DshCart["fulfillmentMode"];
   readonly serviceabilityState: DshServiceabilityState;
   readonly onManageAddresses?: (() => void) | undefined;
   readonly onCheckServiceability: (storeId: string, addressId: string, mode: DshCart["fulfillmentMode"]) => void;
@@ -112,7 +114,7 @@ export function CartAddressSection({
   if (!requiresDeliveryAddress) {
     return (
       <Surface tone="default" style={styles.section}>
-        <Text role="bodyStrong" style={styles.sectionTitle}>الاستلام الذاتي</Text>
+        <Text role="bodyStrong" style={styles.sectionTitle}>استلم بنفسك</Text>
         <Text role="caption" style={styles.mutedText}>
           لا يلزم عنوان تسليم؛ يمكنك استلام الطلب مباشرة من المتجر.
         </Text>
@@ -153,7 +155,7 @@ export function CartAddressSection({
               onPress={() => onCheckServiceability(
                 storeId,
                 selectedAddress.id,
-                cart.fulfillmentMode,
+                fulfillmentMode,
               )}
             />
           ) : null}

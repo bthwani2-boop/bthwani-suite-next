@@ -57,7 +57,7 @@ func (s *Service) raiseExceptionWithEvidence(ctx context.Context, operatorContex
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := GetForUpdateForOperatorContext(tx, operatorContextID, taskID)
 	if err != nil {
@@ -87,7 +87,7 @@ func (s *Service) raiseExceptionWithEvidence(ctx context.Context, operatorContex
 	if n, _ := res.RowsAffected(); n == 0 {
 		return nil, ErrVersionConflict
 	}
-	updated, err := scanTask(tx.QueryRow(`SELECT `+taskColumnsPrefixed+` FROM dsh_partner_delivery_tasks t JOIN dsh_orders o ON o.id=t.order_id WHERE t.id = $1 AND o.operator_context_id = $2`, taskID, operatorContextID).Scan)
+	updated, err := scanTask(tx.QueryRow(taskByIDForOperatorContextSQL, taskID, operatorContextID).Scan)
 	if err != nil {
 		return nil, err
 	}

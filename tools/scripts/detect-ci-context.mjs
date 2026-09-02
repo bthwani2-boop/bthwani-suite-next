@@ -92,7 +92,7 @@ export function deriveClosureRequiredClaims(classification) {
     "analysis:codeql",
     "analysis:semgrep",
     "security:remote",
-    "analysis:opencodereview",
+    "analysis:opencodereview-context",
     classification.rendered_web_required === true ? "experience:rendered-web-baseline" : "",
     classification.rendered_web_required === true ? "experience:rendered-web-attestation" : "",
     classification.mobile_evidence_required === true ? "experience:mobile-device" : "",

@@ -161,7 +161,7 @@ func CreateGovernedIncident(db *sql.DB, input GovernedIncidentCreateInput) (Inci
 	if err != nil {
 		return Incident{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.ActorID, idempotencyKey); err != nil {
 		return Incident{}, err
 	}
@@ -248,7 +248,7 @@ func UpdateGovernedIncident(db *sql.DB, input GovernedIncidentTransitionInput) (
 	if err != nil {
 		return Incident{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.IncidentID, idempotencyKey); err != nil {
 		return Incident{}, err
 	}
@@ -373,7 +373,7 @@ func ListIncidentEvents(db *sql.DB, incidentID string, limit int) ([]IncidentEve
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	items := make([]IncidentEvent, 0)
 	for rows.Next() {

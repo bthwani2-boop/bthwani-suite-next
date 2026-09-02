@@ -25,7 +25,7 @@ type Person struct {
 }
 
 type FieldProfile struct {
-	CityCode              string   `json:"cityCode,omitempty"`
+	ServiceAreaCode       string   `json:"serviceAreaCode,omitempty"`
 	ServiceZoneID         string   `json:"serviceZoneId,omitempty"`
 	SupervisorActorID     string   `json:"supervisorActorId,omitempty"`
 	EmergencyContactName  string   `json:"emergencyContactName,omitempty"`
@@ -36,15 +36,15 @@ type FieldProfile struct {
 }
 
 type CaptainProfile struct {
-	VehicleType        string   `json:"vehicleType,omitempty"`
-	VehicleIdentifier  string   `json:"vehicleIdentifier,omitempty"`
-	LicenseStatus      string   `json:"licenseStatus,omitempty"`
-	LicenseExpiresAt   string   `json:"licenseExpiresAt,omitempty"`
-	OperatingCityCode  string   `json:"operatingCityCode,omitempty"`
-	ServiceZoneID      string   `json:"serviceZoneId,omitempty"`
-	OperatingScopeCode string   `json:"operatingScopeCode,omitempty"`
-	SupervisorActorID  string   `json:"supervisorActorId,omitempty"`
-	DocumentMediaRefs  []string `json:"documentMediaRefs"`
+	VehicleType              string   `json:"vehicleType,omitempty"`
+	VehicleIdentifier        string   `json:"vehicleIdentifier,omitempty"`
+	LicenseStatus            string   `json:"licenseStatus,omitempty"`
+	LicenseExpiresAt         string   `json:"licenseExpiresAt,omitempty"`
+	OperatingServiceAreaCode string   `json:"operatingServiceAreaCode,omitempty"`
+	ServiceZoneID            string   `json:"serviceZoneId,omitempty"`
+	OperatingScopeCode       string   `json:"operatingScopeCode,omitempty"`
+	SupervisorActorID        string   `json:"supervisorActorId,omitempty"`
+	DocumentMediaRefs        []string `json:"documentMediaRefs"`
 }
 
 type EmployeeProfile struct {
@@ -161,19 +161,12 @@ type MeView struct {
 }
 
 type ListFilter struct {
-	Status        string
-	CityCode      string
-	Query         string
-	WorkforceKind string
-	Limit         int
-	Offset        int
-}
-
-type City struct {
-	Code   string `json:"code"`
-	NameAr string `json:"nameAr"`
-	NameEn string `json:"nameEn,omitempty"`
-	Active bool   `json:"active"`
+	Status          string
+	ServiceAreaCode string
+	Query           string
+	WorkforceKind   string
+	Limit           int
+	Offset          int
 }
 
 // Shift reference data remains available only for employee workflows.

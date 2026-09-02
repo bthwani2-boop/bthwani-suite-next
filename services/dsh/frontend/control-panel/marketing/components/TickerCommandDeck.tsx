@@ -79,7 +79,7 @@ export function TickerCommandDeck() {
                     {item.priority === "critical" ? "حرج" : item.priority === "high" ? "مرتفع" : "عادي"}
                   </CpTableCell>
                   <CpTableCell>
-                    <span style={{ color: item.status === "published" ? colorRoles.brandStructure : colorRoles.brandStructure, opacity: item.status === "published" ? 1 : 0.6 }}>
+                    <span style={{ color: colorRoles.brandStructure, opacity: item.status === "published" ? 1 : 0.6 }}>
                       {item.status === "published" ? "نشط" : "موقوف"}
                     </span>
                   </CpTableCell>

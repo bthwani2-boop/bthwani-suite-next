@@ -22,20 +22,21 @@ type DeliveryAttempt struct {
 }
 
 type PushDeliveryAudit struct {
-	ID                string     `json:"id"`
-	NotificationID    string     `json:"notificationId"`
-	ActorID           string     `json:"actorId"`
-	ActorType         string     `json:"actorType"`
-	Topic             string     `json:"topic"`
-	Status            string     `json:"status"`
-	AttemptCount      int        `json:"attemptCount"`
-	NextRetryAt       time.Time  `json:"nextRetryAt"`
-	ProviderMessageID string     `json:"providerMessageId"`
-	LastError         string     `json:"lastError"`
-	SentAt           *time.Time `json:"sentAt,omitempty"`
-	FailedAt         *time.Time `json:"failedAt,omitempty"`
-	CreatedAt        time.Time  `json:"createdAt"`
-	UpdatedAt        time.Time  `json:"updatedAt"`
+	ID                     string     `json:"id"`
+	NotificationID         string     `json:"notificationId"`
+	ActorID                string     `json:"actorId"`
+	ActorType              string     `json:"actorType"`
+	Topic                  string     `json:"topic"`
+	Status                 string     `json:"status"`
+	AttemptCount           int        `json:"attemptCount"`
+	NextRetryAt            time.Time  `json:"nextRetryAt"`
+	ProviderIdempotencyKey string     `json:"providerIdempotencyKey"`
+	ProviderMessageID      string     `json:"providerMessageId"`
+	LastError              string     `json:"lastError"`
+	SentAt                 *time.Time `json:"sentAt,omitempty"`
+	FailedAt               *time.Time `json:"failedAt,omitempty"`
+	CreatedAt              time.Time  `json:"createdAt"`
+	UpdatedAt              time.Time  `json:"updatedAt"`
 }
 
 type DeliveryAuditSummary struct {
@@ -44,13 +45,10 @@ type DeliveryAuditSummary struct {
 	DeadLetter     int `json:"deadLetter"`
 	PendingOutbox  int `json:"pendingOutbox"`
 	FailedOutbox   int `json:"failedOutbox"`
-	QueuedPush     int `json:"queuedPush"`
 	SentPush       int `json:"sentPush"`
-	DeliveredPush  int `json:"deliveredPush"`
+	PendingPush    int `json:"pendingPush"`
+	UnknownPush    int `json:"unknownPush"`
 	FailedPush     int `json:"failedPush"`
-	RetryingPush   int `json:"retryingPush"`
-	DeadPush       int `json:"deadPush"`
-	SuppressedPush int `json:"suppressedPush"`
 }
 
 func validDeliveryOutcome(value string) bool {
@@ -98,7 +96,7 @@ func ListDeliveryAttempts(db *sql.DB, outcome string, limit int) ([]DeliveryAtte
 	if err != nil {
 		return nil, DeliveryAuditSummary{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]DeliveryAttempt, 0)
 	for rows.Next() {
 		var item DeliveryAttempt
@@ -149,22 +147,16 @@ func ListDeliveryAttempts(db *sql.DB, outcome string, limit int) ([]DeliveryAtte
 	}
 	if err := db.QueryRow(`
 		SELECT
-			COUNT(*) FILTER (WHERE status = 'queued'),
 			COUNT(*) FILTER (WHERE status = 'sent'),
-			COUNT(*) FILTER (WHERE status = 'delivered'),
-			COUNT(*) FILTER (WHERE status = 'failed'),
-			COUNT(*) FILTER (WHERE status = 'retrying'),
-			COUNT(*) FILTER (WHERE status = 'dead'),
-			COUNT(*) FILTER (WHERE status = 'suppressed')
+			COUNT(*) FILTER (WHERE status IN ('pending', 'sending')),
+			COUNT(*) FILTER (WHERE status = 'unknown'),
+			COUNT(*) FILTER (WHERE status = 'failed')
 		FROM dsh_notification_channel_deliveries
 		WHERE channel = 'push'`).Scan(
-		&summary.QueuedPush,
 		&summary.SentPush,
-		&summary.DeliveredPush,
+		&summary.PendingPush,
+		&summary.UnknownPush,
 		&summary.FailedPush,
-		&summary.RetryingPush,
-		&summary.DeadPush,
-		&summary.SuppressedPush,
 	); err != nil {
 		return nil, DeliveryAuditSummary{}, err
 	}
@@ -187,6 +179,7 @@ func ListPushDeliveryAudit(db *sql.DB, limit int) ([]PushDeliveryAudit, error) {
 		       d.status,
 		       d.attempt_count,
 		       d.next_retry_at,
+		       COALESCE(d.provider_idempotency_key, ''),
 		       COALESCE(d.provider_message_id, ''),
 		       COALESCE(d.last_error, ''),
 		       d.sent_at,
@@ -201,7 +194,7 @@ func ListPushDeliveryAudit(db *sql.DB, limit int) ([]PushDeliveryAudit, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]PushDeliveryAudit, 0)
 	for rows.Next() {
 		var item PushDeliveryAudit
@@ -214,6 +207,7 @@ func ListPushDeliveryAudit(db *sql.DB, limit int) ([]PushDeliveryAudit, error) {
 			&item.Status,
 			&item.AttemptCount,
 			&item.NextRetryAt,
+			&item.ProviderIdempotencyKey,
 			&item.ProviderMessageID,
 			&item.LastError,
 			&item.SentAt,

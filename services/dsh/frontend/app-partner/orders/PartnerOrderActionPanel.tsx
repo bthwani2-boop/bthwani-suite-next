@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge, Box, Button, ListItem, SectionHeader, Surface, Text } from '@bthwani/ui-kit';
-import type { DshPartnerPreparationStage } from '../../shared/orders/orders.state-machine';
 import type { DshFulfillmentDeliveryMode } from '../../shared/delivery';
+import type { DshOrderStatus } from '../../shared/orders/orders.types';
 import { PartnerFulfillmentActionsPanel } from './PartnerFulfillmentActionsPanel';
 import type { PartnerTeamMember } from '../team/partner-team.types';
 
@@ -31,14 +31,23 @@ export type PartnerOrderActionFlowId =
   | 'order-out-for-delivery'
   | 'order-store-delivered';
 
-const ORDER_ACTION_ITEMS: Array<DshPartnerPreparationStage & { id: PartnerOrderActionFlowId }> = [
-  { id: 'order-accept', title: 'قبول الطلب', subtitle: 'ثبّت قبول الطلب ثم انقل الفريق إلى التحضير.', badgeLabel: 'قبول', lifecycleStatus: 'partner_accepted', prerequisiteStatus: 'operations_approved' },
-  { id: 'order-get', title: 'استلام الطلب', subtitle: 'أكد استلام الطلب داخل الفرع قبل نقله إلى handoff أو المسار التالي.', badgeLabel: 'استلام', lifecycleStatus: 'partner_accepted', prerequisiteStatus: 'operations_approved' },
-  { id: 'order-prepare', title: 'تحضير الطلب', subtitle: 'تابع التجهيز قبل الانتقال إلى الجاهزية.', badgeLabel: 'تحضير', lifecycleStatus: 'preparing', prerequisiteStatus: 'order_received' },
-  { id: 'order-ready', title: 'تأكيد الجاهزية', subtitle: 'أعلن أن الطلب جاهز للتسليم من الفرع.', badgeLabel: 'جاهز', lifecycleStatus: 'ready_for_pickup' },
-  { id: 'order-handoff', title: 'تسليم للمندوب', subtitle: 'ثبّت التسليم عند اكتمال التغليف والتحقق.', badgeLabel: 'تسليم', lifecycleStatus: 'picked_up' },
-  { id: 'order-out-for-delivery', title: 'خرج للتوصيل', subtitle: 'تابع الحالة بعد مغادرة الطلب من الفرع.', badgeLabel: 'مسار', lifecycleStatus: 'enroute_to_dropoff' },
-  { id: 'order-store-delivered', title: 'تسليم داخل المتجر', subtitle: 'أغلق حالة الاستلام عندما يكون الفرع هو نقطة التسليم.', badgeLabel: 'إغلاق', lifecycleStatus: 'delivered' },
+type PartnerOrderActionItem = {
+  readonly id: PartnerOrderActionFlowId;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly badgeLabel: string;
+  readonly canonicalStatus: DshOrderStatus;
+  readonly prerequisiteStatus?: DshOrderStatus;
+};
+
+const ORDER_ACTION_ITEMS: readonly PartnerOrderActionItem[] = [
+  { id: 'order-accept', title: 'قبول الطلب', subtitle: 'ثبّت قبول الطلب ثم انقل الفريق إلى التحضير.', badgeLabel: 'قبول', canonicalStatus: 'store_accepted', prerequisiteStatus: 'pending' },
+  { id: 'order-get', title: 'استلام الطلب', subtitle: 'أكد استلام الطلب داخل الفرع قبل نقله إلى handoff أو المسار التالي.', badgeLabel: 'استلام', canonicalStatus: 'store_accepted', prerequisiteStatus: 'pending' },
+  { id: 'order-prepare', title: 'تحضير الطلب', subtitle: 'تابع التجهيز قبل الانتقال إلى الجاهزية.', badgeLabel: 'تحضير', canonicalStatus: 'preparing', prerequisiteStatus: 'store_accepted' },
+  { id: 'order-ready', title: 'تأكيد الجاهزية', subtitle: 'أعلن أن الطلب جاهز للتسليم من الفرع.', badgeLabel: 'جاهز', canonicalStatus: 'ready_for_pickup' },
+  { id: 'order-handoff', title: 'تسليم للمندوب', subtitle: 'ثبّت التسليم عند اكتمال التغليف والتحقق.', badgeLabel: 'تسليم', canonicalStatus: 'store_handoff_confirmed' },
+  { id: 'order-out-for-delivery', title: 'خرج للتوصيل', subtitle: 'تابع الحالة بعد مغادرة الطلب من الفرع.', badgeLabel: 'مسار', canonicalStatus: 'picked_up' },
+  { id: 'order-store-delivered', title: 'تسليم داخل المتجر', subtitle: 'أغلق حالة الاستلام عندما يكون الفرع هو نقطة التسليم.', badgeLabel: 'إغلاق', canonicalStatus: 'delivered' },
 ];
 
 export type DshPartnerOrderActionPanelProps = {
@@ -89,7 +98,7 @@ export function DshPartnerOrderActionPanel({ activeFlowId, fulfillmentMode, orde
           <ListItem
             key={item.id}
             title={item.title}
-            subtitle={`${item.subtitle} — الحالة: ${item.lifecycleStatus}${item.prerequisiteStatus ? ` — يبدأ بعد: ${item.prerequisiteStatus}` : ''}`}
+            subtitle={`${item.subtitle} — الحالة المرجعية: ${item.canonicalStatus}${item.prerequisiteStatus ? ` — يبدأ بعد: ${item.prerequisiteStatus}` : ''}`}
             trailing={<Badge label={item.badgeLabel} tone="neutral" />}
             meta={activeFlowId === item.id ? 'المسار النشط' : 'افتح المسار'}
             onPress={() => onSelectFlow?.(item.id as PartnerOrderActionFlowId)}

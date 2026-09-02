@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -74,7 +73,7 @@ type FinancialRailRouter struct {
 // environments without a wlt_financial_providers table (e.g., local mock), but
 // production deployments MUST supply a registry to enforce active/maintenance/timeout checks.
 func NewFinancialRailRouter(registry *Registry, environment string) (*FinancialRailRouter, error) {
-	config, err := loadInternalConfig()
+	config, err := LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -108,44 +107,6 @@ func NewFinancialRailRouter(registry *Registry, environment string) (*FinancialR
 		timeoutBudget: timeoutBudget,
 	}, nil
 }
-
-// loadInternalConfig loads provider configuration from environment.
-// This is internal to the financial rail authority; consumers MUST NOT call this.
-func loadInternalConfig() (Config, error) {
-	mode := Mode(strings.TrimSpace(os.Getenv("WLT_FINANCIAL_PROVIDER_MODE")))
-	if mode == "" {
-		return Config{}, fmt.Errorf("WLT_FINANCIAL_PROVIDER_MODE is required; select mock only for explicit local simulation or sandbox for approved provider verification")
-	}
-	if mode != ModeMock && mode != ModeSandbox && mode != ModeProduction {
-		return Config{}, fmt.Errorf("unsupported WLT_FINANCIAL_PROVIDER_MODE: %s", mode)
-	}
-	if mode == ModeProduction {
-		return Config{}, fmt.Errorf("%w: WLT_FINANCIAL_PROVIDER_MODE=production is blocked until a real provider adapter, secret reference, inquiry, webhook verification, reconciliation, and independent release approvals are implemented", ErrProductionProviderUnavailable)
-	}
-	if mode == ModeMock && strings.TrimSpace(os.Getenv("WLT_ALLOW_MOCK_PROVIDER")) != "true" {
-		return Config{}, fmt.Errorf("mock payment provider is disabled; set WLT_ALLOW_MOCK_PROVIDER=true only for an explicit local simulation")
-	}
-
-	baseURL := strings.TrimSpace(os.Getenv("WLT_FINANCIAL_PROVIDER_BASE_URL"))
-	if baseURL == "" {
-		if mode == ModeMock {
-			baseURL = "http://wiremock-financial-provider:8080"
-		} else {
-			return Config{}, fmt.Errorf("WLT_FINANCIAL_PROVIDER_BASE_URL is required for sandbox mode")
-		}
-	}
-
-	// Default timeout budget (can be overridden by registry)
-	timeoutBudget := 15 * time.Second
-	if tb := strings.TrimSpace(os.Getenv("WLT_FINANCIAL_PROVIDER_TIMEOUT_MS")); tb != "" {
-		if ms, err := time.ParseDuration(tb + "ms"); err == nil {
-			timeoutBudget = ms
-		}
-	}
-
-	return Config{Mode: mode, BaseURL: baseURL, TimeoutBudget: timeoutBudget}, nil
-}
-
 func (r *FinancialRailRouter) checkActive(ctx context.Context, capability Capability) error {
 	if r.registry == nil {
 		// Fail closed: a rail without the provider registry authority would let

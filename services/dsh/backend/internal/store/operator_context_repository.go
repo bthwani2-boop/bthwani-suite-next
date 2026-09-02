@@ -60,7 +60,7 @@ func ListAllStoresForOperatorContext(db *sql.DB, operatorContextID string, q Dsh
 	if err != nil {
 		return DshStoreListResult{}, fmt.Errorf("failed to query OperatorContext stores: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	stores := make([]DshStoreSummary, 0)
 	for rows.Next() {
@@ -174,7 +174,7 @@ func CreateStoreForOperatorContextIdempotent(
 	if err != nil {
 		return DshStoreRow{}, false, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var replayHash string
 	var replayJSON []byte

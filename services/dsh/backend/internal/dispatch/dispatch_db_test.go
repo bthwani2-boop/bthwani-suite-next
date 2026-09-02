@@ -113,6 +113,8 @@ func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) 
 	}
 
 	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_dispatch_decisions WHERE order_id = $1::uuid`, orderID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_order_event_outbox WHERE order_id = $1::uuid`, orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_orders WHERE id = $1::uuid`, orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_checkout_intents WHERE id = $1::uuid`, checkoutIntentID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_carts WHERE id = $1::uuid`, cartID)

@@ -1,6 +1,6 @@
 import type { DshPartner, DshPartnerSummary, DshPartnerReadiness } from "./partner.types";
 import type { DshPartnerActivationStatus } from "./partner-activation.model";
-import { getDshPartnerActivationStatusLabel, getDshPartnerActivationStateMetadata, getDshPartnerReadinessChecklist } from "./partner-activation.model";
+import { getDshPartnerActivationStatusLabel, getDshPartnerActivationStateMetadata } from "./partner-activation.model";
 
 const BUSINESS_VERTICAL_LABELS: Readonly<Record<string, string>> = {
   "domain-restaurants": "مطاعم",
@@ -64,7 +64,6 @@ export type DshPartnerDetailViewModel = {
   readonly canDeactivate: boolean;
   readonly canReject: boolean;
   readonly isClientVisible: boolean;
-  readonly checklist: readonly { id: string; label: string; satisfied: boolean; blockedReason?: string | undefined }[];
 };
 
 export type DshPartnerReadinessViewModel = {
@@ -125,7 +124,8 @@ export function buildPartnerListRowViewModel(p: DshPartnerSummary | DshPartner):
 export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailViewModel {
   const status = p.activationStatus;
   const meta = getDshPartnerActivationStateMetadata(status);
-  const checklist = getDshPartnerReadinessChecklist(status);
+  const allowedActions = p.allowedActions ?? [];
+  const allowedTransitions = p.allowedTransitions ?? [];
   return {
     id: p.id,
     displayName: p.displayName,
@@ -147,12 +147,11 @@ export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailView
     blockedReason: meta?.blockedReason ?? "",
     rejectionReason: "", // backend maps rejection reason inside audit/events or notes
     auditRequired: meta?.auditRequired ?? false,
-    allowedNextStatuses: meta?.allowedNextStatuses ?? [],
-    canActivate: meta?.allowedNextStatuses.includes("partner_active") ?? false,
-    canDeactivate: meta?.allowedNextStatuses.includes("partner_terminated") ?? false,
-    canReject: meta?.allowedNextStatuses.includes("ops_rejected") ?? false,
+    allowedNextStatuses: allowedTransitions,
+    canActivate: allowedActions.includes("activate_partner"),
+    canDeactivate: allowedActions.includes("terminate_partner"),
+    canReject: allowedActions.includes("reject_partner"),
     isClientVisible: status === "client_visible",
-    checklist: checklist.map(c => ({ ...c })),
   };
 }
 

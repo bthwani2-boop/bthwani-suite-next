@@ -58,8 +58,14 @@ type WorkspaceState =
       readonly kind: 'ready';
       readonly readiness: readonly DshReadinessEscalation[];
       readonly delivery: readonly DshDeliveryException[];
-      readonly returns: readonly DshDeliveryException[];
+      readonly returns: readonly OrderDeliveryException[];
     };
+
+type OrderDeliveryException = DshDeliveryException & { readonly orderId: string };
+
+function isOrderDeliveryException(item: DshDeliveryException): item is OrderDeliveryException {
+  return Boolean(item.orderId);
+}
 
 type ActionState =
   | { readonly kind: 'idle' }
@@ -126,6 +132,10 @@ function canReturnToStore(item: DshDeliveryException): boolean {
     || item.deliveryStatusAtReport === 'arrived_customer';
 }
 
+function canCancelOrder(item: DshDeliveryException): boolean {
+  return isOrderDeliveryException(item) && canReassign(item);
+}
+
 const PAGE_TITLE = 'الاستثناءات والتصعيدات';
 
 export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsScreenProps) {
@@ -156,7 +166,9 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
         fetchOperatorDeliveryExceptions('acknowledged'),
         fetchOperatorDeliveryExceptions('resolved'),
       ]);
-      const returns = resolved.filter((item) => item.resolutionAction === 'return_to_store');
+      const returns = resolved.filter(
+        (item): item is OrderDeliveryException => item.resolutionAction === 'return_to_store' && isOrderDeliveryException(item),
+      );
       const cancellationEntries = await Promise.all(returns.map(async (item) => {
         try {
           return [item.orderId, await fetchOrderCancellation('operator', item.orderId)] as const;
@@ -296,7 +308,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     }
   }, [actorId, canManageOperations, load]);
 
-  const cancelReturnedOrder = React.useCallback(async (item: DshDeliveryException) => {
+  const cancelReturnedOrder = React.useCallback(async (item: OrderDeliveryException) => {
     if (!canManageOperations) {
       setActionState({ kind: 'error', id: item.id, message: 'هذه الجلسة للقراءة فقط ولا تملك صلاحية operations.manage.' });
       return;
@@ -511,7 +523,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
               حل: إعادة الإسناد للكابتن البديل
             </CpButton>
           ) : null}
-          {canManageOperations && selectedDelivery.status === 'acknowledged' && canReassign(selectedDelivery) ? (
+          {canManageOperations && selectedDelivery.status === 'acknowledged' && canCancelOrder(selectedDelivery) ? (
             <CpButton
               variant="danger"
               disabled={actionState.kind === 'submitting'}
@@ -705,7 +717,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
                     <Text role="bodyStrong" align="start">{DELIVERY_EXCEPTION_REASON_LABELS[item.reasonCode]}</Text>
                     <Text role="caption" tone="muted" align="start">
-                      الطلب: {item.orderId} · الكابتن: {item.captainId}
+                      {item.orderId ? `الطلب: ${item.orderId}` : `الطلب الخاص: ${item.specialRequestId ?? 'غير معروف'}`} · الكابتن: {item.captainId}
                     </Text>
                     <Text role="caption" tone="muted" align="start">
                       المرحلة المحفوظة: {item.deliveryStatusAtReport}
@@ -731,12 +743,18 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                   >
                     فتح القرار
                   </CpButton>
-                  <CpButton
-                    variant="ghost"
-                    onClick={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))}
-                  >
-                    فتح الطلب الحي
-                  </CpButton>
+                   {item.orderId ? (
+                     <CpButton
+                       variant="ghost"
+                       onClick={() => {
+                         if (item.orderId) {
+                           router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }));
+                         }
+                       }}
+                     >
+                       فتح الطلب الحي
+                     </CpButton>
+                   ) : null}
                 </div>
               </Card>
             ))}

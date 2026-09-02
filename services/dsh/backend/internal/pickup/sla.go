@@ -1,17 +1,24 @@
 package pickup
 
-import "time"
+import (
+	"context"
+	"database/sql"
+	"time"
+
+	"dsh-api/internal/platformpolicies"
+)
 
 // SLAState classifies how a pickup session's current leg is tracking
-// against its threshold. Mirrors orders.PreparationSLAState.
-type SLAState string
+// against its threshold. The state vocabulary is shared across DSH SLA
+// projections; pickup owns only its distinct leg vocabulary.
+type SLAState = platformpolicies.SLAState
 
 const (
-	SLANotStarted SLAState = "not_started"
-	SLAOnTrack    SLAState = "on_track"
-	SLADueSoon    SLAState = "due_soon"
-	SLAOverdue    SLAState = "overdue"
-	SLAClosed     SLAState = "closed"
+	SLANotStarted = platformpolicies.SLANotStarted
+	SLAOnTrack    = platformpolicies.SLAOnTrack
+	SLADueSoon    = platformpolicies.SLADueSoon
+	SLAOverdue    = platformpolicies.SLAOverdue
+	SLAClosed     = platformpolicies.SLAClosed
 )
 
 // SLALeg names which handoff the session is currently in.
@@ -24,8 +31,8 @@ const (
 	SLALegAwaitingVerify  SLALeg = "arrived_to_verify"
 )
 
-// SLAThresholds bounds how long each pickup leg may run before it is
-// flagged due_soon/overdue. Global constants for now.
+// SLAThresholds is the pickup projection of the governed operational SLA
+// policy. It contains no default values; callers must load it from policy.
 type SLAThresholds struct {
 	AwaitingNotify  time.Duration
 	NotifyToArrival time.Duration
@@ -33,13 +40,17 @@ type SLAThresholds struct {
 	WarningBefore   time.Duration
 }
 
-func DefaultSLAThresholds() SLAThresholds {
-	return SLAThresholds{
-		AwaitingNotify:  10 * time.Minute,
-		NotifyToArrival: 60 * time.Minute,
-		ArrivalToVerify: 10 * time.Minute,
-		WarningBefore:   5 * time.Minute,
+func GetSLAThresholds(ctx context.Context, db *sql.DB, storeID string) (SLAThresholds, error) {
+	policy, err := platformpolicies.GetOperationalSLAForStore(ctx, db, storeID, "default")
+	if err != nil {
+		return SLAThresholds{}, err
 	}
+	return SLAThresholds{
+		AwaitingNotify:  time.Duration(policy.PickupNotifyMins) * time.Minute,
+		NotifyToArrival: time.Duration(policy.PickupArrivalMins) * time.Minute,
+		ArrivalToVerify: time.Duration(policy.PickupVerifyMins) * time.Minute,
+		WarningBefore:   time.Duration(policy.WarningBeforeMins) * time.Minute,
+	}, nil
 }
 
 // SLA is the volatile, computed-on-read SLA projection for a pickup session.

@@ -125,12 +125,12 @@ const personSelect = `
 	SELECT p.actor_id, p.operator_context_id, p.full_name_ar, COALESCE(p.full_name_en, ''), p.workforce_code, p.workforce_kind,
 	       p.engagement_type, COALESCE(p.engagement_start_date::text, ''), p.engagement_status,
 	       COALESCE(p.photo_media_ref, ''), p.version, p.created_at, p.updated_at,
-	       COALESCE(f.city_code, ''), COALESCE(f.service_zone_id, ''), COALESCE(f.supervisor_actor_id, ''),
+	       COALESCE(f.service_area_code, ''), COALESCE(f.service_zone_id, ''), COALESCE(f.supervisor_actor_id, ''),
 	       COALESCE(f.emergency_contact_name, ''), COALESCE(f.emergency_contact_phone, ''),
 	       COALESCE(f.preferred_language, ''), COALESCE(f.policy_consent_at::text, ''),
 	       COALESCE(f.document_media_refs, '[]'::jsonb), f.actor_id IS NOT NULL,
 	       COALESCE(c.vehicle_type, ''), COALESCE(c.vehicle_identifier, ''), COALESCE(c.license_status, ''),
-	       COALESCE(c.license_expires_at::text, ''), COALESCE(c.operating_city_code, ''), COALESCE(c.service_zone_id, ''),
+	       COALESCE(c.license_expires_at::text, ''), COALESCE(c.operating_service_area_code, ''), COALESCE(c.service_zone_id, ''),
 	       COALESCE(c.operating_scope_code, ''), COALESCE(c.supervisor_actor_id, ''),
 	       COALESCE(c.document_media_refs, '[]'::jsonb), c.actor_id IS NOT NULL,
 	       COALESCE(e.department, ''), COALESCE(e.role, ''), COALESCE(e.supervisor_actor_id, ''), COALESCE(e.office_location, ''),
@@ -157,11 +157,11 @@ func scanPerson(row rowScanner) (Person, error) {
 		&person.ActorID, &person.OperatorContextID, &person.FullNameAr, &person.FullNameEn, &person.WorkforceCode, &person.WorkforceKind,
 		&person.EngagementType, &person.EngagementStartDate, &person.EngagementStatus,
 		&person.PhotoMediaRef, &person.Version, &person.CreatedAt, &person.UpdatedAt,
-		&profile.CityCode, &profile.ServiceZoneID, &profile.SupervisorActorID,
+		&profile.ServiceAreaCode, &profile.ServiceZoneID, &profile.SupervisorActorID,
 		&profile.EmergencyContactName, &profile.EmergencyContactPhone,
 		&profile.PreferredLanguage, &profile.PolicyConsentAt, &documentsJSON, &hasFieldProfile,
 		&captainProfile.VehicleType, &captainProfile.VehicleIdentifier, &captainProfile.LicenseStatus,
-		&captainProfile.LicenseExpiresAt, &captainProfile.OperatingCityCode, &captainProfile.ServiceZoneID,
+		&captainProfile.LicenseExpiresAt, &captainProfile.OperatingServiceAreaCode, &captainProfile.ServiceZoneID,
 		&captainProfile.OperatingScopeCode, &captainProfile.SupervisorActorID, &captainDocumentsJSON, &hasCaptainProfile,
 		&employeeProfile.Department, &employeeProfile.Role, &employeeProfile.SupervisorActorID, &employeeProfile.OfficeLocation,
 		&employeeDocumentsJSON, &hasEmployeeProfile,
@@ -213,9 +213,9 @@ func (r *Repository) ListPeople(ctx context.Context, filter ListFilter) ([]Perso
 		args = append(args, filter.Status)
 		clauses = append(clauses, fmt.Sprintf("p.engagement_status = $%d", len(args)))
 	}
-	if filter.CityCode != "" {
-		args = append(args, filter.CityCode)
-		clauses = append(clauses, fmt.Sprintf("f.city_code = $%d", len(args)))
+	if filter.ServiceAreaCode != "" {
+		args = append(args, filter.ServiceAreaCode)
+		clauses = append(clauses, fmt.Sprintf("f.service_area_code = $%d", len(args)))
 	}
 	if filter.Query != "" {
 		args = append(args, "%"+strings.TrimSpace(filter.Query)+"%")
@@ -285,62 +285,6 @@ func (r *Repository) MarkActiveIfPending(ctx context.Context, actorID string) er
 
 // ---- reference data ----
 
-// EnsureCity materializes display/reference metadata for the city code returned
-// by a DSH-owned platform zone. DSH zone validation is the operational gate;
-// workforce_cities.active is local presentation state and never authorizes or
-// blocks a field/captain service-zone assignment.
-func (r *Repository) EnsureCity(ctx context.Context, code, nameAr string) error {
-	if code == "" {
-		return nil
-	}
-	if nameAr == "" {
-		nameAr = code
-	}
-	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO workforce_cities (code, name_ar)
-		VALUES ($1, $2)
-		ON CONFLICT (code) DO NOTHING`, code, nameAr)
-	return err
-}
-
-func (r *Repository) ListCities(ctx context.Context, includeInactive bool) ([]City, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT code, name_ar, COALESCE(name_en, ''), active FROM workforce_cities
-		WHERE active OR $1 ORDER BY code`, includeInactive)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	cities := []City{}
-	for rows.Next() {
-		var city City
-		if err := rows.Scan(&city.Code, &city.NameAr, &city.NameEn, &city.Active); err != nil {
-			return nil, err
-		}
-		cities = append(cities, city)
-	}
-	return cities, rows.Err()
-}
-
-func (r *Repository) UpsertCity(ctx context.Context, city City, create bool) error {
-	if create {
-		_, err := r.db.ExecContext(ctx, `
-			INSERT INTO workforce_cities (code, name_ar, name_en, active)
-			VALUES ($1, $2, NULLIF($3, ''), $4)`, city.Code, city.NameAr, city.NameEn, city.Active)
-		return mapReferenceWriteError(err)
-	}
-	result, err := r.db.ExecContext(ctx, `
-		UPDATE workforce_cities SET name_ar = $2, name_en = NULLIF($3, ''), active = $4, updated_at = now()
-		WHERE code = $1`, city.Code, city.NameAr, city.NameEn, city.Active)
-	if err != nil {
-		return err
-	}
-	if affected, _ := result.RowsAffected(); affected == 0 {
-		return ErrNotFound
-	}
-	return nil
-}
-
 func (r *Repository) ListShifts(ctx context.Context, includeInactive bool) ([]Shift, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT code, name_ar, COALESCE(name_en, ''), COALESCE(starts_at::text, ''), COALESCE(ends_at::text, ''), active
@@ -383,24 +327,6 @@ func (r *Repository) UpsertShift(ctx context.Context, shift Shift, create bool) 
 }
 
 // ---- helpers ----
-
-// validateProjectedCityTx verifies that the DSH-derived city code has a local
-// projection row for referential integrity. It deliberately ignores the local
-// active flag: DSH ValidateZone is the sole authority for zone availability.
-func validateProjectedCityTx(ctx context.Context, tx *sql.Tx, code string) error {
-	if code == "" {
-		return nil
-	}
-	var exists bool
-	if err := tx.QueryRowContext(ctx,
-		`SELECT EXISTS (SELECT 1 FROM workforce_cities WHERE code = $1)`, code).Scan(&exists); err != nil {
-		return err
-	}
-	if !exists {
-		return ErrInvalidReference
-	}
-	return nil
-}
 
 func mapPersonWriteError(err error) error {
 	var pqErr *pq.Error

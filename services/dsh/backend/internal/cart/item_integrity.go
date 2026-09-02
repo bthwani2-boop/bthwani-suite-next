@@ -7,63 +7,6 @@ import (
 	"github.com/lib/pq"
 )
 
-// UpsertOwnedItem keeps the authenticated client, active cart, store
-// assortment and public catalog eligibility on one authority boundary before
-// delegating to the canonical server-side price/inventory snapshot. A cart or
-// product identifier is never sufficient authority on its own, and a hidden,
-// unavailable or unapproved assortment cannot be injected by knowing its ID.
-func UpsertOwnedItem(
-	ctx context.Context,
-	db *sql.DB,
-	clientID string,
-	storeID string,
-	cartID string,
-	input UpsertItemInput,
-) (*CartItem, error) {
-	if clientID == "" || storeID == "" || cartID == "" || input.MasterProductID == "" || input.Quantity < 1 {
-		return nil, ErrInvalid
-	}
-
-	var ownedStoreCart bool
-	if err := db.QueryRowContext(ctx, `
-		SELECT EXISTS (
-			SELECT 1
-			FROM dsh_carts
-			WHERE id = $1
-			  AND client_id = $2
-			  AND store_id = $3
-			  AND state = 'active'
-		)`, cartID, clientID, storeID,
-	).Scan(&ownedStoreCart); err != nil {
-		return nil, err
-	}
-	if !ownedStoreCart {
-		return nil, ErrNotFound
-	}
-
-	var publicAssortment bool
-	if err := db.QueryRowContext(ctx, `
-		SELECT EXISTS (
-			SELECT 1
-			FROM dsh_store_assortments a
-			JOIN dsh_master_products mp ON mp.id = a.master_product_id
-			WHERE a.store_id = $1
-			  AND a.master_product_id = $2
-			  AND a.publication_status = 'client_visible'
-			  AND a.available = TRUE
-			  AND mp.approval_status = 'approved'
-			  AND mp.is_active = TRUE
-		)`, storeID, input.MasterProductID,
-	).Scan(&publicAssortment); err != nil {
-		return nil, err
-	}
-	if !publicAssortment {
-		return nil, ErrInvalid
-	}
-
-	return UpsertItem(ctx, db, storeID, cartID, input)
-}
-
 // HydrateOperatorCartItems returns the actual persisted cart lines used by the
 // control-panel operational view. The operator surface is read-only and never
 // computes financial truth; it reads the same DSH price snapshots as the client.
@@ -88,7 +31,7 @@ func HydrateOperatorCartItems(ctx context.Context, db *sql.DB, carts []Cart) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	itemsByCartID := make(map[string][]CartItem, len(carts))
 	for rows.Next() {

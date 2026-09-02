@@ -14,27 +14,6 @@ import (
 
 var ErrCaptainTopUpNotOwned = errors.New("captain top-up session is not owned by the authenticated captain")
 
-// CaptainTopUpSession is the bounded WLT readback used by the Captain Cash-In
-// consumer. Monetary state, purpose and ledger references remain WLT-owned.
-type CaptainTopUpSession struct {
-	ID                string  `json:"id"`
-	OperatorContextID string  `json:"operatorContextId"`
-	ClientID          string  `json:"clientId"`
-	TopUpReference    *string `json:"topupReference"`
-	TopUpActorType    *string `json:"topupActorType"`
-	FinancialPurpose  string  `json:"financialPurpose"`
-	PaymentMethod     string  `json:"paymentMethod"`
-	Status            string  `json:"status"`
-	ProviderReference string  `json:"providerReference"`
-	AmountMinorUnits  int64   `json:"amountMinorUnits"`
-	Currency          string  `json:"currency"`
-	CapturedAt        *string `json:"capturedAt"`
-}
-
-type captainTopUpEnvelope struct {
-	PaymentSession CaptainTopUpSession `json:"paymentSession"`
-}
-
 func (c *Client) captainTopUpRequest(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() {
 		return 0, nil, ErrNotConfigured
@@ -69,7 +48,7 @@ func (c *Client) captainTopUpRequest(ctx context.Context, method, path string, b
 	if err != nil {
 		return 0, nil, fmt.Errorf("call WLT Captain top-up route: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes+1))
 	if err != nil {
 		return 0, nil, fmt.Errorf("read WLT Captain top-up response: %w", err)
@@ -121,13 +100,15 @@ func (c *Client) ReadCaptainTopUpSession(ctx context.Context, sessionID, actorID
 	sessionID = strings.TrimSpace(sessionID)
 	actorID = strings.TrimSpace(actorID)
 	if sessionID == "" || actorID == "" {
-		return 0, nil, fmt.Errorf("Captain top-up session and actor are required")
+		return 0, nil, fmt.Errorf("captain top-up session and actor are required")
 	}
 	status, body, err := c.captainTopUpRequest(ctx, http.MethodGet, "/wlt/payment-sessions/"+url.PathEscape(sessionID), nil, correlationID, "", operatorContextID)
 	if err != nil || status < 200 || status >= 300 {
 		return status, body, err
 	}
-	var envelope captainTopUpEnvelope
+	var envelope struct {
+		PaymentSession PaymentSession `json:"paymentSession"`
+	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		return 0, nil, fmt.Errorf("decode WLT Captain top-up readback: %w", err)
 	}

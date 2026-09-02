@@ -41,6 +41,9 @@ import {
   toUploadFileSource,
   uploadAndLinkImage,
   cleanupOrphanCatalogAssets,
+  getCurrentStoreAssortmentPrice,
+  getStoreAssortmentStockStatus,
+  isStoreAssortmentAvailable,
   type CatalogAsset,
 } from "../../shared/catalog";
 
@@ -349,9 +352,9 @@ export function CatalogDashboardScreen() {
       await controller.transitionProposal(proposalId, {
         nextStatus,
         note,
-        adoptedMasterProductId,
-        createMasterProduct,
-        mergeData,
+        ...(adoptedMasterProductId !== undefined ? { adoptedMasterProductId } : {}),
+        ...(createMasterProduct !== undefined ? { createMasterProduct } : {}),
+        ...(mergeData !== undefined ? { mergeData } : {}),
       });
       alert("تمت ترقية حالة الاقتراح بنجاح");
       setReasonByProposal((curr) => ({ ...curr, [proposalId]: "" }));
@@ -1146,7 +1149,12 @@ export function CatalogDashboardScreen() {
 
             {/* ── Diagnostics strip ───────────────────────────────────────── */}
             {(() => {
-              const stalePricedCount = controller.assortment.items.filter(a => a.unitPrice <= 0).length;
+              const stalePricedCount = controller.assortment.items.filter((assortment) => {
+                const price = getCurrentStoreAssortmentPrice(
+                  controller.assortment.commercial.get(assortment.masterProductId),
+                );
+                return !price || price.amountMinor <= 0;
+              }).length;
               const orphanCount = controller.assortment.items.filter(a =>
                 !controller.state.masterProducts.items.some(mp => mp.id === a.masterProductId)
               ).length;
@@ -1164,22 +1172,44 @@ export function CatalogDashboardScreen() {
               <CpTextInput value={assortmentPrice} onChange={setAssortmentPrice} placeholder="السعر المحلي YER" />
               <CpButton disabled={assortmentSaving} onClick={async () => {
                 if (!canManageAssortment) return;
-                const unitPrice = Number(assortmentPrice.trim());
-                if (!selectedStoreId.trim() || !assortmentProductId.trim() || !Number.isFinite(unitPrice) || unitPrice < 0) {
+                const priceInMajorUnits = Number(assortmentPrice.trim());
+                const amountMinor = Math.round(priceInMajorUnits * 100);
+                if (!selectedStoreId.trim()
+                  || !assortmentProductId.trim()
+                  || !Number.isFinite(priceInMajorUnits)
+                  || priceInMajorUnits < 0
+                  || !Number.isSafeInteger(amountMinor)) {
                   alert("أدخل معرف متجر ومنتج مركزي وسعراً صحيحاً.");
                   return;
                 }
-                const current = controller.assortment.items.find((item) => item.masterProductId === assortmentProductId.trim());
+                const productId = assortmentProductId.trim();
+                const current = controller.assortment.items.find((item) => item.masterProductId === productId);
+                const currentCommercial = controller.assortment.commercial.get(productId);
+                const currentInventory = currentCommercial?.inventory;
+                const currentPrice = getCurrentStoreAssortmentPrice(currentCommercial);
                 setAssortmentSaving(true);
                 try {
-                  await controller.upsertAssortment(selectedStoreId.trim(), assortmentProductId.trim(), {
-                    unitPrice,
-                    currency: "YER",
-                    available: current?.available ?? true,
-                    stockStatus: current?.stockStatus ?? "in_stock",
-                    localNote: current?.localNote ?? "",
-                    customImageObjectKey: current?.customImageObjectKey ?? null,
-                    publicationStatus: current?.publicationStatus ?? "draft",
+                  await controller.upsertAssortment(selectedStoreId.trim(), productId, {
+                    metadata: {
+                      localNote: current?.localNote ?? "",
+                      customImageObjectKey: current?.customImageObjectKey ?? null,
+                      publicationStatus: current?.publicationStatus ?? "draft",
+                    },
+                    inventory: {
+                      policyType: currentInventory?.policyType ?? "quantity",
+                      quantity: currentInventory?.quantity ?? 100,
+                      minOrderQuantity: currentInventory?.minOrderQuantity ?? 1,
+                      maxOrderQuantity: currentInventory?.maxOrderQuantity ?? 100,
+                      stepQuantity: currentInventory?.stepQuantity ?? 1,
+                    },
+                    price: {
+                      amountMinor,
+                      currency: currentPrice?.currency ?? "YER",
+                      prepTimeMin: currentPrice?.prepTimeMin ?? 0,
+                      prepTimeMax: currentPrice?.prepTimeMax ?? 0,
+                      effectiveFrom: new Date().toISOString(),
+                      effectiveUntil: null,
+                    },
                   });
                   setAssortmentProductId("");
                   setAssortmentPrice("");
@@ -1207,7 +1237,11 @@ export function CatalogDashboardScreen() {
                 {controller.assortment.items.map((a) => {
                   const canonical = controller.state.masterProducts.items.find(mp => mp.id === a.masterProductId);
                   const isOrphan = !canonical;
-                  const isStalePrice = a.unitPrice <= 0;
+                  const commercial = controller.assortment.commercial.get(a.masterProductId);
+                  const currentPrice = getCurrentStoreAssortmentPrice(commercial);
+                  const isAvailable = commercial ? isStoreAssortmentAvailable(commercial.inventory) : false;
+                  const stockStatus = commercial ? getStoreAssortmentStockStatus(commercial.inventory) : "out_of_stock";
+                  const isStalePrice = !currentPrice || currentPrice.amountMinor <= 0;
                   return (
                     <tr key={a.id} style={{ backgroundColor: isOrphan ? "var(--bthwani-control-panel-surface-muted)" : undefined }}>
                       <CpTableCell><code>{a.id}</code></CpTableCell>
@@ -1217,13 +1251,15 @@ export function CatalogDashboardScreen() {
                         {isOrphan && <CpBadge tone="danger">يتيم</CpBadge>}
                       </CpTableCell>
                       <CpTableCell>
-                        {isStalePrice ? <CpBadge tone="warning">{a.unitPrice} {a.currency} ⚠️</CpBadge> : <>{a.unitPrice} {a.currency}</>}
+                        {isStalePrice
+                          ? <CpBadge tone="warning">{currentPrice ? `${currentPrice.amountMinor / 100} ${currentPrice.currency}` : "لا يوجد سعر فعال"} ⚠️</CpBadge>
+                          : <>{currentPrice.amountMinor / 100} {currentPrice.currency}</>}
                       </CpTableCell>
-                      <CpTableCell>{a.available ? "متاح" : "غير متاح"}</CpTableCell>
+                      <CpTableCell>{isAvailable ? "متاح" : "غير متاح"}</CpTableCell>
                       <CpTableCell>
                         <StatusBadge
-                          label={a.stockStatus}
-                          tone={a.stockStatus === "in_stock" ? "success" : a.stockStatus === "low_stock" ? "warning" : "danger"}
+                          label={stockStatus}
+                          tone={stockStatus === "in_stock" ? "success" : stockStatus === "low_stock" ? "warning" : "danger"}
                         />
                       </CpTableCell>
                       <CpTableCell>{a.localNote || "—"}</CpTableCell>

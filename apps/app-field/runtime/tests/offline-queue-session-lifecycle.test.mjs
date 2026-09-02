@@ -94,8 +94,13 @@ test("v3 queue data is cut over to v4 before the old key is deleted", async () =
   assert.equal(migrated[0].idempotencyKey, "idem-v3");
   assert.match(migrated[0].intentFingerprint, /^field-intent:v1:/);
   assert.equal(storage.store.has(v3Key), false, "the v3 live key is removed only after v4 persistence succeeds");
+  assert.equal(
+    [...storage.store.entries()].find(([key]) => key.includes("v3-cutover-complete"))?.[1],
+    "complete",
+    "the one-time cutover must permanently retire the v3 reader for this scope",
+  );
 
-  const v4Keys = [...storage.store.keys()].filter((key) => key.startsWith("bthwani.field-offline-queue.v4."));
+  const v4Keys = [...storage.store.keys()].filter((key) => key.startsWith("bthwani.field-offline-queue.v4.") && !key.includes("v3-cutover-complete"));
   assert.equal(v4Keys.length, 1, "one canonical v4 live queue remains");
 });
 

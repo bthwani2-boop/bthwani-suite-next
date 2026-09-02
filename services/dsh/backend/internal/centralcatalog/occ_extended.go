@@ -84,15 +84,18 @@ func WithdrawProposalAtomic(ctx context.Context, db *sql.DB, id, actorID string,
 }
 
 func GetStoreAssortmentByKey(ctx context.Context, db *sql.DB, storeID, masterProductID string) (StoreAssortment, error) {
-	return scanAssortment(db.QueryRowContext(ctx, `SELECT `+assortmentColumns+`
+	a, err := scanAssortment(db.QueryRowContext(ctx, `SELECT `+assortmentMetadataColumns+`
 		FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2`, storeID, masterProductID))
+	if err != nil {
+		return StoreAssortment{}, err
+	}
+	return a, nil
 }
 
-// UpsertStoreAssortmentAtomic is the compatibility/OCC entry point used by the
-// existing operator, partner and field handlers. The implementation is
-// intentionally delegated to the sole runtime-truth writer so OCC semantics,
-// normalized price/inventory bootstrap, publication gating and metadata
-// updates cannot drift into a second source of truth.
+// UpsertStoreAssortmentAtomic is the OCC entry point used by the existing
+// operator, partner and field handlers. The implementation is delegated to
+// the sole metadata writer; normalized price/inventory commands own commercial
+// state.
 func UpsertStoreAssortmentAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInput, allowCustomImage bool) (StoreAssortment, error) {
 	return UpsertStoreAssortmentWithRuntimeTruth(
 		ctx,

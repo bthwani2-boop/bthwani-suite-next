@@ -245,7 +245,7 @@ func applyTerminalSupersessionMigration(t *testing.T, db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 	_, err = connection.ExecContext(context.Background(), string(migration))
 	if err != nil {
 		_, _ = connection.ExecContext(context.Background(), "ROLLBACK")
@@ -272,7 +272,7 @@ func TestTerminalSupersessionMigrationNormalizesIntentAuthorityAndLocksTerminalH
 	if err != nil {
 		t.Fatalf("read normalized intent statuses: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	statuses := map[string]string{}
 	for rows.Next() {
 		var requestID, status string
@@ -314,7 +314,7 @@ func TestTerminalSupersessionMigrationNormalizesIntentAuthorityAndLocksTerminalH
 	if err != nil {
 		t.Fatalf("read reconciled audit details: %v", err)
 	}
-	defer auditRows.Close()
+	defer func() { _ = auditRows.Close() }()
 	allowedAuditKeys := map[string]bool{
 		"request_id": true, "decision": true, "action_type": true,
 		"reason_provided": true, "note_provided": true,

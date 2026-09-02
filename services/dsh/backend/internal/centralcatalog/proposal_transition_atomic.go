@@ -14,7 +14,7 @@ func collectIDs(rows *sql.Rows, err error) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var ids []string
 	for rows.Next() {
 		var id string
@@ -46,7 +46,7 @@ func TransitionProposalAtomicExpected(
 	if err != nil {
 		return ProductProposal{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	proposal, err := scanProposal(tx.QueryRowContext(ctx,
 		`SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1 FOR UPDATE`, id))
@@ -260,23 +260,12 @@ func TransitionProposalAtomicExpected(
 			if proposal.SourceStoreID != nil {
 				assortmentID := entityID("assort")
 				_, insertErr := tx.ExecContext(ctx, `INSERT INTO dsh_store_assortments
-					(id, store_id, master_product_id, unit_price, currency, available, stock_status,
-					 publication_status, submitted_by)
-					VALUES ($1,$2,$3,0.00,'YER',true,'in_stock','approved',$4)
+					(id, store_id, master_product_id, publication_status, submitted_by)
+					VALUES ($1,$2,$3,'approved',$4)
 					ON CONFLICT (store_id, master_product_id) DO NOTHING`,
 					assortmentID, *proposal.SourceStoreID, *proposal.AdoptedMasterProductID, actorID)
 				if insertErr != nil {
 					return ProductProposal{}, insertErr
-				}
-				assortment, assortmentErr := scanAssortment(tx.QueryRowContext(ctx,
-					`SELECT `+assortmentColumns+` FROM dsh_store_assortments
-					 WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`,
-					*proposal.SourceStoreID, *proposal.AdoptedMasterProductID))
-				if assortmentErr != nil {
-					return ProductProposal{}, assortmentErr
-				}
-				if err := bootstrapAssortmentRuntimeTruth(ctx, tx, assortment); err != nil {
-					return ProductProposal{}, err
 				}
 			}
 		}

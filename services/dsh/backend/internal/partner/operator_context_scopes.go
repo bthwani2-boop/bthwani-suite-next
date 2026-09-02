@@ -51,7 +51,7 @@ ORDER BY s.display_name ASC`,
 	if err != nil {
 		return nil, fmt.Errorf("query canonical partner store scopes: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	scopes := make([]OperationalScope, 0)
 

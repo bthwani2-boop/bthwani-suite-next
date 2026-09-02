@@ -3,26 +3,10 @@ package cart
 import (
 	"context"
 	"errors"
-	"math"
 	"testing"
 
 	"dsh-api/internal/mapproviders"
 )
-
-func TestCalculateDistanceKMSamePoint(t *testing.T) {
-	d := calculateDistanceKM(15.3694, 44.1910, 15.3694, 44.1910)
-	if math.Abs(d) > 0.0001 {
-		t.Fatalf("expected ~0km for identical coordinates, got %f", d)
-	}
-}
-
-func TestCalculateDistanceKMKnownPair(t *testing.T) {
-	// Sana'a (15.3694, 44.1910) to Aden (12.7855, 45.0187) is roughly 300km.
-	d := calculateDistanceKM(15.3694, 44.1910, 12.7855, 45.0187)
-	if d < 270 || d > 320 {
-		t.Fatalf("expected distance between Sana'a and Aden to be ~270-320km, got %f", d)
-	}
-}
 
 func TestEtaFromRouteNeverFallsBackToDistance(t *testing.T) {
 	minETA, maxETA, reason := etaFromRoute(mapproviders.RouteResponse{
@@ -112,7 +96,7 @@ func availabilityFor(modes []FulfillmentModeAvailability, mode FulfillmentMode) 
 // available, even when the client is in zone — the mode list must reflect
 // what the store actually turned on, not a static three-mode assumption.
 func TestComputeFulfillmentModeAvailabilityModeNotEnabled(t *testing.T) {
-	result := computeFulfillmentModeAvailability([]string{"delivery", "pickup"}, true)
+	result := computeFulfillmentModeAvailability([]string{"delivery", "pickup"}, "serviceable")
 	if got := availabilityFor(result, ModeBthwaniDelivery); got.Available || got.UnavailableReasonCode != "mode_not_enabled" {
 		t.Fatalf("expected bthwani_delivery unavailable with mode_not_enabled, got %+v", got)
 	}
@@ -128,7 +112,7 @@ func TestComputeFulfillmentModeAvailabilityModeNotEnabled(t *testing.T) {
 // be in the store's serviceable zone; pickup never does, since the customer
 // travels to the store themselves.
 func TestComputeFulfillmentModeAvailabilityOutOfZone(t *testing.T) {
-	result := computeFulfillmentModeAvailability([]string{"delivery", "express", "pickup"}, false)
+	result := computeFulfillmentModeAvailability([]string{"delivery", "express", "pickup"}, "out_of_area")
 	for _, mode := range []FulfillmentMode{ModeBthwaniDelivery, ModePartnerDelivery} {
 		got := availabilityFor(result, mode)
 		if got.Available || got.UnavailableReasonCode != "out_of_area" {
@@ -141,7 +125,7 @@ func TestComputeFulfillmentModeAvailabilityOutOfZone(t *testing.T) {
 }
 
 func TestComputeFulfillmentModeAvailabilityAllEnabledInZone(t *testing.T) {
-	result := computeFulfillmentModeAvailability([]string{"delivery", "express", "pickup"}, true)
+	result := computeFulfillmentModeAvailability([]string{"delivery", "express", "pickup"}, "serviceable")
 	if len(result) != 3 {
 		t.Fatalf("expected exactly 3 mode entries, got %d", len(result))
 	}
@@ -149,5 +133,17 @@ func TestComputeFulfillmentModeAvailabilityAllEnabledInZone(t *testing.T) {
 		if !entry.Available {
 			t.Fatalf("expected all modes available when enabled and in zone, got %+v", entry)
 		}
+	}
+}
+
+func TestComputeCheckoutSnapshotRejectsInt64Overflow(t *testing.T) {
+	_, err := computeCheckoutSnapshotFromItems("cart-1", []CartItem{{
+		ProductID:           "product-1",
+		UnitPriceMinorUnits: 9_000_000_000_000_000_000,
+		Currency:            "YER",
+		Quantity:            2,
+	}})
+	if !errors.Is(err, ErrCartTotalOverflow) {
+		t.Fatalf("expected cart total overflow, got %v", err)
 	}
 }

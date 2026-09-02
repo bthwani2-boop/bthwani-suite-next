@@ -118,16 +118,16 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 			&e.CommissionPolicyID, &e.CorrelationID, &e.IdempotencyKey,
 			&e.OccurredAt, &e.AttemptCount,
 		); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, fmt.Errorf("scan field commission outbox event: %w", err)
 		}
 		events = append(events, e)
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return nil, err
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	if len(events) > 0 {
 		ids := make([]string, len(events))

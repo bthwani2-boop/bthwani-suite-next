@@ -6,10 +6,8 @@ import (
 )
 
 // UpsertAssortmentInventoryWithRuntimeTruthAtomic is the authoritative
-// inventory mutation path. The normalized inventory row is the source of
-// truth; dsh_store_assortments.available/stock_status are maintained only as
-// compatibility projections inside the same transaction so older readers can
-// never drift from the inventory state.
+// inventory mutation path. The normalized inventory row is the sole source of
+// truth; no assortment metadata projection is maintained.
 func UpsertAssortmentInventoryWithRuntimeTruthAtomic(
 	ctx context.Context,
 	db *sql.DB,
@@ -30,7 +28,7 @@ func UpsertAssortmentInventoryWithRuntimeTruthAtomic(
 	if err != nil {
 		return StoreAssortmentInventory{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.ExecContext(
 		ctx,
@@ -123,26 +121,6 @@ func UpsertAssortmentInventoryWithRuntimeTruthAtomic(
 		)
 	}
 	if err != nil {
-		return StoreAssortmentInventory{}, err
-	}
-
-	inventoryTruth := assortmentInventoryTruth{
-		PolicyType:       inv.PolicyType,
-		Quantity:         inv.Quantity,
-		ReservedQuantity: inv.ReservedQuantity,
-		MinOrderQuantity: inv.MinOrderQuantity,
-		MaxOrderQuantity: inv.MaxOrderQuantity,
-		StepQuantity:     inv.StepQuantity,
-	}
-	if _, err := tx.ExecContext(ctx, `
-		UPDATE dsh_store_assortments
-		SET available=$2,
-		    stock_status=$3
-		WHERE id=$1`,
-		assortmentID,
-		assortmentInventoryAvailable(inventoryTruth),
-		assortmentInventoryStockStatus(inventoryTruth),
-	); err != nil {
 		return StoreAssortmentInventory{}, err
 	}
 

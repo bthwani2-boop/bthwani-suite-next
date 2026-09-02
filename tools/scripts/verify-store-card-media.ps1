@@ -3,11 +3,16 @@
 
 [CmdletBinding()]
 param(
-    [string] $BaseUrl = "http://localhost:18080"
+    [string] $BaseUrl = ""
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
+    $dshApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_DSH_API_HOST_PORT)) { "18080" } else { $env:BTHWANI_DSH_API_HOST_PORT }
+    $BaseUrl = "http://localhost:$dshApiHostPort"
+}
 
 function Resolve-MediaUrl {
     param(

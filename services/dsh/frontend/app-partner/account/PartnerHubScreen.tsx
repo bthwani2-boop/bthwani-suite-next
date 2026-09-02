@@ -22,10 +22,6 @@ import {
 import { useNotificationsController } from "../../shared/notifications";
 import type { DshNotificationPreference } from "../../shared/notifications";
 import { resolveDshStoreClientVisibility } from "../../shared/partner/dsh-client-visibility.model";
-import {
-  isDshPartnerActivationComplete,
-  isDshPartnerClientVisible,
-} from "../../shared/partner/partner-activation.model";
 import { usePartnerSelfController } from "../../shared/partner/use-partner-self-controller";
 import {
   fetchPartnerStoreCoverageZones,
@@ -158,7 +154,6 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const {
     statusState: selfStatusState,
     readinessState: selfReadinessState,
-    readinessViewModel: selfReadinessViewModel,
     reload: reloadSelfStatus,
   } = usePartnerSelfController(identity.state.kind, canonicalStoreId);
   const {
@@ -361,17 +356,27 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     );
   }
 
-  if (
-    !isDshPartnerActivationComplete(
-      selfStatusState.partner.activationStatus,
-    )
-  ) {
+  const partnerActions = selfStatusState.partner.allowedActions ?? [];
+  const canManageStore = partnerActions.includes("manage_authorized_store_team") || partnerActions.includes("manage_store_settings");
+  if (!canManageStore) {
     return (
-      <PartnerOnboardingStatusView
-        selfStatusState={selfStatusState}
-        selfReadinessState={selfReadinessState}
-        selfReadinessViewModel={selfReadinessViewModel}
-        reloadSelfStatus={reloadSelfStatus}
+        <PartnerOnboardingStatusView
+          selfStatusState={selfStatusState}
+          selfReadinessState={selfReadinessState}
+          reloadSelfStatus={reloadSelfStatus}
+        />
+    );
+  }
+
+  if (selfReadinessState.kind !== "success") {
+    return (
+      <StateView
+        loading={selfReadinessState.kind === "loading" || selfReadinessState.kind === "idle"}
+        tone="danger"
+        title="تعذر إثبات جاهزية المتجر"
+        description={selfReadinessState.kind === "error" ? selfReadinessState.message : "لا تُعرض عمليات المتجر قبل وصول قراءة الجاهزية من DSH."}
+        actionLabel="إعادة التحقق"
+        onActionPress={reloadSelfStatus}
       />
     );
   }
@@ -397,18 +402,16 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
   const serviceModes = storeRuntime.serviceModes;
   const coverageZones = storeRuntime.coverageZones;
   const activationStatus = selfStatusState.partner.activationStatus;
-  const isClientVisibleStage = isDshPartnerClientVisible(activationStatus);
-  const isInternalActiveOnly =
-    isDshPartnerActivationComplete(activationStatus) && !isClientVisibleStage;
   const serviceabilityVerified = coverageZones.some((zone) => zone.status === "active");
   const storeVisibility = resolveDshStoreClientVisibility({
+    readiness: selfReadinessState.readiness,
+    storeId: canonicalStoreId,
     activationStatus,
-    catalogPublished: resolvedListingEnabled,
-    deliveryModesReady: serviceModes.some((mode) => mode.enabled),
-    serviceabilityAvailable: serviceabilityVerified,
     storeOpen: resolvedStoreOpen,
+    inZone: serviceabilityVerified,
   });
-  const visibilityLabel = resolvedListingEnabled ? "مفعّل" : "موقوف";
+  const isInternalActiveOnly = !storeVisibility.visible;
+  const visibilityLabel = storeVisibility.visible ? "مفعّل" : "محجوب";
 
   if (activeSection !== "hub") {
     if (activeSection === "profile") {
@@ -429,8 +432,8 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             storeOpen={resolvedStoreOpen}
             listingEnabled={resolvedListingEnabled}
             canonicalStoreId={canonicalStoreId}
-            activationStatus={activationStatus}
             serviceModes={serviceModes}
+            storeVisibility={storeVisibility}
             {...(selfStatusState.partner.legalNameAr ? { legalNameAr: selfStatusState.partner.legalNameAr } : {})}
             {...(selfStatusState.partner.legalNameEn ? { legalNameEn: selfStatusState.partner.legalNameEn } : {})}
             {...(selfStatusState.partner.legalIdentityType ? { legalIdentityType: selfStatusState.partner.legalIdentityType } : {})}

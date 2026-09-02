@@ -73,6 +73,24 @@ const incidentColumns = `
 	created_at, updated_at
 `
 
+const incidentByIDAndContextSQL = `SELECT
+	id, order_id::text, operator_context_id, target_entity_type, target_entity_id, incident_type, status,
+	reason, ticket_reference, actor_id, actor_role,
+	before_state, after_state, failure_reason,
+	partner_notified, partner_notified_at, correlation_id, command_payload, applied_at,
+	created_at, updated_at
+FROM dsh_operational_incidents
+WHERE id = $1 AND operator_context_id = $2`
+
+const incidentByCommandSQL = `SELECT
+	id, order_id::text, operator_context_id, target_entity_type, target_entity_id, incident_type, status,
+	reason, ticket_reference, actor_id, actor_role,
+	before_state, after_state, failure_reason,
+	partner_notified, partner_notified_at, correlation_id, command_payload, applied_at,
+	created_at, updated_at
+FROM dsh_operational_incidents
+WHERE operator_context_id=$1 AND order_id=$2::uuid AND actor_id=$3 AND correlation_id=$4`
+
 func scanIncident(scan func(...any) error) (*Incident, error) {
 	var inc Incident
 	err := scan(
@@ -93,8 +111,7 @@ func Get(db *sql.DB, id string, operatorContextID string) (*Incident, error) {
 	if operatorContextID == "" {
 		return nil, ErrInvalid
 	}
-	query := `SELECT ` + incidentColumns + ` FROM dsh_operational_incidents WHERE id = $1 AND operator_context_id = $2`
-	inc, err := scanIncident(db.QueryRow(query, id, operatorContextID).Scan)
+	inc, err := scanIncident(db.QueryRow(incidentByIDAndContextSQL, id, operatorContextID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -139,7 +156,7 @@ func List(db *sql.DB, filter ListFilter) ([]Incident, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var incidents []Incident
 	for rows.Next() {

@@ -41,7 +41,7 @@ func actorFromContext(r *http.Request) (actorID, surface string) {
 }
 
 func partnerIDFromContext(r *http.Request) string {
-	partnerID, _ := r.Context().Value("partner_id").(string)
+	partnerID, _ := PartnerIDFromContext(r.Context())
 	return partnerID
 }
 
@@ -51,10 +51,6 @@ func partnerIDFromPath(r *http.Request) string {
 
 func documentIDFromPath(r *http.Request) string {
 	return r.PathValue("docId")
-}
-
-func visitIDFromPath(r *http.Request) string {
-	return r.PathValue("visitId")
 }
 
 func versionFromQuery(r *http.Request) int {
@@ -88,12 +84,6 @@ func requireFieldOwnsPartner(w http.ResponseWriter, db *sql.DB, r *http.Request,
 }
 
 // â”€â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-func readinessHandler(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		writeAggregatedReadiness(w, db, partnerIDFromPath(r))
-	}
-}
 
 // GET /dsh/partners/{partnerId}/documents â€” operator, any partner
 func HandleListDocuments(db *sql.DB) http.HandlerFunc {

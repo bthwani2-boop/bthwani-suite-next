@@ -43,7 +43,7 @@ func ProposeReplacement(db *sql.DB, rawInput ProposeReplacementInput) (*Preparat
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var actualStoreID string
 	var status OrderStatus

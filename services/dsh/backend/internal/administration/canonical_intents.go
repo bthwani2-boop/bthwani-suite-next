@@ -178,7 +178,7 @@ func claimCanonicalMutations(ctx context.Context, db *sql.DB, limit int, leaseOw
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	intents := make([]canonicalMutationIntent, 0, limit)
 	for rows.Next() {
@@ -324,7 +324,7 @@ func finalizeCanonicalMutation(ctx context.Context, db *sql.DB, current canonica
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var status string
 	var leaseOwner sql.NullString

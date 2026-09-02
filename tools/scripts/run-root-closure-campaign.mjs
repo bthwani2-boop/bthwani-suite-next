@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import {
@@ -347,7 +347,7 @@ function main() {
 
   const evidenceDir = options.evidenceDir
     ? (isAbsolute(options.evidenceDir) ? options.evidenceDir : resolve(repoRoot, options.evidenceDir))
-    : join(tmpdir(), "bthwani-root-closure", sanitizeFileName(branch || "detached"), `${headSha.slice(0, 12)}-${nowId()}`);
+    : mkdtempSync(join(tmpdir(), "bthwani-root-closure-"));
   mkdirSync(evidenceDir, { recursive: true });
 
   const probes = [];

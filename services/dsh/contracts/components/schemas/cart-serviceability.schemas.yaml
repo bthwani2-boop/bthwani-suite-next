@@ -157,11 +157,16 @@ DshUpsertCartItemResponse:
 
 DshCartMutationReceipt:
   type: object
-  required: [idempotencyKey, cartId, version, createdAt]
+  required: [idempotencyKey, operation, cartId, itemId, version, resultDeleted, createdAt]
   properties:
     idempotencyKey: { type: string, minLength: 8, maxLength: 200 }
-    cartId: { type: string }
-    version: { type: integer, minimum: 0 }
+    operation:
+      type: string
+      enum: [add_item, remove_item, clear_cart]
+    cartId: { type: [string, "null"] }
+    itemId: { type: [string, "null"] }
+    version: { type: integer, minimum: 1 }
+    resultDeleted: { type: boolean }
     createdAt: { type: string, format: date-time }
 
 DshCartMutationReceiptResponse:
@@ -182,14 +187,18 @@ DshOperatorCartsResponse:
 
 CartServiceabilityRequest:
   type: object
-  required: [storeId]
+  additionalProperties: false
+  required: [storeId, addressId, fulfillmentMode]
   properties:
     storeId: { type: string }
-    serviceAreaCode: { type: string }
+    addressId: { type: string }
+    fulfillmentMode:
+      type: string
+      enum: [bthwani_delivery, partner_delivery, pickup]
 
 CartServiceabilityResult:
   type: object
-  required: [serviceable, code]
+  required: [serviceable, code, addressId, addressVersion, requestedMode, etaStatus, capacityState, capacityConfigured, activeOrders, slaConfigured, checkedAt]
   properties:
     serviceable: { type: boolean }
     code:
@@ -199,11 +208,17 @@ CartServiceabilityResult:
         - store_unavailable
         - out_of_area
         - catalog_unavailable
+        - capacity_paused
         - capacity_exhausted
         - capacity_throttled
         - mode_unavailable
         - policy_unavailable
         - provider_unavailable
+    addressId: { type: string }
+    addressVersion: { type: integer, minimum: 1 }
+    requestedMode:
+      type: string
+      enum: [bthwani_delivery, partner_delivery, pickup]
     reason: { type: string }
     availableModes:
       type: array
@@ -227,6 +242,17 @@ CartServiceabilityResult:
       type: string
       enum: [STORE_LOCATION_UNAVAILABLE, ROUTE_PROVIDER_NOT_CONFIGURED, ROUTE_PROVIDER_UNAVAILABLE, ROUTE_DURATION_UNAVAILABLE]
       description: "Machine-readable reason when etaStatus is unavailable."
+    capacityState:
+      type: string
+      enum: [available, throttled, exhausted, unconfigured, paused, policy_incomplete, mode_disabled, unserviceable]
+    capacityConfigured: { type: boolean }
+    activeOrders: { type: integer, minimum: 0 }
+    maxConcurrentOrders: { type: integer, minimum: 1 }
+    capacityLoadRatio: { type: number, minimum: 0 }
+    slaConfigured: { type: boolean }
+    slaPrepMinutes: { type: integer, minimum: 0 }
+    slaDeliveryMinutes: { type: integer, minimum: 0 }
+    checkedAt: { type: string, format: date-time }
     quoteVersion: { type: string, description: "Unique token for this serviceability quote." }
     expiresAt: { type: string, format: date-time, description: "Expiration time for this quote." }
 

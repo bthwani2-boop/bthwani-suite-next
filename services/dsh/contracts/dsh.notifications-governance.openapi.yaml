@@ -293,6 +293,7 @@ components:
           status,
           attemptCount,
           nextRetryAt,
+          providerIdempotencyKey,
           providerMessageId,
           lastError,
           createdAt,
@@ -304,9 +305,10 @@ components:
         actorId: { type: string }
         actorType: { type: string, enum: [ client, partner, captain, field, operator ] }
         topic: { type: string }
-        status: { type: string, enum: [ pending, sent, failed ] }
+        status: { type: string, enum: [ pending, sending, unknown, sent, failed, suppressed ] }
         attemptCount: { type: integer, minimum: 0 }
         nextRetryAt: { type: string, format: date-time }
+        providerIdempotencyKey: { type: string, minLength: 1 }
         providerMessageId: { type: string }
         lastError: { type: string }
         sentAt: { type: [ string, 'null' ], format: date-time }
@@ -325,6 +327,7 @@ components:
           failedOutbox,
           sentPush,
           pendingPush,
+          unknownPush,
           failedPush
         ]
       properties:
@@ -335,6 +338,7 @@ components:
         failedOutbox: { type: integer, minimum: 0 }
         sentPush: { type: integer, minimum: 0 }
         pendingPush: { type: integer, minimum: 0 }
+        unknownPush: { type: integer, minimum: 0 }
         failedPush: { type: integer, minimum: 0 }
     DshNotificationDeliveryAuditResponse:
       type: object

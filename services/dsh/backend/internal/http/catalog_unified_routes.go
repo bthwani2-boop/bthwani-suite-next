@@ -125,8 +125,6 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	// absent, so registering them bare answered 200 with an empty body instead
 	// of 401/403 and made the capability unusable.
 	mux.HandleFunc("GET /dsh/operator/platform/zones", s.withPermission("control-panel", DshServiceZonesPermissionRead, s.handleListZones))
-	mux.HandleFunc("GET /dsh/operator/platform/sla-rules", s.withPermission("control-panel", DshFulfillmentSlaPermissionRead, s.handleListSlaRules))
-	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.withPermission("control-panel", DshDispatchCapacityPermissionRead, s.handleGetCapacityConfig))
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.withPermission("control-panel", DshServiceZonesPermissionRead, s.handleGetZoneServiceability))
 
 	// Operator taxonomy, products, attributes, relationships, proposals,

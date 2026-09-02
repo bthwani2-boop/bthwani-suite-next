@@ -218,7 +218,7 @@ func list(ctx context.Context, db *sql.DB, where string, args ...any) ([]Assignm
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]Assignment, 0)
 	for rows.Next() {
 		var a Assignment

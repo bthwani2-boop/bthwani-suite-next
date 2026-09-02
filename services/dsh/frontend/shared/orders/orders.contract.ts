@@ -9,7 +9,30 @@ import {
   type DshSignalEventKind,
   type DshSignalPriority,
 } from '../marketing/dsh-signal-layer.model';
-import type { DshOrderJourneyStageId, DshOrderLifecycleStatus } from './orders.state-machine';
+
+/**
+ * Presentation-only milestones used by the read-only cross-surface handoff
+ * map below. Current order status, owner, actions, and legal transitions come
+ * from the DSH OrderTruth response and its generated contract; this type never
+ * authorizes a mutation or defines a backend state machine.
+ */
+export type DshOrderJourneyStageId =
+  | 'payment_pending'
+  | 'payment_failed'
+  | 'order_submitted'
+  | 'operations_approved'
+  | 'partner_rejected'
+  | 'ready_for_pickup'
+  | 'captain_assigned'
+  | 'exception'
+  | 'picked_up'
+  | 'enroute_to_customer'
+  | 'post_delivery'
+  | 'refund_pending'
+  | 'order_received'
+  | 'preparing'
+  | 'delivered'
+  | 'cancellation_requested';
 
 type RecommendationProduct = {
   id: string;
@@ -322,12 +345,6 @@ export const EXCEPTION_TICKET_MAP: Readonly<Record<string, { supportTicketId: st
   'EX-4101': { supportTicketId: 'TK-5101', auditEntryId: 'AU-7001' },
   'EX-4102': { supportTicketId: 'TK-5102', auditEntryId: 'AU-7002' },
   'EX-4103': { supportTicketId: 'TK-5103' },
-};
-
-export const DISPATCH_LIFECYCLE_STATE_MAP: Readonly<Record<string, DshOrderLifecycleStatus>> = {
-  'DA-2001': 'captain_assignment',
-  'DA-2002': 'reassignment_required',
-  'DA-2003': 'captain_unavailable',
 };
 
 // ─── Downstream transition handoffs ───────────────────────────────────────────

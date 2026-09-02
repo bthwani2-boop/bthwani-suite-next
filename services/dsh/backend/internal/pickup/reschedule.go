@@ -45,7 +45,7 @@ func (s *Service) RescheduleWindow(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, _, err := lockPickupOrderForOperatorContext(tx, operatorContextID, orderID, orders.StatusReadyForPickup); err != nil {
 		return nil, err

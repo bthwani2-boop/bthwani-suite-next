@@ -88,7 +88,7 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var list []PartnerSummary
 	for rows.Next() {
@@ -120,11 +120,37 @@ func partnerReadinessForActivationStatus(status ActivationStatus) (string, bool)
 
 // â”€â”€â”€ Documents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const partnerDocumentReadColumns = `id, partner_id, document_type, upload_status, review_status, document_status,
+const insertPartnerDocumentSQL = `
+	INSERT INTO dsh_partner_documents
+		(partner_id, document_type, media_ref, notes, uploaded_by_actor_id, upload_status,
+		 review_status, supersedes_document_id, idempotency_key, request_hash, correlation_id)
+	VALUES ($1,$2,$3,$4,$5,'uploaded','pending',$6,$7,$8,$9)
+	RETURNING id, partner_id, document_type, upload_status, review_status, document_status,
+		uploaded_by_actor_id, media_ref, notes, rejection_reason,
+		COALESCE(reviewed_by_actor_id,''), reviewed_at, last_review_reason,
+		COALESCE(supersedes_document_id,''), version, created_at, updated_at`
+
+const selectPartnerDocumentSQL = `SELECT id, partner_id, document_type, upload_status, review_status, document_status,
 	uploaded_by_actor_id, media_ref, notes, rejection_reason,
-	COALESCE(reviewed_by_actor_id,''),
-	reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
-	version, created_at, updated_at`
+	COALESCE(reviewed_by_actor_id,''), reviewed_at, last_review_reason,
+	COALESCE(supersedes_document_id,''), version, created_at, updated_at
+FROM dsh_partner_documents WHERE partner_id = $1 AND id = $2`
+
+const reviewPartnerDocumentSQL = `
+	UPDATE dsh_partner_documents SET
+		document_status  = $3,
+		review_status    = $4,
+		rejection_reason = CASE WHEN $3='approved' THEN '' ELSE $6 END,
+		reviewed_by_actor_id = $5,
+		reviewed_at      = NOW(),
+		last_review_reason = $6,
+		version          = version + 1,
+		updated_at       = NOW()
+	WHERE id = $1 AND partner_id = $2
+	RETURNING id, partner_id, document_type, upload_status, review_status, document_status,
+		uploaded_by_actor_id, media_ref, notes, rejection_reason,
+		COALESCE(reviewed_by_actor_id,''), reviewed_at, last_review_reason,
+		COALESCE(supersedes_document_id,''), version, created_at, updated_at`
 
 func UploadDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID string, input UploadDocumentInput) (Document, error) {
 	partnerID = strings.TrimSpace(partnerID)
@@ -209,12 +235,7 @@ func UploadDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID string,
 		ORDER BY created_at DESC LIMIT 1`, partnerID, input.DocumentType).Scan(&supersedesID)
 
 	var d Document
-	err = tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_partner_documents
-			(partner_id, document_type, media_ref, notes, uploaded_by_actor_id, upload_status,
-			 review_status, supersedes_document_id, idempotency_key, request_hash, correlation_id)
-		VALUES ($1,$2,$3,$4,$5,'uploaded','pending',$6,$7,$8,$9)
-		RETURNING `+partnerDocumentReadColumns,
+	err = tx.QueryRowContext(ctx, insertPartnerDocumentSQL,
 		partnerID, input.DocumentType, input.MediaRef, input.Notes, input.UploadedByActorID, supersedesID,
 		key, requestHash, correlationID,
 	).Scan(documentScanArgs(&d)...)
@@ -236,7 +257,7 @@ func UploadDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID string,
 
 func loadDocumentTx(ctx context.Context, tx *sql.Tx, partnerID, documentID string) (Document, error) {
 	var document Document
-	err := tx.QueryRowContext(ctx, `SELECT `+partnerDocumentReadColumns+` FROM dsh_partner_documents WHERE partner_id = $1 AND id = $2`, partnerID, documentID).Scan(documentScanArgs(&document)...)
+	err := tx.QueryRowContext(ctx, selectPartnerDocumentSQL, partnerID, documentID).Scan(documentScanArgs(&document)...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Document{}, ErrNotFound
 	}
@@ -257,7 +278,7 @@ func ListDocuments(db *sql.DB, partnerID string) ([]Document, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []Document
 	for rows.Next() {
 		var d Document
@@ -321,55 +342,16 @@ func ReviewDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID, docume
 		operatorContextID, partnerID, documentID, input.ReviewedByActorID, key,
 	).Scan(&replayID, &storedHash)
 	if err == nil {
-		if storedHash != requestHash {
-			return Document{}, DocumentReview{}, ErrIdempotencyConflict
-		}
-		document, loadErr := loadDocumentTx(ctx, tx, partnerID, documentID)
-		if loadErr != nil {
-			return Document{}, DocumentReview{}, loadErr
-		}
-		review, loadErr := loadDocumentReviewTx(ctx, tx, partnerID, documentID, replayID)
-		if loadErr != nil {
-			return Document{}, DocumentReview{}, loadErr
-		}
-		if err := tx.Commit(); err != nil {
-			return Document{}, DocumentReview{}, err
-		}
-		return document, review, nil
+		return replayReviewedDocument(ctx, tx, partnerID, documentID, replayID, storedHash, requestHash)
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return Document{}, DocumentReview{}, err
 	}
 
-	// document_status remains a compatibility projection; review_status is canonical.
-	newDocStatus := "under_review"
-	newReviewStatus := "under_review"
-	switch input.Decision {
-	case "approved":
-		newDocStatus = "approved"
-		newReviewStatus = "verified"
-	case "rejected", "needs_resubmit":
-		newDocStatus = "rejected"
-		if input.Decision == "needs_resubmit" {
-			newReviewStatus = "reupload_required"
-		} else {
-			newReviewStatus = "rejected"
-		}
-	}
+	newDocStatus, newReviewStatus := documentReviewStatuses(input.Decision)
 
 	var d Document
-	err = tx.QueryRowContext(ctx, `
-		UPDATE dsh_partner_documents SET
-			document_status  = $3,
-			review_status    = $4,
-			rejection_reason = CASE WHEN $3='approved' THEN '' ELSE $6 END,
-			reviewed_by_actor_id = $5,
-			reviewed_at      = NOW(),
-			last_review_reason = $6,
-			version          = version + 1,
-			updated_at       = NOW()
-		WHERE id = $1 AND partner_id = $2
-		RETURNING `+partnerDocumentReadColumns,
+	err = tx.QueryRowContext(ctx, reviewPartnerDocumentSQL,
 		documentID, partnerID, newDocStatus, newReviewStatus, input.ReviewedByActorID, input.Reason,
 	).Scan(documentScanArgs(&d)...)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -400,6 +382,37 @@ func ReviewDocumentIdempotent(ctx context.Context, db *sql.DB, partnerID, docume
 		return Document{}, DocumentReview{}, err
 	}
 	return d, rev, nil
+}
+
+func replayReviewedDocument(ctx context.Context, tx *sql.Tx, partnerID, documentID, replayID, storedHash, requestHash string) (Document, DocumentReview, error) {
+	if storedHash != requestHash {
+		return Document{}, DocumentReview{}, ErrIdempotencyConflict
+	}
+	document, err := loadDocumentTx(ctx, tx, partnerID, documentID)
+	if err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	review, err := loadDocumentReviewTx(ctx, tx, partnerID, documentID, replayID)
+	if err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Document{}, DocumentReview{}, err
+	}
+	return document, review, nil
+}
+
+func documentReviewStatuses(decision string) (string, string) {
+	switch decision {
+	case "approved":
+		return "approved", "verified"
+	case "needs_resubmit":
+		return "rejected", "reupload_required"
+	case "rejected":
+		return "rejected", "rejected"
+	default:
+		return "under_review", "under_review"
+	}
 }
 
 func loadDocumentReviewTx(ctx context.Context, tx *sql.Tx, partnerID, documentID, reviewID string) (DocumentReview, error) {
@@ -464,12 +477,13 @@ func validateLegalDocumentType(tx *sql.Tx, documentType string) error {
 
 // â”€â”€â”€ Field visits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-const partnerFieldVisitReadColumns = `id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
+const selectPartnerFieldVisitSQL = `SELECT id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
 	visit_notes, location_latitude, location_longitude,
 	COALESCE((SELECT array_agg(media_ref ORDER BY created_at ASC)
 	          FROM dsh_partner_field_visit_media vm
 	          WHERE vm.visit_id = v.id AND vm.status = 'uploaded'), ARRAY[]::TEXT[]),
-	version, created_at, submitted_at`
+	version, created_at, submitted_at
+FROM dsh_partner_field_visits v WHERE v.partner_id = $1 AND v.id = $2`
 
 func CreateFieldVisitIdempotent(ctx context.Context, db *sql.DB, input CreateFieldVisitInput) (FieldVisit, error) {
 	input.PartnerID = strings.TrimSpace(input.PartnerID)
@@ -614,7 +628,7 @@ func loadFieldVisitTx(ctx context.Context, tx *sql.Tx, partnerID, visitID string
 	var lat, lon sql.NullFloat64
 	var submittedAt sql.NullTime
 	var storeIDOut sql.NullString
-	err := tx.QueryRowContext(ctx, `SELECT `+partnerFieldVisitReadColumns+` FROM dsh_partner_field_visits v WHERE v.partner_id = $1 AND v.id = $2`, partnerID, visitID).Scan(
+	err := tx.QueryRowContext(ctx, selectPartnerFieldVisitSQL, partnerID, visitID).Scan(
 		&visit.ID, &visit.PartnerID, &storeIDOut, &visit.FieldActorID, &visit.VisitStatus,
 		&visit.VisitNotes, &lat, &lon, pq.Array(&visit.EvidenceMediaRefs),
 		&visit.Version, &visit.CreatedAt, &submittedAt)
@@ -653,7 +667,7 @@ func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerLinkedStore, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	stores := []PartnerLinkedStore{}
 	for rows.Next() {
@@ -680,7 +694,7 @@ func ListFieldVisits(db *sql.DB, partnerID string) ([]FieldVisit, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []FieldVisit
 	for rows.Next() {
 		var v FieldVisit
@@ -786,7 +800,7 @@ func ListActivationEvents(db *sql.DB, partnerID string) ([]ActivationEvent, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []ActivationEvent
 	for rows.Next() {
 		var e ActivationEvent
@@ -896,7 +910,7 @@ func ListStoreCoverageZones(db *sql.DB, storeID string) ([]StoreCoverageZone, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	zones := []StoreCoverageZone{}
 	for rows.Next() {

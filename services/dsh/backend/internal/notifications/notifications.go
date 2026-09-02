@@ -110,7 +110,7 @@ func ListActorNotifications(db *sql.DB, actorID, actorType string, limit int) ([
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []Notification
 	for rows.Next() {
@@ -255,7 +255,7 @@ func ListPlatformNotificationConfigs(db *sql.DB) ([]PlatformNotificationConfig, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []PlatformNotificationConfig
 	for rows.Next() {
@@ -285,18 +285,6 @@ func formatPgTextArray(vals []string) string {
 		quoted[i] = fmt.Sprintf("%q", v)
 	}
 	return "{" + strings.Join(quoted, ",") + "}"
-}
-
-// UpsertPlatformNotificationConfig preserves compatibility with existing
-// producers while applying governed defaults for templates and channels.
-func UpsertPlatformNotificationConfig(db *sql.DB, topic string, actorTypes []string, isEnabled bool, description, updatedBy string) (PlatformNotificationConfig, error) {
-	return UpsertPlatformNotificationConfigPolicy(db, PlatformNotificationConfigInput{
-		Topic:           topic,
-		ActorTypes:      actorTypes,
-		IsEnabled:       isEnabled,
-		Description:     description,
-		DefaultChannels: []string{"in_app"},
-	}, updatedBy)
 }
 
 func UpsertPlatformNotificationConfigPolicy(db *sql.DB, input PlatformNotificationConfigInput, updatedBy string) (PlatformNotificationConfig, error) {
@@ -438,8 +426,6 @@ func nullableStringPointer(value sql.NullString) *string {
 }
 
 // pq_TextArray wraps []string for pq driver TEXT[] scanning/inserting.
-type textArray []string
-
 func pq_TextArray(v *[]string) interface {
 	Scan(src interface{}) error
 } {

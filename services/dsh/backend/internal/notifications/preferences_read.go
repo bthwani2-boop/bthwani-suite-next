@@ -17,7 +17,7 @@ func ListActorNotificationPreferences(db *sql.DB, actorID, actorType string) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	preferences := make([]NotificationPreference, 0)
 	for rows.Next() {

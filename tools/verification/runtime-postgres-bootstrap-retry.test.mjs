@@ -6,6 +6,10 @@ const phaseScript = await readFile(
   new URL("../scripts/invoke-runtime-phase.ps1", import.meta.url),
   "utf8",
 );
+const runtimeScript = await readFile(
+  new URL("../../infra/docker/scripts/runtime.ps1", import.meta.url),
+  "utf8",
+);
 const dshCatalogSmoke = await readFile(
   new URL("../../infra/docker/scripts/runtime/smoke-dsh-catalog.ps1", import.meta.url),
   "utf8",
@@ -18,12 +22,33 @@ const workforceActorHelper = await readFile(
   new URL("../dev/local-workforce-actors.ps1", import.meta.url),
   "utf8",
 );
+const platformRuntimeCommon = await readFile(
+  new URL("../scripts/platform-control-runtime/common.ps1", import.meta.url),
+  "utf8",
+);
 const dshPartnerOnboardingSmoke = await readFile(
   new URL("../../infra/docker/scripts/runtime/smoke-dsh-partner-onboarding.ps1", import.meta.url),
   "utf8",
 );
 const dshRuntimeDispatcher = await readFile(
   new URL("../../infra/docker/scripts/runtime-dispatch.ps1", import.meta.url),
+  "utf8",
+);
+const platformRuntimeSmoke = await readFile(
+  new URL("../scripts/platform-control-runtime/smoke.ps1", import.meta.url),
+  "utf8",
+);
+const financialRuntimeDispatcher = dshRuntimeDispatcher;
+const wltAuthenticatedSmoke = await readFile(
+  new URL("../scripts/finance/smoke-wlt-authenticated-runtime.ps1", import.meta.url),
+  "utf8",
+);
+const wltProviderSmoke = await readFile(
+  new URL("../scripts/smoke-wlt-provider-through-wlt.ps1", import.meta.url),
+  "utf8",
+);
+const wiremockFinancialSmoke = await readFile(
+  new URL("../scripts/smoke-wiremock-financial-provider.ps1", import.meta.url),
   "utf8",
 );
 const dshClientHomeSmoke = await readFile(
@@ -58,6 +83,11 @@ test("runtime still fails closed after the one narrow retry", () => {
   );
 });
 
+test("DSH smoke always executes the canonical fresh runtime phase", () => {
+  assert.match(dshRuntimeDispatcher, /Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles \$dshProfileString/);
+  assert.doesNotMatch(dshRuntimeDispatcher, /PreparedRuntime|Prepared runtime supplied|skipping duplicate DSH image build/);
+});
+
 test("runtime accepts a single non-WLT profile under StrictMode", () => {
   assert.match(phaseScript, /\$runtimeProfiles = \$runtimeProfileList -join ","/);
   assert.match(
@@ -65,6 +95,13 @@ test("runtime accepts a single non-WLT profile under StrictMode", () => {
     /elseif \(-not \[string\]::IsNullOrWhiteSpace\(\$runtimeProfiles\)\)/,
   );
   assert.doesNotMatch(phaseScript, /\$runtimeProfileList\.Count/);
+});
+
+test("default local DSH runtime includes governed seed dependencies", () => {
+  assert.match(
+    runtimeScript,
+    /\$ProfileList\s*=\s*@\("identity",\s*"workforce",\s*"wlt",\s*"dsh"\)/,
+  );
 });
 
 test("PowerShell-only runtime phases use the initialized exit-code boundary", () => {
@@ -85,6 +122,66 @@ test("DSH runtime smoke enforces the canonical HEALTHY readiness state", () => {
   assert.doesNotMatch(dshCatalogSmoke, /\$readiness\.status -eq "ready"/);
   assert.doesNotMatch(dshRuntimeSmoke, /\$readiness\.status -ne "ready"/);
   assert.doesNotMatch(dshRuntimeSmoke, /\$storeId:/);
+});
+
+test("DSH smoke scripts use the configured published API port", () => {
+  for (const smoke of [dshCatalogSmoke, dshClientHomeSmoke, dshPartnerOnboardingSmoke]) {
+    assert.match(smoke, /\$dshApiHostPort\s*=\s*if \(\[string\]::IsNullOrWhiteSpace\(\$env:BTHWANI_DSH_API_HOST_PORT\)/);
+    assert.match(smoke, /\$dshBaseUrl\s*=\s*"http:\/\/localhost:\$dshApiHostPort"/);
+    assert.doesNotMatch(smoke, /http:\/\/localhost:18080/);
+  }
+  assert.match(dshRuntimeSmoke, /\$env:BTHWANI_DSH_API_HOST_PORT/);
+  assert.doesNotMatch(dshRuntimeSmoke, /http:\/\/localhost:18080/);
+  for (const environment of [
+    "BTHWANI_IDENTITY_API_HOST_PORT",
+    "BTHWANI_WORKFORCE_API_HOST_PORT",
+    "BTHWANI_DSH_API_HOST_PORT",
+  ]) {
+    assert.match(workforceActorHelper, new RegExp(`\\$env:${environment}`));
+  }
+});
+
+test("platform runtime waits use configured service ports", () => {
+  assert.match(platformRuntimeCommon, /function Get-ConfiguredRuntimePort/);
+  for (const environment of [
+    "BTHWANI_WIREMOCK_FINANCIAL_PORT",
+    "BTHWANI_IDENTITY_API_HOST_PORT",
+    "BTHWANI_PROVIDERS_API_HOST_PORT",
+    "BTHWANI_WLT_API_HOST_PORT",
+    "BTHWANI_DSH_API_HOST_PORT",
+    "BTHWANI_PLATFORM_CONTROL_API_HOST_PORT",
+  ]) {
+    assert.match(platformRuntimeCommon, new RegExp(`-EnvironmentName "${environment}"`));
+  }
+  assert.doesNotMatch(platformRuntimeCommon, /localhost:180(?:80|82|83|87|88|90)/);
+  assert.match(platformRuntimeSmoke, /\$identityApiHostPort/);
+  assert.match(platformRuntimeSmoke, /\$providersApiHostPort/);
+  assert.match(platformRuntimeSmoke, /\$platformApiHostPort/);
+  assert.doesNotMatch(platformRuntimeSmoke, /localhost:180(?:82|87|88)/);
+});
+
+test("runtime readiness uses the configured Mailpit UI port and platform body status", () => {
+  assert.match(runtimeScript, /Get-ApiHostPort\s+-EnvironmentName "BTHWANI_MAILPIT_UI_PORT"\s+-DefaultPort 8025/);
+  assert.match(runtimeScript, /localhost:\$mailpitUiPort\/api\/v1\/info/);
+  assert.match(platformRuntimeCommon, /\[string\]\$ExpectedStatus = ""/);
+  assert.match(platformRuntimeCommon, /\[string\]\$response\.status -eq \$ExpectedStatus/);
+  assert.match(platformRuntimeCommon, /platform\/readiness" "HEALTHY"/);
+  assert.match(platformRuntimeSmoke, /\$providerReadiness\.status -ne "HEALTHY"/);
+  assert.match(platformRuntimeSmoke, /\$health\.status -ne "HEALTHY"/);
+  assert.match(platformRuntimeSmoke, /\$readiness\.status -ne "HEALTHY"/);
+  assert.doesNotMatch(platformRuntimeSmoke, /status -ne "ready"|status -ne "healthy"/);
+});
+
+test("financial runtime consumers honor configured WLT and simulator ports", () => {
+  assert.match(financialRuntimeDispatcher, /\$env:BTHWANI_WIREMOCK_FINANCIAL_PORT/);
+  assert.doesNotMatch(financialRuntimeDispatcher, /localhost:18090/);
+  assert.match(wltAuthenticatedSmoke, /\$env:BTHWANI_WLT_API_HOST_PORT/);
+  assert.match(wltProviderSmoke, /\$env:BTHWANI_WLT_API_HOST_PORT/);
+  assert.match(wltProviderSmoke, /\$env:BTHWANI_WIREMOCK_FINANCIAL_PORT/);
+  assert.match(wiremockFinancialSmoke, /\$env:BTHWANI_WIREMOCK_FINANCIAL_PORT/);
+  for (const smoke of [wltAuthenticatedSmoke, wltProviderSmoke, wiremockFinancialSmoke]) {
+    assert.doesNotMatch(smoke, /localhost:180(?:83|90)/);
+  }
 });
 
 test("PowerShell runtime consumers authenticate Workforce providers by activation", () => {

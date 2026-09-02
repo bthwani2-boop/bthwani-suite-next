@@ -163,3 +163,42 @@ func TestCaptainAcceptCommandReceiptReplaysWithoutASecondTransitionDBIntegration
 		t.Fatalf("reusing accept key for a different command returned %v, want ErrIdempotencyConflict", err)
 	}
 }
+
+func TestCaptainAcceptCommandExpiresOverdueOfferBeforeMutationDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	assignmentID, captainID, orderID, _, _, operatorContextID := seedArrivedCustomerFixture(t, db, "wallet")
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_orders SET status='driver_assigned' WHERE id=$1::uuid`, orderID); err != nil {
+		t.Fatalf("failed to prepare offered order: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		UPDATE dsh_assignments
+		SET status='offered', accepted_at=NULL, response_deadline_at=NOW()-interval '1 minute', version=1
+		WHERE id=$1::uuid
+	`, assignmentID); err != nil {
+		t.Fatalf("failed to prepare expired offer: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_deliveries SET status='driver_assigned' WHERE assignment_id=$1::uuid`, assignmentID); err != nil {
+		t.Fatalf("failed to prepare delivery: %v", err)
+	}
+
+	if _, err := AcceptGovernedAssignmentForOperatorContext(
+		db, operatorContextID, assignmentID, captainID, "expired-captain-accept-"+assignmentID, "expired-captain-accept-correlation-"+assignmentID,
+	); !errors.Is(err, ErrOfferExpired) {
+		t.Fatalf("expected expired offer rejection, got %v", err)
+	}
+
+	var status string
+	if err := db.QueryRowContext(ctx, `SELECT status FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&status); err != nil {
+		t.Fatalf("read expired assignment: %v", err)
+	}
+	if status != string(AssignmentCancelled) {
+		t.Fatalf("expired offer status=%q, want cancelled", status)
+	}
+
+	if _, err := AcceptGovernedAssignmentForOperatorContext(
+		db, operatorContextID, assignmentID, captainID, "expired-captain-accept-retry-"+assignmentID, "expired-captain-accept-retry-correlation-"+assignmentID,
+	); !errors.Is(err, ErrConflict) {
+		t.Fatalf("expected already-actioned offer conflict, got %v", err)
+	}
+}

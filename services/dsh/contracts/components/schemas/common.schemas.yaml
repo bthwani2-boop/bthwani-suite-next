@@ -16,7 +16,7 @@ DshResolveDeliveryExceptionRequest:
     expectedVersion: { type: integer, minimum: 1 }
     action:
       type: string
-      enum: [retry_same_captain, reassign_captain, return_to_store]
+      enum: [retry_same_captain, reassign_captain, return_to_store, cancel_order]
     note: { type: string, minLength: 5, maxLength: 1000 }
     newCaptainId:
       type: string
@@ -95,6 +95,8 @@ DshDeliveryException:
     returnArrivedAt: { type: [string, 'null'], format: date-time }
     returnedAt: { type: [string, 'null'], format: date-time }
     returnAcceptedByActorId: { type: [string, 'null'] }
+    proofMediaRef: { type: [string, 'null'], minLength: 1 }
+    policyNextAction: { type: string, enum: [retry, wait, return, rescue, review] }
     version: { type: integer, minimum: 1 }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
@@ -357,8 +359,11 @@ DshCreateAssignmentRequest:
 
 DshDeclineAssignmentRequest:
   type: object
+  additionalProperties: false
+  required: [reasonCode, reason]
   properties:
-    reason: { type: string }
+    reasonCode: { type: string, minLength: 1, maxLength: 100 }
+    reason: { type: string, minLength: 3, maxLength: 500 }
 
 DshUpdateDeliveryStatusRequest:
   type: object
@@ -679,53 +684,6 @@ DshUpdateZoneRequest:
     description: { type: string }
     isActive: { type: boolean }
     expectedVersion: { type: integer, minimum: 1 }
-
-DshSlaRule:
-  type: object
-  required: [zoneId, captainSlaMinutes, partnerSlaMinutes, version, updatedAt]
-  properties:
-    zoneId: { type: string }
-    captainSlaMinutes: { type: integer }
-    partnerSlaMinutes: { type: integer }
-    version: { type: integer }
-    updatedAt: { type: string, format: date-time }
-
-DshSlaRulesResponse:
-  type: object
-  required: [rules]
-  properties:
-    rules: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSlaRule" }
-
-DshUpsertSlaRulesRequest:
-  type: object
-  required: [zoneId, captainSlaMinutes, partnerSlaMinutes]
-  properties:
-    zoneId: { type: string }
-    captainSlaMinutes: { type: integer }
-    partnerSlaMinutes: { type: integer }
-
-DshCapacityConfig:
-  type: object
-  required: [zoneId, maxConcurrentOrders, warningThreshold, updatedAt]
-  properties:
-    zoneId: { type: string }
-    maxConcurrentOrders: { type: integer }
-    warningThreshold: { type: number }
-    updatedAt: { type: string, format: date-time }
-
-DshCapacityConfigResponse:
-  type: object
-  required: [config]
-  properties:
-    config: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCapacityConfig" }
-
-DshUpsertCapacityConfigRequest:
-  type: object
-  required: [zoneId, maxConcurrentOrders, warningThreshold]
-  properties:
-    zoneId: { type: string }
-    maxConcurrentOrders: { type: integer }
-    warningThreshold: { type: number }
 
 DshCreateSpecialRequest:
   type: object

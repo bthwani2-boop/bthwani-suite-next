@@ -26,7 +26,7 @@ param(
   [ValidateRange(1, 120)]
   [int]$StatementTimeoutMinutes = 15,
 
-  [string]$SourceCommitSha = "",
+  [string]$SourceCommitSha = $env:CANDIDATE_SHA,
 
   [string]$IdentityDatabaseUrl = ""
 )
@@ -56,16 +56,12 @@ if ($MigrationFiles.Count -eq 0) {
   throw "No SQL migrations found for service '$ServiceKey' in $MigrationPath"
 }
 
-if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
-  if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
-    $SourceCommitSha = $env:GITHUB_SHA
-  } else {
-    $SourceCommitSha = (& git rev-parse HEAD).Trim()
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommitSha)) {
-      throw "Unable to resolve source commit SHA."
-    }
-  }
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
+if (-not (Test-Path -LiteralPath $SourceCommitProvenancePath -PathType Leaf)) {
+  throw "Checked-out source commit resolver not found: $SourceCommitProvenancePath"
 }
+. $SourceCommitProvenancePath
+$SourceCommitSha = Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $RepoRoot -ExpectedSourceCommitSha $SourceCommitSha
 
 . (Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1")
 . (Join-Path $RepoRoot "infra/docker/scripts/workforce-migration-input-handoff.ps1")

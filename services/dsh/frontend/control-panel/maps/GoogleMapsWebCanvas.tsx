@@ -30,13 +30,23 @@ export type GoogleMapsWebCanvasProps = {
   readonly ariaLabel?: string;
 };
 
+type GoogleMapsOverlay = {
+  setMap(map: GoogleMapsMap | null): void;
+};
+
+type GoogleMapsListener = {
+  remove(): void;
+};
+
+type GoogleMapsMap = {
+  fitBounds(bounds: unknown, padding?: number): void;
+  addListener(eventName: string, callback: (event: { latLng?: { lat(): number; lng(): number } }) => void): GoogleMapsListener;
+};
+
 type GoogleMapsRuntime = {
-  readonly Map: new (element: HTMLElement, options: Record<string, unknown>) => {
-    fitBounds(bounds: unknown, padding?: number): void;
-    addListener(eventName: string, callback: (event: { latLng?: { lat(): number; lng(): number } }) => void): unknown;
-  };
-  readonly Marker: new (options: Record<string, unknown>) => unknown;
-  readonly Polygon: new (options: Record<string, unknown>) => unknown;
+  readonly Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMapsMap;
+  readonly Marker: new (options: Record<string, unknown>) => GoogleMapsOverlay;
+  readonly Polygon: new (options: Record<string, unknown>) => GoogleMapsOverlay;
   readonly LatLngBounds: new () => {
     extend(coordinate: { lat: number; lng: number }): void;
     isEmpty(): boolean;
@@ -150,6 +160,8 @@ export function GoogleMapsWebCanvas({
     if (!containerRef.current) return;
 
     let active = true;
+    let clickListener: GoogleMapsListener | null = null;
+    const overlays: GoogleMapsOverlay[] = [];
     void loadGoogleMaps(apiKey).then((maps) => {
       if (!active || !containerRef.current) return;
       const map = new maps.Map(containerRef.current, {
@@ -166,11 +178,11 @@ export function GoogleMapsWebCanvas({
         if (!finiteCoordinate(point.latitude, point.longitude)) continue;
         const position = { lat: point.latitude, lng: point.longitude };
         bounds.extend(position);
-        new maps.Marker({
+        overlays.push(new maps.Marker({
           map,
           position,
           title: point.description ? `${point.title} · ${point.description}` : point.title,
-        });
+        }));
       }
 
       for (const polygon of polygons) {
@@ -179,19 +191,19 @@ export function GoogleMapsWebCanvas({
           .map(([longitude, latitude]) => ({ lat: latitude, lng: longitude }));
         if (polygonPath.length < 3) continue;
         for (const coordinate of polygonPath) bounds.extend(coordinate);
-        new maps.Polygon({
+        overlays.push(new maps.Polygon({
           map,
           paths: polygonPath,
           clickable: false,
           strokeOpacity: polygon.active ? 0.9 : 0.4,
           strokeWeight: 2,
           fillOpacity: polygon.active ? 0.18 : 0.06,
-        });
+        }));
       }
 
       if (!bounds.isEmpty()) map.fitBounds(bounds, 48);
       if (onMapClick) {
-        map.addListener("click", (event) => {
+        clickListener = map.addListener("click", (event) => {
           const latLng = event.latLng;
           if (!latLng) return;
           onMapClick({ latitude: latLng.lat(), longitude: latLng.lng() });
@@ -206,6 +218,8 @@ export function GoogleMapsWebCanvas({
 
     return () => {
       active = false;
+      clickListener?.remove();
+      for (const overlay of overlays) overlay.setMap(null);
     };
   }, [onMapClick, points, polygons]);
 

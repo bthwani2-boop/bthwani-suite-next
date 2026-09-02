@@ -46,7 +46,7 @@ func ListAssortmentPauseStates(ctx context.Context, db *sql.DB, storeID string) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []AssortmentPauseState{}
 	for rows.Next() {
 		item, err := scanAssortmentPauseState(rows)

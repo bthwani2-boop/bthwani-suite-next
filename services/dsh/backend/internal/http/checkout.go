@@ -215,7 +215,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to begin checkout")
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if err := checkout.LockCreateIdempotencyTx(r.Context(), tx, actor.OperatorContextID, actor.ID, idempotencyKey); err != nil {
 		if errors.Is(err, checkout.ErrInvalid) {

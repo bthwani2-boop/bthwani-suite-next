@@ -10,6 +10,11 @@ const startScript = fs.readFileSync(startScriptPath, "utf8");
 const runtimeBootstrapPath = path.join(repoRoot, "apps/control-panel/ensure-control-panel-dev-runtime.ps1");
 const runtimeBootstrap = fs.readFileSync(runtimeBootstrapPath, "utf8");
 const frontendReadinessPath = path.join(repoRoot, "tools/scripts/check-frontend-binding-readiness.mjs");
+const frontendReadiness = fs.readFileSync(frontendReadinessPath, "utf8");
+const runtimeScriptPath = path.join(repoRoot, "infra/docker/scripts/runtime.ps1");
+const runtimeScript = fs.readFileSync(runtimeScriptPath, "utf8");
+const runtimePhasePath = path.join(repoRoot, "tools/scripts/invoke-runtime-phase.ps1");
+const runtimePhase = fs.readFileSync(runtimePhasePath, "utf8");
 
 test("control-panel startup converges the declared backend bundle before Next.js", () => {
   assert.match(startScript, /ensure-control-panel-dev-runtime\.ps1/);
@@ -47,7 +52,7 @@ test("control-panel startup forces all browser transports through the same-origi
   assert.doesNotMatch(startScript, /NEXT_PUBLIC_[A-Z_]+_API_BASE_URL\s*=\s*"https?:\/\//);
 });
 
-test("frontend readiness ignores same-origin public BFF paths", () => {
+test("frontend readiness remains blocked even when the legacy bypass flag is set", () => {
   const env = { ...process.env };
   for (const prefix of ["IDENTITY", "DSH"]) {
     delete env[`NEXT_PUBLIC_${prefix}_API_BASE_URL`];
@@ -57,6 +62,8 @@ test("frontend readiness ignores same-origin public BFF paths", () => {
   env.NEXT_PUBLIC_IDENTITY_API_BASE_URL = "/api/identity";
   env.NEXT_PUBLIC_DSH_API_BASE_URL = "/api/dsh";
   env.BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND = "true";
+  env.IDENTITY_API_BASE_URL = "http://127.0.0.1:1";
+  env.DSH_API_BASE_URL = "http://127.0.0.1:1";
 
   const result = spawnSync("node", [frontendReadinessPath, "--bundle", "frontendDefault"], {
     cwd: repoRoot,
@@ -65,8 +72,10 @@ test("frontend readiness ignores same-origin public BFF paths", () => {
     windowsHide: true,
   });
 
-  assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.doesNotMatch(result.stderr, /must be an absolute HTTP\(S\) URL/);
+  assert.equal(result.status, 1, result.stderr || result.stdout);
+  assert.match(result.stdout, /BLOCKED:.*runtime profiles are not ready/s);
+  assert.doesNotMatch(result.stdout, /WARNING:.*ALLOW_FRONTEND_WITHOUT_BACKEND/);
+  assert.doesNotMatch(frontendReadiness, /allowWithoutBackend|ALLOW_FRONTEND_WITHOUT_BACKEND/);
 });
 
 test("frontend readiness still rejects relative service-owner URLs", () => {
@@ -101,8 +110,40 @@ test("control-panel startup keeps service origins in server-only environment var
   ]);
 
   for (const [name, port] of serverOrigins) {
-    assert.match(startScript, new RegExp(`\\$env:${name}\\s*=\\s*\"http:\\/\\/127\\.0\\.0\\.1:${port}\"`));
+    assert.match(startScript, new RegExp(`Get-ControlPanelServiceOrigin\\s+-HostPortEnvironment\\s+\"${name.startsWith("DSH") ? "BTHWANI_DSH_API_HOST_PORT" : name.startsWith("IDENTITY") ? "BTHWANI_IDENTITY_API_HOST_PORT" : name.startsWith("WORKFORCE") ? "BTHWANI_WORKFORCE_API_HOST_PORT" : name.startsWith("PROVIDERS") ? "BTHWANI_PROVIDERS_API_HOST_PORT" : "BTHWANI_PLATFORM_CONTROL_API_HOST_PORT"}\"\\s+-DefaultPort\\s+${port}`));
   }
+});
+
+test("control-panel startup imports canonical runtime ports before the bootstrap child", () => {
+  const bootstrapIndex = startScript.indexOf("& pwsh -NoProfile -ExecutionPolicy Bypass -File $ControlPanelRuntimeBootstrap");
+  assert.notEqual(bootstrapIndex, -1);
+  assert.ok(startScript.includes('$RuntimeEnvironmentPath = Join-Path $RepoRoot "infra\\docker\\env\\runtime.env.example"'));
+  assert.match(startScript, /Import-EnvironmentFile -Path \$RuntimeEnvironmentPath -PreserveExisting -OnlyNames @\(/);
+  assert.ok(startScript.indexOf("Import-EnvironmentFile -Path $RuntimeEnvironmentPath -PreserveExisting") < bootstrapIndex);
+  for (const name of [
+    "DSH_API_BASE_URL",
+    "IDENTITY_API_BASE_URL",
+    "WORKFORCE_API_BASE_URL",
+    "PROVIDERS_API_BASE_URL",
+    "PLATFORM_CONTROL_API_BASE_URL",
+  ]) {
+    assert.ok(startScript.indexOf(`$env:${name}`) < bootstrapIndex);
+  }
+  assert.match(startScript, /PreserveExisting/);
+});
+
+test("runtime waits and phase execution cannot bypass configured service readiness", () => {
+  for (const [environment, port] of [
+    ["BTHWANI_IDENTITY_API_HOST_PORT", 18082],
+    ["BTHWANI_WORKFORCE_API_HOST_PORT", 18086],
+    ["BTHWANI_PROVIDERS_API_HOST_PORT", 18087],
+    ["BTHWANI_PLATFORM_CONTROL_API_HOST_PORT", 18088],
+    ["BTHWANI_WLT_API_HOST_PORT", 18083],
+    ["BTHWANI_DSH_API_HOST_PORT", 18080],
+  ]) {
+    assert.match(runtimeScript, new RegExp(`Get-ApiHostPort\\s+-EnvironmentName\\s+\"${environment}\"\\s+-DefaultPort\\s+${port}`));
+  }
+  assert.doesNotMatch(runtimePhase, /Prepared runtime reuse: PASS/);
 });
 
 

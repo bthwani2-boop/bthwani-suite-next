@@ -76,7 +76,7 @@ func (c *Client) IssueSpecialRequestQuote(ctx context.Context, input SpecialRequ
 	if err != nil {
 		return nil, fmt.Errorf("call WLT special-request quote: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return nil, fmt.Errorf("WLT special-request quote returned HTTP %d", response.StatusCode)
 	}
@@ -114,7 +114,7 @@ func (c *Client) GetActiveSpecialRequestQuote(ctx context.Context, specialReques
 	if err != nil {
 		return nil, fmt.Errorf("read WLT special-request quote: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return nil, fmt.Errorf("WLT special-request quote read returned HTTP %d", response.StatusCode)
 	}

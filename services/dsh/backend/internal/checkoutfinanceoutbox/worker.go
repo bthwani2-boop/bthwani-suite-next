@@ -97,7 +97,7 @@ func isOutcomeUnknown(err error) bool {
 		errors.Is(err, errCanonicalEffectAbsent)
 }
 
-func resultForPaymentSession(event Event, session *wlt.PaymentSessionDetail) (DeliveryResult, error) {
+func resultForPaymentSession(event Event, session *wlt.PaymentSession) (DeliveryResult, error) {
 	if session == nil || strings.TrimSpace(session.ID) == "" {
 		return DeliveryResult{}, fmt.Errorf("WLT payment-session readback is empty")
 	}

@@ -10,7 +10,8 @@
 
 [CmdletBinding()]
 param(
-  [string]$DatabaseUrl = $env:DATABASE_URL
+  [string]$DatabaseUrl = $env:DATABASE_URL,
+  [string]$SourceCommitSha = $env:CANDIDATE_SHA
 )
 
 Set-StrictMode -Version Latest
@@ -32,14 +33,17 @@ $DshRunner = Join-Path $ScriptDir "invoke-dsh-database.ps1"
 $ServiceRunner = Join-Path $RepoRoot "tools/scripts/invoke-service-migrations.ps1"
 $GovernedRunner = Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1"
 $MigrationDir = Join-Path $RepoRoot "services/dsh/database/migrations"
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
 
-foreach ($requiredFile in @($DshRunner, $ServiceRunner, $GovernedRunner)) {
+foreach ($requiredFile in @($DshRunner, $ServiceRunner, $GovernedRunner, $SourceCommitProvenancePath)) {
   if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
     throw "Required governed migration authority not found: $requiredFile"
   }
 }
 
 . $GovernedRunner
+. $SourceCommitProvenancePath
+$SourceCommitSha = Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $RepoRoot -ExpectedSourceCommitSha $SourceCommitSha
 
 function Invoke-ProbePsql {
   param([Parameter(Mandatory = $true)][string]$Sql)
@@ -139,7 +143,7 @@ WHERE service_name = 'dsh' AND migration_id = '$escapedFirstName';
 
   Invoke-RunnerProcess `
     -RunnerPath $DshRunner `
-    -Arguments @("-Action", "migrate", "-Transport", "url", "-DatabaseUrl", $DatabaseUrl) `
+    -Arguments @("-Action", "migrate", "-Transport", "url", "-DatabaseUrl", $DatabaseUrl, "-SourceCommitSha", $SourceCommitSha) `
     -ExpectSuccess $false `
     -ExpectedFailurePattern "GOVERNED_MIGRATION_LEDGER_CONFLICT|MIGRATION_CHECKSUM_MISMATCH" | Out-Null
 } finally {
@@ -180,7 +184,7 @@ SELECT 1 / 0;
 
   Invoke-RunnerProcess `
     -RunnerPath $ServiceRunner `
-    -Arguments @("-ServiceKey", $ProbeService, "-MigrationDirectory", $TemporaryRoot, "-DatabaseUrl", $DatabaseUrl) `
+    -Arguments @("-ServiceKey", $ProbeService, "-MigrationDirectory", $TemporaryRoot, "-DatabaseUrl", $DatabaseUrl, "-SourceCommitSha", $SourceCommitSha) `
     -ExpectSuccess $false `
     -ExpectedFailurePattern "division by zero|MIGRATION_EXECUTION_FAILED|Governed migration execution failed" | Out-Null
 
@@ -216,7 +220,7 @@ VALUES (
 
   Invoke-RunnerProcess `
     -RunnerPath $ServiceRunner `
-    -Arguments @("-ServiceKey", $ProbeService, "-MigrationDirectory", $TemporaryRoot, "-DatabaseUrl", $DatabaseUrl, "-LockTimeoutSeconds", "7", "-StatementTimeoutMinutes", "2") `
+    -Arguments @("-ServiceKey", $ProbeService, "-MigrationDirectory", $TemporaryRoot, "-DatabaseUrl", $DatabaseUrl, "-SourceCommitSha", $SourceCommitSha, "-LockTimeoutSeconds", "7", "-StatementTimeoutMinutes", "2") `
     -ExpectSuccess $true | Out-Null
 
   $recoveredData = Invoke-ProbePsql "SELECT count(*) FROM $ProbeTable WHERE id = 1 AND payload = 'recovered' AND lock_timeout_ms = 7000 AND statement_timeout_ms = 120000;"
@@ -243,6 +247,6 @@ Write-Host "Migration lock/statement timeout session settings: PASS"
 
 Invoke-RunnerProcess `
   -RunnerPath $DshRunner `
-  -Arguments @("-Action", "migrate", "-Transport", "url", "-DatabaseUrl", $DatabaseUrl) `
+  -Arguments @("-Action", "migrate", "-Transport", "url", "-DatabaseUrl", $DatabaseUrl, "-SourceCommitSha", $SourceCommitSha) `
   -ExpectSuccess $true | Out-Null
 Write-Host "Canonical migration runner verification: PASS"

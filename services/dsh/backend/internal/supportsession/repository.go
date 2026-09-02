@@ -137,7 +137,7 @@ func CreateRequest(
 	if err != nil {
 		return Request{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	request, err := scanRequest(tx.QueryRowContext(ctx, `
 INSERT INTO dsh_admin_support_session_requests
 				(operator_context_id, target_actor_id, requested_by, reason, duration_minutes)
@@ -182,7 +182,7 @@ func ListRequests(ctx context.Context, db *sql.DB, status string, limit int) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := make([]Request, 0)
 	for rows.Next() {
 		request, scanErr := scanRequest(rows)
@@ -222,7 +222,7 @@ func ReviewRequest(
 	if err != nil {
 		return Request{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	current, err := scanRequest(tx.QueryRowContext(ctx, `
 		SELECT `+requestColumns+`
 		FROM dsh_admin_support_session_requests
@@ -293,7 +293,7 @@ func MarkIssued(
 	if err != nil {
 		return Request{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	request, err := scanRequest(tx.QueryRowContext(ctx, `
 			SELECT `+requestColumns+`
 			FROM dsh_admin_support_session_requests
@@ -345,7 +345,7 @@ func MarkRevoked(ctx context.Context, db *sql.DB, requestID string, actorID stri
 	if err != nil {
 		return Request{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	request, err := scanRequest(tx.QueryRowContext(ctx, `
 		UPDATE dsh_admin_support_session_requests
 		SET status = 'revoked', revoked_at = NOW(), updated_at = NOW(), version = version + 1
@@ -380,7 +380,7 @@ func RecordPartnerSupportAccess(ctx context.Context, db *sql.DB, identity Identi
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := appendSupportAudit(ctx, tx, identity.InitiatorActorID, "partner_support_access", targetPartnerID, identity.SupportRequestID, false, false); err != nil {
 		return err
 	}
@@ -448,7 +448,7 @@ func LoadSnapshot(ctx context.Context, db *sql.DB, targetActorID string) (Snapsh
 	if err != nil {
 		return Snapshot{}, err
 	}
-	defer auditRows.Close()
+	defer func() { _ = auditRows.Close() }()
 	for auditRows.Next() {
 		var entry SnapshotAudit
 		if err := auditRows.Scan(&entry.Action, &entry.TargetID, &entry.Detail, &entry.CreatedAt); err != nil {

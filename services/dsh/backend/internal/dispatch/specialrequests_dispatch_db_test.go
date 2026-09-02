@@ -508,8 +508,8 @@ func TestSpecialRequestDeliveryProofDBIntegration(t *testing.T) {
 	// special-request-sourced delivery has no dsh_orders/dsh_checkout_intents
 	// row to resolve a payment method from — enqueuing a WLT COD notification
 	// here would be a financial-truth violation. This proves that guard holds
-	// at runtime: no row is inserted into dsh_wlt_outbox_events (the table
-	// wltoutbox.Enqueue writes into) for a special-request PoD submission.
+	// at runtime: no row is inserted into the dsh_wlt_outbox_events table used
+	// by the delivery-completion outbox writer for a special-request PoD submission.
 	t.Run("PoD on special request does not enqueue a WLT outbox event", func(t *testing.T) {
 		id, _ := newApprovedSpecialRequestFixture(t, db)
 		captainID, actorID := newCaptainAndActor()

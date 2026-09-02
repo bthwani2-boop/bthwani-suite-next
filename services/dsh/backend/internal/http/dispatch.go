@@ -132,9 +132,17 @@ func writeDeliveryExceptionError(w http.ResponseWriter, err error) {
 }
 
 func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
+	var orderID any = item.OrderID
+	if item.OrderID == "" {
+		orderID = nil
+	}
+	var specialRequestID any = item.SpecialRequestID
+	if item.SpecialRequestID == "" {
+		specialRequestID = nil
+	}
 	return map[string]any{
 		"id": item.ID, "operatorContextId": item.OperatorContextID, "assignmentId": item.AssignmentID,
-		"orderId": item.OrderID, "specialRequestId": item.SpecialRequestID, "captainId": item.CaptainID,
+		"orderId": orderID, "specialRequestId": specialRequestID, "captainId": item.CaptainID,
 		"reasonCode": string(item.ReasonCode), "note": item.Note,
 		"deliveryStatusAtReport": string(item.DeliveryStatusAtReport),
 		"severity":               string(item.Severity), "status": string(item.Status),
@@ -246,20 +254,6 @@ func (s *protectedStoreServer) handleArriveReturnToStore(w http.ResponseWriter, 
 	store.SendJSON(w, http.StatusOK, map[string]any{"exception": marshalDeliveryException(item)})
 }
 
-func marshalDispatchAssignmentForPartner(a dispatch.Assignment) map[string]any {
-	return map[string]any{
-		"id":             a.ID,
-		"orderId":        a.OrderID,
-		"captainId":      a.CaptainID,
-		"status":         string(a.Status),
-		"acceptedAt":     a.AcceptedAt,
-		"completedAt":    a.CompletedAt,
-		"createdAt":      a.CreatedAt,
-		"updatedAt":      a.UpdatedAt,
-		"deliveryStatus": string(a.Delivery.Status),
-	}
-}
-
 func (s *protectedStoreServer) writeDispatchResult(w http.ResponseWriter, status int, assignment *dispatch.Assignment, err error) {
 	switch {
 	case err == nil:
@@ -277,19 +271,11 @@ func (s *protectedStoreServer) writeDispatchResult(w http.ResponseWriter, status
 	}
 }
 
-func marshalDispatchAssignments(list []dispatch.Assignment) []map[string]any {
-	out := make([]map[string]any, len(list))
-	for i, item := range list {
-		out[i] = marshalDispatchAssignment(item)
-	}
-	return out
-}
-
 func marshalDispatchAssignment(a dispatch.Assignment) map[string]any {
 	return map[string]any{
 		"id":                 a.ID,
-		"orderId":            a.OrderID,
-		"specialRequestId":   a.SpecialRequestID,
+		"orderId":            nullableDispatchValue(a.OrderID),
+		"specialRequestId":   nullableDispatchValue(a.SpecialRequestID),
 		"requestType":        a.SpecialRequestType,
 		"captainId":          a.CaptainID,
 		"assignedBy":         a.AssignedBy,
@@ -307,16 +293,24 @@ func marshalDispatchAssignment(a dispatch.Assignment) map[string]any {
 		"lastLongitude":      a.LastLongitude,
 		"locationRecordedAt": a.LocationRecordedAt,
 		"delivery": map[string]any{
-			"id":           a.Delivery.ID,
-			"assignmentId": a.Delivery.AssignmentID,
-			"orderId":      a.Delivery.OrderID,
-			"captainId":    a.Delivery.CaptainID,
-			"status":       string(a.Delivery.Status),
-			"podMethod":    a.Delivery.PoDMethod,
-			"podReference": a.Delivery.PoDReference,
-			"note":         a.Delivery.Note,
-			"createdAt":    a.Delivery.CreatedAt,
-			"updatedAt":    a.Delivery.UpdatedAt,
+			"id":               a.Delivery.ID,
+			"assignmentId":     a.Delivery.AssignmentID,
+			"orderId":          nullableDispatchValue(a.Delivery.OrderID),
+			"specialRequestId": nullableDispatchValue(a.Delivery.SpecialRequestID),
+			"captainId":        a.Delivery.CaptainID,
+			"status":           string(a.Delivery.Status),
+			"podMethod":        a.Delivery.PoDMethod,
+			"podReference":     a.Delivery.PoDReference,
+			"note":             a.Delivery.Note,
+			"createdAt":        a.Delivery.CreatedAt,
+			"updatedAt":        a.Delivery.UpdatedAt,
 		},
 	}
+}
+
+func nullableDispatchValue(value string) any {
+	if value == "" {
+		return nil
+	}
+	return value
 }

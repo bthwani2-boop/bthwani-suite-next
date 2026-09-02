@@ -1,71 +1,67 @@
-# Engineering Policy
+# BThwani Engineering Constitution
 
 Status: ACTIVE_CANONICAL
 
-## Architecture and ownership
+## Governing law
 
-- Every durable fact and mutation has one authoritative owner.
-- Cross-domain access uses explicit contracts; no direct cross-service table mutation or copied business logic.
-- Projections, caches, read models, mocks, and surface-local state never become parallel truth.
-- Reusable logic lives at the smallest stable shared owner.
-- Prefer vertical end-to-end closure of one outcome over horizontal layer-by-layer work that leaves the outcome incomplete.
-- Do not add abstractions, services, files, dependencies, registries, or wrappers without a proven need.
+> **Correct cause, correct owner, correct layer, correct standard, minimum necessary complexity, complete vertical integrity, complete cutover, zero parallel truth, zero known material residue tied to the change.**
 
-## Contracts and APIs
+A change is not engineering-correct merely because it compiles, passes tests, makes a screen work, reduces a diff, or removes one symptom. It must preserve canonical ownership and invariants across every materially affected writer, reader, consumer, contract, data path and runtime boundary.
 
-- OpenAPI/service contracts are the canonical external interface for bounded contexts that expose them.
-- Generated clients are reproducible artifacts from canonical contracts, never hand-maintained parallel truth.
-- Backend routes, operation IDs, generated clients, and consumers must remain aligned.
-- Breaking changes require explicit consumer migration/cutover.
-- Client-controlled values may express intent but never trusted authorization context.
+## Policy ownership
 
-## Data and migrations
+This file owns cross-cutting engineering law and routes specialized durable requirements to:
 
-- Each service owns one migration history and its data mutations.
-- Migration order/checksums are deterministic and immutable after apply; corrections use an explicit forward-safe path.
-- Constraints, idempotency, concurrency control, transactions, outbox/event rules, and ownership should encode durable invariants close to the data where appropriate.
-- Destructive or narrowing changes require proven consumer/data impact and a safe rollout/recovery path.
-- Financial/audit/business-critical records are reconciled by their owner; deletion is not reconciliation.
-- Seeds and fixtures are development support only.
+- `architecture-and-fullstack.md` — architecture, layer responsibility, dependencies, contracts/generated boundaries and full-stack integrity;
+- `data-and-migrations.md` — schemas, constraints, migrations, backfills, seeds/fixtures and data cutovers;
+- `frontend-and-client.md` — screens/controllers/adapters, local state/readback, mobile/client lifecycle and resource correctness;
+- `runtime-reliability.md` — runtime/config/providers, observability, resilience, performance/capacity and recovery;
+- `standards-and-quality.md` — context-appropriate Best Practice/standards adequacy and quality.
 
-## DSH/WLT
+Security/privacy remains owned by `security.md`; delivery/promotion/release by `delivery.md`; Product/System semantics by `../product/**`.
 
-- DSH owns operational commerce/fulfillment truth.
-- WLT exclusively owns wallet, ledger, payment, refund, settlement, payout, commission, and financial reconciliation truth.
-- DSH/frontends may hold only contract-permitted references/projections and must not reproduce WLT calculations or writes.
+## Universal engineering invariants
 
-## Frontend and shared code
+- Every durable fact and mutation has one authoritative owner and one canonical write path.
+- Cross-domain access uses explicit contracts; no direct cross-service table mutation or copied business authority.
+- Projections, caches, read models, mocks, local UI state and generated outputs remain subordinate and reconstructable.
+- Correct defects at the highest authoritative owner that can actually remove the cause; do not patch descendants while an upstream owner remains wrong.
+- Reusable logic belongs at the smallest stable owner with real multiple consumers; a `shared/common/utils` name never creates authority.
+- Generated artifacts change through their canonical source/generator, then regenerate deterministically and verify affected consumers.
+- Breaking ownership/contract/data changes require complete writer/reader/consumer migration, safe cutover and retirement of the superseded authority.
+- Known obsolete compatibility, duplicate authority, stale aliases, dead fallback or half-migration tied to the change is not acceptable final residue.
+- Task/process terminology, branch names, prompt concepts and verification mechanics must not leak into Product/runtime architecture.
 
-- Surfaces consume canonical contracts/controllers and shared coordination where reuse is real.
-- No live business behavior may depend on local mock/fallback arrays or duplicated state machines.
-- Persisted outcomes require canonical readback when product behavior depends on them.
-- Loading, empty, offline, forbidden, conflict, error, recovery, accessibility, localization/RTL, and weak-network behavior are implemented when applicable to the affected surface.
+## Complete impact rule
 
-## Runtime and providers
+The materially affected set of a change includes every dependency or consumer whose correctness can change because of it. Physical app/service/file boundaries cannot truncate that set.
 
-- Runtime configuration is explicit, environment-scoped, and fail-closed when required values are missing.
-- Secrets never live in source, client-visible config, or logs.
-- Provider integrations define owner, auth, timeout/retry/idempotency, error mapping, observability, and recovery.
-- Provider configuration is not proof of provider health; runtime/provider claims need runtime evidence.
+When a Product outcome crosses layers, correctness is proven vertically as applicable:
 
-## Verification
+```text
+Product/Journey
+-> Surface
+-> Controller/ViewModel
+-> Contract Adapter/Generated Client
+-> Canonical Contract
+-> Auth/Authz
+-> Backend/Application Boundary
+-> Domain Owner
+-> Persistence/Event/Provider Boundary
+-> Schema/Constraints/Migration
+-> Persisted/External Result
+-> Canonical Readback
+-> All affected Consumers/Surfaces
+```
 
-Use the smallest check that proves the affected invariant, then expand only by evidence/risk:
+Only materially applicable links are required; each omitted link requires an actual non-applicability reason, not assumption.
 
-1. targeted unit/domain tests;
-2. type/lint/static checks;
-3. contract/generated-client/binding checks;
-4. migration/database integration checks;
-5. cross-service/integration tests;
-6. runtime/readback;
-7. visual/accessibility/performance when affected;
-8. full workspace/runtime only when closure or broad shared impact requires it.
+## Verification law
 
-Do not create meta-guards, guard registries, workflow registries, or duplicate diagnostics to validate the existence/text of other checks.
+Use the smallest evidence capable of falsifying the affected claim, then expand by risk. Static reachability is not semantic correctness; build success is not runtime proof; runtime success is not authorization/security/data-migration proof; tool green is not system correctness.
 
-## Cleanup
+Do not create meta-guards, duplicate diagnostics or assurance bureaucracy when existing compiler/test/runtime/security capabilities can prove the same invariant more directly.
 
-- Prefer deletion/consolidation of proven obsolete code over compatibility layers.
-- Before move/delete/merge, prove consumers and runtime/generated dependencies.
-- Git history is the archive; temporary diagnostics, logs, screenshots, reports, caches, and task artifacts stay untracked.
-- Task/process terminology must not leak into product/runtime architecture.
+## Cleanup law
+
+Prefer deletion/consolidation after proven cutover over indefinite compatibility. Before move/delete/merge, prove real consumers, generated/runtime dependencies, migration/data consequences and recovery. Git is history; active backup copies and task artifacts are not architecture.

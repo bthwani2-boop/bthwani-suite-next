@@ -6,9 +6,9 @@ import type {
   CentralCatalogDomain,
   CentralCatalogNode,
   createCatalogDomain,
-  updateCatalogDomain,
   createCatalogNode,
-  updateCatalogNode,
+  CatalogDomainUpdateInput,
+  CatalogNodeUpdateInput,
 } from "../../../shared/catalog";
 
 // ─── Style constants (static/layout styles reused across the tree) ───────────
@@ -86,9 +86,9 @@ export type CategoryControlRoomProps = {
   nodes: readonly CentralCatalogNode[];
   searchQuery?: string;
   onCreateDomain: (input: Parameters<typeof createCatalogDomain>[0]) => Promise<unknown>;
-  onUpdateDomain: (domainId: string, input: Parameters<typeof updateCatalogDomain>[1]) => Promise<unknown>;
+  onUpdateDomain: (domainId: string, input: CatalogDomainUpdateInput) => Promise<unknown>;
   onCreateNode: (input: Parameters<typeof createCatalogNode>[0]) => Promise<unknown>;
-  onUpdateNode: (nodeId: string, input: Parameters<typeof updateCatalogNode>[1]) => Promise<unknown>;
+  onUpdateNode: (nodeId: string, input: CatalogNodeUpdateInput) => Promise<unknown>;
   onMoveNode: (nodeId: string, targetParentId: string | null) => Promise<unknown>;
   onMergeNode: (nodeId: string, targetNodeId: string) => Promise<unknown>;
   onDeprecateNode: (nodeId: string) => Promise<unknown>;

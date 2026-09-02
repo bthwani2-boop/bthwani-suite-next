@@ -107,7 +107,7 @@ func deliver(ctx context.Context, db *sql.DB, event Event) error {
 	if err != nil {
 		return fmt.Errorf("begin notification delivery transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_notifications

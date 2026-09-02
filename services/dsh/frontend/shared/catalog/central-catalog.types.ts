@@ -1,403 +1,81 @@
-export interface CentralCatalogDomain {
-  readonly id: string;
-  readonly version: number;
-  readonly slug: string;
-  readonly nameAr: string;
-  readonly nameEn: string;
-  readonly icon: string;
-  readonly sortOrder: number;
-  readonly isActive: boolean;
-  readonly isClientVisible: boolean;
-  readonly requiresProductCatalog: boolean;
-  readonly isManualRequest: boolean;
-  readonly createdAt: string;
-  readonly updatedAt: string;
+import type { components } from "../../../clients/generated/dsh-api";
+
+type CatalogSchema<Name extends keyof components["schemas"]> = components["schemas"][Name];
+
+// Backend catalog DTOs are aliases of the generated contract. Presentation
+// code may compose these types, but it cannot create a second DTO authority.
+export type CentralCatalogDomain = CatalogSchema<"DshCentralCatalogDomain">;
+export type CentralCatalogNode = CatalogSchema<"DshCentralCatalogNode">;
+export type MasterProduct = CatalogSchema<"DshMasterProduct">;
+export type MasterProductPatchInput = CatalogSchema<"DshMasterProductUpdateInput">;
+export type DomainPatchInput = CatalogSchema<"DshDomainUpdateInput">;
+export type NodePatchInput = CatalogSchema<"DshNodeUpdateInput">;
+export type CatalogPolicyUpdateInput = CatalogSchema<"DshCatalogPlatformPolicyUpdateInput">;
+export type ProductProposal = CatalogSchema<"DshProductProposal">;
+/** Store assortment identity and metadata; commercial truth has separate resources. */
+export type StoreAssortment = CatalogSchema<"DshStoreAssortment">;
+export type StoreAssortmentMetadataUpdateInput = CatalogSchema<"DshStoreAssortmentMetadataUpdateInput">;
+export type StoreAssortmentCreateInput = Omit<StoreAssortmentMetadataUpdateInput, "expectedVersion">;
+export type StoreAssortmentMetadataInput = StoreAssortmentCreateInput & {
+  readonly expectedVersion?: number | undefined;
+};
+export type StoreAssortmentInventoryInput = CatalogSchema<"DshStoreAssortmentInventoryInput">;
+export type StoreAssortmentInventory = CatalogSchema<"DshStoreAssortmentInventory">;
+export type StoreAssortmentPriceInput = CatalogSchema<"DshStoreAssortmentPriceInput">;
+export type StoreAssortmentPrice = CatalogSchema<"DshStoreAssortmentPrice">;
+export type StoreAssortmentCommercialReadback = {
+  readonly inventory: StoreAssortmentInventory;
+  readonly prices: readonly StoreAssortmentPrice[];
+};
+export type StoreAssortmentStockStatus = "in_stock" | "low_stock" | "out_of_stock";
+
+export function getCurrentStoreAssortmentPrice(
+  readback: StoreAssortmentCommercialReadback | undefined,
+): StoreAssortmentPrice | undefined {
+  if (!readback) return undefined;
+  const now = Date.now();
+  return readback.prices.find((price) => {
+    const starts = Date.parse(price.effectiveFrom);
+    const ends = price.effectiveUntil ? Date.parse(price.effectiveUntil) : Number.POSITIVE_INFINITY;
+    return Number.isFinite(starts) && starts <= now && now < ends;
+  });
 }
 
-export interface CentralCatalogNode {
-  readonly id: string;
-  readonly version: number;
-  readonly domainId: string;
-  readonly parentId: string | null;
-  readonly level: "BUSINESS_SUBDOMAIN" | "PRODUCT_MAIN_CLASS" | "PRODUCT_SUB_CLASS";
-  readonly slug: string;
-  readonly nameAr: string;
-  readonly nameEn: string;
-  readonly icon: string;
-  readonly sortOrder: number;
-  readonly isActive: boolean;
-  readonly isClientVisible: boolean;
-  readonly requiresBarcode: boolean;
-  readonly allowsProductProposal: boolean;
-  readonly allowsStoreProductCustomImage: boolean;
-  readonly requiresCatalogReview: boolean;
-  readonly requiresProductCatalog: boolean;
-  readonly lifecycleStatus: "active" | "deprecated" | "merged";
-  readonly mergedIntoId: string | null;
-  readonly createdAt: string;
-  readonly updatedAt: string;
+/** Derives presentation state exclusively from the normalized inventory resource. */
+export function isStoreAssortmentAvailable(inventory: StoreAssortmentInventory): boolean {
+  if (inventory.minOrderQuantity < 1
+    || inventory.maxOrderQuantity < inventory.minOrderQuantity
+    || inventory.stepQuantity < 1) {
+    return false;
+  }
+  if (inventory.policyType === "infinite") return true;
+  if (inventory.policyType === "signal") return inventory.quantity > 0;
+  return inventory.quantity - inventory.reservedQuantity >= inventory.minOrderQuantity;
 }
 
-export interface MasterProduct {
-  readonly id: string;
-  readonly version: number;
-  readonly domainId: string;
-  readonly categoryNodeId: string | null;
-  readonly canonicalNameAr: string;
-  readonly canonicalNameEn: string;
-  readonly brand: string;
-  readonly barcode: string | null;
-  readonly gtin: string | null;
-  readonly sku: string | null;
-  readonly unit: string;
-  readonly measurementType: string;
-  /** @deprecated Use DAM asset links instead */
-  readonly canonicalImageObjectKey: string | null;
-  readonly approvalStatus: "draft" | "pending_review" | "approved" | "rejected" | "archived";
-  readonly isActive: boolean;
-  readonly duplicateGroupId: string | null;
-  readonly createdSource: string;
-  readonly parentId: string | null;
-  readonly isStandalone: boolean;
-  readonly createdAt: string;
-  readonly updatedAt: string;
+/** Derives presentation state exclusively from the normalized inventory resource. */
+export function getStoreAssortmentStockStatus(
+  inventory: StoreAssortmentInventory,
+): StoreAssortmentStockStatus {
+  if (!isStoreAssortmentAvailable(inventory)) return "out_of_stock";
+  if (inventory.policyType === "infinite") return "in_stock";
+  const availableQuantity = inventory.policyType === "quantity"
+    ? inventory.quantity - inventory.reservedQuantity
+    : inventory.quantity;
+  return availableQuantity <= 5 ? "low_stock" : "in_stock";
 }
-
-/** PATCH input for sovereign master products. Store price/stock fields belong to StoreAssortment. */
-export interface MasterProductPatchInput {
-  readonly categoryNodeId?: string | null;
-  readonly canonicalNameAr?: string;
-  readonly canonicalNameEn?: string;
-  readonly brand?: string;
-  readonly barcode?: string | null;
-  readonly gtin?: string | null;
-  readonly sku?: string | null;
-  readonly unit?: string;
-  readonly measurementType?: string;
-  readonly approvalStatus?: "draft" | "pending_review" | "approved" | "rejected" | "archived";
-  readonly isActive?: boolean;
-  readonly parentId?: string | null;
-  readonly isStandalone?: boolean;
-  readonly expectedVersion?: number;
-}
-
-/** PATCH input for catalog domains - all fields optional except caller-supplied OCC when updating. */
-export interface DomainPatchInput {
-  readonly nameAr?: string;
-  readonly nameEn?: string;
-  readonly icon?: string;
-  readonly sortOrder?: number;
-  readonly isActive?: boolean;
-  readonly isClientVisible?: boolean;
-  readonly requiresProductCatalog?: boolean;
-  readonly isManualRequest?: boolean;
-  readonly expectedVersion?: number;
-}
-
-/** PATCH input for catalog nodes - hierarchy identity is immutable after creation. */
-export interface NodePatchInput {
-  readonly nameAr?: string;
-  readonly nameEn?: string;
-  readonly icon?: string;
-  readonly sortOrder?: number;
-  readonly isActive?: boolean;
-  readonly isClientVisible?: boolean;
-  readonly requiresBarcode?: boolean;
-  readonly allowsProductProposal?: boolean;
-  readonly allowsStoreProductCustomImage?: boolean;
-  readonly requiresCatalogReview?: boolean;
-  readonly requiresProductCatalog?: boolean;
-  readonly expectedVersion?: number;
-}
-
-/** PUT/PATCH input for platform policies. */
-export interface CatalogPolicyUpdateInput {
-  readonly isActive?: boolean;
-  readonly requiresMarketingReview?: boolean;
-  readonly requiresProductImage?: boolean;
-  readonly requiresCategoryImage?: boolean;
-  readonly requiresDescription?: boolean;
-  readonly requiresBrand?: boolean;
-  readonly requiresUnit?: boolean;
-  readonly productDataQualityMinimumScore?: number;
-  readonly maxGalleryImages?: number;
-  readonly manualRequestMode?: boolean;
-  readonly allowsStoreProductCustomImage?: boolean;
-}
-
-import type { ProductProposalPipelineStatus } from "./central-catalog-product-pipeline";
-
-export interface ProductProposal {
-  readonly id: string;
-  readonly version: number;
-  readonly proposedNameAr: string;
-  readonly proposedNameEn: string;
-  readonly domainId: string;
-  readonly categoryNodeId: string | null;
-  readonly brand: string;
-  readonly barcode: string | null;
-  readonly imageObjectKey: string | null;
-  readonly sourceSurface: "app-field" | "app-partner" | "control-panel-catalog" | "control-panel-platform";
-  readonly sourceActorId: string;
-  readonly sourceStoreId: string | null;
-  readonly status: ProductProposalPipelineStatus;
-  readonly reviewNote: string;
-  readonly adoptedMasterProductId: string | null;
-  readonly targetMasterProductId: string | null;
-  readonly baseVersion: number | null;
-  readonly duplicateCandidates: readonly string[];
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly reviewStage?: string;
-  readonly partnerReviewedBy?: string | null;
-  readonly marketingReviewedBy?: string | null;
-  readonly catalogAdoptedBy?: string | null;
-  readonly catalogApprovedBy?: string | null;
-  readonly clientVisibleAt?: string | null;
-  readonly auditRequired?: boolean;
-  readonly blockedReason?: string | null;
-  readonly resubmissionCount?: number;
-  readonly linkedStoreId?: string | null;
-}
-
-export interface StoreAssortment {
-  readonly id: string;
-  readonly version: number;
-  readonly storeId: string;
-  readonly masterProductId: string;
-  readonly unitPrice: number;
-  readonly currency: string;
-  readonly available: boolean;
-  readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
-  readonly localNote: string;
-  readonly customImageObjectKey: string | null;
-  readonly publicationStatus: "draft" | "submitted" | "approved" | "client_visible" | "rejected" | "hidden";
-  readonly submittedBy: string;
-  readonly approvedBy: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
-
-export interface StoreAssortmentInput {
-  /** Bootstrap-only commercial values; existing rows use the normalized resources below. */
-  readonly unitPrice: number;
-  readonly currency: string;
-  readonly available: boolean;
-  readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
-  readonly localNote: string;
-  readonly customImageObjectKey: string | null;
-  readonly publicationStatus: "draft" | "submitted" | "approved" | "client_visible" | "rejected" | "hidden";
-}
-
-export type StoreAssortmentCreateInput = StoreAssortmentInput;
-
-export interface StoreAssortmentMetadataUpdateInput {
-  readonly localNote: string;
-  readonly customImageObjectKey: string | null;
-  readonly publicationStatus: "draft" | "submitted" | "approved" | "client_visible" | "rejected" | "hidden";
-  readonly expectedVersion: number;
-}
-
-export interface StoreAssortmentInventoryInput {
-  readonly policyType: "signal" | "quantity" | "infinite";
-  readonly quantity: number;
-  readonly minOrderQuantity: number;
-  readonly maxOrderQuantity: number;
-  readonly stepQuantity: number;
-  readonly expectedVersion?: number;
-}
-
-export interface StoreAssortmentInventory {
-  readonly storeAssortmentId: string;
-  readonly policyType: "signal" | "quantity" | "infinite";
-  readonly quantity: number;
-  readonly reservedQuantity: number;
-  readonly minOrderQuantity: number;
-  readonly maxOrderQuantity: number;
-  readonly stepQuantity: number;
-  readonly version: number;
-  readonly updatedAt: string;
-}
-
-export interface StoreAssortmentPriceInput {
-  readonly amountMinor: number;
-  readonly currency: string;
-  readonly prepTimeMin: number;
-  readonly prepTimeMax: number;
-  readonly effectiveFrom: string;
-  readonly effectiveUntil?: string | null;
-}
-
-export interface StoreAssortmentPrice {
-  readonly id: string;
-  readonly storeAssortmentId: string;
-  readonly amountMinor: number;
-  readonly currency: string;
-  readonly prepTimeMin: number;
-  readonly prepTimeMax: number;
-  readonly effectiveFrom: string;
-  readonly effectiveUntil: string | null;
-  readonly version: number;
-}
-
-export interface CatalogPlatformPolicy {
-  readonly id: string;
-  readonly version: number;
-  readonly domainId: string | null;
-  readonly nodeId: string | null;
-  readonly policyScope: string;
-  readonly platformCommissionRate: number;
-  readonly fieldPartnerOnboardingCommissionAmount: number;
-  readonly fieldPartnerOnboardingCommissionCurrency: string;
-  readonly storeOnboardingFeeAmount: number;
-  readonly storeOnboardingFeeCurrency: string;
-  readonly allowsStoreProductCustomImage: boolean;
-  readonly allowsProductProposal: boolean;
-  readonly requiresBarcode: boolean;
-  readonly requiresCatalogReview: boolean;
-  readonly requiresProductImage: boolean;
-  readonly requiresCategoryImage: boolean;
-  readonly requiresMarketingReview: boolean;
-  readonly requiresDescription: boolean;
-  readonly requiresBrand: boolean;
-  readonly requiresUnit: boolean;
-  readonly productDataQualityMinimumScore: number;
-  readonly maxGalleryImages: number;
-  readonly manualRequestMode: boolean;
-  readonly isActive: boolean;
-  readonly effectiveFrom: string;
-  readonly notes: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
-
-/** DAM-resolved effective image for a catalog product or entity. */
-export interface EffectiveImage {
-  readonly url: string;
-  readonly altAr: string;
-  readonly source: "store_custom" | "canonical";
-}
-
-export interface ClientVisibleCatalogEntry {
-  readonly id: string;
-  readonly version: number;
-  readonly domainId: string;
-  readonly categoryNodeId: string | null;
-  readonly canonicalNameAr: string;
-  readonly canonicalNameEn: string;
-  readonly brand: string;
-  readonly barcode: string | null;
-  readonly gtin: string | null;
-  readonly sku: string | null;
-  readonly unit: string;
-  readonly measurementType: string;
-  /** @deprecated Use effectiveImage instead */
-  readonly canonicalImageObjectKey: string | null;
-  readonly approvalStatus: string;
-  readonly isActive: boolean;
-  readonly duplicateGroupId: string | null;
-  readonly createdSource: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly unitPrice: number;
-  readonly currency: string;
-  readonly stockStatus: string;
-  /** @deprecated Use effectiveImage instead */
-  readonly imageObjectKey: string;
-  /** DAM-resolved effective image. Null when no approved image exists. */
-  readonly effectiveImage: EffectiveImage | null;
-}
-
-export interface ClientVisibleCatalogResponse {
-  readonly domains: readonly CentralCatalogDomain[];
-  readonly nodes: readonly CentralCatalogNode[];
-  readonly products: readonly ClientVisibleCatalogEntry[];
-  readonly media: readonly CatalogAssetLinkWithAsset[];
-  readonly policySnapshot: readonly CatalogPlatformPolicy[];
-}
-
-export interface CatalogAsset {
-  readonly id: string;
-  readonly version: number;
-  readonly objectKey: string;
-  readonly publicUrl: string | null;
-  readonly originalFileName: string;
-  readonly mimeType: string;
-  readonly sizeBytes: number;
-  readonly width: number | null;
-  readonly height: number | null;
-  readonly checksumSha256: string | null;
-  readonly altAr: string;
-  readonly altEn: string;
-  readonly dominantColor: string | null;
-  readonly status: "draft" | "uploaded" | "scanning" | "quarantined" | "pending_review" | "approved" | "rejected" | "archived";
-  readonly sourceSurface: "control-panel-catalog" | "control-panel-platform" | "app-partner" | "app-field" | "system";
-  readonly uploadedBy: string;
-  readonly reviewedBy: string | null;
-  readonly reviewNote: string;
-  readonly intendedEntityType: string | null;
-  readonly intendedEntityId: string | null;
-  readonly intendedRole: string | null;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
-
+export type CatalogPlatformPolicy = CatalogSchema<"DshCatalogPlatformPolicy">;
+export type EffectiveImage = NonNullable<CatalogSchema<"DshClientCatalogProduct">["effectiveImage"]>;
+export type ClientVisibleCatalogEntry = CatalogSchema<"DshClientCatalogProduct">;
+export type ClientVisibleCatalogResponse = CatalogSchema<"DshCatalogResponse">;
+export type CatalogAsset = CatalogSchema<"DshCatalogAsset">;
 export type CatalogAssetStatus = CatalogAsset["status"];
-
-export interface CatalogAssetLink {
-  readonly id: string;
-  readonly version: number;
-  readonly assetId: string;
-  readonly entityType: "domain" | "node" | "master_product" | "product_proposal" | "store_assortment" | "collection" | "campaign" | "store";
-  readonly entityId: string;
-  readonly role:
-    | "icon"
-    | "cover"
-    | "thumbnail"
-    | "gallery"
-    | "canonical_product_image"
-    | "partner_custom_product_image"
-    | "marketing_banner"
-    | "document"
-    | "store_logo"
-    | "store_cover"
-    | "storefront_photo"
-    | "interior_photo"
-    | "signage_photo"
-    | "reel_video";
-  readonly sortOrder: number;
-  readonly isPrimary: boolean;
-  readonly status: "draft" | "pending_review" | "approved" | "rejected" | "archived";
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
-
-export interface CatalogAssetLinkWithAsset extends CatalogAssetLink {
-  readonly objectKey: string;
-  readonly publicUrl: string;
-  readonly altAr: string;
-  readonly altEn: string;
-  readonly mimeType: string;
-}
-
-/** Upload intent creation input. sourceSurface is derived from actor role on the server. */
-export interface AssetUploadIntentInput {
-  readonly fileName: string;
-  readonly mimeType: string;
-  readonly sizeBytes: number;
-  readonly altAr?: string;
-  readonly altEn?: string;
-  readonly intendedEntityType?: string;
-  readonly intendedEntityId?: string;
-  readonly intendedRole?: string;
-}
-
-/** Asset PATCH input - only alt text and dominantColor may be updated. */
-export interface AssetUpdateInput {
-  readonly altAr?: string;
-  readonly altEn?: string;
-  readonly dominantColor?: string;
-}
+export type CatalogAssetLink = CatalogSchema<"DshCatalogAssetLink">;
+export type CatalogAssetLinkWithAsset = CatalogSchema<"DshCatalogAssetLinkWithAsset">;
+export type AssetUploadIntentInput = CatalogSchema<"DshCatalogAssetUploadIntentInput">;
+export type AssetUploadIntent = CatalogSchema<"DshCatalogAssetUploadIntentResponse">;
+export type AssetUpdateInput = CatalogSchema<"DshCatalogAssetUpdateInput">;
+export type SeedStatus = CatalogSchema<"DshCatalogSeedStatus">;
 
 export interface CatalogConflictResponse {
   readonly code: "CONFLICT";
@@ -416,7 +94,7 @@ export type AssetUploadProgress =
   | { stage: "linked"; assetId: string; linkId?: string }
   | { stage: "failed"; error: string };
 
-/** Reel entity - partner-submitted video for the home reel carousel. */
+/** Legacy reel DTOs remain presentation-only; governed reel APIs own their contract. */
 export interface Reel {
   readonly id: string;
   readonly assetId: string;
@@ -435,7 +113,6 @@ export interface Reel {
   readonly updatedAt: string;
 }
 
-/** Public reel data returned by /dsh/public/reels. */
 export interface PublicReel {
   readonly id: string;
   readonly titleAr: string;

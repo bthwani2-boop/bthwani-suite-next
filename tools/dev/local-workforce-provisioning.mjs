@@ -38,6 +38,44 @@ const IDENTITY_WORKFORCE_SERVICE_TOKEN =
   'LOCAL_ONLY_replace_with_workforce_internal_service_token';
 export const LOCAL_OPERATOR_CONTEXT_ID = process.env.BTHWANI_OPERATOR_CONTEXT_ID || 'local-dsh';
 export const LOCAL_SERVICE_AREA_CODE = 'sana';
+const LOCAL_LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
+const SAFE_REGISTRY_VALUE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
+const E164_PHONE = /^\+[1-9][0-9]{7,14}$/u;
+const SAFE_LOGIN_USERNAME = /^[A-Za-z][A-Za-z0-9._-]{0,63}$/u;
+const SAFE_DEVICE_FINGERPRINT = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
+const SAFE_LOCAL_PASSWORD = /^[\x20-\x7E]{1,128}$/u;
+
+export function assertLocalApiUrl(value) {
+  let parsed;
+  try {
+    parsed = new URL(String(value));
+  } catch {
+    throw new Error('local workforce API URL is invalid');
+  }
+  if (
+    parsed.protocol !== 'http:'
+    || !LOCAL_LOOPBACK_HOSTS.has(parsed.hostname)
+    || parsed.username
+    || parsed.password
+  ) {
+    throw new Error('local workforce API URL must be an unauthenticated loopback HTTP URL');
+  }
+  return parsed;
+}
+
+function assertRegistryValue(value, field) {
+  if (typeof value !== 'string' || !SAFE_REGISTRY_VALUE.test(value)) {
+    throw new Error(`local workforce registry ${field} is invalid`);
+  }
+  return value;
+}
+
+function assertRegistryPhone(value, field) {
+  if (typeof value !== 'string' || !E164_PHONE.test(value)) {
+    throw new Error(`local workforce registry ${field} is invalid`);
+  }
+  return value;
+}
 
 export function localServiceAreaPayload(expectedVersion = 0) {
   return {
@@ -128,10 +166,9 @@ export function list(value) {
 }
 
 export async function requestJson(operation, url, options = {}) {
-  const response = await fetch(url, options);
+  const response = await fetch(assertLocalApiUrl(url), options);
   const text = await response.text();
   if (!response.ok) {
-    if (options.body) console.error(`Payload failed: ${options.body}`);
     throw new HttpError(operation, response.status, text);
   }
   if (!text.trim()) return null;
@@ -147,12 +184,22 @@ export async function getPasswordSession(
   username,
   deviceFingerprint = `mobile-dev-${username}`,
 ) {
+  if (typeof username !== 'string' || !SAFE_LOGIN_USERNAME.test(username)) {
+    throw new Error('local identity username is invalid');
+  }
+  if (typeof deviceFingerprint !== 'string' || !SAFE_DEVICE_FINGERPRINT.test(deviceFingerprint)) {
+    throw new Error('local identity device fingerprint is invalid');
+  }
+  const password = localPassword();
+  if (typeof password !== 'string' || !SAFE_LOCAL_PASSWORD.test(password)) {
+    throw new Error('local identity password is invalid');
+  }
   const result = await requestJson(`identity:login:${username}`, `${IDENTITY_API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       username,
-      password: localPassword(),
+      password,
       deviceFingerprint,
     }),
   });
@@ -252,8 +299,10 @@ function endpointFor(kind) {
 
 /**
  * Workforce list search matches names and workforce codes, not phones. Prefer
- * the actor recorded in the generated registry so DSH/WLT local fixtures keep
- * the same sovereign cross-service key after a partial Identity rebuild.
+ * the canonical Workforce profile so DSH/WLT local fixtures keep the same
+ * sovereign cross-service key after a partial Identity rebuild. The generated
+ * registry remains a seed/readback artifact; it is not an input to this HTTP
+ * request path.
  */
 async function findExistingProvider(operatorToken, kind) {
   const fullNameAr = LOCAL_WORKFORCE_PROVIDERS[kind].fullNameAr;
@@ -266,12 +315,7 @@ async function findExistingProvider(operatorToken, kind) {
     .concat(list(result?.captains))
     .filter((person) => person?.fullNameAr === fullNameAr);
 
-  const preferredActorId = readGeneratedRegistry()?.actors?.[kind]?.actorId;
-  const preferredPerson = exact.find((person) => person?.actorId === preferredActorId);
-
-  const peopleToCheck = preferredPerson ? [preferredPerson, ...exact.filter(p => p.actorId !== preferredActorId)] : exact;
-
-  for (const person of peopleToCheck) {
+  for (const person of exact) {
     const identityActor = await getIdentityActor(person.actorId);
     if (!identityActor) {
       console.warn(`[dev-provision] Ignoring orphaned Workforce profile ${person.actorId}`);
@@ -281,6 +325,10 @@ async function findExistingProvider(operatorToken, kind) {
     return person;
   }
   return null;
+}
+
+export async function resolveExistingProvider(operatorToken, kind) {
+  return findExistingProvider(operatorToken, kind);
 }
 
 async function createProvider(operatorToken, kind, payload) {
@@ -865,14 +913,23 @@ export function readGeneratedRegistry() {
 
 function writeGeneratedRegistry(actors) {
   fs.mkdirSync(path.dirname(GENERATED_REGISTRY_PATH), { recursive: true });
+  const safeActors = {};
+  for (const kind of ['field', 'captain']) {
+    const actor = actors?.[kind];
+    safeActors[kind] = {
+      actorId: assertRegistryValue(actor?.actorId, `${kind}.actorId`),
+      workforceCode: assertRegistryValue(actor?.workforceCode, `${kind}.workforceCode`),
+      phoneE164: assertRegistryPhone(actor?.phoneE164, `${kind}.phoneE164`),
+    };
+  }
   const registry = {
     $comment:
       'Generated by tools/dev/local-workforce-provisioning.mjs. Local development only. ' +
       'The governed seed runner substitutes these into @@TOKEN@@ placeholders in *.local.sql fixtures.',
     generatedAt: new Date().toISOString(),
-    FIELD_ACTOR_ID: actors.field.actorId,
-    CAPTAIN_ACTOR_ID: actors.captain.actorId,
-    actors,
+    FIELD_ACTOR_ID: safeActors.field.actorId,
+    CAPTAIN_ACTOR_ID: safeActors.captain.actorId,
+    actors: safeActors,
   };
   fs.writeFileSync(GENERATED_REGISTRY_PATH, `${JSON.stringify(registry, null, 2)}\n`, 'utf-8');
   return registry;

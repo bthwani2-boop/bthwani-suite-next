@@ -75,7 +75,7 @@ func TestFieldActivationReadinessHasNoShiftRequirement(t *testing.T) {
 		FullNameAr:    "ميداني تجريبي",
 		WorkforceCode: "FLD-000001",
 		FieldProfile: &FieldProfile{
-			CityCode:          "SAH",
+			ServiceAreaCode:   "SAH",
 			ServiceZoneID:     "zone-1",
 			SupervisorActorID: "supervisor-1",
 		},
@@ -96,7 +96,7 @@ func TestFieldActivationReadinessDoesNotRequireProgressiveGuarantorReferralOrOnb
 		WorkforceKind: "field",
 		FullNameAr:    "ميداني مستقل",
 		WorkforceCode: "FLD-000002",
-		FieldProfile:  &FieldProfile{CityCode: "SAH", ServiceZoneID: "zone-1", SupervisorActorID: "supervisor-1"},
+		FieldProfile:  &FieldProfile{ServiceAreaCode: "SAH", ServiceZoneID: "zone-1", SupervisorActorID: "supervisor-1"},
 	}
 	core := ProviderOperationalCore{
 		WorkforceKind:              "field",
@@ -118,7 +118,7 @@ func TestFieldActivationReadinessRequiresSupervisorIdentityAndContract(t *testin
 		WorkforceKind: "field",
 		FullNameAr:    "ميداني ناقص",
 		WorkforceCode: "FLD-000003",
-		FieldProfile:  &FieldProfile{CityCode: "SAH", ServiceZoneID: "zone-1"},
+		FieldProfile:  &FieldProfile{ServiceAreaCode: "SAH", ServiceZoneID: "zone-1"},
 	}
 	readiness := EvaluateProviderActivationReadiness(person, ProviderOperationalCore{WorkforceKind: "field"})
 	for _, blocker := range []string{"supervisorActorId", "nationalIdNumber", "identityFrontMediaRef", "identityApproved", "contractMediaRef", "contractApproved"} {

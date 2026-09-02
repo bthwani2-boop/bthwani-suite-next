@@ -11,7 +11,7 @@
     "ci:check": "node tools/scripts/ci-check.mjs",
     "ci:close": "node tools/scripts/ci-close.mjs",
     "assurance:discover": "node tools/scripts/run-deep-discovery.mjs",
-    "assurance:self-test": "node --test tools/scripts/assurance-system.test.mjs tools/scripts/assurance-experience-binding.test.mjs tools/scripts/assurance-hardening.test.mjs tools/scripts/run-deep-discovery.test.mjs tools/scripts/lib/evidence-envelope.test.mjs tools/scripts/consume-evidence-artifacts.test.mjs tools/scripts/classify-codeql-evidence.test.mjs tools/scripts/classify-semgrep-evidence.test.mjs tools/scripts/classify-sonar-evidence.test.mjs tools/scripts/compare-assurance-baseline.test.mjs",
+    "assurance:self-test": "node --test tools/scripts/assurance-system.test.mjs tools/scripts/assurance-experience-binding.test.mjs tools/scripts/assurance-hardening.test.mjs tools/scripts/run-deep-discovery.test.mjs tools/scripts/lib/evidence-envelope.test.mjs tools/scripts/capture-tool-evidence.test.mjs tools/scripts/source-commit-provenance.contract.test.mjs tools/scripts/consume-evidence-artifacts.test.mjs tools/scripts/classify-codeql-evidence.test.mjs tools/scripts/validate-codeql-analysis-binding.test.mjs tools/scripts/validate-sonar-analysis-task.test.mjs tools/scripts/classify-semgrep-evidence.test.mjs tools/scripts/classify-sonar-evidence.test.mjs tools/scripts/compare-assurance-baseline.test.mjs",
     "contracts:redocly": "node tools/scripts/contracts/typecheck.mjs",
     "contracts:lint": "pnpm run contracts:redocly && pnpm run guard:contract-registry-drift",
     "typecheck": "pnpm run affected:typecheck",
@@ -190,7 +190,9 @@
     "ocr:setup": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode Setup",
     "ocr:audit": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-open-code-review-toolchain.ps1 -Mode DelegateAudit",
     "lint:typed": "eslint --config eslint.typed.config.mjs \"{apps,core,services,shared}/**/*.{ts,tsx,mts,cts}\"",
-    "test:property": "node --test tools/scripts/detect-ci-context.property.test.mjs"
+    "test:property": "node --test tools/scripts/detect-ci-context.property.test.mjs",
+    "guard:core-package-dependencies": "node --test tools/guards/core-package-dependency-boundary-gate.test.mjs && node tools/guards/core-package-dependency-boundary-gate.mjs --package identity && node tools/guards/core-package-dependency-boundary-gate.mjs --package platform-control && node tools/guards/core-package-dependency-boundary-gate.mjs --package providers && node tools/guards/core-package-dependency-boundary-gate.mjs --package workforce",
+    "guard:workforce-hr-boundary": "node --test tools/guards/workforce-hr-boundary-gate.test.mjs && node tools/guards/workforce-hr-boundary-gate.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

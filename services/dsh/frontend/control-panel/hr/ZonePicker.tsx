@@ -3,7 +3,7 @@
 // Service zone selection sources from DSH Platform Zones (the single
 // source of truth for "where a provider works"), not from Workforce's own
 // city table — Workforce mirrors the chosen zone's city locally only to
-// keep its existing city_code foreign key satisfied.
+// persist the DSH-owned service-area reference alongside the selected zone.
 import React, { useEffect, useState } from "react";
 import { CpMutedInline, CpTabs } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";

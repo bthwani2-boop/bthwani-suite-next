@@ -1,6 +1,29 @@
 # BThwani DSH OpenAPI schemas module: partner.
 # Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
 
+DshPartnerActivationStatusValue:
+  type: string
+  enum:
+    - draft
+    - submitted
+    - field_visit_scheduled
+    - field_visit_completed
+    - documents_missing
+    - documents_uploaded
+    - documents_verified
+    - catalog_not_ready
+    - catalog_ready
+    - delivery_modes_not_ready
+    - delivery_modes_ready
+    - ops_review
+    - ops_approved
+    - ops_rejected
+    - partner_active
+    - partner_suspended
+    - partner_terminated
+    - client_visible
+    - client_hidden
+
 DshPartnerOperationalScope:
   type: object
   required:
@@ -85,26 +108,7 @@ DshPartner:
     category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, default] }
     businessVerticalId: { type: string }
     activationStatus:
-      type: string
-      enum:
-        - draft
-        - submitted
-        - field_visit_scheduled
-        - field_visit_completed
-        - documents_missing
-        - documents_uploaded
-        - documents_verified
-        - catalog_not_ready
-        - catalog_ready
-        - delivery_modes_not_ready
-        - delivery_modes_ready
-        - ops_review
-        - ops_approved
-        - ops_rejected
-        - partner_active
-        - partner_terminated
-        - client_visible
-        - client_hidden
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerActivationStatusValue"
     rejectionReason: { type: string }
     createdBy: { type: string }
     assignedFieldAgent: { type: string }
@@ -116,6 +120,13 @@ DshPartner:
     destinationVerificationStatus:
       type: string
       enum: ["", unverified, verified, requires_reverification, rejected]
+    allowedActions:
+      type: array
+      items: { type: string }
+    allowedTransitions:
+      type: array
+      items:
+        $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerActivationStatusValue"
     version: { type: integer }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
@@ -167,7 +178,8 @@ DshPartnerTransitionRequest:
   type: object
   required: [toStatus]
   properties:
-    toStatus: { type: string }
+    toStatus:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerActivationStatusValue"
     reason: { type: string }
     actorId: { type: string }
     actorSurface: { type: string, enum: [app-field, app-partner, app-captain, control-panel, system] }
@@ -189,7 +201,8 @@ DshPartnerActivationStatus:
     displayName: { type: string }
     legalNameAr: { type: string }
     category: { type: string }
-    activationStatus: { type: string }
+    activationStatus:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerActivationStatusValue"
     primaryPhone: { type: string }
     email: { type: string }
     createdAt: { type: string, format: date-time }
@@ -326,7 +339,7 @@ DshPartnerDocumentReviewResponse:
 
 DshPartnerLinkedStore:
   type: object
-  required: [id, partnerId, slug, displayName, status, isVisible, cityCode, createdAt]
+  required: [id, partnerId, slug, displayName, status, isVisible, cityCode, publicationDecision, blockingReasons, createdAt]
   properties:
     id: { type: string }
     partnerId: { type: string }
@@ -335,6 +348,10 @@ DshPartnerLinkedStore:
     status: { type: string }
     isVisible: { type: boolean }
     cityCode: { type: string }
+    publicationDecision: { type: string, enum: [PUBLISHED, BLOCKED] }
+    blockingReasons:
+      type: array
+      items: { type: string }
     createdAt: { type: string, format: date-time }
 
 DshPartnerStoresListResponse:

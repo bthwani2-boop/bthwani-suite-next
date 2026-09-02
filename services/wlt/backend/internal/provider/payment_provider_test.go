@@ -67,6 +67,28 @@ func TestProductionPaymentAdapterFailsClosed(t *testing.T) {
 	}
 }
 
+func TestProviderServerErrorIsAmbiguous(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"status":"failed","code":"UPSTREAM_ERROR"}`))
+	}))
+	defer server.Close()
+
+	client := newClient(Config{Mode: ModeSandbox, BaseURL: server.URL}, nil, "payment-gateway", "test")
+	result, err := client.Post(context.Background(), "/payment", map[string]any{}, RequestMeta{})
+	if err == nil {
+		t.Fatal("expected provider server error")
+	}
+	if result != (ProviderResult{}) {
+		t.Fatalf("ambiguous provider server error must not return a financial result: %+v", result)
+	}
+	var providerErr Error
+	if errors.As(err, &providerErr) {
+		t.Fatalf("provider server error must remain ambiguous, got typed decline: %v", err)
+	}
+}
+
 func TestRequestMetaFromHTTP(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	req.Header.Set("X-Correlation-ID", "corr-123")

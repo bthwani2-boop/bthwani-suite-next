@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 )
 
 type ApiError struct {
@@ -33,7 +35,46 @@ func SendError(w http.ResponseWriter, status int, code, message string) {
 //   - offset defaults to 0, must be an integer >= 0
 //   - status, if present, must be one of the known DshStoreStatus values
 //   - isVisible is tri-state: "true" -> true, "false" -> false, otherwise unset
+//   - sort, if present, must be one of rating, distance, or eta
+//   - boolean filters, if present, must be true or false
+//   - text filters must be valid UTF-8 and cannot contain PostgreSQL NUL bytes
 func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
+	allowedParams := map[string]struct{}{
+		"category":        {},
+		"cityCode":        {},
+		"hasProBadge":     {},
+		"isFreeDelivery":  {},
+		"isVisible":       {},
+		"limit":           {},
+		"offset":          {},
+		"search":          {},
+		"serviceAreaCode": {},
+		"sort":            {},
+		"status":          {},
+	}
+	for name := range q {
+		if _, ok := allowedParams[name]; !ok {
+			return DshStoreListQuery{}, "invalid query parameter: " + name
+		}
+	}
+
+	textParams := []struct {
+		name  string
+		value string
+	}{
+		{name: "cityCode", value: q.Get("cityCode")},
+		{name: "serviceAreaCode", value: q.Get("serviceAreaCode")},
+		{name: "status", value: q.Get("status")},
+		{name: "search", value: q.Get("search")},
+		{name: "category", value: q.Get("category")},
+		{name: "sort", value: q.Get("sort")},
+	}
+	for _, param := range textParams {
+		if !utf8.ValidString(param.value) || strings.IndexByte(param.value, 0) >= 0 {
+			return DshStoreListQuery{}, "invalid " + param.name
+		}
+	}
+
 	limitStr := q.Get("limit")
 	offsetStr := q.Get("offset")
 
@@ -41,6 +82,9 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 	offset := 0
 	var err error
 
+	if _, present := q["limit"]; present && limitStr == "" {
+		return DshStoreListQuery{}, "limit and offset must be integers"
+	}
 	if limitStr != "" {
 		limit, err = strconv.Atoi(limitStr)
 		if err != nil {
@@ -48,6 +92,9 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 		}
 	}
 
+	if _, present := q["offset"]; present && offsetStr == "" {
+		return DshStoreListQuery{}, "limit and offset must be integers"
+	}
 	if offsetStr != "" {
 		offset, err = strconv.Atoi(offsetStr)
 		if err != nil {
@@ -55,14 +102,9 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 		}
 	}
 
-	var isVisible *bool
-	isVisibleStr := q.Get("isVisible")
-	if isVisibleStr == "true" {
-		v := true
-		isVisible = &v
-	} else if isVisibleStr == "false" {
-		v := false
-		isVisible = &v
+	isVisible, errMsg := parseOptionalBoolean(q, "isVisible")
+	if errMsg != "" {
+		return DshStoreListQuery{}, errMsg
 	}
 
 	status := DshStoreStatus(q.Get("status"))
@@ -79,24 +121,18 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 		}
 	}
 
-	var isFreeDelivery *bool
-	isFreeDeliveryStr := q.Get("isFreeDelivery")
-	if isFreeDeliveryStr == "true" {
-		v := true
-		isFreeDelivery = &v
-	} else if isFreeDeliveryStr == "false" {
-		v := false
-		isFreeDelivery = &v
+	sort := q.Get("sort")
+	if sort != "" && sort != "rating" && sort != "distance" && sort != "eta" {
+		return DshStoreListQuery{}, "invalid sort: " + sort
 	}
 
-	var hasProBadge *bool
-	hasProBadgeStr := q.Get("hasProBadge")
-	if hasProBadgeStr == "true" {
-		v := true
-		hasProBadge = &v
-	} else if hasProBadgeStr == "false" {
-		v := false
-		hasProBadge = &v
+	isFreeDelivery, errMsg := parseOptionalBoolean(q, "isFreeDelivery")
+	if errMsg != "" {
+		return DshStoreListQuery{}, errMsg
+	}
+	hasProBadge, errMsg := parseOptionalBoolean(q, "hasProBadge")
+	if errMsg != "" {
+		return DshStoreListQuery{}, errMsg
 	}
 
 	return DshStoreListQuery{
@@ -106,7 +142,7 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 		IsVisible:       isVisible,
 		Search:          q.Get("search"),
 		Category:        q.Get("category"),
-		Sort:            q.Get("sort"),
+		Sort:            sort,
 		IsFreeDelivery:  isFreeDelivery,
 		HasProBadge:     hasProBadge,
 		Limit:           limit,
@@ -114,10 +150,20 @@ func ParseListQuery(q url.Values) (DshStoreListQuery, string) {
 	}, ""
 }
 
-// validateListQuery remains as the package-local compatibility entry point for
-// existing tests and callers while ParseListQuery is used by protected routes.
-func validateListQuery(q url.Values) (DshStoreListQuery, string) {
-	return ParseListQuery(q)
+func parseOptionalBoolean(q url.Values, name string) (*bool, string) {
+	if _, present := q[name]; !present {
+		return nil, ""
+	}
+	switch value := q.Get(name); value {
+	case "true":
+		v := true
+		return &v, ""
+	case "false":
+		v := false
+		return &v, ""
+	default:
+		return nil, "invalid " + name + ": must be true or false"
+	}
 }
 
 func HandleListStores(db *sql.DB) http.HandlerFunc {

@@ -23,7 +23,7 @@ type HomeContentEventInput struct {
 func HandleHomeContentEvent(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 8*1024)
-		defer r.Body.Close()
+		defer func() { _ = r.Body.Close() }()
 		var input HomeContentEventInput
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()

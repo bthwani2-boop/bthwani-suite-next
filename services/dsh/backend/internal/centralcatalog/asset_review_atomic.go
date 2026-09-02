@@ -26,7 +26,7 @@ func ReviewAssetAtomicExpected(
 	if err != nil {
 		return CatalogAsset{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var currentStatus string
 	var currentVersion int
@@ -59,7 +59,8 @@ func ReviewAssetAtomicExpected(
 		return CatalogAsset{}, NewConflictError(tx, ctx, "dsh_catalog_assets", id, input.ExpectedVersion)
 	}
 
-	if input.Decision == "approved" {
+	switch input.Decision {
+	case "approved":
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
 			status='approved', updated_at=now(), version=version+1
 			WHERE asset_id=$1 AND status='pending_review'`, id); err != nil {
@@ -71,7 +72,7 @@ func ReviewAssetAtomicExpected(
 		if err := syncProductImageProjectionsForAsset(ctx, tx, id); err != nil {
 			return CatalogAsset{}, err
 		}
-	} else if input.Decision == "rejected" || input.Decision == "archived" {
+	case "rejected", "archived":
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
 			status=$1, is_primary=false, updated_at=now(), version=version+1
 			WHERE asset_id=$2 AND status <> 'archived'`, input.Decision, id); err != nil {

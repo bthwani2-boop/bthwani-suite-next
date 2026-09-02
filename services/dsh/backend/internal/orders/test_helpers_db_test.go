@@ -87,19 +87,3 @@ func seedOrderFixture(t *testing.T, db *sql.DB, status string) (order *Order, pa
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_orders WHERE id = $1::uuid`, o.ID) })
 	return &o, paymentSessionID
 }
-
-func fetchFinancialClosureOutboxRow(t *testing.T, db *sql.DB, paymentSessionID string) (eventType string, orderID sql.NullString, reason string, found bool) {
-	t.Helper()
-	err := db.QueryRow(`
-		SELECT event_type, order_id::text, reason
-		FROM dsh_checkout_financial_closure_outbox
-		WHERE payment_session_id = $1`, paymentSessionID,
-	).Scan(&eventType, &orderID, &reason)
-	if err == sql.ErrNoRows {
-		return "", sql.NullString{}, "", false
-	}
-	if err != nil {
-		t.Fatalf("failed to query financial closure outbox: %v", err)
-	}
-	return eventType, orderID, reason, true
-}

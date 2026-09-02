@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"net/url"
 	"testing"
 	"time"
@@ -74,6 +75,25 @@ func TestRowToSummary(t *testing.T) {
 	}
 }
 
+func TestRowToSummaryNormalizesRequiredArrayFields(t *testing.T) {
+	summary := RowToSummary(DshStoreRow{PublicationDecision: PublicationPublished})
+
+	payload, err := json.Marshal(summary)
+	if err != nil {
+		t.Fatalf("marshal summary: %v", err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &fields); err != nil {
+		t.Fatalf("decode summary: %v", err)
+	}
+	if got := string(fields["deliveryModes"]); got != "[]" {
+		t.Fatalf("expected deliveryModes to serialize as [], got %s", got)
+	}
+	if got := string(fields["blockingReasons"]); got != "[]" {
+		t.Fatalf("expected blockingReasons to serialize as [], got %s", got)
+	}
+}
+
 func TestPublicationEligibilityRequiresAllGates(t *testing.T) {
 	row := eligibleStoreRow()
 	if !DiagnoseStorePublication(row).IsReady {
@@ -139,9 +159,29 @@ func TestValidateListQuery(t *testing.T) {
 			wantErr: "limit and offset must be integers",
 		},
 		{
+			name:    "empty limit rejected",
+			query:   url.Values{"limit": {""}},
+			wantErr: "limit and offset must be integers",
+		},
+		{
+			name:    "empty offset rejected",
+			query:   url.Values{"offset": {""}},
+			wantErr: "limit and offset must be integers",
+		},
+		{
+			name:    "unknown parameter rejected",
+			query:   url.Values{"x-schemathesis-unknown-property": {"42"}},
+			wantErr: "invalid query parameter: x-schemathesis-unknown-property",
+		},
+		{
 			name:    "unknown status rejected",
 			query:   url.Values{"status": {"bogus"}},
 			wantErr: "invalid status: bogus",
+		},
+		{
+			name:    "unknown sort rejected",
+			query:   url.Values{"sort": {"bogus"}},
+			wantErr: "invalid sort: bogus",
 		},
 		{
 			name:      "status active accepted",
@@ -189,7 +229,7 @@ func TestValidateListQuery(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, errMsg := validateListQuery(tc.query)
+			got, errMsg := ParseListQuery(tc.query)
 			if errMsg != tc.wantErr {
 				t.Fatalf("expected error %q, got %q", tc.wantErr, errMsg)
 			}
@@ -213,6 +253,26 @@ func TestValidateListQuery(t *testing.T) {
 				if got.IsVisible == nil || *got.IsVisible != *tc.wantVis {
 					t.Errorf("expected isVisible %v, got %v", *tc.wantVis, got.IsVisible)
 				}
+			}
+		})
+	}
+}
+
+func TestParseListQueryRejectsInvalidBooleanAndUnsafeText(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		query   url.Values
+		wantErr string
+	}{
+		{name: "invalid visibility", query: url.Values{"isVisible": {"1"}}, wantErr: "invalid isVisible: must be true or false"},
+		{name: "invalid free delivery", query: url.Values{"isFreeDelivery": {"1"}}, wantErr: "invalid isFreeDelivery: must be true or false"},
+		{name: "nul city code", query: url.Values{"cityCode": {"sana\x00"}}, wantErr: "invalid cityCode"},
+		{name: "invalid utf8 search", query: url.Values{"search": {string([]byte{0xff})}}, wantErr: "invalid search"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, errMsg := ParseListQuery(tc.query)
+			if errMsg != tc.wantErr {
+				t.Fatalf("expected error %q, got %q", tc.wantErr, errMsg)
 			}
 		})
 	}

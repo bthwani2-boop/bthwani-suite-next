@@ -157,7 +157,7 @@ func List(db *sql.DB, operatorContextID, entityType, stage, source string, limit
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []Record
 	for rows.Next() {
 		rec, err := scanRecordRow(rows)
@@ -187,7 +187,7 @@ func ListPartnerQueue(db *sql.DB, operatorContextID, ownerActorID string, limit 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []PartnerQueueRecord
 	for rows.Next() {
 		var rec PartnerQueueRecord
@@ -210,7 +210,7 @@ func Transition(db *sql.DB, operatorContextID, id, toStage, owner, actionLabel s
 	if err != nil {
 		return Record{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var fromStage string
 	if err := tx.QueryRow(`
@@ -261,7 +261,7 @@ func listAuditTrail(db *sql.DB, recordID string) ([]AuditEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []AuditEntry
 	for rows.Next() {
 		var entry AuditEntry

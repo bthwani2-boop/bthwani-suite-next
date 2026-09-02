@@ -124,7 +124,7 @@ func ListDomains(ctx context.Context, db *sql.DB) ([]Domain, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []Domain{}
 	for rows.Next() {
 		d, err := scanDomain(rows)
@@ -284,7 +284,7 @@ func ListNodes(ctx context.Context, db *sql.DB, domainID, parentID string) ([]No
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []Node{}
 	for rows.Next() {
 		n, err := scanNode(rows)
@@ -597,7 +597,7 @@ func ListMasterProducts(ctx context.Context, db *sql.DB, filter MasterProductFil
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []MasterProduct{}
 	for rows.Next() {
 		m, err := scanMasterProduct(rows)
@@ -814,6 +814,14 @@ const proposalColumns = `id, proposed_name_ar, proposed_name_en, domain_id, cate
 	audit_required, blocked_reason, resubmission_count, linked_store_id,
 	target_master_product_id, base_version, duplicate_candidates`
 
+const proposalByIDSQL = `SELECT id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode,
+	image_object_key, source_surface, source_actor_id, source_store_id, status, review_note,
+	adopted_master_product_id, created_at, updated_at, version, review_stage, partner_reviewed_by,
+	marketing_reviewed_by, catalog_adopted_by, catalog_approved_by, client_visible_at,
+	audit_required, blocked_reason, resubmission_count, linked_store_id,
+	target_master_product_id, base_version, duplicate_candidates
+	FROM dsh_product_proposals WHERE id=$1`
+
 func scanProposal(scanner interface{ Scan(...any) error }) (ProductProposal, error) {
 	var p ProductProposal
 	err := scanner.Scan(&p.ID, &p.ProposedNameAr, &p.ProposedNameEn, &p.DomainID, &p.CategoryNodeID, &p.Brand,
@@ -853,7 +861,7 @@ func ListProposals(ctx context.Context, db *sql.DB, filter ProposalFilter) ([]Pr
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []ProductProposal{}
 	for rows.Next() {
 		p, err := scanProposal(rows)
@@ -923,9 +931,9 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID, idempotencyKey str
 	if err != nil {
 		return ProductProposal{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if replay != nil {
-		proposal, err := scanProposal(tx.QueryRowContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1`, replay.ResourceID))
+		proposal, err := scanProposal(tx.QueryRowContext(ctx, proposalByIDSQL, replay.ResourceID))
 		if err != nil {
 			return ProductProposal{}, err
 		}
@@ -1006,7 +1014,7 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID, idempotencyKey str
 	if err := recordCatalogCreateMutation(ctx, tx, mutation, "product_proposal", id); err != nil {
 		return ProductProposal{}, err
 	}
-	proposal, err := scanProposal(tx.QueryRowContext(ctx, `SELECT `+proposalColumns+` FROM dsh_product_proposals WHERE id=$1`, id))
+	proposal, err := scanProposal(tx.QueryRowContext(ctx, proposalByIDSQL, id))
 	if err != nil {
 		return ProductProposal{}, err
 	}
@@ -1016,16 +1024,12 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID, idempotencyKey str
 	return proposal, nil
 }
 
-// ── Store assortment (store-local truth: price/availability/stock/note/image) ─
+// ── Store assortment metadata (commercial truth lives in normalized resources) ─
 
 type StoreAssortment struct {
 	ID                   string    `json:"id"`
 	StoreID              string    `json:"storeId"`
 	MasterProductID      string    `json:"masterProductId"`
-	UnitPrice            float64   `json:"unitPrice"`
-	Currency             string    `json:"currency"`
-	Available            bool      `json:"available"`
-	StockStatus          string    `json:"stockStatus"`
 	LocalNote            string    `json:"localNote"`
 	CustomImageObjectKey *string   `json:"customImageObjectKey"`
 	PublicationStatus    string    `json:"publicationStatus"`
@@ -1060,7 +1064,6 @@ type StoreAssortmentPrice struct {
 	Version           int        `json:"version"`
 }
 
-var validStockStatus = map[string]bool{"in_stock": true, "low_stock": true, "out_of_stock": true}
 var validPublicationStatus = map[string]bool{
 	"draft": true, "submitted": true, "approved": true, "client_visible": true, "rejected": true, "hidden": true,
 }
@@ -1085,24 +1088,24 @@ type StoreAssortmentPriceInput struct {
 }
 
 type StoreAssortmentInput struct {
-	UnitPrice            float64 `json:"unitPrice"`
-	Currency             string  `json:"currency"`
-	Available            bool    `json:"available"`
-	StockStatus          string  `json:"stockStatus"`
 	LocalNote            string  `json:"localNote"`
 	CustomImageObjectKey *string `json:"customImageObjectKey"`
 	PublicationStatus    string  `json:"publicationStatus"`
 	ExpectedVersion      *int    `json:"expectedVersion"`
 }
 
-const assortmentColumns = `id, store_id, master_product_id, unit_price, currency, available, stock_status,
-	local_note, custom_image_object_key, publication_status, submitted_by, approved_by, created_at, updated_at, version`
+// assortmentMetadataColumns deliberately excludes the retired commercial
+// columns from dsh_store_assortments. Price and inventory are normalized
+// authorities and are hydrated separately from their own tables.
+const assortmentMetadataColumns = `id, store_id, master_product_id,
+	local_note, custom_image_object_key, publication_status, submitted_by, approved_by,
+	created_at, updated_at, version`
 
 func scanAssortment(scanner interface{ Scan(...any) error }) (StoreAssortment, error) {
 	var a StoreAssortment
-	err := scanner.Scan(&a.ID, &a.StoreID, &a.MasterProductID, &a.UnitPrice, &a.Currency, &a.Available,
-		&a.StockStatus, &a.LocalNote, &a.CustomImageObjectKey, &a.PublicationStatus, &a.SubmittedBy,
-		&a.ApprovedBy, &a.CreatedAt, &a.UpdatedAt, &a.Version)
+	err := scanner.Scan(&a.ID, &a.StoreID, &a.MasterProductID, &a.LocalNote,
+		&a.CustomImageObjectKey, &a.PublicationStatus, &a.SubmittedBy, &a.ApprovedBy,
+		&a.CreatedAt, &a.UpdatedAt, &a.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return a, ErrNotFound
 	}
@@ -1113,16 +1116,20 @@ func scanAssortment(scanner interface{ Scan(...any) error }) (StoreAssortment, e
 // store, so callers can resolve which store owns it (e.g. for DAM asset-link
 // ownership checks) before knowing the store ID.
 func GetStoreAssortmentByID(ctx context.Context, db *sql.DB, id string) (StoreAssortment, error) {
-	return scanAssortment(db.QueryRowContext(ctx, `SELECT `+assortmentColumns+` FROM dsh_store_assortments WHERE id=$1`, id))
+	a, err := scanAssortment(db.QueryRowContext(ctx, `SELECT `+assortmentMetadataColumns+` FROM dsh_store_assortments WHERE id=$1`, id))
+	if err != nil {
+		return StoreAssortment{}, err
+	}
+	return a, nil
 }
 
 func ListStoreAssortment(ctx context.Context, db *sql.DB, storeID string) ([]StoreAssortment, error) {
-	rows, err := db.QueryContext(ctx, `SELECT `+assortmentColumns+` FROM dsh_store_assortments
+	rows, err := db.QueryContext(ctx, `SELECT `+assortmentMetadataColumns+` FROM dsh_store_assortments
 		WHERE store_id=$1 ORDER BY updated_at DESC`, storeID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []StoreAssortment{}
 	for rows.Next() {
 		a, err := scanAssortment(rows)
@@ -1196,7 +1203,7 @@ func ListCatalogPolicies(ctx context.Context, db *sql.DB) ([]CatalogPolicy, erro
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []CatalogPolicy{}
 	for rows.Next() {
 		p, err := scanPolicy(rows)
@@ -1326,10 +1333,9 @@ type EffectiveImage struct {
 	Source string `json:"source"`
 }
 
-// GetClientCatalog returns the structural candidates allowed by rule 4 of the
-// sovereignty decision. Commercial eligibility is applied by
-// GetPurchasableClientCatalog from normalized price/inventory truth; legacy
-// assortment projections must not filter candidates before that gate runs.
+// GetClientCatalog returns only structural candidates with a current,
+// purchasable normalized price and inventory row. Commercial eligibility is
+// therefore established before any client-facing projection is assembled.
 func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain, []Node, []ClientCatalogEntry, []CatalogAssetLinkWithAsset, []CatalogPolicy, error) {
 	var storePublished bool
 	err := db.QueryRowContext(ctx, `SELECT EXISTS (
@@ -1385,7 +1391,7 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
-	defer linkRows.Close()
+	defer func() { _ = linkRows.Close() }()
 	allLinks := []CatalogAssetLinkWithAsset{}
 	for linkRows.Next() {
 		l, err := scanAssetLinkWithAsset(linkRows)
@@ -1414,14 +1420,42 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 	// 3. Fetch candidate products
 	rows, err := db.QueryContext(ctx, `
 		SELECT `+prefixColumns("mp", masterProductColumns)+`, a.id,
-		       0::double precision, ''::text, 'out_of_stock'::text,
+		       p.amount_minor::double precision / 100, p.currency,
+		       CASE
+			       WHEN a.paused_at IS NOT NULL THEN 'out_of_stock'
+			       WHEN i.policy_type = 'infinite' THEN 'in_stock'
+			       WHEN i.policy_type = 'signal' AND i.quantity <= 5 THEN 'low_stock'
+			       WHEN i.policy_type = 'quantity' AND i.quantity - i.reserved_quantity <= 5 THEN 'low_stock'
+			       ELSE 'in_stock'
+		       END,
 		       COALESCE(a.custom_image_object_key, mp.canonical_image_object_key, '')
 		FROM dsh_store_assortments a
+		JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
+		JOIN LATERAL (
+		    SELECT amount_minor, currency
+		    FROM dsh_store_assortment_prices
+		    WHERE store_assortment_id = a.id
+		      AND effective_from <= NOW()
+		      AND (effective_until IS NULL OR effective_until > NOW())
+		    ORDER BY effective_from DESC, version DESC, id DESC
+		    LIMIT 1
+		) p ON TRUE
 		JOIN dsh_master_products mp ON mp.id = a.master_product_id
 		JOIN dsh_catalog_domains d ON d.id = mp.domain_id
 		LEFT JOIN dsh_catalog_nodes n ON n.id = mp.category_node_id
 		WHERE a.store_id = $1
 		  AND a.publication_status = 'client_visible'
+		  AND a.paused_at IS NULL
+		  AND p.amount_minor > 0
+		  AND char_length(trim(p.currency)) = 3
+		  AND i.min_order_quantity >= 1
+		  AND i.max_order_quantity >= i.min_order_quantity
+		  AND i.step_quantity >= 1
+		  AND (
+				 i.policy_type = 'infinite'
+				 OR (i.policy_type = 'signal' AND i.quantity > 0)
+				 OR (i.policy_type = 'quantity' AND i.quantity - i.reserved_quantity >= i.min_order_quantity)
+		  )
 		  AND mp.approval_status = 'approved' AND mp.is_active = true
 		  AND d.is_active = true AND d.is_client_visible = true AND d.is_manual_request = false
 		  AND (n.id IS NULL OR (n.is_active = true AND n.is_client_visible = true))
@@ -1434,7 +1468,7 @@ func GetClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	entries := []ClientCatalogEntry{}
 	domainIDs := map[string]bool{}
@@ -1590,12 +1624,6 @@ var validAssetStatus = map[string]bool{
 var validAssetSourceSurface = map[string]bool{
 	"control-panel-catalog": true, "control-panel-platform": true, "app-partner": true, "app-field": true, "system": true,
 }
-var validAssetRole = map[string]bool{
-	"icon": true, "cover": true, "thumbnail": true, "gallery": true, "canonical_product_image": true,
-	"partner_custom_product_image": true, "marketing_banner": true, "document": true,
-	"store_logo": true, "store_cover": true, "storefront_photo": true, "interior_photo": true, "signage_photo": true,
-	"reel_video": true, "reel_poster": true,
-}
 var validAssetEntityType = map[string]bool{
 	"domain": true, "node": true, "master_product": true, "product_proposal": true,
 	"store_assortment": true, "collection": true, "campaign": true, "store": true,
@@ -1651,6 +1679,16 @@ func assertEntityExists(ctx context.Context, db dbtx, entityType, entityID strin
 const assetColumns = `id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
 	checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by, reviewed_by,
 	review_note, intended_entity_type, intended_entity_id, intended_role, created_at, updated_at, version`
+
+const assetByIDSQL = `SELECT id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
+	checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by, reviewed_by,
+	review_note, intended_entity_type, intended_entity_id, intended_role, created_at, updated_at, version
+	FROM dsh_catalog_assets WHERE id=$1`
+
+const assetByIDForUpdateSQL = `SELECT id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height,
+	checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by, reviewed_by,
+	review_note, intended_entity_type, intended_entity_id, intended_role, created_at, updated_at, version
+	FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`
 
 func scanAsset(scanner interface{ Scan(...any) error }) (CatalogAsset, error) {
 	var a CatalogAsset
@@ -1768,9 +1806,9 @@ func CreateAssetUploadIntent(ctx context.Context, db *sql.DB, mediaClient *media
 	if err != nil {
 		return AssetUploadIntent{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if replay != nil {
-		asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1`, replay.ResourceID))
+		asset, err := scanAsset(tx.QueryRowContext(ctx, assetByIDSQL, replay.ResourceID))
 		if err != nil {
 			return AssetUploadIntent{}, err
 		}
@@ -1854,7 +1892,7 @@ func verifyAndNormalizeUploadedAsset(ctx context.Context, mediaClient *media.Cli
 	if err != nil {
 		return uploadedAssetFacts{}, fmt.Errorf("%w: uploaded object not found in storage: %v", ErrInvalid, err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	data, err := io.ReadAll(io.LimitReader(reader, maxSize+1))
 	if err != nil {
 		return uploadedAssetFacts{}, err
@@ -1923,11 +1961,11 @@ func CompleteAssetUpload(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	if err != nil {
 		return CatalogAsset{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "dsh-catalog-asset-complete:"+id); err != nil {
 		return CatalogAsset{}, err
 	}
-	asset, err := scanAsset(tx.QueryRowContext(ctx, `SELECT `+assetColumns+` FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id))
+	asset, err := scanAsset(tx.QueryRowContext(ctx, assetByIDForUpdateSQL, id))
 	if err != nil {
 		return CatalogAsset{}, err
 	}
@@ -1994,7 +2032,7 @@ func ListAssets(ctx context.Context, db *sql.DB, status string, limit, offset in
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []CatalogAsset{}
 	for rows.Next() {
 		a, err := scanAsset(rows)
@@ -2084,7 +2122,7 @@ func syncStoreImageProjectionsForAsset(ctx context.Context, tx *sql.Tx, assetID 
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	type storeLink struct{ storeID, role string }
 	var links []storeLink
 	for rows.Next() {
@@ -2130,7 +2168,7 @@ func syncProductImageProjectionsForAsset(ctx context.Context, tx *sql.Tx, assetI
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var productIDs []string
 	for rows.Next() {
 		var id string
@@ -2158,7 +2196,7 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 	if err != nil {
 		return CatalogAsset{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var currentStatus string
 	if err := tx.QueryRowContext(ctx, `SELECT status FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id).Scan(&currentStatus); err != nil {
@@ -2180,7 +2218,8 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 	if n, _ := result.RowsAffected(); n != 1 {
 		return CatalogAsset{}, NewConflictError(tx, ctx, "dsh_catalog_assets", id, input.ExpectedVersion)
 	}
-	if input.Decision == "approved" {
+	switch input.Decision {
+	case "approved":
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
 			status='approved', updated_at=now(), version = version + 1 WHERE asset_id=$1 AND status='pending_review'`, id); err != nil {
 			return CatalogAsset{}, err
@@ -2191,7 +2230,7 @@ func ReviewAsset(ctx context.Context, db *sql.DB, actorID, id string, input Asse
 		if err := syncProductImageProjectionsForAsset(ctx, tx, id); err != nil {
 			return CatalogAsset{}, err
 		}
-	} else if input.Decision == "rejected" || input.Decision == "archived" {
+	case "rejected", "archived":
 		if _, err := tx.ExecContext(ctx, `UPDATE dsh_catalog_asset_links SET
 			status=$1, is_primary=false, updated_at=now(), version = version + 1 WHERE asset_id=$2 AND status <> 'archived'`, input.Decision, id); err != nil {
 			return CatalogAsset{}, err
@@ -2360,11 +2399,12 @@ func ReplacePrimaryAssetLink(ctx context.Context, tx *sql.Tx, input AssetLinkInp
 		id, input.AssetID, input.EntityType, input.EntityID, input.Role, input.SortOrder); err != nil {
 		return CatalogAssetLink{}, err
 	}
-	if input.EntityType == "store" {
+	switch input.EntityType {
+	case "store":
 		if err := syncStoreImageProjection(ctx, tx, input.EntityID, input.Role); err != nil {
 			return CatalogAssetLink{}, err
 		}
-	} else if input.EntityType == "master_product" {
+	case "master_product":
 		if err := syncProductImageProjection(ctx, tx, input.EntityID); err != nil {
 			return CatalogAssetLink{}, err
 		}
@@ -2380,7 +2420,7 @@ func ListAssetLinks(ctx context.Context, db *sql.DB, entityType, entityID string
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []CatalogAssetLink{}
 	for rows.Next() {
 		l, err := scanAssetLink(rows)
@@ -2397,7 +2437,7 @@ func UnlinkAsset(ctx context.Context, db *sql.DB, entityType, entityID, linkID s
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var role string
 	if err := tx.QueryRowContext(ctx, `DELETE FROM dsh_catalog_asset_links
 		WHERE id=$1 AND entity_type=$2 AND entity_id=$3 RETURNING role`, linkID, entityType, entityID).Scan(&role); err != nil {
@@ -2409,11 +2449,12 @@ func UnlinkAsset(ctx context.Context, db *sql.DB, entityType, entityID, linkID s
 	if role == "" {
 		return ErrNotFound
 	}
-	if entityType == "store" {
+	switch entityType {
+	case "store":
 		if err := syncStoreImageProjection(ctx, tx, entityID, role); err != nil {
 			return err
 		}
-	} else if entityType == "master_product" {
+	case "master_product":
 		if err := syncProductImageProjection(ctx, tx, entityID); err != nil {
 			return err
 		}
@@ -2429,7 +2470,7 @@ func DeleteUnlinkedAsset(ctx context.Context, db *sql.DB, mediaClient *media.Cli
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var status, objectKey string
 	if err := tx.QueryRowContext(ctx, `SELECT status, object_key FROM dsh_catalog_assets WHERE id=$1 FOR UPDATE`, id).Scan(&status, &objectKey); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -2573,7 +2614,7 @@ func CleanupOrphanCatalogAssets(ctx context.Context, db *sql.DB, mediaClient *me
 	if err != nil {
 		return 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var deletedCount int
 	var failures []string
@@ -2686,18 +2727,9 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 	if err != nil {
 		return StoreAssortmentPrice{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if replay != nil {
-		var price StoreAssortmentPrice
-		err := tx.QueryRowContext(ctx, `
-			SELECT id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max,
-			       effective_from, effective_until, version
-			FROM dsh_store_assortment_prices WHERE id=$1`, replay.ResourceID).
-			Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin,
-				&price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
-		if errors.Is(err, sql.ErrNoRows) {
-			return StoreAssortmentPrice{}, ErrNotFound
-		}
+		price, err := readAssortmentPriceTx(ctx, tx, replay.ResourceID)
 		if err != nil {
 			return StoreAssortmentPrice{}, err
 		}
@@ -2707,51 +2739,21 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 		return price, nil
 	}
 
-	if input.AmountMinor < 0 || input.PrepTimeMin < 0 || input.PrepTimeMax < input.PrepTimeMin {
-		return StoreAssortmentPrice{}, ErrInvalid
-	}
-	if len(input.Currency) != 3 {
-		return StoreAssortmentPrice{}, ErrInvalid
-	}
-
-	var assortmentID string
-	err = tx.QueryRowContext(ctx, `SELECT id FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`, storeID, masterProductID).Scan(&assortmentID)
-	if err == sql.ErrNoRows {
-		return StoreAssortmentPrice{}, ErrNotFound
-	} else if err != nil {
+	if err := validateAssortmentPriceInput(input); err != nil {
 		return StoreAssortmentPrice{}, err
 	}
 
-	// Ensure no overlap
-	var overlapCount int
-	overlapQuery := `
-		SELECT COUNT(*) FROM dsh_store_assortment_prices
-		WHERE store_assortment_id = $1
-		AND (effective_until IS NULL OR effective_until > $2)
-	`
-	if input.EffectiveUntil != nil {
-		overlapQuery += ` AND effective_from < $3`
-		err = tx.QueryRowContext(ctx, overlapQuery, assortmentID, input.EffectiveFrom, *input.EffectiveUntil).Scan(&overlapCount)
-	} else {
-		err = tx.QueryRowContext(ctx, overlapQuery, assortmentID, input.EffectiveFrom).Scan(&overlapCount)
-	}
+	assortmentID, err := findAssortmentForPriceTx(ctx, tx, storeID, masterProductID)
 	if err != nil {
 		return StoreAssortmentPrice{}, err
 	}
-	if overlapCount > 0 {
-		return StoreAssortmentPrice{}, fmt.Errorf("%w: price schedule overlaps with existing schedule", ErrInvalid)
+
+	if err := ensureAssortmentPriceScheduleDoesNotOverlap(ctx, tx, assortmentID, input); err != nil {
+		return StoreAssortmentPrice{}, err
 	}
 
 	id := entityID("price")
-	var price StoreAssortmentPrice
-	err = tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_store_assortment_prices (
-			id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until, version
-	`, id, assortmentID, input.AmountMinor, input.Currency, input.PrepTimeMin, input.PrepTimeMax, input.EffectiveFrom, input.EffectiveUntil).
-		Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin, &price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
-
+	price, err := insertAssortmentPriceTx(ctx, tx, id, assortmentID, input)
 	if err != nil {
 		return StoreAssortmentPrice{}, err
 	}
@@ -2762,4 +2764,139 @@ func CreateAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, maste
 		return StoreAssortmentPrice{}, err
 	}
 	return price, nil
+}
+
+// ReplaceAssortmentPriceAtomic closes the current effective schedule row and
+// creates the requested normalized price under one idempotent command. It is
+// used by field onboarding, where a single form edits the current price rather
+// than appending a future schedule entry. The legacy assortment row is never
+// written.
+func ReplaceAssortmentPriceAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID, idempotencyKey string, input StoreAssortmentPriceInput) (StoreAssortmentPrice, error) {
+	storeID = strings.TrimSpace(storeID)
+	masterProductID = strings.TrimSpace(masterProductID)
+	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
+	mutationRequest := struct {
+		StoreID         string                    `json:"storeId"`
+		MasterProductID string                    `json:"masterProductId"`
+		Input           StoreAssortmentPriceInput `json:"input"`
+	}{StoreID: storeID, MasterProductID: masterProductID, Input: input}
+	tx, mutation, replay, err := beginCatalogCreateMutation(
+		ctx, db, actorID, "assortment_price.replace", idempotencyKey, mutationRequest,
+	)
+	if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if replay != nil {
+		price, err := readAssortmentPriceTx(ctx, tx, replay.ResourceID)
+		if err != nil {
+			return StoreAssortmentPrice{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return StoreAssortmentPrice{}, err
+		}
+		return price, nil
+	}
+
+	if err := validateAssortmentPriceInput(input); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	assortmentID, err := findAssortmentForPriceTx(ctx, tx, storeID, masterProductID)
+	if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE dsh_store_assortment_prices
+		SET effective_until=$2, version=version+1, updated_at=NOW()
+		WHERE store_assortment_id=$1
+		  AND effective_until IS NULL
+		  AND effective_from < $2`, assortmentID, input.EffectiveFrom); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	if err := ensureAssortmentPriceScheduleDoesNotOverlap(ctx, tx, assortmentID, input); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+
+	id := entityID("price")
+	price, err := insertAssortmentPriceTx(ctx, tx, id, assortmentID, input)
+	if err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	if err := recordCatalogCreateMutation(ctx, tx, mutation, "assortment_price", id); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return StoreAssortmentPrice{}, err
+	}
+	return price, nil
+}
+
+func readAssortmentPriceTx(ctx context.Context, tx *sql.Tx, id string) (StoreAssortmentPrice, error) {
+	var price StoreAssortmentPrice
+	err := tx.QueryRowContext(ctx, `
+		SELECT id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max,
+		       effective_from, effective_until, version
+		FROM dsh_store_assortment_prices WHERE id=$1`, id).
+		Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin,
+			&price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
+	if errors.Is(err, sql.ErrNoRows) {
+		return StoreAssortmentPrice{}, ErrNotFound
+	}
+	return price, err
+}
+
+func validateAssortmentPriceInput(input StoreAssortmentPriceInput) error {
+	if input.AmountMinor < 0 || input.PrepTimeMin < 0 || input.PrepTimeMax < input.PrepTimeMin || len(input.Currency) != 3 {
+		return ErrInvalid
+	}
+	return nil
+}
+
+func findAssortmentForPriceTx(ctx context.Context, tx *sql.Tx, storeID, masterProductID string) (string, error) {
+	var assortmentID string
+	err := tx.QueryRowContext(ctx, `SELECT id FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2 FOR UPDATE`, storeID, masterProductID).Scan(&assortmentID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return assortmentID, err
+}
+
+const assortmentPriceOverlapSQL = `
+		SELECT COUNT(*) FROM dsh_store_assortment_prices
+		WHERE store_assortment_id = $1
+		AND (effective_until IS NULL OR effective_until > $2)`
+
+const assortmentPriceBoundedOverlapSQL = `
+		SELECT COUNT(*) FROM dsh_store_assortment_prices
+		WHERE store_assortment_id = $1
+		AND (effective_until IS NULL OR effective_until > $2)
+		AND effective_from < $3`
+
+func ensureAssortmentPriceScheduleDoesNotOverlap(ctx context.Context, tx *sql.Tx, assortmentID string, input StoreAssortmentPriceInput) error {
+	var overlapCount int
+	var err error
+	if input.EffectiveUntil != nil {
+		err = tx.QueryRowContext(ctx, assortmentPriceBoundedOverlapSQL, assortmentID, input.EffectiveFrom, *input.EffectiveUntil).Scan(&overlapCount)
+	} else {
+		err = tx.QueryRowContext(ctx, assortmentPriceOverlapSQL, assortmentID, input.EffectiveFrom).Scan(&overlapCount)
+	}
+	if err != nil {
+		return err
+	}
+	if overlapCount > 0 {
+		return fmt.Errorf("%w: price schedule overlaps with existing schedule", ErrInvalid)
+	}
+	return nil
+}
+
+func insertAssortmentPriceTx(ctx context.Context, tx *sql.Tx, id, assortmentID string, input StoreAssortmentPriceInput) (StoreAssortmentPrice, error) {
+	var price StoreAssortmentPrice
+	err := tx.QueryRowContext(ctx, `
+		INSERT INTO dsh_store_assortment_prices (
+			id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, store_assortment_id, amount_minor, currency, prep_time_min, prep_time_max, effective_from, effective_until, version
+	`, id, assortmentID, input.AmountMinor, input.Currency, input.PrepTimeMin, input.PrepTimeMax, input.EffectiveFrom, input.EffectiveUntil).
+		Scan(&price.ID, &price.StoreAssortmentID, &price.AmountMinor, &price.Currency, &price.PrepTimeMin, &price.PrepTimeMax, &price.EffectiveFrom, &price.EffectiveUntil, &price.Version)
+	return price, err
 }

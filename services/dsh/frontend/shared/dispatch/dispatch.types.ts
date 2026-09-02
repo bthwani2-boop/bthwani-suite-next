@@ -1,20 +1,7 @@
-import type { components } from "../../../clients/generated/dsh-api";
+import type { components, operations } from "../../../clients/generated/dsh-api";
 
-export type DshDispatchAssignment = components["schemas"]["DshDispatchAssignment"] & {
-  specialRequestId?: string;
-  requestType?: string;
-  operatorContextId?: string;
-  serviceAreaCode?: string;
-  priority?: number;
-  distanceMeters?: number | null;
-  offerReason?: string;
-  responseReason?: string;
-  expiredAt?: string | null;
-  cancelledAt?: string | null;
-  cancelledBy?: string;
-  supersedesAssignmentId?: string;
-  version: number;
-};
+export type DshDispatchAssignment = components["schemas"]["DshDispatchAssignment"];
+export type DshGovernedDispatchAssignment = components["schemas"]["DshGovernedDispatchAssignment"];
 export type DshDispatchAssignmentSource = "order" | "special_request";
 export type DshAssignmentStatus = components["schemas"]["DshAssignmentStatus"];
 export type DshDeliveryStatus = components["schemas"]["DshDeliveryStatus"];
@@ -25,105 +12,44 @@ type GeneratedDshDeliveryExceptionReasonCode = components["schemas"]["DshDeliver
 type GeneratedDshReportDeliveryExceptionInput = components["schemas"]["DshReportDeliveryExceptionRequest"];
 
 export type DshDeliveryExceptionReasonCode =
-  | GeneratedDshDeliveryExceptionReasonCode
-  | "handoff_shortage"
-  | "handoff_mismatch";
+  GeneratedDshDeliveryExceptionReasonCode;
 
-export type DshDeliveryException = Omit<GeneratedDshDeliveryException, "reasonCode" | "orderId"> & {
-  readonly reasonCode: DshDeliveryExceptionReasonCode;
-  readonly orderId: string;
-};
+export type DshDeliveryException = GeneratedDshDeliveryException;
 
-export type DshReportDeliveryExceptionInput = Omit<
-  GeneratedDshReportDeliveryExceptionInput,
-  "reasonCode" | "note"
-> & {
-  readonly reasonCode: DshDeliveryExceptionReasonCode;
-  readonly note: string;
-};
+export type DshReportDeliveryExceptionInput = GeneratedDshReportDeliveryExceptionInput;
 
 export type DshDeliveryExceptionResolutionAction =
-  | "retry_same_captain"
-  | "reassign_captain"
-  | "return_to_store"
-  | "cancel_order";
+  components["schemas"]["DshResolveDeliveryExceptionRequest"]["action"];
 
 export type DshPartnerDispatchReference = components["schemas"]["DshPartnerDispatchReference"];
 
-export type DshGovernedCreateAssignmentInput = {
-  readonly orderId: string;
-  readonly captainId: string;
-  readonly serviceAreaCode: string;
+type DshGovernedCreateAssignmentRequest =
+  operations["createDshAssignment"]["requestBody"]["content"]["application/json"];
+export type DshGovernedCreateAssignmentInput = DshGovernedCreateAssignmentRequest & {
   readonly idempotencyKey: string;
-  readonly priority?: number;
-  readonly distanceMeters?: number;
-  readonly offerReason?: string;
-  readonly responseTimeoutSeconds?: number;
 };
 
-export type DshCaptainDispatchProfileInput = {
-  readonly accreditationStatus: "pending" | "approved" | "suspended" | "expired";
-  readonly availabilityStatus: "available" | "busy" | "offline" | "suspended";
-  readonly maxActiveAssignments: number;
-  readonly priorityScore: number;
-  readonly expectedVersion?: number;
+export type DshCaptainDispatchProfileInput =
+  operations["upsertCaptainDispatchProfile"]["requestBody"]["content"]["application/json"];
+
+export type DshCaptainDispatchCandidate =
+  operations["listCaptainDispatchCandidates"]["responses"][200]["content"]["application/json"]["candidates"][number];
+
+export type DshCaptainReadiness =
+  operations["getOwnCaptainReadiness"]["responses"][200]["content"]["application/json"];
+
+export type DshCaptainAvailabilityStatus = components["schemas"]["DshCaptainAvailability"]["status"];
+
+export type DshCaptainAvailability = components["schemas"]["DshCaptainAvailability"];
+
+type DshReassignAssignmentRequest =
+  operations["reassignGovernedDispatchAssignment"]["requestBody"]["content"]["application/json"];
+export type DshReassignAssignmentInput = DshReassignAssignmentRequest & {
+  readonly idempotencyKey: string;
 };
 
-export type DshCaptainDispatchCandidate = {
-  readonly operatorContextId: string;
-  readonly captainId: string;
-  readonly serviceAreaCode: string;
-  readonly accreditationStatus: "pending" | "approved" | "suspended" | "expired";
-  readonly availabilityStatus: "available" | "busy" | "offline" | "suspended";
-  readonly maxActiveAssignments: number;
-  readonly activeAssignments: number;
-  readonly remainingCapacity: number;
-  readonly priorityScore: number;
-  readonly eligible: boolean;
-  readonly ineligibilityReason?: string;
-  readonly version: number;
-  readonly updatedAt: string;
-};
-
-export type DshCaptainReadiness = {
-  readonly ready: boolean;
-  readonly missing: readonly string[];
-};
-
-export type DshCaptainAvailabilityStatus = "available" | "unavailable" | "break" | "planned-leave";
-
-export type DshCaptainAvailability = {
-  readonly status: DshCaptainAvailabilityStatus;
-  readonly version: number;
-  readonly updatedAt: string;
-};
-
-export type DshReassignAssignmentInput = Omit<DshGovernedCreateAssignmentInput, "orderId"> & {
-  readonly reason: string;
-};
-
-export type DshDispatchDecision = {
-  readonly id: string;
-  readonly operatorContextId: string;
-  readonly assignmentId?: string;
-  readonly orderId?: string;
-  readonly captainId?: string;
-  readonly action:
-    | "offered"
-    | "accepted"
-    | "declined"
-    | "expired"
-    | "cancelled"
-    | "reassigned"
-    | "eligibility_rejected"
-    | "capacity_rejected";
-  readonly reasonCode?: string;
-  readonly reason?: string;
-  readonly actorId: string;
-  readonly actorRole: "operator" | "captain" | "system";
-  readonly metadata: Readonly<Record<string, unknown>>;
-  readonly createdAt: string;
-};
+export type DshDispatchDecision =
+  operations["listDispatchDecisions"]["responses"][200]["content"]["application/json"]["decisions"][number];
 
 export type DshDispatchListState =
   | { readonly kind: "idle" }

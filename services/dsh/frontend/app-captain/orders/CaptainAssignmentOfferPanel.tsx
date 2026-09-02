@@ -10,10 +10,10 @@ import {
   colorRoles,
   spacing,
 } from '@bthwani/ui-kit';
-import type { DshDispatchAssignment } from '../../shared/dispatch';
+import type { DshGovernedDispatchAssignment } from '../../shared/dispatch';
 
 type Props = {
-  readonly assignment: DshDispatchAssignment;
+  readonly assignment: DshGovernedDispatchAssignment;
   readonly busy: boolean;
   readonly errorMessage?: string;
   readonly onAccept: (assignmentId: string) => void;

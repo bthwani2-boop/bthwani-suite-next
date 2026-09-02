@@ -147,7 +147,7 @@ function normalizeForIdentity(value: unknown, path: string): CanonicalValue {
     const object = value as Record<string, unknown>;
     return Object.fromEntries(
       Object.keys(object)
-        .sort()
+        .sort((left, right) => left.localeCompare(right))
         .map((key) => [key, normalizeForIdentity(object[key], `${path}.${key}`)]),
     );
   }

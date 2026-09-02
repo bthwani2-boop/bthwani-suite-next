@@ -3,7 +3,7 @@ import {
   fetchCaptainDispatchAssignments,
   classifyDispatchError,
 } from '../dispatch/dispatch.api';
-import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
+import type { DshGovernedDispatchAssignment } from '../dispatch/dispatch.types';
 import type { DshCaptainOrdersScreenState } from '../orders/orders.contract';
 import {
   isCaptainAssignmentActionable,
@@ -18,7 +18,7 @@ export {
 
 export type CaptainInboxFetchState = Extract<DshCaptainOrdersScreenState, 'ready' | 'loading' | 'empty' | 'error'>;
 
-function isOperationalAssignment(assignment: DshDispatchAssignment): boolean {
+function isOperationalAssignment(assignment: DshGovernedDispatchAssignment): boolean {
   if (assignment.status !== 'accepted') return false;
   return assignment.delivery.status !== 'delivered'
     && assignment.delivery.status !== 'cancelled'
@@ -26,7 +26,7 @@ function isOperationalAssignment(assignment: DshDispatchAssignment): boolean {
 }
 
 export function useCaptainInboxModel(captainId: string) {
-  const [assignments, setAssignments] = React.useState<readonly DshDispatchAssignment[]>([]);
+  const [assignments, setAssignments] = React.useState<readonly DshGovernedDispatchAssignment[]>([]);
   const [fetchState, setFetchState] = React.useState<CaptainInboxFetchState>('loading');
   const requestTokenRef = React.useRef(0);
 

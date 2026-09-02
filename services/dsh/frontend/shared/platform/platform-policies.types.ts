@@ -9,28 +9,6 @@ export type DshZone = {
   readonly updatedAt: string;
 };
 
-export type DshSlaRule = {
-  readonly id: string;
-  readonly zoneId: string;
-  readonly category: string;
-  readonly maxPrepMins: number;
-  readonly maxDeliveryMins: number;
-  readonly version: number;
-  readonly updatedBy: string;
-  readonly updatedAt: string;
-};
-
-export type DshCapacityConfig = {
-  readonly id: string;
-  readonly zoneId: string;
-  readonly maxConcurrentOrders: number;
-  readonly maxCaptainsOnline: number;
-  readonly throttleThreshold: number;
-  readonly version: number;
-  readonly updatedBy: string;
-  readonly updatedAt: string;
-};
-
 export type DshZoneServiceability = {
   readonly zoneId: string;
   readonly isActive: boolean;
@@ -56,24 +34,6 @@ export type DshUpdateZoneInput = {
   readonly name?: string;
   readonly description?: string;
   readonly isActive?: boolean;
-  readonly expectedVersion: number;
-  readonly reason: string;
-};
-
-export type DshUpsertSlaRuleInput = {
-  readonly zoneId: string;
-  readonly category: string;
-  readonly maxPrepMins: number;
-  readonly maxDeliveryMins: number;
-  readonly expectedVersion: number;
-  readonly reason: string;
-};
-
-export type DshUpsertCapacityInput = {
-  readonly zoneId: string;
-  readonly maxConcurrentOrders: number;
-  readonly maxCaptainsOnline: number;
-  readonly throttleThreshold: number;
   readonly expectedVersion: number;
   readonly reason: string;
 };

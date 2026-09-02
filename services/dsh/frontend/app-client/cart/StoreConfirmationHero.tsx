@@ -11,16 +11,10 @@ import {
 } from "@bthwani/ui-kit";
 import type { DshFulfillmentMode } from "../../shared/cart";
 import type { DshStoreDetailViewModel } from "../../shared/store";
+import { getDshDeliveryModeDefinition } from "../../shared/delivery/delivery.contract";
 
 function fulfillmentLabel(mode: DshFulfillmentMode): string {
-  switch (mode) {
-    case "bthwani_delivery":
-      return "توصيل بثواني";
-    case "partner_delivery":
-      return "توصيل المتجر";
-    case "pickup":
-      return "استلام ذاتي";
-  }
+  return getDshDeliveryModeDefinition(mode).label;
 }
 
 export function StoreConfirmationHero({

@@ -21,7 +21,11 @@ import {
 import { ProductProposalAdapter } from '../../shared/catalog';
 import { useFieldCatalogController } from '../../shared/partner';
 import { DshFieldProblemNotice, DshFieldProblemState } from './DshFieldProblemNotice';
-import type { MasterProduct } from '../../shared/catalog/central-catalog.types';
+import {
+  getCurrentStoreAssortmentPrice,
+  getStoreAssortmentStockStatus,
+  type MasterProduct,
+} from '../../shared/catalog/central-catalog.types';
 
 export type DshFieldPartnerProductsScreenProps = {
   readonly partnerId: string;
@@ -65,6 +69,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     linkMasterProductsBatch,
     proposeNewProduct,
     withdrawProposal,
+    assortmentCommercial,
   } = useFieldCatalogController(partnerId);
 
   const [searchText, setSearchText] = React.useState('');
@@ -106,31 +111,35 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     const draft = drafts[productId];
     if (draft) return draft;
     const existing = assortmentItems.find((item) => item.masterProductId === productId);
+    const commercial = existing ? assortmentCommercial.get(productId) : undefined;
+    const currentPrice = getCurrentStoreAssortmentPrice(commercial);
     return existing
       ? {
-          price: String(existing.unitPrice),
+          price: currentPrice ? String(currentPrice.amountMinor / 100) : '',
           localDescription: existing.localNote ?? '',
-          stockStatus: existing.stockStatus,
+          stockStatus: commercial ? getStoreAssortmentStockStatus(commercial.inventory) : 'out_of_stock',
         }
       : emptyDraft();
-  }, [drafts, assortmentItems]);
+  }, [drafts, assortmentItems, assortmentCommercial]);
 
   const ensureDraft = React.useCallback((productId: string) => {
     setDrafts((current) => {
       if (current[productId]) return current;
       const existing = assortmentItems.find((item) => item.masterProductId === productId);
+      const commercial = existing ? assortmentCommercial.get(productId) : undefined;
+      const currentPrice = getCurrentStoreAssortmentPrice(commercial);
       return {
         ...current,
         [productId]: existing
           ? {
-              price: String(existing.unitPrice),
+              price: currentPrice ? String(currentPrice.amountMinor / 100) : '',
               localDescription: existing.localNote ?? '',
-              stockStatus: existing.stockStatus,
+              stockStatus: commercial ? getStoreAssortmentStockStatus(commercial.inventory) : 'out_of_stock',
             }
           : emptyDraft(),
       };
     });
-  }, [assortmentItems]);
+  }, [assortmentItems, assortmentCommercial]);
 
   const toggleSelected = (productId: string) => {
     ensureDraft(productId);
@@ -182,8 +191,7 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
       return [{
         masterProductId: product.id,
         input: {
-          unitPrice: price,
-          available: draft.stockStatus !== 'out_of_stock',
+          price,
           stockStatus: draft.stockStatus,
           localNote: draft.localDescription.trim(),
         },
@@ -461,8 +469,19 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                   </View>
                 ) : linked ? (
                   <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                    <Text role="bodySm" tone="success">{linked.unitPrice} {linked.currency}</Text>
-                    <Text role="caption" tone="muted">{STOCK_STATUS_LABELS[linked.stockStatus]}</Text>
+                    {(() => {
+                      const linkedCommercial = assortmentCommercial.get(linked.masterProductId);
+                      const linkedPrice = getCurrentStoreAssortmentPrice(linkedCommercial);
+                      const linkedStatus = linkedCommercial ? getStoreAssortmentStockStatus(linkedCommercial.inventory) : undefined;
+                      return linkedCommercial && linkedPrice && linkedStatus ? (
+                        <>
+                          <Text role="bodySm" tone="success">{linkedPrice.amountMinor / 100} {linkedPrice.currency}</Text>
+                          <Text role="caption" tone="muted">{STOCK_STATUS_LABELS[linkedStatus]}</Text>
+                        </>
+                      ) : (
+                        <Text role="caption" tone="warning">بيانات السعر والمخزون غير مكتملة</Text>
+                      );
+                    })()}
                     {linked.localNote ? <Text role="caption" tone="muted">{linked.localNote}</Text> : null}
                   </View>
                 ) : (

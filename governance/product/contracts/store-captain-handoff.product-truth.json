@@ -1,52 +1,143 @@
 {
-  "schemaVersion": "1.0.0",
-  "journeyId": "105",
+  "schemaVersion": 1,
+  "capabilityId": "STORE_CAPTAIN_HANDOFF",
   "title": "العهدة الثنائية من المتجر إلى الكابتن",
-  "owner": "DSH",
-  "purpose": "نقل عهدة الطلب من المتجر المالك إلى الكابتن المعين بتأكيدين مستقلين، ومنع الالتقاط المبكر، وتحويل النقص أو عدم التطابق إلى استثناء تشغيلي قابل للتدقيق والمعالجة.",
-  "actors": ["partner", "captain", "operator", "system"],
-  "requiredSurfaces": ["app-partner", "app-captain", "control-panel"],
-  "readbackSurfaces": ["app-client"],
-  "excludedSurfaces": {
-    "app-field": "لا يملك دورًا في عهدة الطلب بعد الجاهزية تحت النموذج الحالي.",
-    "webapp": "يعد خارج النطاق ما لم يثبت Product Truth حالي وجود سطح تشغيلي للعهدة.",
-    "website": "سطح تعريفي ما لم يثبت عقد حالي خلاف ذلك.",
-    "wlt-finance": "لا توجد mutation مالية في عهدة DSH؛ WLT يبقى مالك أي حقيقة مالية."
+  "problem": {
+    "statement": "Order custody must transfer from the owning store to the assigned captain through one dual-confirmation DSH handoff truth, preventing early pickup and turning shortage/mismatch into governed operational exceptions rather than local surface state.",
+    "affectedActors": ["partner", "captain", "operator", "system"]
   },
-  "truthOwnership": {
-    "custodyLifecycle": "DSH",
-    "assignmentTruth": "DSH",
-    "operationalExceptions": "DSH",
-    "financialTruth": "WLT",
-    "surfaceResponsibility": "render, interact, navigate, and refresh only"
-  },
-  "states": ["awaiting_partner", "partner_confirmed", "completed", "superseded"],
-  "acceptanceCriteria": [
-    "ينشئ وصول الكابتن إلى المتجر محاولة عهدة مرتبطة بالإسناد النشط والمتجر والطلب والكابتن وفق العقد الحالي.",
-    "يؤكد الشريك تسليم الطرد من نطاق متجره فقط ويُحفظ actor والوقت والإصدار.",
-    "لا يسمح DSH بحالة picked_up قبل تأكيد المتجر وإكمال الكابتن للتأكيد الثنائي.",
-    "تكون إعادة أوامر الوصول وتأكيد المتجر والالتقاط الناجح idempotent وتعيد الحقيقة الحالية.",
-    "تعيد إعادة بلاغ الاستثناء السابق نتيجته فقط عندما يتطابق retry identity والمحتوى المسموح، ويُرفض payload drift على الهوية نفسها.",
-    "تبطل محاولة العهدة السابقة فور إنشاء إسناد بديل عندما يعرّف state machine الحالي ذلك، ولا تبقى مسارات التقاط متنافسة.",
-    "يمكن للشريك أو الكابتن تسجيل handoff_shortage أو handoff_mismatch بهوية ارتباط ومبلّغ قابلة للتدقيق وفق العقد الحالي.",
-    "يمنع الاستثناء المفتوح الذي يعرّفه state machine تأكيد المتجر أو الالتقاط حتى المعالجة المصرح بها.",
-    "بعد حل العمليات للاستثناء يزيل readback الحاكم الحجب ويتيح الاستكمال دون الاعتماد على حالة محلية.",
-    "تظهر إجراءات الاستثناء في app-partner وapp-captain فقط عندما تكون محاولة العهدة قابلة للتنفيذ.",
-    "تبقى حالة الاستثناء متسقة بعد refresh أو إعادة تشغيل التطبيق لأنها تقرأ من DSH.",
-    "تقرأ control-panel الاستثناء من مالك delivery exceptions نفسه دون مصدر حقيقة إضافي.",
-    "تستمر app-client في قراءة حالة الطلب الموحدة من DSH دون إظهار التقاط غير واقع.",
-    "لا ينفذ DSH أي خصم أو استرداد أو ledger mutation بسبب استثناء العهدة."
+  "actors": [
+    {
+      "id": "partner",
+      "role": "Confirms package handoff only for the owning store and reports governed handoff shortages/mismatches.",
+      "permittedActions": ["read active owned-store handoff", "confirm store handoff", "report handoff shortage or mismatch", "read resolved/blocked state"],
+      "forbiddenActions": ["confirm another store handoff", "force pickup", "ignore blocking exception", "mutate WLT financial truth"]
+    },
+    {
+      "id": "captain",
+      "role": "Acts only on the currently assigned handoff, confirms pickup after required partner confirmation, and reports governed shortage/mismatch.",
+      "permittedActions": ["arrive at store", "read own active handoff", "complete captain pickup confirmation when legal", "report handoff shortage or mismatch", "refresh canonical state"],
+      "forbiddenActions": ["pickup before partner confirmation", "pickup while a blocking exception is open", "act on superseded/unassigned handoff", "invent local exception truth"]
+    },
+    {
+      "id": "operator",
+      "role": "Reads and resolves eligible DSH operational handoff exceptions without creating financial truth.",
+      "permittedActions": ["read handoff/exception state", "resolve authorized operational exception", "read audit/correlation"],
+      "forbiddenActions": ["fabricate handoff completion", "resolve outside authorization", "mutate WLT ledger/balance"]
+    },
+    {
+      "id": "system",
+      "role": "Creates/supersedes handoff attempts from canonical assignment, enforces dual confirmation/idempotency and persists exception/readback state.",
+      "permittedActions": ["create attempt for active assignment", "supersede obsolete attempt", "enforce dual confirmation", "block/unblock pickup from canonical exception state", "return canonical readback"],
+      "forbiddenActions": ["leave competing executable attempts", "accept payload-drift retry under same identity", "mark pickup before prerequisites", "create financial effects"]
+    }
   ],
-  "negativeInvariants": [
-    "لا pickup قبل اكتمال العهدة الثنائية.",
-    "لا pickup أثناء وجود استثناء مانع وفق state machine الحالي.",
-    "لا يبقى pickup محجوبًا محليًا بعد أن يثبت DSH حل الاستثناء.",
-    "لا تأكيد متجر من actor خارج نطاق المتجر المالك.",
-    "لا إعادة استخدام retry/correlation identity لبلاغ متعارض.",
-    "لا تبقى محاولة عهدة قابلة للتنفيذ بعد أن تصبح superseded بإسناد بديل.",
-    "لا تنسى الأسطح الاستثناء بعد refresh أو إعادة تشغيل التطبيق.",
-    "لا توجد حقيقة عهدة أو استثناء داخل ملفات الأسطح.",
-    "لا تستخدم الأسطح raw API calls أو بيانات demo أو fallback تشغيلي كحقيقة.",
-    "لا ينشئ DSH حقيقة مالية موازية لـ WLT."
-  ]
+  "surfaces": [
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner"],
+      "states": ["loading", "awaiting_partner", "partner_confirmed", "blocked_by_exception", "completed", "superseded", "offline", "error"],
+      "actions": ["confirm handoff", "report shortage/mismatch", "refresh"]
+    },
+    {
+      "id": "app-captain",
+      "required": true,
+      "actors": ["captain"],
+      "states": ["loading", "awaiting_partner", "partner_confirmed", "blocked_by_exception", "pickup_available", "completed", "superseded", "offline", "error"],
+      "actions": ["arrive", "complete pickup confirmation", "report shortage/mismatch", "refresh"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["operator"],
+      "states": ["loading", "ready", "exception_open", "exception_resolved", "completed", "superseded", "forbidden", "error"],
+      "actions": ["read handoff/exception", "resolve authorized exception", "inspect audit"]
+    },
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": [],
+      "states": ["loading", "pre_pickup", "picked_up", "in_delivery", "offline", "error"],
+      "actions": ["read truthful order tracking consequence"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["partner", "captain", "operator", "system"],
+      "states": ["awaiting_partner", "partner_confirmed", "completed", "superseded", "exception_open", "exception_resolved", "forbidden", "conflict"],
+      "actions": ["authorize store/captain scope", "enforce active assignment", "persist dual confirmation", "enforce idempotency/payload consistency", "create/read/resolve exception", "return canonical readback"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["system", "operator"],
+      "states": ["transactional", "assignment_bound", "idempotent", "audited", "exception_governed"],
+      "actions": ["persist handoff attempt", "prevent competing executable attempt", "retain actor/time/version", "persist exception/correlation", "enforce supersession"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["partner", "captain", "operator"],
+      "states": ["loading", "ready", "blocked", "completed", "superseded", "offline", "error"],
+      "actions": ["map canonical handoff/exception state", "avoid local custody/exception truth"]
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "exclusionReason": "Field workforce has no custody role after store readiness under the current model.",
+      "actors": [], "states": ["not_affected"], "actions": []
+    }
+  ],
+  "outcome": {
+    "statement": "Custody moves from the owning store to the assigned captain only after the governed dual-confirmation handoff completes, with one DSH exception/readback truth across affected surfaces.",
+    "targetState": "No early pickup, competing handoff attempt, stale local exception, cross-store confirmation or DSH financial side effect remains."
+  },
+  "stateModel": {
+    "custodyAttempt": ["awaiting_partner", "partner_confirmed", "completed", "superseded"]
+  },
+  "acceptance": {
+    "criteria": [
+      "Captain arrival creates/reads a handoff attempt bound to the current active assignment, order, store and captain.",
+      "Only the owning-store partner scope confirms package handoff and the actor/time/version are retained.",
+      "DSH does not allow picked_up before store confirmation plus the captain side of the dual confirmation.",
+      "Successful arrival/partner-confirm/pickup retries are idempotent and return current canonical truth.",
+      "An exception retry replays only when retry identity and governed payload are consistent; payload drift under the same identity is rejected.",
+      "A prior handoff attempt becomes non-executable/superseded when a replacement assignment requires it; no competing pickup path remains.",
+      "Partner/captain can report handoff_shortage or handoff_mismatch with attributable reporter/correlation identity.",
+      "A blocking open exception prevents governed confirmation/pickup until authorized resolution.",
+      "After canonical exception resolution, readback removes the block and continuation does not depend on local state.",
+      "Partner/captain surfaces expose exception actions only when the active handoff is executable.",
+      "Exception state survives refresh/restart because it comes from DSH.",
+      "Control-panel reads the same DSH delivery-exception owner instead of a second subsystem.",
+      "Client tracking never reports pickup before actual canonical handoff completion.",
+      "DSH performs no debit/refund/ledger mutation because of handoff exception state."
+    ],
+    "failureStates": ["pickup_before_dual_confirmation", "pickup_during_blocking_exception", "local_block_stale_after_resolution", "cross_store_confirmation", "payload_drift_retry", "competing_executable_handoff_after_reassignment", "exception_lost_after_refresh", "surface_local_handoff_truth", "mock_or_fallback_operational_truth", "dsh_financial_mutation"]
+  },
+  "invariants": {
+    "business": [
+      "DSH owns custody lifecycle, assignment relationship and operational handoff exceptions; WLT owns any financial truth.",
+      "One active assignment has at most one executable handoff attempt for the governed order/store/captain scope.",
+      "Pickup requires the canonical dual-confirmation prerequisites and absence of a blocking unresolved exception.",
+      "Handoff mutation retries preserve one canonical identity and reject materially different payload under that identity.",
+      "All affected surfaces read the same DSH handoff/exception state after refresh/restart."
+    ],
+    "negative": [
+      "No pickup before dual handoff completion.",
+      "No pickup while a blocking exception is open.",
+      "No local surface block remains after DSH proves resolution.",
+      "No store actor outside the owning store confirms handoff.",
+      "No conflicting payload reuses the same retry/correlation identity.",
+      "No superseded handoff remains executable after replacement assignment.",
+      "No surface stores independent custody/exception truth or uses demo/fallback operational data.",
+      "No DSH handoff path creates financial truth parallel to WLT."
+    ]
+  },
+  "owners": {
+    "custodyLifecycleTruthOwner": "DSH",
+    "assignmentTruthOwner": "DSH",
+    "operationalExceptionTruthOwner": "DSH",
+    "financialTruthOwner": "WLT"
+  }
 }

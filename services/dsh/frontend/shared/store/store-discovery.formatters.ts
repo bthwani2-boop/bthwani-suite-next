@@ -1,4 +1,7 @@
-import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
+import {
+  getDshDeliveryModeDefinition,
+  type DshFulfillmentDeliveryMode,
+} from "../delivery/delivery.contract";
 
 export function formatServiceArea(
   cityLabel: string,
@@ -24,6 +27,13 @@ export function formatDeliveryModes(
   emptyLabel = "لا توجد طرق خدمة مفعلة",
 ): string {
   return modes.map(formatDeliveryMode).join("، ") || emptyLabel;
+}
+
+export function formatFulfillmentModes(
+  modes: readonly DshFulfillmentDeliveryMode[],
+  emptyLabel = "لا توجد طرق خدمة مفعلة",
+): string {
+  return modes.map((mode) => getDshDeliveryModeDefinition(mode).label).join("، ") || emptyLabel;
 }
 
 // Store publication uses a legacy "delivery | express | pickup" vocabulary

@@ -22,7 +22,7 @@ func TestPostgresLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	if err := db.Ping(); err != nil {
 		t.Fatalf("ping database: %v", err)
 	}
@@ -88,18 +88,26 @@ func TestPostgresLifecycle(t *testing.T) {
 	}
 
 	profile, err := UpsertOperationalProfile(ctx, db, UpsertOperationalProfileInput{
-		ZoneID:                  zone.ID,
-		SlaCategory:             "default",
-		MaxPrepMins:             25,
-		MaxAssignmentMins:       8,
-		MaxDeliveryMins:         55,
-		ExpectedSlaVersion:      0,
-		MaxConcurrentOrders:     10,
-		MaxCaptainsOnline:       20,
-		ThrottleThreshold:       0.8,
-		IsPaused:                false,
-		PauseReason:             "",
-		ExpectedCapacityVersion: 0,
+		ZoneID:                     zone.ID,
+		SlaCategory:                "default",
+		MaxPrepMins:                25,
+		MaxAssignmentMins:          8,
+		MaxDeliveryMins:            55,
+		WarningBeforeMins:          5,
+		PickupNotifyMins:           10,
+		PickupArrivalMins:          60,
+		PickupVerifyMins:           10,
+		DeliveryAssignToPickupMins: 15,
+		DeliveryPickupToDepartMins: 10,
+		DeliveryDepartToArriveMins: 45,
+		DeliveryArriveToProofMins:  15,
+		ExpectedSlaVersion:         0,
+		MaxConcurrentOrders:        10,
+		MaxCaptainsOnline:          20,
+		ThrottleThreshold:          0.8,
+		IsPaused:                   false,
+		PauseReason:                "",
+		ExpectedCapacityVersion:    0,
 	}, mutation("create-profile", "create SLA and capacity profile"))
 	if err != nil {
 		t.Fatalf("create operational profile: %v", err)
@@ -135,18 +143,26 @@ func TestPostgresLifecycle(t *testing.T) {
 	}
 
 	pausedProfile, err := UpsertOperationalProfile(ctx, db, UpsertOperationalProfileInput{
-		ZoneID:                  zone.ID,
-		SlaCategory:             "default",
-		MaxPrepMins:             25,
-		MaxAssignmentMins:       8,
-		MaxDeliveryMins:         55,
-		ExpectedSlaVersion:      profile.SLA.Version,
-		MaxConcurrentOrders:     10,
-		MaxCaptainsOnline:       20,
-		ThrottleThreshold:       0.8,
-		IsPaused:                true,
-		PauseReason:             "remote operational pause proof",
-		ExpectedCapacityVersion: profile.Capacity.Version,
+		ZoneID:                     zone.ID,
+		SlaCategory:                "default",
+		MaxPrepMins:                25,
+		MaxAssignmentMins:          8,
+		MaxDeliveryMins:            55,
+		WarningBeforeMins:          5,
+		PickupNotifyMins:           10,
+		PickupArrivalMins:          60,
+		PickupVerifyMins:           10,
+		DeliveryAssignToPickupMins: 15,
+		DeliveryPickupToDepartMins: 10,
+		DeliveryDepartToArriveMins: 45,
+		DeliveryArriveToProofMins:  15,
+		ExpectedSlaVersion:         profile.SLA.Version,
+		MaxConcurrentOrders:        10,
+		MaxCaptainsOnline:          20,
+		ThrottleThreshold:          0.8,
+		IsPaused:                   true,
+		PauseReason:                "remote operational pause proof",
+		ExpectedCapacityVersion:    profile.Capacity.Version,
 	}, mutation("pause-profile", "pause zone capacity for proof"))
 	if err != nil {
 		t.Fatalf("pause operational profile: %v", err)

@@ -73,7 +73,42 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentAtomic(w http.Res
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to this partner draft")
 		return
 	}
-	s.upsertStoreAssortmentAtomic(w, r, actor.ID, "field", storeID)
+	idempotencyKey, ok := requireCatalogCreateIdempotency(w, r)
+	if !ok {
+		return
+	}
+	var input fieldStoreAssortmentMutationInput
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
+	masterProductID := r.PathValue("masterProductId")
+	masterProduct, err := centralcatalog.GetMasterProduct(r.Context(), s.db, masterProductID)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	if masterProduct.ApprovalStatus != "approved" || !masterProduct.IsActive {
+		s.writeCatalogMutationError(w, centralcatalog.ErrForbidden)
+		return
+	}
+	nodeID := ""
+	if masterProduct.CategoryNodeID != nil {
+		nodeID = *masterProduct.CategoryNodeID
+	}
+	policy, err := centralcatalog.ResolveEffectivePolicy(r.Context(), s.db, masterProduct.DomainID, nodeID)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	input.PublicationStatus = "submitted"
+	assortment, err := s.upsertFieldStoreAssortmentWithCommercialTruth(
+		r, actor.ID, storeID, masterProductID, input, policy.AllowsStoreProductCustomImage, idempotencyKey,
+	)
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"assortment": assortment})
 }
 
 func (s *protectedStoreServer) handleUpdatePartnerProductProposalAtomic(w http.ResponseWriter, r *http.Request) {

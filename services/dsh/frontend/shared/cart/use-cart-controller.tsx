@@ -14,7 +14,7 @@ import {
   discardCartSyncQueue,
   enqueueCartSyncCommand,
   getCartSyncQueue,
-  quarantineLegacyCartSyncQueue,
+  purgeRetiredCartSyncArtifacts,
   removeCartSyncCommand,
   updateCartSyncCommand,
   type CartMutationCommand,
@@ -74,55 +74,13 @@ function isConflictError(error: unknown): boolean {
   return typed.status === 412 || typed.code === "VERSION_CONFLICT";
 }
 
-function isIdempotentReplay(error: unknown): boolean {
-  return typeof error === "object" && error !== null
-    && (error as { readonly code?: unknown }).code === "IDEMPOTENT_REPLAY";
-}
-
-function sameStringList(left: readonly string[] | undefined, right: readonly string[]): boolean {
-  return JSON.stringify(left ?? []) === JSON.stringify(right);
-}
-
-function cartReflectsMutation(
-  cart: DshCart | null,
-  mutation: QueuedCartMutation,
-): boolean {
-  const command = mutation.command;
-  if (!cart) return command.kind === "remove" || command.kind === "clear";
-  switch (command.kind) {
-    case "add": {
-      const item = cart.items.find((candidate) => candidate.masterProductId === command.masterProductId);
-      return Boolean(
-        item
-          && item.quantity === command.quantity
-          && sameStringList(item.options, command.options)
-          && (item.note ?? "") === command.note,
-      );
-    }
-    case "remove":
-      return !cart.items.some((item) => item.id === command.itemId);
-    case "clear":
-      return cart.items.length === 0;
-  }
-}
-
 type CartMutationReconciliation = "committed" | "not_applied" | "unknown";
 
 async function reconcileCartMutation(
   mutation: QueuedCartMutation,
 ): Promise<CartMutationReconciliation> {
   const receipt = await getCartMutationReceipt(mutation.context.idempotencyKey);
-  if (receipt) return "committed";
-  const storeId = mutation.command.kind === "add" || mutation.command.kind === "clear"
-    ? mutation.command.storeId
-    : undefined;
-  try {
-    const cart = await fetchCart(storeId);
-    return cartReflectsMutation(cart, mutation) ? "committed" : "not_applied";
-  } catch (error) {
-    if (isNetworkError(error)) return "unknown";
-    throw error;
-  }
+  return receipt ? "committed" : "not_applied";
 }
 
 async function executeCartMutation(mutation: QueuedCartMutation): Promise<void> {
@@ -239,10 +197,6 @@ export function useCartController(
           }
         } catch (error) {
           unresolved = true;
-          if (isIdempotentReplay(error)) {
-            await updateCartSyncCommand(actorId, mutation.id, "submitted_unknown", "تم العثور على replay للخادم؛ نحتفظ بالهوية حتى يثبت receipt/readback.");
-            continue;
-          }
           if (isConflictError(error)) {
             await updateCartSyncCommand(actorId, mutation.id, "conflict", mutationErrorMessage(error));
             conflict = true;
@@ -275,7 +229,7 @@ export function useCartController(
   }, [actorId, load]);
 
   useEffect(() => {
-    void quarantineLegacyCartSyncQueue().catch((error: unknown) => {
+    void purgeRetiredCartSyncArtifacts().catch((error: unknown) => {
       setAction("error");
       setActionError(mutationErrorMessage(error));
     });
@@ -332,23 +286,6 @@ export function useCartController(
       return false;
     } catch (error) {
       if (mutation) {
-        if (isIdempotentReplay(error)) {
-          try {
-            if (await reconcileCartMutation(mutation) === "committed") {
-              await removeCartSyncCommand(actorId, mutation.id);
-              await load();
-              setAction("success");
-              return true;
-            }
-          } catch {
-            // Keep the command durably queued when the replay proof itself is
-            // unavailable; the next connectivity cycle retries reconciliation.
-          }
-          await updateCartSyncCommand(actorId, mutation.id, "submitted_unknown", "تم رفض الإرسال كـ replay؛ ننتظر receipt/readback قبل أي إعادة تنفيذ.").catch(() => undefined);
-          setAction("offline_pending");
-          setActionError("تم العثور على تنفيذ سابق دون readback مؤكد؛ لن نكرر العملية تلقائيًا.");
-          return false;
-        }
         const status = isConflictError(error)
           ? "conflict"
           : isNetworkError(error) ? "submitted_unknown" : "permanent_failure";
@@ -470,6 +407,7 @@ export function useCartController(
 export function useServiceabilityController() {
   const [serviceability, setServiceability] =
     useState<DshServiceabilityState>(serviceabilityIdleState());
+  const requestSequence = useRef(0);
 
   const check = useCallback(
     async (
@@ -477,11 +415,14 @@ export function useServiceabilityController() {
       addressId: string,
       fulfillmentMode: DshFulfillmentMode,
     ) => {
+      const sequence = ++requestSequence.current;
       setServiceability({ kind: "checking" });
       try {
         const result = await checkServiceability(storeId, addressId, fulfillmentMode);
+        if (sequence !== requestSequence.current) return;
         setServiceability(resolveServiceabilityState(result));
       } catch {
+        if (sequence !== requestSequence.current) return;
         setServiceability(resolveServiceabilityError());
       }
     },
@@ -489,7 +430,10 @@ export function useServiceabilityController() {
   );
 
   const reset = useCallback(
-    () => setServiceability(serviceabilityIdleState()),
+    () => {
+      requestSequence.current += 1;
+      setServiceability(serviceabilityIdleState());
+    },
     [],
   );
 

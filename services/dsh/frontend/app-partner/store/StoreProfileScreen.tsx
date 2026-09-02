@@ -16,10 +16,9 @@ import {
   useDirection,
 } from '@bthwani/ui-kit';
 import {
-  type DshPartnerActivationStatus,
   getDshPartnerActivationStatusLabel,
 } from '../../shared/partner/partner-activation.model';
-import { resolveDshStoreClientVisibility } from '../../shared/partner/dsh-client-visibility.model';
+import type { DshStoreClientVisibilityResult } from '../../shared/partner/dsh-client-visibility.model';
 import {
   fetchPartnerStoreSettings,
   updatePartnerStoreSettings,
@@ -39,8 +38,8 @@ export type StoreProfileScreenProps = {
   deliveryReadinessLabel?: string;
   coverageSummary?: string;
   publishStage?: string;
-  activationStatus?: DshPartnerActivationStatus;
   serviceModes?: readonly { id: string; enabled: boolean; title?: string }[];
+  storeVisibility: DshStoreClientVisibilityResult;
   legalNameAr?: string;
   legalNameEn?: string;
   legalIdentityType?: string;
@@ -143,8 +142,8 @@ export function StoreProfileScreen({
   deliveryReadinessLabel,
   coverageSummary,
   publishStage,
-  activationStatus,
   serviceModes = [],
+  storeVisibility,
   legalNameAr,
   legalNameEn,
   legalIdentityType,
@@ -205,7 +204,7 @@ export function StoreProfileScreen({
   const onSave = React.useCallback(async () => {
     if (!canonicalStoreId || loadState.kind !== 'success') return;
     const normalizedReason = saveReason.trim();
-    const backendModes = [...new Set(selectedModes.map(toBackendMode))].sort();
+    const backendModes = [...new Set(selectedModes.map(toBackendMode))].sort((left, right) => left.localeCompare(right));
     if (normalizedReason.length < 3 || backendModes.length === 0) {
       setSaveState({ kind: 'error', message: 'حدد وسيلة خدمة واحدة واكتب سببًا واضحًا للحفظ.' });
       return;
@@ -259,16 +258,7 @@ export function StoreProfileScreen({
 
   const settings = loadState.settings;
   const storeStateLabel = settings.storeOpen ? 'مفتوح الآن' : 'مغلق مؤقتًا';
-  const visibilityLabel = settings.listingEnabled ? 'مفعّل' : 'موقوف';
-  const serviceabilityAvailable = activeZoneLabel.trim().length > 0;
-  const storeVisibility = resolveDshStoreClientVisibility({
-    publishStage,
-    activationStatus,
-    catalogPublished: settings.listingEnabled,
-    deliveryModesReady: settings.deliveryModes.length > 0,
-    serviceabilityAvailable,
-    storeOpen: settings.storeOpen,
-  });
+  const visibilityLabel = storeVisibility.visible ? 'مفعّل' : 'محجوب';
 
   return (
     <Box gap={4} style={styles.container}>

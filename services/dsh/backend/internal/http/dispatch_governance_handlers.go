@@ -195,7 +195,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 			sessionID = deliveryCtx.WltPaymentSessionID
 			checkoutIntentID = deliveryCtx.CheckoutIntentID
 		}
-		tx.Rollback()
+		_ = tx.Rollback()
 	}
 
 	if isCod {
@@ -527,18 +527,20 @@ func (s *protectedStoreServer) marshalGovernedDispatchAssignment(item *dispatch.
 	payload["version"] = governance.Version
 	payload["allowedActions"] = dispatch.AssignmentAllowedActions(item.Status, item.Delivery.Status)
 
-	var rawAddress []byte
-	err = s.db.QueryRow(`SELECT delivery_address_snapshot FROM dsh_orders WHERE id = $1::uuid`, item.OrderID).Scan(&rawAddress)
-	if err == nil && len(rawAddress) > 0 {
-		var addr map[string]any
-		if err := json.Unmarshal(rawAddress, &addr); err == nil {
-			if item.Delivery.Status == dispatch.DeliveryAssigned || item.Delivery.Status == dispatch.DeliveryDriverAssigned || item.Delivery.Status == dispatch.DeliveryArrivedStore {
-				delete(addr, "address1")
-				delete(addr, "address2")
-				delete(addr, "contactPhone")
-				delete(addr, "instructions")
+	if item.OrderID != "" {
+		var rawAddress []byte
+		err = s.db.QueryRow(`SELECT delivery_address_snapshot FROM dsh_orders WHERE id = $1::uuid`, item.OrderID).Scan(&rawAddress)
+		if err == nil && len(rawAddress) > 0 {
+			var addr map[string]any
+			if err := json.Unmarshal(rawAddress, &addr); err == nil {
+				if item.Delivery.Status == dispatch.DeliveryAssigned || item.Delivery.Status == dispatch.DeliveryDriverAssigned || item.Delivery.Status == dispatch.DeliveryArrivedStore {
+					delete(addr, "address1")
+					delete(addr, "address2")
+					delete(addr, "contactPhone")
+					delete(addr, "instructions")
+				}
+				payload["deliveryAddress"] = addr
 			}
-			payload["deliveryAddress"] = addr
 		}
 	}
 
@@ -574,18 +576,20 @@ func (s *protectedStoreServer) marshalGovernedDispatchAssignments(items []dispat
 		row["version"] = meta.Version
 		row["allowedActions"] = dispatch.AssignmentAllowedActions(items[i].Status, items[i].Delivery.Status)
 
-		var rawAddress []byte
-		err := s.db.QueryRow(`SELECT delivery_address_snapshot FROM dsh_orders WHERE id = $1::uuid`, items[i].OrderID).Scan(&rawAddress)
-		if err == nil && len(rawAddress) > 0 {
-			var addr map[string]any
-			if err := json.Unmarshal(rawAddress, &addr); err == nil {
-				if items[i].Delivery.Status == dispatch.DeliveryAssigned || items[i].Delivery.Status == dispatch.DeliveryDriverAssigned || items[i].Delivery.Status == dispatch.DeliveryArrivedStore {
-					delete(addr, "address1")
-					delete(addr, "address2")
-					delete(addr, "contactPhone")
-					delete(addr, "instructions")
+		if items[i].OrderID != "" {
+			var rawAddress []byte
+			err := s.db.QueryRow(`SELECT delivery_address_snapshot FROM dsh_orders WHERE id = $1::uuid`, items[i].OrderID).Scan(&rawAddress)
+			if err == nil && len(rawAddress) > 0 {
+				var addr map[string]any
+				if err := json.Unmarshal(rawAddress, &addr); err == nil {
+					if items[i].Delivery.Status == dispatch.DeliveryAssigned || items[i].Delivery.Status == dispatch.DeliveryDriverAssigned || items[i].Delivery.Status == dispatch.DeliveryArrivedStore {
+						delete(addr, "address1")
+						delete(addr, "address2")
+						delete(addr, "contactPhone")
+						delete(addr, "instructions")
+					}
+					row["deliveryAddress"] = addr
 				}
-				row["deliveryAddress"] = addr
 			}
 		}
 

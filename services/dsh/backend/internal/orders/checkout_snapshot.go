@@ -73,7 +73,7 @@ func loadCheckoutOrderSnapshotTx(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var subtotal int64
 	for rows.Next() {

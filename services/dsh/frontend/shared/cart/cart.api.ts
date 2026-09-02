@@ -87,8 +87,11 @@ export async function clearCart(
 
 export type DshCartMutationReceipt = {
   readonly idempotencyKey: string;
-  readonly cartId: string;
+  readonly operation: "add_item" | "remove_item" | "clear_cart";
+  readonly cartId: string | null;
+  readonly itemId: string | null;
   readonly version: number;
+  readonly resultDeleted: boolean;
   readonly createdAt: string;
 };
 
@@ -122,11 +125,11 @@ export async function checkServiceability(
 
 export async function fetchFulfillmentModes(
   storeId: string,
-  serviceAreaCode?: string,
+  addressId: string,
 ) {
   const params = new URLSearchParams();
   params.set("storeId", storeId);
-  if (serviceAreaCode) params.set("serviceAreaCode", serviceAreaCode);
+  params.set("addressId", addressId);
   return request<import("../checkout/checkout.types").DshFulfillmentModesResponse>(
     `/dsh/client/cart/fulfillment-modes?${params.toString()}`,
   );

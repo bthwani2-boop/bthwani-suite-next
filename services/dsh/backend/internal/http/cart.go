@@ -1,11 +1,8 @@
 package http
 
 import (
-	"context"
-	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -16,38 +13,36 @@ import (
 	"dsh-api/internal/store"
 )
 
-type cartServer struct {
-	protectedStoreServer
-}
-
-func requireCartMutationIdempotency(w http.ResponseWriter, r *http.Request) (string, bool) {
+func requireCartMutationIdentity(w http.ResponseWriter, r *http.Request) (string, string, bool) {
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
 		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_INVALID", "Idempotency-Key must contain between 8 and 200 characters")
-		return "", false
+		return "", "", false
 	}
-	return idempotencyKey, true
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if len(correlationID) < 8 || len(correlationID) > 200 {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_REQUIRED", "X-Correlation-ID must contain between 8 and 200 characters")
+		return "", "", false
+	}
+	return idempotencyKey, correlationID, true
 }
 
-// rejectCartMutationReplay closes the check-before-mutate race for all cart
-// mutation verbs. The cart owner join in cart.FindMutationReceipt prevents a
-// client from probing or reusing another actor's key.
-func (s *protectedStoreServer) rejectCartMutationReplay(w http.ResponseWriter, r *http.Request, actorID, idempotencyKey string) bool {
-	_, err := cart.FindMutationReceipt(r.Context(), s.db, actorID, idempotencyKey)
-	if errors.Is(err, cart.ErrMutationReceiptNotFound) {
-		return false
+func fulfillmentModeOrDefault(raw string) (cart.FulfillmentMode, bool) {
+	mode := cart.FulfillmentMode(strings.TrimSpace(raw))
+	if mode == "" {
+		return cart.ModeBthwaniDelivery, true
 	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart mutation receipt could not be checked")
-		return true
+	switch mode {
+	case cart.ModeBthwaniDelivery, cart.ModePartnerDelivery, cart.ModePickup:
+		return mode, true
+	default:
+		return "", false
 	}
-	store.SendError(w, http.StatusConflict, "IDEMPOTENT_REPLAY", "mutation already applied")
-	return true
 }
 
 // GET /dsh/client/cart/fulfillment-modes
 func (s *protectedStoreServer) handleGetFulfillmentModes(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireActor(w, r, "client")
+	actor, ok := s.requireActor(w, r, "client")
 	if !ok {
 		return
 	}
@@ -56,12 +51,22 @@ func (s *protectedStoreServer) handleGetFulfillmentModes(w http.ResponseWriter, 
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId query parameter is required")
 		return
 	}
-	serviceAreaCode := r.URL.Query().Get("serviceAreaCode")
+	addressID := strings.TrimSpace(r.URL.Query().Get("addressId"))
+	if addressID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "addressId query parameter is required")
+		return
+	}
+	address, err := clientaddress.GetOwned(r.Context(), s.db, actor.ID, addressID)
+	if errors.Is(err, clientaddress.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "address is not owned by the authenticated client")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not resolve delivery address")
+		return
+	}
 
-	// GetFulfillmentModes doesn't rely on full physical coordinates in the simple case,
-	// but if we have an active address, we should technically use it.
-	// For J051 lightweight capability fetch, we just rely on the zone/serviceAreaCode.
-	resp, err := cart.GetFulfillmentModes(r.Context(), s.db, storeID, serviceAreaCode, nil, nil)
+	resp, err := cart.GetFulfillmentModes(r.Context(), s.db, storeID, address.ServiceAreaCode, address.Latitude, address.Longitude)
 	if errors.Is(err, platformpolicies.ErrPolicyTruthUnavailable) {
 		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "operational policy truth is temporarily unavailable")
 		return
@@ -90,34 +95,21 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 	}
 	body.StoreID = strings.TrimSpace(body.StoreID)
 	body.AddressID = strings.TrimSpace(body.AddressID)
-	if body.StoreID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId is required")
+	if body.StoreID == "" || body.AddressID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId and addressId are required")
 		return
 	}
 	mode := cart.FulfillmentMode(strings.TrimSpace(body.FulfillmentMode))
 	if mode == "" {
-		mode = cart.ModeBthwaniDelivery
+		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillmentMode is required")
+		return
 	}
 	if mode != cart.ModeBthwaniDelivery && mode != cart.ModePartnerDelivery && mode != cart.ModePickup {
 		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillmentMode is invalid")
 		return
 	}
 
-	var address *clientaddress.Address
-	var err error
-	if body.AddressID != "" {
-		address, err = clientaddress.GetOwned(r.Context(), s.db, actor.ID, body.AddressID)
-	} else {
-		var addresses []clientaddress.Address
-		addresses, err = clientaddress.List(r.Context(), s.db, actor.ID)
-		if err == nil && len(addresses) == 0 {
-			store.SendError(w, http.StatusUnprocessableEntity, "ADDRESS_REQUIRED", "create a governed client address before checking delivery serviceability")
-			return
-		}
-		if err == nil {
-			address = &addresses[0]
-		}
-	}
+	address, err := clientaddress.GetOwned(r.Context(), s.db, actor.ID, body.AddressID)
 	if errors.Is(err, clientaddress.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "address is not owned by the authenticated client")
 		return
@@ -169,26 +161,50 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		MaxMinutes int `json:"maxMinutes"`
 	}
 	type Response struct {
-		Serviceable    bool                               `json:"serviceable"`
-		Code           string                             `json:"code"`
-		Reason         string                             `json:"reason,omitempty"`
-		AvailableModes []cart.FulfillmentModeAvailability `json:"availableModes,omitempty"`
-		EtaWindow      *EtaWindow                         `json:"etaWindow,omitempty"`
-		EtaStatus      string                             `json:"etaStatus"`
-		EtaReasonCode  string                             `json:"etaReasonCode,omitempty"`
-		QuoteVersion   string                             `json:"quoteVersion,omitempty"`
-		ExpiresAt      *time.Time                         `json:"expiresAt,omitempty"`
+		Serviceable         bool                               `json:"serviceable"`
+		Code                string                             `json:"code"`
+		Reason              string                             `json:"reason,omitempty"`
+		AvailableModes      []cart.FulfillmentModeAvailability `json:"availableModes,omitempty"`
+		AddressID           string                             `json:"addressId"`
+		AddressVersion      int                                `json:"addressVersion"`
+		RequestedMode       cart.FulfillmentMode               `json:"requestedMode"`
+		CapacityState       string                             `json:"capacityState"`
+		CapacityConfigured  bool                               `json:"capacityConfigured"`
+		ActiveOrders        int                                `json:"activeOrders"`
+		MaxConcurrentOrders *int                               `json:"maxConcurrentOrders,omitempty"`
+		CapacityLoadRatio   *float64                           `json:"capacityLoadRatio,omitempty"`
+		SlaConfigured       bool                               `json:"slaConfigured"`
+		SlaPrepMinutes      *int                               `json:"slaPrepMinutes,omitempty"`
+		SlaDeliveryMinutes  *int                               `json:"slaDeliveryMinutes,omitempty"`
+		CheckedAt           time.Time                          `json:"checkedAt"`
+		EtaWindow           *EtaWindow                         `json:"etaWindow,omitempty"`
+		EtaStatus           string                             `json:"etaStatus"`
+		EtaReasonCode       string                             `json:"etaReasonCode,omitempty"`
+		QuoteVersion        string                             `json:"quoteVersion,omitempty"`
+		ExpiresAt           *time.Time                         `json:"expiresAt,omitempty"`
 	}
 
 	resp := Response{
-		Serviceable:    result.Serviceable,
-		Code:           result.Code,
-		Reason:         result.Reason,
-		AvailableModes: result.AvailableModes,
-		EtaStatus:      result.EtaStatus,
-		EtaReasonCode:  result.EtaReasonCode,
-		QuoteVersion:   result.QuoteVersion,
-		ExpiresAt:      result.ExpiresAt,
+		Serviceable:         result.Serviceable,
+		Code:                result.Code,
+		Reason:              result.Reason,
+		AvailableModes:      result.AvailableModes,
+		AddressID:           result.AddressID,
+		AddressVersion:      result.AddressVersion,
+		RequestedMode:       result.RequestedMode,
+		CapacityState:       result.CapacityState,
+		CapacityConfigured:  result.CapacityConfigured,
+		ActiveOrders:        result.ActiveOrders,
+		MaxConcurrentOrders: result.MaxConcurrentOrders,
+		CapacityLoadRatio:   result.CapacityLoadRatio,
+		SlaConfigured:       result.SlaConfigured,
+		SlaPrepMinutes:      result.SlaPrepMinutes,
+		SlaDeliveryMinutes:  result.SlaDeliveryMinutes,
+		CheckedAt:           result.CheckedAt,
+		EtaStatus:           result.EtaStatus,
+		EtaReasonCode:       result.EtaReasonCode,
+		QuoteVersion:        result.QuoteVersion,
+		ExpiresAt:           result.ExpiresAt,
 	}
 	if result.EtaMinMinutes != nil && result.EtaMaxMinutes != nil {
 		resp.EtaWindow = &EtaWindow{
@@ -252,7 +268,11 @@ func (s *protectedStoreServer) handleGetCartMutationReceipt(w http.ResponseWrite
 		return
 	}
 
-	receipt, err := cart.FindMutationReceipt(r.Context(), s.db, actor.ID, idempotencyKey)
+	receipt, err := cart.FindMutationReceiptWithOutcome(r.Context(), s.db, actor.ID, idempotencyKey)
+	if errors.Is(err, cart.ErrMutationOutcomeUnknown) {
+		store.SendError(w, http.StatusConflict, "CART_MUTATION_OUTCOME_UNKNOWN", "mutation outcome is preserved for reconciliation and cannot be replayed safely; refresh canonical cart state before taking further action")
+		return
+	}
 	if errors.Is(err, cart.ErrMutationReceiptNotFound) {
 		store.SendError(w, http.StatusNotFound, "MUTATION_NOT_COMMITTED", "no committed cart mutation receipt exists for this actor and key")
 		return
@@ -264,8 +284,11 @@ func (s *protectedStoreServer) handleGetCartMutationReceipt(w http.ResponseWrite
 	store.SendJSON(w, http.StatusOK, map[string]any{
 		"mutation": map[string]any{
 			"idempotencyKey": receipt.IdempotencyKey,
+			"operation":      receipt.Operation,
 			"cartId":         receipt.CartID,
+			"itemId":         receipt.ItemID,
 			"version":        receipt.Version,
+			"resultDeleted":  receipt.ResultDeleted,
 			"createdAt":      receipt.CreatedAt,
 		},
 	})
@@ -277,8 +300,8 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
-	idempotencyKey, ok := requireCartMutationIdempotency(w, r)
-	if !ok || s.rejectCartMutationReplay(w, r, actor.ID, idempotencyKey) {
+	idempotencyKey, correlationID, ok := requireCartMutationIdentity(w, r)
+	if !ok {
 		return
 	}
 	var body struct {
@@ -292,13 +315,16 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	body.StoreID = strings.TrimSpace(body.StoreID)
+	body.MasterProductID = strings.TrimSpace(body.MasterProductID)
 	if body.StoreID == "" || body.MasterProductID == "" || body.Quantity < 1 {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId, masterProductId and quantity >= 1 are required")
 		return
 	}
-	mode := cart.FulfillmentMode(body.FulfillmentMode)
-	if mode != cart.ModeBthwaniDelivery && mode != cart.ModePartnerDelivery && mode != cart.ModePickup {
-		mode = cart.ModeBthwaniDelivery
+	mode, validMode := fulfillmentModeOrDefault(body.FulfillmentMode)
+	if !validMode {
+		store.SendError(w, http.StatusBadRequest, "INVALID_FULFILLMENT_MODE", "fulfillmentMode must be bthwani_delivery, partner_delivery, or pickup")
+		return
 	}
 	var expectedVersion *int
 	if match := r.Header.Get("If-Match-Version"); match != "" {
@@ -309,7 +335,23 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		}
 		expectedVersion = &v
 	}
-	current, err := cart.GetOrCreateSingleStoreCart(r.Context(), s.db, actor.ID, body.StoreID, mode, expectedVersion)
+	result, err := cart.UpsertItemIdempotent(r.Context(), s.db, actor.ID, body.StoreID, mode, cart.UpsertItemInput{
+		MasterProductID: body.MasterProductID,
+		Quantity:        body.Quantity,
+		Options:         body.Options,
+		Note:            body.Note,
+		ExpectedVersion: expectedVersion,
+		FulfillmentMode: &mode,
+	}, cart.MutationContext{
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+		DeviceID:       strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id")),
+		SessionID:      strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id")),
+	})
+	if errors.Is(err, cart.ErrMutationOutcomeUnknown) {
+		store.SendError(w, http.StatusConflict, "CART_MUTATION_OUTCOME_UNKNOWN", "mutation outcome is preserved for reconciliation and cannot be replayed safely; refresh canonical cart state before taking further action")
+		return
+	}
 	if errors.Is(err, cart.ErrStoreConflict) {
 		conflict := &cart.StoreConflictError{}
 		if errors.As(err, &conflict) {
@@ -325,34 +367,6 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		return
 	}
 	if errors.Is(err, cart.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cart store or fulfillment mode is invalid")
-		return
-	}
-	if errors.Is(err, cart.ErrConflict) {
-		store.SendError(w, http.StatusPreconditionFailed, "VERSION_CONFLICT", "cart has been updated by another request")
-		return
-	}
-	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not resolve cart")
-		return
-	}
-	// Use the exact cart readback from the single-cart boundary. This keeps a
-	// mode change performed by this request and the item mutation in one OCC
-	// sequence, while UpsertItem locks again before writing.
-	mutationVersion := current.Version
-	item, err := cart.UpsertOwnedItem(r.Context(), s.db, actor.ID, body.StoreID, current.ID, cart.UpsertItemInput{
-		MasterProductID: body.MasterProductID,
-		Quantity:        body.Quantity,
-		Options:         body.Options,
-		Note:            body.Note,
-		ExpectedVersion: &mutationVersion,
-		FulfillmentMode: &mode,
-	})
-	if errors.Is(err, cart.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "active cart not found")
-		return
-	}
-	if errors.Is(err, cart.ErrInvalid) {
 		store.SendError(w, http.StatusUnprocessableEntity, "CART_ITEM_UNAVAILABLE", "product is unavailable, has no valid store price, or note exceeds limits")
 		return
 	}
@@ -360,31 +374,20 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusPreconditionFailed, "VERSION_CONFLICT", "cart has been updated by another request")
 		return
 	}
+	if errors.Is(err, cart.ErrIdempotencyConflict) {
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different cart mutation")
+		return
+	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart item update failed")
 		return
 	}
-
-	// Record the idempotency key after the mutation succeeded. Best-effort
-	// means logged, never silently discarded: a dropped tracking row would
-	// silently degrade replay protection for this key.
-	if idempotencyKey != "" {
-		deviceId := strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id"))
-		sessionId := strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id"))
-		if err := recordCartIdempotency(r.Context(), s.db,
-			current.ID, idempotencyKey, current.Version+1, deviceId, sessionId,
-		); err != nil {
-			log.Printf("[cart] idempotency tracking failed (cart_id=%s, error_type %T)", current.ID, err)
-		}
+	if result == nil || result.Item == nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart mutation returned no item result")
+		return
 	}
-
-	// Read cart again to get updated version
-	updatedCart, err := cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, body.StoreID)
-	if err == nil {
-		w.Header().Set("ETag", fmt.Sprintf(`"%d"`, updatedCart.Version))
-	}
-
-	store.SendJSON(w, http.StatusOK, map[string]any{"cartId": current.ID, "item": item})
+	w.Header().Set("ETag", fmt.Sprintf(`"%d"`, result.Version))
+	store.SendJSON(w, http.StatusOK, map[string]any{"cartId": result.CartID, "item": result.Item})
 }
 
 // DELETE /dsh/client/cart/items/{itemId}?cartId=xxx
@@ -393,12 +396,12 @@ func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
-	idempotencyKey, ok := requireCartMutationIdempotency(w, r)
-	if !ok || s.rejectCartMutationReplay(w, r, actor.ID, idempotencyKey) {
+	idempotencyKey, correlationID, ok := requireCartMutationIdentity(w, r)
+	if !ok {
 		return
 	}
-	cartID := r.URL.Query().Get("cartId")
-	itemID := r.PathValue("itemId")
+	cartID := strings.TrimSpace(r.URL.Query().Get("cartId"))
+	itemID := strings.TrimSpace(r.PathValue("itemId"))
 	if cartID == "" || itemID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId and itemId are required")
 		return
@@ -406,12 +409,26 @@ func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *ht
 	var expectedVersion *int
 	if match := r.Header.Get("If-Match-Version"); match != "" {
 		var v int
-		if _, err := fmt.Sscanf(match, "%d", &v); err == nil {
-			expectedVersion = &v
+		if _, err := fmt.Sscanf(match, "%d", &v); err != nil || v < 1 {
+			store.SendError(w, http.StatusBadRequest, "INVALID_VERSION", "If-Match-Version must be a positive integer")
+			return
 		}
+		expectedVersion = &v
 	}
 
-	if err := cart.RemoveOwnedItem(r.Context(), s.db, actor.ID, cartID, itemID, expectedVersion); errors.Is(err, cart.ErrNotFound) {
+	result, err := cart.RemoveItemIdempotent(r.Context(), s.db, actor.ID, cartID, itemID, expectedVersion, cart.MutationContext{
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+		DeviceID:       strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id")),
+		SessionID:      strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id")),
+	})
+	if errors.Is(err, cart.ErrMutationOutcomeUnknown) {
+		store.SendError(w, http.StatusConflict, "CART_MUTATION_OUTCOME_UNKNOWN", "mutation outcome is preserved for reconciliation and cannot be replayed safely; refresh canonical cart state before taking further action")
+		return
+	} else if errors.Is(err, cart.ErrIdempotencyConflict) {
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different cart mutation")
+		return
+	} else if errors.Is(err, cart.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "cart item not found")
 		return
 	} else if errors.Is(err, cart.ErrInvalid) {
@@ -424,22 +441,7 @@ func (s *protectedStoreServer) handleRemoveCartItem(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not remove cart item")
 		return
 	}
-
-	if idempotencyKey != "" {
-		deviceId := strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id"))
-		sessionId := strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id"))
-		// We use expectedVersion or approximate version 0 for deletion logs
-		v := 0
-		if expectedVersion != nil {
-			v = *expectedVersion + 1
-		}
-		if err := recordCartIdempotency(r.Context(), s.db,
-			cartID, idempotencyKey, v, deviceId, sessionId,
-		); err != nil {
-			log.Printf("[cart] idempotency tracking failed (error_type %T)", err)
-		}
-	}
-
+	w.Header().Set("ETag", fmt.Sprintf(`"%d"`, result.Version))
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -449,41 +451,39 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 	if !ok {
 		return
 	}
-	idempotencyKey, ok := requireCartMutationIdempotency(w, r)
-	if !ok || s.rejectCartMutationReplay(w, r, actor.ID, idempotencyKey) {
+	idempotencyKey, correlationID, ok := requireCartMutationIdentity(w, r)
+	if !ok {
 		return
 	}
-	cartID := r.URL.Query().Get("cartId")
-	storeID := r.URL.Query().Get("storeId")
+	cartID := strings.TrimSpace(r.URL.Query().Get("cartId"))
+	storeID := strings.TrimSpace(r.URL.Query().Get("storeId"))
 	if cartID == "" && storeID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId or storeId is required")
 		return
 	}
-	if storeID != "" {
-		current, err := cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, storeID)
-		if errors.Is(err, cart.ErrNotFound) {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		if errors.Is(err, cart.ErrFinancialUnavailable) {
-			store.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_QUOTE_UNAVAILABLE", "canonical financial pricing is temporarily unavailable")
-			return
-		}
-		if err != nil {
-			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart lookup failed")
-			return
-		}
-		cartID = current.ID
-	}
 	var expectedVersion *int
 	if match := r.Header.Get("If-Match-Version"); match != "" {
 		var v int
-		if _, err := fmt.Sscanf(match, "%d", &v); err == nil {
-			expectedVersion = &v
+		if _, err := fmt.Sscanf(match, "%d", &v); err != nil || v < 1 {
+			store.SendError(w, http.StatusBadRequest, "INVALID_VERSION", "If-Match-Version must be a positive integer")
+			return
 		}
+		expectedVersion = &v
 	}
 
-	if err := cart.ClearOwnedCart(r.Context(), s.db, actor.ID, cartID, expectedVersion); errors.Is(err, cart.ErrNotFound) {
+	result, err := cart.ClearCartIdempotent(r.Context(), s.db, actor.ID, cartID, storeID, expectedVersion, cart.MutationContext{
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
+		DeviceID:       strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id")),
+		SessionID:      strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id")),
+	})
+	if errors.Is(err, cart.ErrMutationOutcomeUnknown) {
+		store.SendError(w, http.StatusConflict, "CART_MUTATION_OUTCOME_UNKNOWN", "mutation outcome is preserved for reconciliation and cannot be replayed safely; refresh canonical cart state before taking further action")
+		return
+	} else if errors.Is(err, cart.ErrIdempotencyConflict) {
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used for a different cart mutation")
+		return
+	} else if errors.Is(err, cart.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "cart not found")
 		return
 	} else if errors.Is(err, cart.ErrConflict) {
@@ -493,47 +493,10 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not clear cart")
 		return
 	}
-
-	if idempotencyKey != "" {
-		deviceId := strings.TrimSpace(r.Header.Get("X-Dsh-Device-Id"))
-		sessionId := strings.TrimSpace(r.Header.Get("X-Dsh-Session-Id"))
-		v := 0
-		if expectedVersion != nil {
-			v = *expectedVersion + 1
-		}
-		if err := recordCartIdempotency(r.Context(), s.db,
-			cartID, idempotencyKey, v, deviceId, sessionId,
-		); err != nil {
-			log.Printf("[cart] idempotency tracking failed (error_type %T)", err)
-		}
+	if result != nil && result.CartID != "" && result.Version > 0 {
+		w.Header().Set("ETag", fmt.Sprintf(`"%d"`, result.Version))
 	}
-
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// recordCartIdempotency claims the (cart_id, idempotency_key) pair after a
-// successful cart mutation. The conflict target is the table's primary key,
-// and the insert outcome is always inspected: 0 rows means the key was
-// already claimed by a concurrent request — surfaced as ErrIdempotencyClaimed
-// so callers can log the anomaly instead of mistaking it for success.
-var errCartIdempotencyClaimed = errors.New("cart idempotency key already claimed")
-
-func recordCartIdempotency(ctx context.Context, db *sql.DB, cartID, idempotencyKey string, version int, deviceID, sessionID string) error {
-	result, err := db.ExecContext(ctx,
-		`INSERT INTO dsh_cart_idempotency (cart_id, idempotency_key, version, device_id, session_id) VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, '')) ON CONFLICT (cart_id, idempotency_key) DO NOTHING`,
-		cartID, idempotencyKey, version, deviceID, sessionID,
-	)
-	if err != nil {
-		return err
-	}
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return errCartIdempotencyClaimed
-	}
-	return nil
 }
 
 // GET /dsh/operator/carts?state=active

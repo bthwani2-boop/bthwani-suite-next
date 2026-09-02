@@ -55,23 +55,6 @@ func (s *protectedStoreServer) handleCreateAssetUploadIntent(w http.ResponseWrit
 	})
 }
 
-func (s *protectedStoreServer) handleCompleteAssetUpload(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
-	if !ok {
-		return
-	}
-	assetID := r.PathValue("assetId")
-	if !s.authorizeAssetAccess(w, r, actor, assetID) {
-		return
-	}
-	a, err := centralcatalog.CompleteAssetUpload(r.Context(), s.db, s.mediaClient(), assetID)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"asset": a})
-}
-
 func sourceSurfaceForActor(role string) string {
 	switch role {
 	case "operator":
@@ -102,25 +85,6 @@ func (s *protectedStoreServer) authorizeAssetAccess(w http.ResponseWriter, r *ht
 		return false
 	}
 	return true
-}
-
-func (s *protectedStoreServer) handleDeleteCatalogAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
-	if !ok {
-		return
-	}
-	if actor.Role == "operator" {
-		if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
-			return
-		}
-	} else if !s.authorizeAssetAccess(w, r, actor, r.PathValue("assetId")) {
-		return
-	}
-	if err := centralcatalog.DeleteUnlinkedAsset(r.Context(), s.db, s.mediaClient(), r.PathValue("assetId")); err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *protectedStoreServer) authorizeAssetLinkEntity(w http.ResponseWriter, r *http.Request, actor store.StoreActor, entityType, entityID string) bool {
@@ -160,30 +124,6 @@ func (s *protectedStoreServer) authorizeAssetLinkEntity(w http.ResponseWriter, r
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "only operators can manage media for this entity type")
 		return false
 	}
-}
-
-func (s *protectedStoreServer) handleUnlinkCatalogAsset(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator", "partner", "field")
-	if !ok {
-		return
-	}
-	entityType := r.URL.Query().Get("entityType")
-	entityID := r.URL.Query().Get("entityId")
-	if !s.authorizeAssetLinkEntity(w, r, actor, entityType, entityID) {
-		return
-	}
-	if assetID, err := s.assetIDForLink(r.Context(), r.PathValue("linkId")); err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	} else if !s.authorizeAssetAccess(w, r, actor, assetID) {
-		return
-	}
-	err := centralcatalog.UnlinkAsset(r.Context(), s.db, entityType, entityID, r.PathValue("linkId"))
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"unlinked": true})
 }
 
 func (s *protectedStoreServer) assetIDForLink(ctx context.Context, linkID string) (string, error) {
@@ -229,23 +169,6 @@ func (s *protectedStoreServer) handleListReels(w http.ResponseWriter, r *http.Re
 	store.SendJSON(w, http.StatusOK, map[string]any{"reels": reels})
 }
 
-func (s *protectedStoreServer) handleReviewReel(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaReview)
-	if !ok {
-		return
-	}
-	var input centralcatalog.ReviewReelInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-	reel, err := centralcatalog.ReviewReel(r.Context(), s.db, actor.ID, r.PathValue("reelId"), input)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"reel": reel})
-}
-
 func handlePublicReels(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -270,68 +193,6 @@ func (s *protectedStoreServer) handleCatalogSeedStatus(w http.ResponseWriter, r 
 	store.SendJSON(w, http.StatusOK, status)
 }
 
-func (s *protectedStoreServer) handlePutDomainImage(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
-		return
-	}
-	s.putEntityImage(w, r, "domain", r.PathValue("domainId"), r.PathValue("role"))
-}
-
-func (s *protectedStoreServer) handlePutNodeImage(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
-		return
-	}
-	s.putEntityImage(w, r, "node", r.PathValue("nodeId"), r.PathValue("role"))
-}
-
-func (s *protectedStoreServer) handlePutMasterProductImage(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
-		return
-	}
-	s.putEntityImage(w, r, "master_product", r.PathValue("productId"), r.PathValue("role"))
-}
-
-func (s *protectedStoreServer) handlePutProductProposalImage(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionMediaManage); !ok {
-		return
-	}
-	s.putEntityImage(w, r, "product_proposal", r.PathValue("proposalId"), r.PathValue("role"))
-}
-
 type EntityImageInput struct {
 	AssetID string `json:"assetId"`
-}
-
-func (s *protectedStoreServer) putEntityImage(w http.ResponseWriter, r *http.Request, entityType, entityID, role string) {
-	var input EntityImageInput
-	if !decodeProtectedJSON(w, r, &input) {
-		return
-	}
-
-	tx, err := s.db.BeginTx(r.Context(), nil)
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-	defer tx.Rollback()
-
-	link, err := centralcatalog.ReplacePrimaryAssetLink(r.Context(), tx, centralcatalog.AssetLinkInput{
-		AssetID:    input.AssetID,
-		EntityType: entityType,
-		EntityID:   entityID,
-		Role:       role,
-		SortOrder:  0,
-		IsPrimary:  true,
-	})
-	if err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		s.writeCentralCatalogError(w, err)
-		return
-	}
-
-	store.SendJSON(w, http.StatusOK, map[string]any{"link": link})
 }

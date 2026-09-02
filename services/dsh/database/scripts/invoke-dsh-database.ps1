@@ -31,7 +31,7 @@ param(
 
   [string]$ComposeFile = "infra/docker/compose.runtime.yml",
   [string]$EnvFile = "infra/docker/env/runtime.env.example",
-  [string]$SourceCommitSha = ""
+  [string]$SourceCommitSha = $env:CANDIDATE_SHA
 )
 
 Set-StrictMode -Version Latest
@@ -60,16 +60,12 @@ foreach ($requiredFile in @($RuntimeOrchestrator, $RuntimeMigrationRunner, $Serv
 if ($Transport -eq "auto") {
   $Transport = if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) { "docker" } else { "url" }
 }
-if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
-  if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
-    $SourceCommitSha = $env:GITHUB_SHA
-  } else {
-    $SourceCommitSha = (& git rev-parse HEAD).Trim()
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommitSha)) {
-      throw "Unable to resolve source commit SHA."
-    }
-  }
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
+if (-not (Test-Path -LiteralPath $SourceCommitProvenancePath -PathType Leaf)) {
+  throw "Checked-out source commit resolver not found: $SourceCommitProvenancePath"
 }
+. $SourceCommitProvenancePath
+$SourceCommitSha = Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $RepoRoot -ExpectedSourceCommitSha $SourceCommitSha
 
 if ($Transport -eq "url") {
   if ([string]::IsNullOrWhiteSpace($DatabaseUrl)) {

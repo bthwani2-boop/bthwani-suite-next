@@ -267,7 +267,7 @@ func (s *Service) CreateInOperatorContext(ctx context.Context, operatorContextID
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	req, created, err := s.repo.CreateTxWithReplay(ctx, tx, in)
 	if err != nil {
@@ -552,7 +552,7 @@ func (s *Service) ApplyOperatorTransitionInOperatorContext(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, id, expectedVersion, update)
 	if err != nil {
@@ -636,7 +636,7 @@ func (s *Service) AttachWltQuoteInOperatorContext(ctx context.Context, operatorC
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, id, expectedVersion, update)
 	if err != nil {
 		return nil, err

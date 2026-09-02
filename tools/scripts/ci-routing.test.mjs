@@ -31,7 +31,7 @@ test("orchestrator package keeps its declared nine owners and revision", () => {
   }
   assert.deepEqual(actual.sort(), [...orchestratorFiles].sort());
   const entrypoint = read("tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md");
-  assert.match(entrypoint, /PACKAGE_REVISION: 23/u);
+  assert.match(entrypoint, /PACKAGE_REVISION: 24/u);
   assert.match(entrypoint, /Exactly nine files are semantic owners/u);
   for (const relativePath of orchestratorFiles) assert.equal(exists(`tools/prompting/bthwani-orchestrator/${relativePath}`), true, relativePath);
 });

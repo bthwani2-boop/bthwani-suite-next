@@ -134,7 +134,7 @@ func CreateActorTicket(db *sql.DB, input ActorCreateTicketInput) (Ticket, error)
 	if err != nil {
 		return Ticket{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.ActorID, idempotencyKey); err != nil {
 		return Ticket{}, err
 	}
@@ -198,7 +198,7 @@ func ListActorTickets(db *sql.DB, actorID string, role ReporterRole, limit int) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanTickets(rows)
 }
 

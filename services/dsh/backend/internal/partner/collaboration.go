@@ -170,7 +170,7 @@ func AddCollaborationMessage(ctx context.Context, db *sql.DB, actorID, surface, 
 	if err != nil {
 		return CollaborationMessage{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, thread.ID); err != nil {
 		return CollaborationMessage{}, err
 	}
@@ -301,7 +301,7 @@ func ListFieldOnboardingWorkload(ctx context.Context, db *sql.DB, operatorContex
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []FieldOnboardingWorkloadItem{}
 	for rows.Next() {
 		var item FieldOnboardingWorkloadItem
@@ -369,7 +369,7 @@ func listCollaborationMessages(ctx context.Context, db *sql.DB, threadID string)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []CollaborationMessage{}
 	for rows.Next() {
 		var m CollaborationMessage
@@ -386,7 +386,7 @@ func listChangeRequests(ctx context.Context, db *sql.DB, threadID string) ([]Col
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []CollaborationChangeRequest{}
 	for rows.Next() {
 		var r CollaborationChangeRequest

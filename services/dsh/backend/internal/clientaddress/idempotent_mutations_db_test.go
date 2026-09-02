@@ -25,7 +25,7 @@ func openAddressIntegrationDB(t *testing.T) *sql.DB {
 		t.Fatalf("open postgres: %v", err)
 	}
 	if err := db.PingContext(context.Background()); err != nil {
-		db.Close()
+		_ = db.Close()
 		t.Fatalf("ping postgres: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
@@ -38,7 +38,7 @@ func ensureIntegrationServiceArea(t *testing.T, db *sql.DB) {
 	if err != nil {
 		t.Fatalf("begin integration service-area fixture: %v", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.Exec(`INSERT INTO dsh_service_area_geofences
 		(service_area_code, display_name, polygon, active, priority, srid, overlap_policy, effective_from)

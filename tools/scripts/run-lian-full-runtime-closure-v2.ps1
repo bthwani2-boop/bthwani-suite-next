@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param([switch]$Cleanup)
+param(
+  [switch]$Cleanup,
+  [string]$SourceCommitSha = $env:CANDIDATE_SHA
+)
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
@@ -14,37 +17,24 @@ $EvidenceDirectory = Join-Path $RepoRoot "artifacts"
 $EvidencePath = Join-Path $EvidenceDirectory "lian-runtime-closure-evidence.json"
 $CoreProfiles = "identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media-storage"
 $MigrationRunner = Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1"
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
 New-Item -ItemType Directory -Path $EvidenceDirectory -Force | Out-Null
 
-if (-not (Test-Path -LiteralPath $MigrationRunner)) {
-  throw "Governed migration runner is missing: $MigrationRunner"
+foreach ($requiredPath in @($MigrationRunner, $SourceCommitProvenancePath)) {
+  if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
+    throw "Required runtime closure authority is missing: $requiredPath"
+  }
 }
 . $MigrationRunner
+. $SourceCommitProvenancePath
 
-if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
-  $ResolvedCommitSha = $env:GITHUB_SHA.Trim()
-} else {
-  $ResolvedCommitSha = (& git rev-parse HEAD).Trim()
-  if ($LASTEXITCODE -ne 0) {
-    throw "Unable to resolve the runtime closure commit SHA from Git."
-  }
-}
-if ($ResolvedCommitSha -notmatch '^[0-9a-f]{40}$') {
-  throw "Runtime closure requires an exact immutable commit SHA."
-}
-
-if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_HEAD_REF)) {
-  $ResolvedBranch = $env:GITHUB_HEAD_REF.Trim()
-} elseif (-not [string]::IsNullOrWhiteSpace($env:GITHUB_REF_NAME)) {
-  $ResolvedBranch = $env:GITHUB_REF_NAME.Trim()
-} else {
-  $ResolvedBranch = (& git branch --show-current).Trim()
-  if ($LASTEXITCODE -ne 0) {
-    throw "Unable to resolve the runtime closure ref from Git."
-  }
+$ResolvedCommitSha = Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $RepoRoot -ExpectedSourceCommitSha $SourceCommitSha
+$ResolvedBranch = (& git -C $RepoRoot branch --show-current).Trim()
+if ($LASTEXITCODE -ne 0) {
+  throw "Unable to resolve the checked-out runtime closure ref from Git."
 }
 if ([string]::IsNullOrWhiteSpace($ResolvedBranch)) {
-  throw "Runtime closure requires a resolved branch or ref name."
+  $ResolvedBranch = "DETACHED"
 }
 
 $Evidence = [ordered]@{

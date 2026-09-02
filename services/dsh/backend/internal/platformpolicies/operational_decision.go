@@ -43,14 +43,34 @@ type UpsertDeliveryModePolicyInput struct {
 	ExpectedVersion int    `json:"expectedVersion"`
 }
 
+// SLAState is the shared operational classification used by all SLA
+// projections. Domain packages keep only their distinct leg vocabularies.
+type SLAState string
+
+const (
+	SLANotStarted SLAState = "not_started"
+	SLAOnTrack    SLAState = "on_track"
+	SLADueSoon    SLAState = "due_soon"
+	SLAOverdue    SLAState = "overdue"
+	SLAClosed     SLAState = "closed"
+)
+
 type OperationalSLA struct {
-	Configured        bool   `json:"configured"`
-	RuleID            string `json:"ruleId,omitempty"`
-	Category          string `json:"category,omitempty"`
-	MaxPrepMins       int    `json:"maxPrepMins,omitempty"`
-	MaxAssignmentMins int    `json:"maxAssignmentMins,omitempty"`
-	MaxDeliveryMins   int    `json:"maxDeliveryMins,omitempty"`
-	Version           int    `json:"version,omitempty"`
+	Configured                 bool   `json:"configured"`
+	RuleID                     string `json:"ruleId,omitempty"`
+	Category                   string `json:"category,omitempty"`
+	MaxPrepMins                int    `json:"maxPrepMins,omitempty"`
+	MaxAssignmentMins          int    `json:"maxAssignmentMins,omitempty"`
+	MaxDeliveryMins            int    `json:"maxDeliveryMins,omitempty"`
+	WarningBeforeMins          int    `json:"warningBeforeMins,omitempty"`
+	PickupNotifyMins           int    `json:"pickupNotifyMins,omitempty"`
+	PickupArrivalMins          int    `json:"pickupArrivalMins,omitempty"`
+	PickupVerifyMins           int    `json:"pickupVerifyMins,omitempty"`
+	DeliveryAssignToPickupMins int    `json:"deliveryAssignToPickupMins,omitempty"`
+	DeliveryPickupToDepartMins int    `json:"deliveryPickupToDepartMins,omitempty"`
+	DeliveryDepartToArriveMins int    `json:"deliveryDepartToArriveMins,omitempty"`
+	DeliveryArriveToProofMins  int    `json:"deliveryArriveToProofMins,omitempty"`
+	Version                    int    `json:"version,omitempty"`
 }
 
 type OperationalCapacity struct {
@@ -151,7 +171,7 @@ func ListDeliveryModePolicies(ctx context.Context, db *sql.DB, zoneID string) ([
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []DeliveryModePolicy{}
 	for rows.Next() {
 		var item DeliveryModePolicy
@@ -301,13 +321,23 @@ func EvaluateOperationalPolicy(
 
 	slaErr := db.QueryRowContext(ctx, `
 		SELECT id, category, max_prep_mins, max_assignment_mins,
-		       max_delivery_mins, version
+		       max_delivery_mins, warning_before_mins, pickup_notify_mins,
+		       pickup_arrival_mins, pickup_verify_mins,
+		       delivery_assign_to_pickup_mins, delivery_pickup_to_depart_mins,
+		       delivery_depart_to_arrive_mins, delivery_arrive_to_proof_mins,
+		       version
 		FROM dsh_platform_sla_rules
 		WHERE zone_id = $1 AND category IN ($2, 'default')
 		ORDER BY CASE WHEN category = $2 THEN 0 ELSE 1 END
 		LIMIT 1`, input.ZoneID, input.SlaCategory).Scan(
 		&snapshot.SLA.RuleID, &snapshot.SLA.Category, &snapshot.SLA.MaxPrepMins,
 		&snapshot.SLA.MaxAssignmentMins, &snapshot.SLA.MaxDeliveryMins,
+		&snapshot.SLA.WarningBeforeMins, &snapshot.SLA.PickupNotifyMins,
+		&snapshot.SLA.PickupArrivalMins, &snapshot.SLA.PickupVerifyMins,
+		&snapshot.SLA.DeliveryAssignToPickupMins,
+		&snapshot.SLA.DeliveryPickupToDepartMins,
+		&snapshot.SLA.DeliveryDepartToArriveMins,
+		&snapshot.SLA.DeliveryArriveToProofMins,
 		&snapshot.SLA.Version,
 	)
 	if slaErr != nil && !errors.Is(slaErr, sql.ErrNoRows) {
@@ -470,7 +500,7 @@ func ListPolicyAuditEvents(ctx context.Context, db *sql.DB, aggregateType string
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []PolicyAuditEvent{}
 	for rows.Next() {
 		var item PolicyAuditEvent
@@ -539,25 +569,51 @@ func RollbackPolicyEvent(
 			).Scan(&result.ToVersion)
 			restored = snapshot
 		case "sla_rule":
-			var snapshot struct {
-				SlaRule
-				MaxAssignmentMins int `json:"maxAssignmentMins"`
-			}
+			var snapshot SlaRule
 			if err := json.Unmarshal(event.Payload, &snapshot); err != nil {
 				return result, ErrInvalid
 			}
 			if snapshot.MaxAssignmentMins < 1 {
-				snapshot.MaxAssignmentMins = 10
+				return result, ErrInvalid
+			}
+			if snapshot.WarningBeforeMins < 1 || snapshot.PickupNotifyMins < 1 ||
+				snapshot.PickupArrivalMins < 1 || snapshot.PickupVerifyMins < 1 ||
+				snapshot.DeliveryAssignToPickupMins < 1 ||
+				snapshot.DeliveryPickupToDepartMins < 1 ||
+				snapshot.DeliveryDepartToArriveMins < 1 ||
+				snapshot.DeliveryArriveToProofMins < 1 {
+				// Events written before DSH-1078 have no stage policy payload. Their
+				// rollback may restore only the fields that event actually owned.
+				err = tx.QueryRowContext(ctx, `
+					UPDATE dsh_platform_sla_rules
+					SET category = $2, max_prep_mins = $3, max_assignment_mins = $4,
+					    max_delivery_mins = $5, updated_by = $6,
+					    version = version + 1, updated_at = NOW()
+					WHERE id = $1 AND version = $7
+					RETURNING version`, event.AggregateID, snapshot.Category,
+					snapshot.MaxPrepMins, snapshot.MaxAssignmentMins,
+					snapshot.MaxDeliveryMins, mutation.ActorID, input.ExpectedCurrentVersion,
+				).Scan(&result.ToVersion)
+				restored = snapshot
+				break
 			}
 			err = tx.QueryRowContext(ctx, `
 				UPDATE dsh_platform_sla_rules
 				SET category = $2, max_prep_mins = $3, max_assignment_mins = $4,
-				    max_delivery_mins = $5, updated_by = $6,
+				    max_delivery_mins = $5, warning_before_mins = $6,
+				    pickup_notify_mins = $7, pickup_arrival_mins = $8,
+				    pickup_verify_mins = $9, delivery_assign_to_pickup_mins = $10,
+				    delivery_pickup_to_depart_mins = $11, delivery_depart_to_arrive_mins = $12,
+				    delivery_arrive_to_proof_mins = $13, updated_by = $14,
 				    version = version + 1, updated_at = NOW()
-				WHERE id = $1 AND version = $7
+				WHERE id = $1 AND version = $15
 				RETURNING version`, event.AggregateID, snapshot.Category,
 				snapshot.MaxPrepMins, snapshot.MaxAssignmentMins,
-				snapshot.MaxDeliveryMins, mutation.ActorID, input.ExpectedCurrentVersion,
+				snapshot.MaxDeliveryMins, snapshot.WarningBeforeMins,
+				snapshot.PickupNotifyMins, snapshot.PickupArrivalMins,
+				snapshot.PickupVerifyMins, snapshot.DeliveryAssignToPickupMins,
+				snapshot.DeliveryPickupToDepartMins, snapshot.DeliveryDepartToArriveMins,
+				snapshot.DeliveryArriveToProofMins, mutation.ActorID, input.ExpectedCurrentVersion,
 			).Scan(&result.ToVersion)
 			restored = snapshot
 		case "capacity_config":

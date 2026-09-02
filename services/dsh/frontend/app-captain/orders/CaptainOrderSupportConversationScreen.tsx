@@ -75,6 +75,7 @@ export function CaptainOrderSupportConversationScreen({
   const [messages, setMessages] = React.useState<readonly DshSupportMessage[]>([]);
   const [draft, setDraft] = React.useState("");
   const [errorMessage, setErrorMessage] = React.useState("");
+  const mutationBusyRef = React.useRef(false);
 
   const load = React.useCallback(async () => {
     if (!orderId) return;
@@ -110,7 +111,7 @@ export function CaptainOrderSupportConversationScreen({
   }, [load]);
 
   const createConversation = React.useCallback(async () => {
-    if (!orderId || !actorId || mutationState !== "idle") return;
+    if (!orderId || !actorId || mutationState !== "idle" || mutationBusyRef.current) return;
     const input = {
       orderId,
       subject: `تواصل الكابتن حول الطلب ${orderId}`,
@@ -119,6 +120,7 @@ export function CaptainOrderSupportConversationScreen({
       priority: "high" as const,
     };
     const fingerprint = JSON.stringify(input);
+    mutationBusyRef.current = true;
     setMutationState("creating");
     setErrorMessage("");
     try {
@@ -147,14 +149,16 @@ export function CaptainOrderSupportConversationScreen({
         error instanceof Error ? error.message : "تعذر إنشاء محادثة الطلب.",
       );
     } finally {
+      mutationBusyRef.current = false;
       setMutationState("idle");
     }
   }, [actorId, mutationState, orderId]);
 
   const sendMessage = React.useCallback(async () => {
     const body = draft.trim();
-    if (!ticket || !actorId || body.length < 2 || mutationState !== "idle") return;
+    if (!ticket || !actorId || body.length < 2 || mutationState !== "idle" || mutationBusyRef.current) return;
     const fingerprint = JSON.stringify({ ticketId: ticket.id, body });
+    mutationBusyRef.current = true;
     setMutationState("sending");
     setErrorMessage("");
     try {
@@ -186,6 +190,7 @@ export function CaptainOrderSupportConversationScreen({
         error instanceof Error ? error.message : "تعذر إرسال الرسالة إلى DSH.",
       );
     } finally {
+      mutationBusyRef.current = false;
       setMutationState("idle");
     }
   }, [actorId, draft, mutationState, ticket]);

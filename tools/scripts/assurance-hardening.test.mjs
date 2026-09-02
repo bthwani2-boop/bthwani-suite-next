@@ -74,11 +74,18 @@ test("CodeQL trusted upload consumes SARIF findings before publishing", () => {
 
 test("CodeQL trusted upload waits for processing and exact analysis binding", () => {
   const f = read(".github/workflows/codeql.yml");
+  const validator = read("tools/scripts/validate-codeql-analysis-binding.mjs");
   assert.match(f, /processing_status/u);
   assert.match(f, /analyses_url/u);
-  assert.match(f, /\.commit_sha == \$candidate_sha/u);
-  assert.match(f, /\.ref == \$candidate_ref/u);
-  assert.match(f, /rtrimstr\("\/"\).*\$expected_category/u);
+  assert.match(f, /Load trusted CodeQL analysis binding validator/u);
+  assert.match(f, /TRUSTED_CODEQL_ANALYSIS_VALIDATOR/u);
+  assert.match(f, /validate-codeql-analysis-binding\.mjs/u);
+  assert.match(f, /--candidate-sha "\$\{CANDIDATE_SHA\}"/u);
+  assert.match(f, /--candidate-ref "\$\{CANDIDATE_REF\}"/u);
+  assert.match(validator, /response root must be an array/u);
+  assert.match(validator, /exactly one exact CodeQL analysis binding/u);
+  assert.match(validator, /commit_sha/u);
+  assert.match(validator, /candidateRef/u);
   assert.match(f, /codeql-upload-lifecycle-/u);
 });
 
@@ -96,6 +103,9 @@ test("Sonar evidence retrieval uses endpoint-specific identity and complete pagi
   assert.match(f, /fetch_remaining_pages hotspots api\/hotspots\/search/u);
   assert.match(f, /merge_paged_json issues/u);
   assert.match(f, /merge_paged_json hotspots/u);
+  assert.match(f, /Sonar PR and analysis records did not converge/u);
+  assert.match(f, /api\/project_analyses\/search/u);
+  assert.match(f, /\.key \/\/ ""\) == \$analysis_id/u);
 });
 
 test("Sonar raw API output is consumed as explicit evidence", () => {
@@ -126,6 +136,14 @@ test("experience evidence records are exact-candidate, provenance-bound, and pro
   const retiredReviewer = ["external-authorized-", "assurance-reviewer"].join("");
   const retiredSoloOwner = ["solo-", "owner"].join("");
   assert.doesNotMatch(v, new RegExp("bootstrap|candidateAuthors|APPROVED PR review|reviewIdentity|reviewProvenance|semantic|" + retiredReviewer + "|" + retiredSoloOwner, "iu"));
+});
+
+test("OpenCodeReview trusted-source retrieval is authenticated in its reusable worker", () => {
+  const o = read(".github/workflows/open-code-review.yml");
+  assert.match(o, /GH_TOKEN: \$\{\{ github\.token \}\}/u);
+  assert.match(o, /gh api --method GET/u);
+  assert.match(o, /tools\/scripts\/invoke-open-code-review-toolchain\.ps1/u);
+  assert.match(o, /tools\/scripts\/capture-tool-evidence\.mjs/u);
 });
 
 

@@ -34,6 +34,16 @@ test("new product TypeScript projects fail until Sonar lists their tsconfig", ()
   assert.equal(violations.some(({message}) => message.includes("apps/new-runtime/tsconfig.json")), true);
 });
 
+test("generated-only TypeScript projects remain visible to Sonar configuration", () => {
+  const violations = auditSonarConfiguration({
+    files: codeFiles,
+    tsconfigFiles: [...tsconfigFiles, "core/workforce/tsconfig.json"],
+    model,
+    sonarProperties,
+  });
+  assert.deepEqual(violations, []);
+});
+
 test("SQL exclusion without its canonical authority and disabled Quality Gate waiting fail closed", () => {
   const withoutSqlAuthority = sonarProperties
     .replace(/# SQL exclusion authority:[\s\S]*?# The S2077 entries below/u, "# The S2077 entries below")

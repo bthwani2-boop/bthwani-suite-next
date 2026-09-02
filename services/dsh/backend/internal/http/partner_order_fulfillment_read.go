@@ -27,5 +27,5 @@ func (s *protectedStoreServer) handleGetPartnerDeliveryTask(w http.ResponseWrite
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task), "stage": task.Status})
+	writePartnerDeliveryTask(w, http.StatusOK, map[string]any{"stage": task.Status}, task, r.Context(), s.db)
 }

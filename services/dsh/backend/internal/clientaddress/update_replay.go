@@ -34,7 +34,7 @@ func FindUpdateReplay(
 	if err != nil {
 		return nil, false, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if err := lockClient(ctx, tx, clientID); err != nil {
 		return nil, false, err
 	}

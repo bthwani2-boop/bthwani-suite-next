@@ -434,8 +434,6 @@ export const DSH_CAPABILITY_MAP = [
       "listDshZones",
       "createDshZone",
       "updateDshZone",
-      "getDshSlaRules",
-      "getDshCapacityConfig",
       "getDshOperationalProfile",
       "upsertDshOperationalProfile",
       "getDshZoneServiceability",

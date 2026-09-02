@@ -157,7 +157,7 @@ func CreateRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var req RoleDefinitionRequest
 	err = tx.QueryRowContext(ctx, `
@@ -233,7 +233,7 @@ func ListRoleDefinitionRequests(ctx context.Context, db *sql.DB, status string) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	out := make([]RoleDefinitionRequest, 0)
 	for rows.Next() {
@@ -320,7 +320,7 @@ func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 	if err != nil {
 		return nil, nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var req RoleDefinitionRequest
 	var permissionsJSON, surfacesJSON []byte

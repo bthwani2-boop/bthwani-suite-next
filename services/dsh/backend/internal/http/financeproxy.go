@@ -277,16 +277,6 @@ func operatorWriteBody() []byte {
 	return body
 }
 
-func financeQuery(r *http.Request, keys ...string) url.Values {
-	out := url.Values{}
-	for _, key := range keys {
-		if v := r.URL.Query().Get(key); v != "" {
-			out.Set(key, v)
-		}
-	}
-	return out
-}
-
 func (s *protectedStoreServer) proxyFinanceRead(w http.ResponseWriter, r *http.Request, opID string, params map[string]string, query url.Values, operatorContextID string) {
 	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), opID, params, query, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	if err != nil {

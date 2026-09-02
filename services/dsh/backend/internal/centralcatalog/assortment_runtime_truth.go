@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 )
 
@@ -124,41 +123,11 @@ func assortmentTruthPurchasable(truth assortmentRuntimeTruth) bool {
 		assortmentInventoryAvailable(truth.assortmentInventoryTruth)
 }
 
-func projectAssortmentRuntimeTruth(a StoreAssortment, truth assortmentRuntimeTruth) StoreAssortment {
-	a.UnitPrice = float64(truth.AmountMinor) / 100
-	a.Currency = truth.Currency
-	a.Available = assortmentTruthPurchasable(truth)
-	if truth.Paused {
-		a.StockStatus = "out_of_stock"
-	} else {
-		a.StockStatus = assortmentInventoryStockStatus(truth.assortmentInventoryTruth)
-	}
-	return a
-}
-
-// ListStoreAssortmentRuntimeTruth keeps operator/partner/field reads on the
-// same effective price and inventory authority used by cart. The legacy
-// unit_price/currency/available/stock_status columns are compatibility
-// projections only; they are never returned as current commercial truth once
-// normalized price/inventory exists.
+// ListStoreAssortmentRuntimeTruth keeps the explicit runtime-truth API name
+// while returning metadata only. Commercial truth is read through the
+// normalized inventory/price readback endpoints.
 func ListStoreAssortmentRuntimeTruth(ctx context.Context, db *sql.DB, storeID string) ([]StoreAssortment, error) {
-	items, err := ListStoreAssortment(ctx, db, storeID)
-	if err != nil {
-		return nil, err
-	}
-	for index := range items {
-		truth, truthErr := readAssortmentRuntimeTruth(ctx, db, items[index].ID)
-		if errors.Is(truthErr, ErrNotFound) {
-			items[index].Available = false
-			items[index].StockStatus = "out_of_stock"
-			continue
-		}
-		if truthErr != nil {
-			return nil, truthErr
-		}
-		items[index] = projectAssortmentRuntimeTruth(items[index], truth)
-	}
-	return items, nil
+	return ListStoreAssortment(ctx, db, storeID)
 }
 
 // FilterPurchasableClientCatalogEntries is the final storefront gate. A
@@ -206,48 +175,6 @@ func GetPurchasableClientCatalog(ctx context.Context, db *sql.DB, storeID string
 	return domains, nodes, products, catalogMedia, policySnapshot, nil
 }
 
-func bootstrapAssortmentRuntimeTruth(ctx context.Context, tx *sql.Tx, a StoreAssortment) error {
-	quantity := 0
-	if a.Available {
-		switch a.StockStatus {
-		case "in_stock":
-			quantity = 100
-		case "low_stock":
-			quantity = 5
-		}
-	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_store_assortment_inventory (
-			store_assortment_id, policy_type, quantity, reserved_quantity,
-			min_order_quantity, max_order_quantity, step_quantity
-		) VALUES ($1, 'signal', $2, 0, 1, 100, 1)
-		ON CONFLICT (store_assortment_id) DO NOTHING`, a.ID, quantity); err != nil {
-		return err
-	}
-
-	var priceCount int
-	if err := tx.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM dsh_store_assortment_prices
-		WHERE store_assortment_id = $1`, a.ID).Scan(&priceCount); err != nil {
-		return err
-	}
-	if priceCount == 0 && a.UnitPrice > 0 {
-		amountMinor := int64(math.Round(a.UnitPrice * 100))
-		if amountMinor <= 0 || amountMinor > math.MaxInt32 {
-			return ErrInvalid
-		}
-		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO dsh_store_assortment_prices (
-				id, store_assortment_id, amount_minor, currency,
-				prep_time_min, prep_time_max, effective_from, effective_until
-			) VALUES ($1, $2, $3, $4, 15, 30, NOW(), NULL)`,
-			entityID("price-bootstrap"), a.ID, amountMinor, a.Currency); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func validateAssortmentImageForClientVisibility(ctx context.Context, tx *sql.Tx, masterProductID string, customImageObjectKey *string) error {
 	var masterImage *string
 	if err := tx.QueryRowContext(ctx, `SELECT canonical_image_object_key FROM dsh_master_products WHERE id=$1`, masterProductID).Scan(&masterImage); err != nil {
@@ -269,21 +196,12 @@ func validateAssortmentImageForClientVisibility(ctx context.Context, tx *sql.Tx,
 // edits require the exact current expectedVersion. A transaction-scoped
 // advisory lock serializes both absent-row creation and existing-row updates
 // for the same store/product key, then the row is locked before an edit.
-// Normalized price/inventory bootstrap happens inside the same transaction.
-// Once normalized commercial records exist, metadata writes cannot overwrite
-// them with stale unitPrice/currency/availability/stockStatus values. Dedicated
-// inventory and price endpoints own subsequent commercial changes.
+// Commercial writes are intentionally absent from this metadata command.
+// Dedicated normalized inventory and price commands own all commercial state.
 func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInput, allowCustomImage bool) (StoreAssortment, error) {
 	storeID = strings.TrimSpace(storeID)
 	masterProductID = strings.TrimSpace(masterProductID)
-	if storeID == "" || masterProductID == "" || input.UnitPrice < 0 {
-		return StoreAssortment{}, ErrInvalid
-	}
-	stockStatus := input.StockStatus
-	if stockStatus == "" {
-		stockStatus = "in_stock"
-	}
-	if !validStockStatus[stockStatus] {
+	if storeID == "" || masterProductID == "" {
 		return StoreAssortment{}, ErrInvalid
 	}
 	publicationStatus := input.PublicationStatus
@@ -291,13 +209,6 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 		publicationStatus = "draft"
 	}
 	if !validPublicationStatus[publicationStatus] {
-		return StoreAssortment{}, ErrInvalid
-	}
-	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
-	if currency == "" {
-		currency = "YER"
-	}
-	if len(currency) != 3 {
 		return StoreAssortment{}, ErrInvalid
 	}
 	if input.CustomImageObjectKey != nil && strings.TrimSpace(*input.CustomImageObjectKey) != "" && !allowCustomImage {
@@ -311,7 +222,7 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 	if err != nil {
 		return StoreAssortment{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(
 		ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
@@ -321,7 +232,7 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 	}
 
 	existing, existingErr := scanAssortment(tx.QueryRowContext(ctx, `
-		SELECT `+assortmentColumns+`
+		SELECT `+assortmentMetadataColumns+`
 		FROM dsh_store_assortments
 		WHERE store_id=$1 AND master_product_id=$2
 		FOR UPDATE`, storeID, masterProductID))
@@ -357,57 +268,28 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 		id := entityID("assortment")
 		created, insertErr := scanAssortment(tx.QueryRowContext(ctx, `
 			INSERT INTO dsh_store_assortments (
-				id, store_id, master_product_id, unit_price, currency, available,
-				stock_status, local_note, custom_image_object_key, publication_status, submitted_by
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-			RETURNING `+assortmentColumns,
-			id, storeID, masterProductID, input.UnitPrice, currency, input.Available,
-			stockStatus, input.LocalNote, input.CustomImageObjectKey, publicationStatus, actorID))
+				id, store_id, master_product_id, local_note, custom_image_object_key,
+				publication_status, submitted_by
+			) VALUES ($1,$2,$3,$4,$5,$6,$7)
+			RETURNING `+assortmentMetadataColumns,
+			id, storeID, masterProductID, input.LocalNote, input.CustomImageObjectKey,
+			publicationStatus, actorID))
 		if insertErr != nil {
 			return StoreAssortment{}, insertErr
 		}
 		a = created
 	} else {
-		// Metadata edits preserve all commercial projections by default. Current
-		// normalized values may refresh those projections, but the payload can no
-		// longer mutate commercial truth after creation.
-		legacyUnitPrice := existing.UnitPrice
-		legacyCurrency := existing.Currency
-		legacyAvailable := existing.Available
-		legacyStockStatus := existing.StockStatus
-
-		inventoryTruth, inventoryErr := readAssortmentInventoryTruth(ctx, tx, existing.ID)
-		if inventoryErr == nil {
-			legacyAvailable = assortmentInventoryAvailable(inventoryTruth)
-			legacyStockStatus = assortmentInventoryStockStatus(inventoryTruth)
-		} else if !errors.Is(inventoryErr, ErrNotFound) {
-			return StoreAssortment{}, inventoryErr
-		}
-
-		runtimeTruth, runtimeErr := readAssortmentRuntimeTruth(ctx, tx, existing.ID)
-		if runtimeErr == nil {
-			legacyUnitPrice = float64(runtimeTruth.AmountMinor) / 100
-			legacyCurrency = runtimeTruth.Currency
-		} else if !errors.Is(runtimeErr, ErrNotFound) {
-			return StoreAssortment{}, runtimeErr
-		}
-
 		updated, updateErr := scanAssortment(tx.QueryRowContext(ctx, `
 			UPDATE dsh_store_assortments SET
-				unit_price=$1,
-				currency=$2,
-				available=$3,
-				stock_status=$4,
-				local_note=$5,
-				custom_image_object_key=$6,
-				publication_status=$7,
-				submitted_by=$8,
+				local_note=$1,
+				custom_image_object_key=$2,
+				publication_status=$3,
+				submitted_by=$4,
 				updated_at=NOW(),
 				version=version+1
-			WHERE id=$9 AND version=$10
-			RETURNING `+assortmentColumns,
-			legacyUnitPrice, legacyCurrency, legacyAvailable, legacyStockStatus, input.LocalNote,
-			input.CustomImageObjectKey, publicationStatus, actorID, existing.ID, *input.ExpectedVersion))
+			WHERE id=$5 AND version=$6
+			RETURNING `+assortmentMetadataColumns,
+			input.LocalNote, input.CustomImageObjectKey, publicationStatus, actorID, existing.ID, *input.ExpectedVersion))
 		if errors.Is(updateErr, ErrNotFound) {
 			return StoreAssortment{}, NewConflictError(tx, ctx, "dsh_store_assortments", existing.ID, input.ExpectedVersion)
 		}
@@ -417,19 +299,13 @@ func UpsertStoreAssortmentWithRuntimeTruth(ctx context.Context, db *sql.DB, stor
 		a = updated
 	}
 
-	if err := bootstrapAssortmentRuntimeTruth(ctx, tx, a); err != nil {
-		return StoreAssortment{}, err
-	}
-
 	truth, truthErr := readAssortmentRuntimeTruth(ctx, tx, a.ID)
 	if publicationStatus == "client_visible" {
 		if truthErr != nil || !assortmentTruthPurchasable(truth) {
 			return StoreAssortment{}, fmt.Errorf("%w: client_visible assortment requires an effective price and purchasable inventory", ErrInvalid)
 		}
 	}
-	if truthErr == nil {
-		a = projectAssortmentRuntimeTruth(a, truth)
-	} else if !errors.Is(truthErr, ErrNotFound) {
+	if truthErr != nil && !errors.Is(truthErr, ErrNotFound) {
 		return StoreAssortment{}, truthErr
 	}
 

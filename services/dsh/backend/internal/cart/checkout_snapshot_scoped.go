@@ -72,7 +72,7 @@ func ComputeCheckoutSnapshotTx(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	const maxInt64 = int64(1<<63 - 1)
 	var subtotal int64
@@ -80,7 +80,7 @@ func ComputeCheckoutSnapshotTx(
 	itemCount := 0
 	lines := make([]CheckoutSnapshotLine, 0)
 	hasher := sha256.New()
-	hasher.Write([]byte(fmt.Sprintf("%s|%s|%s|v%d", cartID, clientID, lockedStoreID, currentVersion)))
+	_, _ = fmt.Fprintf(hasher, "%s|%s|%s|v%d", cartID, clientID, lockedStoreID, currentVersion)
 	for rows.Next() {
 		var productID string
 		var quantity int
@@ -108,7 +108,7 @@ func ComputeCheckoutSnapshotTx(
 			return nil, fmt.Errorf("%w: cart total exceeds supported range", ErrInvalid)
 		}
 		subtotal += lineTotal
-		hasher.Write([]byte(fmt.Sprintf("|%s:%d:%d:%s", productID, quantity, unitMinorUnits, itemCurrency)))
+		_, _ = fmt.Fprintf(hasher, "|%s:%d:%d:%s", productID, quantity, unitMinorUnits, itemCurrency)
 		lines = append(lines, CheckoutSnapshotLine{MasterProductID: productID, Quantity: quantity, UnitPriceMinorUnits: unitMinorUnits, Currency: itemCurrency})
 		itemCount++
 	}

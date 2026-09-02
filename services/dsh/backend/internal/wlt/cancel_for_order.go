@@ -79,7 +79,7 @@ func (c *Client) CancelSessionForOrderWithResult(
 	if err != nil {
 		return nil, fmt.Errorf("%w: call WLT order-cancellation: %v", ErrMutationOutcomeUnknown, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
 		return nil, fmt.Errorf("%w: WLT order-cancellation returned HTTP %d", ErrMutationOutcomeUnknown, response.StatusCode)
 	}

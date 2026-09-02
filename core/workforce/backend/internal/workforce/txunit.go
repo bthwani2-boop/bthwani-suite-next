@@ -155,12 +155,9 @@ func personByActorIDTx(ctx context.Context, tx *sql.Tx, actorID string) (Person,
 // createPersonTx provisions the sovereign field profile rows inside a
 // governed transaction. Caller audits and stores the idempotent response in
 // the same transaction.
-func createPersonTx(ctx context.Context, tx *sql.Tx, actorID, workforceCode, cityCode string, input CreateFieldAgentInput) (Person, error) {
+func createPersonTx(ctx context.Context, tx *sql.Tx, actorID, workforceCode, serviceAreaCode string, input CreateFieldAgentInput) (Person, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
-		return Person{}, err
-	}
-	if err := validateProjectedCityTx(ctx, tx, cityCode); err != nil {
 		return Person{}, err
 	}
 	_, err = tx.ExecContext(ctx, `
@@ -179,9 +176,9 @@ func createPersonTx(ctx context.Context, tx *sql.Tx, actorID, workforceCode, cit
 	}
 	_, err = tx.ExecContext(ctx, `
                 INSERT INTO workforce_field_profiles
-                        (operator_context_id, actor_id, city_code, service_zone_id, supervisor_actor_id, document_media_refs)
+                        (operator_context_id, actor_id, service_area_code, service_zone_id, supervisor_actor_id, document_media_refs)
                 VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6::jsonb)`,
-		operatorContextID, actorID, cityCode, input.ServiceZoneID, input.SupervisorActorID, string(documents))
+		operatorContextID, actorID, serviceAreaCode, input.ServiceZoneID, input.SupervisorActorID, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -190,12 +187,9 @@ func createPersonTx(ctx context.Context, tx *sql.Tx, actorID, workforceCode, cit
 
 // createCaptainTx provisions the sovereign captain profile rows inside a
 // governed transaction.
-func createCaptainTx(ctx context.Context, tx *sql.Tx, actorID, workforceCode, cityCode string, input CreateCaptainInput) (Person, error) {
+func createCaptainTx(ctx context.Context, tx *sql.Tx, actorID, workforceCode, serviceAreaCode string, input CreateCaptainInput) (Person, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
-		return Person{}, err
-	}
-	if err := validateProjectedCityTx(ctx, tx, cityCode); err != nil {
 		return Person{}, err
 	}
 	_, err = tx.ExecContext(ctx, `
@@ -219,11 +213,11 @@ func createCaptainTx(ctx context.Context, tx *sql.Tx, actorID, workforceCode, ci
 	_, err = tx.ExecContext(ctx, `
                 INSERT INTO workforce_captain_profiles
                         (operator_context_id, actor_id, vehicle_type, vehicle_identifier, license_status, license_expires_at,
-                         operating_city_code, service_zone_id, operating_scope_code, supervisor_actor_id, document_media_refs)
+                         operating_service_area_code, service_zone_id, operating_scope_code, supervisor_actor_id, document_media_refs)
                 VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, '')::date,
                         NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, ''), $11::jsonb)`,
 		operatorContextID, actorID, input.VehicleType, input.VehicleIdentifier, licenseStatus, input.LicenseExpiresAt,
-		cityCode, input.ServiceZoneID, input.OperatingScopeCode, input.SupervisorActorID, string(documents))
+		serviceAreaCode, input.ServiceZoneID, input.OperatingScopeCode, input.SupervisorActorID, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -264,7 +258,7 @@ func createEmployeeTx(ctx context.Context, tx *sql.Tx, actorID, workforceCode st
 
 // updatePersonTx applies sovereign field edits under optimistic locking
 // inside a governed transaction and returns the committed projection.
-func updatePersonTx(ctx context.Context, tx *sql.Tx, actorID string, derivedCityCode *string, input UpdateFieldAgentInput) (Person, error) {
+func updatePersonTx(ctx context.Context, tx *sql.Tx, actorID string, derivedServiceAreaCode *string, input UpdateFieldAgentInput) (Person, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
 		return Person{}, err
@@ -280,11 +274,6 @@ func updatePersonTx(ctx context.Context, tx *sql.Tx, actorID string, derivedCity
 	}
 	if currentVersion != input.ExpectedVersion {
 		return Person{}, ErrVersionConflict
-	}
-	if derivedCityCode != nil {
-		if err := validateProjectedCityTx(ctx, tx, *derivedCityCode); err != nil {
-			return Person{}, err
-		}
 	}
 	_, err = tx.ExecContext(ctx, `
                 UPDATE workforce_people SET
@@ -303,12 +292,12 @@ func updatePersonTx(ctx context.Context, tx *sql.Tx, actorID string, derivedCity
 	}
 	_, err = tx.ExecContext(ctx, `
                 UPDATE workforce_field_profiles SET
-                        city_code = COALESCE(NULLIF($3, ''), city_code),
+                        service_area_code = COALESCE(NULLIF($3, ''), service_area_code),
                         service_zone_id = COALESCE(NULLIF($4, ''), service_zone_id),
                         supervisor_actor_id = COALESCE(NULLIF($5, ''), supervisor_actor_id),
                         updated_at = now()
                 WHERE operator_context_id = $1 AND actor_id = $2`,
-		operatorContextID, actorID, deref(derivedCityCode), deref(input.ServiceZoneID), deref(input.SupervisorActorID))
+		operatorContextID, actorID, deref(derivedServiceAreaCode), deref(input.ServiceZoneID), deref(input.SupervisorActorID))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -317,7 +306,7 @@ func updatePersonTx(ctx context.Context, tx *sql.Tx, actorID string, derivedCity
 
 // updateCaptainTx applies sovereign captain edits under optimistic locking
 // inside a governed transaction.
-func updateCaptainTx(ctx context.Context, tx *sql.Tx, actorID string, derivedCityCode *string, input UpdateCaptainInput) (Person, error) {
+func updateCaptainTx(ctx context.Context, tx *sql.Tx, actorID string, derivedServiceAreaCode *string, input UpdateCaptainInput) (Person, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
 		return Person{}, err
@@ -333,11 +322,6 @@ func updateCaptainTx(ctx context.Context, tx *sql.Tx, actorID string, derivedCit
 	}
 	if currentVersion != input.ExpectedVersion {
 		return Person{}, ErrVersionConflict
-	}
-	if derivedCityCode != nil {
-		if err := validateProjectedCityTx(ctx, tx, *derivedCityCode); err != nil {
-			return Person{}, err
-		}
 	}
 	_, err = tx.ExecContext(ctx, `
                 UPDATE workforce_people SET
@@ -360,14 +344,14 @@ func updateCaptainTx(ctx context.Context, tx *sql.Tx, actorID string, derivedCit
                         vehicle_identifier = COALESCE(NULLIF($4, ''), vehicle_identifier),
                         license_status = COALESCE(NULLIF($5, ''), license_status),
                         license_expires_at = COALESCE(NULLIF($6, '')::date, license_expires_at),
-                        operating_city_code = COALESCE(NULLIF($7, ''), operating_city_code),
+                        operating_service_area_code = COALESCE(NULLIF($7, ''), operating_service_area_code),
                         service_zone_id = COALESCE(NULLIF($8, ''), service_zone_id),
                         operating_scope_code = COALESCE(NULLIF($9, ''), operating_scope_code),
                         supervisor_actor_id = COALESCE(NULLIF($10, ''), supervisor_actor_id),
                         updated_at = now()
                 WHERE operator_context_id = $1 AND actor_id = $2`,
 		operatorContextID, actorID, deref(input.VehicleType), deref(input.VehicleIdentifier), deref(input.LicenseStatus),
-		deref(input.LicenseExpiresAt), deref(derivedCityCode), deref(input.ServiceZoneID),
+		deref(input.LicenseExpiresAt), deref(derivedServiceAreaCode), deref(input.ServiceZoneID),
 		deref(input.OperatingScopeCode), deref(input.SupervisorActorID))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)

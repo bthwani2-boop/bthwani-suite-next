@@ -110,16 +110,6 @@ func (s *Service) SearchSupervisors(ctx context.Context, kind, query string) ([]
 	return candidates, nil
 }
 
-// ensureServiceZoneCity mirrors the DSH platform zone's city into the local
-// workforce_cities table so the existing FK on city_code keeps working even
-// though the operator now picks a zone, not a Workforce-owned city.
-func (s *Service) ensureServiceZoneCity(ctx context.Context, cityCode string) error {
-	if cityCode == "" {
-		return nil
-	}
-	return s.repo.EnsureCity(ctx, cityCode, cityCode)
-}
-
 // CreateFieldAgent records a durable local intent before provisioning the
 // Identity actor. The durable case records the remote outcome and is completed
 // atomically with the sovereign profile, audit, and idempotent response, so a
@@ -150,10 +140,6 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		}
 		return Person{}, false, err
 	}
-	if err := s.ensureServiceZoneCity(ctx, zone.ServiceAreaCode); err != nil {
-		return Person{}, false, err
-	}
-
 	requestHash := hashRequest(input)
 	if stored, replayed, err := s.repo.IdempotentReplay(ctx, operator.ActorID, "create_field_agent", idempotencyKey, requestHash); err != nil {
 		return Person{}, false, err
@@ -173,7 +159,7 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		OperatorContextID: operator.OperatorContextID, Operation: "create_field_agent", WorkforceKind: "field",
 		WorkforceCode: workforceCode, RequestHash: requestHash, IdempotencyKey: idempotencyKey,
 		RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role, CorrelationID: correlationID,
-		Payload: fieldIdentityBoundaryPayload{Input: input, CityCode: zone.ServiceAreaCode},
+		Payload: fieldIdentityBoundaryPayload{Input: input, ServiceAreaCode: zone.ServiceAreaCode},
 	})
 	if err != nil {
 		return Person{}, false, err
@@ -278,10 +264,6 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 		}
 		return Person{}, false, err
 	}
-	if err := s.ensureServiceZoneCity(ctx, zone.ServiceAreaCode); err != nil {
-		return Person{}, false, err
-	}
-
 	requestHash := hashRequest(input)
 	if stored, replayed, err := s.repo.IdempotentReplay(ctx, operator.ActorID, "create_captain", idempotencyKey, requestHash); err != nil {
 		return Person{}, false, err
@@ -301,7 +283,7 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 		OperatorContextID: operator.OperatorContextID, Operation: "create_captain", WorkforceKind: "captain",
 		WorkforceCode: workforceCode, RequestHash: requestHash, IdempotencyKey: idempotencyKey,
 		RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role, CorrelationID: correlationID,
-		Payload: captainIdentityBoundaryPayload{Input: input, CityCode: zone.ServiceAreaCode},
+		Payload: captainIdentityBoundaryPayload{Input: input, ServiceAreaCode: zone.ServiceAreaCode},
 	})
 	if err != nil {
 		return Person{}, false, err
@@ -509,7 +491,7 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 			return Person{}, err
 		}
 	}
-	var derivedCityCode *string
+	var derivedServiceAreaCode *string
 	if input.ServiceZoneID != nil {
 		zone, err := s.dsh.ValidateZone(ctx, *input.ServiceZoneID, operator.Token)
 		if err != nil {
@@ -518,15 +500,12 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 			}
 			return Person{}, err
 		}
-		if err := s.ensureServiceZoneCity(ctx, zone.ServiceAreaCode); err != nil {
-			return Person{}, err
-		}
-		derivedCityCode = &zone.ServiceAreaCode
+		derivedServiceAreaCode = &zone.ServiceAreaCode
 	}
 	var person Person
 	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
 		var err error
-		person, err = updatePersonTx(ctx, tx, actorID, derivedCityCode, input)
+		person, err = updatePersonTx(ctx, tx, actorID, derivedServiceAreaCode, input)
 		if err != nil {
 			return err
 		}
@@ -551,7 +530,7 @@ func (s *Service) UpdateCaptain(ctx context.Context, operator Operator, actorID 
 			return Person{}, err
 		}
 	}
-	var derivedCityCode *string
+	var derivedServiceAreaCode *string
 	if input.ServiceZoneID != nil {
 		zone, err := s.dsh.ValidateZone(ctx, *input.ServiceZoneID, operator.Token)
 		if err != nil {
@@ -560,15 +539,12 @@ func (s *Service) UpdateCaptain(ctx context.Context, operator Operator, actorID 
 			}
 			return Person{}, err
 		}
-		if err := s.ensureServiceZoneCity(ctx, zone.ServiceAreaCode); err != nil {
-			return Person{}, err
-		}
-		derivedCityCode = &zone.ServiceAreaCode
+		derivedServiceAreaCode = &zone.ServiceAreaCode
 	}
 	var person Person
 	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
 		var err error
-		person, err = updateCaptainTx(ctx, tx, actorID, derivedCityCode, input)
+		person, err = updateCaptainTx(ctx, tx, actorID, derivedServiceAreaCode, input)
 		if err != nil {
 			return err
 		}
@@ -1075,14 +1051,14 @@ func sovereignFieldsComplete(person Person) bool {
 	if person.FieldProfile != nil {
 		// Field providers no longer have shifts. Their sovereign routing minimum
 		// is the canonical city plus the governed DSH service-zone binding.
-		return person.FieldProfile.CityCode != "" && person.FieldProfile.ServiceZoneID != ""
+		return person.FieldProfile.ServiceAreaCode != "" && person.FieldProfile.ServiceZoneID != ""
 	}
 	if person.CaptainProfile != nil {
 		return person.CaptainProfile.VehicleType != "" &&
 			person.CaptainProfile.VehicleIdentifier != "" &&
 			person.CaptainProfile.LicenseStatus == "valid" &&
 			isLicenseNotExpired(person.CaptainProfile.LicenseExpiresAt) &&
-			person.CaptainProfile.OperatingCityCode != ""
+			person.CaptainProfile.OperatingServiceAreaCode != ""
 	}
 	if person.EmployeeProfile != nil {
 		return person.EmployeeProfile.Department != "" && person.EmployeeProfile.Role != ""

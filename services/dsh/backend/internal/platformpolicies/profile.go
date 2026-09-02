@@ -15,18 +15,26 @@ type OperationalProfile struct {
 }
 
 type UpsertOperationalProfileInput struct {
-	ZoneID                  string  `json:"zoneId"`
-	SlaCategory             string  `json:"slaCategory"`
-	MaxPrepMins             int     `json:"maxPrepMins"`
-	MaxAssignmentMins       int     `json:"maxAssignmentMins"`
-	MaxDeliveryMins         int     `json:"maxDeliveryMins"`
-	ExpectedSlaVersion      int     `json:"expectedSlaVersion"`
-	MaxConcurrentOrders     int     `json:"maxConcurrentOrders"`
-	MaxCaptainsOnline       int     `json:"maxCaptainsOnline"`
-	ThrottleThreshold       float64 `json:"throttleThreshold"`
-	IsPaused                bool    `json:"isPaused"`
-	PauseReason             string  `json:"pauseReason"`
-	ExpectedCapacityVersion int     `json:"expectedCapacityVersion"`
+	ZoneID                     string  `json:"zoneId"`
+	SlaCategory                string  `json:"slaCategory"`
+	MaxPrepMins                int     `json:"maxPrepMins"`
+	MaxAssignmentMins          int     `json:"maxAssignmentMins"`
+	MaxDeliveryMins            int     `json:"maxDeliveryMins"`
+	WarningBeforeMins          int     `json:"warningBeforeMins"`
+	PickupNotifyMins           int     `json:"pickupNotifyMins"`
+	PickupArrivalMins          int     `json:"pickupArrivalMins"`
+	PickupVerifyMins           int     `json:"pickupVerifyMins"`
+	DeliveryAssignToPickupMins int     `json:"deliveryAssignToPickupMins"`
+	DeliveryPickupToDepartMins int     `json:"deliveryPickupToDepartMins"`
+	DeliveryDepartToArriveMins int     `json:"deliveryDepartToArriveMins"`
+	DeliveryArriveToProofMins  int     `json:"deliveryArriveToProofMins"`
+	ExpectedSlaVersion         int     `json:"expectedSlaVersion"`
+	MaxConcurrentOrders        int     `json:"maxConcurrentOrders"`
+	MaxCaptainsOnline          int     `json:"maxCaptainsOnline"`
+	ThrottleThreshold          float64 `json:"throttleThreshold"`
+	IsPaused                   bool    `json:"isPaused"`
+	PauseReason                string  `json:"pauseReason"`
+	ExpectedCapacityVersion    int     `json:"expectedCapacityVersion"`
 }
 
 func GetOperationalProfile(ctx context.Context, db *sql.DB, zoneID string, category string) (OperationalProfile, error) {
@@ -42,7 +50,11 @@ func GetOperationalProfile(ctx context.Context, db *sql.DB, zoneID string, categ
 	profile.ZoneID = zoneID
 	slaErr := db.QueryRowContext(ctx, `
 		SELECT id, category, max_prep_mins, max_assignment_mins,
-		       max_delivery_mins, version
+		       max_delivery_mins, warning_before_mins, pickup_notify_mins,
+		       pickup_arrival_mins, pickup_verify_mins,
+		       delivery_assign_to_pickup_mins, delivery_pickup_to_depart_mins,
+		       delivery_depart_to_arrive_mins, delivery_arrive_to_proof_mins,
+		       version
 		FROM dsh_platform_sla_rules
 		WHERE zone_id = $1 AND category IN ($2, 'default')
 		ORDER BY CASE WHEN category = $2 THEN 0 ELSE 1 END
@@ -52,6 +64,14 @@ func GetOperationalProfile(ctx context.Context, db *sql.DB, zoneID string, categ
 		&profile.SLA.MaxPrepMins,
 		&profile.SLA.MaxAssignmentMins,
 		&profile.SLA.MaxDeliveryMins,
+		&profile.SLA.WarningBeforeMins,
+		&profile.SLA.PickupNotifyMins,
+		&profile.SLA.PickupArrivalMins,
+		&profile.SLA.PickupVerifyMins,
+		&profile.SLA.DeliveryAssignToPickupMins,
+		&profile.SLA.DeliveryPickupToDepartMins,
+		&profile.SLA.DeliveryDepartToArriveMins,
+		&profile.SLA.DeliveryArriveToProofMins,
 		&profile.SLA.Version,
 	)
 	if slaErr != nil && !errors.Is(slaErr, sql.ErrNoRows) {
@@ -95,6 +115,14 @@ func UpsertOperationalProfile(
 		input.MaxPrepMins < 1 || input.MaxPrepMins > 1440 ||
 		input.MaxAssignmentMins < 1 || input.MaxAssignmentMins > 1440 ||
 		input.MaxDeliveryMins < 1 || input.MaxDeliveryMins > 1440 ||
+		input.WarningBeforeMins < 1 || input.WarningBeforeMins > 1440 ||
+		input.PickupNotifyMins < 1 || input.PickupNotifyMins > 1440 ||
+		input.PickupArrivalMins < 1 || input.PickupArrivalMins > 1440 ||
+		input.PickupVerifyMins < 1 || input.PickupVerifyMins > 1440 ||
+		input.DeliveryAssignToPickupMins < 1 || input.DeliveryAssignToPickupMins > 1440 ||
+		input.DeliveryPickupToDepartMins < 1 || input.DeliveryPickupToDepartMins > 1440 ||
+		input.DeliveryDepartToArriveMins < 1 || input.DeliveryDepartToArriveMins > 1440 ||
+		input.DeliveryArriveToProofMins < 1 || input.DeliveryArriveToProofMins > 1440 ||
 		input.ExpectedSlaVersion < 0 || input.MaxConcurrentOrders < 1 ||
 		input.MaxCaptainsOnline < 0 || input.ThrottleThreshold < 0 ||
 		input.ThrottleThreshold > 1 || input.ExpectedCapacityVersion < 0 ||
@@ -142,7 +170,11 @@ func upsertOperationalSLA(
 	var before OperationalSLA
 	err := tx.QueryRowContext(ctx, `
 		SELECT id, category, max_prep_mins, max_assignment_mins,
-		       max_delivery_mins, version
+		       max_delivery_mins, warning_before_mins, pickup_notify_mins,
+		       pickup_arrival_mins, pickup_verify_mins,
+		       delivery_assign_to_pickup_mins, delivery_pickup_to_depart_mins,
+		       delivery_depart_to_arrive_mins, delivery_arrive_to_proof_mins,
+		       version
 		FROM dsh_platform_sla_rules
 		WHERE zone_id = $1 AND category = $2
 		FOR UPDATE`, input.ZoneID, input.SlaCategory).Scan(
@@ -151,6 +183,14 @@ func upsertOperationalSLA(
 		&before.MaxPrepMins,
 		&before.MaxAssignmentMins,
 		&before.MaxDeliveryMins,
+		&before.WarningBeforeMins,
+		&before.PickupNotifyMins,
+		&before.PickupArrivalMins,
+		&before.PickupVerifyMins,
+		&before.DeliveryAssignToPickupMins,
+		&before.DeliveryPickupToDepartMins,
+		&before.DeliveryDepartToArriveMins,
+		&before.DeliveryArriveToProofMins,
 		&before.Version,
 	)
 	var item OperationalSLA
@@ -163,15 +203,31 @@ func upsertOperationalSLA(
 		err = tx.QueryRowContext(ctx, `
 			INSERT INTO dsh_platform_sla_rules
 				(zone_id, category, max_prep_mins, max_assignment_mins,
-				 max_delivery_mins, updated_by)
-			VALUES ($1, $2, $3, $4, $5, $6)
+				 max_delivery_mins, warning_before_mins, pickup_notify_mins,
+				 pickup_arrival_mins, pickup_verify_mins,
+				 delivery_assign_to_pickup_mins, delivery_pickup_to_depart_mins,
+				 delivery_depart_to_arrive_mins, delivery_arrive_to_proof_mins,
+				 updated_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 			RETURNING id, category, max_prep_mins, max_assignment_mins,
-			          max_delivery_mins, version`,
+			          max_delivery_mins, warning_before_mins, pickup_notify_mins,
+			          pickup_arrival_mins, pickup_verify_mins,
+			          delivery_assign_to_pickup_mins, delivery_pickup_to_depart_mins,
+			          delivery_depart_to_arrive_mins, delivery_arrive_to_proof_mins,
+			          version`,
 			input.ZoneID,
 			input.SlaCategory,
 			input.MaxPrepMins,
 			input.MaxAssignmentMins,
 			input.MaxDeliveryMins,
+			input.WarningBeforeMins,
+			input.PickupNotifyMins,
+			input.PickupArrivalMins,
+			input.PickupVerifyMins,
+			input.DeliveryAssignToPickupMins,
+			input.DeliveryPickupToDepartMins,
+			input.DeliveryDepartToArriveMins,
+			input.DeliveryArriveToProofMins,
 			mutation.ActorID,
 		).Scan(
 			&item.RuleID,
@@ -179,6 +235,14 @@ func upsertOperationalSLA(
 			&item.MaxPrepMins,
 			&item.MaxAssignmentMins,
 			&item.MaxDeliveryMins,
+			&item.WarningBeforeMins,
+			&item.PickupNotifyMins,
+			&item.PickupArrivalMins,
+			&item.PickupVerifyMins,
+			&item.DeliveryAssignToPickupMins,
+			&item.DeliveryPickupToDepartMins,
+			&item.DeliveryDepartToArriveMins,
+			&item.DeliveryArriveToProofMins,
 			&item.Version,
 		)
 		fromVersion = nil
@@ -191,16 +255,32 @@ func upsertOperationalSLA(
 		err = tx.QueryRowContext(ctx, `
 			UPDATE dsh_platform_sla_rules
 			SET max_prep_mins = $3, max_assignment_mins = $4,
-			    max_delivery_mins = $5, updated_by = $6,
+			    max_delivery_mins = $5, warning_before_mins = $6,
+			    pickup_notify_mins = $7, pickup_arrival_mins = $8,
+			    pickup_verify_mins = $9, delivery_assign_to_pickup_mins = $10,
+			    delivery_pickup_to_depart_mins = $11, delivery_depart_to_arrive_mins = $12,
+			    delivery_arrive_to_proof_mins = $13, updated_by = $14,
 			    version = version + 1, updated_at = NOW()
 			WHERE zone_id = $1 AND category = $2
 			RETURNING id, category, max_prep_mins, max_assignment_mins,
-			          max_delivery_mins, version`,
+			          max_delivery_mins, warning_before_mins, pickup_notify_mins,
+			          pickup_arrival_mins, pickup_verify_mins,
+			          delivery_assign_to_pickup_mins, delivery_pickup_to_depart_mins,
+			          delivery_depart_to_arrive_mins, delivery_arrive_to_proof_mins,
+			          version`,
 			input.ZoneID,
 			input.SlaCategory,
 			input.MaxPrepMins,
 			input.MaxAssignmentMins,
 			input.MaxDeliveryMins,
+			input.WarningBeforeMins,
+			input.PickupNotifyMins,
+			input.PickupArrivalMins,
+			input.PickupVerifyMins,
+			input.DeliveryAssignToPickupMins,
+			input.DeliveryPickupToDepartMins,
+			input.DeliveryDepartToArriveMins,
+			input.DeliveryArriveToProofMins,
 			mutation.ActorID,
 		).Scan(
 			&item.RuleID,
@@ -208,6 +288,14 @@ func upsertOperationalSLA(
 			&item.MaxPrepMins,
 			&item.MaxAssignmentMins,
 			&item.MaxDeliveryMins,
+			&item.WarningBeforeMins,
+			&item.PickupNotifyMins,
+			&item.PickupArrivalMins,
+			&item.PickupVerifyMins,
+			&item.DeliveryAssignToPickupMins,
+			&item.DeliveryPickupToDepartMins,
+			&item.DeliveryDepartToArriveMins,
+			&item.DeliveryArriveToProofMins,
 			&item.Version,
 		)
 		action = "updated"
@@ -218,13 +306,21 @@ func upsertOperationalSLA(
 	}
 	item.Configured = true
 	payload := map[string]any{
-		"id":                item.RuleID,
-		"zoneId":            input.ZoneID,
-		"category":          item.Category,
-		"maxPrepMins":       item.MaxPrepMins,
-		"maxAssignmentMins": item.MaxAssignmentMins,
-		"maxDeliveryMins":   item.MaxDeliveryMins,
-		"version":           item.Version,
+		"id":                         item.RuleID,
+		"zoneId":                     input.ZoneID,
+		"category":                   item.Category,
+		"maxPrepMins":                item.MaxPrepMins,
+		"maxAssignmentMins":          item.MaxAssignmentMins,
+		"maxDeliveryMins":            item.MaxDeliveryMins,
+		"warningBeforeMins":          item.WarningBeforeMins,
+		"pickupNotifyMins":           item.PickupNotifyMins,
+		"pickupArrivalMins":          item.PickupArrivalMins,
+		"pickupVerifyMins":           item.PickupVerifyMins,
+		"deliveryAssignToPickupMins": item.DeliveryAssignToPickupMins,
+		"deliveryPickupToDepartMins": item.DeliveryPickupToDepartMins,
+		"deliveryDepartToArriveMins": item.DeliveryDepartToArriveMins,
+		"deliveryArriveToProofMins":  item.DeliveryArriveToProofMins,
+		"version":                    item.Version,
 	}
 	if err := insertEvent(ctx, tx, "sla_rule", item.RuleID, action, mutation, fromVersion, item.Version, payload); err != nil {
 		return item, err

@@ -132,7 +132,7 @@ func Start(ctx context.Context, db *sql.DB, in Input) (*Saga, bool, error) {
         if err != nil {
                 return nil, false, err
         }
-        defer tx.Rollback()
+        defer func() { _ = tx.Rollback() }()
         var id string
         err = tx.QueryRowContext(ctx, `INSERT INTO dsh_checkout_payment_sagas (operator_context_id,checkout_intent_id,client_id,source_version,command_id,payload,payload_hash) VALUES ($1,$2::uuid,$3,$4,$5,$6::jsonb,$7) ON CONFLICT (operator_context_id,command_id) DO NOTHING RETURNING id::text`, in.OperatorContextID, in.CheckoutIntentID, in.ClientID, in.SourceVersion, in.CommandID, string(payload), hash).Scan(&id)
         if err == sql.ErrNoRows {
@@ -181,7 +181,7 @@ func claim(ctx context.Context, db *sql.DB, id string) (*Saga, error) {
         if err != nil {
                 return nil, err
         }
-        defer tx.Rollback()
+        defer func() { _ = tx.Rollback() }()
         s, err := scanSaga(tx.QueryRowContext(ctx, selectSaga+` WHERE id=$1::uuid FOR UPDATE`, id).Scan)
         if err != nil {
                 return nil, err
@@ -270,7 +270,7 @@ func markComplete(ctx context.Context, db *sql.DB, id string) error {
         return err
 }
 
-func matches(in Input, session *wlt.PaymentSessionDetail) bool {
+func matches(in Input, session *wlt.PaymentSession) bool {
         return session != nil && session.ID != "" && session.ClientID == in.ClientID && session.StoreID == in.StoreID && session.PaymentMethod == in.PaymentMethod && session.AmountMinorUnits == in.AmountMinorUnits && session.Currency == in.Currency && session.Status != "failed" && session.Status != "expired"
 }
 
@@ -291,7 +291,7 @@ func Dispatch(ctx context.Context, db *sql.DB, client *wlt.Client, id string) (*
                 return Get(ctx, db, id)
         }
         wltCtx := wlt.WithOperatorContext(ctx, in.OperatorContextID)
-        var session *wlt.PaymentSessionDetail
+		var session *wlt.PaymentSession
         if s.PaymentSessionID != "" {
                 session, _ = client.GetPaymentSession(wltCtx, s.PaymentSessionID)
         }
@@ -355,7 +355,7 @@ func RunWorker(ctx context.Context, db *sql.DB, client *wlt.Client, interval tim
                                 ids = append(ids, id)
                         }
                 }
-                rows.Close()
+                _ = rows.Close()
                 for _, id := range ids {
                         _, _ = Dispatch(ctx, db, client, id)
                 }

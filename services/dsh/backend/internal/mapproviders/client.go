@@ -303,7 +303,7 @@ func (c *Client) do(req *http.Request, output any) error {
 		}
 		return execErr
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1024*1024))
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUnavailable, err)

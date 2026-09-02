@@ -129,7 +129,7 @@ func CreateClientTicket(db *sql.DB, input ClientCreateTicketInput) (Ticket, erro
 	if err != nil {
 		return Ticket{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.ActorID, idempotencyKey); err != nil {
 		return Ticket{}, err
 	}
@@ -196,7 +196,7 @@ func ListClientTickets(db *sql.DB, actorID string, limit int) ([]Ticket, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanTickets(rows)
 }
 
@@ -225,7 +225,7 @@ func addOwnedMessage(
 	if err != nil {
 		return Message{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.ActorID, idempotencyKey); err != nil {
 		return Message{}, err
 	}
@@ -301,7 +301,7 @@ func listOwnedMessages(db *sql.DB, actorID, ticketID, ownerRole string) ([]Messa
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	messages := []Message{}
 	for rows.Next() {
 		var message Message
@@ -337,7 +337,7 @@ func AddOperatorMessage(db *sql.DB, input GovernedMessageInput) (Message, error)
 	if err != nil {
 		return Message{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.ActorID, idempotencyKey); err != nil {
 		return Message{}, err
 	}
@@ -382,7 +382,7 @@ func UpdateOperatorTicketGoverned(db *sql.DB, input OperatorTicketTransitionInpu
 	if err != nil {
 		return Ticket{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))`, input.ActorID, idempotencyKey); err != nil {
 		return Ticket{}, err
 	}
@@ -484,7 +484,7 @@ func ListTicketEvents(db *sql.DB, ticketID string, limit int) ([]TicketEvent, er
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	events := []TicketEvent{}
 	for rows.Next() {
 		var event TicketEvent

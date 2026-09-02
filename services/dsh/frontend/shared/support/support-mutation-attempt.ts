@@ -1,9 +1,14 @@
-import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
+import { bthwaniSensitiveStorage } from "@bthwani/data-runtime/sensitive-storage-adapter";
 import {
   MutationIdentityScopeError,
   resolveMutationIdentityScope,
 } from "@bthwani/data-runtime/mutation-identity-scope";
 import { secureRandomId } from "../_kernel/secure-random.ts";
+import {
+  ensureSensitiveSupportAttemptsMigrated,
+  opaqueSupportFingerprint,
+  SENSITIVE_SUPPORT_MUTATION_PREFIX,
+} from "./sensitive-support-attempt-storage.ts";
 
 export type SupportMutationContext = {
   readonly idempotencyKey: string;
@@ -23,7 +28,7 @@ type StoredAttempt = {
 
 type SupportMutationScope = "actor" | "client" | "operator" | "partner";
 
-const PREFIX = "@bthwani/dsh/support-mutation/v3/";
+const PREFIX = SENSITIVE_SUPPORT_MUTATION_PREFIX;
 
 function encode(value: string): string {
   return encodeURIComponent(value.trim());
@@ -86,8 +91,10 @@ export async function getOrCreateSupportMutationAttempt(input: {
 }): Promise<StoredAttempt> {
   const resolvedScope = await resolveScope(input.actorId, input.scope, input.operation, input.entityId);
   const storageKey = keyFor(resolvedScope, input.operation, input.entityId);
-  const existing = parseStored(await bthwaniDurableStorage.getItem(storageKey));
-  if (existing?.fingerprint === input.fingerprint) {
+  const fingerprint = opaqueSupportFingerprint(input.fingerprint);
+  await ensureSensitiveSupportAttemptsMigrated();
+  const existing = parseStored(await bthwaniSensitiveStorage.getItem(storageKey));
+  if (existing?.fingerprint === fingerprint) {
     if (existing.scope.actorId !== resolvedScope.actorId) {
       throw new MutationIdentityScopeError(
         "actor_mismatch",
@@ -111,14 +118,14 @@ export async function getOrCreateSupportMutationAttempt(input: {
 
   const part = nextPart();
   const created: StoredAttempt = {
-    fingerprint: input.fingerprint,
+    fingerprint,
     scope: resolvedScope,
     context: {
       idempotencyKey: `support:${input.scope}:${input.operation}:${part}`,
       correlationId: `support:${input.scope}:${input.operation}:${part}`,
     },
   };
-  await bthwaniDurableStorage.setItem(storageKey, JSON.stringify(created));
+  await bthwaniSensitiveStorage.setItem(storageKey, JSON.stringify(created));
   return created;
 }
 
@@ -131,7 +138,9 @@ export async function clearSupportMutationAttempt(input: {
 }): Promise<void> {
   const resolvedScope = await resolveScope(input.actorId, input.scope, input.operation, input.entityId);
   const storageKey = keyFor(resolvedScope, input.operation, input.entityId);
-  const existing = parseStored(await bthwaniDurableStorage.getItem(storageKey));
-  if (!existing || existing.fingerprint !== input.fingerprint) return;
-  await bthwaniDurableStorage.removeItem(storageKey);
+  const fingerprint = opaqueSupportFingerprint(input.fingerprint);
+  await ensureSensitiveSupportAttemptsMigrated();
+  const existing = parseStored(await bthwaniSensitiveStorage.getItem(storageKey));
+  if (!existing || existing.fingerprint !== fingerprint) return;
+  await bthwaniSensitiveStorage.removeItem(storageKey);
 }

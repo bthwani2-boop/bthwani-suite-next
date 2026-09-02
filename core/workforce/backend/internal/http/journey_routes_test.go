@@ -43,7 +43,6 @@ var workforceJourneyRoutes = []workforceJourneyRouteCase{
 	{method: http.MethodPatch, path: "/workforce/employees/employee-1/affiliations", pattern: "PATCH /workforce/employees/{actorId}/affiliations"},
 	{method: http.MethodGet, path: "/workforce/me", pattern: "GET /workforce/me"},
 	{method: http.MethodPatch, path: "/workforce/me", pattern: "PATCH /workforce/me"},
-	{method: http.MethodGet, path: "/workforce/reference/cities", pattern: "GET /workforce/reference/cities"},
 	{method: http.MethodGet, path: "/workforce/reference/shifts", pattern: "GET /workforce/reference/shifts"},
 	{method: http.MethodPost, path: "/workforce/reference/shifts", pattern: "POST /workforce/reference/shifts"},
 	{method: http.MethodPatch, path: "/workforce/reference/shifts/morning", pattern: "PATCH /workforce/reference/shifts/{code}"},
@@ -51,7 +50,7 @@ var workforceJourneyRoutes = []workforceJourneyRouteCase{
 }
 
 func TestWorkforceJourneyRouteMatrixIsCompleteAndUnique(t *testing.T) {
-	const expectedRouteCount = 34
+	const expectedRouteCount = 33
 	if len(workforceJourneyRoutes) != expectedRouteCount {
 		t.Fatalf("expected %d governed workforce routes, got %d", expectedRouteCount, len(workforceJourneyRoutes))
 	}

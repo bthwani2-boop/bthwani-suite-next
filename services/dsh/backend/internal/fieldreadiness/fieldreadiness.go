@@ -246,7 +246,7 @@ func ListStoreVisits(ctx context.Context, db *sql.DB, actor store.StoreActor, st
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []Visit
 	for rows.Next() {
 		v, err := scanVisitRow(rows)
@@ -272,7 +272,7 @@ func ListAgentVisits(ctx context.Context, db *sql.DB, agentID string, limit int)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []Visit
 	for rows.Next() {
 		v, err := scanAgentVisitRow(rows)
@@ -328,7 +328,7 @@ func ListVisitChecks(ctx context.Context, db *sql.DB, actor store.StoreActor, vi
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []ReadinessCheck
 	for rows.Next() {
 		var c ReadinessCheck
@@ -361,7 +361,7 @@ func ListOperatorEscalations(ctx context.Context, db *sql.DB, operatorContextID,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []Escalation
 	for rows.Next() {
 		e, err := scanEscalationRow(rows)
@@ -387,7 +387,7 @@ func ListAgentEscalations(ctx context.Context, db *sql.DB, agentID string, limit
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var list []Escalation
 	for rows.Next() {
 		e, err := scanAgentEscalationRow(rows)

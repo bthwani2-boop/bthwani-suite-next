@@ -241,7 +241,7 @@ func ListLoyaltyTiers(db *sql.DB, activeOnly bool) ([]LoyaltyTier, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []LoyaltyTier{}
 	for rows.Next() {
 		tier, err := scanLoyaltyTier(rows)
@@ -365,7 +365,7 @@ func ListSubscriptionPlans(db *sql.DB, activeOnly bool) ([]SubscriptionPlan, err
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []SubscriptionPlan{}
 	for rows.Next() {
 		plan, err := scanSubscriptionPlan(rows)
@@ -500,7 +500,7 @@ func ListPublishedPartnerOffers(db *sql.DB) ([]PartnerOffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []PartnerOffer{}
 	for rows.Next() {
 		offer, err := scanPartnerOffer(rows)

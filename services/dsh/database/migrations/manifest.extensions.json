@@ -534,6 +534,48 @@
       "sha256": "15b56fa121906f36077b2e6270def886c07e35909b55bfd6877823b0e2e7c1e7",
       "historicalPrefix": "1075",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 317,
+      "file": "dsh-1076_cart_mutation_receipts_atomicity.sql",
+      "sha256": "ec8b4a57919b87c68a67e2f1f7ce0a4b6aba52b97146290fddb49f2ef9e10b9e",
+      "historicalPrefix": "1076",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 318,
+      "file": "dsh-1077_catalog_commercial_cutover.sql",
+      "sha256": "d38dc0d23b42a1f883347e819746d79f8dd046e8992a7b9ea58b603606456686",
+      "historicalPrefix": "1077",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 319,
+      "file": "dsh-1078_operational_sla_stage_policy.sql",
+      "sha256": "5fef9a6fb6688b2570f008a73bfc5684d2bfe1c6b8cda9d51c1ca24246edd65e",
+      "historicalPrefix": "1078",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 320,
+      "file": "dsh-1079_push_delivery_unknown_outcome.sql",
+      "sha256": "7ab458f637b31e8cc9fe1d7bb0d2a61939f588ba3a20613cc13b3a079531c152",
+      "historicalPrefix": "1079",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 321,
+      "file": "dsh-1080_client_profile_preferences_domain.sql",
+      "sha256": "62ee9f409864d3e919033d8bb05082733eaace584e3db5e99e0dd1ae0ce82446",
+      "historicalPrefix": "1080",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 322,
+      "file": "dsh-1081_cart_mutation_receipt_invariant_closure.sql",
+      "sha256": "e5c84b884e1607dacdca885a8563f97fbee69fe620423adfafab914de8167d52",
+      "historicalPrefix": "1081",
+      "state": "ACTIVE"
     }
   ]
 }

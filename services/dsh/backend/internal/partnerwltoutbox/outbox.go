@@ -207,7 +207,7 @@ func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	partners := make([]partnerReadback, 0, 100)
 	for rows.Next() {

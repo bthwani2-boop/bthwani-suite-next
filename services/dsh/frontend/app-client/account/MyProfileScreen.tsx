@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Switch, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Switch, TouchableOpacity, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Header,
@@ -18,14 +18,16 @@ import {
   getOrCreateClientProfileMutationAttempt,
   clearClientProfileMutationAttempt,
   type ClientProfile,
+  type ClientProfileLocale,
 } from "../../shared/client-profile";
 
 export type MyProfileScreenProps = {
-  onBack?: () => void;
+  readonly onBack?: () => void;
 };
 
 type ProfileState =
   | { kind: "loading" }
+  | { kind: "not_found" }
   | { kind: "ready"; profile: ClientProfile }
   | { kind: "error"; message: string }
   | { kind: "conflict"; message: string; serverProfile: ClientProfile };
@@ -33,8 +35,7 @@ type ProfileState =
 export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
   const { state: sessionState } = useIdentitySession();
   const [profileState, setProfileState] = React.useState<ProfileState>({ kind: "loading" });
-  const [locale, setLocale] = React.useState<"ar" | "en">("ar");
-  const [currency, setCurrency] = React.useState("SAR");
+  const [locale, setLocale] = React.useState<ClientProfileLocale>("ar");
   const [consentEmail, setConsentEmail] = React.useState(false);
   const [consentSms, setConsentSms] = React.useState(false);
   const [consentPush, setConsentPush] = React.useState(false);
@@ -46,29 +47,18 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
     setProfileState({ kind: "loading" });
     try {
       const profile = await fetchClientProfile();
-      setLocale(profile.locale as "ar" | "en" || "ar");
-      setCurrency(profile.currencyPreference || "SAR");
+      setLocale(profile.locale);
       setConsentEmail(profile.marketingConsentEmail);
       setConsentSms(profile.marketingConsentSms);
       setConsentPush(profile.marketingConsentPush);
       setProfileState({ kind: "ready", profile });
     } catch (error: any) {
       if (error?.status === 404) {
-        // Not found, use defaults
-        setProfileState({
-          kind: "ready",
-          profile: {
-            clientId: sessionState.identity.subject,
-            locale: "ar",
-            currencyPreference: "SAR",
-            marketingConsentEmail: false,
-            marketingConsentPush: false,
-            marketingConsentSms: false,
-            version: 0,
-            createdAt: "",
-            updatedAt: "",
-          },
-        });
+        setLocale("ar");
+        setConsentEmail(false);
+        setConsentSms(false);
+        setConsentPush(false);
+        setProfileState({ kind: "not_found" });
       } else {
         setProfileState({ kind: "error", message: error?.message || "تعذر جلب الملف التجاري" });
       }
@@ -92,7 +82,6 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
   const hasChanges =
     profileState.kind === "ready" &&
     (locale !== profileState.profile.locale ||
-    currency !== profileState.profile.currencyPreference ||
     consentEmail !== profileState.profile.marketingConsentEmail ||
     consentSms !== profileState.profile.marketingConsentSms ||
     consentPush !== profileState.profile.marketingConsentPush);
@@ -103,13 +92,13 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
     setSaveError(null);
     let updatedProfile = profileState.profile;
     try {
-      const isPreferencesChanged = locale !== profileState.profile.locale || currency !== profileState.profile.currencyPreference;
+      const isPreferencesChanged = locale !== profileState.profile.locale;
       const isConsentsChanged = consentEmail !== profileState.profile.marketingConsentEmail || consentSms !== profileState.profile.marketingConsentSms || consentPush !== profileState.profile.marketingConsentPush;
 
       if (isPreferencesChanged) {
         const input = {
           locale,
-          currencyPreference: currency,
+          currencyPreference: profileState.profile.currencyPreference,
           ...(profileState.profile.version > 0
             ? { expectedVersion: profileState.profile.version }
             : {}),
@@ -122,7 +111,7 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
         const attempt = await getOrCreateClientProfileMutationAttempt(intent);
         updatedProfile = await upsertClientProfilePreferences(input, attempt.context);
         const readback = await fetchClientProfile();
-        if (readback.locale !== locale || readback.currencyPreference !== currency) {
+        if (readback.locale !== locale || readback.currencyPreference !== profileState.profile.currencyPreference) {
           throw new Error("تم حفظ التفضيلات لكن القراءة المعتمدة لم تطابق القيم المطلوبة");
         }
         updatedProfile = readback;
@@ -191,11 +180,36 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
     }
   };
 
+  const handleCreate = async () => {
+    if (profileState.kind !== "not_found") return;
+    setSaving(true);
+    setSaveError(null);
+    const input = { locale, currencyPreference: "YER" as const };
+    const intent = {
+      actorId: identity.subject,
+      operation: "preferences" as const,
+      input,
+    };
+    try {
+      const attempt = await getOrCreateClientProfileMutationAttempt(intent);
+      await upsertClientProfilePreferences(input, attempt.context);
+      const profile = await fetchClientProfile();
+      if (profile.locale !== locale || profile.currencyPreference !== "YER") {
+        throw new Error("تم إنشاء الملف لكن القراءة المعتمدة لم تطابق التفضيلات المطلوبة");
+      }
+      setProfileState({ kind: "ready", profile });
+      await clearClientProfileMutationAttempt(intent, attempt.signature).catch(() => undefined);
+    } catch (error: any) {
+      setProfileState({ kind: "error", message: error?.message || "تعذر إنشاء الملف الشخصي" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleCancel = () => {
     if (profileState.kind === "ready" || profileState.kind === "conflict") {
       const p = profileState.kind === "ready" ? profileState.profile : profileState.serverProfile;
-      setLocale(p.locale as "ar" | "en" || "ar");
-      setCurrency(p.currencyPreference || "SAR");
+      setLocale(p.locale);
       setConsentEmail(p.marketingConsentEmail);
       setConsentSms(p.marketingConsentSms);
       setConsentPush(p.marketingConsentPush);
@@ -206,12 +220,25 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
   };
 
   const confirmWithdrawConsent = (type: "email" | "sms" | "push") => {
-    // Ideally this would show a dialog, but for now we immediately toggle.
-    // DSH specifies: "Withdraw consent shows confirmation then updates."
-    // In a real app we'd use React Native Alert.alert.
-    if (type === "email") setConsentEmail(false);
-    if (type === "sms") setConsentSms(false);
-    if (type === "push") setConsentPush(false);
+    const channelLabel = type === "email"
+      ? "البريد الإلكتروني"
+      : type === "sms"
+        ? "الرسائل النصية"
+        : "إشعارات الهاتف";
+    const revoke = type === "email"
+      ? () => setConsentEmail(false)
+      : type === "sms"
+        ? () => setConsentSms(false)
+        : () => setConsentPush(false);
+
+    Alert.alert(
+      "تأكيد سحب الموافقة",
+      `هل تريد سحب موافقتك على رسائل ${channelLabel} التسويقية؟`,
+      [
+        { text: "إلغاء", style: "cancel" },
+        { text: "سحب الموافقة", style: "destructive", onPress: revoke },
+      ],
+    );
   };
 
   return (
@@ -230,6 +257,12 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
         </View>
 
         {profileState.kind === "loading" && <StateView tone="neutral" title="جارٍ تحميل الملف..." />}
+        {profileState.kind === "not_found" && (
+          <View>
+            <StateView tone="neutral" title="الملف الشخصي غير منشأ بعد" description="أنشئ ملفك لحفظ تفضيلات اللغة والتواصل." />
+            <Button label={saving ? "جاري الإنشاء..." : "إنشاء الملف الشخصي"} onPress={handleCreate} disabled={saving} />
+          </View>
+        )}
         {profileState.kind === "error" && (
           <View>
             <StateView tone="danger" title="حدث خطأ" description={profileState.message} />

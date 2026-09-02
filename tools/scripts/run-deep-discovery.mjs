@@ -48,12 +48,24 @@ export function captureCandidate(root = process.cwd()) {
   for (const relativePath of untrackedFiles) {
     if (!isSafeRelativePath(repositoryRoot, relativePath)) throw new Error(`unsafe untracked candidate path: ${relativePath}`);
     const absolutePath = path.resolve(repositoryRoot, relativePath);
-    const stats = lstatSync(absolutePath);
-    if (stats.isSymbolicLink()) {
-      digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
-      digest.update(`symlink\0${readlinkSync(absolutePath)}\0`);
-    } else if (stats.isFile()) {
-      const descriptor = openSync(absolutePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    let descriptor;
+    try {
+      descriptor = openSync(absolutePath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    } catch (error) {
+      const stats = lstatSync(absolutePath);
+      if (stats.isSymbolicLink()) {
+        digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
+        digest.update(`symlink\0${readlinkSync(absolutePath)}\0`);
+        continue;
+      }
+      if (!stats.isFile()) {
+        digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
+        digest.update(`type\0${stats.type}\0`);
+        continue;
+      }
+      throw error;
+    }
+    {
       try {
         const stableStats = fstatSync(descriptor);
         if (!stableStats.isFile()) throw new Error(`untracked candidate changed type while reading: ${relativePath}`);
@@ -62,9 +74,6 @@ export function captureCandidate(root = process.cwd()) {
       } finally {
         closeSync(descriptor);
       }
-    } else {
-      digest.update(`untracked\0${relativePath}\0mode\0${stats.mode}\0size\0${stats.size}\0`);
-      digest.update(`type\0${stats.type}\0`);
     }
   }
   const worktreeSha = digest.digest("hex");

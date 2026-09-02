@@ -68,7 +68,9 @@ func (c *Client) ReserveCodCapacity(
 		return nil, false, fmt.Errorf("build request: %v", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
-	c.setDelegatedOperatorContextHeader(req, "")
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
+		return nil, false, fmt.Errorf("prepare WLT COD reservation OperatorContext: %w", err)
+	}
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
 		correlationID = orderID
@@ -84,7 +86,7 @@ func (c *Client) ReserveCodCapacity(
 	if err != nil {
 		return nil, false, fmt.Errorf("call WLT: %v", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	body, err := io.ReadAll(io.LimitReader(response.Body, 64<<10))
 	if err != nil {
@@ -154,7 +156,9 @@ func (c *Client) FinalizeCodReservation(
 		return nil, false, fmt.Errorf("build request: %w", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
-	c.setDelegatedOperatorContextHeader(req, "")
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
+		return nil, false, fmt.Errorf("prepare WLT COD finalization OperatorContext: %w", err)
+	}
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
 		correlationID = orderID
@@ -169,7 +173,7 @@ func (c *Client) FinalizeCodReservation(
 	if err != nil {
 		return nil, false, fmt.Errorf("call WLT: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	bodyBytes, err := io.ReadAll(io.LimitReader(response.Body, 64<<10))
 	if err != nil {
 		return nil, false, fmt.Errorf("read response: %w", err)
@@ -222,7 +226,9 @@ func (c *Client) ReleaseCodReservation(
 		return nil, fmt.Errorf("build request: %v", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
-	c.setDelegatedOperatorContextHeader(req, "")
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
+		return nil, fmt.Errorf("prepare WLT COD release OperatorContext: %w", err)
+	}
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
 		correlationID = orderID
@@ -235,7 +241,7 @@ func (c *Client) ReleaseCodReservation(
 	if err != nil {
 		return nil, fmt.Errorf("%w: call WLT COD release: %v", ErrMutationOutcomeUnknown, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 
 	body, err := io.ReadAll(io.LimitReader(response.Body, 64<<10))
 	if err != nil {

@@ -64,9 +64,18 @@ export function CategoryPicker({ value, onChange, domains, nodes, label = "اخ�
             <Box padding={8}><Text tone="secondary">لا يوجد نتائج</Text></Box>
           )}
           {options.map(opt => (
-            <div
+            <button
+              type="button"
               key={opt.id}
-              style={{ padding: 8, cursor: "pointer" }}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: 8,
+                border: "none",
+                background: "transparent",
+                textAlign: "start",
+                cursor: "pointer",
+              }}
               onClick={() => {
                 onChange(opt.id, opt.type);
                 setQuery("");
@@ -75,7 +84,7 @@ export function CategoryPicker({ value, onChange, domains, nodes, label = "اخ�
             >
               <Text>{opt.name}</Text>
               <Text tone="secondary" role="bodySm">{opt.path}</Text>
-            </div>
+            </button>
           ))}
         </Box>
       )}

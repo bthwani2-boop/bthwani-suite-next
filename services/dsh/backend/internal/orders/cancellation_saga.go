@@ -138,7 +138,7 @@ func CreateCancellationCase(db *sql.DB, input CreateCancellationCaseInput) (*Ord
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// The trusted operator context is mandatory. The order lock is context-bound
 	// so a cross-context caller cannot even observe another context's order, and
@@ -346,7 +346,7 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 	if err != nil {
 		return OrderCancellationAction{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtext($1), 0)`, "cancel-action|"+input.ActionID); err != nil {
 		return OrderCancellationAction{}, err
@@ -385,7 +385,8 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 	}
 
 	// State machine enforcement
-	if action.ActionType == CancellationActionApprove {
+	switch action.ActionType {
+	case CancellationActionApprove:
 		if caseItem.Status != CancellationReview {
 			return OrderCancellationAction{}, ErrConflict
 		}
@@ -401,7 +402,7 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 			return OrderCancellationAction{}, err
 		}
 
-	} else if action.ActionType == CancellationActionReject {
+	case CancellationActionReject:
 		if caseItem.Status != CancellationReview {
 			return OrderCancellationAction{}, ErrConflict
 		}
@@ -409,7 +410,7 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 			return OrderCancellationAction{}, err
 		}
 
-	} else if action.ActionType == CancellationActionExecuteCancel {
+	case CancellationActionExecuteCancel:
 		if caseItem.Status != CancellationApproved && caseItem.Status != CancellationCancelling {
 			return OrderCancellationAction{}, ErrConflict
 		}
@@ -474,10 +475,18 @@ func ExecuteCancellationAction(db *sql.DB, input ExecuteCancellationActionInput)
 
 		// Cancel non-custody dependent work (assignments, pickup sessions, deliveries if not picked_up)
 		// We explicitly do not use the removed trigger.
-		tx.Exec(`UPDATE dsh_assignments SET status='cancelled', updated_at=NOW() WHERE order_id=$1::uuid AND status IN ('offered','accepted')`, caseItem.OrderID)
-		tx.Exec(`UPDATE dsh_deliveries SET status='cancelled', note='order cancelled', updated_at=NOW() WHERE order_id=$1::uuid AND status NOT IN ('delivered', 'picked_up')`, caseItem.OrderID)
-		tx.Exec(`UPDATE dsh_partner_delivery_tasks SET status='cancelled', version=version+1, updated_at=NOW() WHERE order_id=$1::uuid AND status NOT IN ('completed','cancelled')`, caseItem.OrderID)
-		tx.Exec(`UPDATE dsh_pickup_sessions SET status='cancelled', cancelled_at=NOW(), cancellation_reason='order_cancelled', used_at=NULL, version=version+1, updated_at=NOW() WHERE order_id=$1::uuid AND status <> 'cancelled'`, caseItem.OrderID)
+		if _, err := tx.Exec(`UPDATE dsh_assignments SET status='cancelled', updated_at=NOW() WHERE order_id=$1::uuid AND status IN ('offered','accepted')`, caseItem.OrderID); err != nil {
+			return OrderCancellationAction{}, err
+		}
+		if _, err := tx.Exec(`UPDATE dsh_deliveries SET status='cancelled', note='order cancelled', updated_at=NOW() WHERE order_id=$1::uuid AND status NOT IN ('delivered', 'picked_up')`, caseItem.OrderID); err != nil {
+			return OrderCancellationAction{}, err
+		}
+		if _, err := tx.Exec(`UPDATE dsh_partner_delivery_tasks SET status='cancelled', version=version+1, updated_at=NOW() WHERE order_id=$1::uuid AND status NOT IN ('completed','cancelled')`, caseItem.OrderID); err != nil {
+			return OrderCancellationAction{}, err
+		}
+		if _, err := tx.Exec(`UPDATE dsh_pickup_sessions SET status='cancelled', cancelled_at=NOW(), cancellation_reason='order_cancelled', used_at=NULL, version=version+1, updated_at=NOW() WHERE order_id=$1::uuid AND status <> 'cancelled'`, caseItem.OrderID); err != nil {
+			return OrderCancellationAction{}, err
+		}
 
 		if _, err = tx.Exec(`UPDATE dsh_order_cancellations SET status = 'cancelled', version = version + 1 WHERE id = $1::uuid`, caseItem.ID); err != nil {
 			return OrderCancellationAction{}, err
@@ -515,7 +524,8 @@ func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, err
 	if operatorContextID == "" {
 		return nil, fmt.Errorf("%w: operator context is required", ErrInvalid)
 	}
-	if c.Status == CancellationApproved {
+	switch c.Status {
+	case CancellationApproved:
 		act, err := CreateCancellationAction(db, CreateCancellationActionInput{
 			OperatorContextID: operatorContextID,
 			OrderID:           input.OrderID,
@@ -539,9 +549,9 @@ func CancelOrderSync(db *sql.DB, input CreateCancellationCaseInput) (*Order, err
 		if err != nil {
 			return nil, err
 		}
-	} else if c.Status == CancellationReview {
+	case CancellationReview:
 		return nil, ErrCancellationRequiresReview
-	} else if c.Status == CancellationRejected || c.Status == CancellationConflict || c.Status == CancellationUnknown {
+	case CancellationRejected, CancellationConflict, CancellationUnknown:
 		return nil, ErrConflict
 	}
 	return GetOrderForContext(db, operatorContextID, input.OrderID)

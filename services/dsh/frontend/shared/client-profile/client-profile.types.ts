@@ -1,24 +1,14 @@
-export type ClientProfile = {
-  readonly clientId: string;
-  readonly locale: string;
-  readonly currencyPreference: string;
-  readonly marketingConsentEmail: boolean;
-  readonly marketingConsentSms: boolean;
-  readonly marketingConsentPush: boolean;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
+import type { operations } from "../../../clients/generated/dsh-api";
 
-export type ClientProfilePreferencesInput = {
-  readonly locale: string;
-  readonly currencyPreference: string;
-  readonly expectedVersion?: number;
-};
+type ClientProfileReadResponse =
+  operations["get_dsh_client_me_profile"]["responses"][200]["content"]["application/json"];
 
-export type ClientProfileConsentsInput = {
-  readonly marketingConsentEmail: boolean;
-  readonly marketingConsentSms: boolean;
-  readonly marketingConsentPush: boolean;
-  readonly expectedVersion?: number;
-};
+export type ClientProfile = ClientProfileReadResponse["profile"];
+export type ClientProfileLocale = ClientProfile["locale"];
+export type ClientProfileCurrency = ClientProfile["currencyPreference"];
+
+export type ClientProfilePreferencesInput =
+  operations["patch_dsh_client_me_profile_preferences"]["requestBody"]["content"]["application/json"];
+
+export type ClientProfileConsentsInput =
+  operations["patch_dsh_client_me_profile_consents"]["requestBody"]["content"]["application/json"];

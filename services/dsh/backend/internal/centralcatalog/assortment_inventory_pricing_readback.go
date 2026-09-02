@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+type StoreAssortmentCommercialReadback struct {
+	Inventory StoreAssortmentInventory `json:"inventory"`
+	Prices    []StoreAssortmentPrice    `json:"prices"`
+}
+
 // resolveStoreAssortmentID resolves the canonical assortment identity for a
 // store/product pair. Commercial readback must bind to this identity before
 // reading normalized inventory or price truth.
@@ -83,7 +88,7 @@ func ListAssortmentPriceRuntimeTruth(ctx context.Context, db *sql.DB, storeID, m
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	out := make([]StoreAssortmentPrice, 0)
 	for rows.Next() {
@@ -107,4 +112,16 @@ func ListAssortmentPriceRuntimeTruth(ctx context.Context, db *sql.DB, storeID, m
 		return nil, err
 	}
 	return out, nil
+}
+
+func GetAssortmentCommercialReadback(ctx context.Context, db *sql.DB, storeID, masterProductID string) (StoreAssortmentCommercialReadback, error) {
+	inventory, err := GetAssortmentInventoryRuntimeTruth(ctx, db, storeID, masterProductID)
+	if err != nil {
+		return StoreAssortmentCommercialReadback{}, err
+	}
+	prices, err := ListAssortmentPriceRuntimeTruth(ctx, db, storeID, masterProductID)
+	if err != nil {
+		return StoreAssortmentCommercialReadback{}, err
+	}
+	return StoreAssortmentCommercialReadback{Inventory: inventory, Prices: prices}, nil
 }

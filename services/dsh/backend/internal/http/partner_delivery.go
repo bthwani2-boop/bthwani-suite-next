@@ -1,6 +1,8 @@
 package http
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"strings"
@@ -9,6 +11,7 @@ import (
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/incident"
 	"dsh-api/internal/partnerdelivery"
+	"dsh-api/internal/platformpolicies"
 	"dsh-api/internal/store"
 
 	"github.com/google/uuid"
@@ -80,8 +83,12 @@ func writePartnerDeliveryError(w http.ResponseWriter, err error) {
 	}
 }
 
-func marshalPartnerDeliveryTask(t *partnerdelivery.PartnerDeliveryTask) map[string]any {
-	sla := partnerdelivery.EvaluateDeliverySLA(t, partnerdelivery.DefaultDeliverySLAThresholds(), time.Now().UTC())
+func marshalPartnerDeliveryTask(ctx context.Context, db *sql.DB, t *partnerdelivery.PartnerDeliveryTask) (map[string]any, error) {
+	thresholds, err := partnerdelivery.GetSLAThresholds(ctx, db, t.StoreID)
+	if err != nil {
+		return nil, err
+	}
+	sla := partnerdelivery.EvaluateDeliverySLA(t, thresholds, time.Now().UTC())
 	return map[string]any{
 		"id":                          t.ID,
 		"orderId":                     t.OrderID,
@@ -103,7 +110,28 @@ func marshalPartnerDeliveryTask(t *partnerdelivery.PartnerDeliveryTask) map[stri
 		"createdAt":                   t.CreatedAt,
 		"updatedAt":                   t.UpdatedAt,
 		"slaState":                    sla,
+	}, nil
+}
+
+func writePartnerDeliveryTask(w http.ResponseWriter, status int, fields map[string]any, task *partnerdelivery.PartnerDeliveryTask, ctx context.Context, db *sql.DB) {
+	if fields == nil {
+		fields = map[string]any{}
 	}
+	var payload any
+	if task != nil {
+		var err error
+		payload, err = marshalPartnerDeliveryTask(ctx, db, task)
+		if err != nil {
+			if platformpolicies.IsOperationalSLAUnavailable(err) {
+				store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "partner-delivery SLA policy is unavailable")
+			} else {
+				store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read partner-delivery SLA policy")
+			}
+			return
+		}
+	}
+	fields["task"] = payload
+	store.SendJSON(w, status, fields)
 }
 
 func (s *protectedStoreServer) handleAssignPartnerDelivery(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +159,7 @@ func (s *protectedStoreServer) handleAssignPartnerDelivery(w http.ResponseWriter
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task)})
+	writePartnerDeliveryTask(w, http.StatusOK, nil, task, r.Context(), s.db)
 }
 
 func (s *protectedStoreServer) handlePartnerDeliveryPickup(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +210,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryTaskTransition(
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(updated)})
+	writePartnerDeliveryTask(w, http.StatusOK, nil, updated, r.Context(), s.db)
 }
 
 func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter, r *http.Request) {
@@ -212,7 +240,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter,
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(updated)})
+	writePartnerDeliveryTask(w, http.StatusOK, nil, updated, r.Context(), s.db)
 }
 
 // handlePartnerDeliveryException is a sovereign-intervention entry point:
@@ -271,7 +299,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(updated), "incidentId": reported.ID})
+	writePartnerDeliveryTask(w, http.StatusOK, map[string]any{"incidentId": reported.ID}, updated, r.Context(), s.db)
 }
 
 func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.ResponseWriter, r *http.Request) {
@@ -292,7 +320,16 @@ func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.Respon
 	}
 	results := make([]map[string]any, 0, len(tasks))
 	for i := range tasks {
-		results = append(results, marshalPartnerDeliveryTask(&tasks[i]))
+		payload, payloadErr := marshalPartnerDeliveryTask(r.Context(), s.db, &tasks[i])
+		if payloadErr != nil {
+			if platformpolicies.IsOperationalSLAUnavailable(payloadErr) {
+				store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "partner-delivery SLA policy is unavailable")
+			} else {
+				store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read partner-delivery SLA policy")
+			}
+			return
+		}
+		results = append(results, payload)
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"tasks": results})
 }
@@ -307,7 +344,7 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDelivery(w http.ResponseW
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task)})
+	writePartnerDeliveryTask(w, http.StatusOK, nil, task, r.Context(), s.db)
 }
 
 func (s *protectedStoreServer) handleGetOperatorPartnerDeliveryByOrder(w http.ResponseWriter, r *http.Request) {
@@ -320,7 +357,7 @@ func (s *protectedStoreServer) handleGetOperatorPartnerDeliveryByOrder(w http.Re
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(task)})
+	writePartnerDeliveryTask(w, http.StatusOK, nil, task, r.Context(), s.db)
 }
 
 func (s *protectedStoreServer) handleGetPartnerReturnToStore(w http.ResponseWriter, r *http.Request) {

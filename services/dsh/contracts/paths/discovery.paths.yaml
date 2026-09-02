@@ -138,3 +138,51 @@
           application/json:
             schema:
               $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+
+/dsh/storefront/{storeId}:
+  get:
+    operationId: getDshStorefront
+    security: []
+    summary: Get the public published storefront aggregate for a store.
+    tags:
+      - DshStoreDiscovery
+    parameters:
+      - name: storeId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Store identifier.
+      - name: If-None-Match
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Optional ETag for conditional retrieval.
+    responses:
+      "200":
+        description: Published store and purchasable catalog aggregate.
+        content:
+          application/json:
+            schema:
+              type: object
+      "304":
+        description: Storefront has not changed since the supplied ETag.
+      "400":
+        description: Invalid store ID.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+      "404":
+        description: Store or approved catalog not found.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+      "500":
+        description: Internal server error.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"

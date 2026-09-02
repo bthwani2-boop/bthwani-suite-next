@@ -17,7 +17,7 @@ func (s *protectedStoreServer) handleRefreshPickupSLAAlerts(w http.ResponseWrite
 		return
 	}
 	correlationID := operationalCorrelationID(r, "")
-	result, err := pickup.RefreshPickupSLAAlerts(s.db, correlationID, time.Now().UTC())
+	result, err := pickup.RefreshPickupSLAAlerts(r.Context(), s.db, correlationID, time.Now().UTC())
 	if errors.Is(err, pickup.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid alert refresh request")
 		return

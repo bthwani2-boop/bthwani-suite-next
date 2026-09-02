@@ -61,14 +61,6 @@ type PartnerDeliveryTask struct {
 	UpdatedAt                   time.Time
 }
 
-const taskColumns = `
-        id, order_id::text, store_id, branch_id, store_courier_id, status,
-        assigned_at, picked_up_at, departed_at, arrived_at,
-        proof_method, proof_reference, completed_at,
-        exception_reason, exception_evidence_references, exception_reported_at,
-        version, created_at, updated_at
-`
-
 const taskColumnsPrefixed = `
         t.id, t.order_id::text, t.store_id, t.branch_id, t.store_courier_id, t.status,
         t.assigned_at, t.picked_up_at, t.departed_at, t.arrived_at,
@@ -76,6 +68,57 @@ const taskColumnsPrefixed = `
         t.exception_reason, t.exception_evidence_references, t.exception_reported_at,
         t.version, t.created_at, t.updated_at
 `
+
+const taskByIDSQL = `SELECT
+	id, order_id::text, store_id, branch_id, store_courier_id, status,
+	assigned_at, picked_up_at, departed_at, arrived_at,
+	proof_method, proof_reference, completed_at,
+	exception_reason, exception_evidence_references, exception_reported_at,
+	version, created_at, updated_at
+FROM dsh_partner_delivery_tasks
+WHERE id = $1`
+
+const taskByIDForOperatorContextSQL = `SELECT
+	t.id, t.order_id::text, t.store_id, t.branch_id, t.store_courier_id, t.status,
+	t.assigned_at, t.picked_up_at, t.departed_at, t.arrived_at,
+	t.proof_method, t.proof_reference, t.completed_at,
+	t.exception_reason, t.exception_evidence_references, t.exception_reported_at,
+	t.version, t.created_at, t.updated_at
+FROM dsh_partner_delivery_tasks t
+JOIN dsh_orders o ON o.id = t.order_id
+WHERE t.id = $1 AND o.operator_context_id = $2`
+
+const taskByOrderForOperatorContextSQL = `SELECT
+	t.id, t.order_id::text, t.store_id, t.branch_id, t.store_courier_id, t.status,
+	t.assigned_at, t.picked_up_at, t.departed_at, t.arrived_at,
+	t.proof_method, t.proof_reference, t.completed_at,
+	t.exception_reason, t.exception_evidence_references, t.exception_reported_at,
+	t.version, t.created_at, t.updated_at
+FROM dsh_partner_delivery_tasks t
+JOIN dsh_orders o ON o.id=t.order_id
+WHERE t.order_id=$1::uuid AND o.operator_context_id=$2`
+
+const taskByOrderForUpdateForOperatorContextSQL = `SELECT
+	t.id, t.order_id::text, t.store_id, t.branch_id, t.store_courier_id, t.status,
+	t.assigned_at, t.picked_up_at, t.departed_at, t.arrived_at,
+	t.proof_method, t.proof_reference, t.completed_at,
+	t.exception_reason, t.exception_evidence_references, t.exception_reported_at,
+	t.version, t.created_at, t.updated_at
+FROM dsh_partner_delivery_tasks t
+JOIN dsh_orders o ON o.id=t.order_id
+WHERE t.order_id=$1::uuid AND o.operator_context_id=$2
+FOR UPDATE OF t`
+
+const taskByIDForUpdateForOperatorContextSQL = `SELECT
+	t.id, t.order_id::text, t.store_id, t.branch_id, t.store_courier_id, t.status,
+	t.assigned_at, t.picked_up_at, t.departed_at, t.arrived_at,
+	t.proof_method, t.proof_reference, t.completed_at,
+	t.exception_reason, t.exception_evidence_references, t.exception_reported_at,
+	t.version, t.created_at, t.updated_at
+FROM dsh_partner_delivery_tasks t
+JOIN dsh_orders o ON o.id = t.order_id
+WHERE t.id = $1 AND o.operator_context_id = $2
+FOR UPDATE OF t`
 
 func itoa(i int) string {
 	return strconv.Itoa(i)
@@ -110,12 +153,7 @@ func GetForUpdateForOperatorContext(tx *sql.Tx, operatorContextID, id string) (*
 	if strings.TrimSpace(operatorContextID) == "" || strings.TrimSpace(id) == "" {
 		return nil, ErrInvalid
 	}
-	query := `SELECT ` + taskColumnsPrefixed + `
-                FROM dsh_partner_delivery_tasks t
-                JOIN dsh_orders o ON o.id = t.order_id
-                WHERE t.id = $1 AND o.operator_context_id = $2
-                FOR UPDATE OF t`
-	t, err := scanTask(tx.QueryRow(query, id, operatorContextID).Scan)
+	t, err := scanTask(tx.QueryRow(taskByIDForUpdateForOperatorContextSQL, id, operatorContextID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -128,12 +166,7 @@ func GetForUpdateByOrderIDForOperatorContext(tx *sql.Tx, operatorContextID, orde
 	if strings.TrimSpace(operatorContextID) == "" || strings.TrimSpace(orderID) == "" {
 		return nil, ErrInvalid
 	}
-	query := `SELECT ` + taskColumnsPrefixed + `
-                FROM dsh_partner_delivery_tasks t
-                JOIN dsh_orders o ON o.id=t.order_id
-                WHERE t.order_id=$1::uuid AND o.operator_context_id=$2
-                FOR UPDATE OF t`
-	t, err := scanTask(tx.QueryRow(query, orderID, operatorContextID).Scan)
+	t, err := scanTask(tx.QueryRow(taskByOrderForUpdateForOperatorContextSQL, orderID, operatorContextID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -145,11 +178,7 @@ func GetByOrderIDForOperatorContext(db *sql.DB, operatorContextID, orderID strin
 	if strings.TrimSpace(operatorContextID) == "" || strings.TrimSpace(orderID) == "" {
 		return nil, ErrInvalid
 	}
-	query := `SELECT ` + taskColumnsPrefixed + `
-                FROM dsh_partner_delivery_tasks t
-                JOIN dsh_orders o ON o.id = t.order_id
-                WHERE t.order_id = $1::uuid AND o.operator_context_id = $2`
-	t, err := scanTask(db.QueryRow(query, orderID, operatorContextID).Scan)
+	t, err := scanTask(db.QueryRow(taskByOrderForOperatorContextSQL, orderID, operatorContextID).Scan)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -217,7 +246,7 @@ func ListForOperatorContext(db *sql.DB, operatorContextID string, filter ListFil
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tasks []PartnerDeliveryTask
 	for rows.Next() {

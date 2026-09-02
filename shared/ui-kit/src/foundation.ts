@@ -221,33 +221,6 @@ export const rawElevationScale = {
 	floating: 3
 } as const;
 
-export const shadowPresets = {
-	flat: undefined,
-	raised: {
-		shadowColor: colorRoles.brandStructure,
-		shadowOpacity: 0.06,
-		shadowRadius: 10,
-		shadowOffset: { width: 0, height: 2 },
-		elevation: 2
-	},
-	overlay: {
-		shadowColor: colorRoles.brandStructure,
-		shadowOpacity: 0.08,
-		shadowRadius: 18,
-		shadowOffset: { width: 0, height: 6 },
-		elevation: 6
-	},
-	floating: {
-		shadowColor: colorRoles.brandStructure,
-		shadowOpacity: 0.12,
-		shadowRadius: 28,
-		shadowOffset: { width: 0, height: 10 },
-		elevation: 10
-	}
-} as const;
-
-export const shadowLaw = shadowPresets;
-
 export const rawMotionScale = {
 	instant: 0,
 	quick: 120,
@@ -364,7 +337,6 @@ export type FontFamilyToken = keyof typeof fontFamilies;
 type FontWeightToken = keyof typeof fontWeights;
 export type Direction = 'rtl' | 'ltr';
 export type Language = 'ar' | 'en' | string;
-export type LogicalTextAlign = 'start' | 'center' | 'end';
 
 export const neutralPalette = rawColorPalettes.neutral;
 export const brandPalette = rawColorPalettes.brand;
@@ -377,7 +349,6 @@ export const colorPalette = semanticColorRoles;
 export const spacing = rawSpacingScale;
 export const radius = rawRadiusScale;
 export const elevation = rawElevationScale;
-export const shadowByElevation = shadowPresets;
 export const motion = rawMotionScale;
 export const sizes = rawSizingScale;
 export const breakpoints = rawBreakpointScale;
@@ -471,22 +442,6 @@ export function resolveLogicalBorderRadius(direction: Direction, start: number, 
 				borderTopRightRadius: end,
 				borderBottomRightRadius: end
 			};
-}
-
-export function resolveTextAlign(direction: Direction, align: LogicalTextAlign = 'start') {
-	if (align === 'center') return 'center';
-	if (align === 'start') return isRtl(direction) ? 'right' : 'left';
-	return isRtl(direction) ? 'left' : 'right';
-}
-
-function resolveRowDirection(direction: Direction, reversed = false) {
-	const baseDirection = isRtl(direction) ? 'row-reverse' : 'row';
-
-	if (!reversed) {
-		return baseDirection;
-	}
-
-	return baseDirection === 'row' ? 'row-reverse' : 'row';
 }
 
 export type CssVariableMap = Record<string, string>;

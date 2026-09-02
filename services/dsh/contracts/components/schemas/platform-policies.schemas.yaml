@@ -55,6 +55,14 @@ DshOperationalPolicySla:
     maxPrepMins: { type: integer, minimum: 1, maximum: 1440 }
     maxAssignmentMins: { type: integer, minimum: 1, maximum: 1440 }
     maxDeliveryMins: { type: integer, minimum: 1, maximum: 1440 }
+    warningBeforeMins: { type: integer, minimum: 1, maximum: 1440 }
+    pickupNotifyMins: { type: integer, minimum: 1, maximum: 1440 }
+    pickupArrivalMins: { type: integer, minimum: 1, maximum: 1440 }
+    pickupVerifyMins: { type: integer, minimum: 1, maximum: 1440 }
+    deliveryAssignToPickupMins: { type: integer, minimum: 1, maximum: 1440 }
+    deliveryPickupToDepartMins: { type: integer, minimum: 1, maximum: 1440 }
+    deliveryDepartToArriveMins: { type: integer, minimum: 1, maximum: 1440 }
+    deliveryArriveToProofMins: { type: integer, minimum: 1, maximum: 1440 }
     version: { type: integer, minimum: 1 }
 
 DshOperationalPolicyCapacity:
@@ -83,12 +91,20 @@ DshOperationalPolicyProfile:
 DshOperationalPolicyProfileMutation:
   type: object
   additionalProperties: false
-  required: [slaCategory, maxPrepMins, maxAssignmentMins, maxDeliveryMins, expectedSlaVersion, maxConcurrentOrders, maxCaptainsOnline, throttleThreshold, isPaused, pauseReason, expectedCapacityVersion, reason]
+  required: [slaCategory, maxPrepMins, maxAssignmentMins, maxDeliveryMins, warningBeforeMins, pickupNotifyMins, pickupArrivalMins, pickupVerifyMins, deliveryAssignToPickupMins, deliveryPickupToDepartMins, deliveryDepartToArriveMins, deliveryArriveToProofMins, expectedSlaVersion, maxConcurrentOrders, maxCaptainsOnline, throttleThreshold, isPaused, pauseReason, expectedCapacityVersion, reason]
   properties:
     slaCategory: { type: string, minLength: 1, maxLength: 120 }
     maxPrepMins: { type: integer, minimum: 1, maximum: 1440 }
     maxAssignmentMins: { type: integer, minimum: 1, maximum: 1440 }
     maxDeliveryMins: { type: integer, minimum: 1, maximum: 1440 }
+    warningBeforeMins: { type: integer, minimum: 1, maximum: 1440 }
+    pickupNotifyMins: { type: integer, minimum: 1, maximum: 1440 }
+    pickupArrivalMins: { type: integer, minimum: 1, maximum: 1440 }
+    pickupVerifyMins: { type: integer, minimum: 1, maximum: 1440 }
+    deliveryAssignToPickupMins: { type: integer, minimum: 1, maximum: 1440 }
+    deliveryPickupToDepartMins: { type: integer, minimum: 1, maximum: 1440 }
+    deliveryDepartToArriveMins: { type: integer, minimum: 1, maximum: 1440 }
+    deliveryArriveToProofMins: { type: integer, minimum: 1, maximum: 1440 }
     expectedSlaVersion: { type: integer, minimum: 0 }
     maxConcurrentOrders: { type: integer, minimum: 1 }
     maxCaptainsOnline: { type: integer, minimum: 0 }

@@ -32,7 +32,7 @@ func ListPrivacyAuditEvents(ctx context.Context, db *sql.DB, limit int) ([]Priva
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	events := make([]PrivacyAuditEvent, 0)
 	for rows.Next() {

@@ -124,7 +124,7 @@ func attachMessageAsset(
 	if err != nil {
 		return MessageAttachment{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	messageInternal, err := resolveMessageScopeTx(tx, actorID, role, ticketID, messageID, operatorWide)
 	if err != nil {
 		return MessageAttachment{}, err
@@ -200,7 +200,7 @@ func listMessageAttachments(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := resolveMessageScopeTx(tx, actorID, role, ticketID, messageID, operatorWide); err != nil {
 		return nil, err
 	}
@@ -214,7 +214,7 @@ func listMessageAttachments(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := make([]MessageAttachment, 0)
 	for rows.Next() {
 		item, scanErr := scanMessageAttachment(rows)
@@ -267,7 +267,7 @@ func markTicketMessagesRead(
 	if err != nil {
 		return MessageReadSummary{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var ticketExists bool
 	if operatorWide {
 		err = tx.QueryRow(`SELECT EXISTS (SELECT 1 FROM dsh_support_tickets WHERE id = $1::uuid)`, ticketID).Scan(&ticketExists)

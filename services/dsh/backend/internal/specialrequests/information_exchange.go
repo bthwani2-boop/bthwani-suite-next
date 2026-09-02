@@ -35,7 +35,7 @@ type InformationResponseMutationContext struct {
 // misuse rejection_reason.
 type InformationExchange struct {
 	ID                       string
-	OperatorContextID                 string
+	OperatorContextID        string
 	SpecialRequestID         string
 	ClientID                 string
 	RequestedByOperatorID    string
@@ -76,6 +76,24 @@ const informationExchangeColumns = `
 	question, response, status, request_version_at_request,
 	request_version_at_response, requested_at, responded_at, updated_at
 `
+
+const informationExchangeByIDSQL = `SELECT
+	id, operator_context_id, special_request_id, client_id, requested_by_operator_id,
+	question, response, status, request_version_at_request,
+	request_version_at_response, requested_at, responded_at, updated_at
+FROM dsh_special_request_information_exchanges
+WHERE id = $1 AND operator_context_id = $2 AND special_request_id = $3 AND client_id = $4`
+
+const informationExchangeRespondSQL = `UPDATE dsh_special_request_information_exchanges
+	SET response = $1,
+		status = 'responded',
+		request_version_at_response = $2,
+		responded_at = now(),
+		updated_at = now()
+	WHERE id = $3 AND status = 'pending'
+	RETURNING id, operator_context_id, special_request_id, client_id, requested_by_operator_id,
+		question, response, status, request_version_at_request,
+		request_version_at_response, requested_at, responded_at, updated_at`
 
 func (s *Service) LatestInformationExchangeInOperatorContext(ctx context.Context, operatorContextID, requestID string) (*InformationExchange, error) {
 	row := s.repo.DB().QueryRowContext(ctx, `SELECT `+informationExchangeColumns+`
@@ -129,7 +147,7 @@ func (s *Service) RequestClientInformationInOperatorContext(
 	if err != nil {
 		return nil, nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var pendingCount int
 	if err := tx.QueryRowContext(ctx, `SELECT count(*)
@@ -218,7 +236,7 @@ func (s *Service) RespondClientInformationInOperatorContext(
 	if err != nil {
 		return nil, nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
 		operatorContextID+"|special-request-information-response|"+clientID+"|"+mutation.IdempotencyKey); err != nil {
 		return nil, nil, err
@@ -232,20 +250,12 @@ func (s *Service) RespondClientInformationInOperatorContext(
 		FOR UPDATE`, operatorContextID, clientID, mutation.IdempotencyKey).Scan(
 		&storedRequestID, &storedFingerprint, &storedExchangeID)
 	if receiptErr == nil {
-		if storedRequestID != requestID || storedFingerprint != fingerprint {
-			return nil, nil, ErrInformationResponseIdempotencyConflict
-		}
-		exchange, err := scanInformationExchange(tx.QueryRowContext(ctx, `SELECT `+informationExchangeColumns+`
-			FROM dsh_special_request_information_exchanges
-			WHERE id = $1 AND operator_context_id = $2 AND special_request_id = $3 AND client_id = $4`,
-			storedExchangeID, operatorContextID, requestID, clientID).Scan)
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, fmt.Errorf("%w: committed information exchange is missing", ErrConflict)
-		}
+		exchange, err := replayInformationResponse(ctx, informationResponseReplayInput{
+			tx: tx, requestID: requestID, clientID: clientID, operatorContextID: operatorContextID,
+			storedRequestID: storedRequestID, storedFingerprint: storedFingerprint, storedExchangeID: storedExchangeID,
+			fingerprint: fingerprint,
+		})
 		if err != nil {
-			return nil, nil, err
-		}
-		if err := tx.Commit(); err != nil {
 			return nil, nil, err
 		}
 		return current, exchange, nil
@@ -269,12 +279,63 @@ func (s *Service) RespondClientInformationInOperatorContext(
 		return nil, nil, err
 	}
 
+	return persistInformationResponse(ctx, informationResponsePersistenceInput{
+		tx: tx, service: s, current: current, operatorContextID: operatorContextID,
+		requestID: requestID, clientID: clientID, expectedVersion: expectedVersion, response: response,
+		mutation: mutation, fingerprint: fingerprint, exchangeID: pending.ID,
+	})
+}
+
+type informationResponseReplayInput struct {
+	tx                *sql.Tx
+	requestID         string
+	clientID          string
+	operatorContextID string
+	storedRequestID   string
+	storedFingerprint string
+	storedExchangeID  string
+	fingerprint       string
+}
+
+func replayInformationResponse(ctx context.Context, input informationResponseReplayInput) (*InformationExchange, error) {
+	if input.storedRequestID != input.requestID || input.storedFingerprint != input.fingerprint {
+		return nil, ErrInformationResponseIdempotencyConflict
+	}
+	exchange, err := scanInformationExchange(input.tx.QueryRowContext(ctx, informationExchangeByIDSQL,
+		input.storedExchangeID, input.operatorContextID, input.requestID, input.clientID).Scan)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("%w: committed information exchange is missing", ErrConflict)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := input.tx.Commit(); err != nil {
+		return nil, err
+	}
+	return exchange, nil
+}
+
+type informationResponsePersistenceInput struct {
+	tx                *sql.Tx
+	service           *Service
+	current           *SpecialRequest
+	operatorContextID string
+	requestID         string
+	clientID          string
+	expectedVersion   int
+	response          string
+	mutation          InformationResponseMutationContext
+	fingerprint       string
+	exchangeID        string
+}
+
+func persistInformationResponse(ctx context.Context, input informationResponsePersistenceInput) (*SpecialRequest, *InformationExchange, error) {
 	status := StatusUnderReview
 	stage := "quote_pending"
-	if current.RequestType == TypeAwnakErrand {
+	if input.current.RequestType == TypeAwnakErrand {
 		stage = "quote_review"
 	}
-	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, requestID, expectedVersion, UpdateInput{
+	updated, err := input.service.repo.UpdateInOperatorContextTx(ctx, input.tx, input.operatorContextID, input.requestID, input.expectedVersion, UpdateInput{
 		Status:        &status,
 		WorkflowStage: &stage,
 	})
@@ -282,41 +343,32 @@ func (s *Service) RespondClientInformationInOperatorContext(
 		return nil, nil, err
 	}
 
-	exchange, err := scanInformationExchange(tx.QueryRowContext(ctx, `
-		UPDATE dsh_special_request_information_exchanges
-		SET response = $1,
-			status = 'responded',
-			request_version_at_response = $2,
-			responded_at = now(),
-			updated_at = now()
-		WHERE id = $3 AND status = 'pending'
-		RETURNING `+informationExchangeColumns,
-		response, updated.Version, pending.ID).Scan)
+	exchange, err := scanInformationExchange(input.tx.QueryRowContext(ctx, informationExchangeRespondSQL,
+		input.response, updated.Version, input.exchangeID).Scan)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	if err := WriteAuditEvent(tx, requestID, clientID, "client", "respond_information", response, mutation.CorrelationID, requestJSON(current), requestJSON(updated)); err != nil {
+	if err := WriteAuditEvent(input.tx, input.requestID, input.clientID, "client", "respond_information", input.response, input.mutation.CorrelationID, requestJSON(input.current), requestJSON(updated)); err != nil {
 		return nil, nil, fmt.Errorf("write audit event: %w", err)
 	}
-	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
+	if err := operationaloutbox.Enqueue(input.tx, operationaloutbox.EnqueueInput{
 		EventType:     "special_request_information_responded",
 		EntityType:    "special_request",
-		EntityID:      requestID,
+		EntityID:      input.requestID,
 		Payload:       requestJSON(updated),
-		CorrelationID: mutation.CorrelationID,
+		CorrelationID: input.mutation.CorrelationID,
 	}); err != nil {
 		return nil, nil, err
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO dsh_special_request_information_response_receipts
+	if _, err := input.tx.ExecContext(ctx, `INSERT INTO dsh_special_request_information_response_receipts
 		(operator_context_id, client_id, special_request_id, idempotency_key, request_fingerprint,
 		 correlation_id, exchange_id, result_version)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		operatorContextID, clientID, requestID, mutation.IdempotencyKey, fingerprint,
-		mutation.CorrelationID, exchange.ID, updated.Version); err != nil {
+		input.operatorContextID, input.clientID, input.requestID, input.mutation.IdempotencyKey, input.fingerprint,
+		input.mutation.CorrelationID, exchange.ID, updated.Version); err != nil {
 		return nil, nil, err
 	}
-	if err := tx.Commit(); err != nil {
+	if err := input.tx.Commit(); err != nil {
 		return nil, nil, err
 	}
 	return updated, exchange, nil

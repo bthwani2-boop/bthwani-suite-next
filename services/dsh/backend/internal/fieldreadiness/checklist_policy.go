@@ -162,7 +162,7 @@ func ListChecklistPolicy(ctx context.Context, db *sql.DB, operatorContextID, bus
 	if err != nil {
 		return ChecklistPolicy{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var item ChecklistPolicyItem
 		if err := rows.Scan(&item.CheckType, &item.LabelAR, &item.Required, &item.Critical, &item.EvidenceRequired, &item.DisplayOrder); err != nil {

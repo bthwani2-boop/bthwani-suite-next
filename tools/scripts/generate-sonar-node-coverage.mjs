@@ -114,7 +114,6 @@ export function loadCoverageOwnershipModel(manifestPath = path.resolve(repoRoot,
     "sonar.generatedPrefixes",
     { allowEmpty: true },
   );
-
   return {
     manifest,
     projects,

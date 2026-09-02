@@ -37,7 +37,7 @@ func (s *protectedStoreServer) handleRefreshDeliverySLAAlerts(w http.ResponseWri
 		return
 	}
 	correlationID := operationalCorrelationID(r, "")
-	result, err := partnerdelivery.RefreshDeliverySLAAlerts(s.db, actor.OperatorContextID, correlationID, time.Now().UTC())
+	result, err := partnerdelivery.RefreshDeliverySLAAlerts(r.Context(), s.db, actor.OperatorContextID, correlationID, time.Now().UTC())
 	if errors.Is(err, partnerdelivery.ErrInvalid) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid alert refresh request")
 		return

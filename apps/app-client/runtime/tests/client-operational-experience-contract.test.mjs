@@ -391,6 +391,10 @@ test("client commercial profile is reachable from My Space and has no inert priv
   assert.equal(profileApi.includes('createDshHttpClient("",'), false);
   assert.equal(profile.includes("طلب نسخة بياناتي"), false);
   assert.equal(profile.includes("طلب حذف الحساب"), false);
+  assert.equal(profile.includes("useState<ClientProfileCurrency>"), false);
+  assert.equal(profile.includes("setCurrency("), false);
+  assert.match(profile, /currencyPreference: profileState\.profile\.currencyPreference/);
+  assert.match(profile, /currencyPreference: "YER" as const/);
 });
 
 test("client profile mutations persist identity and reconcile partial saves", () => {
@@ -428,6 +432,28 @@ test("client profile mutations persist identity and reconcile partial saves", ()
     ["ClientIdempotencyKey", "ClientCorrelationId", "dsh_client_me_profile_preferences", "dsh_client_me_profile_consents"],
   );
   assert.ok(contract.includes("#/components/responses/Conflict"));
+  assert.match(contract, /DshClientProfilePreferencesInput/);
+  assert.match(contract, /currencyPreference: \{ type: string, const: YER \}/);
+  assert.match(screen, /kind: \"not_found\"/);
+  assert.match(screen, /إنشاء الملف الشخصي/);
+  assert.doesNotMatch(screen, /Not found, use defaults|version: 0/);
+});
+
+test("client profile consent withdrawal requires explicit confirmation", () => {
+  const screen = assertMarkers(
+    "services/dsh/frontend/app-client/account/MyProfileScreen.tsx",
+    [
+      'import { Alert, StyleSheet, Switch, TouchableOpacity, View } from "react-native";',
+      "Alert.alert(",
+      "تأكيد سحب الموافقة",
+      "سحب الموافقة",
+      'style: "cancel"',
+      'style: "destructive"',
+      "onPress: revoke",
+    ],
+  );
+  assert.match(screen, /onValueChange=\{\(v\) => v \? setConsentEmail\(true\) : confirmWithdrawConsent\("email"\)\}/);
+  assert.doesNotMatch(screen, /immediately toggle|if \(type === "email"\) setConsentEmail\(false\)/);
 });
 
 test("catalog verification wrapper initializes native exit state before a PowerShell child", () => {
@@ -489,6 +515,8 @@ test("checkout keeps an unresolved payment intent visible and blocks duplicate s
     ["const checkoutLocked", "checkoutLocked || !cartReady", "checkoutState?.kind === \"order_error\"", "serviceabilityController.serviceability.kind === \"serviceable\"", "disabled={!canProceed}"],
   );
   assert.match(cart, /actionPending \|\| checkoutLocked/);
+  assert.match(cart, /label="رمز القسيمة"/);
+  assert.match(cart, /accessibilityLabel=\{label \|\| placeholder\}/);
   assertMarkers(
     "services/dsh/frontend/app-client/cart/CheckoutProgress.tsx",
     ["جلسة الدفع ما تزال محفوظة", "إعادة محاولة الإلغاء", "state.intent.id"],

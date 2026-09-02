@@ -67,14 +67,11 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("GET /workforce/me", s.providerSelf("provider:read", s.me))
 	mux.HandleFunc("PATCH /workforce/me", s.providerSelf("provider:update", s.updateMe))
 
-	mux.HandleFunc("GET /workforce/reference/cities", s.anyAuthenticated(s.listCities))
 	mux.HandleFunc("GET /workforce/reference/shifts", s.anyAuthenticated(s.listShifts))
 	mux.HandleFunc("POST /workforce/reference/shifts", s.operatorOnly("reference:manage", s.createShift))
 	mux.HandleFunc("PATCH /workforce/reference/shifts/{code}", s.operatorOnly("reference:manage", s.updateShift))
 	mux.HandleFunc("GET /workforce/reference/supervisors", s.operatorOnly("provider:read", s.searchSupervisors))
 
-	mux.HandleFunc("POST /workforce/reference/cities", s.operatorOnly("reference:manage", s.createCity))
-	mux.HandleFunc("PATCH /workforce/reference/cities/{code}", s.operatorOnly("reference:manage", s.updateCity))
 	mux.HandleFunc("POST /workforce/{collection}/{actorId}/documents", s.operatorOnly("provider:update", s.appendProviderDocument))
 
 	// Internal routes
@@ -211,12 +208,12 @@ func (s *server) listFieldAgents(w http.ResponseWriter, r *http.Request, _ auth.
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	offset, _ := strconv.Atoi(query.Get("offset"))
 	people, err := s.repo.ListPeople(r.Context(), workforce.ListFilter{
-		Status:        strings.TrimSpace(query.Get("status")),
-		CityCode:      strings.TrimSpace(query.Get("city")),
-		Query:         strings.TrimSpace(query.Get("q")),
-		WorkforceKind: "field",
-		Limit:         limit,
-		Offset:        offset,
+		Status:          strings.TrimSpace(query.Get("status")),
+		ServiceAreaCode: strings.TrimSpace(query.Get("serviceAreaCode")),
+		Query:           strings.TrimSpace(query.Get("q")),
+		WorkforceKind:   "field",
+		Limit:           limit,
+		Offset:          offset,
 	})
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -359,11 +356,11 @@ func (s *server) listCaptains(w http.ResponseWriter, r *http.Request, _ auth.Ide
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	offset, _ := strconv.Atoi(query.Get("offset"))
 	people, err := s.repo.ListCaptains(r.Context(), workforce.ListFilter{
-		Status:   strings.TrimSpace(query.Get("status")),
-		CityCode: strings.TrimSpace(query.Get("city")),
-		Query:    strings.TrimSpace(query.Get("q")),
-		Limit:    limit,
-		Offset:   offset,
+		Status:          strings.TrimSpace(query.Get("status")),
+		ServiceAreaCode: strings.TrimSpace(query.Get("serviceAreaCode")),
+		Query:           strings.TrimSpace(query.Get("q")),
+		Limit:           limit,
+		Offset:          offset,
 	})
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -421,15 +418,6 @@ func (s *server) updateMe(w http.ResponseWriter, r *http.Request, identity auth.
 
 // ---- reference data ----
 
-func (s *server) listCities(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	cities, err := s.repo.ListCities(r.Context(), identity.HasRole("operator") && r.URL.Query().Get("includeInactive") == "true")
-	if err != nil {
-		writeWorkforceError(w, err)
-		return
-	}
-	sendJSON(w, http.StatusOK, map[string]any{"cities": cities})
-}
-
 func (s *server) listShifts(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	shifts, err := s.repo.ListShifts(r.Context(), identity.HasRole("operator") && r.URL.Query().Get("includeInactive") == "true")
 	if err != nil {
@@ -477,53 +465,6 @@ func (s *server) updateShift(w http.ResponseWriter, r *http.Request, _ auth.Iden
 		return
 	}
 	sendJSON(w, http.StatusOK, shift)
-}
-
-func (s *server) createCity(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	if !identity.HasPermission("workforce", "reference:manage", "all") {
-		sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
-		return
-	}
-	var city workforce.City
-	if !decodeJSON(w, r, &city) {
-		return
-	}
-	city.Code = strings.TrimSpace(city.Code)
-	city.NameAr = strings.TrimSpace(city.NameAr)
-	city.NameEn = strings.TrimSpace(city.NameEn)
-	if city.Code == "" || city.NameAr == "" {
-		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "code and nameAr are required")
-		return
-	}
-	city.Active = true
-	if err := s.repo.UpsertCity(r.Context(), city, true); err != nil {
-		writeWorkforceError(w, err)
-		return
-	}
-	sendJSON(w, http.StatusCreated, city)
-}
-
-func (s *server) updateCity(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	if !identity.HasPermission("workforce", "reference:manage", "all") {
-		sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
-		return
-	}
-	var city workforce.City
-	if !decodeJSON(w, r, &city) {
-		return
-	}
-	city.Code = strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/workforce/reference/cities/"))
-	city.NameAr = strings.TrimSpace(city.NameAr)
-	city.NameEn = strings.TrimSpace(city.NameEn)
-	if city.Code == "" || city.NameAr == "" {
-		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "city code and nameAr are required")
-		return
-	}
-	if err := s.repo.UpsertCity(r.Context(), city, false); err != nil {
-		writeWorkforceError(w, err)
-		return
-	}
-	sendJSON(w, http.StatusOK, city)
 }
 
 func (s *server) appendProviderDocument(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
@@ -747,11 +688,11 @@ func (s *server) listEmployees(w http.ResponseWriter, r *http.Request, _ auth.Id
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	offset, _ := strconv.Atoi(query.Get("offset"))
 	people, err := s.repo.ListEmployees(r.Context(), workforce.ListFilter{
-		Status:   strings.TrimSpace(query.Get("status")),
-		CityCode: strings.TrimSpace(query.Get("city")),
-		Query:    strings.TrimSpace(query.Get("q")),
-		Limit:    limit,
-		Offset:   offset,
+		Status:          strings.TrimSpace(query.Get("status")),
+		ServiceAreaCode: strings.TrimSpace(query.Get("serviceAreaCode")),
+		Query:           strings.TrimSpace(query.Get("q")),
+		Limit:           limit,
+		Offset:          offset,
 	})
 	if err != nil {
 		writeWorkforceError(w, err)

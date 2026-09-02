@@ -1,57 +1,98 @@
 // Canonical location: dsh/frontend/shared/platform/platform-vars.view-model.ts
-// Authority: dsh/frontend/shared/platform — domain records and resolution logic for platform vars.
-// control-panel UI is a read-only consumer of these functions; no local apply permitted.
+// Authority: core/platform-control generated read model. This module only groups
+// and formats the canonical response for the control-panel surface; it never
+// stores or applies a local platform value.
 
-import type {
-  DshPlatformAuditEntry,
-  DshPlatformPolicyScenario,
-  DshPlatformProviderControlRecord,
-  DshPlatformScopeLayer,
-  DshPlatformVarRecord,
-  DshPlatformVarScope,
-  DshPlatformVarStatus,
-} from './platform.types';
+import type { PlatformVariable } from './platform-control.api';
 
-export type VarsDomainId = 'dsh' | 'wlt' | 'provider' | 'policy' | 'design';
+export type VarsDomainId = 'dsh' | 'wlt' | 'provider' | 'design';
 
+const SENSITIVE_CLASSIFICATIONS = new Set([
+  'secret',
+  'sensitive',
+  'confidential',
+  'restricted',
+  'credential',
+  'credentials',
+  'password',
+  'token',
+  'private_key',
+  'api_key',
+  'client_secret',
+]);
 
-// Domain record registries — populated when backend contracts are implemented.
-// All mutations MUST go through backend API; no local apply permitted.
-export const DSH_PLATFORM_AUDIT_LOG: DshPlatformAuditEntry[] = [];
-export const DSH_PLATFORM_OPERATIONAL_VARS: DshPlatformVarRecord[] = [];
-export const DSH_PLATFORM_PROVIDER_CONTROL_VARS: DshPlatformProviderControlRecord[] = [];
-export const DSH_PLATFORM_SCOPE_PRECEDENCE: DshPlatformScopeLayer[] = [];
-export const DSH_PLATFORM_POLICY_SCENARIOS: DshPlatformPolicyScenario[] = [];
-export const DSH_PLATFORM_WLT_FINANCIAL_BRIDGE_VARS: DshPlatformVarRecord[] = [];
-export const DSH_PLATFORM_DESIGN_POLICY_VARS: DshPlatformVarRecord[] = [];
-
-export function resolvePlatformVarsDomainRecords(domain: VarsDomainId): readonly DshPlatformVarRecord[] {
-  if (domain === 'dsh')      return DSH_PLATFORM_OPERATIONAL_VARS;
-  if (domain === 'wlt')      return DSH_PLATFORM_WLT_FINANCIAL_BRIDGE_VARS;
-  if (domain === 'provider') return DSH_PLATFORM_PROVIDER_CONTROL_VARS;
-  if (domain === 'design')   return DSH_PLATFORM_DESIGN_POLICY_VARS;
-  return [];
+function normalized(value: string | undefined): string {
+  return value?.trim().toLowerCase() ?? '';
 }
 
-export function sortPlatformVarsByScope(records: readonly DshPlatformVarRecord[]): DshPlatformVarRecord[] {
-  const scopeOrder: Record<string, number> = {};
-  for (const l of DSH_PLATFORM_SCOPE_PRECEDENCE) {
-    scopeOrder[l.scope] = l.order;
-  }
-  return [...records].sort((a, b) => {
-    const ao = scopeOrder[a.scope] ?? 999;
-    const bo = scopeOrder[b.scope] ?? 999;
-    return ao !== bo ? ao - bo : a.label.localeCompare(b.label, 'ar');
-  });
+export function isSensitivePlatformVariable(variable: Pick<PlatformVariable, 'classification'>): boolean {
+  return SENSITIVE_CLASSIFICATIONS.has(normalized(variable.classification));
 }
 
-type PlatformVarKpi = { id: string; label: string; value: string; cls: string };
+export function resolvePlatformVarsDomain(variable: Pick<PlatformVariable, 'key' | 'ownerService'>): VarsDomainId {
+  if (variable.key.startsWith('VAR_UI_')) return 'design';
+  const owner = normalized(variable.ownerService);
+  if (owner === 'wlt') return 'wlt';
+  if (owner === 'provider' || owner === 'providers') return 'provider';
+  return 'dsh';
+}
 
+export function resolvePlatformVarsDomainRecords(
+  records: readonly PlatformVariable[],
+  domain: VarsDomainId,
+): PlatformVariable[] {
+  return records.filter((record) => resolvePlatformVarsDomain(record) === domain);
+}
+
+/**
+ * Stable display order follows the fields returned by the canonical query. It
+ * is deliberately not a local scope-precedence policy.
+ */
+export function sortPlatformVarsByScope(records: readonly PlatformVariable[]): PlatformVariable[] {
+  return [...records].sort((a, b) =>
+    `${a.key}\u0000${a.scopeType}\u0000${a.scopeId ?? ''}`.localeCompare(
+      `${b.key}\u0000${b.scopeType}\u0000${b.scopeId ?? ''}`,
+    ),
+  );
+}
+
+/** Return the unique scopes present in the current canonical read model. */
 export function resolvePlatformVarsFilteredScopes(
-  records: readonly DshPlatformVarRecord[],
-): DshPlatformVarScope[] {
-  const scopes = Array.from(new Set(records.map((r) => r.scope)));
-  return DSH_PLATFORM_SCOPE_PRECEDENCE.map((l) => l.scope).filter((s) => scopes.includes(s));
+  records: readonly PlatformVariable[],
+): string[] {
+  const scopes = new Set<string>();
+  for (const record of records) {
+    const scope = record.scopeType.trim();
+    if (scope) scopes.add(scope);
+  }
+  return [...scopes];
 }
 
-export type { DshPlatformVarRecord, DshPlatformVarStatus, DshPlatformVarScope };
+export function platformVariableIdentity(
+  variable: Pick<PlatformVariable, 'key' | 'scopeType' | 'scopeId'>,
+): string {
+  return `${variable.key}:${variable.scopeType}:${variable.scopeId ?? ''}`;
+}
+
+export function formatPlatformVariableValue(variable: Pick<PlatformVariable, 'classification' | 'value'>): string {
+  if (isSensitivePlatformVariable(variable)) return '••••••';
+  if (variable.value === undefined || variable.value === null) return '';
+  if (typeof variable.value === 'string') return variable.value;
+  try {
+    return JSON.stringify(variable.value);
+  } catch {
+    return '[unserializable]';
+  }
+}
+
+/** Never place a sensitive runtime value in an editable browser control. */
+export function platformVariableEditorValue(variable: PlatformVariable): string {
+  if (isSensitivePlatformVariable(variable)) return '';
+  if (typeof variable.value === 'string') return variable.value;
+  if (variable.value === undefined || variable.value === null) return '';
+  try {
+    return JSON.stringify(variable.value);
+  } catch {
+    return '';
+  }
+}

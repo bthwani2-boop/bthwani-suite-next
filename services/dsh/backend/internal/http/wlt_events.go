@@ -119,7 +119,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to begin WLT event transaction")
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	intent, err := checkout.ApplyWltPaymentEventTx(
 		r.Context(),

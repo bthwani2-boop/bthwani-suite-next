@@ -35,7 +35,7 @@ async function readCspNonce(): Promise<string | undefined> {
   return store.get(NONCE_REQUEST_HEADER) ?? undefined;
 }
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { readonly children: ReactNode }) {
   const nonce = await readCspNonce();
   const criticalCss = renderCpCriticalCss();
   const themeStyleNonce = nonce;

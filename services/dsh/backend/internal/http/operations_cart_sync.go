@@ -11,6 +11,7 @@ import (
 
 type CartIdempotencyRecord struct {
 	IdempotencyKey string    `json:"idempotencyKey"`
+	Operation      string    `json:"operation"`
 	Version        int       `json:"version"`
 	DeviceID       *string   `json:"deviceId"`
 	SessionID      *string   `json:"sessionId"`
@@ -55,8 +56,8 @@ func (s *protectedStoreServer) handleOperatorCartSyncDiagnostics(w http.Response
 	}
 
 	rows, err := s.db.QueryContext(r.Context(), `
-		SELECT idempotency_key, version, device_id, session_id, created_at
-		FROM dsh_cart_idempotency
+		SELECT idempotency_key, operation, result_version, device_id, session_id, created_at
+		FROM dsh_cart_mutation_receipts
 		WHERE cart_id = $1
 		ORDER BY created_at DESC
 		LIMIT 100
@@ -65,18 +66,24 @@ func (s *protectedStoreServer) handleOperatorCartSyncDiagnostics(w http.Response
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to query idempotency history")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	resp.History = []CartIdempotencyRecord{}
 	for rows.Next() {
 		var rec CartIdempotencyRecord
-		if err := rows.Scan(&rec.IdempotencyKey, &rec.Version, &rec.DeviceID, &rec.SessionID, &rec.CreatedAt); err != nil {
+		if err := rows.Scan(&rec.IdempotencyKey, &rec.Operation, &rec.Version, &rec.DeviceID, &rec.SessionID, &rec.CreatedAt); err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to scan history")
 			return
 		}
 		resp.History = append(resp.History, rec)
 	}
+	if err := rows.Err(); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read history")
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		return
+	}
 }

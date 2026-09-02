@@ -49,17 +49,19 @@ DshReadinessResponse:
     status:
       type: string
       enum:
-        - ready
-        - not_ready
+        - HEALTHY
+        - DEGRADED
+        - NOT_READY
     dependencies:
       type: object
       additionalProperties:
         type: string
         enum:
-          - ready
-          - degraded
-          - down
-          - not_configured
+          - HEALTHY
+          - DEGRADED
+          - NOT_READY
+          - configured
+          - missing
     checkedAt:
       type: string
       format: date-time
@@ -166,7 +168,7 @@ DshReadinessEscalation:
 
 DshPartnerReadiness:
   type: object
-  required: [partnerId, canActivate, canActivatePartner, intakeComplete, publicationDecision, blockingReasons, checklist]
+  required: [partnerId, canActivate, canActivatePartner, intakeComplete, publicationDecision, blockingReasons, checklist, storeSummary, stores, generatedAt]
   properties:
     partnerId: { type: string }
     canActivate: { type: boolean }
@@ -181,6 +183,28 @@ DshPartnerReadiness:
     checklist:
       type: array
       items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerReadinessItem" }
+    storeSummary:
+      type: object
+      required: [totalStores, readyStores, blockedStores, clientVisibleStores]
+      properties:
+        totalStores: { type: integer, minimum: 0 }
+        readyStores: { type: integer, minimum: 0 }
+        blockedStores: { type: integer, minimum: 0 }
+        clientVisibleStores: { type: integer, minimum: 0 }
+    stores:
+      type: array
+      items:
+        type: object
+        required: [storeId, displayName, publicationDecision, blockingReasons, isClientVisible]
+        properties:
+          storeId: { type: string }
+          displayName: { type: string }
+          publicationDecision: { type: string, enum: [PUBLISHED, BLOCKED] }
+          blockingReasons:
+            type: array
+            items: { type: string }
+          isClientVisible: { type: boolean }
+    generatedAt: { type: string, format: date-time }
 
 DshPartnerReadinessItem:
   type: object

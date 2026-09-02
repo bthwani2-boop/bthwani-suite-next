@@ -29,7 +29,7 @@ type StatusTone = "neutral" | "success" | "warning" | "danger" | "info";
 const FULFILLMENT_LABELS: Readonly<Record<OrderTruth["fulfillmentMode"], string>> = {
   bthwani_delivery: "توصيل بثواني",
   partner_delivery: "توصيل المتجر",
-  pickup: "استلام ذاتي",
+  pickup: "استلم بنفسك",
 };
 
 function orderStatusTone(status: string): StatusTone {

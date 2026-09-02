@@ -14,7 +14,7 @@ func TestPartnerCreationRejectsDuplicatePrimaryPhoneWithinOperatorContextDBInteg
 	operatorContextID := "operator-context-j020-phone-" + suffix
 	phone := "+9677" + suffix[len(suffix)-8:]
 	base := CreatePartnerInput{
-		LegalNameAr:         "Ø´Ø±ÙŠÙƒ Ù‡Ø§ØªÙ Ø£ÙˆÙ„ " + suffix,
+		LegalNameAr:         "شريك هاتف أول " + suffix,
 		DisplayName:         "Phone Owner A " + suffix,
 		LegalIdentityType:   "commercial_register",
 		LegalIdentityNumber: "J020-PHONE-A-" + suffix,
@@ -37,7 +37,7 @@ func TestPartnerCreationRejectsDuplicatePrimaryPhoneWithinOperatorContextDBInteg
 	registerPartnerFixtureCleanup(t, db, created.ID, partnerStoreID(t, db, created.ID))
 
 	duplicate := base
-	duplicate.LegalNameAr = "Ø´Ø±ÙŠÙƒ Ù‡Ø§ØªÙ Ø«Ø§Ù† " + suffix
+	duplicate.LegalNameAr = "شريك هاتف ثان " + suffix
 	duplicate.DisplayName = "Phone Owner B " + suffix
 	duplicate.LegalIdentityNumber = "J020-PHONE-B-" + suffix
 	_, _, err = CreatePartnerForOperatorContextIdempotent(

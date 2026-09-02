@@ -305,7 +305,7 @@ func reportStoreCaptainHandoffException(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, input.OperatorContextID+"|delivery-exception|"+input.IdempotencyKey); err != nil {
 		return nil, err
 	}

@@ -3,7 +3,7 @@ param(
   [Parameter(Mandatory = $true)]
   [ValidateSet("identity", "workforce", "dsh", "wlt", "providers", "platform-control")]
   [string]$Service,
-  [string]$SourceCommitSha = "",
+  [string]$SourceCommitSha = $env:CANDIDATE_SHA,
   # Explicit permission to reset THIS service's local database when its
   # migration ledger has drifted. Passed only by the bootstrap-dev phase; `up`
   # and `smoke` must never pass it, so a conflict stays loud there.
@@ -67,16 +67,12 @@ if ($migrationFiles.Count -eq 0) {
   throw "No migrations found for '$Service'."
 }
 
-if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
-  if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
-    $SourceCommitSha = $env:GITHUB_SHA
-  } else {
-    $SourceCommitSha = (& git rev-parse HEAD).Trim()
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommitSha)) {
-      throw "Unable to resolve source commit SHA."
-    }
-  }
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
+if (-not (Test-Path -LiteralPath $SourceCommitProvenancePath -PathType Leaf)) {
+  throw "Checked-out source commit resolver not found: $SourceCommitProvenancePath"
 }
+. $SourceCommitProvenancePath
+$SourceCommitSha = Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $RepoRoot -ExpectedSourceCommitSha $SourceCommitSha
 
 . (Join-Path $ScriptDir "schema-migration-runner.ps1")
 . (Join-Path $ScriptDir "workforce-migration-input-handoff.ps1")

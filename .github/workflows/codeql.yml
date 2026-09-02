@@ -393,6 +393,21 @@ jobs:
           node --check "${trusted_classifier}"
           echo "TRUSTED_CODEQL_CLASSIFIER=${trusted_classifier}" >> "${GITHUB_ENV}"
 
+      - name: Load trusted CodeQL analysis binding validator
+        shell: bash
+        env:
+          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          trusted_validator="${RUNNER_TEMP}/validate-codeql-analysis-binding.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/validate-codeql-analysis-binding.mjs" \
+            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_validator}"
+          [[ -s "${trusted_validator}" ]] || { echo "::error::trusted CodeQL analysis binding validator missing"; exit 1; }
+          node --check "${trusted_validator}"
+          echo "TRUSTED_CODEQL_ANALYSIS_VALIDATOR=${trusted_validator}" >> "${GITHUB_ENV}"
+
       - name: Download unprivileged CodeQL SARIF evidence
         shell: bash
         run: |
@@ -437,9 +452,9 @@ jobs:
             jq -n \
               --arg headSha "${CANDIDATE_SHA}" \
               --arg baseSha "${BASE_SHA}" \
-              '{schema:"bthwani-codeql-evidence/1",candidate:{headSha:$headSha,baseSha:$baseSha},mode:"not-applicable",status:"NOT_APPLICABLE",executionStatus:"NOT_APPLICABLE",coverageStatus:"NOT_APPLICABLE",findingStatus:"NOT_APPLICABLE",evidenceConsumption:"NOT_APPLICABLE",evidenceComplete:true,closureClaim:false,counts:{documents:0,categories:0,findings:0,materialFindings:0,scopedFindings:0,scopedMaterialFindings:0,inheritedFindings:0,errors:0}}' \
+              '{schema:"bthwani-codeql-evidence/1",candidate:{headSha:$headSha,baseSha:$baseSha},mode:"not-applicable",status:"N/A_PROVEN",executionStatus:"N/A_PROVEN",coverageStatus:"N/A_PROVEN",findingStatus:"N/A_PROVEN",evidenceConsumption:"N/A_PROVEN",evidenceComplete:true,closureClaim:false,counts:{documents:0,categories:0,findings:0,materialFindings:0,scopedFindings:0,scopedMaterialFindings:0,inheritedFindings:0,errors:0}}' \
               > "${output_dir}/summary.json"
-            echo "status=NOT_APPLICABLE" >> "${GITHUB_OUTPUT}"
+            echo "status=N/A_PROVEN" >> "${GITHUB_OUTPUT}"
             cat "${output_dir}/summary.json"
             exit 0
           fi
@@ -606,7 +621,8 @@ jobs:
             sarif_status_endpoint="/repos/${GITHUB_REPOSITORY}/code-scanning/sarifs/${upload_id}"
             processing_status=""
             analyses_url=""
-            for attempt in $(seq 1 60); do
+            attempt=1
+            while (( attempt <= 60 )); do
               sarif_status="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "${sarif_status_endpoint}")"
               processing_status="$(jq -r '.processing_status // empty' <<<"${sarif_status}")"
               analyses_url="$(jq -r '.analyses_url // empty' <<<"${sarif_status}")"
@@ -626,6 +642,7 @@ jobs:
                   exit 1
                   ;;
               esac
+              ((attempt += 1))
             done
             [[ "${processing_status}" == "complete" ]] || {
               echo "::error::CodeQL SARIF processing did not complete for upload ${upload_id}"
@@ -637,17 +654,23 @@ jobs:
             }
             analyses_endpoint="${analyses_url#https://api.github.com}"
             analyses="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "${analyses_endpoint}")"
-            exact_matches="$(jq --arg upload_id "${upload_id}" --arg candidate_sha "${CANDIDATE_SHA}" \
-              --arg candidate_ref "${CANDIDATE_REF}" --arg expected_category "${expected_category}" \
-              '[.analyses[]? | select((.sarif_id|tostring) == $upload_id and .commit_sha == $candidate_sha and .ref == $candidate_ref and ((.category // "") | rtrimstr("/")) == $expected_category)] | length' \
-              <<<"${analyses}")"
-            [[ "${exact_matches}" == "1" ]] || {
-              echo "::error::CodeQL analysis binding mismatch for upload ${upload_id}: matches=${exact_matches}"
-              exit 1
-            }
-            jq --arg upload_id "${upload_id}" --arg category "${expected_category}" \
-              --arg status "${processing_status}" --arg analyses_url "${analyses_url}" \
-              '. += [{uploadId:$upload_id,category:$category,processingStatus:$status,analysesUrl:$analyses_url,exactBinding:true}]' \
+            response_file="${RUNNER_TEMP}/codeql-analysis-${upload_id}.json"
+            printf '%s\n' "${analyses}" > "${response_file}"
+            binding="$(node "${TRUSTED_CODEQL_ANALYSIS_VALIDATOR}" \
+              --input "${response_file}" \
+              --repository "${GITHUB_REPOSITORY}" \
+              --candidate-sha "${CANDIDATE_SHA}" \
+              --candidate-ref "${CANDIDATE_REF}" \
+              --expected-category "${expected_category}" \
+              --upload-id "${upload_id}" \
+              --run-id "${GITHUB_RUN_ID}" \
+              --run-attempt "${GITHUB_RUN_ATTEMPT:-1}")" || {
+                echo "::error::CodeQL analysis binding validation failed for upload ${upload_id}"
+                exit 1
+              }
+            jq --arg status "${processing_status}" --arg analyses_url "${analyses_url}" \
+              --argjson binding "${binding}" \
+              '. += [$binding + {processingStatus:$status,analysesUrl:$analysesUrl}]' \
               "${RUNNER_TEMP}/codeql-upload-status.json" > "${RUNNER_TEMP}/codeql-upload-status.next.json"
             mv "${RUNNER_TEMP}/codeql-upload-status.next.json" "${RUNNER_TEMP}/codeql-upload-status.json"
           done < "${RUNNER_TEMP}/codeql-upload-metadata.tsv"
@@ -702,7 +725,7 @@ jobs:
             exit 0
           fi
           if [[ "${LANGUAGES}" == "[]" && "${ACTIONS_REQUIRED}" != "true" ]]; then
-            [[ "${DISPOSITION_RESULT}" == "success" && "${DISPOSITION_STATUS}" == "NOT_APPLICABLE" ]] || {
+            [[ "${DISPOSITION_RESULT}" == "success" && "${DISPOSITION_STATUS}" == "N/A_PROVEN" ]] || {
               echo "::error title=CodeQL applicability unresolved::no analyzer was applicable but disposition was not explicit"
               exit 1
             }

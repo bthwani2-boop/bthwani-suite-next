@@ -1,6 +1,6 @@
 import { resolveCaptainInboxFulfillmentMode } from './captain-inbox.fulfillment';
 import { ASSIGNMENT_STATUS_LABELS, DELIVERY_STATUS_LABELS } from '../dispatch/dispatch.types';
-import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
+import type { DshGovernedDispatchAssignment } from '../dispatch/dispatch.types';
 
 export type CaptainInboxServiceType = 'standard' | 'awnak' | 'shein-final-mile';
 
@@ -24,14 +24,14 @@ const ACTIVE_DELIVERY_STATUSES = new Set([
   'arrived_customer',
 ]);
 
-export function resolveServiceType(assignment: DshDispatchAssignment): CaptainInboxServiceType {
+export function resolveServiceType(assignment: DshGovernedDispatchAssignment): CaptainInboxServiceType {
   if (!assignment.specialRequestId) return 'standard';
   if (assignment.requestType === 'AWNAK_ERRAND') return 'awnak';
   if (assignment.requestType === 'SHEIN_ASSISTED_PURCHASE') return 'shein-final-mile';
   return 'standard';
 }
 
-function resolveBellTitle(assignment: DshDispatchAssignment, serviceType: CaptainInboxServiceType): string {
+function resolveBellTitle(assignment: DshGovernedDispatchAssignment, serviceType: CaptainInboxServiceType): string {
   if (serviceType === 'awnak') return `عونك #${assignment.specialRequestId}`;
   if (serviceType === 'shein-final-mile') return `SHEIN #${assignment.specialRequestId}`;
   return `طلب #${assignment.orderId}`;
@@ -52,19 +52,19 @@ function formatOfferDeadline(responseDeadlineAt: string): string {
   return `${Math.ceil(remainingSeconds / 60)} د للرد`;
 }
 
-export function isCaptainAssignmentActionable(assignment: DshDispatchAssignment): boolean {
+export function isCaptainAssignmentActionable(assignment: DshGovernedDispatchAssignment): boolean {
   return ACTIVE_ASSIGNMENT_STATUSES.has(assignment.status)
     && ACTIVE_DELIVERY_STATUSES.has(assignment.delivery.status);
 }
 
-export function toBellItem(assignment: DshDispatchAssignment): CaptainInboxBellItem {
+export function toBellItem(assignment: DshGovernedDispatchAssignment): CaptainInboxBellItem {
   const serviceType = resolveServiceType(assignment);
   const distance = formatDistance(assignment.distanceMeters);
   const area = assignment.serviceAreaCode?.trim() || 'منطقة غير محددة';
   const assignmentLabel = ASSIGNMENT_STATUS_LABELS[assignment.status] ?? assignment.status;
   return {
     id: assignment.id,
-    orderId: assignment.orderId,
+    orderId: assignment.orderId ?? '',
     kind: assignment.status === 'offered' ? 'incoming-offer' : 'active',
     serviceType,
     fulfillmentMode: resolveCaptainInboxFulfillmentMode(assignment),

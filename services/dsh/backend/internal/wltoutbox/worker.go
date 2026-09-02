@@ -98,11 +98,17 @@ func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string,
 
 	switch event.EventType {
 	case EventTypeDeliveryCompleted:
-		if event.CaptainID == "" || event.CheckoutIntentID == "" {
-			return "", fmt.Errorf("delivery completion requires captain and checkout intent")
+		if event.CollectorType == "" || event.CollectorID == "" || event.CheckoutIntentID == "" {
+			return "", fmt.Errorf("delivery completion requires collector and checkout intent")
+		}
+		if event.CollectorType != CollectorCaptain && event.CollectorType != CollectorStoreCourier && event.CollectorType != CollectorPartnerStore {
+			return "", fmt.Errorf("delivery completion has unsupported collector type %q", event.CollectorType)
 		}
 		if _, _, err := client.FinalizeCodReservation(ctx, event.OrderID, event.CheckoutIntentID, event.OrderID, "delivery-completed:"+event.OrderID+":cod-finalize"); err != nil {
 			return "", err
+		}
+		if event.CollectorType != CollectorCaptain {
+			return "", nil
 		}
 		commissionRequired, err := deliveryCommissionRequired(ctx, client, event.CheckoutIntentID)
 		if err != nil {
@@ -112,7 +118,7 @@ func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string,
 			return "", nil
 		}
 		if err := client.DeliverCaptainCommission(ctx, wlt.DeliverCaptainCommissionInput{
-			CaptainID:        event.CaptainID,
+			CaptainID:        event.CollectorID,
 			OrderID:          event.OrderID,
 			CheckoutIntentID: event.CheckoutIntentID,
 		}); err != nil {

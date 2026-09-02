@@ -292,7 +292,7 @@ jobs:
               artifactIdentity: $artifactIdentity,
               toolVersion: $toolVersion,
               packageIntegrity: $packageIntegrity,
-              analyzer: "opencodereview",
+              analyzer: "opencodereview-context",
               candidateSha: $head,
               outcome: "PASS",
               log: "toolchain.log",
@@ -308,10 +308,10 @@ jobs:
             "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/lib/evidence-envelope.mjs" \
             -f "ref=${GITHUB_SHA}" --jq '.content' | base64 --decode > "${capture_dir}/lib/evidence-envelope.mjs"
           node "${capture_dir}/capture-tool-evidence.mjs" \
-            --tool-id opencodereview --status PASS --exit-code 0 \
+            --tool-id opencodereview-context --status PASS --exit-code 0 \
             --raw-file "${evidence}/toolchain.log" \
             --native-file "${evidence}/delegation-contract.json" \
-            --output "${evidence}/opencodereview.evidence.json" \
+            --output "${evidence}/opencodereview-context.evidence.json" \
             --head-sha "${HEAD_SHA}" --base-sha "${BASE_SHA}" \
             --scope "exact candidate deterministic OpenCodeReview scope/rules/diff"
 

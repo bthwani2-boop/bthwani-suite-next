@@ -1,144 +1,66 @@
 // Canonical location: dsh/frontend/shared/platform/platform-vars.model.ts
-// Authority: dsh/frontend/shared/platform — react model hook for managing platform vars workspace state.
-// No JSX. No ui-kit. No Tamagui.
+// Authority: dsh/frontend/shared/platform — React view model over the
+// core/platform-control generated read model. No local apply is permitted.
 
 import React from 'react';
-import type {
-  DshPlatformVarRecord,
-  DshPlatformVarScope,
-  DshPlatformPolicyScenario,
-  DshPlatformAuditEntry,
-  DshPlatformVarStatus,
-} from './platform.types';
+import type { PlatformVariable } from './platform-control.api';
 import {
-  DSH_PLATFORM_AUDIT_LOG,
-  DSH_PLATFORM_OPERATIONAL_VARS,
-  DSH_PLATFORM_WLT_FINANCIAL_BRIDGE_VARS,
-  DSH_PLATFORM_PROVIDER_CONTROL_VARS,
-  DSH_PLATFORM_DESIGN_POLICY_VARS,
-  DSH_PLATFORM_POLICY_SCENARIOS,
   resolvePlatformVarsDomainRecords,
   sortPlatformVarsByScope,
   resolvePlatformVarsFilteredScopes,
+  platformVariableIdentity,
+  platformVariableEditorValue,
   VarsDomainId,
 } from './platform-vars.view-model';
-import {
-  isPlatformDesignVar,
-  PLATFORM_VAR_QUICK_PICKS,
-} from './platform-vars.policy';
 
-type PlatformVarsSessionEntry = {
-  readonly current: string;
-  readonly proposed: string | null;
-  readonly status: DshPlatformVarStatus;
-};
-
-function buildInitialVarsState(): Record<string, PlatformVarsSessionEntry> {
-  const init: Record<string, PlatformVarsSessionEntry> = {};
-  const all = [
-    ...DSH_PLATFORM_OPERATIONAL_VARS,
-    ...DSH_PLATFORM_WLT_FINANCIAL_BRIDGE_VARS,
-    ...DSH_PLATFORM_PROVIDER_CONTROL_VARS,
-    ...DSH_PLATFORM_DESIGN_POLICY_VARS,
-  ];
-  for (const variable of all) {
-    init[variable.id] = {
-      current: variable.currentValue,
-      proposed: variable.proposedValue ?? null,
-      status: variable.status,
-    };
-  }
-  return init;
-}
-
-/**
- * Read-only platform variables model.
- *
- * The displayed records are static policy declarations, not runtime values.
- * Mutations remain disabled until Platform Control exposes governed read,
- * propose, approve, rollout, rollback, and audit contracts.
- */
-export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomainId }) {
-  const [varsState] = React.useState<Record<string, PlatformVarsSessionEntry>>(buildInitialVarsState);
+export function usePlatformVarsModel({
+  activeDomain,
+  variables,
+}: {
+  readonly activeDomain: VarsDomainId;
+  readonly variables: readonly PlatformVariable[];
+}) {
   const [activeScope, setActiveScope] = React.useState<string>('all');
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [editVal, setEditVal] = React.useState('');
 
-  const getLive = React.useCallback(
-    (variable: DshPlatformVarRecord): DshPlatformVarRecord => {
-      const session = varsState[variable.id];
-      if (!session) return { ...variable, proposedValue: variable.proposedValue ?? null };
-      return {
-        ...variable,
-        currentValue: session.current,
-        proposedValue: session.proposed,
-      };
-    },
-    [varsState],
-  );
-
   React.useEffect(() => {
     setActiveScope('all');
-    const records = resolvePlatformVarsDomainRecords(activeDomain);
-    const first = records[0] ?? null;
-    setSelectedId(first?.id ?? null);
-    setEditVal(first ? (getLive(first).proposedValue ?? '') : '');
-  }, [activeDomain, getLive]);
-
-  React.useEffect(() => {
-    if (!selectedId) return;
-    const all = [
-      ...DSH_PLATFORM_OPERATIONAL_VARS,
-      ...DSH_PLATFORM_WLT_FINANCIAL_BRIDGE_VARS,
-      ...DSH_PLATFORM_PROVIDER_CONTROL_VARS,
-      ...DSH_PLATFORM_DESIGN_POLICY_VARS,
-    ];
-    const found = all.find((record) => record.id === selectedId);
-    if (found) setEditVal(getLive(found).proposedValue ?? '');
-  }, [getLive, selectedId]);
+    const first = resolvePlatformVarsDomainRecords(variables, activeDomain)[0] ?? null;
+    setSelectedId(first ? platformVariableIdentity(first) : null);
+  }, [activeDomain, variables]);
 
   const domainRecords = React.useMemo(
-    () => sortPlatformVarsByScope(resolvePlatformVarsDomainRecords(activeDomain)),
-    [activeDomain],
+    () => sortPlatformVarsByScope(resolvePlatformVarsDomainRecords(variables, activeDomain)),
+    [activeDomain, variables],
   );
 
   const filteredRecords = React.useMemo(
     () => activeScope === 'all'
       ? domainRecords
-      : domainRecords.filter((record) => record.scope === (activeScope as DshPlatformVarScope)),
+      : domainRecords.filter((record) => record.scopeType === activeScope),
     [activeScope, domainRecords],
   );
 
   const rawSelected =
-    filteredRecords.find((record) => record.id === selectedId) ??
+    filteredRecords.find((record) => platformVariableIdentity(record) === selectedId) ??
     filteredRecords[0] ??
     domainRecords[0] ??
     null;
-  const selectedVar = rawSelected ? getLive(rawSelected) : null;
+  const selectedVar = rawSelected;
+
+  React.useEffect(() => {
+    if (!selectedVar) {
+      setEditVal('');
+      return;
+    }
+    setEditVal(platformVariableEditorValue(selectedVar));
+  }, [selectedVar]);
 
   const orderedScopes = React.useMemo(
     () => resolvePlatformVarsFilteredScopes(domainRecords),
     [domainRecords],
   );
-
-  const linkedScenarios = React.useMemo((): DshPlatformPolicyScenario[] => {
-    if (!selectedVar) return [];
-    return DSH_PLATFORM_POLICY_SCENARIOS.filter((scenario) =>
-      scenario.relatedKeys.includes(selectedVar.key),
-    );
-  }, [selectedVar]);
-
-  const linkedAudits = React.useMemo((): DshPlatformAuditEntry[] => {
-    if (!selectedVar) return [];
-    return DSH_PLATFORM_AUDIT_LOG.filter((entry) => entry.targetKey === selectedVar.key);
-  }, [selectedVar]);
-
-  const quickPicks = React.useMemo((): readonly string[] => {
-    if (!selectedVar) return [];
-    return PLATFORM_VAR_QUICK_PICKS[selectedVar.key] ?? [];
-  }, [selectedVar]);
-
-  const isDesign = selectedVar ? isPlatformDesignVar(selectedVar.key) : false;
 
   return {
     activeScope,
@@ -150,9 +72,5 @@ export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomai
     filteredRecords,
     selectedVar,
     orderedScopes,
-    linkedScenarios,
-    linkedAudits,
-    quickPicks,
-    isDesignVar: isDesign,
   };
 }

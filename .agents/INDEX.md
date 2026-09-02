@@ -10,7 +10,7 @@ Load only when the trigger matches:
 
 - `bthwani-orchestrator` — canonical thin agent entrypoint; loads the repository Root-Cause Orchestrator. All other skills remain subordinate.
 
-- `bthwani-current-workspace-authority` — pin repository, branch, commit, and ref provenance.
+- `bthwani-current-workspace-authority` — emit repository, branch, commit, and ref-provenance evidence; canonical authority remains the orchestrator.
 - `bthwani-universal-task-router` — compatibility redirect only; do not treat as authority.
 - `bthwani-evidence-gate-router` — compatibility redirect only; evidence authority remains orchestrator owner 04.
 - `bthwani-api-runtime-binding` — API contract, generated client, route, or consumer binding changes.
@@ -19,7 +19,7 @@ Load only when the trigger matches:
 - `bthwani-docker-journey-runtime` — Docker, persistence, startup, or live runtime proof.
 - `bthwani-dsh-wlt-finance-boundary` — payment, wallet, ledger, settlement, payout, refund, commission, or reconciliation.
 - `bthwani-final-journey-closure-judge` — compatibility redirect only; cannot decide closure.
-- `bthwani-independent-implementation-reviewer` — bounded independent implementation review when materially required.
+- `bthwani-independent-implementation-reviewer` — emit bounded implementation-review evidence when materially required; it cannot decide G4 or closure.
 - `bthwani-platform-runtime-config` — environment, provider, URL, port, CORS, or sensitive runtime configuration.
 - `bthwani-product-truth-governor` — user-visible, role-sensitive, commercial, cross-surface, or workflow behavior.
 - `bthwani-screen-flow-binding` — route, screen, state, action, or controller binding.

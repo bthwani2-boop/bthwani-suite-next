@@ -71,6 +71,7 @@ type FieldOfflineOperationV3<P = unknown> = Omit<FieldOfflineOperation<P>, "inte
 
 const STORAGE_PREFIX = "bthwani.field-offline-queue.v4";
 const V3_STORAGE_PREFIX = "bthwani.field-offline-queue.v3";
+const V3_CUTOVER_MARKER_SUFFIX = "v3-cutover-complete";
 const MAX_ATTEMPTS = 10;
 const MAX_QUEUE_OPERATIONS = 100;
 // The identity fingerprint is compact, but the queue intentionally retains
@@ -161,6 +162,10 @@ function v3RecoveryQuarantineStorageKey(scope: FieldOfflineQueueScope): string {
   return `${V3_STORAGE_PREFIX}.recovery-quarantine.${v3ScopeSuffix(scope)}`;
 }
 
+function v3CutoverMarkerKey(scope: FieldOfflineQueueScope): string {
+  return `${STORAGE_PREFIX}.${V3_CUTOVER_MARKER_SUFFIX}.${scopeStorageSuffix(scope)}`;
+}
+
 export function configureFieldOfflineQueueStorage(adapter: FieldOfflineQueueStorageAdapter): void {
   storageAdapter = adapter;
 }
@@ -244,6 +249,18 @@ async function writeQueueForScope(scope: FieldOfflineQueueScope, queue: FieldOff
 }
 
 async function migrateV3Artifacts(scope: FieldOfflineQueueScope): Promise<void> {
+  const cutoverMarker = v3CutoverMarkerKey(scope);
+  if ((await storageAdapter.getItem(cutoverMarker)) === "complete") {
+    // Once the bounded cutover succeeded, v3 is retired. A stale old client
+    // must not be able to reopen the old queue authority after this point.
+    await Promise.all([
+      storageAdapter.removeItem(v3StorageKey(scope)),
+      storageAdapter.removeItem(v3CorruptStorageKey(scope)),
+      storageAdapter.removeItem(v3RecoveryQuarantineStorageKey(scope)),
+    ]);
+    return;
+  }
+
   const currentCorrupt = await storageAdapter.getItem(corruptStorageKey(scope));
   if (!currentCorrupt) {
     const archivedV3Corrupt = await storageAdapter.getItem(v3CorruptStorageKey(scope));
@@ -273,7 +290,10 @@ async function migrateV3Artifacts(scope: FieldOfflineQueueScope): Promise<void> 
   }
 
   const v3Raw = await storageAdapter.getItem(v3StorageKey(scope));
-  if (!v3Raw) return;
+  if (!v3Raw) {
+    await storageAdapter.setItem(cutoverMarker, "complete");
+    return;
+  }
   try {
     const parsed: unknown = JSON.parse(v3Raw);
     if (!Array.isArray(parsed)) {
@@ -342,6 +362,7 @@ async function migrateV3Artifacts(scope: FieldOfflineQueueScope): Promise<void> 
       );
     }
     await storageAdapter.removeItem(v3StorageKey(scope));
+    await storageAdapter.setItem(cutoverMarker, "complete");
   } catch (error) {
     await storageAdapter.setItem(corruptStorageKey(scope), v3Raw);
     await storageAdapter.removeItem(v3StorageKey(scope));

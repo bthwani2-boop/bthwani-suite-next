@@ -50,7 +50,7 @@ func TestCaptainReadinessStillRequiresItsOwnGates(t *testing.T) {
 		CaptainProfile: &CaptainProfile{
 			VehicleType: "motorcycle", VehicleIdentifier: "1234",
 			LicenseStatus: "valid", LicenseExpiresAt: time.Now().AddDate(1, 0, 0).Format("2006-01-02"),
-			OperatingCityCode: "ADE",
+			OperatingServiceAreaCode: "ADE",
 		},
 	}
 	if !sovereignFieldsComplete(valid) {
@@ -60,7 +60,7 @@ func TestCaptainReadinessStillRequiresItsOwnGates(t *testing.T) {
 	expired.CaptainProfile = &CaptainProfile{
 		VehicleType: "motorcycle", VehicleIdentifier: "1234",
 		LicenseStatus: "valid", LicenseExpiresAt: time.Now().AddDate(-1, 0, 0).Format("2006-01-02"),
-		OperatingCityCode: "ADE",
+		OperatingServiceAreaCode: "ADE",
 	}
 	if sovereignFieldsComplete(expired) {
 		t.Fatal("expired captain license must never be ready")

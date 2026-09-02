@@ -15,7 +15,7 @@ func RebuildProjections(ctx context.Context, db *sql.DB, periodStart time.Time) 
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	periodEnd := periodStart.AddDate(0, 0, 1)
 

@@ -10,6 +10,7 @@ import type {
   DshDeliveryExceptionResolutionAction,
   DshDeliveryStatus,
   DshDispatchAssignment,
+  DshGovernedDispatchAssignment,
   DshDispatchDecision,
   DshGovernedCreateAssignmentInput,
   DshPartnerDispatchReference,
@@ -61,12 +62,12 @@ export function fetchOperatorCaptainReadiness(captainId: string): Promise<DshCap
 export async function createGovernedDispatchAssignment(
   input: DshGovernedCreateAssignmentInput,
   mutation: DshOperatorCommandContext,
-): Promise<{ readonly assignment: DshDispatchAssignment; readonly replayed: boolean }> {
+): Promise<{ readonly assignment: DshGovernedDispatchAssignment; readonly replayed: boolean }> {
   const { idempotencyKey, ...body } = input;
   if (idempotencyKey !== mutation.idempotencyKey) {
     throw new Error("dispatch assignment idempotency key does not match its command context");
   }
-  const data = await request<{ assignment: DshDispatchAssignment; replayed?: boolean }>(
+  const data = await request<{ assignment: DshGovernedDispatchAssignment; replayed?: boolean }>(
     "/dsh/operator/dispatch/assignments",
     {
       method: "POST",
@@ -78,13 +79,13 @@ export async function createGovernedDispatchAssignment(
   return { assignment: data.assignment, replayed: data.replayed === true };
 }
 
-export async function fetchOperatorDispatchAssignments(): Promise<readonly DshDispatchAssignment[]> {
-  const data = await request<{ assignments: DshDispatchAssignment[] }>("/dsh/operator/dispatch/assignments");
+export async function fetchOperatorDispatchAssignments(): Promise<readonly DshGovernedDispatchAssignment[]> {
+  const data = await request<{ assignments: DshGovernedDispatchAssignment[] }>("/dsh/operator/dispatch/assignments");
   return data.assignments ?? [];
 }
 
-export async function fetchCaptainDispatchAssignments(): Promise<readonly DshDispatchAssignment[]> {
-  const data = await request<{ assignments: DshDispatchAssignment[] }>("/dsh/captain/dispatch/assignments");
+export async function fetchCaptainDispatchAssignments(): Promise<readonly DshGovernedDispatchAssignment[]> {
+  const data = await request<{ assignments: DshGovernedDispatchAssignment[] }>("/dsh/captain/dispatch/assignments");
   return data.assignments ?? [];
 }
 
@@ -112,8 +113,8 @@ export async function upsertCaptainDispatchProfile(
 export async function acceptDispatchAssignment(
   assignmentId: string,
   mutation: DshCaptainCommandContext,
-): Promise<DshDispatchAssignment> {
-  const data = await request<{ assignment: DshDispatchAssignment }>(
+): Promise<DshGovernedDispatchAssignment> {
+  const data = await request<{ assignment: DshGovernedDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/accept`,
     {
       method: "POST",
@@ -129,8 +130,8 @@ export async function declineDispatchAssignment(
   reason: string,
   mutation: DshCaptainCommandContext,
   reasonCode = "captain_declined",
-): Promise<DshDispatchAssignment> {
-  const data = await request<{ assignment: DshDispatchAssignment }>(
+): Promise<DshGovernedDispatchAssignment> {
+  const data = await request<{ assignment: DshGovernedDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/decline`,
     {
       method: "POST",
@@ -146,12 +147,12 @@ export async function reassignDispatchAssignment(
   assignmentId: string,
   input: DshReassignAssignmentInput,
   mutation: DshOperatorCommandContext,
-): Promise<DshDispatchAssignment> {
+): Promise<DshGovernedDispatchAssignment> {
   const { idempotencyKey, ...body } = input;
   if (idempotencyKey !== mutation.idempotencyKey) {
     throw new Error("dispatch reassignment idempotency key does not match its command context");
   }
-  const data = await request<{ assignment: DshDispatchAssignment }>(
+  const data = await request<{ assignment: DshGovernedDispatchAssignment }>(
     `/dsh/operator/dispatch/assignments/${encodeURIComponent(assignmentId)}/reassign`,
     {
       method: "POST",

@@ -118,7 +118,7 @@ func seedVerificationEvidence(t *testing.T, db *sql.DB, visitID, storeID, agentI
 	if err != nil {
 		t.Fatalf("list required visit checks: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var required []string
 	for rows.Next() {
 		var checkType string

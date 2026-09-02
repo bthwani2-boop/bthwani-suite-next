@@ -27,105 +27,6 @@ func (err *StoreConflictError) Error() string {
 
 func (err *StoreConflictError) Unwrap() error { return ErrStoreConflict }
 
-// GetOrCreateSingleStoreCart enforces the Product Truth decision that a client
-// may own at most one active cart across the whole OperatorContext. The advisory lock and
-// the database partial unique index close both application and concurrent-write
-// paths. Switching stores is explicit; the server never silently destroys a
-// different store's active cart.
-func GetOrCreateSingleStoreCart(
-	ctx context.Context,
-	db *sql.DB,
-	clientID string,
-	storeID string,
-	mode FulfillmentMode,
-	expectedVersion *int,
-) (*Cart, error) {
-	clientID = strings.TrimSpace(clientID)
-	storeID = strings.TrimSpace(storeID)
-	if clientID == "" || storeID == "" {
-		return nil, ErrInvalid
-	}
-	if mode == "" {
-		mode = ModeBthwaniDelivery
-	}
-	if mode != ModeBthwaniDelivery && mode != ModePartnerDelivery && mode != ModePickup {
-		return nil, ErrInvalid
-	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, "dsh-active-cart:"+clientID); err != nil {
-		return nil, err
-	}
-
-	var current Cart
-	err = tx.QueryRowContext(ctx, `
-		SELECT id::text, client_id, store_id, fulfillment_mode, state, note, version, created_at, updated_at
-		FROM dsh_carts
-		WHERE client_id = $1 AND state = 'active'
-		ORDER BY updated_at DESC, id DESC
-		LIMIT 1
-		FOR UPDATE`, clientID).Scan(
-		&current.ID,
-		&current.ClientID,
-		&current.StoreID,
-		&current.FulfillmentMode,
-		&current.State,
-		&current.Note,
-		&current.Version,
-		&current.CreatedAt,
-		&current.UpdatedAt,
-	)
-	if err == nil {
-		if current.StoreID != storeID {
-			return nil, &StoreConflictError{ActiveCartID: current.ID, ActiveStoreID: current.StoreID}
-		}
-		if expectedVersion != nil && current.Version != *expectedVersion {
-			return nil, ErrConflict
-		}
-		if err := tx.Commit(); err != nil {
-			return nil, err
-		}
-		items, err := listItems(ctx, db, current.ID)
-		if err != nil {
-			return nil, err
-		}
-		current.Items = items
-		return &current, nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return nil, err
-	}
-
-	var created Cart
-	err = tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_carts (client_id, store_id, fulfillment_mode)
-		VALUES ($1, $2, $3)
-		RETURNING id::text, client_id, store_id, fulfillment_mode, state, note, version, created_at, updated_at`,
-		clientID, storeID, mode).Scan(
-		&created.ID,
-		&created.ClientID,
-		&created.StoreID,
-		&created.FulfillmentMode,
-		&created.State,
-		&created.Note,
-		&created.Version,
-		&created.CreatedAt,
-		&created.UpdatedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	created.Items = []CartItem{}
-	return &created, nil
-}
-
 type CartItemValidation struct {
 	ItemID                      string  `json:"itemId"`
 	MasterProductID             string  `json:"masterProductId"`
@@ -176,7 +77,7 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 			p.currency,
 			CASE
 				WHEN a.id IS NULL THEN FALSE
-				WHEN a.publication_status <> 'client_visible' OR a.available IS NOT TRUE THEN FALSE
+				WHEN a.publication_status <> 'client_visible' OR a.paused_at IS NOT NULL THEN FALSE
 				WHEN mp.approval_status <> 'approved' OR mp.is_active IS NOT TRUE THEN FALSE
 				WHEN p.amount_minor IS NULL OR p.amount_minor <= 0 OR length(trim(p.currency)) <> 3 THEN FALSE
 				WHEN i.store_assortment_id IS NULL OR i.step_quantity < 1 THEN FALSE
@@ -208,7 +109,7 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 	if err != nil {
 		return result, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var item CartItemValidation
@@ -364,6 +265,41 @@ func operationalPolicyServiceabilityFailure(decision platformpolicies.Operationa
 	}
 }
 
+// applyOperationalModePolicies keeps the per-mode capability list aligned with
+// the same live policy snapshot that authorizes checkout. Store publication and
+// geofence evidence alone cannot advertise a mode when capacity, SLA, pause or
+// mode policy currently denies it.
+func applyOperationalModePolicies(
+	ctx context.Context,
+	db *sql.DB,
+	storeID string,
+	modes []FulfillmentModeAvailability,
+) (map[FulfillmentMode]platformpolicies.OperationalDecision, int, error) {
+	decisions := make(map[FulfillmentMode]platformpolicies.OperationalDecision, len(modes))
+	activeOrders := 0
+	for index := range modes {
+		if !modes[index].Available {
+			continue
+		}
+		decision, orders, err := platformpolicies.EvaluateOperationalPolicyForStoreSnapshot(
+			ctx,
+			db,
+			storeID,
+			string(modes[index].Mode),
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+		decisions[modes[index].Mode] = decision
+		activeOrders = orders
+		if !decision.Serviceable {
+			modes[index].Available = false
+			modes[index].UnavailableReasonCode, _ = operationalPolicyServiceabilityFailure(decision)
+		}
+	}
+	return decisions, activeOrders, nil
+}
+
 // CheckGovernedServiceability combines geographic/store readiness with the
 // exact same canonical operational-policy snapshot used by cart/checkout/order
 // mutation guards. There is no second zone resolver, terminal-order list, SLA
@@ -389,10 +325,16 @@ func CheckGovernedServiceability(
 		EtaStatus:            "not_requested",
 		CheckedAt:            time.Now().UTC(),
 	}
+	availableModes := append([]FulfillmentModeAvailability(nil), base.AvailableModes...)
+	decisions, activeOrders, err := applyOperationalModePolicies(ctx, db, storeID, availableModes)
+	if err != nil {
+		return GovernedServiceabilityResult{}, err
+	}
+	result.ServiceabilityResult.AvailableModes = availableModes
 
 	if requestedMode != "" {
 		modeAvailable := false
-		for _, candidate := range base.AvailableModes {
+		for _, candidate := range availableModes {
 			if candidate.Mode == requestedMode {
 				modeAvailable = candidate.Available
 				break
@@ -412,25 +354,16 @@ func CheckGovernedServiceability(
 		}
 	}
 
-	decision, activeOrders, err := platformpolicies.EvaluateOperationalPolicyForStoreSnapshot(
-		ctx,
-		db,
-		storeID,
-		string(requestedMode),
-	)
-	if err != nil {
-		return GovernedServiceabilityResult{}, err
-	}
-
 	result.ActiveOrders = activeOrders
-	if decision.SLA.Configured {
+	decision, decisionFound := decisions[requestedMode]
+	if decisionFound && decision.SLA.Configured {
 		prep := decision.SLA.MaxPrepMins
 		delivery := decision.SLA.MaxDeliveryMins
 		result.SlaConfigured = true
 		result.SlaPrepMinutes = &prep
 		result.SlaDeliveryMinutes = &delivery
 	}
-	if decision.Capacity.Configured && decision.Capacity.MaxConcurrentOrders > 0 {
+	if decisionFound && decision.Capacity.Configured && decision.Capacity.MaxConcurrentOrders > 0 {
 		maxValue := decision.Capacity.MaxConcurrentOrders
 		ratio := decision.PressureRatio
 		result.CapacityConfigured = true
@@ -452,7 +385,7 @@ func CheckGovernedServiceability(
 			result.CapacityState = "unserviceable"
 		}
 	}
-	if !decision.Serviceable && result.Serviceable {
+	if decisionFound && !decision.Serviceable && result.Serviceable {
 		result.Serviceable = false
 		result.Code, result.Reason = operationalPolicyServiceabilityFailure(decision)
 	}

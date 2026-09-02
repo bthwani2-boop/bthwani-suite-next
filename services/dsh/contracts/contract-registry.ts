@@ -17,7 +17,6 @@ export type DshContractRegistration = {
     | "dsh-analytics-extensions"
     | "dsh-reels"
     | "dsh-runtime-extensions"
-    | "dsh-catalog"
     | "dsh-catalog-governance"
     | "dsh-client-address-privacy"
     | "dsh-workforce-scopes"
@@ -49,7 +48,6 @@ export type DshContractRegistration = {
     | "dsh-dispatch-governance"
     | "dsh-captain-financial-eligibility"
     | "dsh-live-tracking"
-    | "dsh-delivery-exceptions"
     | "dsh-delivery-proof-media"
     | "dsh-delivery-proof-completion";
   readonly path: string;
@@ -108,14 +106,6 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/dispatch",
-  },
-  {
-    id: "dsh-catalog",
-    path: "contracts/dsh.catalog.openapi.yaml",
-    state: "CONTRACT_ACTIVE",
-    runtimeDependency: true,
-    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/catalog/central-catalog.api.ts",
   },
   {
     id: "dsh-catalog-governance",
@@ -339,8 +329,8 @@ export const DSH_CONTRACT_REGISTRY = [
     path: "contracts/dsh.dispatch-governance.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/dispatch",
+    clientStrategy: "PARENT_GENERATED_SUBSET",
+    generatedClient: "clients/generated/dsh-api.ts",
   },
   {
     id: "dsh-captain-financial-eligibility",
@@ -357,14 +347,6 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/dispatch",
-  },
-  {
-    id: "dsh-delivery-exceptions",
-    path: "contracts/dsh.delivery-exceptions.openapi.yaml",
-    state: "CONTRACT_ACTIVE",
-    runtimeDependency: true,
-    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/dispatch/dispatch.api.ts",
   },
   {
     id: "dsh-delivery-proof-media",

@@ -104,7 +104,7 @@ func (s *Service) MarkReady(ctx context.Context, operatorContextID, orderID, act
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, _, err := lockPickupOrderForOperatorContext(tx, operatorContextID, orderID, ""); err != nil {
 		return err
@@ -135,7 +135,7 @@ func (s *Service) NotifyCustomer(ctx context.Context, operatorContextID, orderID
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, _, err := lockPickupOrderForOperatorContext(tx, operatorContextID, orderID, ""); err != nil {
 		return err
@@ -164,7 +164,7 @@ func (s *Service) IssueOtp(ctx context.Context, operatorContextID, orderID, clie
 	if err != nil {
 		return "", nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	storeID, orderClientID, err := lockPickupOrderForOperatorContext(tx, operatorContextID, orderID, orders.StatusReadyForPickup)
 	if err != nil {
@@ -241,7 +241,7 @@ func (s *Service) CustomerArrived(ctx context.Context, operatorContextID, orderI
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, _, err := lockPickupOrderForOperatorContext(tx, operatorContextID, orderID, ""); err != nil {
 		return err
@@ -273,7 +273,7 @@ func (s *Service) VerifyOtp(ctx context.Context, operatorContextID, orderID, sub
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := GetForUpdateByOrderID(tx, orderID)
 	if err != nil {
@@ -360,7 +360,7 @@ func (s *Service) NoShow(ctx context.Context, operatorContextID, orderID, actorI
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := GetForUpdateByOrderID(tx, orderID)
 	if err != nil {
@@ -423,7 +423,7 @@ func (s *Service) ExtendWindow(ctx context.Context, operatorContextID, orderID s
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := GetForUpdateByOrderID(tx, orderID)
 	if err != nil {

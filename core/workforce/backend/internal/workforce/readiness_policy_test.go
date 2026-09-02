@@ -8,8 +8,8 @@ func TestFieldActivationReadinessUsesServiceZoneAndSupervisor(t *testing.T) {
 		FullNameAr:    "مندوب اختبار",
 		WorkforceCode: "FLD-TEST-001",
 		FieldProfile: &FieldProfile{
-			CityCode:      "sana",
-			ServiceZoneID: "zone-local-001",
+			ServiceAreaCode: "sana",
+			ServiceZoneID:   "zone-local-001",
 		},
 	}
 

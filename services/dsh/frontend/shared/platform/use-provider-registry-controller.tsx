@@ -60,7 +60,7 @@ function stringParameter(parameters: ExternalProvider["parameters"], key: string
 
 function parameterKeys(parameters: ExternalProvider["parameters"]): readonly string[] {
   if (!parameters || typeof parameters !== "object") return [];
-  return Object.keys(parameters as Record<string, unknown>).sort();
+  return Object.keys(parameters as Record<string, unknown>).sort((left, right) => left.localeCompare(right));
 }
 
 function visibleRuntimeConfig(

@@ -99,6 +99,8 @@ BEGIN
     AND EXISTS (
       SELECT 1
       FROM dsh_store_assortments assortment
+      JOIN dsh_store_assortment_inventory inventory
+        ON inventory.store_assortment_id = assortment.id
       JOIN dsh_master_products product
         ON product.id = assortment.master_product_id
       JOIN dsh_catalog_domains domain
@@ -106,9 +108,22 @@ BEGIN
       JOIN dsh_store_catalog_domains store_domain
         ON store_domain.store_id = assortment.store_id
        AND store_domain.domain_id = product.domain_id
+      JOIN LATERAL (
+        SELECT price.amount_minor
+        FROM dsh_store_assortment_prices price
+        WHERE price.store_assortment_id = assortment.id
+          AND price.effective_from <= NOW()
+          AND (price.effective_until IS NULL OR price.effective_until > NOW())
+        ORDER BY price.effective_from DESC, price.version DESC, price.id DESC
+        LIMIT 1
+      ) current_price ON TRUE
       WHERE assortment.store_id = s.id
         AND assortment.publication_status = 'client_visible'
-        AND assortment.available = true
+        AND current_price.amount_minor > 0
+        AND (
+          inventory.policy_type = 'infinite'
+          OR inventory.quantity - inventory.reserved_quantity >= GREATEST(inventory.min_order_quantity, 1)
+        )
         AND product.approval_status = 'approved'
         AND product.is_active = true
         AND domain.is_active = true
@@ -143,10 +158,15 @@ BEGIN
     IF EXISTS (
       SELECT 1
       FROM dsh_store_assortments assortment
+      JOIN dsh_store_assortment_inventory inventory
+        ON inventory.store_assortment_id = assortment.id
       JOIN dsh_master_products product
         ON product.id = assortment.master_product_id
       WHERE assortment.publication_status = 'client_visible'
-        AND assortment.available = true
+        AND (
+          inventory.policy_type = 'infinite'
+          OR inventory.quantity - inventory.reserved_quantity >= GREATEST(inventory.min_order_quantity, 1)
+        )
         AND product.approval_status = 'approved'
         AND product.is_active = true
         AND NOT EXISTS (

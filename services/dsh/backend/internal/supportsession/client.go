@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"dsh-api/internal/auth"
 )
 
 var (
@@ -18,12 +20,11 @@ var (
 	ErrIdentityConflict = errors.New("identity support session conflict")
 )
 
-type Permission struct {
-	Service string `json:"service"`
-	Surface string `json:"surface"`
-	Action  string `json:"action"`
-	Scope   string `json:"scope"`
-}
+// Permission is the shared Identity wire projection used by both normal and
+// elevated sessions. The support-session contract owns the surrounding
+// identity, while the permission shape remains defined once in the Identity
+// client adapter.
+type Permission = auth.Permission
 
 type Identity struct {
 	Subject           string       `json:"subject"`
@@ -83,7 +84,7 @@ func (c *Client) do(ctx context.Context, path string, input any, output any) err
 	if err != nil {
 		return err
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
 	if err != nil {
 		return err

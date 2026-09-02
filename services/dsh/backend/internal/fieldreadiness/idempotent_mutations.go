@@ -192,7 +192,7 @@ func CompleteGovernedVisitIdempotent(
 		var evidenceRequired bool
 		var validEvidence bool
 		if err := rows.Scan(&checkType, &evidenceRequired, &status, &validEvidence); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return Visit{}, err
 		}
 		requiredCount++
@@ -204,10 +204,10 @@ func CompleteGovernedVisitIdempotent(
 		}
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return Visit{}, err
 	}
-	rows.Close()
+	_ = rows.Close()
 	if requiredCount == 0 {
 		return Visit{}, ErrChecklistPolicyMissing
 	}

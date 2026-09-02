@@ -129,7 +129,7 @@
 /dsh/client/cart/serviceability:
   post:
     operationId: checkDshCartServiceability
-    summary: Check whether the store can be served in the client's zone. No financial computation.
+    summary: Check whether the store can be served at the client's governed address and requested fulfillment mode. No financial computation.
     tags: [DshCart]
     security: [{ bearerAuth: [] }]
     requestBody:
@@ -145,12 +145,16 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/CartServiceabilityResult" }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "422":
+        description: Store is not mapped to a governed operational zone.
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
 
 # J051: per-mode capability query — lightweight, no financial computation.
 /dsh/client/cart/fulfillment-modes:
   get:
     operationId: getDshCartFulfillmentModes
-    summary: Return per-mode availability for a store+location. Clients call this before the mode selector.
+    summary: Return per-mode availability for a store at the client's governed address. Clients call this before the mode selector.
     tags: [DshCart]
     security: [{ bearerAuth: [] }]
     parameters:
@@ -158,9 +162,9 @@
         in: query
         required: true
         schema: { type: string }
-      - name: serviceAreaCode
+      - name: addressId
         in: query
-        required: false
+        required: true
         schema: { type: string }
     responses:
       "200":
@@ -170,6 +174,8 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/FulfillmentModesResponse" }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
 
 /dsh/operator/carts:
   get:

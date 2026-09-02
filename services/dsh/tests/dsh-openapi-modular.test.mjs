@@ -16,7 +16,20 @@ const partnerSchemasPath = path.join(
   contractsDirectory,
   "components/schemas/partner.schemas.yaml",
 );
+const catalogSchemasPath = path.join(
+  contractsDirectory,
+  "components/schemas/catalog.schemas.yaml",
+);
 const catalogPathsPath = path.join(contractsDirectory, "paths/catalog.paths.yaml");
+const dispatchSchemasPath = path.join(
+  contractsDirectory,
+  "components/schemas/dispatch.schemas.yaml",
+);
+const dispatchPathsPath = path.join(contractsDirectory, "paths/dispatch.paths.yaml");
+const dispatchGovernanceContractPath = path.join(
+  contractsDirectory,
+  "dsh.dispatch-governance.openapi.yaml",
+);
 
 function read(filePath) {
   return fs.readFileSync(filePath, "utf8").replace(/\r\n/g, "\n");
@@ -75,14 +88,58 @@ test("partner draft request matches domain identity and server-owned metadata", 
 
 test("catalog asset link contract exposes atomic primary store media binding", () => {
   const catalogPaths = read(catalogPathsPath);
+  const catalogSchemas = read(catalogSchemasPath);
   const linkPath = catalogPaths.match(
     /\/dsh\/operator\/catalog\/assets\/\{assetId\}\/link:[\s\S]*?\n\/dsh\/operator\/catalog\/assets\/\{assetId\}\/links\/\{linkId\}:/,
   );
   assert.ok(linkPath, "catalog asset link path is missing");
-  assert.match(linkPath[0], /required: \[entityType, entityId, role\]/);
-  assert.match(linkPath[0], /isPrimary:[\s\S]*type: boolean/);
-  assert.match(linkPath[0], /Replaces the current primary link atomically/);
-  assert.match(linkPath[0], /additionalProperties: false/);
+  assert.match(
+    linkPath[0],
+    /\$ref: ["']\.\.\/dsh\.openapi\.yaml#\/components\/schemas\/DshCatalogAssetLinkInput["']?/,
+  );
+  const linkInputSchema = catalogSchemas.match(
+    /DshCatalogAssetLinkInput:[\s\S]*?\n\nDshCatalogAssetLinkResponse:/,
+  );
+  assert.ok(linkInputSchema, "catalog asset link input schema is missing");
+  assert.match(linkInputSchema[0], /required: \[entityType, entityId, role\]/);
+  assert.match(linkInputSchema[0], /isPrimary:[\s\S]*type: boolean/);
+  assert.match(linkInputSchema[0], /Replaces the current primary link atomically/);
+  assert.match(linkInputSchema[0], /additionalProperties: false/);
+});
+
+test("dispatch governance response shape has one canonical generated boundary", () => {
+  const schemas = read(dispatchSchemasPath);
+  const paths = read(dispatchPathsPath);
+  const governanceContract = read(dispatchGovernanceContractPath);
+
+  const governedSchema = schemas.match(
+    /DshGovernedDispatchAssignment:[\s\S]*?\n\nDshGovernedDispatchAssignmentResponse:/,
+  );
+  assert.ok(governedSchema, "governed dispatch assignment schema is missing");
+  for (const marker of [
+    "operatorContextId",
+    "serviceAreaCode",
+    "priority",
+    "allowedActions",
+    "deliveryAddress",
+  ]) {
+    assert.match(governedSchema[0], new RegExp(`\\b${marker}:`));
+  }
+
+  assert.equal(
+    (paths.match(/DshGovernedDispatchAssignmentsResponse/g) ?? []).length,
+    2,
+    "operator and captain assignment lists must use the governed response",
+  );
+  assert.equal(
+    (paths.match(/DshGovernedDispatchAssignmentResponse/g) ?? []).length,
+    3,
+    "create, accept, and decline must use the governed response",
+  );
+  assert.match(
+    governanceContract,
+    /GovernedDispatchAssignment:\s*\n\s+\$ref: ['"]\.\/dsh\.openapi\.yaml#\/components\/schemas\/DshGovernedDispatchAssignment['"]?/,
+  );
 });
 
 test("composition integrity fails closed on unresolved local references", () => {

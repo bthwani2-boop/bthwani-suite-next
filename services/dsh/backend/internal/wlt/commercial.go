@@ -155,7 +155,7 @@ func (c *Client) commercialRequest(
 	if err != nil {
 		return fmt.Errorf("call WLT commercial service: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		var apiError struct {
 			Code    string `json:"code"`

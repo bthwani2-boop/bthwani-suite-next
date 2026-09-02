@@ -74,7 +74,7 @@ func (c *Client) GetVariable(ctx context.Context, key, scopeType, scopeId string
 	if err != nil {
 		return nil, fmt.Errorf("call platform-control: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, nil // Variable not found or not active for this scope

@@ -58,7 +58,7 @@ func ListOrderDrilldown(db *sql.DB, window Window, storeID, status string, limit
 	if err != nil {
 		return out, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var row OperationalRecord
 		row.Kind = "order"

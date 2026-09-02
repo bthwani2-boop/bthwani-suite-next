@@ -4,10 +4,12 @@ import test from 'node:test';
 import {
   captainCreatePayload,
   HttpError,
+  assertLocalApiUrl,
   needsLocalProviderConvergence,
   LOCAL_CAPTAIN_DISPATCH_CAPACITY_MINOR_UNITS,
   LOCAL_SERVICE_AREA_CODE,
   localServiceAreaPayload,
+  requestJson,
 } from './local-workforce-provisioning.mjs';
 
 test('captain bootstrap payload matches the governed Workforce create contract', () => {
@@ -57,4 +59,62 @@ test('local provider session recovery converges missing and incomplete provider 
     needsLocalProviderConvergence(new HttpError('workforce:get-captain', 500, '{"code":"PROFILE_INCOMPLETE"}')),
     false,
   );
+});
+
+test('local workforce HTTP requests accept only loopback HTTP URLs', () => {
+  assert.equal(assertLocalApiUrl('http://127.0.0.1:18086/workforce').hostname, '127.0.0.1');
+  assert.equal(assertLocalApiUrl('http://[::1]:18086/workforce').hostname, '[::1]');
+  for (const value of [
+    'file:///etc/passwd',
+    'https://127.0.0.1:18086/workforce',
+    'http://attacker.example/workforce',
+    'http://127.0.0.1.evil/workforce',
+    'http://user:password@127.0.0.1:18086/workforce',
+  ]) {
+    assert.throws(() => assertLocalApiUrl(value), /loopback HTTP URL|invalid/u);
+  }
+});
+
+test('local workforce HTTP failures never log request credentials or payloads', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalConsoleError = console.error;
+  const requestSecret = 'request-body-secret-sentinel';
+  const headerSecret = 'authorization-secret-sentinel';
+  const messages = [];
+  const payload = JSON.stringify({
+    username: 'developer',
+    password: requestSecret,
+    deviceFingerprint: 'local-test-device',
+  });
+
+  globalThis.fetch = async () => ({
+    ok: false,
+    status: 401,
+    text: async () => '{"code":"UNAUTHORIZED"}',
+  });
+  console.error = (...args) => {
+    messages.push(args.map(String).join(' '));
+  };
+
+  try {
+    await assert.rejects(
+      requestJson('identity:test-login', 'http://127.0.0.1:18082/auth/login', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${headerSecret}`,
+          'Content-Type': 'application/json',
+        },
+        body: payload,
+      }),
+      (error) => error instanceof HttpError && error.status === 401,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.error = originalConsoleError;
+  }
+
+  const output = messages.join('\n');
+  assert.equal(output.includes(requestSecret), false);
+  assert.equal(output.includes(headerSecret), false);
+  assert.equal(output.includes(payload), false);
 });

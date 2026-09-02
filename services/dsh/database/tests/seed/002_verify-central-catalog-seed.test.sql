@@ -44,12 +44,26 @@ UNION ALL
 SELECT 'client_visible_products_exist', EXISTS (
   SELECT 1
   FROM dsh_store_assortments a
+  JOIN dsh_store_assortment_inventory inventory
+    ON inventory.store_assortment_id = a.id
+  JOIN LATERAL (
+    SELECT price.amount_minor
+    FROM dsh_store_assortment_prices price
+    WHERE price.store_assortment_id = a.id
+      AND price.effective_from <= NOW()
+      AND (price.effective_until IS NULL OR price.effective_until > NOW())
+    ORDER BY price.effective_from DESC, price.version DESC, price.id DESC
+    LIMIT 1
+  ) current_price ON TRUE
   JOIN dsh_master_products p ON p.id = a.master_product_id
   JOIN dsh_catalog_domains d ON d.id = p.domain_id
   JOIN dsh_stores s ON s.id = a.store_id
   WHERE a.publication_status = 'client_visible'
-    AND a.available = TRUE
-    AND a.unit_price > 0
+    AND current_price.amount_minor > 0
+    AND (
+      inventory.policy_type = 'infinite'
+      OR inventory.quantity - inventory.reserved_quantity >= GREATEST(inventory.min_order_quantity, 1)
+    )
     AND p.approval_status = 'approved'
     AND p.is_active = TRUE
     AND d.is_active = TRUE

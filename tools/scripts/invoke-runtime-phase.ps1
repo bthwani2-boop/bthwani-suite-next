@@ -129,34 +129,6 @@ function Read-PreparedRuntimeMarker {
   }
 }
 
-function Test-PreparedRuntimeCoverage {
-  $marker = Read-PreparedRuntimeMarker
-  if ($null -eq $marker -or [string]$marker.sourceSha -ne $CurrentSourceSha) {
-    return $false
-  }
-
-  foreach ($profile in @($ProfileList | Where-Object { $RuntimeContainerByProfile.ContainsKey($_) })) {
-    $markerProperty = $marker.imageIds.PSObject.Properties[$profile]
-    if ($null -eq $markerProperty) {
-      return $false
-    }
-    $containerName = $RuntimeContainerByProfile[$profile]
-    $running = (& docker inspect $containerName --format "{{.State.Running}}" 2>$null).Trim()
-    if ($LASTEXITCODE -ne 0 -or $running -ne "true") {
-      return $false
-    }
-    try {
-      $currentImageId = Get-RuntimeContainerImageId -ContainerName $containerName
-    } catch {
-      return $false
-    }
-    if ($currentImageId -ne [string]$markerProperty.Value) {
-      return $false
-    }
-  }
-  return $true
-}
-
 function Assert-PreparedRuntimeMarker {
   $marker = Read-PreparedRuntimeMarker
   if ($null -eq $marker) {
@@ -230,7 +202,6 @@ try {
 
   if ($Action -eq "smoke" -and $ProfileList -contains "dsh") {
     Assert-PreparedRuntimeMarker
-    $runtimeParameters.PreparedRuntime = $true
     if ($ProfileList -contains "wlt") {
       $runtimeParameters.SeedWlt = $true
     }
@@ -252,22 +223,18 @@ try {
       }
     }
   } elseif (-not [string]::IsNullOrWhiteSpace($runtimeProfiles)) {
-    if ($Action -eq "up" -and -not $Force -and (Test-PreparedRuntimeCoverage)) {
-      "Prepared runtime reuse: PASS sourceSha=$CurrentSourceSha profiles=$Profiles" | Tee-Object -FilePath $LogPath | Out-Host
-    } else {
-      $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters
-      if ($runtimeExitCode -ne 0 -and (Test-TransientPostgresBootstrapRestart)) {
-        Write-Warning "PostgreSQL bootstrap performed its expected temporary-server restart. Retrying runtime:up once after stabilization."
-        "=== transient-postgres-bootstrap-retry: one retry ===" | Add-Content -LiteralPath $LogPath
-        Start-Sleep -Seconds 5
-        $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters -Append
-      }
-      if ($runtimeExitCode -ne 0) {
-        throw "Runtime script action '$Action' failed with exit code $runtimeExitCode"
-      }
-      if ($Action -in @("up", "bootstrap-dev")) {
-        Write-PreparedRuntimeMarker -ProfilesToRecord $ProfileList
-      }
+    $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters
+    if ($runtimeExitCode -ne 0 -and (Test-TransientPostgresBootstrapRestart)) {
+      Write-Warning "PostgreSQL bootstrap performed its expected temporary-server restart. Retrying runtime:up once after stabilization."
+      "=== transient-postgres-bootstrap-retry: one retry ===" | Add-Content -LiteralPath $LogPath
+      Start-Sleep -Seconds 5
+      $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters -Append
+    }
+    if ($runtimeExitCode -ne 0) {
+      throw "Runtime script action '$Action' failed with exit code $runtimeExitCode"
+    }
+    if ($Action -in @("up", "bootstrap-dev")) {
+      Write-PreparedRuntimeMarker -ProfilesToRecord $ProfileList
     }
   } else {
     "Runtime base phase skipped: no non-WLT profiles remain for action '$Action'." | Tee-Object -FilePath $LogPath

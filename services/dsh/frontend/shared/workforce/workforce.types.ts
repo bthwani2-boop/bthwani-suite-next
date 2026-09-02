@@ -40,8 +40,6 @@ export type UpdateSelfInput = Schemas["UpdateSelfRequest"];
 
 export type ActivationCodeResult = Schemas["ActivationCodeResult"];
 
-export type WorkforceCity = Schemas["City"];
-
 // Shifts remain reference data for employees only. They are never accepted by
 // field or captain creation/update contracts.
 export type WorkforceShift = Schemas["Shift"];

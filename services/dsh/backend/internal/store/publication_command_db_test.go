@@ -73,11 +73,20 @@ func seedPublicationFixture(t *testing.T, db execQueryRower) publicationFixture 
 	}
 	if _, err := db.Exec(`
 		INSERT INTO dsh_store_assortments
-		  (id, store_id, master_product_id, unit_price, currency, available,
-		   stock_status, publication_status, approved_by)
-		VALUES ($1,$2,$3,100,'YER',TRUE,'in_stock','client_visible',$4)`,
+		  (id, store_id, master_product_id, publication_status, approved_by)
+		VALUES ($1,$2,$3,'client_visible',$4)`,
 		fixture.assortmentID, fixture.storeID, fixture.productID, fixture.actorID); err != nil {
 		t.Fatalf("insert publication assortment: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO dsh_store_assortment_prices (id, store_assortment_id, amount_minor, currency, effective_from)
+		VALUES ($1,$2,10000,'YER',NOW())`, "publication-price-"+suffix, fixture.assortmentID); err != nil {
+		t.Fatalf("insert normalized publication assortment price: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO dsh_store_assortment_inventory (store_assortment_id, policy_type, quantity, min_order_quantity, max_order_quantity, step_quantity)
+		VALUES ($1,'quantity',100,1,100,1)`, fixture.assortmentID); err != nil {
+		t.Fatalf("insert normalized publication assortment inventory: %v", err)
 	}
 	return fixture
 }

@@ -102,7 +102,7 @@ func CreateReturnCase(db *sql.DB, input CreateReturnCaseInput) (*OrderReturn, er
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// 1. Lock the order within the trusted operator context. The lock itself is
 	// context-bound so cross-context callers cannot observe or mutate another

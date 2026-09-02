@@ -78,7 +78,8 @@ test("browser Maps provisioning is idempotent and resilient to gcloud progress o
   assert.match(script, /services', 'api-keys', 'get-key-string'/);
   assert.match(script, /--format=value\(keyString\)/);
   assert.match(script, /Set-EnvironmentFileValue/);
-  assert.match(script, /maps-backend\.googleapis\.com/);
+  const serviceLine = script.split(/\r?\n/u).find((line) => line.includes("$MapsJavaScriptService"));
+  assert.equal(serviceLine?.trim(), "$MapsJavaScriptService = 'maps-backend.googleapis.com'");
   assert.match(script, /--allowed-referrers/);
 });
 
@@ -87,7 +88,13 @@ test("Maps JavaScript loader uses async loading and exposes authentication failu
   const canvas = read(canvasPath);
 
   assert.match(config, /loading:\s*"async"/);
-  assert.ok(config.includes("https://maps.googleapis.com/maps/api/js"));
+  const baseUrlLine = config
+    .split(/\r?\n/u)
+    .find((line) => line.startsWith("const GOOGLE_MAPS_JAVASCRIPT_API_BASE_URL"));
+  assert.equal(
+    baseUrlLine,
+    'const GOOGLE_MAPS_JAVASCRIPT_API_BASE_URL = "https://maps.googleapis.com/maps/api/js";',
+  );
   assert.match(canvas, /gm_authFailure/);
   assert.match(canvas, /HTTP referrer/);
   assert.match(canvas, /GOOGLE_MAPS_SCRIPT_ID/);

@@ -39,14 +39,23 @@ type Zone struct {
 }
 
 type SlaRule struct {
-	ID              string    `json:"id"`
-	ZoneID          string    `json:"zoneId"`
-	Category        string    `json:"category"`
-	MaxPrepMins     int       `json:"maxPrepMins"`
-	MaxDeliveryMins int       `json:"maxDeliveryMins"`
-	Version         int       `json:"version"`
-	UpdatedBy       string    `json:"updatedBy"`
-	UpdatedAt       time.Time `json:"updatedAt"`
+	ID                         string    `json:"id"`
+	ZoneID                     string    `json:"zoneId"`
+	Category                   string    `json:"category"`
+	MaxPrepMins                int       `json:"maxPrepMins"`
+	MaxAssignmentMins          int       `json:"maxAssignmentMins"`
+	MaxDeliveryMins            int       `json:"maxDeliveryMins"`
+	WarningBeforeMins          int       `json:"warningBeforeMins"`
+	PickupNotifyMins           int       `json:"pickupNotifyMins"`
+	PickupArrivalMins          int       `json:"pickupArrivalMins"`
+	PickupVerifyMins           int       `json:"pickupVerifyMins"`
+	DeliveryAssignToPickupMins int       `json:"deliveryAssignToPickupMins"`
+	DeliveryPickupToDepartMins int       `json:"deliveryPickupToDepartMins"`
+	DeliveryDepartToArriveMins int       `json:"deliveryDepartToArriveMins"`
+	DeliveryArriveToProofMins  int       `json:"deliveryArriveToProofMins"`
+	Version                    int       `json:"version"`
+	UpdatedBy                  string    `json:"updatedBy"`
+	UpdatedAt                  time.Time `json:"updatedAt"`
 }
 
 type CapacityConfig struct {
@@ -84,7 +93,7 @@ func ListZones(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	items := []Zone{}
 	for rows.Next() {
@@ -104,74 +113,6 @@ func ListZones(
 		items = append(items, item)
 	}
 	return items, rows.Err()
-}
-
-func ListSlaRules(
-	ctx context.Context,
-	db *sql.DB,
-	zoneID string,
-) ([]SlaRule, error) {
-	args := []any{}
-	query := `
-		SELECT id, zone_id, category, max_prep_mins, max_delivery_mins,
-		       version, updated_by, updated_at
-		FROM dsh_platform_sla_rules`
-	if strings.TrimSpace(zoneID) != "" {
-		query += ` WHERE zone_id = $1`
-		args = append(args, strings.TrimSpace(zoneID))
-	}
-	query += ` ORDER BY zone_id, category`
-
-	rows, err := db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	items := []SlaRule{}
-	for rows.Next() {
-		var item SlaRule
-		if err := rows.Scan(
-			&item.ID,
-			&item.ZoneID,
-			&item.Category,
-			&item.MaxPrepMins,
-			&item.MaxDeliveryMins,
-			&item.Version,
-			&item.UpdatedBy,
-			&item.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, rows.Err()
-}
-
-func GetCapacity(
-	ctx context.Context,
-	db *sql.DB,
-	zoneID string,
-) (CapacityConfig, error) {
-	var item CapacityConfig
-	err := db.QueryRowContext(ctx, `
-		SELECT id, zone_id, max_concurrent_orders, max_captains_online,
-		       throttle_threshold, version, updated_by, updated_at
-		FROM dsh_platform_capacity_configs
-		WHERE zone_id = $1`, strings.TrimSpace(zoneID)).Scan(
-		&item.ID,
-		&item.ZoneID,
-		&item.MaxConcurrentOrders,
-		&item.MaxCaptainsOnline,
-		&item.ThrottleThreshold,
-		&item.Version,
-		&item.UpdatedBy,
-		&item.UpdatedAt,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return CapacityConfig{}, ErrNotFound
-	}
-	return item, err
 }
 
 func GetZoneServiceability(
@@ -240,7 +181,7 @@ func withIdempotency[T any](
 	if err != nil {
 		return zero, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	lockKey := mutation.ActorID + "|" + operation + "|" + mutation.IdempotencyKey
 	if _, err := tx.ExecContext(

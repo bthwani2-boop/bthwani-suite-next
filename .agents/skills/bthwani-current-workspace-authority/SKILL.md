@@ -1,14 +1,14 @@
 ---
 name: bthwani-current-workspace-authority
 version: 2026.07.17-v2
-summary: Pin repository mode, remote branch, immutable commit, and allowed scope before any repository claim or write.
+summary: Emit repository/ref pinning evidence for the canonical orchestrator before repository claims or writes.
 ---
 
 # bthwani-current-workspace-authority
 
 ## Purpose
 
-Establish one immutable repository truth before diagnosis, analysis, execution, or verification. Support remote-only and local execution without silently substituting the default branch, another branch, memory, or stale diagnostics.
+Provide immutable repository/ref facts to the canonical orchestrator before diagnosis, analysis, execution, or verification. This is a bounded adapter and never creates a second repository authority or closure decision.
 
 ## Invoke when
 
@@ -28,11 +28,11 @@ Establish one immutable repository truth before diagnosis, analysis, execution, 
 
 ## Authority boundary
 
-This skill owns repository/ref resolution only. It does not own product scope, architecture, implementation, QA, security, release, runtime, finance, or final closure.
+This adapter reports repository/ref resolution only. The canonical orchestrator owns scope, root ranking, implementation, verification, integration, and closure; this adapter cannot override those decisions.
 
 ## Resolution modes
 
-### Remote-only mode
+### Remote-only evidence mode
 
 Use when the user names GitHub, a remote branch, or explicitly requires remote analysis/execution.
 
@@ -50,7 +50,7 @@ TARGET_REMOTE_BRANCH = explicit user branch
 RESOLVED_COMMIT_SHA = remote branch head
 ```
 
-### Local mode
+### Local evidence mode
 
 Use only when the user explicitly requests local execution or supplies a local workspace as the source of truth.
 
@@ -66,7 +66,7 @@ TARGET_LOCAL_BRANCH = active branch
 RESOLVED_COMMIT_SHA = local HEAD
 ```
 
-## Required evidence
+## Adapter evidence
 
 Return or retain internally:
 
@@ -79,6 +79,7 @@ Return or retain internally:
 - excluded paths;
 - pre-write and post-write branch-head checks;
 - whether concurrent branch movement was detected.
+- the adapter reports facts and limitations only; the orchestrator decides whether they are sufficient.
 
 ## Concurrency rule
 
@@ -94,7 +95,7 @@ If the remote branch moves unexpectedly during a write batch, stop further write
 - Switching, rebasing, resetting, or force-moving a branch unless explicitly required and independently justified.
 - Claiming branch verification without an immutable commit SHA.
 
-## Required output
+## Output to the canonical orchestrator
 
 ```text
 repository_mode:
@@ -104,7 +105,7 @@ resolved_commit_sha:
 ref_provenance:
 allowed_paths:
 concurrent_movement:
-decision:
+observations:
 ```
 
-Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, and `PROTOCOL_VIOLATION`.
+The adapter does not emit `PASS`, `FIX_REQUIRED`, closure, approval, or protocol decisions. Any sufficiency or stop-state decision belongs to the canonical orchestrator.

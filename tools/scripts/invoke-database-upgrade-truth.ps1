@@ -4,7 +4,7 @@ param(
   [Parameter(Mandatory = $true)][string]$MigrationDirectory,
   [Parameter(Mandatory = $true)][string]$DatabaseUrl,
   [string]$TestsDirectory = "",
-  [string]$SourceCommitSha = ""
+  [string]$SourceCommitSha = $env:CANDIDATE_SHA
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,16 +22,12 @@ if ($migrationFiles.Count -eq 0) {
   throw "No migrations found for '$ServiceName' in '$migrationPath'."
 }
 
-if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
-  if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
-    $SourceCommitSha = $env:GITHUB_SHA
-  } else {
-    $SourceCommitSha = (& git rev-parse HEAD).Trim()
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($SourceCommitSha)) {
-      throw "Unable to resolve source commit SHA."
-    }
-  }
+$SourceCommitProvenancePath = Join-Path $RepoRoot "tools/scripts/lib/source-commit-provenance.ps1"
+if (-not (Test-Path -LiteralPath $SourceCommitProvenancePath -PathType Leaf)) {
+  throw "Checked-out source commit resolver not found: $SourceCommitProvenancePath"
 }
+. $SourceCommitProvenancePath
+$SourceCommitSha = Resolve-BthwaniCheckedOutSourceCommitSha -RepoRoot $RepoRoot -ExpectedSourceCommitSha $SourceCommitSha
 
 . (Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1")
 
@@ -82,7 +78,9 @@ Invoke-BthwaniGovernedMigrations `
   -ExecuteStatement $executeStatement
 
 $serviceLiteral = "'" + $ServiceName.Replace("'", "''") + "'"
+$sourceCommitLiteral = "'" + $SourceCommitSha.Replace("'", "''") + "'"
 $firstCount = [int](Invoke-ScalarQuery "SELECT COUNT(*) FROM schema_migrations WHERE service_name = $serviceLiteral AND success AND NOT dirty;")
+$unexpectedSourceCount = [int](Invoke-ScalarQuery "SELECT COUNT(*) FROM schema_migrations WHERE service_name = $serviceLiteral AND success AND NOT dirty AND source_commit_sha <> $sourceCommitLiteral;")
 $firstFingerprint = Invoke-ScalarQuery @"
 SELECT md5(COALESCE(string_agg(migration_id || ':' || checksum_sha256 || ':' || source_commit_sha, '|' ORDER BY migration_id), ''))
 FROM schema_migrations
@@ -92,6 +90,10 @@ Write-Host "LEDGER_FIRST service=$ServiceName expected=$($migrationFiles.Count) 
 if ($firstCount -ne $migrationFiles.Count) {
   throw "Ledger coverage mismatch for '$ServiceName': expected $($migrationFiles.Count), recorded $firstCount."
 }
+if ($unexpectedSourceCount -ne 0) {
+  throw "Clean-install migration provenance mismatch for '$ServiceName': $unexpectedSourceCount row(s) were not recorded against source $SourceCommitSha."
+}
+Write-Host "LEDGER_SOURCE_PROVENANCE service=$ServiceName sha=$SourceCommitSha rows=$firstCount"
 
 Write-Host "--- $ServiceName idempotent runner verification ---"
 Invoke-BthwaniGovernedMigrations `

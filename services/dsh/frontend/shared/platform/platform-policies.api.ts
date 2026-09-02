@@ -1,13 +1,9 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
-  DshCapacityConfig,
   DshCaptainFinancialEligibility,
   DshCreateZoneInput,
-  DshSlaRule,
   DshStoreOnboardingFeePolicy,
   DshStoreOnboardingFeePolicyInput,
-  DshUpsertCapacityInput,
-  DshUpsertSlaRuleInput,
   DshUpdateZoneInput,
   DshZone,
   DshZoneServiceability,
@@ -42,30 +38,6 @@ export const updateZone = (id: string, body: DshUpdateZoneInput) =>
     method: "PATCH",
     body,
     idempotencyKey: stableMutationKey(`zone:${id}:update`, body),
-  });
-
-export const fetchSlaRules = (zoneId?: string) =>
-  req<{ slaRules: DshSlaRule[] }>(
-    `/dsh/operator/platform/sla-rules${zoneId ? `?zoneId=${encodeURIComponent(zoneId)}` : ""}`,
-  );
-
-export const upsertSlaRule = (body: DshUpsertSlaRuleInput) =>
-  req<{ slaRule: DshSlaRule }>("/dsh/operator/platform/sla-rules", {
-    method: "PUT",
-    body,
-    idempotencyKey: stableMutationKey(`sla:${body.zoneId}:${body.category}`, body),
-  });
-
-export const fetchCapacityConfig = (zoneId: string) =>
-  req<{ capacityConfig: DshCapacityConfig }>(
-    `/dsh/operator/platform/capacity?zoneId=${encodeURIComponent(zoneId)}`,
-  );
-
-export const upsertCapacityConfig = (body: DshUpsertCapacityInput) =>
-  req<{ capacityConfig: DshCapacityConfig }>("/dsh/operator/platform/capacity", {
-    method: "PUT",
-    body,
-    idempotencyKey: stableMutationKey(`capacity:${body.zoneId}`, body),
   });
 
 export const fetchZoneServiceability = (zoneId: string) =>

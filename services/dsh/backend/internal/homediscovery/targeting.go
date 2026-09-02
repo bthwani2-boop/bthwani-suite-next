@@ -37,7 +37,7 @@ func ListAdminTargeting(ctx context.Context, db *sql.DB, kind, itemID string) (A
 	if err != nil {
 		return AdminTargeting{}, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	result := EmptyAdminTargeting()
 	for rows.Next() {
@@ -79,7 +79,7 @@ func ReplaceAdminTargeting(
 	if err != nil {
 		return AdminTargeting{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var exists bool
 	if err := tx.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM "+table+" WHERE id=$1)", itemID).Scan(&exists); err != nil {

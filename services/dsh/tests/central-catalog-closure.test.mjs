@@ -46,6 +46,49 @@ test("partner commercial truth has one canonical inventory and price resource", 
   assert.doesNotMatch(`${paths}\n${routes}\n${handlers}\n${client}\n${partnerCatalog}`, /prices\/schedule|upsertPartnerStoreAssortmentOCC|toggleAvailability/);
 });
 
+test("assortment contract is metadata-only and commercial fields are normalized", () => {
+  const schemas = read("contracts/components/schemas/catalog.schemas.yaml");
+  const paths = read("contracts/paths/catalog.paths.yaml");
+  const assortmentSchema = schemas.match(
+    /DshStoreAssortment:\n[\s\S]*?\n\nDshStoreAssortmentInventory:/,
+  );
+  const inputSchema = schemas.match(
+    /DshStoreAssortmentInput:\n[\s\S]*?\n\nDshStoreAssortmentMetadataUpdateInput:/,
+  );
+  assert.ok(assortmentSchema, "metadata assortment schema is missing");
+  assert.ok(inputSchema, "metadata assortment input schema is missing");
+  assert.doesNotMatch(`${assortmentSchema[0]}\n${inputSchema[0]}`, /\b(unitPrice|currency|available|stockStatus)\b/);
+  assert.match(paths, /DshStoreAssortmentInventoryInput/);
+  assert.match(paths, /DshStoreAssortmentPriceInput/);
+  assert.doesNotMatch(paths, /oneOf:\s*[\s\S]{0,180}DshStoreAssortmentMetadataUpdateInput/);
+});
+
+test("commercial cutover is gated before legacy assortment columns are dropped", () => {
+  const migration = read("database/migrations/dsh-1077_catalog_commercial_cutover.sql");
+  const seeds = [
+    read("database/seeds/local/dsh-032_central_catalog_seed.local.sql"),
+    read("database/seeds/local/dsh-960_client_storefront_catalog_completion.local.sql"),
+    read("database/seeds/local/dsh-981_assortment_runtime_truth.local.sql"),
+  ].join("\n");
+  const dropAt = migration.indexOf("DROP COLUMN IF EXISTS unit_price");
+
+  assert.match(migration, /^BEGIN;$/m);
+  assert.match(migration, /DSH1077_NORMALIZED_INVENTORY_INCOMPLETE/);
+  assert.match(migration, /DSH1077_NORMALIZED_INVENTORY_INVALID/);
+  assert.match(migration, /DSH1077_NORMALIZED_PRICE_INCOMPLETE/);
+  assert.match(migration, /DSH1077_NORMALIZED_INVENTORY_MISMATCH/);
+  assert.match(migration, /DSH1077_NORMALIZED_PRICE_MISMATCH/);
+  assert.ok(dropAt > migration.indexOf("$dsh1077_backfill_and_gate$"));
+  for (const legacyColumn of ["unit_price", "currency", "available", "stock_status", "available_before_pause"]) {
+    assert.match(migration, new RegExp(`DROP COLUMN IF EXISTS ${legacyColumn}`));
+  }
+  assert.match(migration, /DROP TRIGGER IF EXISTS trg_dsh_store_assortments_pause_restore_state/);
+  assert.match(migration, /DROP FUNCTION IF EXISTS dsh_assortment_sync_pause_restore_state/);
+  assert.doesNotMatch(seeds, /\b(unit_price|available|stock_status)\b/);
+  assert.match(seeds, /INSERT INTO dsh_store_assortment_inventory/);
+  assert.match(seeds, /INSERT INTO dsh_store_assortment_prices/);
+});
+
 test("closure migration preserves legacy data before dropping local catalog tables", () => {
   const migration = read("database/migrations/dsh-036_central_catalog_runtime_closure.sql");
   const migrateProductsAt = migration.indexOf("INSERT INTO dsh_master_products");
@@ -119,9 +162,12 @@ test("central verification fails hard instead of only printing results", () => {
 });
 
 test("partner and field catalog writes cannot bypass central approval", () => {
-  const handlers = read("backend/internal/http/centralcatalog.go");
+  const handlers = [
+    read("backend/internal/http/catalog_occ_write_handlers.go"),
+    read("backend/internal/http/centralcatalog_catalog.go"),
+  ].join("\n");
 
-  assert.match(handlers, /mp\.ApprovalStatus != "approved" \|\| !mp\.IsActive/);
+  assert.match(handlers, /masterProduct\.ApprovalStatus != "approved" \|\| !masterProduct\.IsActive/);
   assert.match(handlers, /input\.PublicationStatus = "submitted"/);
   assert.match(handlers, /approvalStatus = "approved"/);
   assert.match(handlers, /activeOnly = true/);

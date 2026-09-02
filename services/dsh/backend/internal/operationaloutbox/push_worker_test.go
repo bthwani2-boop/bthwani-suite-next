@@ -3,6 +3,7 @@ package operationaloutbox
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -78,6 +79,36 @@ func TestHTTPPushProviderRejectsFailureResponse(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "503") {
 		t.Fatalf("expected provider failure with status, got %v", err)
+	}
+	var providerErr *PushProviderError
+	if !errors.As(err, &providerErr) || !providerErr.Unknown {
+		t.Fatalf("HTTP 503 must remain an unknown provider outcome, got %T %+v", err, providerErr)
+	}
+}
+
+func TestHTTPPushProviderClassifiesExplicitClientRejectionAsDefinitive(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "invalid token", http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	provider, err := NewHTTPPushProvider(server.URL, "", time.Second)
+	if err != nil {
+		t.Fatalf("configure provider: %v", err)
+	}
+	_, err = provider.Send(context.Background(), PushMessage{IdempotencyKey: "delivery-3", Tokens: []string{"ExponentPushToken[test]"}})
+	if err == nil {
+		t.Fatal("expected explicit provider rejection")
+	}
+	var providerErr *PushProviderError
+	if !errors.As(err, &providerErr) || providerErr.Unknown {
+		t.Fatalf("HTTP 400 must be a definitive rejection, got %T %+v", err, providerErr)
+	}
+}
+
+func TestUnclassifiedProviderErrorsRemainUnknown(t *testing.T) {
+	if !pushOutcomeUnknown(errors.New("provider implementation did not classify its outcome")) {
+		t.Fatal("unclassified provider errors must fail closed as unknown")
 	}
 }
 

@@ -1,4 +1,5 @@
 import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
+import type { paths } from "@bthwani/dsh/openapi";
 
 // Canonical source: shared/delivery/delivery.contract.ts (DshFulfillmentDeliveryMode).
 export type DshFulfillmentMode = DshFulfillmentDeliveryMode;
@@ -103,53 +104,11 @@ export type DshCart = {
   readonly updatedAt: string;
 };
 
-export type DshServiceabilityCode =
-  | "serviceable"
-  | "store_unavailable"
-  | "out_of_area"
-  | "catalog_unavailable"
-  | "mode_unavailable"
-  | "capacity_exhausted"
-  | "capacity_throttled"
-  | "policy_unavailable"
-  | "provider_unavailable";
-
-export type DshFulfillmentModeAvailability = {
-  readonly mode: DshFulfillmentMode;
-  readonly available: boolean;
-  readonly unavailableReasonCode?: string;
-};
-
-export type DshCapacityState =
-  | "available"
-  | "throttled"
-  | "exhausted"
-  | "unconfigured"
-  | "policy_unavailable";
-
-export type DshServiceabilityResult = {
-  readonly serviceable: boolean;
-  readonly code: DshServiceabilityCode;
-  readonly reason?: string;
-  readonly availableModes?: readonly DshFulfillmentModeAvailability[];
-  readonly etaWindow?: { minMinutes: number; maxMinutes: number };
-  readonly etaStatus: "not_requested" | "available" | "unavailable";
-  readonly etaReasonCode?: string;
-  readonly quoteVersion?: string;
-  readonly expiresAt?: string;
-  readonly addressId?: string;
-  readonly addressVersion?: number;
-  readonly requestedMode?: DshFulfillmentMode;
-  readonly capacityState: DshCapacityState;
-  readonly capacityConfigured: boolean;
-  readonly activeOrders: number;
-  readonly maxConcurrentOrders?: number;
-  readonly capacityLoadRatio?: number;
-  readonly slaConfigured: boolean;
-  readonly slaPrepMinutes?: number;
-  readonly slaDeliveryMinutes?: number;
-  readonly checkedAt: string;
-};
+type CartServiceabilityOperation = paths["/dsh/client/cart/serviceability"]["post"];
+export type DshServiceabilityResult = CartServiceabilityOperation["responses"][200]["content"]["application/json"];
+export type DshServiceabilityCode = DshServiceabilityResult["code"];
+export type DshFulfillmentModeAvailability = NonNullable<DshServiceabilityResult["availableModes"]>[number];
+export type DshCapacityState = DshServiceabilityResult["capacityState"];
 
 export type DshCartState =
   | { readonly kind: "loading" }

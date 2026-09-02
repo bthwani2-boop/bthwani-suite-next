@@ -103,7 +103,7 @@ func RefreshIntent(db *sql.DB, input RefreshIntentInput) (*Intent, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var cartID string
 	var currentState string
@@ -168,7 +168,7 @@ func ValidateIntent(db *sql.DB, intentID, operatorContextID, clientID string, de
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	row := tx.QueryRow(`
 		SELECT id, operator_context_id, client_id, cart_id::text, store_id, fulfillment_mode,

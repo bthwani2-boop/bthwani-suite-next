@@ -189,6 +189,10 @@ type DshStoreListQuery struct {
 
 func RowToSummary(row DshStoreRow) DshStoreSummary {
 	diagnostics := DiagnoseStorePublication(row)
+	deliveryModes := make([]string, len(row.DeliveryModes))
+	copy(deliveryModes, row.DeliveryModes)
+	blockingReasons := make([]string, len(diagnostics.BlockerCodes))
+	copy(blockingReasons, diagnostics.BlockerCodes)
 	return DshStoreSummary{
 		ID: row.ID, Slug: row.Slug, DisplayName: row.DisplayName, Status: row.Status,
 		CityCode: row.CityCode, ServiceAreaCode: row.ServiceAreaCode,
@@ -196,7 +200,7 @@ func RowToSummary(row DshStoreRow) DshStoreSummary {
 		RatingAverage:  row.RatingAverage, RatingCount: row.RatingCount,
 		DeliveryEtaMin: row.DeliveryEtaMin, DeliveryEtaMax: row.DeliveryEtaMax,
 		IsVisible: row.IsVisible, HeroImageURL: row.HeroImageURL, LogoURL: row.LogoURL,
-		Category: row.Category, CategoryLabel: row.CategoryLabel, DeliveryModes: row.DeliveryModes,
+		Category: row.Category, CategoryLabel: row.CategoryLabel, DeliveryModes: deliveryModes,
 		IsFreeDelivery: row.IsFreeDelivery, DistanceKM: row.DistanceKM,
 		FollowerCount: row.FollowerCount, HasProBadge: row.HasProBadge,
 		HasCouponBadge: row.HasCouponBadge, PointsMultiplier: row.PointsMultiplier,
@@ -205,7 +209,7 @@ func RowToSummary(row DshStoreRow) DshStoreSummary {
 		CatalogApprovalStatus: row.CatalogApprovalStatus,
 		MarketingVisibility:   row.MarketingVisibility,
 		PublicationDecision:   row.PublicationDecision,
-		BlockingReasons:       append([]string(nil), diagnostics.BlockerCodes...),
+		BlockingReasons:       blockingReasons,
 		Version:               row.Version,
 	}
 }

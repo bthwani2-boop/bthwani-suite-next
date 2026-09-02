@@ -100,7 +100,7 @@ func fetchOutboxRow(t *testing.T, db *sql.DB, id string) (status string, attempt
 	return
 }
 
-func TestEnqueueIsIdempotentByOrderAndEventTypeDBIntegration(t *testing.T) {
+func TestEnqueueDeliveryCompletedIsIdempotentByOrderAndEventTypeDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	orderID, checkoutIntentID := seedOrderFixture(t, db)
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
@@ -109,10 +109,10 @@ func TestEnqueueIsIdempotentByOrderAndEventTypeDBIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Enqueue(tx, EventTypeDeliveryCompleted, orderID, "captain-1", "partner-1", checkoutIntentID); err != nil {
+	if err := EnqueueDeliveryCompleted(tx, orderID, "captain-1", "partner-1", checkoutIntentID); err != nil {
 		t.Fatalf("first enqueue failed: %v", err)
 	}
-	if err := Enqueue(tx, EventTypeDeliveryCompleted, orderID, "captain-1", "partner-1", checkoutIntentID); err != nil {
+	if err := EnqueueDeliveryCompleted(tx, orderID, "captain-1", "partner-1", checkoutIntentID); err != nil {
 		t.Fatalf("second enqueue (duplicate) failed: %v", err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -137,7 +137,7 @@ func TestClaimBatchLeasesRowsAndMarkSentFinalizesDBIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Enqueue(tx, EventTypeDeliveryCompleted, orderID, "captain-1", "partner-1", checkoutIntentID); err != nil {
+	if err := EnqueueDeliveryCompleted(tx, orderID, "captain-1", "partner-1", checkoutIntentID); err != nil {
 		t.Fatal(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -186,7 +186,7 @@ func TestMarkFailedSchedulesRetryWithoutLosingTheEventDBIntegration(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Enqueue(tx, EventTypeDeliveryCompleted, orderID, "captain-1", "partner-1", checkoutIntentID); err != nil {
+	if err := EnqueueDeliveryCompleted(tx, orderID, "captain-1", "partner-1", checkoutIntentID); err != nil {
 		t.Fatal(err)
 	}
 	if err := tx.Commit(); err != nil {

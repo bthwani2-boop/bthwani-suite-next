@@ -59,7 +59,7 @@ func TestQuoteReadbackMustMatchDurableCommand(t *testing.T) {
 
 func TestPaymentReadbackMustMatchDurableCommand(t *testing.T) {
 	input := PaymentSessionSagaInput{StoreID: "dsh-special-requests", PaymentMethod: "official_wallet", AmountMinorUnits: 1250, Currency: "YER"}
-	valid := &wlt.PaymentSessionDetail{ID: "session-1", StoreID: input.StoreID, PaymentMethod: input.PaymentMethod, AmountMinorUnits: input.AmountMinorUnits, Currency: input.Currency, Status: "created"}
+	valid := &wlt.PaymentSession{ID: "session-1", StoreID: input.StoreID, PaymentMethod: input.PaymentMethod, AmountMinorUnits: input.AmountMinorUnits, Currency: input.Currency, Status: "created"}
 	if !paymentMatches(input, valid) {
 		t.Fatal("expected matching WLT payment readback to be accepted")
 	}

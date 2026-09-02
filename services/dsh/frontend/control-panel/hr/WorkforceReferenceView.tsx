@@ -6,13 +6,11 @@ import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTextInpu
 import { SettingsPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 import {
-  createWorkforceCity,
   createWorkforceShift,
-  updateWorkforceCity,
   updateWorkforceShift,
   useWorkforceReferenceData,
   workforceErrorMessage } from "../../shared/workforce";
-import type { WorkforceCity, WorkforceShift } from "../../shared/workforce";
+import type { WorkforceShift } from "../../shared/workforce";
 import { corrId } from "../../shared/_kernel/dsh-http-request";
 
 export function WorkforceReferenceView(props: { readonly onBack: () => void; readonly canManage: boolean }) {
@@ -31,8 +29,6 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void; rea
   };
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [cityCode, setCityCode] = useState("");
-  const [cityName, setCityName] = useState("");
   const [shiftCode, setShiftCode] = useState("");
   const [shiftName, setShiftName] = useState("");
   const [shiftStartsAt, setShiftStartsAt] = useState("");
@@ -59,8 +55,6 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void; rea
     }
   };
 
-  const toggleCity = (city: WorkforceCity) => run(`city:update:${city.code}:${city.active ?? true}`, (commandId) =>
-    updateWorkforceCity({ ...city, active: !(city.active ?? true) }, commandId));
   const toggleShift = (shift: WorkforceShift) => run(`shift:update:${shift.code}:${shift.active ?? true}`, (commandId) =>
     updateWorkforceShift({ ...shift, active: !(shift.active ?? true) }, commandId));
 
@@ -74,48 +68,21 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void; rea
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
         <CpMutedInline>
-          المدن التشغيلية والورديات مرجعيات سيادية. المدن المشتقة من مناطق DSH تُضاف تلقائيًا، ويمكن للإدارة تصحيح مسمياتها أو تعطيلها عند توقف التشغيل.
+          مناطق الخدمة التشغيلية مملوكة بالكامل لـ DSH وتُعرض هنا للقراءة فقط. إدارة المناطق وحالتها تتم من إعدادات Platform؛ أما الورديات فمرجع Workforce للموظفين.
         </CpMutedInline>
         {error ? <CpStateView kind="error" title={error} /> : null}
         {reference.error ? <CpStateView kind="error" title={reference.error} /> : null}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          <Text role="bodyStrong">المدن</Text>
-          {reference.cities.map((city) => (
-            <div key={city.code} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+          <Text role="bodyStrong">مناطق الخدمة التشغيلية (DSH)</Text>
+          {reference.zones.map((zone) => (
+            <div key={zone.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
               <div>
-                <Text role="bodySm">{city.nameAr} ({city.code})</Text>
-                <div><CpBadge tone={city.active === false ? "danger" : "success"}>{city.active === false ? "معطلة" : "نشطة"}</CpBadge></div>
+                <Text role="bodySm">{zone.name} ({zone.serviceAreaCode})</Text>
+                <div><CpBadge tone={zone.isActive ? "success" : "danger"}>{zone.isActive ? "نشطة" : "معطلة"}</CpBadge></div>
               </div>
-              {props.canManage ? <CpButton variant={(city.active ?? true) ? "ghost" : "secondary"} disabled={busy} onClick={() => void toggleCity(city)}>
-                {(city.active ?? true) ? "تعطيل" : "تفعيل"}
-              </CpButton> : null}
             </div>
           ))}
-          {props.canManage ? <>
-          <div>
-            <Text role="bodySm">كود مدينة جديد</Text>
-            <CpTextInput value={cityCode} onChange={setCityCode} placeholder="SAH" aria-label="كود مدينة جديد" />
-          </div>
-          <div>
-            <Text role="bodySm">اسم المدينة بالعربية</Text>
-            <CpTextInput value={cityName} onChange={setCityName} placeholder="صنعاء" aria-label="اسم المدينة بالعربية" />
-          </div>
-          <CpButton
-            variant="primary"
-            disabled={busy || !cityCode.trim() || !cityName.trim()}
-            onClick={() =>
-              void run(`city:create:${cityCode.trim().toUpperCase()}:${cityName.trim()}`, (commandId) => createWorkforceCity({ code: cityCode.trim().toUpperCase(), nameAr: cityName.trim(), active: true }, commandId)).then((ok) => {
-                if (ok) {
-                  setCityCode("");
-                  setCityName("");
-                }
-              })
-            }
-          >
-            إضافة مدينة
-          </CpButton>
-          </> : null}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>

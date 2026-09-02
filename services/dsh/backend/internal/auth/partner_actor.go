@@ -104,7 +104,7 @@ func (c *Client) ProvisionPartnerActor(ctx context.Context, input PartnerActorPr
 	if err != nil {
 		return view, ErrIdentityUnavailable
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusCreated {
 		return view, identityMutationError(resp.StatusCode)
 	}
@@ -136,7 +136,7 @@ func (c *Client) SetPartnerStoreAccess(
 	if err != nil {
 		return ErrIdentityUnavailable
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return identityMutationError(resp.StatusCode)
 	}
@@ -172,7 +172,7 @@ func (c *Client) IssuePartnerActivation(
 	if err != nil {
 		return result, ErrIdentityUnavailable
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusCreated {
 		return result, identityMutationError(resp.StatusCode)
 	}

@@ -1209,10 +1209,10 @@ export function WebControlDisclosureItem({
 }
 
 export type WebCompactSurfaceHeaderProps = {
-  title: string;
-  description?: string;
-  metrics?: ReadonlyArray<{ id: string; title: string; value: string }>;
-  onBack?: () => void;
+  readonly title: string;
+  readonly description?: string;
+  readonly metrics?: ReadonlyArray<{ readonly id: string; readonly title: string; readonly value: string }>;
+  readonly onBack?: () => void;
 };
 
 export function WebCompactSurfaceHeader({ title, description, onBack, metrics = [] }: WebCompactSurfaceHeaderProps) {

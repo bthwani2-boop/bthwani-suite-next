@@ -1,6 +1,6 @@
 param(
   [string]$BaseUrl = $env:WLT_BASE_URL,
-  [string]$WiremockUrl = "http://localhost:18090",
+  [string]$WiremockUrl = "",
   [string]$OperatorContextId = $env:BTHWANI_OPERATOR_CONTEXT_ID,
   [string]$ServiceToken = $env:WLT_DSH_SERVICE_TOKEN
 )
@@ -9,7 +9,12 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
-  $BaseUrl = "http://localhost:18083"
+  $wltApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_WLT_API_HOST_PORT)) { "18083" } else { $env:BTHWANI_WLT_API_HOST_PORT }
+  $BaseUrl = "http://localhost:$wltApiHostPort"
+}
+if ([string]::IsNullOrWhiteSpace($WiremockUrl)) {
+  $wiremockPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_WIREMOCK_FINANCIAL_PORT)) { "18090" } else { $env:BTHWANI_WIREMOCK_FINANCIAL_PORT }
+  $WiremockUrl = "http://localhost:$wiremockPort"
 }
 if ([string]::IsNullOrWhiteSpace($OperatorContextId)) {
   throw "BTHWANI_OPERATOR_CONTEXT_ID or -OperatorContextId is required for WLT provider smoke"

@@ -1,5 +1,7 @@
 package homediscovery
 
+import "encoding/json"
+
 type HomeBanner struct {
 	ID           string `json:"id"`
 	Title        string `json:"title"`
@@ -90,30 +92,49 @@ type HomeDiscoveryResult struct {
 }
 
 type HomeStore struct {
-	ID               string      `json:"id"`
-	Slug             string      `json:"slug"`
-	DisplayName      string      `json:"displayName"`
-	Status           string      `json:"status"`
-	Serviceability   interface{} `json:"serviceability"`
-	RatingAverage    *float64    `json:"ratingAverage,omitempty"`
-	RatingCount      int         `json:"ratingCount"`
-	DeliveryEtaMin   *int        `json:"deliveryEtaMin,omitempty"`
-	DeliveryEtaMax   *int        `json:"deliveryEtaMax,omitempty"`
-	HeroImageURL     *string     `json:"heroImageUrl,omitempty"`
-	LogoURL          *string     `json:"logoUrl,omitempty"`
-	Category         string      `json:"category"`
-	CategoryLabel    string      `json:"categoryLabel"`
-	IsFreeDelivery   bool        `json:"isFreeDelivery"`
-	HasProBadge      bool        `json:"hasProBadge"`
-	HasCouponBadge   bool        `json:"hasCouponBadge"`
-	IsPopular        bool        `json:"isPopular"`
-	FollowerCount    int         `json:"followerCount"`
-	PointsMultiplier *int        `json:"pointsMultiplier,omitempty"`
-	CityCode         string      `json:"cityCode"`
-	ServiceAreaCode  string      `json:"serviceAreaCode"`
-	IsVisible        bool        `json:"isVisible"`
-	DeliveryModes    []string    `json:"deliveryModes"`
-	DistanceKm       *float64    `json:"distanceKm,omitempty"`
+	ID                    string      `json:"id"`
+	Slug                  string      `json:"slug"`
+	DisplayName           string      `json:"displayName"`
+	Status                string      `json:"status"`
+	Serviceability        interface{} `json:"serviceability"`
+	RatingAverage         *float64    `json:"ratingAverage,omitempty"`
+	RatingCount           int         `json:"ratingCount"`
+	DeliveryEtaMin        *int        `json:"deliveryEtaMin,omitempty"`
+	DeliveryEtaMax        *int        `json:"deliveryEtaMax,omitempty"`
+	HeroImageURL          *string     `json:"heroImageUrl,omitempty"`
+	LogoURL               *string     `json:"logoUrl,omitempty"`
+	Category              string      `json:"category"`
+	CategoryLabel         string      `json:"categoryLabel"`
+	IsFreeDelivery        bool        `json:"isFreeDelivery"`
+	HasProBadge           bool        `json:"hasProBadge"`
+	HasCouponBadge        bool        `json:"hasCouponBadge"`
+	IsPopular             bool        `json:"isPopular"`
+	FollowerCount         int         `json:"followerCount"`
+	PointsMultiplier      *int        `json:"pointsMultiplier,omitempty"`
+	PartnerReadiness      string      `json:"partnerReadiness"`
+	CatalogApprovalStatus string      `json:"catalogApprovalStatus"`
+	MarketingVisibility   string      `json:"marketingVisibility"`
+	PublicationDecision   string      `json:"publicationDecision"`
+	BlockingReasons       []string    `json:"blockingReasons"`
+	CityCode              string      `json:"cityCode"`
+	ServiceAreaCode       string      `json:"serviceAreaCode"`
+	IsVisible             bool        `json:"isVisible"`
+	DeliveryModes         []string    `json:"deliveryModes"`
+	DistanceKm            *float64    `json:"distanceKm,omitempty"`
+}
+
+// MarshalJSON keeps the required array fields aligned with the public store
+// contract even when their database-backed values are absent.
+func (s HomeStore) MarshalJSON() ([]byte, error) {
+	if s.BlockingReasons == nil {
+		s.BlockingReasons = []string{}
+	}
+	if s.DeliveryModes == nil {
+		s.DeliveryModes = []string{}
+	}
+
+	type homeStore HomeStore
+	return json.Marshal(homeStore(s))
 }
 
 type HomeServiceability struct {

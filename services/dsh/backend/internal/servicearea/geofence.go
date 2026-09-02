@@ -76,7 +76,7 @@ func List(ctx context.Context, db *sql.DB) ([]Geofence, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []Geofence{}
 	for rows.Next() {
 		item, err := scanGeofence(rows)
@@ -173,7 +173,7 @@ func Upsert(ctx context.Context, db *sql.DB, serviceAreaCode string, input Upser
 	if err != nil {
 		return Geofence{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, input.ActorID+"|"+operation+"|"+input.IdempotencyKey); err != nil {
 		return Geofence{}, err
 	}

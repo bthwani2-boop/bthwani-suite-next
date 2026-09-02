@@ -54,24 +54,31 @@ type CreatePaymentSessionInput struct {
 }
 
 type PaymentSession struct {
-	ID                    string                   `json:"id"`
-	CheckoutIntentID      string                   `json:"checkoutIntentId"`
-	SpecialRequestID      string                   `json:"specialRequestId"`
-	OperatorContextID     string                   `json:"operatorContextId"`
-	ClientID              string                   `json:"clientId"`
-	StoreID               string                   `json:"storeId"`
-	PaymentMethod         string                   `json:"paymentMethod"`
-	Status                string                   `json:"status"`
-	ProviderReference     string                   `json:"providerReference"`
-	AmountMinorUnits      int64                    `json:"amountMinorUnits"`
-	Currency              string                   `json:"currency"`
-	TenderAllocation      *PaymentTenderAllocation `json:"tenderAllocation,omitempty"`
-	CreatedAt             string                   `json:"createdAt"`
-	UpdatedAt             string                   `json:"updatedAt"`
-	PricingQuoteID        string                   `json:"pricingQuoteId,omitempty"`
-	PricingQuoteHash      string                   `json:"pricingQuoteHash,omitempty"`
-	PricingQuoteVersion   int                      `json:"pricingQuoteVersion,omitempty"`
-	PricingQuoteExpiresAt string                   `json:"pricingQuoteExpiresAt,omitempty"`
+	ID                     string                   `json:"id"`
+	CheckoutIntentID       string                   `json:"checkoutIntentId"`
+	SpecialRequestID       string                   `json:"specialRequestId"`
+	SubscriptionPurchaseID string                   `json:"subscriptionPurchaseId"`
+	CommercialProductRef   string                   `json:"commercialProductReference"`
+	TopUpReference         *string                  `json:"topupReference"`
+	TopUpActorType         *string                  `json:"topupActorType"`
+	OperatorContextID      string                   `json:"operatorContextId"`
+	ClientID               string                   `json:"clientId"`
+	StoreID                string                   `json:"storeId"`
+	PaymentMethod          string                   `json:"paymentMethod"`
+	Status                 string                   `json:"status"`
+	ProviderReference      string                   `json:"providerReference"`
+	AmountMinorUnits       int64                    `json:"amountMinorUnits"`
+	Currency               string                   `json:"currency"`
+	FinancialPurpose       string                   `json:"financialPurpose"`
+	TenderAllocation       *PaymentTenderAllocation `json:"tenderAllocation,omitempty"`
+	PricingQuoteID         string                   `json:"pricingQuoteId,omitempty"`
+	PricingQuoteHash       string                   `json:"pricingQuoteHash,omitempty"`
+	PricingQuoteVersion    int                      `json:"pricingQuoteVersion,omitempty"`
+	PricingQuoteExpiresAt  *time.Time               `json:"pricingQuoteExpiresAt"`
+	Allocation             []PaymentAllocationLine  `json:"allocation,omitempty"`
+	CapturedAt             *time.Time               `json:"capturedAt"`
+	CreatedAt              time.Time                `json:"createdAt"`
+	UpdatedAt              time.Time                `json:"updatedAt"`
 }
 
 type PaymentTenderAllocation struct {
@@ -164,7 +171,7 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	if err != nil {
 		return nil, fmt.Errorf("%w: call WLT payment session: %v", ErrPaymentSessionOutcomeUnknown, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
 			return nil, fmt.Errorf("%w: HTTP %d", ErrPaymentSessionOutcomeUnknown, response.StatusCode)
@@ -233,7 +240,7 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	if err != nil {
 		return fmt.Errorf("call WLT field commission: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return fmt.Errorf("WLT field commission returned HTTP %d", response.StatusCode)
 	}
@@ -289,7 +296,7 @@ func (c *Client) DeliverCaptainCommission(ctx context.Context, input DeliverCapt
 	if err != nil {
 		return fmt.Errorf("call WLT captain commission: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return fmt.Errorf("WLT captain commission returned HTTP %d", response.StatusCode)
 	}
@@ -324,7 +331,7 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 	if err != nil {
 		return fmt.Errorf("%w: call WLT expire-session: %v", ErrMutationOutcomeUnknown, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode == http.StatusConflict {
 		return nil
 	}

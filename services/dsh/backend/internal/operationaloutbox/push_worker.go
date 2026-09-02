@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,24 +13,29 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
-	pushWorkerBatchSize = 50
-	pushWorkerLease     = 2 * time.Minute
-	maxPushAttempts     = 10
+	pushWorkerBatchSize      = 50
+	pushWorkerLease          = 2 * time.Minute
+	pushWorkerReconcileLease = 2 * time.Minute
+	maxPushAttempts          = 10
 )
 
 type PushDelivery struct {
-	ID            string
-	NotificationID string
-	ActorID       string
-	ActorType     string
-	Topic         string
-	Title         string
-	Body          string
-	ActionURL     string
-	AttemptCount  int
+	ID                     string
+	NotificationID         string
+	ActorID                string
+	ActorType              string
+	Topic                  string
+	Title                  string
+	Body                   string
+	ActionURL              string
+	AttemptCount           int
+	ProviderIdempotencyKey string
+	LeaseToken             string
 }
 
 type PushMessage struct {
@@ -43,6 +49,40 @@ type PushMessage struct {
 
 type PushProvider interface {
 	Send(context.Context, PushMessage) (string, error)
+}
+
+// PushProviderError is the provider boundary's explicit outcome classification.
+// Unknown means the request may have reached the provider and must never be
+// retried as a fresh delivery without provider reconciliation.
+type PushProviderError struct {
+	Unknown bool
+	Cause   error
+}
+
+func (e *PushProviderError) Error() string {
+	if e == nil || e.Cause == nil {
+		return "push provider outcome is unknown"
+	}
+	return e.Cause.Error()
+}
+
+func (e *PushProviderError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.Cause
+}
+
+// PushDeliveryReconciler is optional because not every provider exposes an
+// inquiry API. Providers that do expose one may resolve UNKNOWN by the same
+// durable idempotency key before the worker permits another send.
+type PushDeliveryReconciler interface {
+	Reconcile(context.Context, string) (PushReconciliationResult, error)
+}
+
+type PushReconciliationResult struct {
+	Present           bool
+	ProviderMessageID string
 }
 
 type HTTPPushProvider struct {
@@ -92,15 +132,18 @@ func (p *HTTPPushProvider) Send(ctx context.Context, message PushMessage) (strin
 	}
 	response, err := p.client.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("send push request: %w", err)
+		return "", &PushProviderError{Unknown: true, Cause: fmt.Errorf("send push request: %w", err)}
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, readErr := io.ReadAll(io.LimitReader(response.Body, 64*1024))
 	if readErr != nil {
-		return "", fmt.Errorf("read push response: %w", readErr)
+		return "", &PushProviderError{Unknown: true, Cause: fmt.Errorf("read push response: %w", readErr)}
 	}
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		return "", fmt.Errorf("push provider returned %d: %s", response.StatusCode, strings.TrimSpace(string(body)))
+		return "", &PushProviderError{
+			Unknown: response.StatusCode >= http.StatusInternalServerError,
+			Cause:   fmt.Errorf("push provider returned %d: %s", response.StatusCode, strings.TrimSpace(string(body))),
+		}
 	}
 	var result struct {
 		MessageID string `json:"messageId"`
@@ -144,6 +187,14 @@ func RunPushWorker(ctx context.Context, db *sql.DB, provider PushProvider, verif
 }
 
 func ProcessPushOnce(ctx context.Context, db *sql.DB, provider PushProvider, verifier SessionVerifier) error {
+	if err := markExpiredPushSends(db); err != nil {
+		return err
+	}
+	if reconciler, ok := provider.(PushDeliveryReconciler); ok {
+		if err := reconcileUnknownPushes(ctx, db, reconciler); err != nil {
+			log.Printf("[notification-push] unknown delivery reconciliation failed: %v", err)
+		}
+	}
 	deliveries, err := claimPushBatch(db, pushWorkerBatchSize, pushWorkerLease)
 	if err != nil {
 		return err
@@ -175,7 +226,7 @@ func ProcessPushOnce(ctx context.Context, db *sql.DB, provider PushProvider, ver
 		}
 		if err == nil {
 			message := PushMessage{
-				IdempotencyKey: delivery.ID,
+				IdempotencyKey: delivery.ProviderIdempotencyKey,
 				NotificationID: delivery.NotificationID,
 				Tokens:         tokens,
 				Title:          delivery.Title,
@@ -190,13 +241,22 @@ func ProcessPushOnce(ctx context.Context, db *sql.DB, provider PushProvider, ver
 			var providerMessageID string
 			providerMessageID, err = provider.Send(ctx, message)
 			if err == nil {
-				if markErr := markPushSent(db, delivery.ID, providerMessageID); markErr != nil {
+				if markErr := markPushSent(db, delivery, providerMessageID); markErr != nil {
 					log.Printf("[notification-push] failed to mark %s sent: %v", delivery.ID, markErr)
+					if unknownErr := markPushUnknown(db, delivery, markErr); unknownErr != nil {
+						log.Printf("[notification-push] failed to preserve unknown outcome for %s: %v", delivery.ID, unknownErr)
+					}
 				}
 				continue
 			}
 		}
-		if markErr := markPushFailed(db, delivery.ID, delivery.AttemptCount, err); markErr != nil {
+		if pushOutcomeUnknown(err) {
+			if markErr := markPushUnknown(db, delivery, err); markErr != nil {
+				log.Printf("[notification-push] failed to persist unknown outcome for %s: %v", delivery.ID, markErr)
+			}
+			continue
+		}
+		if markErr := markPushFailed(db, delivery, err); markErr != nil {
 			log.Printf("[notification-push] failed to persist retry for %s: %v", delivery.ID, markErr)
 		}
 	}
@@ -211,7 +271,7 @@ func claimPushBatch(db *sql.DB, limit int, lease time.Duration) ([]PushDelivery,
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	rows, err := tx.Query(`
 		SELECT d.id::text,
 		       n.id::text,
@@ -221,7 +281,8 @@ func claimPushBatch(db *sql.DB, limit int, lease time.Duration) ([]PushDelivery,
 		       n.title,
 		       n.body,
 		       COALESCE(n.action_url, ''),
-		       d.attempt_count
+		       d.attempt_count,
+		       d.provider_idempotency_key
 		FROM dsh_notification_channel_deliveries d
 		JOIN dsh_notifications n ON n.id = d.notification_id
 		WHERE d.channel = 'push'
@@ -233,7 +294,7 @@ func claimPushBatch(db *sql.DB, limit int, lease time.Duration) ([]PushDelivery,
 	if err != nil {
 		return nil, fmt.Errorf("claim push delivery batch: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var deliveries []PushDelivery
 	for rows.Next() {
 		var delivery PushDelivery
@@ -247,6 +308,7 @@ func claimPushBatch(db *sql.DB, limit int, lease time.Duration) ([]PushDelivery,
 			&delivery.Body,
 			&delivery.ActionURL,
 			&delivery.AttemptCount,
+			&delivery.ProviderIdempotencyKey,
 		); err != nil {
 			return nil, err
 		}
@@ -262,15 +324,159 @@ func claimPushBatch(db *sql.DB, limit int, lease time.Duration) ([]PushDelivery,
 		}
 		if _, err := tx.Exec(`
 			UPDATE dsh_notification_channel_deliveries
-			SET next_retry_at = NOW() + $2::interval, updated_at = NOW()
-			WHERE id = ANY($1::uuid[])`, pqStringArray(ids), lease.String()); err != nil {
+			SET status = 'sending', lease_token = $2::uuid,
+			    lease_expires_at = NOW() + $3::interval,
+			    attempt_count = attempt_count + 1,
+			    last_attempt_at = NOW(), last_error = NULL, updated_at = NOW()
+			WHERE id = ANY($1::uuid[]) AND status = 'pending'`, pqStringArray(ids), uuid.NewString(), lease.String()); err != nil {
 			return nil, fmt.Errorf("lease push delivery batch: %w", err)
+		}
+		// The batch UPDATE above must fence each row with its own token. Re-read
+		// the tokens from the locked transaction so stale workers cannot finalize
+		// a later lease using a shared batch token.
+		for index := range deliveries {
+			deliveries[index].LeaseToken = uuid.NewString()
+			if _, err := tx.Exec(`
+				UPDATE dsh_notification_channel_deliveries
+				SET lease_token = $2::uuid
+				WHERE id = $1::uuid AND status = 'sending'`, deliveries[index].ID, deliveries[index].LeaseToken); err != nil {
+				return nil, fmt.Errorf("fence push delivery %s: %w", deliveries[index].ID, err)
+			}
+			deliveries[index].AttemptCount++
 		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 	return deliveries, nil
+}
+
+func pushOutcomeUnknown(err error) bool {
+	if err == nil {
+		return false
+	}
+	var providerErr *PushProviderError
+	if errors.As(err, &providerErr) {
+		return providerErr.Unknown
+	}
+	// A provider implementation that does not classify its error has not
+	// proved that the request was rejected before the side-effect boundary.
+	return true
+}
+
+func markExpiredPushSends(db *sql.DB) error {
+	_, err := db.Exec(`
+		UPDATE dsh_notification_channel_deliveries
+		SET status = 'unknown', unknown_at = COALESCE(unknown_at, NOW()),
+		    lease_token = NULL, lease_expires_at = NULL,
+		    next_retry_at = NOW(),
+		    last_error = COALESCE(last_error, 'push worker lease expired after provider boundary'),
+		    updated_at = NOW()
+		WHERE channel = 'push' AND status = 'sending'
+		  AND (lease_expires_at IS NULL OR lease_expires_at <= NOW())`)
+	return err
+}
+
+type unknownPushDelivery struct {
+	ID                     string
+	ProviderIdempotencyKey string
+}
+
+func listUnknownPushDeliveries(db *sql.DB, limit int) ([]unknownPushDelivery, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	rows, err := tx.Query(`
+		SELECT id::text, provider_idempotency_key
+		FROM dsh_notification_channel_deliveries
+		WHERE channel = 'push' AND status = 'unknown' AND next_retry_at <= NOW()
+		ORDER BY updated_at, id
+		LIMIT $1
+		FOR UPDATE SKIP LOCKED`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	items := make([]unknownPushDelivery, 0, limit)
+	for rows.Next() {
+		var item unknownPushDelivery
+		if err := rows.Scan(&item.ID, &item.ProviderIdempotencyKey); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		if _, err := tx.Exec(`
+			UPDATE dsh_notification_channel_deliveries
+			SET next_retry_at = NOW() + $2::interval,
+			    reconciliation_attempt_count = reconciliation_attempt_count + 1,
+			    last_reconciliation_at = NOW(), updated_at = NOW()
+			WHERE id = $1::uuid AND status = 'unknown'`, item.ID, pushWorkerReconcileLease.String()); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func reconcileUnknownPushes(ctx context.Context, db *sql.DB, reconciler PushDeliveryReconciler) error {
+	items, err := listUnknownPushDeliveries(db, pushWorkerBatchSize)
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		result, reconcileErr := reconciler.Reconcile(ctx, item.ProviderIdempotencyKey)
+		if reconcileErr != nil {
+			if err := markPushReconciliationFailure(db, item.ID, reconcileErr); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := markPushReconciled(db, item, result); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func markPushReconciliationFailure(db *sql.DB, deliveryID string, cause error) error {
+	_, err := db.Exec(`
+		UPDATE dsh_notification_channel_deliveries
+		SET last_error = $2, next_retry_at = NOW() + $3::interval, updated_at = NOW()
+		WHERE id = $1::uuid AND channel = 'push' AND status = 'unknown'`, deliveryID, pushErrorText(cause), pushWorkerReconcileLease.String())
+	return err
+}
+
+func markPushReconciled(db *sql.DB, delivery unknownPushDelivery, result PushReconciliationResult) error {
+	status := "pending"
+	var providerMessageID any
+	var sentAt any
+	if result.Present {
+		status = "sent"
+		providerMessageID = strings.TrimSpace(result.ProviderMessageID)
+		if providerMessageID == nil || providerMessageID == "" {
+			providerMessageID = delivery.ProviderIdempotencyKey
+		}
+		sentAt = time.Now().UTC()
+	}
+	_, err := db.Exec(`
+		UPDATE dsh_notification_channel_deliveries
+		SET status = $3, provider_message_id = CASE WHEN $3 = 'sent' THEN $4 ELSE provider_message_id END,
+		    sent_at = CASE WHEN $3 = 'sent' THEN $5 ELSE sent_at END,
+		    unknown_at = CASE WHEN $3 = 'sent' OR $3 = 'pending' THEN NULL ELSE unknown_at END,
+		    last_error = CASE WHEN $3 = 'sent' OR $3 = 'pending' THEN NULL ELSE last_error END,
+		    next_retry_at = CASE WHEN $3 = 'pending' THEN NOW() ELSE next_retry_at END,
+		    updated_at = NOW()
+		WHERE id = $1::uuid AND provider_idempotency_key = $2 AND channel = 'push' AND status = 'unknown'`,
+		delivery.ID, delivery.ProviderIdempotencyKey, status, providerMessageID, sentAt)
+	return err
 }
 
 type pushEndpoint struct {
@@ -288,7 +494,7 @@ func listActivePushEndpoints(ctx context.Context, db *sql.DB, actorID, actorType
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var endpoints []pushEndpoint
 	for rows.Next() {
 		var ep pushEndpoint
@@ -308,21 +514,32 @@ func deactivatePushEndpointByID(db *sql.DB, id string) error {
 	return err
 }
 
-func markPushSent(db *sql.DB, deliveryID, providerMessageID string) error {
-	_, err := db.Exec(`
+func markPushSent(db *sql.DB, delivery PushDelivery, providerMessageID string) error {
+	result, err := db.Exec(`
 		UPDATE dsh_notification_channel_deliveries
 		SET status = 'sent',
-		    provider_message_id = $2,
+		    provider_message_id = NULLIF($3, ''),
 		    last_error = NULL,
 		    sent_at = NOW(),
-		    failed_at = NULL,
-		    updated_at = NOW()
-		WHERE id = $1::uuid AND status = 'pending'`, deliveryID, providerMessageID)
-	return err
+		    failed_at = NULL, unknown_at = NULL,
+		    lease_token = NULL, lease_expires_at = NULL, updated_at = NOW()
+		WHERE id = $1::uuid AND provider_idempotency_key = $2
+		  AND status = 'sending' AND lease_token = $4::uuid`, delivery.ID, delivery.ProviderIdempotencyKey, providerMessageID, delivery.LeaseToken)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return fmt.Errorf("push delivery %s lease was lost before sent finalization", delivery.ID)
+	}
+	return nil
 }
 
-func markPushFailed(db *sql.DB, deliveryID string, attemptCount int, cause error) error {
-	nextAttempt := attemptCount + 1
+func markPushFailed(db *sql.DB, delivery PushDelivery, cause error) error {
+	nextAttempt := delivery.AttemptCount
 	status := "pending"
 	backoff := time.Duration(1<<uint(min(nextAttempt, 10))) * time.Second
 	if backoff > 30*time.Minute {
@@ -331,19 +548,61 @@ func markPushFailed(db *sql.DB, deliveryID string, attemptCount int, cause error
 	if nextAttempt >= maxPushAttempts {
 		status = "failed"
 	}
-	errorMessage := "push delivery failed"
-	if cause != nil {
-		errorMessage = cause.Error()
-	}
-	_, err := db.Exec(`
+	errorMessage := pushErrorText(cause)
+	result, err := db.Exec(`
 		UPDATE dsh_notification_channel_deliveries
 		SET attempt_count = $2,
 		    status = $3,
 		    last_error = $4,
 		    next_retry_at = CASE WHEN $3 = 'pending' THEN NOW() + $5::interval ELSE next_retry_at END,
 		    failed_at = CASE WHEN $3 = 'failed' THEN NOW() ELSE NULL END,
+		    lease_token = NULL, lease_expires_at = NULL,
 		    updated_at = NOW()
-		WHERE id = $1::uuid AND status = 'pending'`,
-		deliveryID, nextAttempt, status, errorMessage, backoff.String())
+		WHERE id = $1::uuid AND provider_idempotency_key = $6
+		  AND status = 'sending' AND lease_token = $7::uuid`,
+		delivery.ID, nextAttempt, status, errorMessage, backoff.String(), delivery.ProviderIdempotencyKey, delivery.LeaseToken)
+	if err != nil {
+		return err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return fmt.Errorf("push delivery %s lease was lost before failure finalization", delivery.ID)
+	}
+	return nil
+}
+
+func markPushUnknown(db *sql.DB, delivery PushDelivery, cause error) error {
+	_, err := db.Exec(`
+		UPDATE dsh_notification_channel_deliveries
+		SET status = 'unknown', unknown_at = NOW(), last_error = $3,
+		    next_retry_at = NOW() + $4::interval,
+		    lease_token = NULL, lease_expires_at = NULL, updated_at = NOW()
+		WHERE id = $1::uuid AND provider_idempotency_key = $2
+		  AND status = 'sending' AND lease_token = $5::uuid`,
+		delivery.ID, delivery.ProviderIdempotencyKey, pushErrorText(cause), pushBackoff(delivery.AttemptCount).String(), delivery.LeaseToken)
 	return err
+}
+
+func pushBackoff(attempt int) time.Duration {
+	if attempt < 1 {
+		attempt = 1
+	}
+	if attempt > 10 {
+		attempt = 10
+	}
+	delay := time.Duration(1<<uint(attempt)) * time.Second
+	if delay > 30*time.Minute {
+		return 30 * time.Minute
+	}
+	return delay
+}
+
+func pushErrorText(cause error) string {
+	if cause == nil {
+		return "push delivery failed without a provider result"
+	}
+	return cause.Error()
 }

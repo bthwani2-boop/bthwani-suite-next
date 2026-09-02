@@ -69,6 +69,17 @@ func providerEventTypeForStatus(status string) string {
 	}
 }
 
+func validateProviderWebhookEnvelope(envelope providerWebhookEnvelope) error {
+	expectedType := providerEventTypeForStatus(envelope.Status)
+	if envelope.EventID == "" || envelope.OperatorContextID == "" || envelope.PaymentSessionID == "" || expectedType == "" || envelope.Type != expectedType {
+		return errors.New("provider webhook identity type status OperatorContext and paymentSessionId must be valid")
+	}
+	if (envelope.Status == "authorized" || envelope.Status == "captured") && strings.TrimSpace(envelope.ProviderReference) == "" {
+		return errors.New("providerReference is required for authorized and captured provider events")
+	}
+	return nil
+}
+
 func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		secret := strings.TrimSpace(os.Getenv("WLT_PROVIDER_WEBHOOK_SECRET"))
@@ -97,9 +108,8 @@ func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_WEBHOOK", "provider webhook payload must contain exactly one JSON object")
 			return
 		}
-		expectedType := providerEventTypeForStatus(envelope.Status)
-		if envelope.EventID == "" || envelope.OperatorContextID == "" || envelope.PaymentSessionID == "" || expectedType == "" || envelope.Type != expectedType {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_WEBHOOK", "provider webhook identity type status OperatorContext and paymentSessionId must be valid")
+		if err := validateProviderWebhookEnvelope(envelope); err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_WEBHOOK", err.Error())
 			return
 		}
 		payloadHashBytes := sha256.Sum256(body)

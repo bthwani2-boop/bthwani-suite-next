@@ -68,7 +68,7 @@ func (c *Client) doPaymentSessionRequest(req *http.Request) (int, []byte, error)
 	if err != nil {
 		return 0, nil, fmt.Errorf("call WLT payment session endpoint: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes+1))
 	if err != nil {
 		return 0, nil, fmt.Errorf("read WLT payment session response: %w", err)

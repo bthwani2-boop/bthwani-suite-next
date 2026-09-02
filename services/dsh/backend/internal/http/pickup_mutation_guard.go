@@ -260,7 +260,7 @@ func PickupMutationGuard(
 			store.SendError(w, http.StatusServiceUnavailable, "PICKUP_UNAVAILABLE", "pickup command store is unavailable")
 			return
 		}
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 		if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_lock(hashtextextended($1, 0))`, "pickup:"+route.orderID); err != nil {
 			store.SendError(w, http.StatusServiceUnavailable, "PICKUP_UNAVAILABLE", "pickup command lock is unavailable")
 			return
@@ -388,7 +388,7 @@ func (s *protectedStoreServer) handleReschedulePickupWindow(w http.ResponseWrite
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+	writePickupSession(w, http.StatusOK, nil, session, r.Context(), s.db)
 }
 
 // RegisterPickupRecoveryRoutes adds the operator-owned no-show recovery route.

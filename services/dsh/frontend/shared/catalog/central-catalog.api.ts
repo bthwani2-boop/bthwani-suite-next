@@ -1,5 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { corrId, createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
+import type { operations } from "../../../clients/generated/dsh-api";
 import type {
   CentralCatalogDomain,
   CentralCatalogNode,
@@ -9,11 +10,58 @@ import type {
   ClientVisibleCatalogResponse,
   CatalogAsset,
   CatalogAssetLink,
+  AssetUploadIntent,
+  AssetUploadIntentInput,
+  AssetUpdateInput,
+  SeedStatus,
+  StoreAssortmentMetadataInput,
   StoreAssortmentInventoryInput,
   StoreAssortmentInventory,
   StoreAssortmentPriceInput,
   StoreAssortmentPrice,
+  StoreAssortmentCommercialReadback,
 } from "./central-catalog.types";
+
+type JsonResponse<Operation extends keyof operations, Status extends keyof operations[Operation]["responses"]> =
+  operations[Operation]["responses"][Status] extends { content: { "application/json": infer Body } } ? Body : never;
+type JsonRequest<Operation extends keyof operations> = operations[Operation]["requestBody"] extends { content: infer Content }
+  ? Content extends { "application/json": infer Body }
+    ? Body
+    : never
+  : never;
+
+type CatalogDomainsResponse = JsonResponse<"listCatalogDomains", 200>;
+type CatalogDomainCreateInput = JsonRequest<"createCatalogDomain">;
+type CatalogDomainUpdateInput = JsonRequest<"updateCatalogDomain">;
+type CatalogNodesResponse = JsonResponse<"listCatalogNodes", 200>;
+type CatalogNodeCreateInput = JsonRequest<"createCatalogNode">;
+type CatalogNodeUpdateInput = JsonRequest<"updateCatalogNode">;
+type MasterProductsResponse = JsonResponse<"listMasterProductsOperator", 200>;
+type MasterProductCreateInput = JsonRequest<"createMasterProduct">;
+type MasterProductUpdateInput = JsonRequest<"updateMasterProduct">;
+type MasterProductResponse = JsonResponse<"getMasterProductOperator", 200>;
+type ProductProposalsResponse = JsonResponse<"listProductProposals", 200>;
+type ProductProposalCreateInput = JsonRequest<"createPartnerProductProposal">;
+type ProductProposalUpdateInput = JsonRequest<"patchPartnerProductProposal">;
+type ProductProposalTransitionInput = JsonRequest<"transitionProductProposal">;
+type ProductProposalResponse = JsonResponse<"transitionProductProposal", 200>;
+type CatalogAssetsResponse = JsonResponse<"listCatalogAssets", 200>;
+type CatalogAssetUploadIntentResponse = JsonResponse<"createAssetUploadIntent", 201>;
+type CatalogAssetResponse = JsonResponse<"completeAssetUpload", 200>;
+type CatalogAssetUpdateInput = JsonRequest<"updateCatalogAsset">;
+type CatalogAssetReviewInput = JsonRequest<"reviewCatalogAsset">;
+type CatalogAssetResponseAfterReview = JsonResponse<"reviewCatalogAsset", 200>;
+type CatalogAssetLinkInput = JsonRequest<"linkCatalogAsset">;
+type CatalogAssetLinkResponse = JsonResponse<"linkCatalogAsset", 201>;
+type CatalogAssetLinksResponse = JsonResponse<"listCatalogAssetLinks", 200>;
+type CatalogSeedStatusResponse = JsonResponse<"getCatalogSeedStatus", 200>;
+type OperatorInventoryInput = JsonRequest<"updateOperatorStoreAssortmentInventory">;
+type OperatorPriceInput = JsonRequest<"createOperatorStoreAssortmentPrice">;
+type PartnerInventoryInput = JsonRequest<"updatePartnerStoreAssortmentInventory">;
+type PartnerPriceInput = JsonRequest<"createPartnerStoreAssortmentPrice">;
+type AssortmentResponse = { readonly assortment: StoreAssortment };
+type InventoryResponse = JsonResponse<"updatePartnerStoreAssortmentInventory", 200>;
+type PriceResponse = JsonResponse<"createPartnerStoreAssortmentPrice", 200>;
 
 const baseUrl = resolveDshApiBaseUrl();
 const { request } = createDshHttpClient(baseUrl, "central-catalog-corr");
@@ -22,22 +70,12 @@ const { request: publicRequest } = createDshPublicHttpClient(baseUrl);
 // ─── Operator APIs ────────────────────────────────────────────────────────────
 
 export async function fetchCatalogDomains(): Promise<readonly CentralCatalogDomain[]> {
-  const resp = await request<{ domains: readonly CentralCatalogDomain[] }>("/dsh/operator/catalog/domains");
+  const resp = await request<CatalogDomainsResponse>("/dsh/operator/catalog/domains");
   return resp.domains;
 }
 
-export async function createCatalogDomain(input: {
-  readonly slug: string;
-  readonly nameAr: string;
-  readonly nameEn: string;
-  readonly icon: string;
-  readonly sortOrder: number;
-  readonly isActive: boolean;
-  readonly isClientVisible: boolean;
-  readonly requiresProductCatalog: boolean;
-  readonly isManualRequest: boolean;
-}): Promise<CentralCatalogDomain> {
-  const resp = await request<{ domain: CentralCatalogDomain }>("/dsh/operator/catalog/domains", {
+export async function createCatalogDomain(input: CatalogDomainCreateInput): Promise<CentralCatalogDomain> {
+  const resp = await request<JsonResponse<"createCatalogDomain", 201>>("/dsh/operator/catalog/domains", {
     method: "POST",
     body: input,
   });
@@ -46,19 +84,9 @@ export async function createCatalogDomain(input: {
 
 export async function updateCatalogDomain(
   domainId: string,
-  input: {
-    readonly slug?: string;
-    readonly nameAr?: string;
-    readonly nameEn?: string;
-    readonly icon?: string;
-    readonly sortOrder?: number;
-    readonly isActive?: boolean;
-    readonly isClientVisible?: boolean;
-    readonly requiresProductCatalog?: boolean;
-    readonly isManualRequest?: boolean;
-  },
+  input: CatalogDomainUpdateInput,
 ): Promise<CentralCatalogDomain> {
-  const resp = await request<{ domain: CentralCatalogDomain }>(`/dsh/operator/catalog/domains/${encodeURIComponent(domainId)}`, {
+  const resp = await request<JsonResponse<"updateCatalogDomain", 200>>(`/dsh/operator/catalog/domains/${encodeURIComponent(domainId)}`, {
     method: "PATCH",
     body: input,
   });
@@ -71,28 +99,12 @@ export async function fetchCatalogNodes(query?: { domainId?: string; parentId?: 
   if (query?.parentId) params.set("parentId", query.parentId);
   const qs = params.toString();
   const path = qs ? `/dsh/operator/catalog/nodes?${qs}` : "/dsh/operator/catalog/nodes";
-  const resp = await request<{ nodes: readonly CentralCatalogNode[] }>(path);
+  const resp = await request<CatalogNodesResponse>(path);
   return resp.nodes;
 }
 
-export async function createCatalogNode(input: {
-  readonly domainId: string;
-  readonly parentId: string | null;
-  readonly level: string;
-  readonly slug: string;
-  readonly nameAr: string;
-  readonly nameEn: string;
-  readonly icon: string;
-  readonly sortOrder: number;
-  readonly isActive: boolean;
-  readonly isClientVisible: boolean;
-  readonly requiresBarcode: boolean;
-  readonly allowsProductProposal: boolean;
-  readonly allowsStoreProductCustomImage: boolean;
-  readonly requiresCatalogReview: boolean;
-  readonly requiresProductCatalog: boolean;
-}): Promise<CentralCatalogNode> {
-  const resp = await request<{ node: CentralCatalogNode }>("/dsh/operator/catalog/nodes", {
+export async function createCatalogNode(input: CatalogNodeCreateInput): Promise<CentralCatalogNode> {
+  const resp = await request<JsonResponse<"createCatalogNode", 201>>("/dsh/operator/catalog/nodes", {
     method: "POST",
     body: input,
   });
@@ -101,25 +113,9 @@ export async function createCatalogNode(input: {
 
 export async function updateCatalogNode(
   nodeId: string,
-  input: {
-    readonly domainId?: string;
-    readonly parentId?: string | null;
-    readonly level?: string;
-    readonly slug?: string;
-    readonly nameAr?: string;
-    readonly nameEn?: string;
-    readonly icon?: string;
-    readonly sortOrder?: number;
-    readonly isActive?: boolean;
-    readonly isClientVisible?: boolean;
-    readonly requiresBarcode?: boolean;
-    readonly allowsProductProposal?: boolean;
-    readonly allowsStoreProductCustomImage?: boolean;
-    readonly requiresCatalogReview?: boolean;
-    readonly requiresProductCatalog?: boolean;
-  },
+  input: CatalogNodeUpdateInput,
 ): Promise<CentralCatalogNode> {
-  const resp = await request<{ node: CentralCatalogNode }>(`/dsh/operator/catalog/nodes/${encodeURIComponent(nodeId)}`, {
+  const resp = await request<JsonResponse<"updateCatalogNode", 200>>(`/dsh/operator/catalog/nodes/${encodeURIComponent(nodeId)}`, {
     method: "PATCH",
     body: input,
   });
@@ -172,27 +168,12 @@ export async function fetchMasterProductsPage(query?: {
   if (query?.offset !== undefined) params.set("offset", String(query.offset));
   const qs = params.toString();
   const path = qs ? `/dsh/operator/catalog/master-products?${qs}` : "/dsh/operator/catalog/master-products";
-  const resp = await request<{ masterProducts: readonly MasterProduct[]; total: number; limit: number; offset: number }>(path);
+  const resp = await request<MasterProductsResponse>(path);
   return { items: resp.masterProducts, total: resp.total, limit: resp.limit, offset: resp.offset };
 }
 
-export async function createMasterProduct(input: {
-  readonly domainId: string;
-  readonly categoryNodeId: string | null;
-  readonly canonicalNameAr: string;
-  readonly canonicalNameEn: string;
-  readonly brand: string;
-  readonly barcode: string | null;
-  readonly gtin: string | null;
-  readonly sku: string | null;
-  readonly unit: string;
-  readonly measurementType: string;
-  readonly canonicalImageObjectKey: string | null;
-  readonly approvalStatus: string;
-  readonly isActive: boolean;
-  readonly createdSource?: string;
-}): Promise<MasterProduct> {
-  const resp = await request<{ masterProduct: MasterProduct }>("/dsh/operator/catalog/master-products", {
+export async function createMasterProduct(input: MasterProductCreateInput): Promise<MasterProduct> {
+  const resp = await request<JsonResponse<"createMasterProduct", 201>>("/dsh/operator/catalog/master-products", {
     method: "POST",
     body: input,
   });
@@ -201,23 +182,9 @@ export async function createMasterProduct(input: {
 
 export async function updateMasterProduct(
   productId: string,
-  input: {
-    readonly domainId?: string;
-    readonly categoryNodeId?: string | null;
-    readonly canonicalNameAr?: string;
-    readonly canonicalNameEn?: string;
-    readonly brand?: string;
-    readonly barcode?: string | null;
-    readonly gtin?: string | null;
-    readonly sku?: string | null;
-    readonly unit?: string;
-    readonly measurementType?: string;
-    readonly canonicalImageObjectKey?: string | null;
-    readonly approvalStatus?: string;
-    readonly isActive?: boolean;
-  },
+  input: MasterProductUpdateInput,
 ): Promise<MasterProduct> {
-  const resp = await request<{ masterProduct: MasterProduct }>(`/dsh/operator/catalog/master-products/${encodeURIComponent(productId)}`, {
+  const resp = await request<JsonResponse<"updateMasterProduct", 200>>(`/dsh/operator/catalog/master-products/${encodeURIComponent(productId)}`, {
     method: "PATCH",
     body: input,
   });
@@ -225,7 +192,7 @@ export async function updateMasterProduct(
 }
 
 export async function fetchMasterProductById(productId: string): Promise<MasterProduct> {
-  const resp = await request<{ masterProduct: MasterProduct }>(
+  const resp = await request<MasterProductResponse>(
     `/dsh/operator/catalog/master-products/${encodeURIComponent(productId)}`,
   );
   return resp.masterProduct;
@@ -244,7 +211,7 @@ export async function fetchProductProposalsPage(query?: {
   if (query?.offset !== undefined) params.set("offset", String(query.offset));
   const qs = params.toString();
   const path = qs ? `/dsh/operator/catalog/product-proposals?${qs}` : "/dsh/operator/catalog/product-proposals";
-  const resp = await request<{ proposals: readonly ProductProposal[]; total: number; limit: number; offset: number }>(path);
+  const resp = await request<ProductProposalsResponse>(path);
   return { items: resp.proposals, total: resp.total, limit: resp.limit, offset: resp.offset };
 }
 
@@ -271,12 +238,7 @@ function buildProductProposalReadbackQuery(query?: ProductProposalReadbackQuery,
 }
 
 async function fetchProductProposalReadbackPage(path: string): Promise<PagedResult<ProductProposal>> {
-  const response = await request<{
-    readonly proposals: readonly ProductProposal[];
-    readonly total: number;
-    readonly limit: number;
-    readonly offset: number;
-  }>(path);
+  const response = await request<ProductProposalsResponse>(path);
   return {
     items: response.proposals,
     total: response.total,
@@ -287,16 +249,9 @@ async function fetchProductProposalReadbackPage(path: string): Promise<PagedResu
 
 export async function transitionProductProposal(
   proposalId: string,
-  input: {
-    readonly nextStatus: string;
-    readonly note: string;
-    readonly adoptedMasterProductId?: string | null | undefined;
-    readonly createMasterProduct?: boolean | undefined;
-    readonly mergeData?: boolean | undefined;
-    readonly expectedVersion?: number | undefined;
-  },
+  input: ProductProposalTransitionInput,
 ): Promise<ProductProposal> {
-  const resp = await request<{ proposal: ProductProposal }>(`/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/transition`, {
+  const resp = await request<ProductProposalResponse>(`/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/transition`, {
     method: "POST",
     body: input,
   });
@@ -308,24 +263,83 @@ export async function fetchOperatorStoreAssortment(storeId: string): Promise<rea
   return resp.assortment;
 }
 
-export async function upsertOperatorStoreAssortment(
+export async function upsertOperatorStoreAssortmentMetadata(
   storeId: string,
   masterProductId: string,
-  input: {
-    readonly unitPrice: number;
-    readonly currency: string;
-    readonly available: boolean;
-    readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
-    readonly localNote: string;
-    readonly customImageObjectKey: string | null;
-    readonly publicationStatus: string;
-  },
+  input: StoreAssortmentMetadataInput,
 ): Promise<StoreAssortment> {
-  const resp = await request<{ assortment: StoreAssortment }>(`/dsh/operator/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`, {
+  const resp = await request<AssortmentResponse>(`/dsh/operator/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`, {
     method: "PUT",
     body: input,
   });
   return resp.assortment;
+}
+
+export async function fetchOperatorStoreAssortmentInventory(
+  storeId: string,
+  masterProductId: string,
+): Promise<StoreAssortmentInventory> {
+  const resp = await request<JsonResponse<"getOperatorStoreAssortmentInventory", 200>>(
+    `/dsh/operator/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/inventory`,
+  );
+  return resp.inventory;
+}
+
+export async function upsertOperatorStoreAssortmentInventory(
+  storeId: string,
+  masterProductId: string,
+  input: OperatorInventoryInput,
+): Promise<StoreAssortmentInventory> {
+  const resp = await request<JsonResponse<"updateOperatorStoreAssortmentInventory", 200>>(
+    `/dsh/operator/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/inventory`,
+    { method: "PUT", body: input },
+  );
+  return resp.inventory;
+}
+
+export async function fetchOperatorStoreAssortmentPrices(
+  storeId: string,
+  masterProductId: string,
+): Promise<readonly StoreAssortmentPrice[]> {
+  const resp = await request<JsonResponse<"listOperatorStoreAssortmentPrices", 200>>(
+    `/dsh/operator/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices`,
+  );
+  return resp.prices;
+}
+
+export async function createOperatorStoreAssortmentPrice(
+  storeId: string,
+  masterProductId: string,
+  input: OperatorPriceInput,
+  idempotencyKey = corrId("catalog-operator-price-create"),
+): Promise<StoreAssortmentPrice> {
+  const resp = await request<JsonResponse<"createOperatorStoreAssortmentPrice", 200>>(
+    `/dsh/operator/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices`,
+    { method: "POST", body: input, idempotencyKey },
+  );
+  return resp.price;
+}
+
+export async function fetchOperatorStoreAssortmentCommercial(
+  storeId: string,
+  masterProductId: string,
+): Promise<StoreAssortmentCommercialReadback> {
+  const [inventory, prices] = await Promise.all([
+    fetchOperatorStoreAssortmentInventory(storeId, masterProductId),
+    fetchOperatorStoreAssortmentPrices(storeId, masterProductId),
+  ]);
+  return { inventory, prices };
+}
+
+export async function fetchOperatorStoreAssortmentsCommercial(
+  storeId: string,
+  assortments: readonly StoreAssortment[],
+): Promise<ReadonlyMap<string, StoreAssortmentCommercialReadback>> {
+  const entries = await Promise.all(assortments.map(async (assortment) => [
+    assortment.masterProductId,
+    await fetchOperatorStoreAssortmentCommercial(storeId, assortment.masterProductId),
+  ] as const));
+  return new Map(entries);
 }
 
 // ─── Partner APIs ─────────────────────────────────────────────────────────────
@@ -362,9 +376,9 @@ export async function fetchPartnerMasterProducts(query?: {
 export async function upsertPartnerStoreAssortmentInventory(
   storeId: string,
   masterProductId: string,
-  input: StoreAssortmentInventoryInput,
+  input: PartnerInventoryInput,
 ): Promise<StoreAssortmentInventory> {
-  const resp = await request<{ inventory: StoreAssortmentInventory }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/inventory`, {
+  const resp = await request<InventoryResponse>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/inventory`, {
     method: "PUT",
     body: input,
   });
@@ -382,10 +396,10 @@ export async function fetchPartnerStoreAssortmentInventory(
 export async function createPartnerStoreAssortmentPrice(
   storeId: string,
   masterProductId: string,
-  input: StoreAssortmentPriceInput,
+  input: PartnerPriceInput,
   idempotencyKey = corrId("catalog-price-create"),
 ): Promise<StoreAssortmentPrice> {
-  const resp = await request<{ price: StoreAssortmentPrice }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices`, {
+  const resp = await request<PriceResponse>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices`, {
     method: "POST",
     body: input,
     idempotencyKey,
@@ -399,6 +413,28 @@ export async function fetchPartnerStoreAssortmentPrices(
 ): Promise<readonly StoreAssortmentPrice[]> {
   const resp = await request<{ prices: readonly StoreAssortmentPrice[] }>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}/prices`);
   return resp.prices;
+}
+
+export async function fetchPartnerStoreAssortmentCommercial(
+  storeId: string,
+  masterProductId: string,
+): Promise<StoreAssortmentCommercialReadback> {
+  const [inventory, prices] = await Promise.all([
+    fetchPartnerStoreAssortmentInventory(storeId, masterProductId),
+    fetchPartnerStoreAssortmentPrices(storeId, masterProductId),
+  ]);
+  return { inventory, prices };
+}
+
+export async function fetchPartnerStoreAssortmentsCommercial(
+  storeId: string,
+  assortments: readonly StoreAssortment[],
+): Promise<ReadonlyMap<string, StoreAssortmentCommercialReadback>> {
+  const entries = await Promise.all(assortments.map(async (assortment) => [
+    assortment.masterProductId,
+    await fetchPartnerStoreAssortmentCommercial(storeId, assortment.masterProductId),
+  ] as const));
+  return new Map(entries);
 }
 
 export async function fetchPartnerStoreAssortment(storeId: string): Promise<readonly StoreAssortment[]> {
@@ -419,17 +455,7 @@ export function fetchPartnerProductProposals(
 
 export async function createPartnerProductProposal(input: {
   readonly storeId: string;
-  readonly proposedNameAr: string;
-  readonly proposedNameEn: string;
-  readonly domainId: string;
-  readonly categoryNodeId: string | null;
-  readonly brand: string;
-  readonly barcode: string | null;
-  readonly imageObjectKey: string | null;
-  readonly targetMasterProductId?: string | undefined;
-  readonly baseVersion?: number | undefined;
-  readonly duplicateCandidates?: readonly string[] | undefined;
-  readonly sourceSurface: "app-partner" | "control-panel" | "app-field";
+} & ProductProposalCreateInput & {
   readonly idempotencyKey?: string;
 }): Promise<ProductProposal> {
   const storeId = input.storeId.trim();
@@ -437,7 +463,7 @@ export async function createPartnerProductProposal(input: {
     throw new Error("storeId is required for partner product proposals");
   }
   const { storeId: _storeId, idempotencyKey, ...requestBody } = input;
-  const resp = await request<{ proposal: ProductProposal }>(
+  const resp = await request<JsonResponse<"createPartnerProductProposal", 201>>(
     `/dsh/partner/catalog/product-proposals?storeId=${encodeURIComponent(storeId)}`,
     {
       method: "POST",
@@ -449,7 +475,7 @@ export async function createPartnerProductProposal(input: {
 }
 
 export async function withdrawPartnerProductProposal(proposalId: string, expectedVersion: number): Promise<ProductProposal> {
-  const resp = await request<{ proposal: ProductProposal }>(`/dsh/partner/catalog/product-proposals/${encodeURIComponent(proposalId)}/withdraw`, {
+  const resp = await request<JsonResponse<"post_dsh_partner_catalog_product_proposals__proposalId__withdraw", 200>>(`/dsh/partner/catalog/product-proposals/${encodeURIComponent(proposalId)}/withdraw`, {
     method: "POST",
     body: { expectedVersion },
   });
@@ -490,27 +516,18 @@ export async function fetchFieldMasterProducts(query?: {
 export async function fetchFieldStoreAssortment(partnerId: string): Promise<{
   readonly storeId: string;
   readonly assortment: readonly StoreAssortment[];
+  readonly commercial: ReadonlyMap<string, StoreAssortmentCommercialReadback>;
 }> {
-  return request<{
+  const response = await request<{
     readonly storeId: string;
     readonly assortment: readonly StoreAssortment[];
+    readonly commercial: Readonly<Record<string, StoreAssortmentCommercialReadback>>;
   }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/assortment`);
+  return { ...response, commercial: new Map(Object.entries(response.commercial ?? {})) };
 }
 
-export async function createFieldProductProposal(partnerId: string, input: {
-  readonly proposedNameAr: string;
-  readonly proposedNameEn: string;
-  readonly domainId: string;
-  readonly categoryNodeId: string | null;
-  readonly brand: string;
-  readonly barcode: string | null;
-  readonly imageObjectKey: string | null;
-  readonly targetMasterProductId?: string | undefined;
-  readonly baseVersion?: number | undefined;
-  readonly duplicateCandidates?: readonly string[] | undefined;
-  readonly sourceSurface: "app-field";
-}, idempotencyKey = corrId("catalog-field-proposal-create")): Promise<ProductProposal> {
-  const resp = await request<{ proposal: ProductProposal }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals`, {
+export async function createFieldProductProposal(partnerId: string, input: ProductProposalCreateInput, idempotencyKey = corrId("catalog-field-proposal-create")): Promise<ProductProposal> {
+  const resp = await request<JsonResponse<"createFieldProductProposal", 201>>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals`, {
     method: "POST",
     body: input,
     idempotencyKey,
@@ -519,7 +536,7 @@ export async function createFieldProductProposal(partnerId: string, input: {
 }
 
 export async function withdrawFieldProductProposal(partnerId: string, proposalId: string, expectedVersion: number): Promise<ProductProposal> {
-  const resp = await request<{ proposal: ProductProposal }>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals/${encodeURIComponent(proposalId)}/withdraw`, {
+  const resp = await request<JsonResponse<"post_dsh_partner_catalog_product_proposals__proposalId__withdraw", 200>>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/catalog/product-proposals/${encodeURIComponent(proposalId)}/withdraw`, {
     method: "POST",
     body: { expectedVersion },
   });
@@ -538,23 +555,11 @@ export function fetchFieldProductProposals(
 // ─── Public Published Catalog ──────────────────────────────────────────────────
 
 export async function fetchPublishedCentralCatalog(storeId: string): Promise<ClientVisibleCatalogResponse> {
-  return publicRequest<ClientVisibleCatalogResponse>(`/dsh/stores/${encodeURIComponent(storeId)}/catalog`);
-}
-
-export interface SeedStatus {
-  readonly domainsCount: number;
-  readonly nodesCount: number;
-  readonly masterProductsCount: number;
-  readonly assortmentsCount: number;
-  readonly manualRequestExists: boolean;
-  readonly shayInExists: boolean;
-  readonly awnakExists: boolean;
-  readonly seedVersion: string;
-  readonly missingSeeds: readonly string[];
+  return publicRequest<JsonResponse<"getPublishedDshCatalog", 200>>(`/dsh/stores/${encodeURIComponent(storeId)}/catalog`);
 }
 
 export async function fetchSeedStatus(): Promise<SeedStatus> {
-  return request<SeedStatus>("/dsh/operator/catalog/seed-status");
+  return request<CatalogSeedStatusResponse>("/dsh/operator/catalog/seed-status");
 }
 
 export async function fetchCatalogAssetsPage(query?: { status?: string; limit?: number; offset?: number }): Promise<PagedResult<CatalogAsset>> {
@@ -564,27 +569,12 @@ export async function fetchCatalogAssetsPage(query?: { status?: string; limit?: 
   if (query?.offset !== undefined) params.set("offset", String(query.offset));
   const qs = params.toString();
   const path = qs ? `/dsh/operator/catalog/assets?${qs}` : "/dsh/operator/catalog/assets";
-  const resp = await request<{ assets: readonly CatalogAsset[]; total: number; limit: number; offset: number }>(path);
+  const resp = await request<CatalogAssetsResponse>(path);
   return { items: resp.assets, total: resp.total, limit: resp.limit, offset: resp.offset };
 }
 
-export interface AssetUploadIntent {
-  readonly asset: CatalogAsset;
-  readonly uploadUrl: string;
-  readonly expiresAt: string;
-}
-
-export async function createAssetUploadIntent(input: {
-  readonly fileName: string;
-  readonly mimeType: string;
-  readonly sizeBytes: number;
-  readonly altAr?: string;
-  readonly altEn?: string;
-  readonly intendedEntityType?: string;
-  readonly intendedEntityId?: string;
-  readonly intendedRole?: string;
-}, idempotencyKey = corrId("catalog-asset-intent-create")): Promise<AssetUploadIntent> {
-  return request<AssetUploadIntent>("/dsh/operator/catalog/assets/upload-intents", {
+export async function createAssetUploadIntent(input: AssetUploadIntentInput, idempotencyKey = corrId("catalog-asset-intent-create")): Promise<AssetUploadIntent> {
+  return request<CatalogAssetUploadIntentResponse>("/dsh/operator/catalog/assets/upload-intents", {
     method: "POST",
     body: input,
     idempotencyKey,
@@ -592,29 +582,22 @@ export async function createAssetUploadIntent(input: {
 }
 
 export async function completeAssetUpload(assetId: string): Promise<CatalogAsset> {
-  const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/complete`, {
+  const resp = await request<CatalogAssetResponse>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/complete`, {
     method: "POST",
   });
   return resp.asset;
 }
 
-export async function updateCatalogAsset(assetId: string, input: {
-  readonly altAr?: string;
-  readonly altEn?: string;
-  readonly dominantColor?: string;
-}): Promise<CatalogAsset> {
-  const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}`, {
+export async function updateCatalogAsset(assetId: string, input: AssetUpdateInput): Promise<CatalogAsset> {
+  const resp = await request<JsonResponse<"updateCatalogAsset", 200>>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}`, {
     method: "PATCH",
     body: input,
   });
   return resp.asset;
 }
 
-export async function reviewCatalogAsset(assetId: string, input: {
-  readonly decision: "approved" | "rejected" | "archived";
-  readonly reviewNote: string;
-}): Promise<CatalogAsset> {
-  const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/review`, {
+export async function reviewCatalogAsset(assetId: string, input: CatalogAssetReviewInput): Promise<CatalogAsset> {
+  const resp = await request<CatalogAssetResponseAfterReview>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/review`, {
     method: "POST",
     body: input,
   });
@@ -636,14 +619,8 @@ export async function simulateAssetScan(assetId: string, targetStatus: string): 
   return resp.asset;
 }
 
-export async function linkCatalogAsset(assetId: string, input: {
-  readonly entityType: string;
-  readonly entityId: string;
-  readonly role: string;
-  readonly sortOrder?: number;
-  readonly isPrimary?: boolean;
-}): Promise<CatalogAssetLink> {
-  const resp = await request<{ link: CatalogAssetLink }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/link`, {
+export async function linkCatalogAsset(assetId: string, input: CatalogAssetLinkInput): Promise<CatalogAssetLink> {
+  const resp = await request<CatalogAssetLinkResponse>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/link`, {
     method: "POST",
     body: input,
   });
@@ -663,7 +640,7 @@ export async function fetchCatalogAssetLinks(query: { entityType: string; entity
   const params = new URLSearchParams();
   params.set("entityType", query.entityType);
   params.set("entityId", query.entityId);
-  const resp = await request<{ links: readonly CatalogAssetLink[] }>(`/dsh/operator/catalog/asset-links?${params.toString()}`);
+  const resp = await request<CatalogAssetLinksResponse>(`/dsh/operator/catalog/asset-links?${params.toString()}`);
   return resp.links;
 }
 

@@ -15,20 +15,29 @@ import {
 } from '@bthwani/ui-kit';
 import {
   fetchPartnerAssortmentPauses,
+  fetchPartnerStoreAssortmentCommercial,
   fetchPartnerStoreAssortment,
   fetchPartnerMasterProducts,
+  getCurrentStoreAssortmentPrice,
+  getStoreAssortmentStockStatus,
+  isStoreAssortmentAvailable,
   pausePartnerStoreAssortment,
   resumePartnerStoreAssortment,
 } from '../../shared/catalog';
-import type { AssortmentPauseState, StoreAssortment, MasterProduct } from '../../shared/catalog';
+import type {
+  AssortmentPauseState,
+  StoreAssortment,
+  StoreAssortmentCommercialReadback,
+  MasterProduct,
+} from '../../shared/catalog';
 import { InventoryConfigurationModal } from './InventoryConfigurationModal';
 import { PriceConfigurationModal } from './PriceConfigurationModal';
 
 export type ProductControlsScreenProps = {
-  storeId: string;
-  productId: string;
-  onBack?: () => void;
-  onSaved?: () => void;
+  readonly storeId: string;
+  readonly productId: string;
+  readonly onBack?: () => void;
+  readonly onSaved?: () => void;
 };
 
 export type ProductControlsScreenState =
@@ -47,6 +56,7 @@ export function ProductControlsScreen({
 
   const [screenState, setScreenState] = React.useState<ProductControlsScreenState>('loading');
   const [assortment, setAssortment] = React.useState<StoreAssortment | null>(null);
+  const [commercial, setCommercial] = React.useState<StoreAssortmentCommercialReadback | null>(null);
   const [pauseState, setPauseState] = React.useState<AssortmentPauseState | null>(null);
   const [masterProduct, setMasterProduct] = React.useState<MasterProduct | null>(null);
   const [pauseReason, setPauseReason] = React.useState('');
@@ -81,8 +91,14 @@ export function ProductControlsScreen({
         fetchPartnerAssortmentPauses(storeId),
       ]);
       if (!isCurrentRequest()) return;
+      const readbackAssortment = assortments.find((item) => item.masterProductId === productId) ?? null;
+      const readbackCommercial = readbackAssortment
+        ? await fetchPartnerStoreAssortmentCommercial(storeId, productId)
+        : null;
+      if (!isCurrentRequest()) return;
       setMasterProduct(masterProducts.find((product) => product.id === productId) ?? null);
-      setAssortment(assortments.find((item) => item.masterProductId === productId) ?? null);
+      setAssortment(readbackAssortment);
+      setCommercial(readbackCommercial);
       const pause = pauses.find((item) => item.masterProductId === productId) ?? null;
       setPauseState(pause);
       setPauseReason(pause?.reason ?? '');
@@ -120,7 +136,12 @@ export function ProductControlsScreen({
       if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       const readbackAssortment = assortments.find((item) => item.masterProductId === productId);
       const readbackPause = pauses.find((item) => item.masterProductId === productId);
+      const readbackCommercial = readbackAssortment
+        ? await fetchPartnerStoreAssortmentCommercial(storeId, productId)
+        : null;
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       if (!readbackAssortment || !readbackPause
+        || !readbackCommercial
         || readbackAssortment.id !== result.assortment.id
         || readbackAssortment.version !== result.assortment.version
         || readbackPause.version !== result.pause.version
@@ -130,6 +151,7 @@ export function ProductControlsScreen({
         throw new Error('لم تتطابق قراءة الإيقاف اللاحقة مع الطلب؛ لم يُعتمد التغيير.');
       }
       setAssortment(readbackAssortment);
+      setCommercial(readbackCommercial);
       setPauseState(readbackPause);
       onSaved?.();
     } catch (err: any) {
@@ -155,7 +177,12 @@ export function ProductControlsScreen({
       if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       const readbackAssortment = assortments.find((item) => item.masterProductId === productId);
       const readbackPause = pauses.find((item) => item.masterProductId === productId);
+      const readbackCommercial = readbackAssortment
+        ? await fetchPartnerStoreAssortmentCommercial(storeId, productId)
+        : null;
+      if (!mountedRef.current || operationScopeKey !== scopeKeyRef.current) return;
       if (!readbackAssortment || !readbackPause
+        || !readbackCommercial
         || readbackAssortment.id !== result.assortment.id
         || readbackAssortment.version !== result.assortment.version
         || readbackPause.version !== result.pause.version
@@ -165,6 +192,7 @@ export function ProductControlsScreen({
         throw new Error('لم تتطابق قراءة الاستئناف اللاحقة مع الطلب؛ لم يُعتمد التغيير.');
       }
       setAssortment(readbackAssortment);
+      setCommercial(readbackCommercial);
       setPauseState(readbackPause);
       setPauseReason('');
       setPausedUntil('');
@@ -177,6 +205,10 @@ export function ProductControlsScreen({
       if (mountedRef.current && operationScopeKey === scopeKeyRef.current) setPauseSaving(false);
     }
   }, [loadData, onSaved, pauseState, productId, scopeKey, storeId]);
+
+  const currentPrice = getCurrentStoreAssortmentPrice(commercial ?? undefined);
+  const available = commercial ? isStoreAssortmentAvailable(commercial.inventory) : undefined;
+  const stockStatus = commercial ? getStoreAssortmentStockStatus(commercial.inventory) : undefined;
 
   if (screenState === 'loading') {
     return <StateView title="جارٍ تحميل أدوات الكتالوج canonical…" loading />;
@@ -228,10 +260,16 @@ export function ProductControlsScreen({
           <>
             <Surface tone="raised" padding={3} gap={3} radiusToken="md">
               <Text role="bodyStrong" align="start">إسقاطات العرض الحالية (قراءة فقط)</Text>
-              <Text role="bodySm" tone="muted" align="start">
-                السعر: {assortment.unitPrice} {assortment.currency} · التوفر: {assortment.available ? 'متاح' : 'غير متاح'} · المخزون: {assortment.stockStatus}
-              </Text>
-              <Text role="caption" tone="muted" align="start">هذه القيم projections يقرأها الخادم من موارد السعر والمخزون المعيارية.</Text>
+              {commercial && currentPrice && stockStatus && available !== undefined ? (
+                <Text role="bodySm" tone="muted" align="start">
+                  السعر: {currentPrice.amountMinor} {currentPrice.currency} (بالوحدة الصغرى) · التوفر: {available ? 'متاح' : 'غير متاح'} · المخزون: {stockStatus}
+                </Text>
+              ) : (
+                <Text role="bodySm" tone="warning" align="start">
+                  لا توجد قراءة تجارية معيارية مكتملة لهذا المنتج.
+                </Text>
+              )}
+              <Text role="caption" tone="muted" align="start">تُقرأ هذه القيم مباشرة من موارد السعر والمخزون المعيارية.</Text>
               <Box style={{ flexDirection: 'row', gap: spacing[2], flexWrap: 'wrap' }}>
                 <Button label="إدارة المخزون" tone="primary" size="sm" fullWidth={false} onPress={() => setInventoryVisible(true)} />
                 <Button label="إدارة الأسعار" tone="secondary" size="sm" fullWidth={false} onPress={() => setPriceVisible(true)} />

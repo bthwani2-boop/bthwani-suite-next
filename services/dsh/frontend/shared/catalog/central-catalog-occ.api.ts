@@ -10,6 +10,12 @@ import type {
   ProductProposal,
   StoreAssortment,
   StoreAssortmentCreateInput,
+  StoreAssortmentCommercialReadback,
+  StoreAssortmentInventory,
+  StoreAssortmentInventoryInput,
+  StoreAssortmentPrice,
+  StoreAssortmentPriceInput,
+  StoreAssortmentMetadataInput,
   StoreAssortmentMetadataUpdateInput,
 } from "./central-catalog.types";
 
@@ -19,7 +25,8 @@ type DomainMutationInput = NonNullable<operations["updateCatalogDomain"]["reques
 type NodeMutationInput = NonNullable<operations["updateCatalogNode"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type ProductMutationInput = NonNullable<operations["updateMasterProduct"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type ProposalTransitionInput = Parameters<typeof catalogApi.transitionProductProposal>[1] & { readonly expectedVersion: number };
-type AssortmentMutationInput = Parameters<typeof catalogApi.upsertOperatorStoreAssortment>[2] & { readonly expectedVersion?: number };
+type OperatorMetadataMutationInput = Parameters<typeof catalogApi.upsertOperatorStoreAssortmentMetadata>[2];
+type OperatorPriceInput = Parameters<typeof catalogApi.createOperatorStoreAssortmentPrice>[2];
 type AssetMutationInput = NonNullable<operations["updateCatalogAsset"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type AssetReviewInput = NonNullable<operations["reviewCatalogAsset"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 
@@ -67,20 +74,70 @@ export async function transitionProductProposalOCC(
   return response.proposal;
 }
 
-export type StoreAssortmentOCCInput = Omit<AssortmentMutationInput, "expectedVersion"> & {
+export type OperatorStoreAssortmentMetadataOCCInput = Omit<OperatorMetadataMutationInput, "expectedVersion"> & {
   readonly expectedVersion?: number | undefined;
 };
 
-export async function upsertOperatorStoreAssortmentOCC(
+export async function upsertOperatorStoreAssortmentMetadataOCC(
   storeId: string,
   masterProductId: string,
-  input: StoreAssortmentOCCInput,
+  input: OperatorStoreAssortmentMetadataOCCInput,
 ): Promise<StoreAssortment> {
-  const response = await request<{ assortment: StoreAssortment }>(
-    `/dsh/operator/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`,
-    { method: "PUT", body: input },
+  return catalogApi.upsertOperatorStoreAssortmentMetadata(
+    storeId,
+    masterProductId,
+    input,
   );
-  return response.assortment;
+}
+
+export type CreateStoreAssortmentWithCommercialTruthInput = {
+  readonly metadata: StoreAssortmentCreateInput;
+  readonly inventory: Omit<StoreAssortmentInventoryInput, "expectedVersion">;
+  readonly price: StoreAssortmentPriceInput;
+  readonly idempotencyKey?: string | undefined;
+};
+
+async function assertCommercialReadback(
+  assortment: StoreAssortment,
+  readback: StoreAssortmentCommercialReadback,
+  createdPriceId: string,
+): Promise<void> {
+  if (readback.inventory.storeAssortmentId !== assortment.id
+    || !readback.prices.some((price) => price.id === createdPriceId)) {
+    throw new Error("CATALOG_ASSORTMENT_COMMERCIAL_READBACK_MISMATCH");
+  }
+}
+
+export async function createOperatorStoreAssortmentWithCommercialTruth(
+  storeId: string,
+  masterProductId: string,
+  input: CreateStoreAssortmentWithCommercialTruthInput,
+): Promise<{
+  readonly assortment: StoreAssortment;
+  readonly inventory: StoreAssortmentInventory;
+  readonly price: StoreAssortmentPrice;
+  readonly readback: StoreAssortmentCommercialReadback;
+}> {
+  const assortment = await catalogApi.upsertOperatorStoreAssortmentMetadata(
+    storeId,
+    masterProductId,
+    input.metadata,
+  );
+  const currentInventory = await catalogApi.fetchOperatorStoreAssortmentInventory(storeId, masterProductId);
+  const inventory = await catalogApi.upsertOperatorStoreAssortmentInventory(
+    storeId,
+    masterProductId,
+    { ...input.inventory, expectedVersion: currentInventory.version },
+  );
+  const price = await catalogApi.createOperatorStoreAssortmentPrice(
+    storeId,
+    masterProductId,
+    input.price,
+    input.idempotencyKey,
+  );
+  const readback = await catalogApi.fetchOperatorStoreAssortmentCommercial(storeId, masterProductId);
+  await assertCommercialReadback(assortment, readback, price.id);
+  return { assortment, inventory, price, readback };
 }
 
 export async function createPartnerStoreAssortment(
@@ -93,6 +150,34 @@ export async function createPartnerStoreAssortment(
     { method: "PUT", body: input },
   );
   return response.assortment;
+}
+
+export async function createPartnerStoreAssortmentWithCommercialTruth(
+  storeId: string,
+  masterProductId: string,
+  input: CreateStoreAssortmentWithCommercialTruthInput,
+): Promise<{
+  readonly assortment: StoreAssortment;
+  readonly inventory: StoreAssortmentInventory;
+  readonly price: StoreAssortmentPrice;
+  readonly readback: StoreAssortmentCommercialReadback;
+}> {
+  const assortment = await createPartnerStoreAssortment(storeId, masterProductId, input.metadata);
+  const currentInventory = await catalogApi.fetchPartnerStoreAssortmentInventory(storeId, masterProductId);
+  const inventory = await catalogApi.upsertPartnerStoreAssortmentInventory(
+    storeId,
+    masterProductId,
+    { ...input.inventory, expectedVersion: currentInventory.version },
+  );
+  const price = await catalogApi.createPartnerStoreAssortmentPrice(
+    storeId,
+    masterProductId,
+    input.price,
+    input.idempotencyKey,
+  );
+  const readback = await catalogApi.fetchPartnerStoreAssortmentCommercial(storeId, masterProductId);
+  await assertCommercialReadback(assortment, readback, price.id);
+  return { assortment, inventory, price, readback };
 }
 
 export async function updatePartnerStoreAssortmentMetadataOCC(
@@ -111,7 +196,7 @@ export async function upsertFieldStoreAssortmentOCC(
   partnerId: string,
   storeId: string,
   masterProductId: string,
-  input: StoreAssortmentOCCInput,
+  input: FieldStoreAssortmentOCCInput,
 ): Promise<StoreAssortment> {
   const response = await request<{ assortment: StoreAssortment }>(
     `/dsh/field/partners/${encodeURIComponent(partnerId)}/stores/${encodeURIComponent(storeId)}/assortment/${encodeURIComponent(masterProductId)}`,
@@ -120,7 +205,13 @@ export async function upsertFieldStoreAssortmentOCC(
   return response.assortment;
 }
 
-export type FieldStoreAssortmentBatchItem = StoreAssortmentOCCInput & {
+export type FieldStoreAssortmentOCCInput = Omit<StoreAssortmentMetadataInput, "expectedVersion"> & {
+  readonly expectedVersion?: number | undefined;
+  readonly inventory: StoreAssortmentInventoryInput;
+  readonly price: StoreAssortmentPriceInput;
+};
+
+export type FieldStoreAssortmentBatchItem = FieldStoreAssortmentOCCInput & {
   readonly masterProductId: string;
 };
 

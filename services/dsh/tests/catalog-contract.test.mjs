@@ -27,6 +27,24 @@ test("Cart and Serviceability operations are implemented in canonical DSH OpenAP
   assert.doesNotMatch(contract, /\bledger entry\b|\brefund finalization\b/i);
 });
 
+test("Cart serviceability is address-scoped across the contract, handler, and client adapter", async () => {
+  const contract = await dshContract();
+  const pathSource = fs.readFileSync(new URL("../contracts/paths/cart-serviceability.paths.yaml", import.meta.url), "utf8");
+  const schemaSource = fs.readFileSync(new URL("../contracts/components/schemas/cart-serviceability.schemas.yaml", import.meta.url), "utf8");
+  const handler = fs.readFileSync(new URL("../backend/internal/http/cart.go", import.meta.url), "utf8");
+  const cartApi = fs.readFileSync(new URL("../frontend/shared/cart/cart.api.ts", import.meta.url), "utf8");
+
+  assert.match(contract, /CartServiceabilityRequest:/);
+  assert.match(schemaSource, /required: \[storeId, addressId, fulfillmentMode\]/);
+  assert.match(pathSource, /name: addressId[\s\S]*required: true/);
+  assert.doesNotMatch(pathSource, /name: serviceAreaCode/);
+  assert.match(handler, /addressId query parameter is required/);
+  assert.match(handler, /fulfillmentMode is required/);
+  assert.match(handler, /address\.ServiceAreaCode, address\.Latitude, address\.Longitude/);
+  assert.match(cartApi, /addressId: string/);
+  assert.match(cartApi, /params\.set\("addressId", addressId\)/);
+});
+
 test("Order Fulfillment routes are implemented and registered at runtime", async () => {
   const contract = await dshContract();
   const router = fs.readFileSync(new URL("../backend/internal/http/server.go", import.meta.url), "utf8");

@@ -9,6 +9,7 @@ const workflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci-runti
 const contextualWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci-check.yml"), "utf8");
 const runtimeAuthority = fs.readFileSync(path.join(repoRoot, "infra/docker/scripts/runtime.ps1"), "utf8");
 const wltAuthenticatedSmoke = fs.readFileSync(path.join(repoRoot, "tools/scripts/finance/smoke-wlt-authenticated-runtime.ps1"), "utf8");
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 
 test("runtime verification uses one fixed full component set in the correct order", () => {
   assert.match(workflow, /RUNTIME_COMPONENTS: identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media-storage/u);
@@ -42,4 +43,18 @@ test("WLT authenticated smoke follows the canonical readiness contract", () => {
 test("runtime authority retains the unavailable local media safety guard", () => {
   assert.match(runtimeAuthority, /services\/dsh\/database\/seeds\/media\/local-media\.manifest\.json/u);
   assert.match(runtimeAuthority, /Use media-storage for MinIO\/runtime upload infrastructure/u);
+});
+
+test("Schemathesis property checks stay bound to the public DSH path scope", () => {
+  for (const operation of [
+    "GET /dsh/health",
+    "GET /dsh/readiness",
+    "GET /dsh/stores",
+    "GET /dsh/stores/{storeId}",
+    "GET /dsh/storefront/{storeId}",
+  ]) {
+    assert.match(workflow, new RegExp(escapeRegExp(`--include-name '${operation}'`), "u"));
+  }
+  assert.doesNotMatch(workflow, /--include-path-regex/u);
+  assert.doesNotMatch(workflow, /--include-method GET/u);
 });

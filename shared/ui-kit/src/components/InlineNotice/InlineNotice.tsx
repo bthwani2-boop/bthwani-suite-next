@@ -8,12 +8,12 @@ import { spacing } from "../../tokens/spacing";
 export type InlineNoticeTone = "success" | "info" | "warning" | "danger";
 
 export type InlineNoticeProps = {
-  tone: InlineNoticeTone;
-  title: string;
-  description?: string;
+  readonly tone: InlineNoticeTone;
+  readonly title: string;
+  readonly description?: string;
   /** Stable reason code shown as a support reference, e.g. `CHECKLIST_INCOMPLETE`. */
-  code?: string;
-  action?: ReactNode;
+  readonly code?: string;
+  readonly action?: ReactNode;
 };
 
 const TONE_ICON: Record<InlineNoticeTone, string> = {

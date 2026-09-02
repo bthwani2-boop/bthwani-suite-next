@@ -12,6 +12,21 @@ if (-not (Test-Path -LiteralPath $script:RuntimeOrchestrator -PathType Leaf)) {
   throw "Canonical runtime authority not found: $script:RuntimeOrchestrator"
 }
 
+function Get-ConfiguredRuntimePort {
+  param(
+    [Parameter(Mandatory = $true)][string]$EnvironmentName,
+    [Parameter(Mandatory = $true)][int]$DefaultPort
+  )
+
+  $raw = [Environment]::GetEnvironmentVariable($EnvironmentName)
+  if ([string]::IsNullOrWhiteSpace($raw)) { return $DefaultPort }
+  $port = 0
+  if (-not [int]::TryParse($raw, [ref]$port) -or $port -lt 1 -or $port -gt 65535) {
+    throw "$EnvironmentName must be a TCP port between 1 and 65535."
+  }
+  return $port
+}
+
 function Invoke-CanonicalPlatformRuntime {
   param(
     [Parameter(Mandatory = $true)]
@@ -62,18 +77,26 @@ function Invoke-PlatformDatabasePsql {
 }
 
 function Wait-PlatformHttpReady {
-  param([Parameter(Mandatory = $true)][string]$Url)
+  param(
+    [Parameter(Mandatory = $true)][string]$Url,
+    [string]$ExpectedStatus = ""
+  )
 
   for ($attempt = 1; $attempt -le 60; $attempt++) {
     try {
-      Invoke-RestMethod $Url -TimeoutSec 5 -ErrorAction Stop | Out-Null
-      return
+      $response = Invoke-RestMethod $Url -TimeoutSec 5 -ErrorAction Stop
+      if ([string]::IsNullOrWhiteSpace($ExpectedStatus) -or [string]$response.status -eq $ExpectedStatus) {
+        return
+      }
     } catch {
-      Start-Sleep -Seconds 2
     }
+    Start-Sleep -Seconds 2
   }
 
-  throw "endpoint did not become ready: $Url"
+  if ([string]::IsNullOrWhiteSpace($ExpectedStatus)) {
+    throw "endpoint did not become ready: $Url"
+  }
+  throw "endpoint did not report status '$ExpectedStatus': $Url"
 }
 
 function Invoke-PlatformMigrations {
@@ -83,15 +106,22 @@ function Invoke-PlatformMigrations {
 function Start-PlatformP3Runtime {
   Invoke-CanonicalPlatformRuntime -Action up
 
+  $wiremockFinancialPort = Get-ConfiguredRuntimePort -EnvironmentName "BTHWANI_WIREMOCK_FINANCIAL_PORT" -DefaultPort 18090
+  $identityApiHostPort = Get-ConfiguredRuntimePort -EnvironmentName "BTHWANI_IDENTITY_API_HOST_PORT" -DefaultPort 18082
+  $providersApiHostPort = Get-ConfiguredRuntimePort -EnvironmentName "BTHWANI_PROVIDERS_API_HOST_PORT" -DefaultPort 18087
+  $wltApiHostPort = Get-ConfiguredRuntimePort -EnvironmentName "BTHWANI_WLT_API_HOST_PORT" -DefaultPort 18083
+  $dshApiHostPort = Get-ConfiguredRuntimePort -EnvironmentName "BTHWANI_DSH_API_HOST_PORT" -DefaultPort 18080
+  $platformApiHostPort = Get-ConfiguredRuntimePort -EnvironmentName "BTHWANI_PLATFORM_CONTROL_API_HOST_PORT" -DefaultPort 18088
+
   foreach ($url in @(
-    "http://localhost:18090/__admin/mappings",
-    "http://localhost:18082/identity/health",
-    "http://localhost:18087/providers/readiness",
-    "http://localhost:18083/wlt/health",
-    "http://localhost:18080/dsh/health",
-    "http://localhost:18088/platform/health",
-    "http://localhost:18088/platform/readiness"
+    "http://localhost:$wiremockFinancialPort/__admin/mappings",
+    "http://localhost:$identityApiHostPort/identity/health",
+    "http://localhost:$providersApiHostPort/providers/readiness",
+    "http://localhost:$wltApiHostPort/wlt/health",
+    "http://localhost:$dshApiHostPort/dsh/health",
+    "http://localhost:$platformApiHostPort/platform/health"
   )) {
     Wait-PlatformHttpReady $url
   }
+  Wait-PlatformHttpReady "http://localhost:$platformApiHostPort/platform/readiness" "HEALTHY"
 }

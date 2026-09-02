@@ -205,7 +205,7 @@ func List(db *sql.DB) ([]Coupon, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	result := []Coupon{}
 	for rows.Next() {
 		coupon, err := scanCoupon(rows)

@@ -59,18 +59,26 @@ func (s *protectedStoreServer) handleUpsertOperationalProfile(w http.ResponseWri
 		return
 	}
 	var body struct {
-		SlaCategory             string  `json:"slaCategory"`
-		MaxPrepMins             int     `json:"maxPrepMins"`
-		MaxAssignmentMins       int     `json:"maxAssignmentMins"`
-		MaxDeliveryMins         int     `json:"maxDeliveryMins"`
-		ExpectedSlaVersion      int     `json:"expectedSlaVersion"`
-		MaxConcurrentOrders     int     `json:"maxConcurrentOrders"`
-		MaxCaptainsOnline       int     `json:"maxCaptainsOnline"`
-		ThrottleThreshold       float64 `json:"throttleThreshold"`
-		IsPaused                bool    `json:"isPaused"`
-		PauseReason             string  `json:"pauseReason"`
-		ExpectedCapacityVersion int     `json:"expectedCapacityVersion"`
-		Reason                  string  `json:"reason"`
+		SlaCategory                string  `json:"slaCategory"`
+		MaxPrepMins                int     `json:"maxPrepMins"`
+		MaxAssignmentMins          int     `json:"maxAssignmentMins"`
+		MaxDeliveryMins            int     `json:"maxDeliveryMins"`
+		WarningBeforeMins          int     `json:"warningBeforeMins"`
+		PickupNotifyMins           int     `json:"pickupNotifyMins"`
+		PickupArrivalMins          int     `json:"pickupArrivalMins"`
+		PickupVerifyMins           int     `json:"pickupVerifyMins"`
+		DeliveryAssignToPickupMins int     `json:"deliveryAssignToPickupMins"`
+		DeliveryPickupToDepartMins int     `json:"deliveryPickupToDepartMins"`
+		DeliveryDepartToArriveMins int     `json:"deliveryDepartToArriveMins"`
+		DeliveryArriveToProofMins  int     `json:"deliveryArriveToProofMins"`
+		ExpectedSlaVersion         int     `json:"expectedSlaVersion"`
+		MaxConcurrentOrders        int     `json:"maxConcurrentOrders"`
+		MaxCaptainsOnline          int     `json:"maxCaptainsOnline"`
+		ThrottleThreshold          float64 `json:"throttleThreshold"`
+		IsPaused                   bool    `json:"isPaused"`
+		PauseReason                string  `json:"pauseReason"`
+		ExpectedCapacityVersion    int     `json:"expectedCapacityVersion"`
+		Reason                     string  `json:"reason"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -83,18 +91,26 @@ func (s *protectedStoreServer) handleUpsertOperationalProfile(w http.ResponseWri
 		r.Context(),
 		s.db,
 		platformpolicies.UpsertOperationalProfileInput{
-			ZoneID:                  r.PathValue("zoneId"),
-			SlaCategory:             body.SlaCategory,
-			MaxPrepMins:             body.MaxPrepMins,
-			MaxAssignmentMins:       body.MaxAssignmentMins,
-			MaxDeliveryMins:         body.MaxDeliveryMins,
-			ExpectedSlaVersion:      body.ExpectedSlaVersion,
-			MaxConcurrentOrders:     body.MaxConcurrentOrders,
-			MaxCaptainsOnline:       body.MaxCaptainsOnline,
-			ThrottleThreshold:       body.ThrottleThreshold,
-			IsPaused:                body.IsPaused,
-			PauseReason:             body.PauseReason,
-			ExpectedCapacityVersion: body.ExpectedCapacityVersion,
+			ZoneID:                     r.PathValue("zoneId"),
+			SlaCategory:                body.SlaCategory,
+			MaxPrepMins:                body.MaxPrepMins,
+			MaxAssignmentMins:          body.MaxAssignmentMins,
+			MaxDeliveryMins:            body.MaxDeliveryMins,
+			WarningBeforeMins:          body.WarningBeforeMins,
+			PickupNotifyMins:           body.PickupNotifyMins,
+			PickupArrivalMins:          body.PickupArrivalMins,
+			PickupVerifyMins:           body.PickupVerifyMins,
+			DeliveryAssignToPickupMins: body.DeliveryAssignToPickupMins,
+			DeliveryPickupToDepartMins: body.DeliveryPickupToDepartMins,
+			DeliveryDepartToArriveMins: body.DeliveryDepartToArriveMins,
+			DeliveryArriveToProofMins:  body.DeliveryArriveToProofMins,
+			ExpectedSlaVersion:         body.ExpectedSlaVersion,
+			MaxConcurrentOrders:        body.MaxConcurrentOrders,
+			MaxCaptainsOnline:          body.MaxCaptainsOnline,
+			ThrottleThreshold:          body.ThrottleThreshold,
+			IsPaused:                   body.IsPaused,
+			PauseReason:                body.PauseReason,
+			ExpectedCapacityVersion:    body.ExpectedCapacityVersion,
 		},
 		mutation,
 	)

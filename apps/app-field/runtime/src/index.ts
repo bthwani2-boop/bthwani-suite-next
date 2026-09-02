@@ -17,6 +17,18 @@ import {
   detachFieldOfflineQueueScope,
 } from "@bthwani/dsh/app-field";
 import { initSentry } from "./observability/sentry";
+import { configureBthwaniSensitiveStorage } from "@bthwani/data-runtime/sensitive-storage-adapter";
+import { createBthwaniBrowserSensitiveStorage } from "@bthwani/data-runtime/browser-sensitive-storage";
+
+configureBthwaniSensitiveStorage(
+  Platform.OS === "web"
+    ? createBthwaniBrowserSensitiveStorage()
+    : {
+        getItem: (key) => SecureStore.getItemAsync(key),
+        setItem: (key, value) => SecureStore.setItemAsync(key, value),
+        removeItem: (key) => SecureStore.deleteItemAsync(key),
+      },
+);
 
 if (Platform.OS !== "web") {
   configureFieldOfflineQueueStorage({

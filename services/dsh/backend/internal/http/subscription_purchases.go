@@ -289,8 +289,6 @@ func (s *protectedStoreServer) bindSubscriptionPaymentSession(
 		OperatorContextID:      item.OperatorContextID,
 		ClientID:               item.ClientID,
 		PaymentMethod:          item.PaymentMethod,
-		AmountMinorUnits:       product.PriceMinorUnits,
-		Currency:               product.Currency,
 	}, idempotencyKey, correlationID)
 	if err != nil {
 		_, _ = s.db.Exec(`UPDATE dsh_subscription_purchases

@@ -7,12 +7,12 @@ import { spacing } from '../../tokens/spacing';
 import { radius } from '../../tokens/radius';
 
 export type TopBarProps = {
-  title: string;
-  subtitle?: string | undefined;
-  variant?: 'primary' | 'secondary' | undefined;
-  onBack?: (() => void) | undefined;
-  rightSlot?: React.ReactNode | undefined;
-  style?: any;
+  readonly title: string;
+  readonly subtitle?: string | undefined;
+  readonly variant?: 'primary' | 'secondary' | undefined;
+  readonly onBack?: (() => void) | undefined;
+  readonly rightSlot?: React.ReactNode | undefined;
+  readonly style?: any;
 };
 
 export function TopBar({ title, subtitle, variant = 'primary', onBack, rightSlot, style }: TopBarProps) {

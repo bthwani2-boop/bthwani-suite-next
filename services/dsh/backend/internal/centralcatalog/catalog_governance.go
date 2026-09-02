@@ -67,7 +67,7 @@ func ListCatalogAttributes(ctx context.Context, db *sql.DB) ([]CatalogAttribute,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []CatalogAttribute{}
 	for rows.Next() {
 		item, err := scanCatalogAttribute(rows)
@@ -122,7 +122,7 @@ func ListCatalogAttributeOptions(ctx context.Context, db *sql.DB, attributeID st
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []CatalogAttributeOption{}
 	for rows.Next() {
 		var item CatalogAttributeOption
@@ -243,7 +243,7 @@ func ListMasterProductAttributeValues(ctx context.Context, db *sql.DB, productID
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []MasterProductAttributeValue{}
 	for rows.Next() {
 		var item MasterProductAttributeValue
@@ -405,7 +405,7 @@ func ListMasterProductRelationships(ctx context.Context, db *sql.DB, productID s
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []MasterProductRelationship{}
 	for rows.Next() {
 		item, err := scanRelationship(rows)
@@ -479,10 +479,10 @@ func PauseStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, a
 		return StoreAssortment{}, ErrInvalid
 	}
 	row := db.QueryRowContext(ctx, `UPDATE dsh_store_assortments SET
-		available_before_pause=available, available=FALSE, pause_reason=$1, paused_until=$2,
+		pause_reason=$1, paused_until=$2,
 		paused_at=NOW(), paused_by=$3, submitted_by=$3, version=version+1, updated_at=NOW()
 		WHERE store_id=$4 AND master_product_id=$5 AND version=$6
-		RETURNING `+assortmentColumns,
+		RETURNING `+assortmentMetadataColumns,
 		strings.TrimSpace(input.Reason), input.PausedUntil, actorID, storeID, productID, *input.ExpectedVersion)
 	item, err := scanAssortment(row)
 	if errors.Is(err, ErrNotFound) {
@@ -492,7 +492,10 @@ func PauseStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, a
 		}
 		return StoreAssortment{}, &ConflictError{EntityID: current.ID, ExpectedVersion: input.ExpectedVersion, CurrentVersion: current.Version, Message: "version mismatch"}
 	}
-	return item, err
+	if err != nil {
+		return StoreAssortment{}, err
+	}
+	return item, nil
 }
 
 func ResumeStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, actorID string, expectedVersion *int) (StoreAssortment, error) {
@@ -500,10 +503,10 @@ func ResumeStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, 
 		return StoreAssortment{}, ErrInvalid
 	}
 	row := db.QueryRowContext(ctx, `UPDATE dsh_store_assortments SET
-		available=available_before_pause, pause_reason='', paused_until=NULL, paused_at=NULL,
+		pause_reason='', paused_until=NULL, paused_at=NULL,
 		paused_by=NULL, submitted_by=$1, version=version+1, updated_at=NOW()
-		WHERE store_id=$2 AND master_product_id=$3 AND version=$4
-		RETURNING `+assortmentColumns,
+		WHERE store_id=$2 AND master_product_id=$3 AND version=$4 AND paused_at IS NOT NULL
+		RETURNING `+assortmentMetadataColumns,
 		actorID, storeID, productID, *expectedVersion)
 	item, err := scanAssortment(row)
 	if errors.Is(err, ErrNotFound) {
@@ -513,13 +516,15 @@ func ResumeStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, 
 		}
 		return StoreAssortment{}, &ConflictError{EntityID: current.ID, ExpectedVersion: expectedVersion, CurrentVersion: current.Version, Message: "version mismatch"}
 	}
-	return item, err
+	if err != nil {
+		return StoreAssortment{}, err
+	}
+	return item, nil
 }
 
 // RetireStoreAssortment permanently marks a store-product assortment as retired
-// (publication_status='retired', available=false). A retired assortment cannot be
-// resumed — the partner must create a new assortment link. This closes the lifecycle
-// gap between pause (temporary) and full removal from the store.
+// (publication_status='retired', paused_at set). A retired assortment cannot
+// be resumed — the partner must create a new assortment link.
 func RetireStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, actorID string, expectedVersion *int, reason string) (StoreAssortment, error) {
 	if expectedVersion == nil {
 		return StoreAssortment{}, ErrInvalid
@@ -528,10 +533,10 @@ func RetireStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, 
 		return StoreAssortment{}, fmt.Errorf("%w: reason is required when retiring an assortment", ErrInvalid)
 	}
 	row := db.QueryRowContext(ctx, `UPDATE dsh_store_assortments SET
-		available=FALSE, publication_status='retired', pause_reason=$1,
+		publication_status='retired', pause_reason=$1,
 		paused_at=NOW(), paused_by=$2, submitted_by=$2, version=version+1, updated_at=NOW()
 		WHERE store_id=$3 AND master_product_id=$4 AND version=$5 AND publication_status != 'retired'
-		RETURNING `+assortmentColumns,
+		RETURNING `+assortmentMetadataColumns,
 		strings.TrimSpace(reason), actorID, storeID, productID, *expectedVersion)
 	item, err := scanAssortment(row)
 	if errors.Is(err, ErrNotFound) {
@@ -544,7 +549,10 @@ func RetireStoreAssortment(ctx context.Context, db *sql.DB, storeID, productID, 
 		}
 		return StoreAssortment{}, &ConflictError{EntityID: current.ID, ExpectedVersion: expectedVersion, CurrentVersion: current.Version, Message: "version mismatch"}
 	}
-	return item, err
+	if err != nil {
+		return StoreAssortment{}, err
+	}
+	return item, nil
 }
 
 // MigrateAssortmentsOnMerge re-points all store assortments from a deprecated
@@ -616,7 +624,7 @@ func ListCatalogAudit(ctx context.Context, db *sql.DB, filter CatalogAuditFilter
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	items := []CatalogAuditEntry{}
 	for rows.Next() {
 		var item CatalogAuditEntry

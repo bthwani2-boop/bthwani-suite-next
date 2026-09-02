@@ -38,6 +38,14 @@ type ProfileForm = {
   maxPrepMins: string;
   maxAssignmentMins: string;
   maxDeliveryMins: string;
+  warningBeforeMins: string;
+  pickupNotifyMins: string;
+  pickupArrivalMins: string;
+  pickupVerifyMins: string;
+  deliveryAssignToPickupMins: string;
+  deliveryPickupToDepartMins: string;
+  deliveryDepartToArriveMins: string;
+  deliveryArriveToProofMins: string;
   maxConcurrentOrders: string;
   maxCaptainsOnline: string;
   throttleThreshold: string;
@@ -48,9 +56,17 @@ type ProfileForm = {
 
 const EMPTY_PROFILE: ProfileForm = {
   slaCategory: "default",
-  maxPrepMins: "20",
-  maxAssignmentMins: "10",
-  maxDeliveryMins: "45",
+  maxPrepMins: "",
+  maxAssignmentMins: "",
+  maxDeliveryMins: "",
+  warningBeforeMins: "",
+  pickupNotifyMins: "",
+  pickupArrivalMins: "",
+  pickupVerifyMins: "",
+  deliveryAssignToPickupMins: "",
+  deliveryPickupToDepartMins: "",
+  deliveryDepartToArriveMins: "",
+  deliveryArriveToProofMins: "",
   maxConcurrentOrders: "100",
   maxCaptainsOnline: "30",
   throttleThreshold: "0.8",
@@ -185,9 +201,17 @@ export function OperationalPolicySection({
       if (nextProfile) {
         setForm({
           slaCategory: nextProfile.sla.category ?? "default",
-          maxPrepMins: String(nextProfile.sla.maxPrepMins ?? 20),
-          maxAssignmentMins: String(nextProfile.sla.maxAssignmentMins ?? 10),
-          maxDeliveryMins: String(nextProfile.sla.maxDeliveryMins ?? 45),
+          maxPrepMins: String(nextProfile.sla.maxPrepMins ?? ""),
+          maxAssignmentMins: String(nextProfile.sla.maxAssignmentMins ?? ""),
+          maxDeliveryMins: String(nextProfile.sla.maxDeliveryMins ?? ""),
+          warningBeforeMins: String(nextProfile.sla.warningBeforeMins ?? ""),
+          pickupNotifyMins: String(nextProfile.sla.pickupNotifyMins ?? ""),
+          pickupArrivalMins: String(nextProfile.sla.pickupArrivalMins ?? ""),
+          pickupVerifyMins: String(nextProfile.sla.pickupVerifyMins ?? ""),
+          deliveryAssignToPickupMins: String(nextProfile.sla.deliveryAssignToPickupMins ?? ""),
+          deliveryPickupToDepartMins: String(nextProfile.sla.deliveryPickupToDepartMins ?? ""),
+          deliveryDepartToArriveMins: String(nextProfile.sla.deliveryDepartToArriveMins ?? ""),
+          deliveryArriveToProofMins: String(nextProfile.sla.deliveryArriveToProofMins ?? ""),
           maxConcurrentOrders: String(nextProfile.capacity.maxConcurrentOrders ?? 100),
           maxCaptainsOnline: String(nextProfile.capacity.maxCaptainsOnline ?? 30),
           throttleThreshold: String(nextProfile.capacity.throttleThreshold ?? 0.8),
@@ -221,6 +245,14 @@ export function OperationalPolicySection({
         maxPrepMins: integer(form.maxPrepMins, "حد التحضير", 1, 1440),
         maxAssignmentMins: integer(form.maxAssignmentMins, "حد الإسناد", 1, 1440),
         maxDeliveryMins: integer(form.maxDeliveryMins, "حد التوصيل", 1, 1440),
+        warningBeforeMins: integer(form.warningBeforeMins, "نافذة الإنذار", 1, 1440),
+        pickupNotifyMins: integer(form.pickupNotifyMins, "التقاط: انتظار الإشعار", 1, 1440),
+        pickupArrivalMins: integer(form.pickupArrivalMins, "التقاط: الإشعار إلى الوصول", 1, 1440),
+        pickupVerifyMins: integer(form.pickupVerifyMins, "التقاط: الوصول إلى التحقق", 1, 1440),
+        deliveryAssignToPickupMins: integer(form.deliveryAssignToPickupMins, "التوصيل: الإسناد إلى الالتقاط", 1, 1440),
+        deliveryPickupToDepartMins: integer(form.deliveryPickupToDepartMins, "التوصيل: الالتقاط إلى المغادرة", 1, 1440),
+        deliveryDepartToArriveMins: integer(form.deliveryDepartToArriveMins, "التوصيل: المغادرة إلى الوصول", 1, 1440),
+        deliveryArriveToProofMins: integer(form.deliveryArriveToProofMins, "التوصيل: الوصول إلى الإثبات", 1, 1440),
         expectedSlaVersion: profile?.sla.version ?? 0,
         maxConcurrentOrders: integer(form.maxConcurrentOrders, "الطلبات المتزامنة", 1, 1_000_000),
         maxCaptainsOnline: integer(form.maxCaptainsOnline, "الكباتن المتصلون", 0, 1_000_000),
@@ -377,6 +409,14 @@ export function OperationalPolicySection({
             <CpTextInput disabled={!canManageProfile} aria-label="حد التحضير (د)" value={form.maxPrepMins} onChange={(maxPrepMins) => setForm((current) => ({ ...current, maxPrepMins }))} />
             <CpTextInput disabled={!canManageProfile} aria-label="حد الإسناد (د)" value={form.maxAssignmentMins} onChange={(maxAssignmentMins) => setForm((current) => ({ ...current, maxAssignmentMins }))} />
             <CpTextInput disabled={!canManageProfile} aria-label="حد التوصيل (د)" value={form.maxDeliveryMins} onChange={(maxDeliveryMins) => setForm((current) => ({ ...current, maxDeliveryMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="نافذة الإنذار (د)" value={form.warningBeforeMins} onChange={(warningBeforeMins) => setForm((current) => ({ ...current, warningBeforeMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="التقاط: انتظار الإشعار (د)" value={form.pickupNotifyMins} onChange={(pickupNotifyMins) => setForm((current) => ({ ...current, pickupNotifyMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="التقاط: الإشعار إلى الوصول (د)" value={form.pickupArrivalMins} onChange={(pickupArrivalMins) => setForm((current) => ({ ...current, pickupArrivalMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="التقاط: الوصول إلى التحقق (د)" value={form.pickupVerifyMins} onChange={(pickupVerifyMins) => setForm((current) => ({ ...current, pickupVerifyMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="التوصيل: الإسناد إلى الالتقاط (د)" value={form.deliveryAssignToPickupMins} onChange={(deliveryAssignToPickupMins) => setForm((current) => ({ ...current, deliveryAssignToPickupMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="التوصيل: الالتقاط إلى المغادرة (د)" value={form.deliveryPickupToDepartMins} onChange={(deliveryPickupToDepartMins) => setForm((current) => ({ ...current, deliveryPickupToDepartMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="التوصيل: المغادرة إلى الوصول (د)" value={form.deliveryDepartToArriveMins} onChange={(deliveryDepartToArriveMins) => setForm((current) => ({ ...current, deliveryDepartToArriveMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="التوصيل: الوصول إلى الإثبات (د)" value={form.deliveryArriveToProofMins} onChange={(deliveryArriveToProofMins) => setForm((current) => ({ ...current, deliveryArriveToProofMins }))} />
             <CpTextInput disabled={!canManageProfile} aria-label="الطلبات المتزامنة" value={form.maxConcurrentOrders} onChange={(maxConcurrentOrders) => setForm((current) => ({ ...current, maxConcurrentOrders }))} />
             <CpTextInput disabled={!canManageProfile} aria-label="الحد الأعلى للكباتن" value={form.maxCaptainsOnline} onChange={(maxCaptainsOnline) => setForm((current) => ({ ...current, maxCaptainsOnline }))} />
             <CpTextInput disabled={!canManageProfile} aria-label="عتبة الضغط 0..1" value={form.throttleThreshold} onChange={(throttleThreshold) => setForm((current) => ({ ...current, throttleThreshold }))} />

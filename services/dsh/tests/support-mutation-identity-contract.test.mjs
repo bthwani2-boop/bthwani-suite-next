@@ -8,7 +8,13 @@ function source(path) {
 
 test("support mutation attempts are namespaced by actor and installation", () => {
   const attempt = source("frontend/shared/support/support-mutation-attempt.ts");
-  assert.match(attempt, /const PREFIX = "@bthwani\/dsh\/support-mutation\/v3\/"/);
+  const storage = source("frontend/shared/support/sensitive-support-attempt-storage.ts");
+  assert.match(attempt, /const PREFIX = SENSITIVE_SUPPORT_MUTATION_PREFIX/);
+  assert.match(attempt, /bthwaniSensitiveStorage/);
+  assert.doesNotMatch(attempt, /bthwaniDurableStorage/);
+  assert.match(storage, /support-mutation\/v3/);
+  assert.match(storage, /ensureSensitiveSupportAttemptsMigrated/);
+  assert.match(storage, /opaqueSupportFingerprint/);
   assert.match(attempt, /readonly actorId: string;/);
   assert.match(attempt, /resolveMutationIdentityScope\(actorId, /);
   assert.match(attempt, /encode\(scope\.actorId\).*encode\(scope\.installationId\)/);
@@ -56,4 +62,26 @@ test("client and control-panel support surfaces pass live identity subjects", ()
   assert.match(clientDetail, /useTicketDetailController\(ticketId, actorId, identity\.state\.kind\)/);
   assert.match(dashboard, /useControlPanelSession/);
   assert.match(rescue, /useControlPanelSession/);
+});
+
+test("support mutation controllers serialize writes before React state updates", () => {
+  const ticket = source("frontend/shared/support/use-support-controller.tsx");
+  assert.equal((ticket.match(/const mutationBusyRef = useRef\(false\)/g) ?? []).length, 3);
+  assert.equal((ticket.match(/if \(mutationBusyRef\.current\) return false;/g) ?? []).length, 3);
+  assert.equal((ticket.match(/mutationBusyRef\.current = false;/g) ?? []).length, 3);
+  assert.match(ticket, /\}, \[actorId, loadEvents, loadMessages, mode, ticketId\]\);/);
+});
+
+test("direct order conversations serialize durable writes before React state updates", () => {
+  const client = source("frontend/app-client/orders/OrderChatScreen.tsx");
+  const captain = source("frontend/app-captain/orders/CaptainOrderSupportConversationScreen.tsx");
+  for (const screen of [client, captain]) {
+    assert.equal((screen.match(/const mutationBusyRef = React\.useRef\(false\)/g) ?? []).length, 1);
+  }
+  assert.equal((client.match(/mutationBusyRef\.current[^;\n]*return;/g) ?? []).length, 1);
+  assert.equal((client.match(/mutationBusyRef\.current = false;/g) ?? []).length, 1);
+  assert.equal((captain.match(/mutationBusyRef\.current[^;\n]*return;/g) ?? []).length, 2);
+  assert.equal((captain.match(/mutationBusyRef\.current = false;/g) ?? []).length, 2);
+  assert.match(client, /const loadBusyRef = React\.useRef\(false\)/);
+  assert.match(client, /if \(!orderId\.trim\(\) \|\| loadBusyRef\.current\) return;/);
 });

@@ -99,7 +99,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	rows, err := tx.Query(`SELECT id::TEXT,event_type,operator_context_id,
 		checkout_intent_id::TEXT,coupon_redemption_id::TEXT,
@@ -112,7 +112,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	if err != nil {
 		return nil, fmt.Errorf("claim promotion funding outbox: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	events := []Event{}
 	for rows.Next() {

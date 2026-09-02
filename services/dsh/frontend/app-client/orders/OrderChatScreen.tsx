@@ -103,6 +103,8 @@ export function OrderChatScreen({
   const [draft, setDraft] = React.useState("");
   const [errorMessage, setErrorMessage] = React.useState("");
   const scrollRef = React.useRef<ScrollView>(null);
+  const loadBusyRef = React.useRef(false);
+  const mutationBusyRef = React.useRef(false);
   const isPickup = fulfillmentMode === "pickup";
   const partnerTitle = isPickup ? "محادثة المتجر" : "محادثة التوصيل";
 
@@ -116,12 +118,13 @@ export function OrderChatScreen({
   }, []);
 
   const loadConversation = React.useCallback(async () => {
-    if (!orderId.trim()) return;
+    if (!orderId.trim() || loadBusyRef.current) return;
     if (!actorId) {
       setLoadState("error");
       setErrorMessage("يجب تسجيل الدخول قبل فتح محادثة الطلب.");
       return;
     }
+    loadBusyRef.current = true;
     setLoadState("loading");
     setErrorMessage("");
     try {
@@ -159,6 +162,8 @@ export function OrderChatScreen({
     } catch (error) {
       setLoadState("error");
       setErrorMessage(error instanceof Error ? error.message : "تعذر تحميل محادثة الطلب من DSH.");
+    } finally {
+      loadBusyRef.current = false;
     }
   }, [actorId, isPickup, orderId, readback]);
 
@@ -168,8 +173,9 @@ export function OrderChatScreen({
 
   const sendMessage = React.useCallback(async () => {
     const body = draft.trim();
-    if (!ticket || !actorId || body.length < 2 || mutationState !== "idle" || CLOSED_STATUSES.has(ticket.status)) return;
+    if (!ticket || !actorId || body.length < 2 || mutationState !== "idle" || mutationBusyRef.current || CLOSED_STATUSES.has(ticket.status)) return;
     const fingerprint = JSON.stringify({ ticketId: ticket.id, body });
+    mutationBusyRef.current = true;
     setMutationState("sending");
     setErrorMessage("");
     try {
@@ -195,6 +201,7 @@ export function OrderChatScreen({
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "تعذر إرسال الرسالة إلى DSH.");
     } finally {
+      mutationBusyRef.current = false;
       setMutationState("idle");
     }
   }, [actorId, draft, mutationState, orderId, readback, ticket]);

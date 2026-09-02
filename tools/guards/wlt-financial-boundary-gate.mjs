@@ -399,10 +399,12 @@ if (!genericHandler.includes("input.SubscriptionPurchaseID") || !genericHandler.
 const commercialRouter = requireCommercialText("services/wlt/backend/internal/http/server.go", "POST /wlt/commercial/payment-sessions", "SUBSCRIPTION_PAYMENT_ROUTE_NOT_REGISTERED");
 if (!commercialRouter.includes("commercial.HandleCreateSubscriptionPaymentSession")) violations.push({ file: "services/wlt/backend/internal/http/server.go", line: 0, message: "SUBSCRIPTION_PAYMENT_HANDLER_NOT_BOUND" });
 requireCommercialText("services/wlt/contracts/wlt.commercial.openapi.yaml", "/wlt/commercial/payment-sessions:", "SUBSCRIPTION_PAYMENT_ROUTE_NOT_CONTRACTED");
-for (const file of ["services/dsh/backend/internal/wlt/subscription_purchase.go", "services/dsh/backend/internal/wlt/subscription_payment_bound.go"]) {
-  const source = requireCommercialText(file, "/wlt/commercial/payment-sessions", "DSH_SUBSCRIPTION_CLIENT_NOT_USING_COMMERCIAL_ROUTE");
-  if (source.includes('"/wlt/payment-sessions"')) violations.push({ file, line: 0, message: "DSH_SUBSCRIPTION_CLIENT_USES_GENERIC_PAYMENT_ROUTE" });
-}
+const subscriptionClientSource = requireCommercialText("services/dsh/backend/internal/wlt/subscription_purchase.go", "/wlt/commercial/payment-sessions", "DSH_SUBSCRIPTION_CLIENT_NOT_USING_COMMERCIAL_ROUTE");
+if (subscriptionClientSource.includes('"/wlt/payment-sessions"')) violations.push({ file: "services/dsh/backend/internal/wlt/subscription_purchase.go", line: 0, message: "DSH_SUBSCRIPTION_CLIENT_USES_GENERIC_PAYMENT_ROUTE" });
+const boundSubscriptionClientFile = "services/dsh/backend/internal/wlt/subscription_payment_bound.go";
+const boundSubscriptionClientSource = readCanonicalSource(boundSubscriptionClientFile);
+if (!/CreateSubscriptionPaymentSession\(/.test(boundSubscriptionClientSource)) violations.push({ file: boundSubscriptionClientFile, line: 0, message: "DSH_BOUND_SUBSCRIPTION_CLIENT_NOT_DELEGATING_COMMERCIAL_ROUTE" });
+if (boundSubscriptionClientSource.includes('"/wlt/payment-sessions"')) violations.push({ file: boundSubscriptionClientFile, line: 0, message: "DSH_BOUND_SUBSCRIPTION_CLIENT_USES_GENERIC_PAYMENT_ROUTE" });
 const unsafeCommercialHelper = "services/dsh/backend/internal/wlt/subscription_payment_generic.go";
 if (listFiles().includes(unsafeCommercialHelper)) violations.push({ file: unsafeCommercialHelper, line: 0, message: "UNSAFE_GENERIC_SUBSCRIPTION_PAYMENT_HELPER_REINTRODUCED" });
 

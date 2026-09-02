@@ -1,12 +1,15 @@
 package http
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"strings"
 	"time"
 
 	"dsh-api/internal/pickup"
+	"dsh-api/internal/platformpolicies"
 	"dsh-api/internal/store"
 )
 
@@ -65,8 +68,12 @@ func writePickupError(w http.ResponseWriter, err error) {
 	}
 }
 
-func marshalPickupSession(s *pickup.PickupSession) map[string]any {
-	sla := pickup.EvaluateSLA(s, nil, pickup.DefaultSLAThresholds(), time.Now().UTC())
+func marshalPickupSession(ctx context.Context, db *sql.DB, s *pickup.PickupSession) (map[string]any, error) {
+	thresholds, err := pickup.GetSLAThresholds(ctx, db, s.StoreID)
+	if err != nil {
+		return nil, err
+	}
+	sla := pickup.EvaluateSLA(s, nil, thresholds, time.Now().UTC())
 	return map[string]any{
 		"id":                 s.ID,
 		"orderId":            s.OrderID,
@@ -92,7 +99,32 @@ func marshalPickupSession(s *pickup.PickupSession) map[string]any {
 		"version":            s.Version,
 		"createdAt":          s.CreatedAt,
 		"updatedAt":          s.UpdatedAt,
+	}, nil
+}
+
+func writePickupSession(w http.ResponseWriter, status int, fields map[string]any, session *pickup.PickupSession, ctx context.Context, db *sql.DB) {
+	if fields == nil {
+		fields = map[string]any{}
 	}
+	var payload any
+	if session != nil {
+		var err error
+		payload, err = marshalPickupSession(ctx, db, session)
+		if err != nil {
+			writePickupPolicyError(w, err)
+			return
+		}
+	}
+	fields["session"] = payload
+	store.SendJSON(w, status, fields)
+}
+
+func writePickupPolicyError(w http.ResponseWriter, err error) {
+	if platformpolicies.IsOperationalSLAUnavailable(err) {
+		store.SendError(w, http.StatusServiceUnavailable, "POLICY_TRUTH_UNAVAILABLE", "pickup SLA policy is unavailable")
+		return
+	}
+	store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to read pickup SLA policy")
 }
 
 func (s *protectedStoreServer) handleGetPartnerPickupState(w http.ResponseWriter, r *http.Request) {
@@ -121,14 +153,7 @@ func (s *protectedStoreServer) handleGetPartnerPickupState(w http.ResponseWriter
 		return
 	}
 
-	var sessionPayload any
-	if session != nil {
-		sessionPayload = marshalPickupSession(session)
-	}
-	store.SendJSON(w, http.StatusOK, map[string]any{
-		"session": sessionPayload,
-		"stage":   stage,
-	})
+	writePickupSession(w, http.StatusOK, map[string]any{"stage": stage}, session, r.Context(), s.db)
 }
 
 func (s *protectedStoreServer) handlePickupMarkReady(w http.ResponseWriter, r *http.Request) {
@@ -203,7 +228,7 @@ func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "notified": true, "session": marshalPickupSession(refreshed)})
+	writePickupSession(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "notified": true}, refreshed, r.Context(), s.db)
 }
 
 func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter, r *http.Request) {
@@ -229,7 +254,7 @@ func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "customerArrived": true, "session": marshalPickupSession(refreshed)})
+	writePickupSession(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "customerArrived": true}, refreshed, r.Context(), s.db)
 }
 
 func (s *protectedStoreServer) issuePickupOtpInternal(w http.ResponseWriter, r *http.Request, operatorContextID, orderID, clientID, actorID, actorRole, correlationID string) (string, *pickup.PickupSession, bool) {
@@ -266,7 +291,7 @@ func (s *protectedStoreServer) handlePickupVerify(w http.ResponseWriter, r *http
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+	writePickupSession(w, http.StatusOK, nil, session, r.Context(), s.db)
 }
 
 func (s *protectedStoreServer) handlePickupNoShow(w http.ResponseWriter, r *http.Request) {
@@ -298,7 +323,7 @@ func (s *protectedStoreServer) handlePickupNoShow(w http.ResponseWriter, r *http
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(refreshed)})
+	writePickupSession(w, http.StatusOK, nil, refreshed, r.Context(), s.db)
 }
 
 func (s *protectedStoreServer) handleListOperatorPickups(w http.ResponseWriter, r *http.Request) {
@@ -319,7 +344,12 @@ func (s *protectedStoreServer) handleListOperatorPickups(w http.ResponseWriter, 
 	}
 	results := make([]map[string]any, 0, len(sessions))
 	for i := range sessions {
-		results = append(results, marshalPickupSession(&sessions[i]))
+		payload, payloadErr := marshalPickupSession(r.Context(), s.db, &sessions[i])
+		if payloadErr != nil {
+			writePickupPolicyError(w, payloadErr)
+			return
+		}
+		results = append(results, payload)
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"sessions": results})
 }
@@ -334,7 +364,7 @@ func (s *protectedStoreServer) handleGetOperatorPickup(w http.ResponseWriter, r 
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+	writePickupSession(w, http.StatusOK, nil, session, r.Context(), s.db)
 }
 
 // handlePartnerExtendPickupWindow is the partner's routine window-extension
@@ -369,7 +399,7 @@ func (s *protectedStoreServer) handlePartnerExtendPickupWindow(w http.ResponseWr
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+	writePickupSession(w, http.StatusOK, nil, session, r.Context(), s.db)
 }
 
 // handlePartnerReschedulePickupWindow is the partner's routine no-show
@@ -403,7 +433,7 @@ func (s *protectedStoreServer) handlePartnerReschedulePickupWindow(w http.Respon
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+	writePickupSession(w, http.StatusOK, nil, session, r.Context(), s.db)
 }
 
 // handleExtendPickupWindow is the operator's emergency-override extension,
@@ -439,5 +469,5 @@ func (s *protectedStoreServer) handleExtendPickupWindow(w http.ResponseWriter, r
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+	writePickupSession(w, http.StatusOK, nil, session, r.Context(), s.db)
 }

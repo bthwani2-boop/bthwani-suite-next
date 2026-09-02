@@ -44,7 +44,7 @@ func (s *protectedStoreServer) uploadDeliveryProofObject(
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "file field is required")
 		return uploadedDeliveryProof{}, false
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	uploadBody, contentType, err := prepareMediaUploadBody(file, header.Header.Get("Content-Type"))
 	if err != nil {
@@ -125,5 +125,5 @@ func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.Respon
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(updated)})
+	writePartnerDeliveryTask(w, http.StatusOK, nil, updated, r.Context(), s.db)
 }

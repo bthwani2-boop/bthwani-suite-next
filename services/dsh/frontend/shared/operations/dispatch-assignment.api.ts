@@ -1,19 +1,13 @@
 import { createDshHttpClient } from '../_kernel/dsh-http-request';
 import { secureRandomId } from '../_kernel/secure-random.ts';
-import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
+import type {
+  DshGovernedCreateAssignmentInput,
+  DshGovernedDispatchAssignment,
+} from '../dispatch/dispatch.types';
 
 const { request } = createDshHttpClient('/api/dsh', 'operator-dispatch-assignment', 15000);
 
-export type AssignOrderToCaptainInput = {
-  readonly orderId: string;
-  readonly captainId: string;
-  readonly serviceAreaCode: string;
-  readonly idempotencyKey: string;
-  readonly priority?: number;
-  readonly distanceMeters?: number;
-  readonly offerReason?: string;
-  readonly responseTimeoutSeconds?: number;
-};
+export type AssignOrderToCaptainInput = DshGovernedCreateAssignmentInput;
 
 export function buildDispatchAssignmentIdempotencyKey(
   orderId: string,
@@ -25,7 +19,7 @@ export function buildDispatchAssignmentIdempotencyKey(
 
 export async function assignOrderToCaptain(
   input: AssignOrderToCaptainInput,
-): Promise<DshDispatchAssignment> {
+): Promise<DshGovernedDispatchAssignment> {
   const orderId = input.orderId.trim();
   const captainId = input.captainId.trim();
   const serviceAreaCode = input.serviceAreaCode.trim();
@@ -36,7 +30,7 @@ export async function assignOrderToCaptain(
   if (idempotencyKey.length < 16) {
     throw { kind: 'invalid_request', message: 'idempotencyKey must contain at least 16 characters' };
   }
-  const result = await request<{ assignment: DshDispatchAssignment; replayed?: boolean }>(
+  const result = await request<{ assignment: DshGovernedDispatchAssignment; replayed?: boolean }>(
     '/dsh/operator/dispatch/assignments',
     {
       method: 'POST',
@@ -44,12 +38,12 @@ export async function assignOrderToCaptain(
         orderId,
         captainId,
         serviceAreaCode,
-        idempotencyKey,
         priority: input.priority ?? 0,
         offerReason: input.offerReason ?? 'operator selected governed candidate',
         responseTimeoutSeconds: input.responseTimeoutSeconds ?? 90,
         ...(input.distanceMeters === undefined ? {} : { distanceMeters: input.distanceMeters }),
       },
+      idempotencyKey,
     },
   );
   return result.assignment;

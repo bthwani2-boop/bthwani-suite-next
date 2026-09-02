@@ -52,7 +52,7 @@ func GetPlatformKpis(db *sql.DB, period string) (PlatformKpis, error) {
 	if err != nil {
 		return kpis, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var metricID string
@@ -107,7 +107,7 @@ func GetOrderAnalytics(db *sql.DB, period string) (OrderAnalytics, error) {
 	if err != nil {
 		return out, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var count OrderStatusCount
 		if err := rows.Scan(&count.Status, &count.Count); err != nil {
@@ -144,7 +144,7 @@ func GetDeliveryAnalytics(db *sql.DB, period string) (DeliveryAnalytics, error) 
 	if err != nil {
 		return out, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var metricID string
@@ -194,7 +194,7 @@ func GetSupportAnalytics(db *sql.DB, period string) (SupportAnalytics, error) {
 	if err != nil {
 		return out, err
 	}
-	defer metricRows.Close()
+	defer func() { _ = metricRows.Close() }()
 
 	for metricRows.Next() {
 		var metricID string
@@ -219,7 +219,7 @@ func GetSupportAnalytics(db *sql.DB, period string) (SupportAnalytics, error) {
 	if err != nil {
 		return out, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var count TicketCategoryCount
 		if err := rows.Scan(&count.Category, &count.Count); err != nil {

@@ -75,6 +75,27 @@ test("clean normalized evidence closes consumption without claiming product clos
   assert.equal(result.rootGraph.closureClaim, false);
 });
 
+test("explicit NOT_APPLICABLE remains non-passing while N/A_PROVEN can close", () => {
+  const inputDir = temporaryDirectory();
+  const outputDir = temporaryDirectory();
+  fs.mkdirSync(path.join(inputDir, "codeql"), {recursive: true});
+  fs.writeFileSync(path.join(inputDir, "codeql", "summary.json"), JSON.stringify({
+    schema: "bthwani-codeql-evidence/1",
+    candidate: {headSha, baseSha},
+    status: "NOT_APPLICABLE",
+    evidenceComplete: true,
+    findings: [],
+    errors: [],
+  }));
+
+  const result = consumeEvidenceArtifacts({inputDir, outputDir, headSha, baseSha, requiredTools: ["codeql"]});
+
+  assert.equal(result.envelopes[0].execution.status, "NOT_APPLICABLE");
+  assert.equal(result.summary.notApplicableExecution, 1);
+  assert.equal(result.summary.nonPassingExecution, 1);
+  assert.equal(result.closed, false);
+});
+
 test("consumes native jscpd output and preserves explicit baseline disposition", () => {
   const inputDir = temporaryDirectory();
   const outputDir = temporaryDirectory();

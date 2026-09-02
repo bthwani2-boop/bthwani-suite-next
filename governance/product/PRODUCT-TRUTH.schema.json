@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:bthwani:governance:product-truth:v1",
+  "title": "BThwani Product Truth V1",
+  "description": "Structural representation schema only. Conformance does not certify semantic correctness.",
+  "type": "object",
+  "required": ["schemaVersion", "capabilityId", "problem", "actors", "surfaces", "outcome", "acceptance", "invariants", "owners"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "capabilityId": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "problem": {
+      "type": "object",
+      "required": ["statement", "affectedActors"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1 },
+        "affectedActors": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "frequency": { "type": "string" },
+        "severity": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "actors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "role", "permittedActions", "forbiddenActions"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "permittedActions": { "type": "array", "items": { "type": "string" } },
+          "forbiddenActions": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": true
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "required", "actors", "states", "actions"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "required": { "type": "boolean" },
+          "exclusionReason": { "type": "string" },
+          "actors": { "type": "array", "items": { "type": "string" } },
+          "states": { "type": "array", "items": { "type": "string" } },
+          "actions": { "type": "array", "items": { "type": "string" } },
+          "routesOrScreens": { "type": "array", "items": { "type": "string" }, "description": "Derived non-normative traceability only." },
+          "operationIds": { "type": "array", "items": { "type": "string" }, "description": "Derived non-normative traceability only." }
+        },
+        "additionalProperties": true
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "required": ["statement", "targetState"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 1 },
+        "targetState": { "type": "string", "minLength": 1 },
+        "primaryMetric": { "type": "string" },
+        "guardrailMetrics": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "acceptance": {
+      "type": "object",
+      "required": ["criteria", "failureStates"],
+      "properties": {
+        "criteria": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "failureStates": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      },
+      "additionalProperties": true
+    },
+    "invariants": {
+      "type": "object",
+      "required": ["business", "negative"],
+      "properties": {
+        "business": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "negative": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      },
+      "additionalProperties": true
+    },
+    "owners": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "preconditions": { "type": "array", "items": { "type": "string" } },
+    "stateModel": { "type": "object", "additionalProperties": true },
+    "transitions": { "type": "array" },
+    "relationships": { "type": "object", "additionalProperties": true },
+    "capabilities": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

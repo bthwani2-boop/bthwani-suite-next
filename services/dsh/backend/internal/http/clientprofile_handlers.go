@@ -1,7 +1,6 @@
 package http
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -40,8 +39,7 @@ func (s *protectedStoreServer) handleUpsertClientProfilePreferences(w http.Respo
 	}
 
 	var input clientprofile.ClientProfilePreferencesInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "Invalid JSON payload")
+	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
 
@@ -53,6 +51,10 @@ func (s *protectedStoreServer) handleUpsertClientProfilePreferences(w http.Respo
 		}
 		if errors.Is(err, clientprofile.ErrConflict) {
 			store.SendError(w, http.StatusConflict, "PROFILE_CONFLICT", "Profile version conflict")
+			return
+		}
+		if errors.Is(err, clientprofile.ErrInvalid) {
+			store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "Unsupported profile preferences")
 			return
 		}
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update preferences")
@@ -73,8 +75,7 @@ func (s *protectedStoreServer) handleUpsertClientProfileConsents(w http.Response
 	}
 
 	var input clientprofile.ClientProfileConsentsInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "Invalid JSON payload")
+	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
 
@@ -86,6 +87,10 @@ func (s *protectedStoreServer) handleUpsertClientProfileConsents(w http.Response
 		}
 		if errors.Is(err, clientprofile.ErrConflict) {
 			store.SendError(w, http.StatusConflict, "PROFILE_CONFLICT", "Profile version conflict")
+			return
+		}
+		if errors.Is(err, clientprofile.ErrInvalid) {
+			store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "Unsupported profile consents")
 			return
 		}
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update consents")

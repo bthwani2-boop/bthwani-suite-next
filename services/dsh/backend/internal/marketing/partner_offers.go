@@ -100,7 +100,7 @@ func ListPartnerOffers(db *sql.DB) ([]PartnerOffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []PartnerOffer{}
 	for rows.Next() {
 		o, err := scanPartnerOffer(rows)
@@ -119,7 +119,7 @@ func ListPartnerOffersByStore(db *sql.DB, storeID string) ([]PartnerOffer, error
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := []PartnerOffer{}
 	for rows.Next() {
 		o, err := scanPartnerOffer(rows)

@@ -20,9 +20,13 @@ func mockWFServer(t *testing.T) *workforceclient.Client {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		if strings.Contains(r.URL.Path, "staff-") || strings.Contains(r.URL.Path, "paused-") || strings.Contains(r.URL.Path, "other-store-") {
-			w.Write([]byte(`{"activationReadiness":{"isActive":false}}`))
+			if _, err := w.Write([]byte(`{"activationReadiness":{"isActive":false}}`)); err != nil {
+				t.Errorf("write inactive workforce response: %v", err)
+			}
 		} else {
-			w.Write([]byte(`{"activationReadiness":{"isActive":true}}`))
+			if _, err := w.Write([]byte(`{"activationReadiness":{"isActive":true}}`)); err != nil {
+				t.Errorf("write active workforce response: %v", err)
+			}
 		}
 	}))
 	t.Cleanup(ts.Close)

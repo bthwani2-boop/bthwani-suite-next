@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"dsh-api/internal/auth"
 )
 
 func TestFinanceOperationDescriptorsOwnExactCoordinates(t *testing.T) {
@@ -39,14 +41,14 @@ func TestExecuteFinanceWriteEnforcesCanonicalRequirements(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) }))
 	defer server.Close()
 	c := NewClient(server.URL, "service-token")
-	ctx := context.WithValue(WithOperatorContext(context.Background(), "operator-1"), "authorized_action", "finance.manage")
+	ctx := auth.WithAuthorizationContext(WithOperatorContext(context.Background(), "operator-1"), "finance.manage", "all")
 	if _, _, err := c.ExecuteFinanceWrite(ctx, "finance.reconciliation.resolve", map[string]string{"caseId": "case-1"}, []byte(`{}`), "corr-1", "", "operator-1", "actor-1"); err == nil || !strings.Contains(err.Error(), "requires an idempotency key") {
 		t.Fatalf("expected idempotency rejection, got %v", err)
 	}
 	if _, _, err := c.ExecuteFinanceWrite(ctx, "finance.reconciliation.resolve", map[string]string{"caseId": "case-1"}, []byte(`{}`), "corr-1", "idem-1", "operator-1", ""); err == nil || !strings.Contains(err.Error(), "delegated finance principal") {
 		t.Fatalf("expected delegation rejection, got %v", err)
 	}
-	wrong := context.WithValue(WithOperatorContext(context.Background(), "operator-1"), "authorized_action", "finance.read")
+	wrong := auth.WithAuthorizationContext(WithOperatorContext(context.Background(), "operator-1"), "finance.read", "all")
 	if _, _, err := c.ExecuteFinanceWrite(wrong, "finance.reconciliation.resolve", map[string]string{"caseId": "case-1"}, []byte(`{}`), "corr-1", "idem-1", "operator-1", "actor-1"); err == nil || !strings.Contains(err.Error(), "requires permission") {
 		t.Fatalf("expected permission rejection, got %v", err)
 	}
@@ -65,7 +67,7 @@ func TestExecuteFinanceWriteUsesRegistryMethodAndPath(t *testing.T) {
 	}))
 	defer server.Close()
 	c := NewClient(server.URL, "service-token")
-	ctx := context.WithValue(WithOperatorContext(context.Background(), "operator-1"), "authorized_action", "finance.manage")
+	ctx := auth.WithAuthorizationContext(WithOperatorContext(context.Background(), "operator-1"), "finance.manage", "all")
 	if _, _, err := c.ExecuteFinanceWrite(ctx, "finance.reconciliation.resolve", map[string]string{"caseId": "case-1"}, []byte(`{}`), "corr-1", "idem-1", "operator-1", "actor-1"); err != nil {
 		t.Fatal(err)
 	}

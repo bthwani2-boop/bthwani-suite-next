@@ -87,7 +87,7 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 	if err != nil {
 		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: call WLT: %v", ErrDispatchFinancialEligibilityUnavailable, err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxDispatchFinancialEligibilityResponseBytes))
 	if err != nil {
 		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: read response: %v", ErrDispatchFinancialEligibilityUnavailable, err)

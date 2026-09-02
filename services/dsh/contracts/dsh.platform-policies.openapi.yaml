@@ -237,68 +237,6 @@ components:
           type: string
           minLength: 3
           maxLength: 500
-    DshSlaRule:
-      type: object
-      required:
-      - id
-      - zoneId
-      - category
-      - maxPrepMins
-      - maxDeliveryMins
-      - version
-      - updatedBy
-      - updatedAt
-      properties:
-        id:
-          type: string
-        zoneId:
-          type: string
-        category:
-          type: string
-        maxPrepMins:
-          type: integer
-        maxDeliveryMins:
-          type: integer
-        version:
-          type: integer
-          minimum: 1
-        updatedBy:
-          type: string
-        updatedAt:
-          type: string
-          format: date-time
-    DshCapacityConfig:
-      type: object
-      required:
-      - id
-      - zoneId
-      - maxConcurrentOrders
-      - maxCaptainsOnline
-      - throttleThreshold
-      - version
-      - updatedBy
-      - updatedAt
-      properties:
-        id:
-          type: string
-        zoneId:
-          type: string
-        maxConcurrentOrders:
-          type: integer
-        maxCaptainsOnline:
-          type: integer
-        throttleThreshold:
-          type: number
-          minimum: 0
-          maximum: 1
-        version:
-          type: integer
-          minimum: 1
-        updatedBy:
-          type: string
-        updatedAt:
-          type: string
-          format: date-time
     DshZoneServiceability:
       type: object
       required:

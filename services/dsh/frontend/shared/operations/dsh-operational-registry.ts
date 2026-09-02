@@ -116,7 +116,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/shared/catalog/central-catalog.types.ts',
+    currentEvidencePath: 'dsh/contracts/dsh.openapi.yaml',
     notes: 'Catalog data remains central; surfaces must not clone product/media payloads locally.',
   },
   {
@@ -137,7 +137,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/shared/orders/orders.state-machine.ts',
+    currentEvidencePath: 'dsh/contracts/dsh.order-truth.openapi.yaml',
     notes: 'Order lifecycle belongs to DSH; payment/refund truth stays WLT read-only.',
   },
   {

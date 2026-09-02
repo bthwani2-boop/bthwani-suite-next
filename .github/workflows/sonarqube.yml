@@ -805,6 +805,30 @@ jobs:
             echo "::error::candidate or coverage artifact contains a symlink; secret-bearing Sonar scan refused"
             exit 1
           fi
+          project_key="$(sed -n 's/^sonar\.projectKey=//p' "${GITHUB_WORKSPACE}/sonar-project.properties" | head -n 1)"
+          [[ -n "${project_key}" ]] || {
+            echo "::error::trusted Sonar project key missing"
+            exit 1
+          }
+          echo "SONAR_PROJECT_KEY=${project_key}" >> "${GITHUB_ENV}"
+
+      - name: Load trusted Sonar task validator
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          trusted_validator="${RUNNER_TEMP}/validate-sonar-analysis-task.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/validate-sonar-analysis-task.mjs" \
+            -f "ref=${DEFAULT_BRANCH}" --jq '.content' | base64 --decode > "${trusted_validator}"
+          [[ -s "${trusted_validator}" ]] || {
+            echo "::error::trusted Sonar task validator missing"
+            exit 1
+          }
+          node --check "${trusted_validator}"
+          echo "TRUSTED_SONAR_TASK_VALIDATOR=${trusted_validator}" >> "${GITHUB_ENV}"
 
       - name: Validate SonarQube Cloud token
         shell: bash
@@ -831,6 +855,38 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+      - name: Validate and publish exact Sonar analysis task identity
+        if: ${{ success() }}
+        shell: bash
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          [[ -s .scannerwork/report-task.txt ]] || {
+            echo "::error::Sonar scanner did not publish report-task.txt"
+            exit 1
+          }
+          validator_args=()
+          if [[ -n "${PR_NUMBER}" ]]; then
+            validator_args+=(--pr-number "${PR_NUMBER}")
+          fi
+          node "${TRUSTED_SONAR_TASK_VALIDATOR}" \
+            --input .scannerwork/report-task.txt \
+            --output .scannerwork/sonar-analysis-task.json \
+            --project-key "${SONAR_PROJECT_KEY}" \
+            "${validator_args[@]}"
+
+      - name: Upload exact Sonar analysis task identity
+        if: ${{ success() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sonar-analysis-task-${{ needs.scope.outputs.head_sha }}-${{ github.run_id }}
+          path: |
+            .scannerwork/report-task.txt
+            .scannerwork/sonar-analysis-task.json
+          if-no-files-found: error
+          retention-days: 2
+
   evidence:
     name: Consume Sonar evidence
     needs: [scope, scan]
@@ -840,6 +896,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
+      actions: read
       contents: read
     env:
       GH_TOKEN: ${{ github.token }}
@@ -874,10 +931,67 @@ jobs:
           [[ -s "${trusted_classifier}" ]] || { echo "::error::trusted Sonar evidence classifier missing"; exit 1; }
           [[ -s "${trusted_properties}" ]] || { echo "::error::trusted Sonar project settings missing"; exit 1; }
           node --check "${trusted_classifier}"
+          trusted_task_validator="${RUNNER_TEMP}/validate-sonar-analysis-task.mjs"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/validate-sonar-analysis-task.mjs" \
+            -f "ref=${DEFAULT_BRANCH}" --jq '.content' | base64 --decode > "${trusted_task_validator}"
+          [[ -s "${trusted_task_validator}" ]] || { echo "::error::trusted Sonar task validator missing"; exit 1; }
+          node --check "${trusted_task_validator}"
           project_key="$(sed -n 's/^sonar\.projectKey=//p' "${trusted_properties}" | head -n 1)"
           [[ -n "${project_key}" ]] || { echo "::error::trusted Sonar project key missing"; exit 1; }
-          echo "TRUSTED_SONAR_CLASSIFIER=${trusted_classifier}" >> "${GITHUB_ENV}"
-          echo "SONAR_PROJECT_KEY=${project_key}" >> "${GITHUB_ENV}"
+          {
+            echo "TRUSTED_SONAR_CLASSIFIER=${trusted_classifier}"
+            echo "TRUSTED_SONAR_TASK_VALIDATOR=${trusted_task_validator}"
+            echo "SONAR_PROJECT_KEY=${project_key}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Download and validate exact Sonar analysis task identity
+        shell: bash
+        env:
+          EXPECTED_HEAD_SHA: ${{ needs.scope.outputs.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          evidence="${RUNNER_TEMP}/sonar-evidence"
+          mkdir -p "${evidence}/task"
+          name="sonar-analysis-task-${EXPECTED_HEAD_SHA}-${GITHUB_RUN_ID}"
+          artifacts="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100")"
+          artifact_id="$(jq -r --arg name "${name}" \
+            '[.artifacts[] | select(.name == $name)] | if length == 1 then .[0].id else empty end' <<<"${artifacts}")"
+          [[ "${artifact_id}" =~ ^[0-9]+$ ]] || {
+            echo "::error::Exact Sonar analysis task artifact missing or ambiguous"
+            exit 1
+          }
+          archive="${RUNNER_TEMP}/sonar-analysis-task.zip"
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${archive}"
+          while IFS= read -r entry; do
+            [[ -n "${entry}" && "${entry}" != ".." && "${entry}" != /* && "${entry}" != ../* && \
+               "${entry}" != */../* && "${entry}" != */.. ]] || {
+              echo "::error::unsafe Sonar analysis task artifact path"
+              exit 1
+            }
+          done < <(unzip -Z1 "${archive}")
+          unzip -q "${archive}" -d "${evidence}/task"
+          if find "${evidence}/task" -type l -print -quit | grep -q .; then
+            echo "::error::Sonar analysis task artifact contains a symlink"
+            exit 1
+          fi
+          mapfile -t task_files < <(find "${evidence}/task" -type f -name report-task.txt -print)
+          [[ "${#task_files[@]}" == 1 ]] || {
+            echo "::error::Sonar report-task identity is missing or ambiguous"
+            exit 1
+          }
+          validator_args=()
+          if [[ -n "${PR_NUMBER}" ]]; then
+            validator_args+=(--pr-number "${PR_NUMBER}")
+          fi
+          node "${TRUSTED_SONAR_TASK_VALIDATOR}" \
+            --input "${task_files[0]}" \
+            --output "${evidence}/task/validated.json" \
+            --project-key "${SONAR_PROJECT_KEY}" \
+            "${validator_args[@]}"
 
       - name: Retrieve raw Sonar evidence for the exact candidate
         shell: bash
@@ -888,23 +1002,21 @@ jobs:
           : > "${evidence}/warnings.log"
           [[ -n "${SONAR_TOKEN}" ]] || { echo "::error::SONAR_TOKEN is not configured"; exit 1; }
 
-          quality_gate_args=(--data-urlencode "projectKey=${SONAR_PROJECT_KEY}")
+          quality_gate_args=()
           issues_args=(--data-urlencode "componentKeys=${SONAR_PROJECT_KEY}")
           hotspots_args=(--data-urlencode "projectKey=${SONAR_PROJECT_KEY}")
           measures_args=(--data-urlencode "component=${SONAR_PROJECT_KEY}")
-          analysis_args=(--data-urlencode "project=${SONAR_PROJECT_KEY}")
+          task="${evidence}/task/validated.json"
+          ce_task_id="$(jq -r '.properties.ceTaskId // empty' "${task}")"
+          [[ -n "${ce_task_id}" ]] || { echo "::error::Sonar CE task id is missing"; exit 1; }
           if [[ -n "${PR_NUMBER}" ]]; then
-            quality_gate_args+=(--data-urlencode "pullRequest=${PR_NUMBER}")
             issues_args+=(--data-urlencode "pullRequest=${PR_NUMBER}")
             hotspots_args+=(--data-urlencode "pullRequest=${PR_NUMBER}")
             measures_args+=(--data-urlencode "pullRequest=${PR_NUMBER}")
-            analysis_args+=(--data-urlencode "pullRequest=${PR_NUMBER}")
           else
-            quality_gate_args+=(--data-urlencode "branch=${BRANCH_NAME}")
             issues_args+=(--data-urlencode "branch=${BRANCH_NAME}")
             hotspots_args+=(--data-urlencode "branch=${BRANCH_NAME}")
             measures_args+=(--data-urlencode "branch=${BRANCH_NAME}")
-            analysis_args+=(--data-urlencode "branch=${BRANCH_NAME}")
           fi
 
           fetch_json() {
@@ -926,7 +1038,8 @@ jobs:
             local name="$1" endpoint="$2"
             shift 2
             local first_page="${evidence}/raw/${name}-page-1.json"
-            local total="$(jq -r '.paging.total // empty' "${first_page}")"
+            local total
+            total="$(jq -r '.paging.total // empty' "${first_page}")"
             [[ "${total}" =~ ^[0-9]+$ ]] || return 0
             local page=2
             while (( (page - 1) * 500 < total )); do
@@ -947,13 +1060,97 @@ jobs:
             ' "$@" > "${output}"
           }
 
+          fetch_json ce-task api/ce/task --data-urlencode "id=${ce_task_id}"
+          jq -e \
+            --arg task_id "${ce_task_id}" \
+            --arg project "${SONAR_PROJECT_KEY}" \
+            '.task | type == "object" and .id == $task_id and .status == "SUCCESS" and
+             .componentKey == $project and (.analysisId | type == "string" and length > 0)' \
+            "${evidence}/raw/ce-task.json" >/dev/null || {
+            echo "::error::Sonar CE task is not a successful exact-project task"
+            exit 1
+          }
+          analysis_id="$(jq -r '.task.analysisId' "${evidence}/raw/ce-task.json")"
+          revision="${HEAD_SHA}"
+          analysis_entries='[]'
+          if [[ -n "${PR_NUMBER}" ]]; then
+            selected=false
+            attempt=1
+            max_attempts=60
+            rm -f "${evidence}/raw/pull-request-selected.json" "${evidence}/raw/analysis-selected.json"
+            while (( attempt <= max_attempts )); do
+              fetch_json pull-request api/project_pull_requests/list \
+                --data-urlencode "project=${SONAR_PROJECT_KEY}"
+              if jq -e \
+                --arg pr "${PR_NUMBER}" \
+                --arg head "${HEAD_SHA}" \
+                '(.pullRequests // []) as $all |
+                 [$all[] | select((.key | tostring) == $pr)] as $matches |
+                 ($matches | length) == 1 and ($matches[0].commit.sha // "") == $head' \
+                "${evidence}/raw/pull-request.json" >/dev/null; then
+                jq -e \
+                  --arg pr "${PR_NUMBER}" \
+                  --arg head "${HEAD_SHA}" \
+                  '(.pullRequests // []) |
+                   map(select((.key | tostring) == $pr and (.commit.sha // "") == $head)) |
+                   if length == 1 then .[0] else empty end' \
+                  "${evidence}/raw/pull-request.json" > "${evidence}/raw/pull-request-selected.json"
+                fetch_json analysis-search api/project_analyses/search \
+                  --data-urlencode "project=${SONAR_PROJECT_KEY}" \
+                  --data-urlencode "pullRequest=${PR_NUMBER}" \
+                  --data-urlencode "ps=100"
+                if jq -e \
+                  --arg analysis_id "${analysis_id}" \
+                  --arg head "${HEAD_SHA}" \
+                  '(.analyses // []) |
+                   map(select((.key // "") == $analysis_id and (.revision // "") == $head)) |
+                   length == 1' \
+                  "${evidence}/raw/analysis-search.json" >/dev/null; then
+                  jq -e \
+                    --arg analysis_id "${analysis_id}" \
+                    --arg head "${HEAD_SHA}" \
+                    '{analyses: [(.analyses // [])[] |
+                      select((.key // "") == $analysis_id and (.revision // "") == $head)]}' \
+                    "${evidence}/raw/analysis-search.json" > "${evidence}/raw/analysis-selected.json"
+                  analysis_entries="$(jq -c '.analyses' "${evidence}/raw/analysis-selected.json")"
+                  selected=true
+                  break
+                fi
+              fi
+              if (( attempt == max_attempts )); then
+                break
+              fi
+              sleep 5
+              attempt=$((attempt + 1))
+            done
+            if [[ "${selected}" != "true" ]]; then
+              echo "::error::Sonar PR and analysis records did not converge to the exact candidate after ${max_attempts} attempts"
+              exit 1
+            fi
+          else
+            printf '%s\n' '{}' > "${evidence}/raw/pull-request-selected.json"
+            analysis_entries="$(jq -cn --arg key "${analysis_id}" --arg revision "${revision}" \
+              '[{key:$key,revision:$revision}]')"
+          fi
+          quality_gate_args=(--data-urlencode "analysisId=${analysis_id}")
+          echo "SONAR_ANALYSIS_ID=${analysis_id}" >> "${GITHUB_ENV}"
+
+          jq -n \
+            --arg analysisId "${analysis_id}" \
+            --arg revision "${revision}" \
+            --arg ceTaskId "${ce_task_id}" \
+            --arg projectKey "${SONAR_PROJECT_KEY}" \
+            --argjson analyses "${analysis_entries}" \
+            --slurpfile pullRequest "${evidence}/raw/pull-request-selected.json" \
+            '{analysisId:$analysisId,analyses:$analyses,ceTaskId:$ceTaskId,projectKey:$projectKey,pullRequest:$pullRequest[0]}' \
+            > "${evidence}/raw/analysis.json"
+
           fetch_json quality-gate api/qualitygates/project_status "${quality_gate_args[@]}"
           fetch_json issues-page-1 api/issues/search "${issues_args[@]}" --data-urlencode "resolved=false" --data-urlencode "ps=500" --data-urlencode "p=1"
           fetch_remaining_pages issues api/issues/search "${issues_args[@]}" --data-urlencode "resolved=false"
           fetch_json hotspots-page-1 api/hotspots/search "${hotspots_args[@]}" --data-urlencode "ps=500" --data-urlencode "p=1"
           fetch_remaining_pages hotspots api/hotspots/search "${hotspots_args[@]}"
           fetch_json measures api/measures/component "${measures_args[@]}" --data-urlencode "metricKeys=bugs,vulnerabilities,code_smells,security_hotspots,coverage,duplicated_lines_density,ncloc"
-          fetch_json analysis api/project_analyses/search "${analysis_args[@]}" --data-urlencode "ps=1"
 
           mapfile -t issue_pages < <(find "${evidence}/raw" -maxdepth 1 -type f -name 'issues-page-*.json' -print | sort -V)
           mapfile -t hotspot_pages < <(find "${evidence}/raw" -maxdepth 1 -type f -name 'hotspots-page-*.json' -print | sort -V)
@@ -987,6 +1184,8 @@ jobs:
             --head-sha "${HEAD_SHA}" \
             --base-sha "${BASE_SHA}" \
             --mode "${MODE}" \
+            --analysis-id "${SONAR_ANALYSIS_ID}" \
+            --pr-number "${PR_NUMBER}" \
             --execution-status success || classifier_exit=$?
           [[ -s "${evidence}/classified/summary.json" ]] || {
             echo "::error::Sonar evidence classifier did not produce a summary"

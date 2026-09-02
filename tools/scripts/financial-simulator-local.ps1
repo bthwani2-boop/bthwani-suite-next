@@ -92,8 +92,10 @@ try {
       }
       Invoke-FinancialJourneys
       Write-Host "`nFinancial simulator is ready." -ForegroundColor Green
-      Write-Host 'WLT API: http://localhost:18083'
-      Write-Host 'WireMock financial provider: http://localhost:18090'
+      $wltApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_WLT_API_HOST_PORT)) { '18083' } else { $env:BTHWANI_WLT_API_HOST_PORT }
+      $wiremockPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_WIREMOCK_FINANCIAL_PORT)) { '18090' } else { $env:BTHWANI_WIREMOCK_FINANCIAL_PORT }
+      Write-Host "WLT API: http://localhost:$wltApiHostPort"
+      Write-Host "WireMock financial provider: http://localhost:$wiremockPort"
     }
 
     'down' {

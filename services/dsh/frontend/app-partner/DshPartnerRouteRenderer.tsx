@@ -386,7 +386,7 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
           }
         }}
         initialFilterId={route.context.filterId}
-        initialCaseId={route.context.highlightedCaseId ?? null}
+        initialCaseId={route.context.highlightedCaseId ?? route.orderId ?? null}
         initialIssueCategoryId={route.context.highlightedIssueCategoryId ?? null}
         initialSupportRouteId={route.context.preferredSupportRouteId ?? null}
       />,

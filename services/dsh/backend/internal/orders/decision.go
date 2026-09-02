@@ -57,7 +57,7 @@ func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, erro
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	fingerprint := partnerDecisionFingerprint(input)
 	lockIdentity := input.StoreID + "|partner-order-decision|" + input.IdempotencyKey
 	if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, lockIdentity); err != nil {

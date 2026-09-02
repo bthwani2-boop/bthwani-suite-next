@@ -60,3 +60,27 @@ func TestDeliveryExceptionPathID(t *testing.T) {
 		t.Fatal("expected extra path segments to be rejected")
 	}
 }
+
+func TestMarshalDeliveryExceptionPreservesExclusiveSourceAndPolicyFields(t *testing.T) {
+	t.Parallel()
+
+	proof := "proof-1"
+	payload := marshalDeliveryException(&dispatch.DeliveryException{
+		OrderID:          "",
+		SpecialRequestID: "special-request-1",
+		ProofMediaRef:    &proof,
+		PolicyNextAction: "rescue",
+	})
+	if payload["orderId"] != nil {
+		t.Fatalf("expected orderId to be null for special-request exception, got %#v", payload["orderId"])
+	}
+	if payload["specialRequestId"] != "special-request-1" {
+		t.Fatalf("expected specialRequestId readback, got %#v", payload["specialRequestId"])
+	}
+	if payload["proofMediaRef"] != &proof {
+		t.Fatalf("expected proofMediaRef readback, got %#v", payload["proofMediaRef"])
+	}
+	if payload["policyNextAction"] != "rescue" {
+		t.Fatalf("expected policyNextAction readback, got %#v", payload["policyNextAction"])
+	}
+}

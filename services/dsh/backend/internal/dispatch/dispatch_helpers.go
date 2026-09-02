@@ -9,24 +9,58 @@ import (
 	"dsh-api/internal/specialrequests"
 )
 
-func lockAssignment(tx *sql.Tx, assignmentID, captainID string) (*Assignment, error) {
-	row := tx.QueryRow(assignmentSelectSQL()+`
-		WHERE a.id = $1::uuid AND a.captain_id = $2
-		FOR UPDATE OF a, d`, assignmentID, captainID)
-	assignment, err := scanAssignmentRowWithDelivery(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	return assignment, err
-}
+const assignmentForCaptainAndContextSQL = `
+	SELECT a.id::text, COALESCE(a.order_id::text, ''), a.captain_id, a.assigned_by, a.status,
+	       a.response_deadline_at, a.accepted_at, a.declined_at, a.completed_at, a.created_at, a.updated_at, a.version,
+	       a.last_latitude, a.last_longitude, a.location_recorded_at,
+	       COALESCE(a.special_request_id::text, ''),
+	       COALESCE(sr.request_type::text, ''),
+	       d.id::text, d.assignment_id::text, COALESCE(d.order_id::text, ''), d.captain_id, d.status,
+	       COALESCE(d.pod_method, ''), COALESCE(d.pod_reference, ''), COALESCE(d.note, ''),
+	       d.created_at, d.updated_at,
+	       COALESCE(d.special_request_id::text, '')
+	FROM dsh_assignments a
+	JOIN dsh_deliveries d ON d.assignment_id = a.id
+	LEFT JOIN dsh_special_requests sr ON sr.id = a.special_request_id
+	WHERE a.id = $1::uuid AND a.captain_id = $2 AND a.operator_context_id = $3`
+
+const assignmentForCaptainAndContextForUpdateSQL = `
+	SELECT a.id::text, COALESCE(a.order_id::text, ''), a.captain_id, a.assigned_by, a.status,
+	       a.response_deadline_at, a.accepted_at, a.declined_at, a.completed_at, a.created_at, a.updated_at, a.version,
+	       a.last_latitude, a.last_longitude, a.location_recorded_at,
+	       COALESCE(a.special_request_id::text, ''),
+	       COALESCE(sr.request_type::text, ''),
+	       d.id::text, d.assignment_id::text, COALESCE(d.order_id::text, ''), d.captain_id, d.status,
+	       COALESCE(d.pod_method, ''), COALESCE(d.pod_reference, ''), COALESCE(d.note, ''),
+	       d.created_at, d.updated_at,
+	       COALESCE(d.special_request_id::text, '')
+	FROM dsh_assignments a
+	JOIN dsh_deliveries d ON d.assignment_id = a.id
+	LEFT JOIN dsh_special_requests sr ON sr.id = a.special_request_id
+	WHERE a.id = $1::uuid AND a.captain_id = $2 AND a.operator_context_id = $3
+	FOR UPDATE OF a, d`
+
+const assignmentForOperatorContextForUpdateSQL = `
+	SELECT a.id::text, COALESCE(a.order_id::text, ''), a.captain_id, a.assigned_by, a.status,
+	       a.response_deadline_at, a.accepted_at, a.declined_at, a.completed_at, a.created_at, a.updated_at, a.version,
+	       a.last_latitude, a.last_longitude, a.location_recorded_at,
+	       COALESCE(a.special_request_id::text, ''),
+	       COALESCE(sr.request_type::text, ''),
+	       d.id::text, d.assignment_id::text, COALESCE(d.order_id::text, ''), d.captain_id, d.status,
+	       COALESCE(d.pod_method, ''), COALESCE(d.pod_reference, ''), COALESCE(d.note, ''),
+	       d.created_at, d.updated_at,
+	       COALESCE(d.special_request_id::text, '')
+	FROM dsh_assignments a
+	JOIN dsh_deliveries d ON d.assignment_id = a.id
+	LEFT JOIN dsh_special_requests sr ON sr.id = a.special_request_id
+	WHERE a.id = $1::uuid AND a.operator_context_id = $2
+	FOR UPDATE OF a, d`
 
 func lockAssignmentForOperatorContext(tx *sql.Tx, operatorContextID, assignmentID, captainID string) (*Assignment, error) {
 	if strings.TrimSpace(operatorContextID) == "" {
 		return nil, ErrInvalid
 	}
-	row := tx.QueryRow(assignmentSelectSQL()+`
-		WHERE a.id = $1::uuid AND a.captain_id = $2 AND a.operator_context_id = $3
-		FOR UPDATE OF a, d`, assignmentID, captainID, operatorContextID)
+	row := tx.QueryRow(assignmentForCaptainAndContextForUpdateSQL, assignmentID, captainID, operatorContextID)
 	assignment, err := scanAssignmentRowWithDelivery(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound

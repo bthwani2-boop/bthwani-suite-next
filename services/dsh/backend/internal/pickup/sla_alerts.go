@@ -1,6 +1,7 @@
 package pickup
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strings"
@@ -64,11 +65,11 @@ type RefreshPickupSLAAlertsResult struct {
 
 // RefreshPickupSLAAlerts scans every pickup session, opens an alert for any
 // session whose current leg is overdue, and resolves alerts whose leg is no
-// longer overdue. See partnerdelivery.RefreshDeliverySLAAlerts for why the
-// reconciliation runs in Go rather than as one SQL statement.
-func RefreshPickupSLAAlerts(db *sql.DB, correlationID string, now time.Time) (*RefreshPickupSLAAlertsResult, error) {
+// longer overdue. The reconciliation runs in Go because the current overdue
+// leg is selected from several timestamps and a governed policy projection.
+func RefreshPickupSLAAlerts(ctx context.Context, db *sql.DB, correlationID string, now time.Time) (*RefreshPickupSLAAlertsResult, error) {
 	correlationID = strings.TrimSpace(correlationID)
-	if db == nil || correlationID == "" {
+	if ctx == nil || db == nil || correlationID == "" {
 		return nil, ErrInvalid
 	}
 
@@ -76,7 +77,7 @@ func RefreshPickupSLAAlerts(db *sql.DB, correlationID string, now time.Time) (*R
 	if err != nil {
 		return nil, err
 	}
-	thresholds := DefaultSLAThresholds()
+	thresholdsByStore := make(map[string]SLAThresholds)
 
 	type overdueInfo struct {
 		leg     SLALeg
@@ -86,6 +87,14 @@ func RefreshPickupSLAAlerts(db *sql.DB, correlationID string, now time.Time) (*R
 	overdue := make(map[string]overdueInfo, len(sessions))
 	for i := range sessions {
 		session := &sessions[i]
+		thresholds, ok := thresholdsByStore[session.StoreID]
+		if !ok {
+			thresholds, err = GetSLAThresholds(ctx, db, session.StoreID)
+			if err != nil {
+				return nil, err
+			}
+			thresholdsByStore[session.StoreID] = thresholds
+		}
 		sla := EvaluateSLA(session, nil, thresholds, now)
 		if sla.State == SLAOverdue {
 			overdue[session.ID] = overdueInfo{leg: sla.CurrentLeg, orderID: session.OrderID, storeID: session.StoreID}
@@ -96,7 +105,7 @@ func RefreshPickupSLAAlerts(db *sql.DB, correlationID string, now time.Time) (*R
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	opened := 0
 	for sessionID, info := range overdue {
@@ -121,7 +130,7 @@ func RefreshPickupSLAAlerts(db *sql.DB, correlationID string, now time.Time) (*R
 	for rows.Next() {
 		var row openRow
 		if err := rows.Scan(&row.id, &row.sessionID, &row.leg); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, err
 		}
 		info, stillOverdue := overdue[row.sessionID]
@@ -130,10 +139,10 @@ func RefreshPickupSLAAlerts(db *sql.DB, correlationID string, now time.Time) (*R
 		}
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		_ = rows.Close()
 		return nil, err
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	resolved := 0
 	for _, row := range toResolve {
@@ -175,7 +184,7 @@ func ListPickupSLAAlerts(db *sql.DB, status SLAAlertStatus, limit int) ([]Pickup
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	alerts := make([]PickupSLAAlert, 0)
 	for rows.Next() {
 		alert, err := scanPickupSLAAlert(rows.Scan)

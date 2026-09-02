@@ -223,7 +223,7 @@ export function ProviderRegistryPanel() {
                   بيانات الاعتماد: {credentialLabel(registry.detailState.provider.credentialConfigured)}
                 </Text>
                 <Text>
-                  مفاتيح الإعدادات العامة: {Object.keys(registry.detailState.provider.parameters ?? {}).sort().join("، ") || "لا يوجد"}
+                  مفاتيح الإعدادات العامة: {Object.keys(registry.detailState.provider.parameters ?? {}).sort((left, right) => left.localeCompare(right)).join("، ") || "لا يوجد"}
                 </Text>
                 <Text>آخر تحديث: {registry.detailState.provider.updatedAt}</Text>
               </View>

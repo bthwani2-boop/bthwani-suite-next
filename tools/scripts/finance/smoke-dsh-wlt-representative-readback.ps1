@@ -1,7 +1,7 @@
 param(
-  [string]$IdentityBaseUrl = "http://localhost:18082",
-  [string]$DshBaseUrl = "http://localhost:18080",
-  [string]$WorkforceBaseUrl = "http://localhost:18086"
+  [string]$IdentityBaseUrl = "",
+  [string]$DshBaseUrl = "",
+  [string]$WorkforceBaseUrl = ""
 )
 
 Set-StrictMode -Version Latest
@@ -9,6 +9,13 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot "../../dev/local-actors.ps1")
 . (Join-Path $PSScriptRoot "../../dev/local-workforce-actors.ps1")
 $ErrorActionPreference = "Stop"
+
+$dshApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_DSH_API_HOST_PORT)) { "18080" } else { $env:BTHWANI_DSH_API_HOST_PORT }
+if ([string]::IsNullOrWhiteSpace($DshBaseUrl)) { $DshBaseUrl = "http://localhost:$dshApiHostPort" }
+$identityApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_API_HOST_PORT)) { "18082" } else { $env:BTHWANI_IDENTITY_API_HOST_PORT }
+if ([string]::IsNullOrWhiteSpace($IdentityBaseUrl)) { $IdentityBaseUrl = "http://localhost:$identityApiHostPort" }
+$workforceApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_WORKFORCE_API_HOST_PORT)) { "18086" } else { $env:BTHWANI_WORKFORCE_API_HOST_PORT }
+if ([string]::IsNullOrWhiteSpace($WorkforceBaseUrl)) { $WorkforceBaseUrl = "http://localhost:$workforceApiHostPort" }
 
 $password = Get-LocalPassword
 

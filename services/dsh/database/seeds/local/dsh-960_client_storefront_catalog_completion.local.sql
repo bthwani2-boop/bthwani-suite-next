@@ -39,24 +39,20 @@ ON CONFLICT (id) DO UPDATE SET
   updated_at = NOW();
 
 INSERT INTO dsh_store_assortments
-  (id, store_id, master_product_id, unit_price, currency, available,
-   stock_status, local_note, publication_status, submitted_by, approved_by)
+  (id, store_id, master_product_id, local_note, publication_status,
+   submitted_by, approved_by)
 VALUES
   ('assortment-store-1003-rice', 'store-1003', 'product-1001-rice',
-   18200, 'YER', TRUE, 'in_stock', 'متاح في فرع شارع تعز',
+   'متاح في فرع شارع تعز',
    'client_visible', 'system-seed', 'system-seed'),
   ('assortment-store-1006-pain-relief', 'store-1006', 'product-1006-pain-relief',
-   1500, 'YER', TRUE, 'in_stock', 'عبوة دوائية تجريبية محلية',
+   'عبوة دوائية تجريبية محلية',
    'client_visible', 'system-seed', 'system-seed'),
   ('assortment-store-electronics-phone', 'store-test-electronics',
-   'product-electronics-android-phone', 125000, 'YER', TRUE, 'in_stock',
-   'هاتف ذكي متاح للعرض المحلي', 'client_visible', 'system-seed',
+   'product-electronics-android-phone', 'هاتف ذكي متاح للعرض المحلي',
+   'client_visible', 'system-seed',
    'system-seed')
 ON CONFLICT (store_id, master_product_id) DO UPDATE SET
-  unit_price = EXCLUDED.unit_price,
-  currency = EXCLUDED.currency,
-  available = TRUE,
-  stock_status = EXCLUDED.stock_status,
   local_note = EXCLUDED.local_note,
   publication_status = 'client_visible',
   submitted_by = EXCLUDED.submitted_by,

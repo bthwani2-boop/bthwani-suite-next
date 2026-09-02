@@ -119,7 +119,7 @@ func MarkSentWithResult(db *sql.DB, id, leaseToken string, result DeliveryResult
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var orderID sql.NullString
 	updated, err := markLeaseTransition(tx, id, leaseToken, `
@@ -171,7 +171,7 @@ func MarkDeliveryFailure(db *sql.DB, event Event, cause error) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var query string
 	var args []any
@@ -224,7 +224,7 @@ func MarkOutcomeUnknown(db *sql.DB, event Event, cause error) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	var query string
 	var args []any
@@ -266,7 +266,7 @@ func MarkReadbackAbsent(db *sql.DB, event Event, cause error) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	updated, err := markLeaseTransition(tx, event.ID, event.LeaseToken, `
 		UPDATE dsh_checkout_financial_closure_outbox
 		SET status='pending', failure_disposition='retry_scheduled', failure_classification='PROVEN_ABSENT', diagnostic_code='wlt_readback_absent',
@@ -288,7 +288,7 @@ func MarkInvalidOperatorContext(db *sql.DB, event Event, cause error) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	updated, err := markLeaseTransition(tx, event.ID, event.LeaseToken, `
 		UPDATE dsh_checkout_financial_closure_outbox
 		SET status='failed', failure_disposition='invalid_operator_context', failure_classification='INVALID_UNRECOVERABLE', diagnostic_code='invalid_operator_context',
@@ -328,7 +328,7 @@ func retryFailed(db *sql.DB, id, operatorContextID, reason string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var orderID, eventType string
 	err = tx.QueryRow(`
 		UPDATE dsh_checkout_financial_closure_outbox outbox

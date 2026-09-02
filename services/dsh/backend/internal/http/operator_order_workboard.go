@@ -128,7 +128,7 @@ func (s *protectedStoreServer) handleOperatorOrderWorkboard(w http.ResponseWrite
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load operator order workboard")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	now := time.Now()
 	result := make([]operatorOrderWorkboardRow, 0)

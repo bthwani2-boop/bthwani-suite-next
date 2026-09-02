@@ -299,11 +299,3 @@ func marshalOrder(o *orders.Order) map[string]any {
 		"updatedAt":        o.UpdatedAt,
 	}
 }
-
-func marshalOrders(list []orders.Order) []map[string]any {
-	out := make([]map[string]any, len(list))
-	for i := range list {
-		out[i] = marshalOrder(&list[i])
-	}
-	return out
-}

@@ -2,48 +2,102 @@
 
 Status: ACTIVE_CANONICAL
 
+## Governing security model
+
+Security follows canonical Product/System ownership rather than creating a second business model. Authentication establishes identity; authorization separately enforces trusted context, permission, object/business scope, legal state and ownership. Security controls fail closed when required trust cannot be proven.
+
 ## Identity and authorization
 
-- Authentication proves identity; authorization separately enforces permission, trusted context, business scope, and object ownership.
-- Every protected read/write is authorized server-side. UI visibility is never authorization.
-- Trusted operator/platform context comes from authenticated server-side context and cannot be supplied or overridden by client input.
-- Partner/store/customer/captain/field boundaries are enforced by the owning backend and, where appropriate, durable data constraints.
+- Every protected read/write is authorized server-side; UI visibility is never authorization.
+- Trusted platform/operator/service context is derived from authenticated server-side state or governed delegation and cannot be granted/overridden by client-controlled headers, queries, bodies, local storage or UI selection.
+- Partner/store/customer/captain/field/operator boundaries are enforced by the owning backend and, where appropriate, durable data constraints.
+- Object-level authorization is required in addition to route/role authorization where identifiers select owned/sensitive resources; possession or guessability of an ID never grants access.
+- Cross-scope not-found/forbidden behavior must not unnecessarily disclose existence or ownership of protected resources.
+- Administrative/support/break-glass access is explicitly scoped, attributable, auditable and no broader than the operational need.
+
+## Untrusted input and attack-surface boundaries
+
+Treat all client, provider, file, URL, path, webhook, import/export and external-system input as untrusted until validated at the owning boundary.
+
+Apply materially relevant protections for:
+
+`injection | IDOR/object-scope bypass | SSRF | path traversal | unsafe file/upload handling | schema/body/size abuse | malformed content | replay | duplicate requests | rate/abuse amplification | unsafe redirects/URLs | cross-origin/session misuse`.
+
+Validation is semantic as well as syntactic: a well-formed value cannot override trusted ownership, monetary truth, authorization scope or legal state. File/media handling must constrain accepted type/size/content/storage/access behavior and never trust a filename or client MIME claim as security authority.
+
+Network/provider destinations that can be influenced by untrusted input require allowlisted/owned resolution semantics sufficient to prevent access to unintended internal/local metadata or privileged endpoints.
+
+Rate/abuse controls are applied where an operation can materially consume resources, enumerate sensitive state, brute-force credentials/codes, amplify provider cost or create repeated financial/operational effects. Rate limiting does not replace idempotency or authorization.
 
 ## Sessions and credentials
 
-- Passwords, OTP/activation codes, tokens, signing keys, service credentials, and provider secrets are never logged or stored in plaintext outside their approved store.
+- Passwords, OTP/activation codes, tokens, signing keys, service credentials, provider secrets and recovery credentials are never logged or stored in plaintext outside their approved secure store.
 - Session/refresh/revocation/activation behavior is explicit and replay-safe where required.
-- Administrative/support access remains scoped and auditable.
+- Revoked, expired, suspended or replaced trust must not survive through client cache/local state or an alternate session path.
+- Credential comparison/verification and token/cookie/session transport/storage use the owning platform/framework's current secure primitives; do not invent custom cryptography for convenience.
+- Client/mobile/web bundles contain no server secret, privileged provider credential or private signing material.
 
 ## Service and provider security
 
-- Privileged service-to-service operations use explicit authentication and least privilege.
-- Provider webhooks use signature verification, replay/timestamp protection, schema/body limits, and stable event identity.
-- Client/mobile/web bundles contain no server secret or privileged provider credential.
-- Missing trusted context, permission, secret, signature, provider identity, or security-critical configuration fails closed.
+- Privileged service-to-service operations use explicit authenticated service identity and least privilege.
+- Provider webhooks use signature/authentication verification, replay/timestamp protection where supported/required, schema/body limits, stable event identity and idempotent processing.
+- Provider-specific secrets/payloads terminate at their adapter/owner boundary; downstream domains consume governed normalized facts.
+- Missing trusted context, permission, secret, signature, provider identity or security-critical configuration fails closed.
+- Unknown/ambiguous external mutation outcomes remain unresolved/reconcilable; security/reliability uncertainty must not be converted into fabricated success or a second provider attempt that can duplicate the effect.
 
-## Privacy
+## Privacy and data lifecycle
 
-- Collect only data required by current product/contracts.
-- Restrict access by purpose, actor, and scope; redact data not required by a consumer.
-- Logs, traces, analytics, support artifacts, screenshots, and test evidence avoid unnecessary PII, precise location history, document contents, financial payloads, tokens, and credentials.
-- Use opaque IDs/correlation IDs when sufficient.
+Privacy is a lifecycle property, not only access control. For materially handled personal/sensitive data, be able to trace:
+
+```text
+data element
+-> declared Product/operational purpose
+-> canonical owner
+-> allowed actors/scopes
+-> collection/minimization
+-> validation/classification
+-> storage/protection
+-> transport
+-> projections/caches
+-> logs/traces/analytics/support/evidence exposure
+-> retention
+-> masking/redaction
+-> export/share
+-> deletion/anonymization/reconciliation where applicable
+```
+
+- Collect only data required by current Product/contracts and a legitimate current purpose.
+- Restrict reads/projections/exports by purpose, actor, object and business scope; redact fields not required by a consumer.
+- Retain sensitive data only for the governed operational/legal/audit need. A durable retention requirement must have an owner; absence of a material required retention/deletion decision is a governance gap rather than permission to retain forever.
+- Deletion/anonymization must respect canonical ownership, references, legal/audit/financial retention and reconciliation. Deleting a projection does not delete owner truth; deleting owner truth without resolving required consumers/references is not privacy closure.
+- Production PII, credentials, identity documents, precise location history and financial payloads are not ordinary local/staging/test data. Exceptional diagnostic use must be authorized, minimized/sanitized, protected, time-bounded and removed after purpose.
+
+## Sensitive logging, telemetry, and evidence
+
+Logs, traces, analytics, support artifacts, screenshots, crash reports and test/security evidence must avoid unnecessary PII, precise location history, document contents, full financial identifiers/payloads, tokens, credentials and secrets. Prefer opaque IDs/correlation IDs and masked values when sufficient.
+
+Telemetry requires a real Product/Operations/Security decision purpose; do not create durable user profiling or copy sensitive payloads merely because an analytics tool permits it.
 
 ## Financial security
 
 - WLT is the sole authoritative financial-truth owner.
-- Financial mutations require authenticated server-side context, idempotency/correlation, legal state transition, and owner-side validation.
+- Financial mutations require authenticated server-side context, idempotency/correlation, legal state transition and owner-side validation of server-derived monetary truth.
 - Payout destinations/beneficiaries and other sensitive financial execution data are verified/versioned before use; material changes require renewed validation rather than silent trust transfer.
 - Full financial identifiers are protected in storage and masked by default; unmasked access/export is restricted and auditable.
-- Manual files/screenshots/operator assertions may support investigation but cannot directly mutate or establish authoritative wallet/ledger truth.
+- Beneficiary/client/operator input may express governed intent/evidence but cannot directly overwrite authoritative balance, ledger, earning, fee, commission, payout or reconciliation values.
+- Manual files/screenshots/operator assertions may support investigation/execution evidence but cannot establish authoritative wallet/ledger truth.
 - Reconciliation mismatch or unknown external mutation outcome remains unresolved/fail-closed until the owning system can prove the result.
+- Separation-of-duties/maker-checker/step-up behavior is enforced server-side where current Product/financial policy requires it; the UI cannot self-authorize an exception.
 
-## Dependency and CI security
+## Dependencies, generated artifacts, and supply-chain security
 
-- Required dependencies/actions are pinned/locked according to the executable repository configuration.
-- Generated artifacts retain provenance to their canonical source.
-- Critical authentication/authorization bypass, secret exposure, cross-scope access, isolation failure, or material financial-security failure blocks the affected outcome until fixed or explicitly left unresolved by the current human authority.
+- Required dependencies/actions are pinned/locked according to executable repository/delivery policy and originate from authorized sources.
+- Generated artifacts retain provenance to their canonical source and are regenerated rather than hand-forked.
+- Build/release artifacts and sensitive signing/deployment identities follow `delivery.md`; security policy does not create a parallel release process.
+- A dependency, SDK or asset that can materially alter permissions, privacy, network behavior, native capability or supply-chain risk requires applicable ownership/review/evidence.
 
-## Evidence
+## Evidence and blocking conditions
 
-Run only security checks relevant to the affected code cone. Static security checks prove what they test; runtime auth/session/isolation/provider claims require targeted runtime/integration evidence. Do not create security approval registries or governance gates as substitutes for actual security evidence.
+Use the smallest security evidence capable of falsifying the affected claim, then deepen by risk. Static analysis proves only its covered source patterns; runtime authorization/session/isolation/provider/file/network claims require targeted runtime/integration/adversarial evidence where material.
+
+Critical authentication/authorization bypass, secret exposure, cross-scope access, isolation failure, unsafe privileged input path or material financial-security failure blocks the affected outcome until root-correct treatment or an explicit legitimate unresolved stop state. Do not create security approval registries or governance gates as substitutes for actual security evidence.

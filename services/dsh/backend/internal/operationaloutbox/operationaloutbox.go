@@ -70,7 +70,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	rows, err := tx.Query(`
 		SELECT id::text, event_type, entity_type, entity_id, payload::text,
@@ -93,7 +93,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 			&e.ID, &e.EventType, &e.EntityType, &e.EntityID, &payload,
 			&e.CorrelationID, &e.AttemptCount,
 		); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return nil, fmt.Errorf("scan operational outbox event: %w", err)
 		}
 		e.Payload = []byte(payload)
@@ -102,7 +102,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	rows.Close()
+	_ = rows.Close()
 
 	if len(events) > 0 {
 		ids := make([]string, len(events))
@@ -132,7 +132,7 @@ func MarkSent(db *sql.DB, id string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	var previousAttempts int
 	if err := tx.QueryRow(`
 		UPDATE dsh_operational_outbox_events
@@ -180,7 +180,7 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	if _, err := tx.Exec(`
 		UPDATE dsh_operational_outbox_events
 		SET attempt_count = $2,

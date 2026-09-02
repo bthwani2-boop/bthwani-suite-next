@@ -7,9 +7,9 @@ import {
   getPasswordSession,
   getPasswordToken,
   issueProviderSession,
-  readGeneratedRegistry,
   provisionLocalWorkforceActors,
   needsLocalProviderConvergence,
+  resolveExistingProvider,
 } from './local-workforce-provisioning.mjs';
 
 const PORT = Number(process.env.BTHWANI_DEV_SESSION_BROKER_PORT || 18100);
@@ -92,9 +92,8 @@ async function createSessionForRole(role, surface, deviceFingerprint) {
       deviceFingerprint.trim(),
     );
   } else {
-    let registry = readGeneratedRegistry();
-    let provisioned = registry?.actors?.[role];
     const operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
+    let provisioned = await resolveExistingProvider(operatorToken, role);
 
     if (provisioned?.actorId) {
       try {

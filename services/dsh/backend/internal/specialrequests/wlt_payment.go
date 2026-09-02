@@ -61,7 +61,7 @@ func (s *Service) AttachWltPaymentSessionInOperatorContext(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, id, expectedVersion, UpdateInput{WltPaymentSessionID: &sessionID})
 	if err != nil {
 		return nil, err
@@ -198,7 +198,7 @@ func ApplyWltPaymentEventWithEvent(db *sql.DB, operatorContextID string, id, pay
 	if err != nil {
 		return nil, false, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	current, err := repo.GetInOperatorContextTx(ctx, tx, operatorContextID, id)
 	if err != nil {

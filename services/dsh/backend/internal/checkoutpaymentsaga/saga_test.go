@@ -53,7 +53,7 @@ func TestHashPayloadIsStableAndSensitiveToPayloadChanges(t *testing.T) {
 
 func TestMatchesEnforcesCheckoutCommandIdentityAgainstWltReadContract(t *testing.T) {
 	input := validInput()
-	readback := &wlt.PaymentSessionDetail{
+	readback := &wlt.PaymentSession{
 		ID:                "session-1",
 		ClientID:          input.ClientID,
 		StoreID:           input.StoreID,

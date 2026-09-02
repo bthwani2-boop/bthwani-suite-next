@@ -221,7 +221,7 @@ func ListAdminAudit(ctx context.Context, db *sql.DB, actorID string, limit int) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := make([]AdminAuditEntry, 0)
 	for rows.Next() {
 		var entry AdminAuditEntry
