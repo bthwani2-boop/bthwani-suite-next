@@ -93,7 +93,7 @@ func (c *Client) ValidateZone(ctx context.Context, zoneID, operatorToken string)
 	if err != nil {
 		return Zone{}, ErrUnavailable
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return Zone{}, fmt.Errorf("dsh-api returned HTTP %d", resp.StatusCode)
@@ -139,7 +139,7 @@ func (c *Client) CaptainFinancialEligibility(ctx context.Context, actorID string
 	if err != nil {
 		return result, fmt.Errorf("call DSH financial eligibility: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		return result, fmt.Errorf("DSH financial eligibility returned HTTP %d", resp.StatusCode)
 	}
@@ -246,7 +246,7 @@ func (c *Client) SyncAvailabilityProjectionWithResult(ctx context.Context, input
 	if err != nil {
 		return AvailabilityProjectionResult{}, fmt.Errorf("%w: %w: %v", ErrAvailabilityOutcomeUnknown, ErrUnavailable, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return AvailabilityProjectionResult{}, classifyAvailabilityResponseError(resp)
 	}
@@ -291,7 +291,7 @@ func (c *Client) ReconcileAvailabilityProjection(ctx context.Context, operatorCo
 	if err != nil {
 		return AvailabilityProjectionResult{}, false, fmt.Errorf("%w: %w: %v", ErrAvailabilityOutcomeUnknown, ErrUnavailable, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusNotFound {
 		return AvailabilityProjectionResult{}, false, nil
 	}
@@ -378,7 +378,7 @@ func (c *Client) ValidateProviderDocumentMedia(ctx context.Context, actorID, act
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUnavailable, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusBadRequest {
 		return ErrProviderMediaInvalid
 	}
