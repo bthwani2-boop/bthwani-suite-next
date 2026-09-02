@@ -38,7 +38,7 @@ func main() {
 	if err := db.Ping(); err != nil {
 		log.Fatalf("[platform-control-api] database unavailable: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repository := platformcontrol.NewRepository(db)
 	service := platformcontrol.NewService(repository)
