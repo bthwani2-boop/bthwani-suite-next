@@ -19,7 +19,7 @@ PERIODIC_REBASE_OR_AUTOSYNC=NO
 
 The campaign covers **everything that exists on branch `g`**. It does not authorize auditing, mutating, synchronizing, or restructuring `master`, `ocr`, or any other branch.
 
-The single execution session is coordinator, root selector, mutation authority, migration/cutover authority, cleanup/deletion authority, commit/push authority, and exact-HEAD qualifier.
+The single execution session is coordinator, root selector, mutation authority, migration/cutover authority, cleanup/deletion authority, naming/path/topology authority, commit/push authority, and exact-HEAD qualifier.
 
 Read-only sub-agents/tools may run in parallel for discovery, inventory, review, falsification, evidence analysis, and negative-space search. They do not become mutation authorities.
 
@@ -42,7 +42,7 @@ All material commits/pushes go directly to `g`.
 
 There is no fixed file list and no predeclared subsystem boundary.
 
-Every material artifact present on `g` may enter scope when evidence shows it is wrong, weak, duplicated, obsolete, stale, dead, misplaced, unreachable, superseded, noisy, or structurally non-canonical.
+Every material artifact present on `g` may enter scope when evidence shows it is wrong, weak, duplicated, obsolete, stale, dead, misplaced, unreachable, superseded, noisy, ambiguously named, incorrectly located, or structurally non-canonical.
 
 This includes:
 
@@ -77,6 +77,9 @@ SEVERITY=
 ACTUAL_SOURCE_OF_DEFECT=
 LOCAL_OR_STRUCTURAL=
 TARGET_CANONICAL_STRUCTURE=
+TARGET_CANONICAL_NAMES_AND_PATHS=
+NAMING_CONVENTION_SOURCE=
+PATH_TOPOLOGY_RATIONALE=
 ACTUAL_SOURCE_OF_FIX=
 CANONICAL_OWNER=
 CANONICAL_WRITER=
@@ -92,6 +95,7 @@ DEPENDENCY_IMPACT=
 MIGRATION_BACKFILL_RECONCILIATION=
 CUTOVER=
 OLD_AUTHORITY_TO_DELETE=
+OLD_NAMES_PATHS_TO_ELIMINATE=
 FILES_DIRS_PACKAGES_SCRIPTS_CONFIG_TESTS_DEPS_TO_REHOME_MERGE_SPLIT_DELETE=
 NEGATIVE_SPACE_SEARCH=
 TARGETED_VERIFICATION=
@@ -104,21 +108,22 @@ This is a diagnosis checkpoint, not a human approval gate.
 
 ## 5. Local-vs-structural decision
 
-Use local treatment only when canonical owner/writer is already correct, no parallel authority exists, affected cone is genuinely local, and the change does not preserve a defective model.
+Use local treatment only when canonical owner/writer is already correct, no parallel authority exists, affected cone is genuinely local, names/paths already express the correct responsibility, and the change does not preserve a defective model.
 
-Escalate to structural reconstruction when repeated descendants share one cause, duplicate owners/writers exist, wrappers/mappers/adapters accumulate, old/new implementations coexist, contract/schema/runtime vocabulary diverges, compatibility dominates the structure, or package/folder boundaries duplicate responsibility.
+Escalate to structural reconstruction when repeated descendants share one cause, duplicate owners/writers exist, wrappers/mappers/adapters accumulate, old/new implementations coexist, contract/schema/runtime vocabulary diverges, compatibility dominates the structure, package/folder boundaries duplicate or misstate responsibility, or file/directory naming encodes obsolete architecture.
 
 Structural order:
 
-`PROVE COMMON ROOT → DEFINE MINIMUM CANONICAL TARGET → RESTRUCTURE/REWRITE SOURCE → MIGRATE COMPLETE CONE → CUT OVER → DELETE DEFECTIVE STRUCTURE → DELETE RESIDUE → PROVE ZERO REACHABILITY`.
+`PROVE COMMON ROOT → DEFINE MINIMUM CANONICAL TARGET → DEFINE CANONICAL NAME/PATH/BOUNDARY → RESTRUCTURE/REWRITE SOURCE → MIGRATE COMPLETE CONE → CUT OVER → DELETE DEFECTIVE STRUCTURE/OLD PATHS → DELETE RESIDUE → PROVE ZERO REACHABILITY`.
 
-## 6. Full restructuring/deletion authority inside `g`
+## 6. Full restructuring/deletion/naming authority inside `g`
 
 When required by a proven root, the session may:
 
 - rewrite functions/types/modules/components;
 - replace whole internal APIs;
 - move/rename file families or directory trees;
+- rename packages/modules/scripts/workflows/config files when names misstate responsibility;
 - merge/delete directories/packages;
 - split mixed-responsibility modules;
 - change contracts and regenerate clients;
@@ -127,11 +132,36 @@ When required by a proven root, the session may:
 - consolidate/delete scripts, CLI helpers, workflows, actions, hooks, tooling, configs;
 - remove obsolete tests/fixtures/mocks/snapshots/dependencies/plugins;
 - delete entire superseded implementations after cutover;
-- restructure product journey/state ownership across surfaces.
+- restructure product journey/state ownership across surfaces;
+- normalize path/layout conventions where the current layout materially harms ownership clarity, discoverability, tooling, or maintainability.
 
 No minimal-diff requirement exists. The requirement is the smallest causally complete canonical solution.
 
-## 7. Old artifact law
+Do not perform style-only mass renames when the current naming is already clear and conventional. Do not preserve misleading names or paths merely to reduce diff size.
+
+## 7. Canonical naming/path execution gate
+
+For every materially affected file/directory/package/module boundary, prove:
+
+```text
+NAME_TRUTHFUL=YES
+PATH_MATCHES_CANONICAL_OWNER=YES
+BOUNDARY_HAS_UNIQUE_RESPONSIBILITY=YES
+CONVENTION_IS_LANGUAGE_FRAMEWORK_APPROPRIATE=YES
+OLD_TRANSITIONAL_NAME_REQUIRED=NO_OR_BOUNDED
+DUPLICATE_TREE=NO
+MISLEADING_GENERIC_BUCKET=NO_OR_PROVEN
+```
+
+If any answer fails, restructure/rename/rehome before closing the root.
+
+Canonical naming must prefer durable domain/responsibility language over patch chronology. Permanent structure must not be encoded as `old/new/v2/v3/temp/copy/backup/fixed/final` unless that term has real domain semantics.
+
+After rename/move:
+
+`MIGRATE ALL REFERENCES → DELETE OLD PATH → SEARCH OLD PATH/NAME/VOCABULARY → PROVE ZERO REQUIRED REFERENCES`.
+
+## 8. Old artifact law
 
 Every old/legacy/stale file, folder, script, workflow, config, package, test, fixture, mock, dependency, generated artifact, copy/backup/temp file, or compatibility shell on `g` must prove one of:
 
@@ -148,28 +178,29 @@ If none is proven:
 
 Git history is the archive. `g` must not retain obsolete artifacts as an archive.
 
-## 8. Canonical treatment order
+## 9. Canonical treatment order
 
 1. canonical semantics/source;
-2. canonical writer;
-3. storage/schema/data migration;
-4. canonical contract;
-5. generated regeneration;
-6. all readers;
-7. all consumers;
-8. runtime/config/tooling binding;
-9. product journey/state;
-10. cutover;
-11. disable old writes;
-12. prove zero old reads/imports/routes/config/script/workflow/runtime reachability;
-13. delete superseded authority;
-14. delete filesystem/tooling/config/test/dependency residue;
-15. targeted verification;
-16. independent negative-space falsification.
+2. canonical owner/writer;
+3. canonical target naming/path/topology;
+4. storage/schema/data migration;
+5. canonical contract;
+6. generated regeneration;
+7. all readers;
+8. all consumers;
+9. runtime/config/tooling binding;
+10. product journey/state;
+11. cutover;
+12. disable old writes;
+13. prove zero old reads/imports/routes/config/script/workflow/runtime/old-path reachability;
+14. delete superseded authority and old names/paths;
+15. delete filesystem/tooling/config/test/dependency residue;
+16. targeted verification;
+17. independent negative-space falsification.
 
 Do not add a new canonical layer while leaving the old authority reachable.
 
-## 9. Exact-HEAD concurrency lock
+## 10. Exact-HEAD concurrency lock
 
 Before every coherent commit/push:
 
@@ -183,14 +214,15 @@ If equality fails:
 
 Never force push.
 
-## 10. Per-root verification checkpoint
+## 11. Per-root verification checkpoint
 
 Before commit:
 
 - targeted tests/checks;
 - migration/backfill/readback proof;
 - generated parity where applicable;
-- all expected deletions complete;
+- canonical naming/path/topology review for affected artifacts;
+- all expected deletions and old-path removals complete;
 - reference/negative-space searches clean;
 - no unrelated accidental diff;
 - structural ownership review;
@@ -200,7 +232,7 @@ Then:
 
 `COMMIT ONE COHERENT ROOT → PUSH DIRECTLY TO g → FETCH/VERIFY REMOTE HEAD → RE-PIN → INGEST EVIDENCE → INVALIDATE AFFECTED CLAIMS → RERUN FAILED/INVALIDATED/NEWLY_REQUIRED EVIDENCE → REBUILD/RE-RANK G ROOT GRAPH`.
 
-## 11. Campaign end states
+## 12. Campaign end states
 
 Valid end states:
 
@@ -211,7 +243,7 @@ Open executable roots remain.
 A genuinely external dependency blocks a material root and no safe action on `g` can resolve it.
 
 ### `G_RADICAL_CLEANUP_COMPLETE`
-All known material roots/gaps/unknowns/residue on the entire content of `g` are zero and exact-candidate qualification is complete.
+All known material roots/gaps/unknowns/residue on the entire content of `g` are zero, affected naming/path/topology is canonical across the branch-wide final sweep, and exact-candidate qualification is complete.
 
 After this state:
 
