@@ -177,5 +177,3 @@ func TestGovernedRefundOrderPaymentStillPostsPlatformPayable(t *testing.T) {
                 t.Fatalf("order-payment refund must debit platform_payable only, got platformDebit=%d walletDebit=%d", platformDebit, walletDebit)
         }
 }
-
-var _ = sql.ErrNoRows
