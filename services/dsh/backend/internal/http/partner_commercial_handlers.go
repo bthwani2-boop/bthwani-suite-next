@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"dsh-api/internal/auth"
 	"dsh-api/internal/store"
 )
 
@@ -72,6 +71,3 @@ func (s *protectedStoreServer) getPartnerIdForStore(ctx context.Context, storeId
 	}
 	return partnerId, true
 }
-
-// unused import reference for auth
-var _ auth.Identity
