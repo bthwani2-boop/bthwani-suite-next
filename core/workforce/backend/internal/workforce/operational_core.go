@@ -258,7 +258,7 @@ func (r *Repository) PatchOperationalCore(ctx context.Context, actorID, operator
 	if err != nil {
 		return ProviderOperationalCore{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	_, err = tx.ExecContext(ctx, `
 		UPDATE workforce_provider_operational_core SET
 		referral_source_type=COALESCE($2,referral_source_type),referral_source_actor_id=COALESCE($3,referral_source_actor_id),
@@ -515,7 +515,7 @@ func (r *Repository) ListAvailabilityNotices(ctx context.Context, actorID string
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	out := make([]AvailabilityNotice, 0)
 	for rows.Next() {
 		var n AvailabilityNotice
@@ -597,7 +597,7 @@ func (r *Repository) ListProviderIncidents(ctx context.Context, actorID string, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	ids := make([]string, 0)
 	for rows.Next() {
 		var id string
