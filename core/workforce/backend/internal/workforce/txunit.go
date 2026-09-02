@@ -256,27 +256,29 @@ func createEmployeeTx(ctx context.Context, tx *sql.Tx, actorID, workforceCode st
 	return personByActorIDTx(ctx, tx, actorID)
 }
 
-// updatePersonTx applies sovereign field edits under optimistic locking
-// inside a governed transaction and returns the committed projection.
-func updatePersonTx(ctx context.Context, tx *sql.Tx, actorID string, derivedServiceAreaCode *string, input UpdateFieldAgentInput) (Person, error) {
+func lockPersonForUpdateTx(ctx context.Context, tx *sql.Tx, actorID string, expectedVersion int) (string, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
-		return Person{}, err
+		return "", err
 	}
 	var currentVersion int
 	err = tx.QueryRowContext(ctx, `
-                SELECT version FROM workforce_people WHERE operator_context_id = $1 AND actor_id = $2 FOR UPDATE`, operatorContextID, actorID).Scan(&currentVersion)
+				SELECT version FROM workforce_people WHERE operator_context_id = $1 AND actor_id = $2 FOR UPDATE`, operatorContextID, actorID).Scan(&currentVersion)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Person{}, ErrNotFound
+		return "", ErrNotFound
 	}
 	if err != nil {
-		return Person{}, err
+		return "", err
 	}
-	if currentVersion != input.ExpectedVersion {
-		return Person{}, ErrVersionConflict
+	if currentVersion != expectedVersion {
+		return "", ErrVersionConflict
 	}
-	_, err = tx.ExecContext(ctx, `
-                UPDATE workforce_people SET
+	return operatorContextID, nil
+}
+
+func updatePersonFieldsTx(ctx context.Context, tx *sql.Tx, operatorContextID, actorID string, fullNameAr, fullNameEn, engagementType, engagementStartDate, photoMediaRef *string) error {
+	_, err := tx.ExecContext(ctx, `
+				UPDATE workforce_people SET
                         full_name_ar = COALESCE($3, full_name_ar),
                         full_name_en = COALESCE(NULLIF($4, ''), full_name_en),
                         engagement_type = COALESCE($5, engagement_type),
@@ -284,11 +286,24 @@ func updatePersonTx(ctx context.Context, tx *sql.Tx, actorID string, derivedServ
                         photo_media_ref = COALESCE(NULLIF($7, ''), photo_media_ref),
                         version = version + 1,
                         updated_at = now()
-                WHERE operator_context_id = $1 AND actor_id = $2`,
-		operatorContextID, actorID, input.FullNameAr, deref(input.FullNameEn),
-		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
+				WHERE operator_context_id = $1 AND actor_id = $2`,
+		operatorContextID, actorID, fullNameAr, deref(fullNameEn),
+		engagementType, deref(engagementStartDate), deref(photoMediaRef))
 	if err != nil {
-		return Person{}, mapPersonWriteError(err)
+		return mapPersonWriteError(err)
+	}
+	return nil
+}
+
+// updatePersonTx applies sovereign field edits under optimistic locking
+// inside a governed transaction and returns the committed projection.
+func updatePersonTx(ctx context.Context, tx *sql.Tx, actorID string, derivedServiceAreaCode *string, input UpdateFieldAgentInput) (Person, error) {
+	operatorContextID, err := lockPersonForUpdateTx(ctx, tx, actorID, input.ExpectedVersion)
+	if err != nil {
+		return Person{}, err
+	}
+	if err := updatePersonFieldsTx(ctx, tx, operatorContextID, actorID, input.FullNameAr, input.FullNameEn, input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef); err != nil {
+		return Person{}, err
 	}
 	_, err = tx.ExecContext(ctx, `
                 UPDATE workforce_field_profiles SET
@@ -307,36 +322,12 @@ func updatePersonTx(ctx context.Context, tx *sql.Tx, actorID string, derivedServ
 // updateCaptainTx applies sovereign captain edits under optimistic locking
 // inside a governed transaction.
 func updateCaptainTx(ctx context.Context, tx *sql.Tx, actorID string, derivedServiceAreaCode *string, input UpdateCaptainInput) (Person, error) {
-	operatorContextID, err := operatorContextID(ctx)
+	operatorContextID, err := lockPersonForUpdateTx(ctx, tx, actorID, input.ExpectedVersion)
 	if err != nil {
 		return Person{}, err
 	}
-	var currentVersion int
-	err = tx.QueryRowContext(ctx, `
-                SELECT version FROM workforce_people WHERE operator_context_id = $1 AND actor_id = $2 FOR UPDATE`, operatorContextID, actorID).Scan(&currentVersion)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Person{}, ErrNotFound
-	}
-	if err != nil {
+	if err := updatePersonFieldsTx(ctx, tx, operatorContextID, actorID, input.FullNameAr, input.FullNameEn, input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef); err != nil {
 		return Person{}, err
-	}
-	if currentVersion != input.ExpectedVersion {
-		return Person{}, ErrVersionConflict
-	}
-	_, err = tx.ExecContext(ctx, `
-                UPDATE workforce_people SET
-                        full_name_ar = COALESCE($3, full_name_ar),
-                        full_name_en = COALESCE(NULLIF($4, ''), full_name_en),
-                        engagement_type = COALESCE($5, engagement_type),
-                        engagement_start_date = COALESCE(NULLIF($6, '')::date, engagement_start_date),
-                        photo_media_ref = COALESCE(NULLIF($7, ''), photo_media_ref),
-                        version = version + 1,
-                        updated_at = now()
-                WHERE operator_context_id = $1 AND actor_id = $2`,
-		operatorContextID, actorID, input.FullNameAr, deref(input.FullNameEn),
-		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
-	if err != nil {
-		return Person{}, mapPersonWriteError(err)
 	}
 	_, err = tx.ExecContext(ctx, `
                 UPDATE workforce_captain_profiles SET
@@ -362,36 +353,12 @@ func updateCaptainTx(ctx context.Context, tx *sql.Tx, actorID string, derivedSer
 // updateEmployeeTx applies sovereign employee edits under optimistic locking
 // inside a governed transaction.
 func updateEmployeeTx(ctx context.Context, tx *sql.Tx, actorID string, input UpdateEmployeeInput) (Person, error) {
-	operatorContextID, err := operatorContextID(ctx)
+	operatorContextID, err := lockPersonForUpdateTx(ctx, tx, actorID, input.ExpectedVersion)
 	if err != nil {
 		return Person{}, err
 	}
-	var currentVersion int
-	err = tx.QueryRowContext(ctx, `
-                SELECT version FROM workforce_people WHERE operator_context_id = $1 AND actor_id = $2 FOR UPDATE`, operatorContextID, actorID).Scan(&currentVersion)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Person{}, ErrNotFound
-	}
-	if err != nil {
+	if err := updatePersonFieldsTx(ctx, tx, operatorContextID, actorID, input.FullNameAr, input.FullNameEn, input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef); err != nil {
 		return Person{}, err
-	}
-	if currentVersion != input.ExpectedVersion {
-		return Person{}, ErrVersionConflict
-	}
-	_, err = tx.ExecContext(ctx, `
-                UPDATE workforce_people SET
-                        full_name_ar = COALESCE($3, full_name_ar),
-                        full_name_en = COALESCE(NULLIF($4, ''), full_name_en),
-                        engagement_type = COALESCE($5, engagement_type),
-                        engagement_start_date = COALESCE(NULLIF($6, '')::date, engagement_start_date),
-                        photo_media_ref = COALESCE(NULLIF($7, ''), photo_media_ref),
-                        version = version + 1,
-                        updated_at = now()
-                WHERE operator_context_id = $1 AND actor_id = $2`,
-		operatorContextID, actorID, input.FullNameAr, deref(input.FullNameEn),
-		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
-	if err != nil {
-		return Person{}, mapPersonWriteError(err)
 	}
 	_, err = tx.ExecContext(ctx, `
                 UPDATE workforce_employee_profiles SET
