@@ -32,7 +32,7 @@ func (r *Repository) UpdateProviderGoverned(
 	if err != nil {
 		return ExternalProvider{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	const operation = "provider.update"
 	lockKey := operatorContextID + "|" + governance.ActorID + "|" + operation + "|" + governance.IdempotencyKey
