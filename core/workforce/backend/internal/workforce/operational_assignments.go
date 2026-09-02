@@ -64,7 +64,7 @@ func (r *Repository) SetOperationalScopes(ctx context.Context, actorID, operator
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 	lockKey := fmt.Sprintf("%x", sha256.Sum256([]byte(actorID+"\x00"+operatorContextID+"\x00"+role)))
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, lockKey); err != nil {
 		return nil, err
@@ -205,7 +205,7 @@ func (r *Repository) GetOperationalScopes(ctx context.Context, actorID, operator
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var scopeType, targetID string
