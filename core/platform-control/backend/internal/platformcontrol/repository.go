@@ -51,7 +51,7 @@ ORDER BY owner_service, variable_key, scope_type, scope_id`)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	variables := make([]Variable, 0)
 	for rows.Next() {
@@ -100,7 +100,7 @@ ORDER BY owner_service, flag_key`)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	flags := make([]FeatureFlag, 0)
 	for rows.Next() {
@@ -178,7 +178,7 @@ LIMIT 200`)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	events := make([]AuditEvent, 0)
 	for rows.Next() {
@@ -243,8 +243,6 @@ func scanChangeSet(row rowScanner) (ChangeSet, error) {
 	changeSet.Status = ChangeSetStatus(status)
 	return changeSet, nil
 }
-
-
 
 func insertAudit(
 	ctx context.Context,
