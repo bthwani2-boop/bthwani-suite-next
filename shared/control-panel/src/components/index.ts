@@ -16,5 +16,3 @@ export * from "./CpDescriptionList";
 export * from "./CpExternalLink";
 export * from "./CpBadge";
 export * from "./CpTabs";
-export * from "./CpAmountDisplay";
-export * from "./CpCommonLabels";
