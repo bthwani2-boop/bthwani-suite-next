@@ -14,7 +14,7 @@ func (r *Repository) ListProvidersByKind(ctx context.Context, kind string) ([]Ex
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	list := []ExternalProvider{}
 	for rows.Next() {
