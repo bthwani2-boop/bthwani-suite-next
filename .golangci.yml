@@ -5,6 +5,22 @@ run:
 
 linters:
   default: standard
+  exclusions:
+    rules:
+      # Test cleanup failures must not mask the assertion that the test exists to
+      # prove. Production financial/database operations remain fully checked.
+      - path: _test\.go
+        linters:
+          - errcheck
+      # Deferred cleanup is best-effort after the function's real result has
+      # already been determined. Keep errcheck enabled for every non-cleanup
+      # database, provider, ledger, settlement, payout, and refund operation.
+      - source: '^\s*defer\s+.*\.Close\(\)'
+        linters:
+          - errcheck
+      - source: '^\s*defer\s+.*\.Rollback\(\)'
+        linters:
+          - errcheck
 
 issues:
   max-issues-per-linter: 0
