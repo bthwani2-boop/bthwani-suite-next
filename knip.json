@@ -130,7 +130,6 @@
     },
     "services/dsh": {
       "entry": [
-        "runtime-map.ts",
         "service.manifest.ts",
         "tests/*.test.mjs"
       ],

@@ -48,7 +48,11 @@ paths:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       responses:
-        '200': { description: OperatorContext-local settlement summary }
+        '200':
+          description: OperatorContext-local settlement summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SettlementSummaryResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
@@ -134,10 +138,49 @@ components:
         netAmount: { type: integer }
         currency: { type: string }
         orderCount: { type: integer }
-        status: { type: string }
+        status: { $ref: '#/components/schemas/SettlementStatus' }
         settledAt: { type: [string, 'null'] }
         createdAt: { type: string }
         updatedAt: { type: string }
+    SettlementStatus:
+      type: string
+      enum:
+        [
+          pending,
+          processing,
+          settled,
+          failed,
+          reversed
+        ]
+    SettlementSummary:
+      type: object
+      required:
+        [
+          partnerId,
+          periodStart,
+          periodEnd,
+          totalGross,
+          totalFee,
+          totalNet,
+          totalOrders,
+          settlementCount,
+          currency
+        ]
+      properties:
+        partnerId: { type: string }
+        periodStart: { type: string }
+        periodEnd: { type: string }
+        totalGross: { type: integer }
+        totalFee: { type: integer }
+        totalNet: { type: integer }
+        totalOrders: { type: integer }
+        settlementCount: { type: integer }
+        currency: { type: string }
+    SettlementSummaryResponse:
+      type: object
+      required: [ summary ]
+      properties:
+        summary: { $ref: '#/components/schemas/SettlementSummary' }
     SettlementListResponse:
       type: object
       required: [ settlements ]
@@ -145,3 +188,4 @@ components:
         settlements:
           type: array
           items: { $ref: '#/components/schemas/SettlementListItem' }
+

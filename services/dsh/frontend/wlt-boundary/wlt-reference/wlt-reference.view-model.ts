@@ -13,12 +13,17 @@ export type WltDshReferenceViewModel = {
 };
 
 const PAYMENT_LABELS: Record<WltPaymentStatusReference, string> = {
-  pending: "معلّق",
-  authorized: "مرخَّص",
+  reference_created: "تم إنشاء المرجع",
+  pending_provider: "بانتظار المزود",
+  authorization_pending: "بانتظار التفويض",
+  authorized: "مفوّض",
+  capture_pending: "بانتظار التحصيل",
   captured: "مُحصَّل",
+  cod_pending: "دفع عند الاستلام معلّق",
+  cod_finalized: "دفع عند الاستلام مكتمل",
   failed: "فشل",
-  refunded: "مُسترجَع",
-  partially_refunded: "مُسترجَع جزئياً",
+  expired: "منتهي الصلاحية",
+  provider_result_unknown: "نتيجة المزود غير معروفة",
 };
 
 const SETTLEMENT_LABELS: Record<WltSettlementStatusReference, string> = {
@@ -26,14 +31,17 @@ const SETTLEMENT_LABELS: Record<WltSettlementStatusReference, string> = {
   processing: "قيد المعالجة",
   settled: "مُسوَّى",
   failed: "فشل",
+  reversed: "معكوس",
 };
 
 const REFUND_LABELS: Record<WltRefundStatusReference, string> = {
-  none: "لا يوجد",
   requested: "مطلوب",
   approved: "مقبول",
+  processing: "قيد المعالجة",
+  provider_unknown: "غير معروف لدى المزود",
   completed: "مكتمل",
   rejected: "مرفوض",
+  reversed: "معكوس",
 };
 
 export function toWltDshReferenceViewModel(

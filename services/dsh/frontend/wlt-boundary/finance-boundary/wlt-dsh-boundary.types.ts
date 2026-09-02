@@ -3,54 +3,19 @@ import type { components } from "@bthwani/wlt/openapi";
 /**
  * Canonical WLT-for-DSH financial boundary.
  *
- * Named financial records and lifecycle states are aliases of the generated
- * WLT OpenAPI client. The isolated read projections below exist only where the
- * current WLT contract still exposes an open response or omits returned fields;
- * each gap is documented at the declaration and must be removed when OpenAPI
- * gains the matching named schema.
+ * All financial records and lifecycle states are derived directly from the
+ * generated WLT OpenAPI client. Zero handwritten shadow unions or DTOs.
  */
-export type WltPaymentStatusReference =
-  | "pending"
-  | "authorized"
-  | "captured"
-  | "failed"
-  | "refunded"
-  | "partially_refunded";
-
-export type WltSettlementStatusReference =
-  | "pending"
-  | "processing"
-  | "settled"
-  | "failed";
-
-export type WltRefundStatusReference =
-  | "none"
-  | "requested"
-  | "approved"
-  | "completed"
-  | "rejected";
-
-export type WltReferenceField =
-  | "wlt_reference"
-  | "payment_session_reference"
-  | "payment_status_reference"
-  | "settlement_status_reference"
-  | "refund_status_reference";
+export type WltPaymentStatusReference = components["schemas"]["PaymentStatus"];
+export type WltSettlementStatusReference = components["schemas"]["SettlementStatus"];
+export type WltRefundStatusReference = components["schemas"]["RefundStatus"];
 
 export type WltPaymentSessionStatusReference = components["schemas"]["PaymentStatus"];
 export type WltRefundStatus = components["schemas"]["RefundStatus"];
 export type WltDshRefundReference = components["schemas"]["GovernedRefund"];
-export type WltSettlementStatus = components["schemas"]["SettlementListItem"]["status"];
+export type WltSettlementStatus = components["schemas"]["SettlementStatus"];
 export type WltDshSettlementReference = components["schemas"]["SettlementListItem"];
-
-/** The settlement-summary route still lacks a named response schema. */
-export type WltDshSettlementSummary = {
-  readonly partnerId: string;
-  readonly totalSettled: number;
-  readonly pendingAmount: number;
-  readonly currency: string;
-  readonly settlementCount: number;
-};
+export type WltDshSettlementSummary = components["schemas"]["SettlementSummary"];
 
 export type WltCommissionType = components["schemas"]["Commission"]["commissionType"];
 export type WltCommissionStatus = components["schemas"]["CommissionStatus"];
@@ -67,3 +32,4 @@ export type WltDshReferenceContext = {
   readonly settlementStatus: WltSettlementStatusReference | null;
   readonly refundStatus: WltRefundStatusReference | null;
 };
+

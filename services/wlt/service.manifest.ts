@@ -8,64 +8,12 @@ export const wltServiceManifest = {
 
   type: "FINANCIAL_PLATFORM_SERVICE",
   lifecycle: "ACTIVE",
-  closureState: "FIX_REQUIRED",
-  runtimeState: "IMPLEMENTED_RUNTIME_EVIDENCE_REQUIRED",
 
   ownsFinancialTruth: true,
 
   contracts: [
     "contracts/wlt.openapi.yaml",
   ],
-
-  implementationReadiness: {
-    backend: true,
-    database: false,
-    generatedClient: true,
-    frontend: true,
-    frontendDshBoundary: true,
-    paymentSessionReference: true,
-    trustedOperatorContextServiceBoundary: true,
-    localSimulatorMutations: false,
-    stagingProviderLabMutations: false,
-  },
-
-  runtimeEvidence: {
-    evidenceCommitSha: null,
-    referenceRuntimeVerified: false,
-    journeyRuntimeVerified: false,
-    localSimulatorMutationsVerified: false,
-    stagingProviderLabMutationsVerified: false,
-    productionMutationsVerified: false,
-    evidenceState: "NEEDS_EVIDENCE",
-    reason:
-      "clients/generated/wlt-api.ts regenerates byte-identical to the committed file from contracts/generated/wlt.bundle.openapi.yaml (verified 2026-08-06; `pnpm run openapi:generate` produces zero diff), so generatedClient is proven. Database migration, reference, mutation, reconciliation, operator-context-isolation, and cross-service journeys still require fresh same-commit runtime evidence this static file cannot provide.",
-  },
-
-  productionReadiness: {
-    productionMutationsReady: false,
-    productionProviderDefaultEnabled: false,
-    blocker:
-      "Production provider mutations remain unconditionally fail-closed: WLT_ALLOW_PRODUCTION_PROVIDER alone cannot enable them. Production requires an implemented approved provider adapter, secret reference, provider inquiry, verified webhook handling, reconciliation, independent finance/security/release approvals, operator-context isolation, and same-commit runtime evidence.",
-  },
-
-  // Compatibility fields are deliberately evidence-safe. Static source or
-  // simulator configuration must not promote runtime or financial readiness.
-  backendRuntimeReady: false,
-  databaseReady: false,
-  generatedClientReady: true,
-  frontendReady: true,
-  frontendDshBoundaryReady: true,
-  referenceRuntimeVerified: false,
-  journeyRuntimeVerified: false,
-  paymentSessionReferenceReady: true,
-  trustedOperatorContextServiceBoundaryReady: true,
-  localSimulatorMutationsReady: false,
-  stagingProviderLabMutationsReady: false,
-  productionMutationsReady: false,
-  productionMutationBlocker:
-    "Production provider mutations remain unconditionally fail-closed until an approved provider adapter and same-commit independent evidence exist; WLT_ALLOW_PRODUCTION_PROVIDER alone is insufficient.",
-  mutationRuntimeReady: false,
-  mutationJourneysApproved: false,
 
   boundaries: {
     owns: [
@@ -106,3 +54,4 @@ export const wltServiceManifest = {
 } as const;
 
 export default wltServiceManifest;
+

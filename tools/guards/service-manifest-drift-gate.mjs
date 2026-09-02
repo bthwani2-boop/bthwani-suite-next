@@ -14,7 +14,6 @@ const registryFile = `${serviceRoot}/contracts/contract.manifest.yaml`;
 const capabilityFiles = [`${serviceRoot}/capability-map.ts`];
 const extensionFile = `${serviceRoot}/${["capability-map", "extensions.ts"].join(".")}`;
 const manifest = read(manifestFile);
-const runtimeMap = read(runtimeMapFile);
 let registry = [];
 try {
   registry = dshContractRegistrations();
@@ -24,15 +23,15 @@ try {
 
 for (const [marker, message] of [
   ["capabilities: DSH_CAPABILITIES", "MANIFEST_CAPABILITY_DRIFT"],
-  ["currentTruth: {", "MANIFEST_CURRENT_TRUTH_DRIFT"],
-  ["contractOperations: DSH_CONTRACT_OPERATIONS", "MANIFEST_OPERATION_DRIFT"],
-  ["sameCommitRuntimeEvidenceReady", "MANIFEST_SAME_COMMIT_EVIDENCE_DERIVATION_MISSING"],
-  ["DSH_RUNTIME_MAP.every", "MANIFEST_RUNTIME_DERIVATION_MISSING"],
+  ["surfaces: DSH_SURFACE_MAP", "MANIFEST_SURFACE_DRIFT"],
 ]) {
   if (!manifest.includes(marker)) violations.push({ file: manifestFile, message });
 }
 
 for (const [pattern, message] of [
+  [/currentTruth:\s*\{/, "MANIFEST_CURRENT_TRUTH_AUTHORITY_FORBIDDEN"],
+  [/runtimeState:\s*["']/, "MANIFEST_TRANSIENT_EXECUTION_STATE_FORBIDDEN"],
+  [/closureState:\s*["']/, "MANIFEST_TRANSIENT_CLOSURE_STATE_FORBIDDEN"],
   [/backendRuntimeReady:\s*true\b/, "MANIFEST_HARDCODED_BACKEND_RUNTIME_READY_FORBIDDEN"],
   [/databaseReady:\s*true\b/, "MANIFEST_HARDCODED_DATABASE_READY_FORBIDDEN"],
   [/generatedClientReady:\s*true\b/, "MANIFEST_HARDCODED_GENERATED_CLIENT_READY_FORBIDDEN"],
@@ -41,19 +40,8 @@ for (const [pattern, message] of [
   if (pattern.test(manifest)) violations.push({ file: manifestFile, message });
 }
 
-for (const [marker, message] of [
-  ['runtimeEvidence: null', "RUNTIME_MAP_CURRENT_EVIDENCE_MUST_START_EMPTY"],
-  ['runtimeEvidenceCommitSha: null', "RUNTIME_MAP_CURRENT_EVIDENCE_SHA_MUST_START_EMPTY"],
-  ['evidenceState: "NONE"', "RUNTIME_MAP_CURRENT_EVIDENCE_STATE_MISSING"],
-  ["unresolvedState(capability)", "RUNTIME_MAP_UNRESOLVED_STATE_DERIVATION_MISSING"],
-]) {
-  if (!runtimeMap.includes(marker)) violations.push({ file: runtimeMapFile, message });
-}
-for (const [pattern, message] of [
-  [/services\/dsh\/evidence\//, "RUNTIME_MAP_HISTORICAL_EVIDENCE_PATH_FORBIDDEN"],
-  [/HISTORICAL_NOT_SAME_COMMIT/, "RUNTIME_MAP_HISTORICAL_EVIDENCE_STATE_FORBIDDEN"],
-]) {
-  if (pattern.test(runtimeMap)) violations.push({ file: runtimeMapFile, message });
+if (fs.existsSync(path.join(repoRoot, runtimeMapFile))) {
+  violations.push({ file: runtimeMapFile, message: "SOURCE_CONTROLLED_RUNTIME_MAP_FORBIDDEN" });
 }
 
 const ids = new Set();

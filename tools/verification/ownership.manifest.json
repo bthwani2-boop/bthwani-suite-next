@@ -42,7 +42,6 @@
         "services/dsh/capability-map.ts",
         "services/dsh/capabilities.ts",
         "services/dsh/frontend/",
-        "services/dsh/runtime-map.ts",
         "services/dsh/service.manifest.ts",
         "services/dsh/surface-map.ts"
       ],

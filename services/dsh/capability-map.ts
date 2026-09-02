@@ -1,13 +1,3 @@
-export const DSH_CAPABILITY_STATUS = [
-  "contract-active",
-  "planned",
-  "blocked-runtime",
-  "runtime-verified",
-  "experience-fix-required",
-] as const;
-
-export type DshCapabilityStatus = (typeof DSH_CAPABILITY_STATUS)[number];
-
 export type DshCapability = {
   readonly id:
     | "dsh.system.readiness"
@@ -27,21 +17,11 @@ export type DshCapability = {
     | "dsh.policies"
     | "dsh.admin"
     | "dsh.partner.activation";
-  readonly status: DshCapabilityStatus;
   readonly contractOperations: readonly string[];
   readonly surfaces: readonly string[];
-  readonly runtimeBound: boolean;
+  readonly requiresRuntimeBinding: boolean;
   readonly relatedFutureSurfaces?: readonly DshSurfaceDependency[];
   readonly relatedFutureCapabilities?: readonly string[];
-  readonly closureState:
-    | "CONTRACT_ACTIVE_RUNTIME_BLOCKED"
-    | "NOT_APPROVED_YET"
-    | "RUNTIME_VERIFIED"
-    | "FIX_REQUIRED"
-    | "CLIENT_REVERIFIED_ONLY"
-    | "CONTROL_PANEL_NOT_STARTED"
-    | "TOPIC_CLOSURE_NOT_APPROVED"
-    | "IMPLEMENTED_MULTI_SURFACE";
   readonly topic?: "stores" | "catalog" | "commerce" | "field-ops" | "support" | "analytics";
   readonly topicScope?: readonly (
     | "discovery"
@@ -125,15 +105,12 @@ export type DshSurfaceDependency =
 export const DSH_CAPABILITY_MAP = [
   {
     id: "dsh.system.readiness",
-    status: "runtime-verified",
     contractOperations: ["getDshHealth", "getDshReadiness"],
     surfaces: [],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
   },
   {
     id: "dsh.store.discovery",
-    status: "runtime-verified",
     contractOperations: [
       "listDshStores",
       "getDshStore",
@@ -155,14 +132,12 @@ export const DSH_CAPABILITY_MAP = [
       "app-field",
       "app-captain",
     ],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
     topic: "stores",
     topicScope: ["discovery", "governance", "readiness", "verification", "pickup-context"],
   },
   {
     id: "dsh.client.home-discovery",
-    status: "runtime-verified",
     contractOperations: [
       "getDshHomeDiscovery",
       "listOperatorHomeDiscoveryContent",
@@ -171,14 +146,12 @@ export const DSH_CAPABILITY_MAP = [
       "deleteOperatorHomeDiscoveryContent",
     ],
     surfaces: ["app-client", "control-panel"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
     topic: "stores",
     topicScope: ["discovery"],
   },
   {
     id: "dsh.client.catalog",
-    status: "runtime-verified",
     contractOperations: [
       "getPublishedDshCatalog",
       "listDshCatalogApprovals",
@@ -264,8 +237,7 @@ export const DSH_CAPABILITY_MAP = [
       "post_dsh_field_partners__partnerId__assortment__masterProductId__resume",
     ],
     surfaces: ["app-client", "app-partner", "control-panel", "app-field"],
-    runtimeBound: true,
-    closureState: "IMPLEMENTED_MULTI_SURFACE",
+    requiresRuntimeBinding: true,
     topic: "catalog",
     topicScope: [
       "browse",
@@ -284,7 +256,6 @@ export const DSH_CAPABILITY_MAP = [
   // ── Cart & Serviceability ─────────────────────────────────────────────────
   {
     id: "dsh.client.cart",
-    status: "runtime-verified",
     contractOperations: [
       "getDshClientCart",
       "upsertDshCartItem",
@@ -294,15 +265,13 @@ export const DSH_CAPABILITY_MAP = [
       "listOperatorCarts",
     ],
     surfaces: ["app-client", "control-panel"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
     topic: "commerce",
     topicScope: ["cart", "serviceability"],
   },
   // ── Checkout Intent & WLT Handoff ─────────────────────────────────────────
   {
     id: "dsh.client.checkout",
-    status: "experience-fix-required",
     contractOperations: [
       "createDshCheckoutIntent",
       "getDshCheckoutIntent",
@@ -318,8 +287,7 @@ export const DSH_CAPABILITY_MAP = [
       "reverseDshClientMapLocation",
     ],
     surfaces: ["app-client", "control-panel"],
-    runtimeBound: false,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: false,
     topic: "commerce",
     topicScope: [
       "checkout",
@@ -334,7 +302,6 @@ export const DSH_CAPABILITY_MAP = [
   // ── Order Fulfillment & Partner Acceptance ────────────────────────────────
   {
     id: "dsh.client.orders",
-    status: "runtime-verified",
     contractOperations: [
       "createDshOrder",
       "listDshClientOrders",
@@ -347,15 +314,13 @@ export const DSH_CAPABILITY_MAP = [
       "listDshOperatorOrders",
     ],
     surfaces: ["app-client", "app-partner", "control-panel"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
     topic: "commerce",
     topicScope: ["order-fulfillment", "partner-acceptance"],
   },
   // ── Dispatch & Captain Delivery Lifecycle ─────────────────────────────────
   {
     id: "dsh.client.dispatch",
-    status: "experience-fix-required",
     contractOperations: [
       "createDshAssignment",
       "listDshDispatchAssignments",
@@ -385,8 +350,7 @@ export const DSH_CAPABILITY_MAP = [
       "verifyDshPickupSession",
     ],
     surfaces: ["app-client", "app-captain", "control-panel", "app-partner"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
     topic: "commerce",
     topicScope: [
       "dispatch",
@@ -401,7 +365,6 @@ export const DSH_CAPABILITY_MAP = [
   // ── Field Verification & Store Quality Assurance ──────────────────────────
   {
     id: "dsh.field.readiness",
-    status: "runtime-verified",
     contractOperations: [
       "createDshFieldVisit",
       "listDshFieldVisits",
@@ -416,15 +379,13 @@ export const DSH_CAPABILITY_MAP = [
       "submitFieldStoreVerification",
     ],
     surfaces: ["app-field", "app-partner", "control-panel"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
     topic: "field-ops",
     topicScope: ["field-visits", "readiness-checklist", "escalation", "partner-onboarding"],
   },
   // ── Field Finance (WLT-owned wallet/commissions/payouts, DSH BFF) ──────────
   {
     id: "dsh.field.finance",
-    status: "experience-fix-required",
     contractOperations: [
       "getDshFieldMeWallet",
       "getDshFieldMeCommissions",
@@ -433,15 +394,13 @@ export const DSH_CAPABILITY_MAP = [
       "submitDshFieldMePayoutRequest",
     ],
     surfaces: ["app-field"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
     topic: "field-ops",
     topicScope: ["field-finance"],
   },
   // ── Support, Incidents & Escalation Room ───────────────────────────────────
   {
     id: "dsh.support.hub",
-    status: "experience-fix-required",
     contractOperations: [
       "createDshSupportTicket",
       "listDshMyTickets",
@@ -468,8 +427,7 @@ export const DSH_CAPABILITY_MAP = [
       "listDshOperatorSupportEvents",
     ],
     surfaces: ["app-client", "app-partner", "control-panel", "app-captain"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
     topic: "support",
     topicScope: [
       "ticket-submission",
@@ -489,7 +447,6 @@ export const DSH_CAPABILITY_MAP = [
   // ── Platform Analytics & Operational Reporting ────────────────────────────
   {
     id: "dsh.operator.analytics",
-    status: "runtime-verified",
     contractOperations: [
       "getDshPlatformKpis",
       "getDshOrderAnalytics",
@@ -505,15 +462,13 @@ export const DSH_CAPABILITY_MAP = [
       "listDshControlPanelFinanceCommissions",
     ],
     surfaces: ["control-panel", "app-partner"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
     topic: "analytics",
     topicScope: ["platform-kpis", "order-analytics", "delivery-analytics", "support-analytics", "store-analytics", "partner-performance"],
   },
   // ── Notifications & Actor Communication ───────────────────────────────────
   {
     id: "dsh.notifications",
-    status: "experience-fix-required",
     contractOperations: [
       "listDshNotifications",
       "markDshNotificationRead",
@@ -526,8 +481,7 @@ export const DSH_CAPABILITY_MAP = [
       "listDshNotificationDeliveryAttempts",
     ],
     surfaces: ["app-client", "control-panel", "app-partner", "app-field", "app-captain"],
-    runtimeBound: true,
-    closureState: "IMPLEMENTED_MULTI_SURFACE",
+    requiresRuntimeBinding: true,
     topicScope: [
       "actor-inbox",
       "channel-preferences",
@@ -567,7 +521,6 @@ export const DSH_CAPABILITY_MAP = [
   // Sibling services (wlt-api, identity-api) confirmed unaffected.
   {
     id: "dsh.marketing",
-    status: "runtime-verified",
     contractOperations: [
       "listDshCampaigns",
       "createDshCampaign",
@@ -585,13 +538,11 @@ export const DSH_CAPABILITY_MAP = [
       "submitDshPartnerSelfOffer",
     ],
     surfaces: ["control-panel", "app-partner"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
   },
   // ── Platform Policies & Service Area Management ───────────────────────────
   {
     id: "dsh.policies",
-    status: "experience-fix-required",
     contractOperations: [
       "listDshZones",
       "createDshZone",
@@ -606,8 +557,7 @@ export const DSH_CAPABILITY_MAP = [
       "put_dsh_operator_platform_service_areas__serviceAreaCode_",
     ],
     surfaces: ["control-panel"],
-    runtimeBound: false,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: false,
     topicScope: [
       "service-area-geofences",
       "coordinate-to-service-area",
@@ -617,7 +567,6 @@ export const DSH_CAPABILITY_MAP = [
   // ── Administration, Roles & Activation ────────────────────────────────────
   {
     id: "dsh.admin",
-    status: "runtime-verified",
     contractOperations: [
       "listDshAdminRoles",
       "post_dsh_operator_admin_roles_requests",
@@ -645,13 +594,11 @@ export const DSH_CAPABILITY_MAP = [
       "resolveDshControlPanelFinanceReconciliationCase",
     ],
     surfaces: ["control-panel"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
   },
   // ── Partner Onboarding & Store Publication ─────────────────────────────────
   {
     id: "dsh.partner.activation",
-    status: "runtime-verified",
     contractOperations: [
       "listDshPartners",
       "createDshPartner",
@@ -684,8 +631,7 @@ export const DSH_CAPABILITY_MAP = [
       "updatePartnerStoreSettings",
     ],
     surfaces: ["control-panel", "app-field", "app-partner"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
+    requiresRuntimeBinding: true,
     topic: "field-ops",
     topicScope: ["partner-onboarding", "readiness-checklist"],
   },
