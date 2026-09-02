@@ -117,7 +117,7 @@ func (s *Service) probeDependency(ctx context.Context, dependency ServiceDepende
 		posture.Message = err.Error()
 		return posture
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
 	posture.EvidenceSource = fmt.Sprintf("GET %s -> %d", posture.Endpoint, resp.StatusCode)
 	if resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices {
