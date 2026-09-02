@@ -26,6 +26,70 @@ The cleanup/restructure authority applies across all content on `g`:
 
 Any material artifact discovered anywhere on `g` enters scope automatically if it is wrong, weak, duplicated, misplaced, obsolete, superseded, stale, dead, unreachable, noisy, ambiguous, or structurally non-canonical.
 
+### Canonical reconstruction doctrine
+
+This campaign is **CANONICAL RECONSTRUCTION OF `g`**, not classification of an inherited tree and not cleanup around the edges.
+
+Governing principle:
+
+`PRESERVE REQUIRED TRUTH, NOT EXISTING STRUCTURE`.
+
+Preserve only proven required product/system behavior, persisted data, externally required contracts, security/integrity guarantees, and genuinely canonical implementation value. Existing files, folders, paths, package boundaries, internal APIs, wrappers, adapters, naming, scripts, tests, configs, or abstractions have no preservation right merely because they already exist.
+
+For every materially relevant responsibility ask:
+
+`IF THIS RESPONSIBILITY WERE BUILT TODAY FROM CURRENT PROVEN TRUTH AND APPLICABLE BEST PRACTICES, WHERE SHOULD IT LIVE, WHAT SHOULD IT BE CALLED, WHAT BOUNDARY SHOULD OWN IT, AND WHAT SHOULD NOT EXIST?`
+
+Then compare that canonical target with the live `g` state and execute the necessary `REFACTOR / RESTRUCTURE / REWRITE / REHOME / RENAME / CONSOLIDATE / SPLIT / DELETE` treatment.
+
+The campaign must preserve required truth while being willing to discard defective historical structure.
+
+### Every artifact must re-earn its right to exist
+
+`EVERY MATERIAL ARTIFACT MUST RE-EARN ITS RIGHT TO EXIST`.
+
+Every material file, directory, package, module, script, workflow, config, route, dependency, test, fixture, mock, generated repair, internal API, wrapper, adapter, schema object, runtime entry, and authoritative document must answer with evidence:
+
+1. Why does it exist now?
+2. What unique current responsibility does it own?
+3. Who is its canonical owner?
+4. Is its responsibility located at the correct boundary?
+5. Does its name truthfully describe that responsibility?
+6. Is its path the canonical place for that owner/responsibility?
+7. Does another artifact perform the same material responsibility?
+8. Can it be absorbed, merged, simplified, derived, regenerated, or deleted?
+9. Does its shape follow applicable language/framework/ecosystem conventions where materially useful?
+10. Would retaining it preserve patch history, accidental topology, or unnecessary complexity?
+
+If the answers do not justify its current existence and shape:
+
+`REHOME / RENAME / MERGE / SPLIT / REWRITE / REGENERATE / MIGRATE / DELETE`.
+
+### Best-practice outcome, not style churn
+
+`BEST-PRACTICE CONFORMANT WHERE MATERIAL AND APPLICABLE`.
+
+Best practice is evaluated by material outcomes, especially:
+
+`CLEAR OWNERSHIP`
+`LOW COUPLING`
+`HIGH COHESION`
+`PREDICTABLE PATHS`
+`FRAMEWORK-NATIVE STRUCTURE`
+`NO DUPLICATE TRUTH`
+`NO CIRCULAR OWNERSHIP`
+`EXPLICIT CONTRACTS`
+`GENERATED CODE DERIVED FROM CANONICAL SOURCE`
+`MINIMUM NECESSARY LAYERS`
+`CLEAR RUNTIME COMPOSITION`
+`TESTABILITY`
+`OBSERVABILITY`
+`SECURITY`
+`DATA INTEGRITY`
+`MAINTAINABILITY`.
+
+Do not mass-rename or apply design patterns for fashion. Do not rewrite healthy canonical code for stylistic preference. But when current naming, path, boundary, abstraction, or topology materially violates ownership clarity, framework conventions, maintainability, integrity, or canonical uniqueness, fix it completely rather than preserving the defect for a smaller diff.
+
 ## 2. G ISOLATION BOUNDARY
 
 Forbidden throughout the campaign:
@@ -120,7 +184,7 @@ Git history is the archive. The live contents of `g` are not an archive.
 
 ## 7. Package files
 
-1. `00-EXECUTION-INDEX.md` — campaign identity, branch-only scope, isolation, invariants, naming/path/topology law.
+1. `00-EXECUTION-INDEX.md` — campaign identity, branch-only scope, isolation, reconstruction doctrine, invariants, naming/path/topology law.
 2. `01-LIVE-ROOT-GRAPH-AND-CLOSURE-UNITS.md` — dynamic `g` Root Graph; current entries are not scope limits.
 3. `02-FILESYSTEM-MIGRATION-CLEANUP-DELETION-MATRIX.md` — all-artifact cleanup/restructure/deletion/naming/path law for `g` only.
 4. `03-SINGLE-SESSION-DIRECT-G-EXECUTION.md` — isolated direct execution on `g`.
@@ -167,6 +231,7 @@ ROOT_CORRECTNESS_STATE=PASS
 STRUCTURAL_RECONSTRUCTION_STATE=PASS
 CANONICAL_UNIQUENESS_STATE=PASS
 CANONICAL_NAMING_PATH_TOPOLOGY_STATE=PASS
+BEST_PRACTICE_MATERIAL_CONFORMANCE_STATE=PASS
 ZERO_PARALLEL_TRUTH_STATE=PASS
 ZERO_RESIDUE_STATE=PASS
 REPOSITORY_NOISE_BUDGET=ZERO_KNOWN_MATERIAL_NOISE
