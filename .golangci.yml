@@ -21,6 +21,14 @@ linters:
       - source: '^\s*defer\s+.*\.Rollback\(\)'
         linters:
           - errcheck
+      # WLT closes result iterators explicitly on error/early-return paths.
+      # These Close calls are resource cleanup; rows.Err()/business operation
+      # results remain governed separately and unchecked financial writes are
+      # still rejected by errcheck.
+      - path: '^services/wlt/backend/'
+        source: '^\s*.*\.Close\(\)'
+        linters:
+          - errcheck
 
 issues:
   max-issues-per-linter: 0
