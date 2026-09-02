@@ -3,18 +3,11 @@
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useControlPanelSession } from "@bthwani/dsh/control-panel/session";
+import { resolveControlPanelReturnTo } from "@bthwani/dsh/control-panel-routes";
 import { identityErrorPresentation } from "@bthwani/core-identity";
 import { colorRoles, alpha } from "@bthwani/ui-kit";
 import { requestControlPanelDevSession } from "./dev-session.adapter";
 import { controlPanelDevelopmentMode } from "./runtime-config";
-
-function resolveSafeReturnTo(raw: string | null): string {
-  if (!raw) return "/dsh/dashboard";
-  if (!raw.startsWith("/dsh") || raw.startsWith("//") || raw.includes("://")) {
-    return "/dsh/dashboard";
-  }
-  return raw;
-}
 
 export default function DshLoginPage() {
   return (
@@ -33,7 +26,7 @@ function DshLoginForm() {
   const [quickLoginPending, setQuickLoginPending] = useState(false);
   const [quickLoginError, setQuickLoginError] = useState<string | null>(null);
 
-  const returnTo = resolveSafeReturnTo(searchParams.get("returnTo"));
+  const returnTo = resolveControlPanelReturnTo(searchParams.get("returnTo"));
 
   useEffect(() => {
     if (state.kind === "authenticated") {

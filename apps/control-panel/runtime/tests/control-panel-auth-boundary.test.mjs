@@ -9,6 +9,10 @@ const source = fs.readFileSync(
   path.join(repoRoot, "services/dsh/frontend/shared/session/ControlPanelAuthBoundary.tsx"),
   "utf8",
 );
+const loginSource = fs.readFileSync(
+  path.join(repoRoot, "apps/control-panel/runtime/src/app/(shell)/dsh/login/page.tsx"),
+  "utf8",
+);
 const sectionBoundary = fs.readFileSync(
   path.join(repoRoot, "services/dsh/frontend/control-panel/ControlPanelSectionAccessBoundary.tsx"),
   "utf8",
@@ -77,6 +81,9 @@ test("control-panel authentication preserves governed DSH and WLT return paths",
   assert.equal(routes.resolveControlPanelReturnTo("https://evil.example/path"), "/dsh/dashboard");
   assert.equal(routes.resolveControlPanelReturnTo("/outside"), "/dsh/dashboard");
   assert.match(source, /resolveControlPanelReturnTo\(pathname\)/);
+  assert.match(loginSource, /@bthwani\/dsh\/control-panel-routes/);
+  assert.match(loginSource, /resolveControlPanelReturnTo\(searchParams\.get\("returnTo"\)\)/);
+  assert.doesNotMatch(loginSource, /resolveSafeReturnTo|startsWith\("\/dsh"\)/);
 });
 
 test("control-panel route ancestry is segment-bound and rejects sibling prefixes", () => {

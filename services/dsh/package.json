@@ -46,6 +46,7 @@
   },
   "exports": {
     "./mobile-capabilities": "./frontend/shared/mobile-capabilities.ts",
+    "./control-panel-routes": "./frontend/shared/control-panel-routes.ts",
     "./openapi": "./clients/generated/dsh-api.ts",
     "./wlt": "./frontend/wlt/index.ts",
     "./app-client": "./frontend/app-client/index.ts",
