@@ -14,7 +14,7 @@ func (r *Repository) ApplyChangeSet(ctx context.Context, id, actorID string, rol
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	status, err := lockChangeSetStatus(ctx, tx, id)
 	if err != nil {
@@ -142,7 +142,7 @@ func (r *Repository) RollbackChangeSet(ctx context.Context, id, actorID string, 
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	status, err := lockChangeSetStatus(ctx, tx, id)
 	if err != nil {
