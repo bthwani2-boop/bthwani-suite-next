@@ -145,20 +145,13 @@ type CatalogPolicyPatchInput struct {
 	EffectiveFrom   *time.Time `json:"effectiveFrom"`
 }
 
-// UpdateCatalogPolicyAtomic prevents policy lost-updates and returns the exact
-// committed row from the same SQL statement.
+// UpdateCatalogPolicyAtomic mutates catalog-operational policy only. Financial
+// commission and onboarding-fee policy is WLT-owned and is deliberately absent
+// from this writer. CatalogPolicyPatchInput rejects those JSON fields before
+// this function is reached (see financial_policy_authority.go).
 func UpdateCatalogPolicyAtomic(ctx context.Context, db *sql.DB, id string, input CatalogPolicyPatchInput) (CatalogPolicy, error) {
 	if err := validateExpectedVersion(input.ExpectedVersion); err != nil {
 		return CatalogPolicy{}, err
-	}
-	if input.PlatformCommissionRate != nil && (*input.PlatformCommissionRate < 0 || *input.PlatformCommissionRate > 1) {
-		return CatalogPolicy{}, ErrInvalid
-	}
-	if input.FieldPartnerOnboardingCommissionAmount != nil && *input.FieldPartnerOnboardingCommissionAmount < 0 {
-		return CatalogPolicy{}, ErrInvalid
-	}
-	if input.StoreOnboardingFeeAmount != nil && *input.StoreOnboardingFeeAmount < 0 {
-		return CatalogPolicy{}, ErrInvalid
 	}
 	if input.ProductDataQualityMinimumScore != nil && (*input.ProductDataQualityMinimumScore < 0 || *input.ProductDataQualityMinimumScore > 1) {
 		return CatalogPolicy{}, ErrInvalid
@@ -168,32 +161,25 @@ func UpdateCatalogPolicyAtomic(ctx context.Context, db *sql.DB, id string, input
 	}
 
 	row := db.QueryRowContext(ctx, `UPDATE dsh_catalog_platform_policies SET
-		platform_commission_rate=COALESCE($1, platform_commission_rate),
-		field_partner_onboarding_commission_amount=COALESCE($2, field_partner_onboarding_commission_amount),
-		field_partner_onboarding_commission_currency=COALESCE($3, field_partner_onboarding_commission_currency),
-		store_onboarding_fee_amount=COALESCE($4, store_onboarding_fee_amount),
-		store_onboarding_fee_currency=COALESCE($5, store_onboarding_fee_currency),
-		allows_store_product_custom_image=COALESCE($6, allows_store_product_custom_image),
-		allows_product_proposal=COALESCE($7, allows_product_proposal),
-		requires_barcode=COALESCE($8, requires_barcode),
-		requires_catalog_review=COALESCE($9, requires_catalog_review),
-		requires_marketing_review=COALESCE($10, requires_marketing_review),
-		requires_product_image=COALESCE($11, requires_product_image),
-		requires_category_image=COALESCE($12, requires_category_image),
-		requires_description=COALESCE($13, requires_description),
-		requires_brand=COALESCE($14, requires_brand),
-		requires_unit=COALESCE($15, requires_unit),
-		product_data_quality_minimum_score=COALESCE($16, product_data_quality_minimum_score),
-		max_gallery_images=COALESCE($17, max_gallery_images),
-		manual_request_mode=COALESCE($18, manual_request_mode),
-		is_active=COALESCE($19, is_active),
-		effective_from=COALESCE($20, effective_from), notes=COALESCE($21, notes),
+		allows_store_product_custom_image=COALESCE($1, allows_store_product_custom_image),
+		allows_product_proposal=COALESCE($2, allows_product_proposal),
+		requires_barcode=COALESCE($3, requires_barcode),
+		requires_catalog_review=COALESCE($4, requires_catalog_review),
+		requires_marketing_review=COALESCE($5, requires_marketing_review),
+		requires_product_image=COALESCE($6, requires_product_image),
+		requires_category_image=COALESCE($7, requires_category_image),
+		requires_description=COALESCE($8, requires_description),
+		requires_brand=COALESCE($9, requires_brand),
+		requires_unit=COALESCE($10, requires_unit),
+		product_data_quality_minimum_score=COALESCE($11, product_data_quality_minimum_score),
+		max_gallery_images=COALESCE($12, max_gallery_images),
+		manual_request_mode=COALESCE($13, manual_request_mode),
+		is_active=COALESCE($14, is_active),
+		effective_from=COALESCE($15, effective_from), notes=COALESCE($16, notes),
 		updated_at=now(), version=version+1
-		WHERE id=$22 AND version=$23
+		WHERE id=$17 AND version=$18
 		RETURNING `+policyColumns,
-		input.PlatformCommissionRate, input.FieldPartnerOnboardingCommissionAmount,
-		input.FieldPartnerOnboardingCommissionCurrency, input.StoreOnboardingFeeAmount,
-		input.StoreOnboardingFeeCurrency, input.AllowsStoreProductCustomImage, input.AllowsProductProposal,
+		input.AllowsStoreProductCustomImage, input.AllowsProductProposal,
 		input.RequiresBarcode, input.RequiresCatalogReview, input.RequiresMarketingReview, input.RequiresProductImage,
 		input.RequiresCategoryImage, input.RequiresDescription, input.RequiresBrand, input.RequiresUnit,
 		input.ProductDataQualityMinimumScore, input.MaxGalleryImages, input.ManualRequestMode,
