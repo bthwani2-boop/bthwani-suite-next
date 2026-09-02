@@ -2,111 +2,80 @@
 
 ## Purpose
 
-Convert the branch-wide current-state model into a standards-grounded target architecture, then compute the material difference between the two.
+Define the canonical target and structural delta at the scope needed to execute each proven root safely, while allowing the branch-wide model to mature continuously.
 
-Do not mutate yet.
+A complete branch-wide `CANONICAL g` and complete branch-wide Structural Delta are **not prerequisites for the first mutation**.
 
-## Step 3 — define `CANONICAL g`
+## Root-scoped canonical target
 
-For every material responsibility ask:
-
-`IF BUILT TODAY FROM CURRENT PROVEN TRUTH AND APPLICABLE BEST PRACTICES, WHO SHOULD OWN IT, WHERE SHOULD IT LIVE, WHAT SHOULD IT BE CALLED, WHAT BOUNDARY SHOULD CONTAIN IT, WHAT SHOULD BE THE SOLE WRITER, WHAT SHOULD BE DERIVED, AND WHAT SHOULD NOT EXIST?`
-
-Resolve enough target architecture to establish, where applicable:
+For a candidate root, establish from current Product/System/Data truth and applicable engineering standards:
 
 ```text
 CANONICAL_RESPONSIBILITY
 CANONICAL_OWNER
 CANONICAL_WRITER_OR_DERIVED_STATUS
 CANONICAL_PACKAGE_DIRECTORY_BOUNDARY
-CANONICAL_FILE_DIRECTORY_PACKAGE_NAMES
-CANONICAL_PATH
+CANONICAL_NAME_AND_PATH
 DEPENDENCY_DIRECTION
 DATA_SCHEMA_OWNER
 CONTRACT_GENERATED_OWNER
 RUNTIME_CONFIG_OWNER
-SCRIPT_WORKFLOW_TOOLING_OWNER
-REQUIRED_CONSUMERS
-REQUIRED_DATA_CONTRACT_RUNTIME_RELATIONSHIPS
-STRUCTURE_TO_KEEP
-STRUCTURE_TO_HARDEN
-STRUCTURE_TO_REHOME_RENAME_MERGE_SPLIT_REWRITE_REGENERATE_MIGRATE_DELETE
+REQUIRED_WRITERS_READERS_CONSUMERS
+STRUCTURE_TO_KEEP_HARDEN_REHOME_RENAME_MERGE_SPLIT_REWRITE_REGENERATE_MIGRATE_DELETE
 ```
 
-The target is not speculative redesign for style. It must be grounded in live Product/System truth, applicable governance/engineering standards, actual consumers, runtime/data constraints, and framework/language best practices where material.
+Ask:
 
-No preservation bias exists for inherited layout.
+`IF THIS RESPONSIBILITY WERE BUILT TODAY FROM CURRENT PROVEN TRUTH, WHO SHOULD OWN IT, WHERE SHOULD IT LIVE, WHAT SHOULD WRITE IT, WHAT SHOULD CONSUME IT, AND WHAT SHOULD NOT EXIST?`
 
-## Naming/path/topology standard
+The target must be evidence-backed, not stylistic speculation.
 
-A correct implementation in the wrong place is still structurally wrong.
+## Root-scoped structural delta
 
-Target architecture must prefer:
-
-`TRUTHFUL NAMES → OWNER-ALIGNED PATHS → UNIQUE RESPONSIBILITIES → LOW UNJUSTIFIED COUPLING → HIGH COHESION → PREDICTABLE FRAMEWORK-NATIVE STRUCTURE → MINIMUM NECESSARY LAYERS`.
-
-Permanent architecture must not preserve chronology or patch history such as `old`, `new`, `legacy`, `v2`, `v3`, `tmp`, `temp`, `copy`, `backup`, `fixed`, `final` unless that term has real domain/version semantics.
-
-Generic buckets (`common`, `utils`, `helpers`, `misc`, `shared`, `core`) require a precise proven canonical role; otherwise responsibilities must be rehomed/split.
-
-## Step 4 — compute structural delta
-
-Compare:
-
-`CURRENT g ↔ CANONICAL g`.
-
-Every material delta item should establish conceptually:
+Compare the proven current state of the affected cone with its canonical target:
 
 ```text
 CURRENT_STATE
 CANONICAL_TARGET
-DELTA_CLASS
-CURRENT_EVIDENCE
+CAUSAL_ROOT
 AFFECTED_AUTHORITY
-AFFECTED_WRITERS_READERS_CONSUMERS
+WRITERS_READERS_CONSUMERS
 DATA_SCHEMA_IMPACT
 CONTRACT_GENERATED_IMPACT
 RUNTIME_CONFIG_TOOLING_IMPACT
 NAMING_PATH_TOPOLOGY_IMPACT
-SYMPTOM_DESCENDANT_OR_ROOT_CANDIDATE
-EXPECTED_STRUCTURAL_DISPOSITION
+MIGRATION_CUTOVER_REQUIREMENTS
+LOSING_AUTHORITY_TO_REMOVE
+VERIFICATION_AND_NEGATIVE_SPACE
 ```
 
-Material delta classes include:
+Material delta classes include wrong ownership/boundaries, duplicate mutable writers, parallel/shadow truth, contract or generated drift, data/schema parallel authority, runtime/config duplication, misleading paths/names, dead/stale structure, unbounded compatibility, patch-shaped architecture, and obsolete residue.
 
-- wrong ownership;
-- wrong package/directory/module boundaries;
-- misplaced files;
-- misleading names/paths;
-- duplicate responsibility trees;
-- parallel/shadow truth;
-- duplicate mutable writers;
-- duplicate semantic decisions/policies/state machines/mappings;
-- unnecessary wrappers/adapters/mappers;
-- contract/generated/manual-repair drift;
-- data/schema parallel authority;
-- runtime/config duplication;
-- dead packages/files/routes/scripts/workflows;
-- legacy/transitional paths;
-- unused dependencies/config/routes/exports;
-- stale tests/fixtures/mocks/snapshots;
-- unbounded compatibility;
-- patch-shaped architecture;
-- obsolete residue.
+## Execution boundary
 
-## No execution yet
+Do not execute a candidate while its **own** canonical target or affected-cone delta contains an unknown capable of changing:
 
-Even if a delta looks obvious, do not mutate in this stage. It may be a descendant of a higher structural root discovered elsewhere in the complete delta.
+- canonical owner or writer;
+- Source-of-Fix;
+- migration/cutover direction;
+- required consumers;
+- deletion safety;
+- whether a higher root subsumes the candidate.
 
-## Completion gate
+Once those facts are proven and the `ROOT-CORRECT EXECUTION GATE` passes, execution may begin even if unrelated branch-wide delta discovery remains incomplete.
 
-Continue to `03` only when:
+## Branch-wide model
 
-```text
-CANONICAL_G_TARGET=ESTABLISHED
-MATERIAL_OWNER_WRITER_BOUNDARY_DECISIONS=RESOLVED_ENOUGH_TO_RANK
-MATERIAL_NAMING_PATH_TOPOLOGY_TARGET=ESTABLISHED
-CURRENT_TO_CANONICAL_DELTA=ESTABLISHED
-ALL_MATERIAL_DELTA_ITEMS=CLASSIFIED_ENOUGH_FOR_CAUSAL_SYNTHESIS
-NO_TARGET_UNKNOWN_CAPABLE_OF_INVALIDATING_ROOT_RANKING_OR_CUTOVER_DIRECTION
-```
+Maintain `CANONICAL g` and the Structural Delta incrementally. Use branch-wide census to expand and challenge them throughout the campaign.
+
+If later evidence proves a higher root, preempt descendant work and recompute the affected target/delta.
+
+The **complete** branch-wide Current↔Canonical fixed-point proof belongs to final adversarial qualification in `06`.
+
+## Naming/path/topology standard
+
+Prefer:
+
+`TRUTHFUL NAMES → OWNER-ALIGNED PATHS → UNIQUE RESPONSIBILITIES → LOW UNJUSTIFIED COUPLING → HIGH COHESION → FRAMEWORK-NATIVE STRUCTURE → MINIMUM NECESSARY LAYERS`.
+
+Do not preserve patch chronology (`old`, `new`, `legacy`, `v2`, `tmp`, `backup`, `fixed`, `final`) as permanent architecture unless it carries real domain/version semantics.
