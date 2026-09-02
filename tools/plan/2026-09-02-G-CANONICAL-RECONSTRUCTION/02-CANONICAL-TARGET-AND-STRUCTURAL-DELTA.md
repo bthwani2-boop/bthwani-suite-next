@@ -1,285 +1,81 @@
-# 02 — Surviving Required Truth and Complete Removal Delta
+# 02 — CANONICAL TARGET AND STRUCTURAL DELTA
 
 ## Purpose
 
-حوّل Census من `01` إلى Target واضح للحذف فقط:
+Define the canonical target and structural delta at the scope needed to execute each proven root safely, while allowing the branch-wide model to mature continuously.
+
+A complete branch-wide `CANONICAL g` and complete branch-wide Structural Delta are **not prerequisites for the first mutation**.
+
+## Root-scoped canonical target
+
+For a candidate root, establish from current Product/System/Data truth and applicable engineering standards:
 
 ```text
-CURRENT g
-− PROVEN NON-REQUIRED MATERIAL
-= SURVIVING REQUIRED g
+CANONICAL_RESPONSIBILITY
+CANONICAL_OWNER
+CANONICAL_WRITER_OR_DERIVED_STATUS
+CANONICAL_PACKAGE_DIRECTORY_BOUNDARY
+CANONICAL_NAME_AND_PATH
+DEPENDENCY_DIRECTION
+DATA_SCHEMA_OWNER
+CONTRACT_GENERATED_OWNER
+RUNTIME_CONFIG_OWNER
+REQUIRED_WRITERS_READERS_CONSUMERS
+STRUCTURE_TO_KEEP_HARDEN_REHOME_RENAME_MERGE_SPLIT_REWRITE_REGENERATE_MIGRATE_DELETE
 ```
 
-هذه ليست مرحلة تصميم `CANONICAL g` من الصفر. لا يسمح باستخدام الحملة ذريعة لإعادة هيكلة Code سليم.
+Ask:
 
-## 1. Target model
+`IF THIS RESPONSIBILITY WERE BUILT TODAY FROM CURRENT PROVEN TRUTH, WHO SHOULD OWN IT, WHERE SHOULD IT LIVE, WHAT SHOULD WRITE IT, WHAT SHOULD CONSUME IT, AND WHAT SHOULD NOT EXIST?`
 
-الـTarget هو أصغر Live Tree يحافظ بالكامل على Required Product/System/Data/Contract/Operational Truth المثبتة حاليًا.
+The target must be evidence-backed, not stylistic speculation.
 
-لكل Artifact:
+## Root-scoped structural delta
+
+Compare the proven current state of the affected cone with its canonical target:
 
 ```text
-KEEP_PROVEN
-DELETE_PROVEN
-RETIRE_AFTER_PROVEN_CUTOVER
-BLOCKED_BY_UNKNOWN
+CURRENT_STATE
+CANONICAL_TARGET
+CAUSAL_ROOT
+AFFECTED_AUTHORITY
+WRITERS_READERS_CONSUMERS
+DATA_SCHEMA_IMPACT
+CONTRACT_GENERATED_IMPACT
+RUNTIME_CONFIG_TOOLING_IMPACT
+NAMING_PATH_TOPOLOGY_IMPACT
+MIGRATION_CUTOVER_REQUIREMENTS
+LOSING_AUTHORITY_TO_REMOVE
+VERIFICATION_AND_NEGATIVE_SPACE
 ```
 
-المبدأ:
+Material delta classes include wrong ownership/boundaries, duplicate mutable writers, parallel/shadow truth, contract or generated drift, data/schema parallel authority, runtime/config duplication, misleading paths/names, dead/stale structure, unbounded compatibility, patch-shaped architecture, and obsolete residue.
 
-```text
-PRESERVE REQUIRED TRUTH.
-REMOVE PROVEN NON-REQUIRED STRUCTURE.
-DO NOT INVENT NEW ARCHITECTURE TO MAKE CLEANUP LOOK BETTER.
-```
+## Execution boundary
 
-## 2. What qualifies as a material removal delta
+Do not execute a candidate while its **own** canonical target or affected-cone delta contains an unknown capable of changing:
 
-استخرج جميع Material Items من الأنواع التالية حيث يثبت عدم الحاجة:
+- canonical owner or writer;
+- Source-of-Fix;
+- migration/cutover direction;
+- required consumers;
+- deletion safety;
+- whether a higher root subsumes the candidate.
 
-```text
-DEAD_FILE
-ORPHANED_DIRECTORY
-UNUSED_SYMBOL
-UNUSED_EXPORT_REEXPORT
-UNUSED_PACKAGE
-UNUSED_DEPENDENCY
-DEAD_ROUTE_API
-DEAD_RUNTIME_ENTRYPOINT
-DEAD_SCRIPT_WORKFLOW
-STALE_CONFIG_ENV_BINDING
-STALE_TEST_FIXTURE_MOCK_SNAPSHOT
-SUPERSEDED_IMPLEMENTATION
-LOSING_DUPLICATE_AUTHORITY
-OBSOLETE_COMPATIBILITY_LAYER
-MANUAL_GENERATED_REPAIR_RESIDUE
-DEAD_DATA_ARTIFACT
-OBSOLETE_SCHEMA_STORAGE_AFTER_SAFE_MIGRATION
-UNREACHABLE_ASSET
-STALE_MANIFEST_ENTRY
-OBSOLETE_PLAN_GOVERNANCE_AUTHORITY
-FILESYSTEM_NOISE
-OLD_NAME_PATH_RESIDUE
-```
+Once those facts are proven and the `ROOT-CORRECT EXECUTION GATE` passes, execution may begin even if unrelated branch-wide delta discovery remains incomplete.
 
-## 3. Required-survivor proof
+## Branch-wide model
 
-إذا كان Candidate مكررًا أو Superseded، أثبت قبل الحذف:
+Maintain `CANONICAL g` and the Structural Delta incrementally. Use branch-wide census to expand and challenge them throughout the campaign.
 
-```text
-SURVIVING_RESPONSIBILITY=
-SURVIVING_OWNER=
-SURVIVING_WRITER_IF_APPLICABLE=
-SURVIVING_CONTRACT_IF_APPLICABLE=
-SURVIVING_STORAGE_TRUTH_IF_APPLICABLE=
-```
+If later evidence proves a higher root, preempt descendant work and recompute the affected target/delta.
 
-لا تنشئ Owner ثالثًا.
+The **complete** branch-wide Current↔Canonical fixed-point proof belongs to final adversarial qualification in `06`.
 
-```text
-TWO_AUTHORITIES → SELECT PROVEN WINNER → MIGRATE → CUTOVER → DELETE LOSER
-```
+## Naming/path/topology standard
 
-ممنوع:
+Prefer:
 
-```text
-TWO_AUTHORITIES → NEW WRAPPER → KEEP BOTH
-```
+`TRUTHFUL NAMES → OWNER-ALIGNED PATHS → UNIQUE RESPONSIBILITIES → LOW UNJUSTIFIED COUPLING → HIGH COHESION → FRAMEWORK-NATIVE STRUCTURE → MINIMUM NECESSARY LAYERS`.
 
-## 4. Migration is subordinate to deletion
-
-Migration/Cutover يسمح به فقط عندما يكون Necessary Precondition لحذف Losing Artifact.
-
-الأولوية:
-
-```text
-MIGRATE TO AN EXISTING PROVEN SURVIVING OWNER
-```
-
-إضافة Package/Service/Layer/Adapter جديدة ليست جزءًا طبيعيًا من هذه الحملة.
-
-إذا تعذر الحذف من دون اختراع Architecture جديدة، صنف الحالة:
-
-`BLOCKED_BY_ARCHITECTURAL_DEPENDENCY`
-
-ولا توسع Scope تلقائيًا. يجوز فقط Minimal Bounded Transition إذا ثبت أنه السبيل الوحيد الآمن للحذف، مع Exit Conditions صريحة وإزالة transition نفسها داخل نفس closure إن أمكن.
-
-## 5. Complete affected cone per candidate
-
-لكل Candidate ابنِ cone كاملًا:
-
-```text
-DECLARATION
-IMPORTS
-EXPORTS_REEXPORTS
-CALLERS
-READERS
-WRITERS
-ROUTES
-RUNTIME_ENTRYPOINTS
-CONFIG_ENV
-SCRIPTS_WORKFLOWS
-PACKAGE_MANIFESTS
-WORKSPACE_REFERENCES
-BUILD_REFERENCES
-CONTRACT_GENERATED
-DATA_SCHEMA
-MIGRATIONS_SEEDS_BOOTSTRAP_UPGRADE
-TESTS_FIXTURES_MOCKS_SNAPSHOTS
-ASSETS
-DOCS_GOVERNANCE_REFERENCES
-```
-
-Candidate غير جاهز للحذف إذا كان cone ناقصًا ماديًا.
-
-## 6. Deletion proof matrix
-
-قبل نقل Candidate إلى `READY_TO_DELETE` أثبت حيث applicable:
-
-```text
-ZERO_REQUIRED_IMPORTS=PASS
-ZERO_REQUIRED_EXPORTS_REEXPORTS=PASS
-ZERO_REQUIRED_CALLERS=PASS
-ZERO_REQUIRED_RUNTIME_ROUTES=PASS
-ZERO_REQUIRED_MUTABLE_WRITERS=PASS
-ZERO_REQUIRED_READERS=PASS
-ZERO_REQUIRED_CONFIG_REFERENCES=PASS
-ZERO_REQUIRED_SCRIPT_WORKFLOW_INVOCATIONS=PASS
-ZERO_REQUIRED_CONTRACT_GENERATED_REFERENCES=PASS
-ZERO_REQUIRED_TEST_FIXTURE_MOCK_DEPENDENCY=PASS
-ZERO_REQUIRED_DATA_MIGRATION_DEPENDENCY=PASS
-ZERO_SUPPORTED_BOOTSTRAP_UPGRADE_RECOVERY_DEPENDENCY=PASS
-ZERO_REQUIRED_EXTERNAL_CONTRACT_DEPENDENCY=PASS
-SURVIVING_REQUIRED_BEHAVIOR_PROVEN=PASS
-```
-
-`N/A` يجب أن يكون مبررًا، لا افتراضيًا.
-
-## 7. Removal obligations
-
-الحذف ليس Artifact واحدًا فقط. استخرج كل Obligation التابعة:
-
-```text
-CONSUMER_MIGRATION
-WRITER_CUTOVER
-READER_CUTOVER
-BARREL_EXPORT_REMOVAL
-ROUTE_UNREGISTRATION
-CONFIG_REMOVAL
-ENV_REMOVAL
-SCRIPT_REMOVAL
-WORKFLOW_REMOVAL
-MANIFEST_UPDATE
-DEPENDENCY_REMOVAL
-LOCKFILE_UPDATE
-TEST_FIXTURE_MOCK_CLEANUP
-GENERATED_REGENERATION
-DATA_MIGRATION_BACKFILL_RECONCILIATION
-OLD_PATH_REFERENCE_REMOVAL
-EMPTY_PARENT_DIRECTORY_REMOVAL
-DOCUMENTATION_AUTHORITY_UPDATE
-```
-
-لا تسمح بحذف Source وترك residue التابعة.
-
-## 8. Root synthesis for deletion campaign
-
-Cluster Candidates بحيث تعالج Losing Structure مرة واحدة.
-
-مثال:
-
-```text
-10 dead files inside one obsolete package
-→ not 10 unrelated roots
-→ one OBSOLETE_PACKAGE_TREE deletion closure unit
-```
-
-أو:
-
-```text
-manual DTO copies + mapper + tests + exports
-all superseded by generated contract
-→ one LOSING_CONTRACT_COPY_TREE closure unit
-```
-
-## 9. Ranking
-
-رتب Deletion Closure Units حسب:
-
-```text
-PROVEN_NOT_REQUIRED_CONFIDENCE
-× STRUCTURAL_RESIDUE_REDUCTION
-× FANOUT
-× BLOCKING_POWER
-× RUNTIME / DATA / SECURITY RISK OF KEEPING LOSING AUTHORITY
-× DELETION_SAFETY_PROOF
-× EVIDENCE_INVALIDATION_RISK
-```
-
-ارفع P0 عند وجود:
-
-```text
-REACHABLE_SUPERSEDED_RUNTIME
-DUPLICATE_MUTABLE_WRITER
-SHADOW_AUTHORITY
-DEAD_BUT_STILL_ROUTABLE_API
-OBSOLETE_CONFIG_STILL_SELECTABLE
-STALE_SCRIPT_WORKFLOW_THAT_CAN_MUTATE_STATE
-PATCH_COMPATIBILITY_THAT_KEEPS_OLD_AUTHORITY_REACHABLE
-```
-
-لا ترتب حسب:
-
-```text
-old finding order
-first search hit
-easiest delete
-fewest files
-largest file count
-```
-
-## 10. Required output
-
-أنشئ Removal Delta واحدًا:
-
-```text
-REMOVAL_DELTA_VERSION=<pinned g sha>
-READY_TO_DELETE_UNITS=<n>
-RETIRE_AFTER_CUTOVER_UNITS=<n>
-BLOCKED_UNKNOWNS=<n>
-KEEP_PROVEN_ITEMS=<n>
-```
-
-ولكل Unit:
-
-```text
-DELETION_UNIT_ID=
-PRIMARY_LOSING_ARTIFACT=
-WHY_NOT_REQUIRED=
-SURVIVING_REQUIRED_TRUTH=
-SURVIVING_OWNER=
-COMPLETE_AFFECTED_CONE=
-MIGRATION_CUTOVER=
-DATA_IMPACT=
-CONTRACT_GENERATED_IMPACT=
-RUNTIME_CONFIG_TOOLING_IMPACT=
-TEST_DEPENDENCY_IMPACT=
-ARTIFACTS_TO_DELETE=
-RESIDUE_TO_DELETE=
-NEGATIVE_SPACE_SEARCH=
-TARGETED_VERIFICATION=
-REOPEN_CONDITIONS=
-STATUS=
-```
-
-## 11. Gate to execution
-
-لا تنتقل إلى `03` ما لم:
-
-```text
-COMPLETE_CENSUS=PASS
-REQUIRED_SURVIVOR_MODEL=PASS
-COMPLETE_REMOVAL_DELTA=PASS
-MATERIAL_UNKNOWN_AFFECTING_FIRST_UNIT=0
-FIRST_UNIT_DELETION_SAFETY_PROVABLE=YES
-```
+Do not preserve patch chronology (`old`, `new`, `legacy`, `v2`, `tmp`, `backup`, `fixed`, `final`) as permanent architecture unless it carries real domain/version semantics.

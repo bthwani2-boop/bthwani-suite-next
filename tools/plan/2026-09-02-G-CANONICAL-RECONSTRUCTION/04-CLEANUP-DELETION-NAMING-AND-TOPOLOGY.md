@@ -1,369 +1,172 @@
-# 04 — Cleanup, Deletion, Residue Removal, Naming and Topology
+# 04 — CLEANUP, DELETION, NAMING AND TOPOLOGY
 
 ## Purpose
 
-هذا الملف هو Enforcement Gate الفعلي للحذف الكامل. لا يكفي حذف Source رئيسي؛ يجب حذف كل residue التي فقدت حقها في الوجود بسببه.
+Ensure reconstruction removes the inherited structural debt instead of wrapping it.
 
-القانون:
+This file applies during execution of each selected Closure Unit and again during final branch-wide qualification.
+
+## Every artifact must justify survival
+
+Every material artifact in the affected cone must end with one proven disposition:
+
+`KEEP_PROVEN | HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | BOUNDED_RETIREMENT`.
+
+There is no final `IGNORE`, `KEEP_JUST_IN_CASE`, `HISTORICAL_KEEP`, permanent `TEMP`, or `MAYBE_USED`.
+
+Git history is the archive. Live `g` is not an archive.
+
+## Old/stale artifact law
+
+For every old/legacy/stale/obsolete/superseded file, folder, package, script, workflow, config, route, test, fixture, mock, snapshot, dependency, generated repair, copy/backup/temp/prototype, or compatibility shell, prove at least one:
+
+- unique current canonical responsibility;
+- current required runtime consumer;
+- current required build/test/tooling/operations consumer;
+- required generated/derived status from canonical source;
+- supported bounded migration with explicit removal trigger;
+- required evidence under live governance.
+
+If none is proven after consumer/data safety proof: `DELETE`.
+
+Do not relocate garbage into `archive`, `history`, `legacy`, `backup`, `old`, or similar live folders.
+
+## Names and paths are architecture
+
+For every materially affected file/directory/package/module/script/workflow/config/test/generated/data boundary prove:
 
 ```text
-CUTOVER COMPLETE
-→ DELETE LOSING ARTIFACT
-→ DELETE ALL PROVEN NON-REQUIRED RESIDUE
-→ PROVE NEGATIVE SPACE
+NAME_MATCHES_ACTUAL_RESPONSIBILITY
+PATH_MATCHES_CANONICAL_OWNER
+DIRECTORY_LEVEL_JUSTIFIED
+PACKAGE_MODULE_BOUNDARY_HAS_UNIQUE_RESPONSIBILITY
+APPLICABLE_LANGUAGE_FRAMEWORK_CONVENTION=PASS_OR_JUSTIFIED_EXCEPTION
+DOMAIN_VOCABULARY_CONSISTENT
+NO_MISLEADING_GENERIC_BUCKET_WHEN_REAL_OWNER_EXISTS
+NO_TRANSITIONAL_NAME_AS_PERMANENT_STRUCTURE
+NO_DUPLICATE_TREE_FOR_SAME_RESPONSIBILITY
+NO_FALSE_OWNER_IMPLIED_BY_PATH
+NO_OBSOLETE_NAME_AFTER_CUTOVER
 ```
 
-## 1. Universal deletion safety gate
+Permanent architecture must not preserve patch chronology (`old`, `new`, `legacy`, `v2`, `v3`, `tmp`, `copy`, `backup`, `fixed`, `final`) unless that term has real product/domain/version semantics.
 
-قبل حذف أي Material Artifact أثبت حيث applicable:
+Generic buckets (`common`, `utils`, `helpers`, `misc`, `shared`, `core`) require precise canonical purpose; otherwise rehome/split/delete.
+
+## Semantic duplication
+
+Duplication is semantic, not textual.
+
+Search for duplicate meaning in:
+
+`eligibility | permission | serviceability | financial truth | state/status interpretation | allowed actions | retry/idempotency | state transitions | defaults/fallbacks | validation | normalization | locale/currency | role/capability vocabulary | address/location | pricing/fees | contract semantics | error-to-state mapping | runtime/config decisions | operational scripts/tooling`.
+
+When proven:
+
+`SELECT CANONICAL OWNER → MIGRATE WRITERS/READERS/CONSUMERS → CUT OVER → DELETE LOSING AUTHORITY`.
+
+Never solve two authorities by creating a third mapper/wrapper/registry.
+
+## Collapse before add
+
+Before adding a package, directory, shared layer, adapter, mapper, wrapper, service, registry, abstraction, compatibility path, config source, script, workflow, test utility, or dependency, prove an existing canonical owner cannot absorb the responsibility.
+
+Prefer elimination/consolidation over another layer.
+
+## Directory/package treatment
+
+If a directory/package has no unique responsibility:
+
+`INVENTORY CONSUMERS → MOVE REQUIRED CONTENT → MIGRATE REFERENCES → DELETE TREE`.
+
+If mixed responsibilities: `SPLIT BY CANONICAL OWNER`.
+
+If duplicate responsibility trees:
+
+`SELECT CANONICAL TARGET → MIGRATE COMPLETE CONE → MERGE REQUIRED VALUE → DELETE LOSER`.
+
+If the winning implementation has a misleading name/path, rename/rehome it rather than preserving historical topology.
+
+## Script/tool/workflow treatment
+
+Every script/tool/workflow must prove:
+
+`CURRENT PURPOSE | CANONICAL OWNER | CANONICAL NAME/PATH | SUPPORTED INVOCATION | CURRENT CONSUMERS | WHY CANONICAL TOOLING CANNOT ABSORB IT`.
+
+Duplicate responsibility must consolidate to one. Product/runtime/config truth must not live independently in scripts. Unsupported/dead scripts/workflows are deleted.
+
+## Data/schema cleanup
+
+Schema/data restructuring must prove target constraints, clean install/bootstrap, migration order, existing-data backfill/reconciliation, writer cutover, readback, idempotency/atomicity where material, recovery semantics, and safe removal of obsolete mutable storage after zero consumers.
+
+No permanent parallel mutable columns/tables representing the same truth.
+
+## Contract/generated cleanup
+
+`AUTHORITATIVE SEMANTICS → CANONICAL CONTRACT → REGENERATE → MIGRATE ALL CONSUMERS → DELETE MANUAL REPAIR → ZERO UNEXPECTED GENERATED DIFF`.
+
+Investigate handwritten DTO/enum copies, repair intersections, generated overlays, direct generated edits, keep-in-sync comments, runtime coercions hiding drift, and non-canonical generated paths.
+
+## Tests/dependencies cleanup
+
+Tests are evidence consumers, not alternate product authorities. Delete tests/fixtures/mocks/snapshots tied only to superseded behavior. Never weaken assertions to manufacture green.
+
+After each migration, remove obsolete dependencies/devDependencies/plugins/config/scripts/workflows and prove no accidental transitive reliance remains.
+
+## Deletion proof
+
+Before deleting a material artifact prove as applicable:
 
 ```text
 ZERO_REQUIRED_IMPORTS
 ZERO_REQUIRED_EXPORTS_REEXPORTS
 ZERO_REQUIRED_CALLERS
-ZERO_REQUIRED_RUNTIME_ROUTES
-ZERO_REQUIRED_ENTRYPOINTS
-ZERO_REQUIRED_MUTABLE_WRITERS
+ZERO_RUNTIME_ROUTES
+ZERO_MUTABLE_WRITERS
 ZERO_REQUIRED_READERS
-ZERO_REQUIRED_CONFIG_ENV_REFERENCES
-ZERO_REQUIRED_SCRIPT_WORKFLOW_INVOCATIONS
-ZERO_REQUIRED_CONTRACT_GENERATED_REFERENCES
-ZERO_REQUIRED_TEST_FIXTURE_MOCK_SNAPSHOT_DEPENDENCY
-ZERO_REQUIRED_DATA_SCHEMA_MIGRATION_DEPENDENCY
-ZERO_SUPPORTED_BOOTSTRAP_UPGRADE_RECOVERY_DEPENDENCY
-ZERO_REQUIRED_EXTERNAL_CONTRACT_DEPENDENCY
-ZERO_REQUIRED_OPERATIONAL_RUNBOOK_DEPENDENCY
+ZERO_CONFIG_REFERENCES
+ZERO_SCRIPT_WORKFLOW_INVOCATIONS
+ZERO_CONTRACT_GENERATED_REFERENCES
+ZERO_REQUIRED_TEST_FIXTURE_MOCK_DEPENDENCY
+ZERO_REQUIRED_DATA_MIGRATION_DEPENDENCY
+ZERO_SUPPORTED_UPGRADE_OPERATIONS_DEPENDENCY
 ```
 
-ثم:
+After deletion rerun reference and negative-space searches.
+
+## Move/rename proof
+
+`TRUE RESPONSIBILITY → TRUE OWNER → CANONICAL NAME → CANONICAL PATH → CORRECT BOUNDARY → NO DUPLICATE AUTHORITY → MOVE/RENAME → MIGRATE ALL REFERENCES → DELETE OLD PATH → SEARCH OLD PATH/NAME/VOCABULARY → ZERO REQUIRED REFERENCES`.
+
+No unbounded forwarding shell remains merely to reduce migration effort.
+
+## No cosmetic cleanup
+
+Forbidden final outcomes:
+
+- moving `legacy` to `archive` while keeping it live;
+- renaming clutter without correcting ownership;
+- duplicate truths hidden behind `shared/common`;
+- old scripts collected instead of deleted;
+- new canonical implementation while old writer remains reachable;
+- wrapper/adapter layers whose only purpose is preserving wrong topology;
+- leaving names/paths wrong because changing imports is inconvenient.
+
+## Per-root cleanup proof
+
+Before root closure answer with evidence:
 
 ```text
-DELETE
-→ SEARCH REFERENCES AGAIN
-→ VERIFY BUILD/RUNTIME/TESTS AS APPLICABLE
-→ NEGATIVE-SPACE PROOF
+WHAT_OLD_AUTHORITY_DISAPPEARED?
+WHAT_DUPLICATE_WRITER_READER_MAPPING_DISAPPEARED?
+WHAT_OBSOLETE_FILES_DIRECTORIES_PACKAGES_DISAPPEARED?
+WHAT_OBSOLETE_SCRIPTS_WORKFLOWS_CONFIG_TOOLING_DISAPPEARED?
+WHAT_TEST_FIXTURE_MOCK_DEPENDENCY_RESIDUE_DISAPPEARED?
+WHICH_NAMES_PATHS_BOUNDARIES_ARE_NOW_CANONICAL?
+WHAT_PROVES_OLD_NAMES_PATHS_HAVE_ZERO_REQUIRED_REFS?
+WHAT_COMPATIBILITY_REMAINS_AND_WHAT_REMOVES_IT?
+WHAT_PROVES_NO_THIRD_AUTHORITY?
+WHAT_PROVES_NO_REQUIRED_DATA_BEHAVIOR_OPERATIONS_LOSS?
 ```
 
-## 2. Files and symbols
-
-احذف:
-
-```text
-unreferenced dead symbols
-superseded implementations
-unused exports
-unused re-exports
-files whose final required responsibility disappeared
-manual copies replaced by surviving authority
-patch helpers that only served deleted behavior
-```
-
-بعد الحذف افحص barrels/index files/public API surfaces/type exports.
-
-## 3. Directories and package trees
-
-Directory لا تبقى كأرشيف حي.
-
-بعد إزالة محتواها المطلوب:
-
-```text
-EMPTY_DIRECTORY → DELETE
-OBSOLETE_PACKAGE_TREE → DELETE WHOLE TREE
-```
-
-افحص:
-
-```text
-workspace manifests
-package.json dependencies/scripts
-path aliases
-tsconfig references
-build config
-lint/test config
-Docker/compose/runtime references
-CI paths
-CODEOWNERS/governance references where material
-```
-
-## 4. Dependencies
-
-Dependency تصبح deletable فقط إذا ثبت:
-
-```text
-ZERO_REQUIRED_DIRECT_IMPORTS
-ZERO_REQUIRED_DYNAMIC_LOADS
-ZERO_REQUIRED_BUILD_TOOL_USAGE
-ZERO_REQUIRED_SCRIPT_USAGE
-ZERO_REQUIRED_WORKFLOW_USAGE
-ZERO_REQUIRED_GENERATION_USAGE
-```
-
-ثم:
-
-```text
-REMOVE MANIFEST ENTRY
-→ UPDATE LOCKFILE USING PROJECT-CANONICAL PACKAGE MANAGER
-→ VERIFY NO UNEXPECTED DEPENDENCY GRAPH DAMAGE
-```
-
-لا تحذف Transitive Dependency مباشرة من lockfile يدويًا كترقيع.
-
-## 5. APIs, routes and runtime entrypoints
-
-قبل حذف API/Route/Handler/Command:
-
-```text
-ZERO_REQUIRED_CALLERS
-ZERO_REQUIRED_EXTERNAL_CONSUMERS
-ZERO_REQUIRED_INTERNAL_CONSUMERS
-ZERO_ROUTE_REGISTRATION
-ZERO_DISCOVERY_REGISTRY_REFS
-ZERO_CONFIG_SELECTABILITY
-ZERO_DOCUMENTED_SUPPORTED_CONTRACT
-```
-
-إذا كان Endpoint قديمًا لكن ما يزال Supported External Contract:
-
-`KEEP_PROVEN` أو `RETIRE_AFTER_PROVEN_CUTOVER`، وليس `DELETE_PROVEN`.
-
-## 6. Config and environment
-
-احذف Config/Env binding فقط بعد إثبات:
-
-```text
-ZERO_REQUIRED_READERS
-ZERO_REQUIRED_DEPLOYMENT_BINDINGS
-ZERO_REQUIRED_SECRET_MAPPING
-ZERO_REQUIRED_WORKFLOW_REFERENCES
-ZERO_REQUIRED_RUNTIME_FALLBACK
-```
-
-ممنوع تحويل obsolete config إلى fallback صامت يبقيه حيًا.
-
-## 7. Scripts, CLI and workflows
-
-لكل Script/Workflow افحص:
-
-```text
-package script invocation
-CI workflow_call / workflow_dispatch / schedule / push / PR triggers
-other workflow references
-operator documentation
-release/deploy/bootstrap usage
-data mutation capability
-```
-
-Script أو Workflow غير مستدعى محليًا ليس ميتًا تلقائيًا.
-
-إذا ثبت dead:
-
-```text
-DELETE FILE
-→ DELETE CALL SITES
-→ DELETE MANIFEST COMMANDS
-→ DELETE DOC/RUNBOOK REFERENCES
-→ VERIFY NO AUTOMATION PATH REFERENCES IT
-```
-
-## 8. Tests, fixtures, mocks, snapshots
-
-تصنيفها يكون حسب Truth التي تحميها:
-
-```text
-LIVE_REQUIRED_TRUTH → KEEP / MIGRATE
-RETIRED_TRUTH_ONLY → DELETE
-DUPLICATE_REDUNDANT_WITH_NO_UNIQUE_GUARD → DELETE_PROVEN
-UNKNOWN_GUARD_VALUE → BLOCKED_BY_UNKNOWN
-```
-
-بعد حذف Production Artifact افحص residue الاختبارية التابعة له كاملة.
-
-## 9. Contracts and generated artifacts
-
-احذف:
-
-```text
-handwritten DTO copies
-manual enum copies
-generated overlays
-manual generated edits
-keep-in-sync mappers
-repair intersections / Omit layers
-```
-
-فقط عندما يثبت أنها Losing Copies وأن كل Required Consumers انتقلت إلى authoritative existing source.
-
-بعدها:
-
-```text
-REGENERATE
-→ VERIFY EXPECTED GENERATED DIFF
-→ ZERO LOSING-COPY REFERENCES
-```
-
-## 10. Database, schema, storage and migrations
-
-هذه أعلى فئة حساسية.
-
-لا تحذف Table/Column/Index/Seed/Storage Truth قبل:
-
-```text
-DATA INVENTORY
-→ PROVEN TARGET REQUIRED TRUTH
-→ MIGRATION
-→ BACKFILL / RECONCILIATION
-→ WRITER CUTOVER
-→ READER CUTOVER
-→ PERSISTED READBACK
-→ ZERO REQUIRED DATA LOSS
-→ SUPPORTED UPGRADE / BOOTSTRAP / RECOVERY PROOF
-```
-
-ثم فقط:
-
-`REMOVE OBSOLETE STORAGE`.
-
-Historical migrations لا تحذف لمجرد القدم. يجب إثبات أنها غير لازمة لكل Supported installation/upgrade/recovery path.
-
-## 11. Assets and manifests
-
-افحص الصور/fonts/bundles/static files/native manifests/app configs:
-
-```text
-code references
-runtime URI references
-manifest references
-build bundling
-native resource lookup
-web public paths
-store/app metadata where applicable
-```
-
-عدم وجود import صريح لا يثبت dead asset.
-
-## 12. Docs, plans and governance
-
-إذا كانت Artifact وثائقية جزءًا من Live Execution Authority، فهي Material.
-
-احذفها فقط عندما:
-
-```text
-AUTHORITY_ENDED_OR_SUPERSEDED=PROVEN
-ZERO_LIVE_EXECUTION_REFERENCES=PROVEN
-ZERO_OPERATOR_DEPENDENCY=PROVEN
-```
-
-لا تنقلها إلى `archive/old/history` داخل Live Tree لمجرد الاحتفاظ بها. Git History هو archive.
-
-## 13. Naming/path cleanup — narrow scope only
-
-هذه الحملة ليست Rename Campaign عامة.
-
-Naming/Path mutation يسمح فقط عندما:
-
-1. حذف Losing Artifact يترك اسمًا يشير إلى شيء لم يعد موجودًا، أو
-2. اسم/مسار بقايا هو نفسه Artifact غير مطلوب، أو
-3. Rename ضروري لإكمال Cutover إلى surviving owner المثبت.
-
-ابحث بعد كل حذف عن:
-
-```text
-old
-new
-legacy
-v2
-v3
-tmp
-temp
-copy
-backup
-fixed
-final
-```
-
-لكن لا تحذف/تغير بناءً على الاسم وحده.
-
-## 14. Compatibility residue
-
-بعد اكتمال Cutover:
-
-```text
-compat adapter
-fallback
-alias
-old route
-old env key
-old export
-old mapping
-translation shim
-keep-in-sync code
-```
-
-يجب أن يثبت Required Responsibility مستقلة أو يُحذف.
-
-ممنوع `UNBOUNDED_COMPATIBILITY`.
-
-## 15. Parent/child residue sweep
-
-كل Deletion Unit يجب أن تفحص أعلى وأسفل Artifact المحذوف:
-
-```text
-PARENT BARREL / INDEX
-PARENT DIRECTORY
-PACKAGE MANIFEST
-WORKSPACE
-DEPENDENTS
-TEST TREE
-CONFIG TREE
-DOCS / RUNBOOK
-CI
-GENERATED OUTPUT
-LOCKFILE
-```
-
-هدفنا ليس ترك قشرة فارغة بعد حذف الداخل.
-
-## 16. Negative-space proof
-
-بعد كل Unit نفذ Searches موجهة لأسماء ومسارات ورموز وContracts وConfig keys وRoutes المحذوفة.
-
-النتيجة المطلوبة:
-
-```text
-OLD_SYMBOL_REFS=0
-OLD_PATH_REFS=0
-OLD_IMPORT_REFS=0
-OLD_EXPORT_REFS=0
-OLD_ROUTE_REFS=0
-OLD_CONFIG_REFS=0
-OLD_SCRIPT_WORKFLOW_REFS=0
-OLD_TEST_FIXTURE_REFS=0
-OLD_RUNTIME_REACHABILITY=0
-LOSING_AUTHORITY_REACHABILITY=0
-```
-
-أي نتيجة مادية تعيد Unit إلى `OPEN`.
-
-## 17. No cosmetic cleanup
-
-ممنوع:
-
-```text
-legacy → archive
-old → history
-duplicate → common
-misc → utils
-two authorities → shared wrapper
-unused → disabled forever
-```
-
-التنظيف الصحيح:
-
-```text
-PROVE NOT REQUIRED
-→ MIGRATE REQUIRED DEPENDENTS IF ANY
-→ CUT OVER
-→ DELETE
-→ DELETE RESIDUE
-→ PROVE ZERO REFERENCES
-```
+Replacement with no old-structure removal is `CLOSURE_SUSPICION` unless bounded retention is explicitly proven.

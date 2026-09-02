@@ -1,291 +1,129 @@
-# 03 — Deletion Root Selection and Closure Execution
+# 03 — ROOT SELECTION AND RECONSTRUCTION EXECUTION
 
 ## Purpose
 
-بعد اكتمال Census وRemoval Delta فقط، اختر أعلى **Deletion Closure Unit** مثبتة وقابلة للتنفيذ، ثم أغلقها من السبب إلى آخر residue.
+Select the highest **proven executable** causal root currently supported by live evidence and close its complete affected cone end-to-end.
 
-هذه ليست حملة Reconstruction عامة. كل Mutation يجب أن تخدم إزالة Artifact أو Authority لم يعد مطلوبًا.
+This file may be entered as soon as a root passes the `ROOT-CORRECT EXECUTION GATE` in `00-START-HERE.md`. Completion of the entire branch-wide census, `CURRENT g`, `CANONICAL g`, Structural Delta, or Root Graph is not required first.
 
-## 1. Selection law
+## Root selection law
 
-اختر:
+Do not create one root per file, tool finding, screen, test failure, or historical label.
 
-`HIGHEST PROVEN EXECUTABLE DELETION CLOSURE UNIT`
+For each candidate:
 
-الوحدة الصحيحة:
+1. cluster symptoms under causal parents;
+2. prove the actual Source-of-Defect;
+3. prove the canonical Source-of-Fix and owner/writer;
+4. identify any higher root already supported by evidence;
+5. map the complete affected writers/readers/consumers/data/contracts/runtime/tooling;
+6. prove migration/cutover/deletion safety;
+7. execute only when the root-correct gate passes.
 
-`SMALLEST CAUSALLY COMPLETE UNIT THAT CAN BE FULLY RETIRED AND DELETED`
+Among currently proven executable roots, prefer the highest causal/leverage root using:
 
-ليست:
+`CAUSAL DEPTH × BLOCKING POWER × CANONICAL IMPORTANCE × PRODUCT/DATA/SECURITY/FINANCIAL RISK × FANOUT × STRUCTURAL LEVERAGE × EXECUTABLE PROOF`.
 
-`SMALLEST DIFF`.
+Never rank by numeric ID, age, easiest diff, first red check, file count, or finding count.
 
-## 2. Mandatory declaration before mutation
+A repository-wide ranking is not required before executing a root whose affected cone is causally complete and cannot be invalidated by known unresolved evidence.
 
-قبل أول Mutation في كل Unit أعلن وسجّل:
+## Historical findings are probes only
+
+For every historical finding:
 
 ```text
-DELETION_UNIT_ID=<ephemeral>
+LIVE PROVEN ROOT? → ELIGIBLE WHEN GATE PASSES
+DESCENDANT OF HIGHER ROOT? → ATTACH / PREEMPT
+ALREADY FIXED? → SUPERSEDED
+INCORRECT? → FALSE_POSITIVE
+INSUFFICIENT PROOF? → EVIDENCE_ONLY
+```
+
+Historical order has zero scheduling authority.
+
+## Declare one Closure Unit
+
+Select the smallest **causally complete** root or tightly coupled root cluster that can reach honest closure without exporting dual authority, half migration, deferred cutover, cleanup debt, unmigrated consumers, or unresolved ownership decisions.
+
+Before mutation record:
+
+```text
 PINNED_REMOTE_G_SHA=
-PRIMARY_LOSING_ARTIFACT=
-WHY_IT_NO_LONGER_HAS_REQUIRED_RESPONSIBILITY=
-EVIDENCE_PROVING_NON_REQUIREDNESS=
-SURVIVING_REQUIRED_TRUTH=
-SURVIVING_OWNER=
-SURVIVING_WRITER=PASS_OR_NA
+PRIMARY_CAUSAL_ROOT=
+ACTUAL_SOURCE_OF_DEFECT=
+ACTUAL_SOURCE_OF_FIX=
+CANONICAL_RESPONSIBILITY=
+CANONICAL_OWNER=
+CANONICAL_WRITER=
+TARGET_CANONICAL_NAME_PATH_BOUNDARY=
 COMPLETE_AFFECTED_CONE=
-LIVE_IMPORTERS_CALLERS_READERS_WRITERS=
-RUNTIME_ROUTE_IMPACT=
-CONFIG_ENV_IMPACT=
-SCRIPT_WORKFLOW_IMPACT=
-PACKAGE_DEPENDENCY_IMPACT=
-DATA_SCHEMA_MIGRATION_UPGRADE_IMPACT=
+WRITERS_READERS_CONSUMERS=
+DATA_SCHEMA_IMPACT=
 CONTRACT_GENERATED_IMPACT=
-TEST_FIXTURE_MOCK_IMPACT=
-MIGRATION_REQUIRED=YES_NO
-MIGRATION_TARGET_EXISTING_OWNER=
+RUNTIME_CONFIG_TOOLING_IMPACT=
+TEST_FIXTURE_MOCK_DEPENDENCY_IMPACT=
+MIGRATION_BACKFILL_RECONCILIATION=
 CUTOVER=
-ARTIFACTS_TO_DELETE=
-RESIDUE_TO_DELETE=
+LOSING_AUTHORITIES_TO_DELETE=
+OLD_NAMES_PATHS_TO_DELETE=
 NEGATIVE_SPACE_SEARCH=
 TARGETED_VERIFICATION=
 REOPEN_CONDITIONS=
 ```
 
-ليس Approval Gate. إذا الأدلة مكتملة، تابع مباشرة.
+This is a coordination checkpoint, not an approval gate.
 
-## 3. Allowed mutations
+## Execute canonical reconstruction
 
-مسموح داخل `g` عندما يخدم الحذف مباشرة:
+Treatment order:
 
-```text
-DELETE
-REMOVE_IMPORT
-REMOVE_EXPORT_REEXPORT
-REMOVE_ROUTE_REGISTRATION
-REMOVE_CONFIG_BINDING
-REMOVE_ENV_BINDING
-REMOVE_SCRIPT
-REMOVE_WORKFLOW
-REMOVE_MANIFEST_ENTRY
-REMOVE_DEPENDENCY
-UPDATE_LOCKFILE
-MIGRATE_REQUIRED_CONSUMER_TO_EXISTING_SURVIVING_OWNER
-CUT_OVER_READER_WRITER
-REGENERATE_FROM_EXISTING_CANONICAL_SOURCE
-MIGRATE_BACKFILL_RECONCILE_DATA_WHEN_REQUIRED_FOR_SAFE_RETIREMENT
-REMOVE_TEST_FIXTURE_MOCK_SNAPSHOT_TIED_ONLY_TO_DELETED_TRUTH
-REMOVE_EMPTY_DIRECTORY
-REMOVE_OBSOLETE_DOC_PLAN_AUTHORITY
-```
+`CANONICAL SEMANTICS → CANONICAL OWNER/WRITER → TARGET NAME/PATH/BOUNDARY → DATA/SCHEMA → CONTRACT → GENERATED → READERS → CONSUMERS → RUNTIME/CONFIG/TOOLING → PRODUCT JOURNEY/STATE → CUTOVER → DISABLE OLD WRITES → ZERO OLD READERS/REFS → DELETE LOSING AUTHORITY → DELETE OLD PATHS/RESIDUE → VERIFY → FALSIFY`.
 
-يسمح بتعديل Code حي فقط بالقدر اللازم لإزالة اعتماده على Losing Artifact.
+When proven necessary, rewrite, move, rename, merge, split, regenerate, migrate, or delete across the full affected cone. No minimal-diff requirement exists. Do not solve duplicate authority by adding another wrapper/mapper/compatibility layer.
 
-## 4. Forbidden scope expansion
+`04-CLEANUP-DELETION-NAMING-AND-TOPOLOGY.md` applies to every Closure Unit.
 
-ممنوع تلقائيًا:
+## Exact-HEAD mutation lock
+
+Immediately before commit/push:
+
+`EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA`.
+
+If false:
+
+`FETCH → COMPARE → IDENTIFY OVERLAP → INVALIDATE AFFECTED EVIDENCE → RE-PIN → RE-DIAGNOSE → REAPPLY ONLY IF STILL VALID`.
+
+Never force-push over unseen work.
+
+## Per-root closure condition
+
+A root remains open until all applicable conditions pass:
 
 ```text
-NEW_FEATURE
-UNRELATED_BUG_FIX
-GENERAL_REFACTOR
-GENERAL_RENAME
-NEW_PACKAGE
-NEW_SERVICE
-NEW_SHARED_LAYER
-NEW_FRAMEWORK
-NEW_ABSTRACTION
-THIRD_AUTHORITY
-PERMANENT_COMPATIBILITY_LAYER
-DESIGN_CLEANUP_NOT_REQUIRED_FOR_DELETION
-```
-
-إذا ظهر Defect مستقل لا يمنع الحذف الآمن:
-
-`RECORD_AS_OUT_OF_CAMPAIGN_EVIDENCE`.
-
-لا تحوّل الحملة إليه.
-
-## 5. Root-correct deletion order
-
-نفذ بالترتيب حيث applicable:
-
-```text
-PROVE SURVIVING REQUIRED TRUTH
-→ PROVE SURVIVING OWNER / WRITER
-→ MIGRATE REQUIRED CONSUMERS
-→ MIGRATE/BACKFILL/RECONCILE REQUIRED DATA
-→ CUT OVER READERS
-→ CUT OVER WRITERS
-→ REMOVE OLD ROUTE / ENTRYPOINT / CONFIG SELECTABILITY
-→ DISABLE OLD WRITES
-→ PROVE OLD WRITERS=0
-→ PROVE OLD READERS=0
-→ DELETE LOSING SOURCE
-→ DELETE EXPORTS / REEXPORTS
-→ DELETE ROUTE / CONFIG / SCRIPT / WORKFLOW REFERENCES
-→ DELETE TEST / FIXTURE / MOCK RESIDUE
-→ REMOVE UNUSED DEPENDENCIES / MANIFEST ENTRIES
-→ REMOVE OLD PATH / NAME REFERENCES
-→ REMOVE EMPTY DIRECTORIES
-→ REGENERATE WHEN REQUIRED
-→ TARGETED VERIFY
-→ REFERENCE SEARCH
-→ NEGATIVE-SPACE PROOF
-→ FALSIFY REQUIRED-BEHAVIOR LOSS
-```
-
-## 6. Simple dead artifact fast path
-
-إذا Artifact مستقل ومثبت أنه بلا أي required cone:
-
-```text
-PROVE ZERO REQUIRED REFERENCES
-→ DELETE
-→ REMOVE MANIFEST/EXPORT/CONFIG RESIDUE IF ANY
-→ VERIFY
-→ SEARCH AGAIN
-→ CLOSE
-```
-
-لا تفرض Migration وهمية على Dead Artifact حقيقي.
-
-## 7. Duplicate / shadow authority path
-
-إذا Artifact خاسر لكنه ما يزال مستخدمًا:
-
-```text
-PROVE WINNING EXISTING AUTHORITY
-→ ENUMERATE ALL CONSUMERS
-→ MIGRATE ALL REQUIRED CONSUMERS
-→ CUT OVER ALL WRITES / READS
-→ PROVE ZERO LIVE USE OF LOSER
-→ DELETE LOSER
-→ DELETE KEEP-IN-SYNC / MAPPER / COMPAT RESIDUE
-→ NEGATIVE SPACE
-```
-
-ممنوع إبقاء الاثنين خلف Wrapper جديد.
-
-## 8. Data-bearing artifact path
-
-لا تحذف Table/Column/Storage/Seed/Migration artifact حتى يثبت:
-
-```text
-TARGET_REQUIRED_DATA_TRUTH=
-MIGRATION=
-BACKFILL_RECONCILIATION=
-WRITER_CUTOVER=
-PERSISTED_READBACK=PASS
-ZERO_REQUIRED_DATA_LOSS=PASS
-SUPPORTED_BOOTSTRAP_UPGRADE_RECOVERY=PASS
-```
-
-ثم فقط احذف obsolete storage إذا كان ذلك متوافقًا مع lifecycle الفعلي.
-
-Historical migration قد تبقى `KEEP_PROVEN` إذا كانت لازمة لبناء/ترقية/استعادة Supported State.
-
-## 9. Contract / generated path
-
-عند حذف manual duplicate أو repair layer:
-
-```text
-PROVE AUTHORITATIVE EXISTING SOURCE
-→ REGENERATE IF REQUIRED
-→ MIGRATE ALL REQUIRED CONSUMERS
-→ VERIFY PARITY
-→ DELETE MANUAL COPY / OVERLAY / KEEP-IN-SYNC LOGIC
-→ ZERO UNEXPECTED GENERATED DIFF
-```
-
-## 10. Tests and evidence
-
-لا تجعل Test ينجح بحذف assertion يحمي Behavior مطلوبًا.
-
-المسموح:
-
-```text
-DELETE TEST ONLY IF THE TESTED TRUTH ITSELF IS PROVEN RETIRED
-OR
-MIGRATE TEST TO THE SURVIVING REQUIRED OWNER/CONTRACT
-```
-
-ممنوع:
-
-```text
-TEST_WEAKENING
-SUPPRESSION
-SKIP_TO_HIDE_FAILURE
-CONSTRAINT_WEAKENING
-```
-
-## 11. Per-unit closure gate
-
-Unit تبقى `OPEN` حتى:
-
-```text
-NON_REQUIREDNESS_PROOF=PASS
-SURVIVING_REQUIRED_TRUTH_PROOF=PASS
-COMPLETE_AFFECTED_CONE=PASS
-REQUIRED_CONSUMER_MIGRATION=PASS_OR_NA
-DATA_SAFETY=PASS_OR_NA
+CANONICAL_OWNER_PROOF=PASS
+CANONICAL_WRITER_PROOF=PASS_OR_NA
+COMPLETE_CONSUMER_MIGRATION=PASS
+DATA_MIGRATION_READBACK=PASS_OR_NA
 CONTRACT_GENERATED_PARITY=PASS_OR_NA
 OLD_WRITERS=0
 OLD_READERS=0
 OLD_IMPORTS_REEXPORTS=0
-OLD_ROUTES_ENTRYPOINTS=0
-OLD_CONFIG_ENV_REFS=0
-OLD_SCRIPT_WORKFLOW_REFS=0
-OLD_REQUIRED_TEST_FIXTURE_REFS=0
+OLD_ROUTES_CONFIG_SCRIPT_WORKFLOW_REFS=0
+OLD_NAME_PATH_REFS=0
 OLD_RUNTIME_REACHABILITY=0
-LOSING_ARTIFACT_DELETED=YES
-DEPENDENCY_MANIFEST_RESIDUE=0
-OLD_PATH_NAME_REFS=0
-EMPTY_DIRECTORY_RESIDUE=0
+SUPERSEDED_STRUCTURE_DELETED=YES
 UNBOUNDED_COMPATIBILITY=0
+THIRD_AUTHORITY=0
 TARGETED_VERIFICATION=PASS
 NEGATIVE_SPACE=PASS
-REQUIRED_BEHAVIOR_REGRESSION=0
-EVIDENCE_DEBT=0
+AFFECTED_CONE_EVIDENCE_DEBT=0
 ```
 
-## 12. Commit / push discipline
+Then commit the coherent Closure Unit, push directly to `g`, verify the remote SHA, re-pin, and continue with `05`.
 
-بعد إغلاق Unit:
+## Preemption
 
-```text
-VERIFY EXPECTED DIFF IS DELETION-CENTERED
-→ VERIFY NO UNRELATED MUTATIONS
-→ FETCH REMOTE g
-→ REQUIRE EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA
-```
+If new census/evidence proves a higher root that invalidates the selected treatment:
 
-إذا تغير SHA:
-
-```text
-STOP MUTATION
-→ COMPARE
-→ INVALIDATE AFFECTED EVIDENCE
-→ RE-PIN
-→ RE-EVALUATE UNIT
-```
-
-إذا لم يتغير:
-
-```text
-COMMIT ONE COHERENT DELETION CLOSURE UNIT
-→ PUSH DIRECTLY TO g
-→ FETCH
-→ VERIFY REMOTE SHA
-→ RE-PIN
-```
-
-ممنوع:
-
-```text
-PR
-MERGE
-REBASE
-AUTO_SYNC
-FORCE_PUSH
-```
+`STOP DESCENDANT WORK → PROMOTE HIGHER ROOT → REMAP AFFECTED CONE → REDEFINE TARGET → EXECUTE ONLY AFTER GATE PASSES`.

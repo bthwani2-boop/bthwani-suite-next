@@ -1,237 +1,90 @@
-# 05 — Reverify, Re-diagnose, and Repeat the Deletion Loop
+# 05 — REVERIFY, REDIAGNOSE AND REPEAT
 
 ## Purpose
 
-بعد كل Deletion Closure Unit، لا تستخدم قائمة ثابتة ولا تنتقل تلقائيًا إلى Finding تاريخية. أعد بناء حالة الحذف من Exact New `g`.
+After each coherent Closure Unit, verify the result, refresh affected truth, continue discovery, and choose the next highest proven executable root.
 
-## 1. Immediate post-unit verification
+Do not turn historical findings into a static queue and do not require a complete repository-wide model before every next root.
 
-بعد الحذف:
+## Verify and checkpoint the completed root
 
-```text
-TARGETED TESTS / BUILD / TYPECHECK / LINT AS APPLICABLE
-→ RUNTIME / ROUTE / CONFIG CHECK AS APPLICABLE
-→ DATA READBACK AS APPLICABLE
-→ CONTRACT / GENERATED PARITY AS APPLICABLE
-→ REFERENCE SEARCH
-→ NEGATIVE SPACE
-→ REQUIRED-BEHAVIOR FALSIFICATION
-→ NO UNRELATED ACCIDENTAL DIFF
-```
+Before closure/commit:
 
-إذا فشل أي عنصر مادي:
+- run targeted tests/checks for invalidated claims;
+- prove migration/backfill/readback where material;
+- prove contract/generated parity where material;
+- confirm canonical owner/writer/name/path/topology in the affected cone;
+- confirm required deletions and old-path removals;
+- run reference and negative-space searches;
+- independently attempt to falsify closure;
+- confirm no unrelated accidental diff.
 
-`UNIT=OPEN`.
+Immediately before push require:
 
-## 2. Push and re-pin
+`EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA`.
 
-قبل Push:
+Then:
 
-```text
-FETCH REMOTE g
-→ EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA
-```
+`COMMIT COHERENT CLOSURE UNIT → PUSH DIRECTLY TO g → FETCH → VERIFY REMOTE HEAD → RE-PIN`.
 
-إذا تغير:
+No force push.
 
-```text
-COMPARE
-→ INVALIDATE AFFECTED EVIDENCE
-→ RE-PIN
-→ RE-EVALUATE CURRENT UNIT
-```
+## Refresh only what changed or can invalidate the next decision
 
-إذا لم يتغير:
+After every closure:
 
 ```text
-COMMIT COHERENT DELETION CLOSURE UNIT
-→ PUSH DIRECTLY TO g
-→ FETCH
-→ VERIFY REMOTE SHA
-→ PIN NEW EXACT SHA
+RE-PIN
+→ INGEST NEW EVIDENCE
+→ REFRESH AFFECTED CURRENT STATE
+→ REFRESH AFFECTED CANONICAL TARGET
+→ REFRESH AFFECTED STRUCTURAL DELTA
+→ CONTINUE BRANCH-WIDE DISCOVERY
+→ RE-DIAGNOSE ROOT CANDIDATES
 ```
 
-## 3. Refresh the deletion model
+A full branch-wide Current/Canonical/Delta/Root Graph rebuild is **not mandatory after every root**.
 
-بعد كل New SHA حدّث:
+Broaden the re-census when a closure or new evidence changes a material top-level topology, canonical owner, major data/schema authority, contract/generated authority, runtime/config composition, dependency direction, tooling authority, or reveals a higher root capable of invalidating current treatment.
+
+## Next-root rule
+
+The next root may execute when it passes the `ROOT-CORRECT EXECUTION GATE` from `00`:
 
 ```text
-CURRENT_TRACKED_TREE
-CURRENT_LIVE_USE_MODEL
-REQUIRED_SURVIVOR_MODEL
-DELETION_CANDIDATES
-REMOVAL_DELTA
-BLOCKED_UNKNOWNS
-EVIDENCE_VALIDITY
+PINNED
+CANONICAL_OWNER_CONFIRMED
+CAUSAL_ROOT_PROVEN
+COMPLETE_AFFECTED_CONE_MAPPED
+FINAL_STATE_CONFIRMED
+MIGRATION_CUTOVER_CLEANUP_DEFINED
+VERIFICATION_DEFINED
 ```
 
-الحذف السابق قد يجعل Artifacts جديدة يتيمة. لذلك لا تعتمد على Census القديمة كما هي.
+Unrelated uncensused repository areas do not block that root unless they can materially change its owner, Source-of-Fix, affected cone, cutover direction, or causal rank.
 
-مثال:
+## Root preemption law
 
-```text
-remove obsolete package
-→ parent barrel becomes empty
-→ dependency becomes unused
-→ fixture tree loses last consumer
-→ workflow job becomes dead
-```
+If re-diagnosis proves a higher root that invalidates descendant treatment:
 
-هذه ليست Scope creep؛ هذه Residue سببية ويجب التقاطها.
+`STOP DESCENDANT QUEUE → PROMOTE HIGHER ROOT → REDEFINE CANONICAL TARGET/AFFECTED CONE → EXECUTE HIGHER ROOT WHEN GATE PASSES`.
 
-## 4. Dynamic deletion graph
+## Historical probe law
 
-أعد synthesis:
+Old findings remain evidence only. They may become:
 
-```text
-NEWLY_ORPHANED
-NEWLY_UNUSED
-NEWLY_UNREACHABLE
-LOSING_AUTHORITIES_REMAINING
-COMPATIBILITY_RESIDUE
-MANIFEST_DEPENDENCY_RESIDUE
-TEST_FIXTURE_RESIDUE
-CONFIG_ROUTE_RESIDUE
-```
+`PROMOTED LIVE ROOT | DESCENDANT OF HIGHER ROOT | SUPERSEDED | FALSE_POSITIVE | EVIDENCE_ONLY`.
 
-ثم أعد ترتيب Closure Units من الأدلة الحية.
+They never become a static queue.
 
-Historical Finding لا يملك Scheduling Authority.
+## Repeat condition
 
-## 5. Re-baseline triggers
+If at least one proven executable root exists, return to `03`, close the highest currently proven causal root, verify, and return here.
 
-نفذ Partial أو Full Census جديد إذا تغير ماديًا:
+Continue branch-wide census/discovery throughout the campaign so newly exposed roots can be promoted as evidence becomes sufficient.
 
-```text
-top-level topology
-workspace/package graph
-runtime entrypoints
-route graph
-config composition
-contract/generated lineage
-data/schema ownership
-script/workflow graph
-build/bootstrap/upgrade path
-```
+## Final transition
 
-أو إذا أزال الحذف Owner كان يملك fanout كبيرًا.
+When no proven executable root remains, do **not** declare completion from queue state alone.
 
-## 6. Evidence invalidation
-
-لا تعيد استخدام Proof قديم إذا تغيرت assumptions التي اعتمد عليها.
-
-مثال:
-
-```text
-ZERO_CALLERS proof at SHA A
-!= automatically valid at SHA B
-```
-
-أعد Search/Graph/Verification عندما يمس التغيير المسار أو consumer graph.
-
-## 7. Unknown handling
-
-إذا ظهر Unknown جديد:
-
-```text
-UNKNOWN_AFFECTS_DELETION_SAFETY=YES
-→ BLOCK CANDIDATE
-→ RESOLVE UNKNOWN BEFORE DELETE
-```
-
-لا تستخدم Error/Missing/Unreachable tooling كدليل عدم استعمال.
-
-```text
-FAILED SEARCH != ZERO REFERENCES
-MISSING BUILD != DEAD CODE
-UNAVAILABLE ENV != UNUSED CONFIG
-404 != UNUSED ROUTE
-```
-
-## 8. Candidate lifecycle
-
-الحالات المسموحة:
-
-```text
-SUSPECTED
-EVIDENCE_COLLECTION
-KEEP_PROVEN
-DELETE_PROVEN
-RETIRE_AFTER_PROVEN_CUTOVER
-BLOCKED_BY_UNKNOWN
-EXECUTING
-OPEN_RESIDUE
-CLOSED
-```
-
-`CLOSED` تعني حذف Artifact وكل residue السببية وإثبات Negative Space.
-
-## 9. No fixed queue
-
-لا تستخدم:
-
-```text
-STATIC_ROOT_QUEUE
-OLD_ROOT_ID_ORDER
-HISTORICAL_FINDING_ORDER
-FIRST_RED_NEXT
-EASIEST_DELETE_NEXT
-```
-
-استخدم:
-
-```text
-REFRESHED g
-→ LIVE-USE MODEL
-→ REMOVAL DELTA
-→ DYNAMIC DELETION GRAPH
-→ HIGHEST PROVEN EXECUTABLE UNIT
-```
-
-## 10. When graph reaches zero
-
-`DELETION_GRAPH=0` لا يعني Completion.
-
-نفذ:
-
-```text
-FRESH BRANCH-WIDE ADVERSARIAL RE-CENSUS
-```
-
-من Actual Tracked Tree على Exact Candidate SHA.
-
-أعد فحص:
-
-```text
-EVERY MATERIAL ARTIFACT RIGHT TO EXIST
-ORPHANED FILES/DIRECTORIES
-UNUSED SYMBOLS/EXPORTS
-UNUSED PACKAGES/DEPENDENCIES
-DEAD ROUTES/APIS
-DEAD ENTRYPOINTS
-DEAD CONFIG/ENV
-DEAD SCRIPTS/WORKFLOWS
-STALE TEST/FIXTURE/MOCK/SNAPSHOT
-SUPERSEDED AUTHORITIES
-COMPATIBILITY RESIDUE
-GENERATED/MANUAL REPAIR RESIDUE
-DEAD DATA/SCHEMA RESIDUE
-STALE ASSETS/MANIFESTS
-OBSOLETE PLAN/GOVERNANCE AUTHORITY
-FILESYSTEM NOISE
-```
-
-أي Finding مادي يعيد فتح Dynamic Deletion Graph.
-
-## 11. Stop condition
-
-انتقل إلى `06` فقط عندما:
-
-```text
-DYNAMIC_DELETION_GRAPH=0
-KNOWN_DELETE_PROVEN_NOT_EXECUTED=0
-KNOWN_RETIRE_AFTER_CUTOVER_NOT_EXECUTED=0
-KNOWN_OPEN_RESIDUE=0
-KNOWN_MATERIAL_UNKNOWNS_AFFECTING_CLEANUP=0
-FRESH_FULL_G_RE_CENSUS=PASS
-```
+Transition to `06-FINAL-ADVERSARIAL-QUALIFICATION.md` for the fresh complete branch-wide re-census and exact fixed-point proof. Any material finding from that final qualification reopens execution at `03`.
