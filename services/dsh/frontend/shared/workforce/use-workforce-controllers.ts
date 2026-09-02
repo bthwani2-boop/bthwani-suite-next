@@ -1,45 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  createCaptain,
-  createFieldAgent,
-  getCaptain,
-  getFieldAgent,
-  issueCaptainActivationCode,
-  issueFieldAgentActivationCode,
-  listCaptains,
-  listFieldAgents,
-  listWorkforceShifts,
-  reactivateCaptain,
-  reactivateFieldAgent,
-  revokeCaptainActivationCodes,
-  revokeFieldAgentActivationCodes,
-  searchSupervisors,
-  suspendCaptain,
-  suspendFieldAgent,
-  updateCaptain,
-  updateFieldAgent,
-  isSessionExpiredCode,
-  workforceErrorMessage,
-} from "./workforce.api";
+import { createCaptain, getCaptain, getFieldAgent, issueCaptainActivationCode, issueFieldAgentActivationCode, listCaptains, listFieldAgents, listWorkforceShifts, reactivateCaptain, reactivateFieldAgent, revokeCaptainActivationCodes, revokeFieldAgentActivationCodes, searchSupervisors, suspendCaptain, suspendFieldAgent, updateCaptain, updateFieldAgent, isSessionExpiredCode, workforceErrorMessage } from "./workforce.api";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { corrId } from "../_kernel/dsh-http-request";
 import { fetchZones } from "../platform/platform-policies.api";
 import type { DshZone } from "../platform/platform-policies.types";
-import type {
-  ActivationCodeResult,
-  Captain,
-  CaptainDetail,
-  CreateCaptainInput,
-  CreateFieldAgentInput,
-  EngagementStatus,
-  FieldAgent,
-  FieldAgentDetail,
-  ProviderKind,
-  SupervisorCandidate,
-  UpdateCaptainInput,
-  UpdateFieldAgentInput,
-  WorkforceShift,
-} from "./workforce.types";
+import type { ActivationCodeResult, Captain, CaptainDetail, CreateCaptainInput, EngagementStatus, FieldAgent, FieldAgentDetail, ProviderKind, SupervisorCandidate, UpdateCaptainInput, UpdateFieldAgentInput, WorkforceShift } from "./workforce.types";
 
 // Shared controllers consumed by BOTH the HR section and the Partners
 // activation tab — one source of truth, no second copy of provider data.
@@ -425,41 +390,6 @@ export function useSupervisorSearchController(kind: ProviderKind) {
   }, [kind, query]);
 
   return { query, setQuery, candidates, loading, error };
-}
-
-export type ServiceZoneReferenceState = {
-  readonly loading: boolean;
-  readonly error: string | null;
-  readonly zones: readonly DshZone[];
-};
-
-export function useServiceZoneReference() {
-  const [state, setState] = useState<ServiceZoneReferenceState>({
-    loading: true,
-    error: null,
-    zones: [],
-  });
-
-  const reload = useCallback(async () => {
-    setState((prev) => ({ ...prev, loading: true, error: null }));
-    try {
-      const { zones } = await fetchZones(true);
-      setState({ loading: false, error: null, zones: zones ?? [] });
-    } catch (error) {
-      setState((prev) => ({ ...prev, loading: false, error: workforceErrorMessage(error) }));
-    }
-  }, []);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  const zoneLabel = useMemo(() => {
-    const byId = new Map((state.zones || []).map((z) => [z.id, z.name]));
-    return (id?: string) => (id ? byId.get(id) ?? id : "—");
-  }, [state.zones]);
-
-  return { ...state, reload, zoneLabel };
 }
 
 export function useProviderActivationController(providerKind: "field" | "captain", actorId: string) {

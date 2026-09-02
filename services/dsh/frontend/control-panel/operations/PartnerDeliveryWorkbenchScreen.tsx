@@ -2,12 +2,7 @@
 
 import React from 'react';
 import { Badge, Box, Button, StateView, Surface, Text, TextField } from '@bthwani/ui-kit';
-import {
-  WebControlPanelDecisionRow,
-  WebControlPanelQueue,
-  WebControlPanelRecommendation,
-  type WebControlPanelDecisionRowProps,
-} from '@bthwani/ui-kit/web';
+import { WebControlPanelDecisionRow, WebControlPanelQueue, WebControlPanelRecommendation, type WebControlPanelDecisionRowProps } from '@bthwani/ui-kit/web';
 import { useOperatorPartnerDeliveriesController } from '../../shared/partner-delivery/use-partner-delivery-controller';
 import type { OperationsFocusParams } from './operations.types';
 
@@ -192,4 +187,3 @@ export function PartnerDeliveryWorkbenchScreen(_props: PartnerDeliveryWorkbenchS
   );
 }
 
-export default PartnerDeliveryWorkbenchScreen;

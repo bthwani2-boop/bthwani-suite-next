@@ -1,7 +1,6 @@
 // DSH Operations domain — workspace IDs, group meta, focus params, view state.
 // No JSX. No ui-kit. No Tamagui.
 
-import type { DshFulfillmentDeliveryMode } from '../delivery/delivery.contract';
 import type { CanonicalOperationsGroupId } from './dsh-operational.contract';
 export type { CanonicalOperationsGroupId };
 
@@ -27,8 +26,6 @@ export const DSH_CONTROL_PANEL_TONE_MAP: Record<string, DshControlPanelTone> = {
   pending: 'warning',
 };
 
-export type DshFulfillmentOperationalMode = DshFulfillmentDeliveryMode;
-
 export type OperationsFocusParams = {
   orderId?: string | undefined;
   customerId?: string | undefined;
@@ -37,47 +34,6 @@ export type OperationsFocusParams = {
   requestId?: string | undefined;
   panel?: OperationsPanelId | undefined;
   subGroup?: string | undefined;
-};
-
-export const DSH_FULFILLMENT_OPERATIONAL_MODE_META: Readonly<Record<DshFulfillmentOperationalMode, {
-  readonly label: string;
-  readonly operationalOwner: string;
-  readonly requiresCaptain: boolean;
-  readonly requiresPartnerCourier: boolean;
-  readonly requiresCustomerPickup: boolean;
-}>> = {
-  bthwani_delivery: {
-    label: 'توصيل بثواني',
-    operationalOwner: 'الكابتن + بثواني',
-    requiresCaptain: true,
-    requiresPartnerCourier: false,
-    requiresCustomerPickup: false,
-  },
-  partner_delivery: {
-    label: 'توصيل الشريك',
-    operationalOwner: 'ساعي الشريك',
-    requiresCaptain: false,
-    requiresPartnerCourier: true,
-    requiresCustomerPickup: false,
-  },
-  pickup: {
-    label: 'استلم بنفسك',
-    operationalOwner: 'العميل + المتجر',
-    requiresCaptain: false,
-    requiresPartnerCourier: false,
-    requiresCustomerPickup: true,
-  },
-} as const;
-
-type DshOperationsOrderRow = {
-  id: string;
-  storeName: string;
-  customerName: string;
-  statusLabel: string;
-  statusTone: 'warning' | 'danger' | 'success' | 'neutral';
-  fulfillmentMode: DshFulfillmentOperationalMode;
-  nextAction: string;
-  slaLabel: string;
 };
 
 export type NonOperationsSectionRootId = 'support' | 'finance' | 'catalogs' | 'marketing' | 'partners' | 'platform' | 'administration';

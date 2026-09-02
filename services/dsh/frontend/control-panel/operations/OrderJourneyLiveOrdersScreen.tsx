@@ -3,17 +3,9 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge, Box, Button, StateView, Text } from '@bthwani/ui-kit';
-import {
-  WebControlPanelDecisionRow,
-  WebControlPanelKpiStrip,
-  WebControlPanelQueue,
-} from '@bthwani/ui-kit/web';
+import { WebControlPanelDecisionRow, WebControlPanelKpiStrip, WebControlPanelQueue } from '@bthwani/ui-kit/web';
 import styles from '../shared/control-panel-surface.module.css';
-import {
-  FINANCIAL_CLOSURE_LABELS,
-  OrderPreparationReadbackCard,
-  useOrderPreparationReadback,
-} from '../../shared/orders';
+import { FINANCIAL_CLOSURE_LABELS, OrderPreparationReadbackCard, useOrderPreparationReadback } from '../../shared/orders';
 import { OrderTruthReadbackSummary } from '../../shared/order-truth';
 import { formatWltMoney } from '@bthwani/dsh/finance';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
@@ -239,4 +231,3 @@ export function OrderJourneyLiveOrdersScreen({
   );
 }
 
-export default OrderJourneyLiveOrdersScreen;

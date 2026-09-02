@@ -39,13 +39,10 @@ test("every support mutation controller propagates the canonical actor subject",
 
 test("checkout attempts require the same explicit actor identity", () => {
   const attempt = source("frontend/shared/checkout/checkout-create-attempt.ts");
-  const controller = source("frontend/shared/checkout/use-checkout-controller.tsx");
   const flow = source("frontend/shared/checkout/use-checkout-to-order-flow.tsx");
   assert.match(attempt, /getOrCreateCheckoutAttempt\(\n\s+actorId: string,/);
   assert.match(attempt, /clearCheckoutAttempt\(actorId: string, fingerprint: string\)/);
   assert.doesNotMatch(attempt, /resolveMutationIdentityScope\("",/);
-  assert.match(controller, /getOrCreateCheckoutAttempt\(actorId, input\)/);
-  assert.match(controller, /clearCheckoutAttempt\(actorId, attempt\.fingerprint\)/);
   assert.match(flow, /getOrCreateCheckoutAttempt\(actorId, input\)/);
   assert.match(flow, /clearCheckoutAttempt\(actorId, fingerprintCheckoutInput\(input\)\)/);
 });

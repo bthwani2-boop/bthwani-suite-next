@@ -1,30 +1,9 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
-import {
-  Badge,
-  Button,
-  Card,
-  StateView,
-  Text,
-  TextField,
-  TopBar,
-  colorRoles,
-  spacing,
-} from "@bthwani/ui-kit";
-import {
-  TICKET_CATEGORY_LABELS,
-  usePartnerSupportController,
-  type DshCreateTicketInput,
-  type DshSupportTicket,
-  type DshTicketCategory,
-  type DshTicketPriority,
-} from "../../shared/support";
-import type {
-  DshPartnerSupportCommandFilterId,
-  DshPartnerSupportIssueCategoryId,
-  DshPartnerSupportRouteId,
-} from "../../shared/partner/partner.types";
+import { Badge, Button, Card, StateView, Text, TextField, TopBar, colorRoles, spacing } from "@bthwani/ui-kit";
+import { TICKET_CATEGORY_LABELS, usePartnerSupportController, type DshCreateTicketInput, type DshSupportTicket, type DshTicketCategory, type DshTicketPriority } from "../../shared/support";
+import type { DshPartnerSupportCommandFilterId, DshPartnerSupportIssueCategoryId, DshPartnerSupportRouteId } from "../../shared/partner/partner.types";
 
 export type PartnerSupportScreenProps = {
   readonly onBack?: () => void;
@@ -359,4 +338,3 @@ const styles = StyleSheet.create({
   messageCard: { padding: spacing[3], gap: spacing[1] },
 });
 
-export default PartnerSupportScreen;

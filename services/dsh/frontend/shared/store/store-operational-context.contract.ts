@@ -13,9 +13,3 @@ export type DshStoreOperationalContextContract = {
   readonly deliveryReadiness: string;
 };
 
-export const DSH_STORE_OPERATIONAL_CONTEXT_FIELDS = [
-  "addressLine",
-  "coverageSummary",
-  "operatingHours",
-  "deliveryReadiness",
-] as const satisfies readonly (keyof DshStoreOperationalContextContract)[];

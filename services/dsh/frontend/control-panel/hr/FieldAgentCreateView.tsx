@@ -1,13 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
 import { CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
 import { Button, Text } from "@bthwani/ui-kit";
-import {
-  useCanonicalFieldAgentCreateController,
-  type SupervisorCandidate } from "../../shared/workforce";
+import { useCanonicalFieldAgentCreateController, type SupervisorCandidate } from "../../shared/workforce";
 import { SupervisorPicker } from "./SupervisorPicker";
 import { ZonePicker } from "./ZonePicker";
 
@@ -126,4 +124,3 @@ export function FieldAgentCreateView(props: {
   );
 }
 
-export default FieldAgentCreateView;

@@ -1,10 +1,6 @@
 // Canonical location: dsh/frontend/shared/delivery/captain/captain.contract.ts
 // Authority: dsh/frontend/shared/delivery/captain — shared captain delivery contracts/runtime.
 
-import type { DshCaptainOrderAction, DshCaptainOrderId, DshCaptainOrderMode, DshCaptainOrderProofStatus, DshCaptainOrderStage } from '../orders/orders.contract';
-import type { DshOnDemandPolicy } from '../operations/dsh-operational.contract';
-import { getDshFlowById } from '../operations/dsh-operational-registry';
-
 export type CaptainServiceType = 'dsh' | 'amn';
 export type CaptainAvailabilityStatus = 'available' | 'unavailable' | 'break' | 'planned-leave';
 export type CaptainGpsStatus = 'ready' | 'limited' | 'offline' | 'disabled';
@@ -19,12 +15,6 @@ export type CaptainAvailabilityMeta = {
   description: string;
   chipTone: 'success' | 'warning' | 'default';
   orderBadgeLabel: string;
-};
-
-export type CaptainGpsStatusMeta = {
-  label: string;
-  description: string;
-  chipTone: 'success' | 'warning' | 'default';
 };
 
 export const availabilityStatusMeta: Record<CaptainAvailabilityStatus, CaptainAvailabilityMeta> = {
@@ -54,46 +44,8 @@ export const availabilityStatusMeta: Record<CaptainAvailabilityStatus, CaptainAv
   },
 };
 
-export const gpsStatusMeta: Record<CaptainGpsStatus, CaptainGpsStatusMeta> = {
-  ready: {
-    label: 'GPS جاهز',
-    description: 'إشارة الموقع مستقرة ويمكن عرض الخريطة بثقة.',
-    chipTone: 'success',
-  },
-  limited: {
-    label: 'GPS محدود',
-    description: 'الإشارة متاحة جزئيًا — دقة الموقع منخفضة.',
-    chipTone: 'warning',
-  },
-  offline: {
-    label: 'GPS دون اتصال',
-    description: 'تعذر تحديث الموقع الآن. لا تحديثات موقع حتى تعود الإشارة.',
-    chipTone: 'warning',
-  },
-  disabled: {
-    label: 'GPS معطل',
-    description: 'الموقع مغلق من الجهاز ويحتاج تفعيل الإذن من إعدادات الهاتف قبل استخدام الخريطة.',
-    chipTone: 'default',
-  },
-};
-
-export type MapHeatZone = {
-  id: string;
-  size: number;
-  color: string;
-  label: string;
-  top?: number;
-  bottom?: number;
-  left?: number;
-  right?: number;
-};
-
 export function getCaptainAvailabilityMeta(status: CaptainAvailabilityStatus): CaptainAvailabilityMeta {
   return availabilityStatusMeta[status];
-}
-
-function getCaptainGpsStatusMeta(status: CaptainGpsStatus): CaptainGpsStatusMeta {
-  return gpsStatusMeta[status];
 }
 
 // ─── Routing Contracts (Moved from contracts/captain/dsh-captain-routes.ts) ───
@@ -117,19 +69,6 @@ export type DshCaptainRoute =
   | 'pickup-dropoff'
   | 'pod-submission'
   | 'map';
-
-export type DshCaptainCommandTarget =
-  | 'home'
-  | 'entry'
-  | 'inbox'
-  | 'detail'
-  | 'orderchat'
-  | 'bell'
-  | 'support-directory'
-  | 'account-orders'
-  | 'map'
-  | 'pickup-dropoff'
-  | 'pod-submission';
 
 export type DshCaptainRouteId =
   | 'dsh-captain-home'
@@ -181,52 +120,8 @@ export const DSH_CAPTAIN_ROUTE_RECORDS = [
 
 // ─── Surface Bindings (Moved from contracts/captain/dsh-captain-binding.contracts.ts) ───
 
-type DshCaptainOrderSnapshot = {
-  id: DshCaptainOrderId;
-  mode: DshCaptainOrderMode;
-  stage: DshCaptainOrderStage;
-  pickupLabel: string;
-  dropoffLabel: string;
-  etaLabel: string;
-};
-
-type DshCaptainOrderActionPayload = {
-  orderId: DshCaptainOrderId;
-  action: DshCaptainOrderAction;
-  note?: string;
-};
-
-type DshCaptainProofPayload = {
-  orderId: DshCaptainOrderId;
-  status: DshCaptainOrderProofStatus;
-  attachmentLabel?: string;
-};
-
-type DshCaptainFinanceSnapshot = {
-  codBalanceLabel: string;
-  earningsLabel: string;
-  settlementLabel: string;
-};
-
 export type DshCaptainFinanceScreenState = 'ready' | 'loading' | 'empty' | 'error';
 export type DshCaptainFinanceSection = 'earnings' | 'settlement';
-
-type DshCaptainOperationsSnapshot = {
-  availabilityLabel: string;
-  routeReadinessLabel: string;
-  safetyLabel: string;
-};
-
-export const DSH_CAPTAIN_REGISTRY_FLOW_IDS = [
-  'captain-order-pickup',
-  'captain-proof-of-delivery',
-  'captain-map-navigation',
-] as const;
-export type DshCaptainRegistryFlowId = (typeof DSH_CAPTAIN_REGISTRY_FLOW_IDS)[number];
-
-export function getDshCaptainFlowPolicy(flowId: DshCaptainRegistryFlowId): DshOnDemandPolicy | undefined {
-  return getDshFlowById(flowId)?.onDemandPolicy;
-}
 
 // ─── Screen Registry (Moved from contracts/captain/dsh-captain-screen-registry.ts) ───
 

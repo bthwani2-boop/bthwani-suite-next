@@ -64,4 +64,3 @@ export function SupervisorPicker(props: {
   );
 }
 
-export default SupervisorPicker;

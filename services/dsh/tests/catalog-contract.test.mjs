@@ -42,7 +42,7 @@ test("Cart serviceability is address-scoped across the contract, handler, and cl
   assert.match(handler, /fulfillmentMode is required/);
   assert.match(handler, /address\.ServiceAreaCode, address\.Latitude, address\.Longitude/);
   assert.match(cartApi, /addressId: string/);
-  assert.match(cartApi, /params\.set\("addressId", addressId\)/);
+  assert.match(cartApi, /body: \{ storeId, addressId, fulfillmentMode \}/);
 });
 
 test("Order Fulfillment routes are implemented and registered at runtime", async () => {
@@ -70,7 +70,7 @@ test("Dispatch and Captain Delivery routes are implemented and registered at run
   assert.match(contract, /createDshAssignment/);
   assert.match(contract, /listDshCaptainAssignments/);
   assert.match(contract, /updateDshDeliveryStatus/);
-	assert.match(contract, /submitCaptainDeliveryProof/);
+        assert.match(contract, /submitCaptainDeliveryProof/);
   assert.match(contract, /getDshClientOrderTracking/);
   assert.match(router, /dsh\/operator\/dispatch\/assignments/);
   assert.match(router, /dsh\/captain\/dispatch\/assignments/);

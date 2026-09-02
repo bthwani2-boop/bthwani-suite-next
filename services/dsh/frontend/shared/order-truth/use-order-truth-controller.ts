@@ -1,32 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  classifyOrderTruthFailure,
-  createOrderTruth,
-  fetchClientOrderTruth,
-  fetchClientOrderTruthDetail,
-  fetchOperatorOrderTruth,
-  fetchOperatorOrderTruthDetail,
-  fetchPartnerOrderTruth,
-  fetchPartnerOrderTruthDetail,
-} from "./order-truth.api";
+import { classifyOrderTruthFailure, createOrderTruth, fetchClientOrderTruth, fetchClientOrderTruthDetail, fetchOperatorOrderTruth, fetchPartnerOrderTruth } from "./order-truth.api";
 import { useIdentitySession } from "@bthwani/core-identity";
-import {
-  clearOrderTruthAttempt,
-  getOrCreateOrderTruthAttempt,
-} from "./order-truth-create-attempt";
-import {
-  isTerminalOrderTruth,
-  resolveOrderTruthPollingMs,
-  type OrderTruthNetworkClass,
-} from "./order-truth.experience";
-import type {
-  CreateOrderTruthInput,
-  OrderTruth,
-  OrderTruthActor,
-  OrderTruthCollectionState,
-  OrderTruthCreateState,
-  OrderTruthDetailState,
-} from "./order-truth.types";
+import { clearOrderTruthAttempt, getOrCreateOrderTruthAttempt } from "./order-truth-create-attempt";
+import type { CreateOrderTruthInput, OrderTruth, OrderTruthActor, OrderTruthCollectionState, OrderTruthCreateState } from "./order-truth.types";
 
 export function useCreateOrderTruthController(token?: string) {
   const identity = useIdentitySession();
@@ -104,58 +80,3 @@ export function useOrderTruthCollectionController(
   return { state, reload: load };
 }
 
-export function useOrderTruthDetailController(
-  actor: OrderTruthActor,
-  orderId: string,
-  token?: string,
-  pollingMs = 5000,
-  networkClass: OrderTruthNetworkClass = "normal",
-  foreground = true,
-) {
-  const [state, setState] = useState<OrderTruthDetailState>({ kind: "idle" });
-  const previousSuccess = useRef<OrderTruth | null>(null);
-
-  const load = useCallback(async () => {
-    if (!orderId.trim()) {
-      setState({ kind: "not_found", message: "معرف الطلب غير صالح." });
-      return;
-    }
-    if (!previousSuccess.current) setState({ kind: "loading" });
-    try {
-      const order = actor === "client"
-        ? await fetchClientOrderTruthDetail(orderId, token)
-        : actor === "partner"
-          ? await fetchPartnerOrderTruthDetail(orderId, token)
-          : await fetchOperatorOrderTruthDetail(orderId, token);
-      previousSuccess.current = order;
-      setState({ kind: "success", order });
-    } catch (error) {
-      const failure = classifyOrderTruthFailure(error, actor);
-      if (failure.kind === "offline" && previousSuccess.current) {
-        setState({ kind: "partial", order: previousSuccess.current, message: failure.message });
-      } else if (failure.kind === "conflict") {
-        setState({ kind: "error", message: failure.message });
-      } else {
-        setState({ kind: failure.kind, message: failure.message });
-      }
-    }
-  }, [actor, orderId, token]);
-
-  const currentOrder = state.kind === "success" || state.kind === "partial" ? state.order : null;
-  const resolvedPollingMs = resolveOrderTruthPollingMs({
-    actor,
-    requestedMs: pollingMs,
-    networkClass,
-    foreground,
-    terminal: currentOrder ? isTerminalOrderTruth(currentOrder) : false,
-  });
-
-  useEffect(() => {
-    void load();
-    if (resolvedPollingMs <= 0) return undefined;
-    const interval = setInterval(() => { void load(); }, resolvedPollingMs);
-    return () => clearInterval(interval);
-  }, [load, resolvedPollingMs]);
-
-  return { state, reload: load, pollingMs: resolvedPollingMs };
-}

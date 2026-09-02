@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import { Button, Card, StateView, Text } from "@bthwani/ui-kit";
-import {
-  CpBadge,
-  CpMutedInline,
-  CpPageHeader,
-  CpTable,
-  CpTableCell,
-  CpTableHeaderCell } from "@bthwani/control-panel/components";
+import { CpBadge, CpMutedInline, CpPageHeader, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
@@ -137,4 +131,3 @@ export function LedgerInspectorScreen() {
   );
 }
 
-export default LedgerInspectorScreen;

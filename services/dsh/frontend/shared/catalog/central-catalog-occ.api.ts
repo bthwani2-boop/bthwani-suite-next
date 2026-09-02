@@ -2,22 +2,7 @@ import type { operations } from "../../../clients/generated/dsh-api";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import * as catalogApi from "./central-catalog.api";
-import type {
-  CatalogAsset,
-  CentralCatalogDomain,
-  CentralCatalogNode,
-  MasterProduct,
-  ProductProposal,
-  StoreAssortment,
-  StoreAssortmentCreateInput,
-  StoreAssortmentCommercialReadback,
-  StoreAssortmentInventory,
-  StoreAssortmentInventoryInput,
-  StoreAssortmentPrice,
-  StoreAssortmentPriceInput,
-  StoreAssortmentMetadataInput,
-  StoreAssortmentMetadataUpdateInput,
-} from "./central-catalog.types";
+import type { CatalogAsset, CentralCatalogDomain, CentralCatalogNode, MasterProduct, ProductProposal, StoreAssortment, StoreAssortmentCreateInput, StoreAssortmentCommercialReadback, StoreAssortmentInventory, StoreAssortmentInventoryInput, StoreAssortmentPrice, StoreAssortmentPriceInput, StoreAssortmentMetadataInput, StoreAssortmentMetadataUpdateInput } from "./central-catalog.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "central-catalog-occ-corr");
 
@@ -26,8 +11,6 @@ type NodeMutationInput = NonNullable<operations["updateCatalogNode"]["requestBod
 type ProductMutationInput = NonNullable<operations["updateMasterProduct"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type ProposalTransitionInput = Parameters<typeof catalogApi.transitionProductProposal>[1] & { readonly expectedVersion: number };
 type OperatorMetadataMutationInput = Parameters<typeof catalogApi.upsertOperatorStoreAssortmentMetadata>[2];
-type OperatorPriceInput = Parameters<typeof catalogApi.createOperatorStoreAssortmentPrice>[2];
-type AssetMutationInput = NonNullable<operations["updateCatalogAsset"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type AssetReviewInput = NonNullable<operations["reviewCatalogAsset"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 
 export async function updateCatalogDomainOCC(domainId: string, input: DomainMutationInput): Promise<CentralCatalogDomain> {
@@ -258,19 +241,6 @@ async function resolveAssetVersion(assetId: string, supplied?: number): Promise<
     if (page.items.length === 0 || offset >= page.total) break;
   }
   throw new Error("CATALOG_ASSET_NOT_LOADED");
-}
-
-export type CatalogAssetUpdateOCCInput = Omit<AssetMutationInput, "expectedVersion"> & {
-  readonly expectedVersion?: number;
-};
-
-export async function updateCatalogAssetOCC(assetId: string, input: CatalogAssetUpdateOCCInput): Promise<CatalogAsset> {
-  const expectedVersion = await resolveAssetVersion(assetId, input.expectedVersion);
-  const response = await request<{ asset: CatalogAsset }>(
-    `/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}`,
-    { method: "PATCH", body: { ...input, expectedVersion } satisfies AssetMutationInput },
-  );
-  return response.asset;
 }
 
 export type CatalogAssetReviewOCCInput = Omit<AssetReviewInput, "expectedVersion"> & {

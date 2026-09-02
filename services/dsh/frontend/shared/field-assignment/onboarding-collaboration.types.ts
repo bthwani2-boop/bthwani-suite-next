@@ -51,19 +51,3 @@ export type OnboardingChangeRequestInput = {
   readonly toStatus: "documents_missing" | "ops_rejected";
 };
 
-import type { FieldOnboardingAssignmentStatus } from "./field-assignment.types";
-
-export type FieldOnboardingWorkloadItem = {
-  readonly assignmentId: string;
-  readonly fieldActorId: string;
-  readonly assignmentStatus: FieldOnboardingAssignmentStatus;
-  readonly storeNameHint: string;
-  readonly phoneHint?: string;
-  readonly addressHint?: string;
-  readonly partnerId?: string;
-  readonly partnerStatus?: string;
-  readonly partnerVersion?: number;
-  readonly openChangeRequests: number;
-  readonly unreadCount: number;
-  readonly updatedAt: string;
-};

@@ -64,4 +64,3 @@ export function PartnerDeliveryStatusCard({ task }: { readonly task: DshPartnerD
   );
 }
 
-export default PartnerDeliveryStatusCard;

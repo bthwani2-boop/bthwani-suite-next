@@ -1,23 +1,9 @@
 import React from 'react';
 import { Pressable, Switch as RNSwitch, View, BackHandler } from 'react-native';
-import {
-  Box,
-  Chip,
-  colorRoles,
-  Icon,
-  MobileScrollView,
-  Text,
-  useDirection,
-  radius,
-  spacing,
-} from '@bthwani/ui-kit';
-import { getWltDshPartnerCommissionLabel, wltDshPartnerUiCopy } from '@bthwani/dsh/wlt-boundary';
+import { Box, colorRoles, Icon, MobileScrollView, Text, useDirection, radius, spacing } from '@bthwani/ui-kit';
+import { wltDshPartnerUiCopy } from '@bthwani/dsh/wlt-boundary';
 import type { PartnerHubSection } from '../dsh-partner.types';
-import type {
-  HubNavigationItem,
-  PartnerOperationalMode,
-  SummaryItem,
-} from '../../shared/partner/partner-hub.types';
+import type { HubNavigationItem, SummaryItem } from '../../shared/partner/partner-hub.types';
 
 // Shared visual theme for the partner hub screen and its extracted panels.
 // Named `partnerHubTheme` (not `theme`) to avoid colliding with `useTheme()`
@@ -411,84 +397,3 @@ export function HubNavRow({
   );
 }
 
-export function OperationsModeRow({
-  mode,
-  selected,
-  onPress,
-}: {
-  mode: PartnerOperationalMode;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const { direction } = useDirection();
-
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={mode.title}
-      onPress={onPress}
-      style={({ pressed }) => [
-        {
-          width: '100%',
-          paddingHorizontal: spacing[4],
-          paddingVertical: 14,
-          backgroundColor: pressed ? partnerHubTheme.surfaceInset : partnerHubTheme.surface,
-          borderBottomWidth: 1,
-          borderBottomColor: partnerHubTheme.line,
-        },
-      ]}
-    >
-      <View
-        style={{
-          flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
-          alignItems: 'center',
-        }}
-      >
-        <View
-          style={{
-            flexDirection: direction === 'rtl' ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            gap: 10,
-            flex: 1,
-            minWidth: 0,
-          }}
-        >
-          <View
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 13,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: selected ? partnerHubTheme.brandSurface : partnerHubTheme.surfaceInset,
-              borderWidth: 1,
-              borderColor: selected ? partnerHubTheme.brand : partnerHubTheme.line,
-              flexShrink: 0,
-            }}
-          >
-            <Icon name={mode.id === 'pickup' ? 'hand-left-outline' : mode.id === 'partner_delivery' ? 'car-outline' : 'bicycle-outline'} size={16} tone={selected ? 'brand' : 'muted'} />
-          </View>
-
-          <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-            <Text role="bodyStrong" align="start" numberOfLines={1}>
-              {mode.title}
-            </Text>
-            <Text role="bodySm" tone="muted" align="start" numberOfLines={1}>
-              {mode.subtitle}
-            </Text>
-          </View>
-        </View>
-
-        <View style={{ alignItems: direction === 'rtl' ? 'flex-start' : 'flex-end', gap: spacing[1], marginEnd: 10 }}>
-          <Chip label={mode.enabled ? 'مفعّل' : 'غير مفعّل'} />
-          <Text role="caption" tone="muted">
-            {getWltDshPartnerCommissionLabel(mode.commission)}
-          </Text>
-        </View>
-
-        <Icon name="chevron-forward-outline" mirrored tone="muted" size={18} />
-      </View>
-    </Pressable>
-  );
-}

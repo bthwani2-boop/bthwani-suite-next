@@ -2,13 +2,7 @@
 
 import React from 'react';
 import { Badge, Box, Button, Divider, StateView, Text } from '@bthwani/ui-kit';
-import {
-  acknowledgeDeliverySLAAlert,
-  fetchDeliverySLAAlerts,
-  refreshDeliverySLAAlerts,
-  type DshDeliverySLAAlert,
-  type DshRefreshSLAAlertsResult,
-} from '../../shared/partner-delivery/delivery-sla-alerts.api';
+import { acknowledgeDeliverySLAAlert, fetchDeliverySLAAlerts, refreshDeliverySLAAlerts, type DshDeliverySLAAlert, type DshRefreshSLAAlertsResult } from '../../shared/partner-delivery/delivery-sla-alerts.api';
 
 const LEG_LABELS: Record<string, string> = {
   assign_to_pickup: 'بانتظار استلام الموصل',
@@ -121,4 +115,3 @@ export function PartnerDeliverySLAAlertsPanel({
   );
 }
 
-export default PartnerDeliverySLAAlertsPanel;

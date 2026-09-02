@@ -26,13 +26,6 @@ export type PartnerTeamMember = {
   readonly version: number;
 };
 
-/** Map of team role identifiers to Arabic labels */
-export const PARTNER_TEAM_ROLE_LABELS: Record<PartnerTeamRole, string> = {
-  owner: 'المالك / المدير العام',
-  supervisor: 'مشرف المتجر',
-  staff: 'عضو فريق المبيعات / التشغيل',
-};
-
 /**
  * Array of available team roles ordered by descending privilege level.
  */

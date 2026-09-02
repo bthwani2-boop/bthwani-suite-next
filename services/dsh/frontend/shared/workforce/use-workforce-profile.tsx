@@ -100,7 +100,3 @@ export function useWorkforceProfile(): WorkforceProfileContextValue {
   return value;
 }
 
-export function useWorkforceMeOrNull(): WorkforceMe | null {
-  const { state } = useWorkforceProfile();
-  return state.kind === "ready" ? state.me : null;
-}

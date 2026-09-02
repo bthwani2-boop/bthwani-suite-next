@@ -192,12 +192,6 @@ export const upsertDshOperationalDeliveryMode = (
     },
   );
 
-export const evaluateDshOperationalPolicy = (body: DshOperationalEvaluationInput) =>
-  request<{ decision: DshOperationalDecision }>(
-    "/dsh/platform/operational-policy/evaluate",
-    { method: "POST", body },
-  );
-
 export const evaluateDshOperatorOperationalPolicy = (body: DshOperationalEvaluationInput) =>
   request<{ decision: DshOperationalDecision }>(
     "/dsh/operator/platform/operational-policy/evaluate",

@@ -1,18 +1,8 @@
 "use client";
 
 import React from "react";
-import {
-  CpRetryButton,
-  CpStatePanel,
-  CpStateView,
-  CpTable,
-  CpTableCell,
-  CpTableHeaderCell,
-} from "@bthwani/control-panel/components";
-import {
-  fetchOperatorPartnerFleetSnapshot,
-  type DshOperatorPartnerFleetSnapshot,
-} from "../../../shared/partner/partner-fleet.api";
+import { CpRetryButton, CpStatePanel, CpStateView, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
+import { fetchOperatorPartnerFleetSnapshot, type DshOperatorPartnerFleetSnapshot } from "../../../shared/partner/partner-fleet.api";
 
 export type OperatorPartnerFleetPanelProps = {
   readonly storeId: string;
@@ -137,4 +127,3 @@ export function OperatorPartnerFleetPanel({ storeId }: OperatorPartnerFleetPanel
   );
 }
 
-export default OperatorPartnerFleetPanel;

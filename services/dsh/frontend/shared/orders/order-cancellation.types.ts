@@ -100,15 +100,6 @@ export const CLIENT_CANCELLATION_REASONS: readonly CancellationReasonOption[] = 
   { code: "other", label: "سبب آخر", description: "يتطلب كتابة توضيح." },
 ];
 
-export const PARTNER_CANCELLATION_REASONS: readonly CancellationReasonOption[] = [
-  { code: "out_of_stock", label: "نفاد صنف", description: "أحد أصناف الطلب غير متوفر." },
-  { code: "store_closed", label: "المتجر مغلق", description: "تعذر تنفيذ الطلب بسبب إغلاق الفرع." },
-  { code: "capacity", label: "الطاقة التشغيلية ممتلئة", description: "لا يمكن تجهيز الطلب ضمن الوقت المطلوب." },
-  { code: "pricing_issue", label: "مخالفة سعرية", description: "يوجد تعارض يحتاج تصحيحًا قبل التنفيذ." },
-  { code: "cannot_fulfill", label: "تعذر التنفيذ", description: "تعذر تنفيذ الطلب بعد التحقق التشغيلي." },
-  { code: "other", label: "سبب آخر", description: "يتطلب كتابة توضيح." },
-];
-
 export const OPERATOR_CANCELLATION_REASONS: readonly CancellationReasonOption[] = [
   { code: "customer_request", label: "طلب العميل", description: "تم التحقق من رغبة العميل في الإلغاء." },
   { code: "partner_request", label: "طلب الشريك", description: "طلب الشريك الإلغاء بعد المراجعة." },

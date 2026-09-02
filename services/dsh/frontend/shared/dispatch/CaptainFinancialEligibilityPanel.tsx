@@ -88,4 +88,3 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.5 },
 });
 
-export default CaptainFinancialEligibilityPanel;

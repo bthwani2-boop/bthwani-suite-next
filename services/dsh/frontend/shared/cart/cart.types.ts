@@ -34,7 +34,6 @@ export type DshPricingQuote = {
 };
 // ──────────────────────────────────────────────────────────────────────────────
 
-
 export type DshCartItem = {
   readonly id: string;
   readonly cartId: string;
@@ -108,7 +107,6 @@ type CartServiceabilityOperation = paths["/dsh/client/cart/serviceability"]["pos
 export type DshServiceabilityResult = CartServiceabilityOperation["responses"][200]["content"]["application/json"];
 export type DshServiceabilityCode = DshServiceabilityResult["code"];
 export type DshFulfillmentModeAvailability = NonNullable<DshServiceabilityResult["availableModes"]>[number];
-export type DshCapacityState = DshServiceabilityResult["capacityState"];
 
 export type DshCartState =
   | { readonly kind: "loading" }

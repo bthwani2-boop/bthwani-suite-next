@@ -2,18 +2,10 @@
 
 import React from 'react';
 import { Box, Button, StateView, Text } from '@bthwani/ui-kit';
-import {
-  WebControlPanelDecisionRow,
-  WebControlPanelKpiStrip,
-  WebControlPanelQueue,
-} from '@bthwani/ui-kit/web';
+import { WebControlPanelDecisionRow, WebControlPanelKpiStrip, WebControlPanelQueue } from '@bthwani/ui-kit/web';
 import styles from '../shared/control-panel-surface.module.css';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
-import {
-  assignOrderToCaptain,
-  buildDispatchAssignmentIdempotencyKey,
-  dispatchAssignmentErrorMessage,
-} from '../../shared/operations';
+import { assignOrderToCaptain, buildDispatchAssignmentIdempotencyKey, dispatchAssignmentErrorMessage } from '../../shared/operations';
 import { useDispatchCaptainOptions } from '../../shared/operations/use-dispatch-captain-options';
 import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 import { DispatchOperationsPanel } from './DispatchOperationsPanel';
@@ -237,4 +229,3 @@ export function OrderJourneyDispatchAssignmentScreen({
   );
 }
 
-export default OrderJourneyDispatchAssignmentScreen;

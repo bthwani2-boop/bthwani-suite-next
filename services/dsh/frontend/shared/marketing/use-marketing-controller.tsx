@@ -1,42 +1,11 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
-import {
-  fetchCampaigns, createCampaign, updateCampaign, archiveCampaign,
-  fetchTickers, createTicker, updateTicker, deleteTicker,
-} from "./marketing.api";
-import {
-  fetchPartnerOffers, updatePartnerOffer, archivePartnerOffer,
-  fetchPartnerSelfOffers, submitPartnerSelfOffer,
-} from "./marketing.api";
+import { fetchTickers, createTicker, updateTicker, deleteTicker } from "./marketing.api";
+import { fetchPartnerSelfOffers, submitPartnerSelfOffer } from "./marketing.api";
 import type { MarketingTickerWritePayload, PartnerOfferSubmitPayload } from "./marketing.api";
-import {
-  fetchDeliveryAnalytics,
-  fetchOrderAnalytics,
-  fetchPlatformKpis,
-  fetchStoreAnalytics,
-  fetchSupportAnalytics,
-} from "../analytics/analytics.api";
-import type { DshCampaign, DshMarketingState } from "./marketing.types";
-import {
-  buildDeliverySignalCards,
-  buildMarketingKpiMetrics,
-  type DeliverySignalCardViewModel,
-  type MarketingKpiMetrics,
-} from "./marketing-registry";
-import type {
-  MarketingNewsTickerItem,
-  MarketingNewsTickerAudience,
-  MarketingNewsTickerStatus,
-  MarketingNewsTickerKind,
-  MarketingNewsTickerSource,
-  MarketingNewsTickerDeliveryMode,
-  MarketingNewsTickerPriority,
-  MarketingTickerPlan,
-  MarketingNewsTickerLocale,
-  MarketingNewsTickerPreview,
-  MarketingTickerPlanReason,
-  MarketingTickerPlanEntry,
-} from "./marketing.types";
-import type { PartnerOfferRecord, PartnerOfferStatus } from "../partner/dsh-partner-offer-types";
+import { fetchDeliveryAnalytics, fetchOrderAnalytics, fetchPlatformKpis, fetchStoreAnalytics, fetchSupportAnalytics } from "../analytics/analytics.api";
+import { buildDeliverySignalCards, buildMarketingKpiMetrics, type DeliverySignalCardViewModel, type MarketingKpiMetrics } from "./marketing-registry";
+import type { MarketingNewsTickerItem, MarketingNewsTickerAudience, MarketingTickerPlan, MarketingTickerPlanReason, MarketingTickerPlanEntry } from "./marketing.types";
+import type { PartnerOfferRecord } from "../partner/dsh-partner-offer-types";
 
 function resolveMsg(err: unknown): string {
   const e = err as { kind?: string; status?: number } | undefined;
@@ -70,7 +39,6 @@ export function createMarketingTickerDraft(overrides: Partial<MarketingNewsTicke
     ...overrides,
   };
 }
-
 
 // --- News Ticker Evaluation Helpers ---
 
@@ -217,90 +185,10 @@ export function useTickersController(authKind: string) {
   };
 }
 
-
 // usePartnerOffersController drives the operator review queue: it can review,
 // approve, reject (with reason), and archive offers, but it never creates one
 // — offers only ever originate from a partner's own submission
 // (usePartnerSelfOffersController below).
-export function usePartnerOffersController(authKind: string) {
-  const [items, setItems] = useState<ReadonlyArray<PartnerOfferRecord>>([]);
-  const [selected, setSelected] = useState<PartnerOfferRecord | null>(null);
-  const [draft, setDraft] = useState<PartnerOfferRecord | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const { offers } = await fetchPartnerOffers();
-      setItems(offers);
-      setErrorMessage(null);
-    } catch (err) {
-      setErrorMessage(resolveMsg(err));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (authKind !== "authenticated") { setItems([]); return; }
-    void load();
-  }, [authKind, load]);
-
-  const select = useCallback((item: PartnerOfferRecord | null) => {
-    setSelected(item);
-    setDraft(item === null ? null : { ...item });
-  }, []);
-
-  const save = useCallback(async (input: PartnerOfferRecord) => {
-    try {
-      await updatePartnerOffer(input.id, {
-        status: input.status,
-        title: input.title,
-        valueLabel: input.valueLabel,
-        eligibility: input.eligibility,
-        rejectionReason: input.rejectionReason,
-        marginRiskNote: input.marginRiskNote,
-      });
-      setErrorMessage(null);
-      await load();
-      select(null);
-    } catch (err) {
-      setErrorMessage(resolveMsg(err));
-    }
-  }, [load, select]);
-
-  const remove = useCallback(async (id: string) => {
-    try {
-      await archivePartnerOffer(id);
-      setErrorMessage(null);
-      await load();
-      if (selected?.id === id) select(null);
-    } catch (err) {
-      setErrorMessage(resolveMsg(err));
-    }
-  }, [load, selected, select]);
-
-  const toggleStatus = useCallback(async (id: string) => {
-    const current = items.find(o => o.id === id);
-    if (!current) return;
-    const nextStatus = current.status === "published" ? "paused"
-      : current.status === "review" ? "published"
-      : current.status === "inbound" ? "review"
-      : current.status;
-    if (nextStatus === current.status) return;
-    try {
-      await updatePartnerOffer(id, { status: nextStatus });
-      setErrorMessage(null);
-      await load();
-    } catch (err) {
-      setErrorMessage(resolveMsg(err));
-    }
-  }, [items, load]);
-
-  return {
-    items, selected, draft, setDraft, select, save, remove, toggleStatus,
-    reload: load,
-    errorMessage,
-    isBackedByApi: true as const,
-  };
-}
 
 // usePartnerSelfOffersController drives an authenticated partner's own offer
 // submissions (app-partner PromotionsScreen): list own offers, submit a new
@@ -348,7 +236,6 @@ export function usePartnerSelfOffersController(authKind: string, storeId?: strin
     isBackedByApi: true as const,
   };
 }
-
 
 export type OperationalMetrics = {
   readonly completedOrdersRate: string;
@@ -464,33 +351,3 @@ export function useMarketingDeliverySignalsController() {
   return { items, reload: load, errorMessage };
 }
 
-
-export function useCampaignsController(authKind: string) {
-  const [state, setState] = useState<DshMarketingState<DshCampaign>>({ kind: "idle" });
-
-  const load = useCallback(async () => {
-    setState({ kind: "loading" });
-    try {
-      const { campaigns } = await fetchCampaigns();
-      setState({ kind: "success", items: campaigns });
-    } catch (err) {
-      setState({ kind: "error", message: resolveMsg(err) });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (authKind !== "authenticated") { setState({ kind: "idle" }); return; }
-    load();
-  }, [authKind, load]);
-
-  return {
-    state, reload: load,
-    create: async (body: { title: string; description?: string; startDate?: string; endDate?: string }) => {
-      await createCampaign(body); await load();
-    },
-    update: async (id: string, body: { status?: string; title?: string }) => {
-      await updateCampaign(id, body); await load();
-    },
-    remove: async (id: string) => { await archiveCampaign(id); await load(); },
-  };
-}

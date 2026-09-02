@@ -1,13 +1,5 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
-import type {
-  DshCaptainFinancialEligibility,
-  DshCreateZoneInput,
-  DshStoreOnboardingFeePolicy,
-  DshStoreOnboardingFeePolicyInput,
-  DshUpdateZoneInput,
-  DshZone,
-  DshZoneServiceability,
-} from "./platform-policies.types";
+import type { DshCreateZoneInput, DshStoreOnboardingFeePolicy, DshStoreOnboardingFeePolicyInput, DshUpdateZoneInput, DshZone, DshZoneServiceability } from "./platform-policies.types";
 
 const { request: req } = createDshHttpClient("/api/dsh", "platform-policy");
 
@@ -68,16 +60,3 @@ export const fetchStoreOnboardingFeeReference = () =>
     "/dsh/platform/store-onboarding-fee",
   );
 
-export const fetchOperatorCaptainFinancialEligibility = (captainId: string) =>
-  req<{ financialEligibility: DshCaptainFinancialEligibility }>(
-    `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/financial-eligibility`,
-  );
-
-export const refreshOperatorCaptainFinancialEligibility = (captainId: string) =>
-  req<{ financialEligibility: DshCaptainFinancialEligibility }>(
-    `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/financial-eligibility/refresh`,
-    {
-      method: "POST",
-      idempotencyKey: stableMutationKey(`captain:${captainId}:financial-eligibility`, { captainId }),
-    },
-  );

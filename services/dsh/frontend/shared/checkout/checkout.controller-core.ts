@@ -1,22 +1,8 @@
 import type { DshCheckoutIntent, DshCheckoutState } from "./checkout.types";
-import {
-  checkoutConfirmingState,
-  checkoutBlockedPaymentUnavailableState,
-  checkoutErrorState,
-  checkoutIntentListLoadState,
-  checkoutLoadingState,
-} from "./checkout.states";
+import { checkoutBlockedPaymentUnavailableState, checkoutErrorState, checkoutIntentListLoadState } from "./checkout.states";
 import { resolveCheckoutIntentDisplayState } from "./checkout.view-model";
 
 export type CheckoutErrorKind = "permission_denied" | "conflict" | "offline" | "payment_unavailable" | "error";
-
-export function beginCheckoutSubmit(): DshCheckoutState {
-  return checkoutLoadingState();
-}
-
-export function beginCheckoutReload(): DshCheckoutState {
-  return checkoutLoadingState();
-}
 
 export function resolveCheckoutSubmitSuccess(intent: DshCheckoutIntent): DshCheckoutState {
   return resolveCheckoutIntentDisplayState(intent);
@@ -37,10 +23,6 @@ export function resolveCheckoutSubmitError(classified: { readonly kind: Checkout
     return checkoutBlockedPaymentUnavailableState();
   }
   return checkoutErrorState("تعذر إنشاء طلب الدفع.");
-}
-
-export function resolveCheckoutReloadError(): DshCheckoutState {
-  return checkoutErrorState("تعذر تحديث حالة الطلب.");
 }
 
 export function resolveOperatorCheckoutLoadState(

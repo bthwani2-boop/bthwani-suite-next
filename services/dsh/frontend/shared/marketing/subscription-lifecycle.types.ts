@@ -1,4 +1,3 @@
-import type { ClientBenefitsPayload, SubscriptionPlanRecord } from "./loyalty-subscriptions.types";
 
 export type SubscriptionPurchaseStatus =
   | "initiated"
@@ -115,9 +114,3 @@ export type SubscriptionCancellationEnvelope = {
   readonly updatedPurchaseCount: number;
 };
 
-export type SubscriptionLifecycleSnapshot = {
-  readonly benefits: ClientBenefitsPayload;
-  readonly selectedPlan?: SubscriptionPlanRecord;
-  readonly purchase?: SubscriptionPurchaseRecord;
-  readonly paymentSession?: SubscriptionPaymentSession;
-};

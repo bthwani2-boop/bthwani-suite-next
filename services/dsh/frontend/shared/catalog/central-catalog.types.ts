@@ -7,10 +7,6 @@ type CatalogSchema<Name extends keyof components["schemas"]> = components["schem
 export type CentralCatalogDomain = CatalogSchema<"DshCentralCatalogDomain">;
 export type CentralCatalogNode = CatalogSchema<"DshCentralCatalogNode">;
 export type MasterProduct = CatalogSchema<"DshMasterProduct">;
-export type MasterProductPatchInput = CatalogSchema<"DshMasterProductUpdateInput">;
-export type DomainPatchInput = CatalogSchema<"DshDomainUpdateInput">;
-export type NodePatchInput = CatalogSchema<"DshNodeUpdateInput">;
-export type CatalogPolicyUpdateInput = CatalogSchema<"DshCatalogPlatformPolicyUpdateInput">;
 export type ProductProposal = CatalogSchema<"DshProductProposal">;
 /** Store assortment identity and metadata; commercial truth has separate resources. */
 export type StoreAssortment = CatalogSchema<"DshStoreAssortment">;
@@ -64,26 +60,11 @@ export function getStoreAssortmentStockStatus(
     : inventory.quantity;
   return availableQuantity <= 5 ? "low_stock" : "in_stock";
 }
-export type CatalogPlatformPolicy = CatalogSchema<"DshCatalogPlatformPolicy">;
-export type EffectiveImage = NonNullable<CatalogSchema<"DshClientCatalogProduct">["effectiveImage"]>;
-export type ClientVisibleCatalogEntry = CatalogSchema<"DshClientCatalogProduct">;
-export type ClientVisibleCatalogResponse = CatalogSchema<"DshCatalogResponse">;
 export type CatalogAsset = CatalogSchema<"DshCatalogAsset">;
-export type CatalogAssetStatus = CatalogAsset["status"];
 export type CatalogAssetLink = CatalogSchema<"DshCatalogAssetLink">;
-export type CatalogAssetLinkWithAsset = CatalogSchema<"DshCatalogAssetLinkWithAsset">;
 export type AssetUploadIntentInput = CatalogSchema<"DshCatalogAssetUploadIntentInput">;
 export type AssetUploadIntent = CatalogSchema<"DshCatalogAssetUploadIntentResponse">;
-export type AssetUpdateInput = CatalogSchema<"DshCatalogAssetUpdateInput">;
 export type SeedStatus = CatalogSchema<"DshCatalogSeedStatus">;
-
-export interface CatalogConflictResponse {
-  readonly code: "CONFLICT";
-  readonly message: string;
-  readonly entityId: string;
-  readonly expectedVersion: number | null;
-  readonly currentVersion: number;
-}
 
 /** Upload progress state machine. */
 export type AssetUploadProgress =
@@ -94,49 +75,3 @@ export type AssetUploadProgress =
   | { stage: "linked"; assetId: string; linkId?: string }
   | { stage: "failed"; error: string };
 
-/** Legacy reel DTOs remain presentation-only; governed reel APIs own their contract. */
-export interface Reel {
-  readonly id: string;
-  readonly assetId: string;
-  readonly titleAr: string;
-  readonly titleEn: string;
-  readonly targetType: "master_product" | "store" | "offer";
-  readonly targetId: string;
-  readonly status: "pending_review" | "approved" | "rejected" | "archived";
-  readonly sortOrder: number;
-  readonly submittedBy: string;
-  readonly submittedByRole: string;
-  readonly sourceStoreId: string | null;
-  readonly reviewedBy: string | null;
-  readonly reviewNote: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-}
-
-export interface PublicReel {
-  readonly id: string;
-  readonly titleAr: string;
-  readonly titleEn: string;
-  readonly videoUrl: string;
-  readonly targetType: "master_product" | "store" | "offer";
-  readonly targetId: string;
-  readonly sortOrder: number;
-}
-
-export interface CreateReelSubmissionInput {
-  readonly assetId: string;
-  readonly titleAr?: string;
-  readonly titleEn?: string;
-  readonly targetType: "master_product" | "store" | "offer";
-  readonly targetId: string;
-  readonly sortOrder?: number;
-  readonly sourceStoreId?: string;
-}
-
-export interface ReviewReelInput {
-  readonly decision: "approved" | "rejected" | "archived";
-  readonly reviewNote?: string;
-  readonly targetType?: "master_product" | "store" | "offer";
-  readonly targetId?: string;
-  readonly sortOrder?: number;
-}

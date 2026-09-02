@@ -363,4 +363,3 @@ export function PartnerFulfillmentActionsPanel({
   return null;
 }
 
-export default PartnerFulfillmentActionsPanel;

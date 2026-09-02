@@ -163,27 +163,3 @@ export const TICKET_CATEGORY_LABELS: Record<DshTicketCategory, string> = {
   other: "أخرى",
 };
 
-export const INCIDENT_SEVERITY_LABELS: Record<DshIncidentSeverity, string> = {
-  low: "منخفض",
-  medium: "متوسط",
-  high: "مرتفع",
-  critical: "حرج",
-};
-
-export const INCIDENT_STATUS_LABELS: Record<DshIncidentStatus, string> = {
-  open: "مفتوح",
-  triaged: "تم فرزه",
-  containing: "قيد الاحتواء",
-  mitigating: "قيد المعالجة",
-  monitoring: "قيد المراقبة",
-  resolved: "محلول",
-  closed: "مغلق",
-};
-
-export const INCIDENT_SCOPE_LABELS: Record<DshIncidentScope, string> = {
-  delivery: "التوصيل",
-  stores: "المتاجر",
-  payments: "المدفوعات",
-  platform: "المنصة",
-  unknown: "غير محدد",
-};

@@ -1,22 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
-import type {
-  DshCaptainDispatchCandidate,
-  DshCaptainDispatchProfileInput,
-  DshCaptainAvailability,
-  DshCaptainAvailabilityStatus,
-  DshCaptainReadiness,
-  DshDeliveryException,
-  DshDeliveryExceptionResolutionAction,
-  DshDeliveryStatus,
-  DshDispatchAssignment,
-  DshGovernedDispatchAssignment,
-  DshDispatchDecision,
-  DshGovernedCreateAssignmentInput,
-  DshPartnerDispatchReference,
-  DshReassignAssignmentInput,
-	DshReportDeliveryExceptionInput,
-} from "./dispatch.types";
+import type { DshCaptainDispatchCandidate, DshCaptainAvailability, DshCaptainAvailabilityStatus, DshCaptainReadiness, DshDeliveryException, DshDeliveryExceptionResolutionAction, DshDeliveryStatus, DshDispatchAssignment, DshGovernedDispatchAssignment, DshDispatchDecision, DshReassignAssignmentInput, DshReportDeliveryExceptionInput } from "./dispatch.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dispatch");
 
@@ -33,7 +17,6 @@ export type DshCaptainCommandContext = {
   readonly correlationId: string;
 };
 export type DshOperatorCommandContext = DshCaptainCommandContext;
-export type DshCaptainAvailabilityMutationContext = DshCaptainCommandContext;
 
 export async function setOwnCaptainAvailability(
   status: Extract<DshCaptainAvailabilityStatus, "available" | "unavailable">,
@@ -51,32 +34,6 @@ export async function setOwnCaptainAvailability(
     throw new Error("Captain availability mutation returned a non-canonical readback");
   }
   return readback;
-}
-
-export function fetchOperatorCaptainReadiness(captainId: string): Promise<DshCaptainReadiness> {
-  return request<DshCaptainReadiness>(
-    `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/readiness`,
-  );
-}
-
-export async function createGovernedDispatchAssignment(
-  input: DshGovernedCreateAssignmentInput,
-  mutation: DshOperatorCommandContext,
-): Promise<{ readonly assignment: DshGovernedDispatchAssignment; readonly replayed: boolean }> {
-  const { idempotencyKey, ...body } = input;
-  if (idempotencyKey !== mutation.idempotencyKey) {
-    throw new Error("dispatch assignment idempotency key does not match its command context");
-  }
-  const data = await request<{ assignment: DshGovernedDispatchAssignment; replayed?: boolean }>(
-    "/dsh/operator/dispatch/assignments",
-    {
-      method: "POST",
-      body,
-      idempotencyKey: mutation.idempotencyKey,
-      correlationId: mutation.correlationId,
-    },
-  );
-  return { assignment: data.assignment, replayed: data.replayed === true };
 }
 
 export async function fetchOperatorDispatchAssignments(): Promise<readonly DshGovernedDispatchAssignment[]> {
@@ -97,17 +54,6 @@ export async function fetchCaptainDispatchCandidates(
     `/dsh/operator/dispatch/candidates?${params.toString()}`,
   );
   return data.candidates ?? [];
-}
-
-export async function upsertCaptainDispatchProfile(
-  captainId: string,
-  input: DshCaptainDispatchProfileInput,
-): Promise<DshCaptainDispatchCandidate> {
-  const data = await request<{ candidate: DshCaptainDispatchCandidate }>(
-    `/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/profile`,
-    { method: "PUT", body: input },
-  );
-  return data.candidate;
 }
 
 export async function acceptDispatchAssignment(
@@ -416,20 +362,6 @@ export async function acceptPartnerReturnToStore(
   return fetchPartnerReturnToStore(orderId);
 }
 
-export async function fetchClientOrderTracking(orderId: string): Promise<DshDispatchAssignment> {
-  const data = await request<{ assignment: DshDispatchAssignment }>(
-    `/dsh/client/orders/${encodeURIComponent(orderId)}/tracking`,
-  );
-  return data.assignment;
-}
-
-export async function fetchPartnerDispatchTracking(orderId: string): Promise<DshPartnerDispatchReference | null> {
-  const data = await request<{ assignment: DshPartnerDispatchReference | null }>(
-    `/dsh/partner/orders/${encodeURIComponent(orderId)}/dispatch-tracking`,
-  );
-  return data.assignment;
-}
-
 export type DshDispatchError = {
   readonly kind: "permission_denied" | "offline" | "conflict" | "not_found" | "error";
   readonly code?: string;
@@ -458,27 +390,3 @@ export function classifyDispatchError(error: unknown): DshDispatchError {
   return { kind: "error", ...details };
 }
 
-export function getDshOrderLifecycleRuntimeClient() {
-  return {
-    assignCaptain(
-      orderId: string,
-      input: {
-        readonly captain_id: string;
-        readonly service_area_code: string;
-        readonly idempotency_key: string;
-        readonly priority?: number;
-        readonly distance_meters?: number;
-      },
-      mutation: DshOperatorCommandContext,
-    ) {
-      return createGovernedDispatchAssignment({
-        orderId,
-        captainId: input.captain_id,
-        serviceAreaCode: input.service_area_code,
-        idempotencyKey: input.idempotency_key,
-        ...(input.priority === undefined ? {} : { priority: input.priority }),
-        ...(input.distance_meters === undefined ? {} : { distanceMeters: input.distance_meters }),
-      }, mutation).then((result) => result.assignment);
-    },
-  };
-}

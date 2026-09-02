@@ -5,25 +5,9 @@
 
 import type { components } from "../../../clients/generated/dsh-api";
 
-export type ActiveOrderPhase = "pickup" | "delivery";
-
-export type StoreCourierStage =
-  | "ready_for_pickup"
-  | "picked_up"
-  | "out_for_delivery"
-  | "delivery_failed"
-  | "delivered";
-
 export type DshFulfillmentDeliveryMode = NonNullable<
   components["schemas"]["DshOrder"]["fulfillmentMode"]
 >;
-
-export type DshDeliveryModeTrackingStageFilter = {
-  readonly showCaptainStages: boolean;
-  readonly showPickupStoreInstructions: boolean;
-  readonly showPartnerCourierStatus: boolean;
-  readonly showDeliveryDropoffAddress: boolean;
-};
 
 /** Presentation-only metadata. Availability and allowed actions come from DSH runtime responses. */
 export type DshDeliveryModeDefinition = {
@@ -58,21 +42,6 @@ export function getDshDeliveryModeDefinition(
     throw new Error(`unsupported DSH fulfillment mode: ${mode}`);
   }
   return definition;
-}
-
-/**
- * Presentation-only timeline projection. Backend order state and allowedActions
- * remain authoritative for transitions and mutations.
- */
-export function getDshModeTrackingStageFilter(
-  mode: DshFulfillmentDeliveryMode,
-): DshDeliveryModeTrackingStageFilter {
-  return {
-    showCaptainStages: mode === "bthwani_delivery",
-    showPickupStoreInstructions: mode === "pickup",
-    showPartnerCourierStatus: mode === "partner_delivery",
-    showDeliveryDropoffAddress: mode !== "pickup",
-  };
 }
 
 export function isDshFulfillmentDeliveryMode(

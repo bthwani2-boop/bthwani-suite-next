@@ -1,15 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
-import type {
-  DshClientDeliveryProof,
-  DshDeliveryPinResponse,
-  DshDeliveryProof,
-  DshDeliveryProofError,
-  DshDeliveryProofErrorKind,
-  DshDeliveryProofStatus,
-  DshReviewDeliveryProofInput,
-  DshSubmitDeliveryProofInput,
-} from "./delivery-proof.types";
+import type { DshClientDeliveryProof, DshDeliveryPinResponse, DshDeliveryProof, DshDeliveryProofError, DshDeliveryProofErrorKind, DshDeliveryProofStatus, DshReviewDeliveryProofInput, DshSubmitDeliveryProofInput } from "./delivery-proof.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "delivery-proof");
 
@@ -57,13 +48,6 @@ export async function fetchOperatorDeliveryProofs(
     `/dsh/operator/delivery-proofs${query}`,
   );
   return data.proofs ?? [];
-}
-
-export async function fetchOperatorDeliveryProof(proofId: string): Promise<DshDeliveryProof> {
-  const data = await request<{ readonly proof: DshDeliveryProof }>(
-    `/dsh/operator/delivery-proofs/${encodeURIComponent(proofId)}`,
-  );
-  return data.proof;
 }
 
 export async function acceptOperatorDeliveryProof(

@@ -1,13 +1,6 @@
 import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import type {
-  FieldOnboardingWorkloadItem,
-  OnboardingChangeRequest,
-  OnboardingChangeRequestInput,
-  OnboardingCollaborationMessage,
-  OnboardingCollaborationMessageInput,
-  OnboardingCollaborationView,
-} from "./onboarding-collaboration.types";
+import type { OnboardingChangeRequest, OnboardingChangeRequestInput, OnboardingCollaborationMessage, OnboardingCollaborationMessageInput, OnboardingCollaborationView } from "./onboarding-collaboration.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "onboarding-collaboration");
 
@@ -40,13 +33,6 @@ export async function createOnboardingChangeRequest(partnerId: string, input: On
   return result.changeRequest;
 }
 
-export async function markOperatorOnboardingRead(partnerId: string, threadId: string, sequence: number): Promise<void> {
-  await request(`/dsh/operator/partners/${encodeURIComponent(partnerId)}/collaboration/read?threadId=${encodeURIComponent(threadId)}`, {
-    method: "POST",
-    body: { sequence },
-  });
-}
-
 export async function getFieldOnboardingCollaboration(partnerId: string, assignmentId?: string, documentId?: string): Promise<OnboardingCollaborationView> {
   return request<OnboardingCollaborationView>(`/dsh/field/partners/${encodeURIComponent(partnerId)}/collaboration${contextQuery(assignmentId, documentId)}`);
 }
@@ -66,12 +52,3 @@ export async function markFieldOnboardingRead(partnerId: string, threadId: strin
   });
 }
 
-export async function listOperatorOnboardingWorkload(): Promise<readonly FieldOnboardingWorkloadItem[]> {
-  const result = await request<{ items: FieldOnboardingWorkloadItem[] }>("/dsh/operator/field-onboarding/workload");
-  return result.items;
-}
-
-export async function listFieldOnboardingWorkload(): Promise<readonly FieldOnboardingWorkloadItem[]> {
-  const result = await request<{ items: FieldOnboardingWorkloadItem[] }>("/dsh/field/onboarding/workload");
-  return result.items;
-}

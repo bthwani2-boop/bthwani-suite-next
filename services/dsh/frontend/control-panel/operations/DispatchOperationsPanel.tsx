@@ -2,18 +2,8 @@
 
 import React from 'react';
 import { Button, Text, TextField } from '@bthwani/ui-kit';
-import {
-  WebControlPanelDecisionRow,
-  WebControlPanelQueue } from '@bthwani/ui-kit/web';
-import {
-  CpBadge,
-  CpDescriptionList,
-  CpDescriptionRow,
-  CpMutedInline,
-  CpPageHeader,
-  CpRetryButton,
-  CpStatePanel,
-  CpStateView } from '@bthwani/control-panel/components';
+import { WebControlPanelDecisionRow, WebControlPanelQueue } from '@bthwani/ui-kit/web';
+import { CpBadge, CpDescriptionList, CpDescriptionRow, CpMutedInline, CpPageHeader, CpRetryButton, CpStatePanel, CpStateView } from '@bthwani/control-panel/components';
 import { OperationsRoomFrame } from '@bthwani/control-panel/shell';
 import { useDispatchOperations } from '../../shared/operations';
 import type { DshDispatchDecision } from '../../shared/dispatch';
@@ -232,4 +222,3 @@ export function DispatchOperationsPanel({ canManageOperations }: { readonly canM
   );
 }
 
-export default DispatchOperationsPanel;

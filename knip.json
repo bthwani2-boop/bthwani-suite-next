@@ -41,10 +41,18 @@
     "taskkill"
   ],
   "ignoreIssues": {
-    "tools/mobile/runtime-shared/sentry-config.ts": ["files"],
-    "shared/data-runtime/src/BthwaniQueryProvider.native.tsx": ["files"],
-    "tools/mobile/metro.config.factory.cjs": ["unlisted"],
-    "apps/app-*/runtime/fingerprint.config.js": ["unlisted"]
+    "tools/mobile/runtime-shared/sentry-config.ts": [
+      "files"
+    ],
+    "shared/data-runtime/src/BthwaniQueryProvider.native.tsx": [
+      "files"
+    ],
+    "tools/mobile/metro.config.factory.cjs": [
+      "unlisted"
+    ],
+    "apps/app-*/runtime/fingerprint.config.js": [
+      "unlisted"
+    ]
   },
   "ignoreExportsUsedInFile": true,
   "rules": {
@@ -92,74 +100,39 @@
       "entry": [
         "fingerprint.config.js"
       ],
-      "ignoreDependencies": ["expo-font"]
+      "ignoreDependencies": [
+        "expo-font"
+      ]
     },
     "apps/app-partner/runtime": {
       "entry": [
         "fingerprint.config.js"
       ],
-      "ignoreDependencies": ["expo-font"]
+      "ignoreDependencies": [
+        "expo-font"
+      ]
     },
     "apps/app-captain/runtime": {
       "entry": [
         "fingerprint.config.js"
       ],
-      "ignoreDependencies": ["expo-font"]
+      "ignoreDependencies": [
+        "expo-font"
+      ]
     },
     "apps/app-field/runtime": {
       "entry": [
         "fingerprint.config.js"
       ],
-      "ignoreDependencies": ["expo-font"]
+      "ignoreDependencies": [
+        "expo-font"
+      ]
     },
     "services/dsh": {
       "entry": [
         "runtime-map.ts",
         "service.manifest.ts",
-        "tests/*.test.mjs",
-        "frontend/app-*/index.{ts,tsx}",
-        "frontend/app-*/**/index.{ts,tsx}",
-        "frontend/app-*/**/*Surface.tsx",
-        "frontend/app-*/**/*Screen.tsx",
-        "frontend/app-*/**/*Panel.tsx",
-        "frontend/app-*/**/*Sheet.tsx",
-        "frontend/app-*/**/*Header.tsx",
-        "frontend/app-*/**/*context.tsx",
-        "frontend/app-partner/account/PartnerHubNav.tsx",
-        "frontend/app-partner/dsh-partner-binding.contracts.ts",
-        "frontend/control-panel/**/index.{ts,tsx}",
-        "frontend/control-panel/**/*Screen.tsx",
-        "frontend/control-panel/**/*Panel.tsx",
-        "frontend/control-panel/**/*View.tsx",
-        "frontend/control-panel/**/*Inspector.tsx",
-        "frontend/control-panel/**/*Workspace.tsx",
-        "frontend/control-panel/**/*Section.tsx",
-        "frontend/control-panel/**/*.types.ts",
-        "frontend/control-panel/**/*.helpers.ts",
-        "frontend/control-panel/finance/RepresentativeWalletLookup.tsx",
-        "frontend/control-panel/hr/SupervisorPicker.tsx",
-        "frontend/control-panel/hr/ZonePicker.tsx",
-        "frontend/shared/**/index.{ts,tsx}",
-        "frontend/shared/**/*.registry.ts",
-        "frontend/shared/**/*contract*.ts",
-        "frontend/shared/**/*.policy.ts",
-        "frontend/shared/**/*.view-model.ts",
-        "frontend/shared/**/*.adapter.ts",
-        "frontend/shared/**/*.transport.ts",
-        "frontend/shared/**/*.state-machine.ts",
-        "frontend/shared/**/*.states.ts",
-        "frontend/shared/**/*.types.ts",
-        "frontend/shared/**/*.model.ts",
-        "frontend/shared/**/*.api.ts",
-        "frontend/shared/**/*.client.ts",
-        "frontend/shared/**/*controller*.{ts,tsx}",
-        "frontend/shared/**/*journey.ts",
-        "frontend/shared/**/*classifier.ts",
-        "frontend/shared/**/*image-source.ts",
-        "frontend/shared/**/*notification-action.ts",
-        "frontend/shared/partner-delivery/PartnerDeliveryStatusCard.tsx",
-        "frontend/shared/workforce/WorkforceErrorState.tsx",
-        "frontend/wlt-boundary/index.ts"
+        "tests/*.test.mjs"
       ],
       "ignoreFiles": [
         "frontend/shared/**/generated/**"

@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
 import { CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
 import { Button, Text } from "@bthwani/ui-kit";
 
-import {
-  useEmployeeCreateController,
-  type SupervisorCandidate } from "../../shared/workforce";
+import { useEmployeeCreateController, type SupervisorCandidate } from "../../shared/workforce";
 import { SupervisorPicker } from "./SupervisorPicker";
 
 export function EmployeeCreateView(props: {
@@ -193,4 +191,3 @@ export function EmployeeCreateView(props: {
   );
 }
 
-export default EmployeeCreateView;

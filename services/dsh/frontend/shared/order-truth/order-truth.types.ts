@@ -86,16 +86,6 @@ export type OrderTruthCollectionState =
   | { readonly kind: "forbidden"; readonly message: string }
   | { readonly kind: "error"; readonly message: string };
 
-export type OrderTruthDetailState =
-  | { readonly kind: "idle" }
-  | { readonly kind: "loading" }
-  | { readonly kind: "success"; readonly order: OrderTruth }
-  | { readonly kind: "partial"; readonly order: OrderTruth; readonly message: string }
-  | { readonly kind: "offline"; readonly message: string }
-  | { readonly kind: "forbidden"; readonly message: string }
-  | { readonly kind: "not_found"; readonly message: string }
-  | { readonly kind: "error"; readonly message: string };
-
 export type OrderTruthFailure = {
   readonly kind: "offline" | "forbidden" | "not_found" | "conflict" | "error";
   readonly message: string;

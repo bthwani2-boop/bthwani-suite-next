@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   createLoyaltyTier,
   createSubscriptionPlan,
-  fetchClientBenefits,
   fetchLoyaltyTiers,
   fetchSubscriptionPlans,
   updateLoyaltyTier,
@@ -13,7 +12,6 @@ import {
   type SubscriptionPlanUpdatePayload,
 } from "./marketing.api";
 import type {
-  ClientBenefitsPayload,
   LoyaltyProgramSummary,
   LoyaltyTierRecord,
   SubscriptionPlanRecord,
@@ -156,27 +154,3 @@ export function useSubscriptionPlansController(authKind: string) {
   return { state, summary, selected, select: setSelected, actionError, reload: load, create, update };
 }
 
-type ClientBenefitsState =
-  | { readonly kind: "loading" }
-  | { readonly kind: "success"; readonly benefits: ClientBenefitsPayload }
-  | { readonly kind: "error"; readonly message: string };
-
-export function useClientBenefitsController() {
-  const [state, setState] = useState<ClientBenefitsState>({ kind: "loading" });
-
-  const load = useCallback(async () => {
-    setState({ kind: "loading" });
-    try {
-      const response = await fetchClientBenefits();
-      setState({ kind: "success", benefits: response.benefits });
-    } catch (error) {
-      setState({ kind: "error", message: messageOf(error) });
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  return { state, reload: load };
-}

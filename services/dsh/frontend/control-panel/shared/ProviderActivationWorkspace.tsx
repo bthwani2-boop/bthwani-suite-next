@@ -1,22 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
 import { Button, Box, Card, Text, TextField } from "@bthwani/ui-kit";
-import {
-  CpBadge,
-  CpDescriptionList,
-  CpDescriptionRow,
-  CpMutedInline,
-  CpStatePanel,
-  CpStateView,
-  CpTabs } from "@bthwani/control-panel/components";
-import {
-  ENGAGEMENT_STATUS_LABEL_AR,
-  useProviderActivationController,
-  useWorkforceReferenceData,
-  useFieldAgentListController,
-  useCaptainListController,
-  type EngagementStatus,
-  type FieldAgent } from "../../shared/workforce";
+import { CpBadge, CpDescriptionList, CpDescriptionRow, CpMutedInline, CpStatePanel, CpStateView, CpTabs } from "@bthwani/control-panel/components";
+import { ENGAGEMENT_STATUS_LABEL_AR, useProviderActivationController, useWorkforceReferenceData, useFieldAgentListController, useCaptainListController, type EngagementStatus, type FieldAgent } from "../../shared/workforce";
 import { ProviderOperationalEnforcementPanel } from "./ProviderOperationalEnforcementPanel";
 import { ActorActivationCard } from "./ActorActivationCard";
 
@@ -243,7 +229,6 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
                 : {})}
             />
 
-
             <CpMutedInline>
               الخادم يعيد فحص الهوية والعقد والضمين والتجهيز والضمانة المالية والتدريب والاعتماد؛ لا يمكن تجاوز البوابة من الواجهة.
             </CpMutedInline>
@@ -283,4 +268,3 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
   );
 }
 
-export default ProviderActivationWorkspace;

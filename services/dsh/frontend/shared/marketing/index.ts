@@ -6,7 +6,6 @@ export {
   createMarketingTickerDraft,
   useMarketingDeliverySignalsController,
   useMarketingKpiMetricsController,
-  usePartnerOffersController,
   usePartnerSelfOffersController,
   useTickersController,
   useVisibilityGatesController,

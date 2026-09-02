@@ -26,23 +26,6 @@ export type GovernedReel = {
   readonly updatedAt: string;
 };
 
-export type GovernedPublicReel = {
-  readonly id: string;
-  readonly titleAr: string;
-  readonly titleEn: string;
-  readonly subtitleAr: string;
-  readonly subtitleEn: string;
-  readonly highlightAr: string;
-  readonly highlightEn: string;
-  readonly ctaLabelAr: string;
-  readonly ctaLabelEn: string;
-  readonly videoUrl: string;
-  readonly posterUrl: string;
-  readonly targetType: ReelTargetType;
-  readonly targetId: string;
-  readonly sortOrder: number;
-};
-
 export type GovernedReelSubmissionInput = {
   readonly assetId: string;
   readonly posterAssetId?: string;

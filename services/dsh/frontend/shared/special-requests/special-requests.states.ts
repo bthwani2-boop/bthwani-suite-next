@@ -15,10 +15,6 @@ export function specialRequestIdleState(): DshSpecialRequestState {
   return { kind: "idle" };
 }
 
-export function specialRequestValidatingState(): DshSpecialRequestState {
-  return { kind: "validating" };
-}
-
 export function specialRequestSubmittingState(): DshSpecialRequestState {
   return { kind: "submitting" };
 }

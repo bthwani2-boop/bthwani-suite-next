@@ -1,12 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient, type DshRequestOptions } from "../_kernel/dsh-http-request";
-import type {
-  CreateOrderTruthInput,
-  OrderTruth,
-  OrderTruthActor,
-  OrderTruthFailure,
-  OrderTruthMutationContext,
-} from "./order-truth.types";
+import type { CreateOrderTruthInput, OrderTruth, OrderTruthActor, OrderTruthFailure, OrderTruthMutationContext } from "./order-truth.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "order-truth", 12000);
 
@@ -65,17 +59,6 @@ export async function fetchPartnerOrderTruth(
   return data.orders ?? [];
 }
 
-export async function fetchPartnerOrderTruthDetail(
-  orderId: string,
-  token?: string,
-): Promise<OrderTruth> {
-  const data = await request<{ order: OrderTruth }>(
-    `/dsh/partner/order-truth/${encodeURIComponent(orderId)}`,
-    withOptionalToken({}, token),
-  );
-  return data.order;
-}
-
 export async function fetchOperatorOrderTruth(
   input: { readonly status?: string; readonly limit?: number } = {},
   token?: string,
@@ -89,17 +72,6 @@ export async function fetchOperatorOrderTruth(
     withOptionalToken({}, token),
   );
   return data.orders ?? [];
-}
-
-export async function fetchOperatorOrderTruthDetail(
-  orderId: string,
-  token?: string,
-): Promise<OrderTruth> {
-  const data = await request<{ order: OrderTruth }>(
-    `/dsh/operator/order-truth/${encodeURIComponent(orderId)}`,
-    withOptionalToken({}, token),
-  );
-  return data.order;
 }
 
 export function classifyOrderTruthFailure(error: unknown, actor: OrderTruthActor): OrderTruthFailure {

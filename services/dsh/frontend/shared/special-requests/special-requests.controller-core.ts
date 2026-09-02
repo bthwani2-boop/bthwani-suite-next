@@ -1,17 +1,6 @@
 import type { DshSpecialRequestResponse, ClassifiedSpecialRequestError } from "./special-requests.types";
 import type { DshSpecialRequestState } from "./special-requests.states";
-import {
-  specialRequestConflictState,
-  specialRequestOfflineState,
-  specialRequestRecoverableErrorState,
-  specialRequestSubmittedState,
-  specialRequestSubmittingState,
-  specialRequestValidatingState,
-} from "./special-requests.states";
-
-export function beginValidate(): DshSpecialRequestState {
-  return specialRequestValidatingState();
-}
+import { specialRequestConflictState, specialRequestOfflineState, specialRequestRecoverableErrorState, specialRequestSubmittedState, specialRequestSubmittingState } from "./special-requests.states";
 
 export function beginSubmit(): DshSpecialRequestState {
   return specialRequestSubmittingState();
@@ -51,6 +40,3 @@ export function resolveApproveQuoteSuccess(request: DshSpecialRequestResponse): 
   return specialRequestSubmittedState(request);
 }
 
-export function resolveMutationError(classified: ClassifiedSpecialRequestError): DshSpecialRequestState {
-  return resolveSubmitError(classified);
-}

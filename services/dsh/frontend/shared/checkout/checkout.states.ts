@@ -1,18 +1,6 @@
-import type {
-  DshCheckoutIntent,
-  DshCheckoutState,
-  DshCheckoutTerminalReason,
-} from "./checkout.types";
+import type { DshCheckoutIntent, DshCheckoutState, DshCheckoutTerminalReason } from "./checkout.types";
 
 export type DshCheckoutIntentListLoadState = "loading" | "success" | "empty" | "error";
-
-export function checkoutIdleState(): DshCheckoutState {
-  return { kind: "idle" };
-}
-
-export function checkoutLoadingState(): DshCheckoutState {
-  return { kind: "loading" };
-}
 
 export function checkoutConfirmingState(intent: DshCheckoutIntent): DshCheckoutState {
   return { kind: "confirming", intent };

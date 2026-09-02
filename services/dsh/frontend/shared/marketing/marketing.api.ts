@@ -2,22 +2,8 @@ import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type { MarketingNewsTickerItem } from "./marketing.types";
 import type { GovernedCampaignWritePayload, GovernedDshCampaign } from "./campaign.types";
-import type {
-  ClientBenefitsPayload,
-  LoyaltyProgramSummary,
-  LoyaltyTierRecord,
-  SubscriptionBillingCycle,
-  SubscriptionPlanRecord,
-  SubscriptionsSummary,
-} from "./loyalty-subscriptions.types";
-import type {
-  CouponCreatePayload,
-  CouponFundingPolicy,
-  CouponListResponse,
-  CouponRecord,
-  CouponUpdatePayload,
-  IssuedCoupon,
-} from "./coupons.types";
+import type { ClientBenefitsPayload, LoyaltyProgramSummary, LoyaltyTierRecord, SubscriptionBillingCycle, SubscriptionPlanRecord, SubscriptionsSummary } from "./loyalty-subscriptions.types";
+import type { CouponCreatePayload, CouponFundingPolicy, CouponListResponse, CouponRecord, CouponUpdatePayload, IssuedCoupon } from "./coupons.types";
 
 const { request: req } = createDshHttpClient(resolveDshApiBaseUrl(), "mkt");
 
@@ -45,8 +31,6 @@ export const createCampaign = (body: CampaignCreatePayload) =>
     method: "POST",
     body,
   });
-export const getCampaign = (id: string) =>
-  req<{ campaign: GovernedDshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`);
 export const updateCampaign = (id: string, body: GovernedCampaignWritePayload) =>
   req<{ campaign: GovernedDshCampaign }>(`/dsh/operator/marketing/campaigns/${id}`, {
     method: "PATCH",

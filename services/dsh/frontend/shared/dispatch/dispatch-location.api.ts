@@ -204,34 +204,6 @@ function isRetryableLocationError(error: unknown): boolean {
   return typeof value.status === 'number' && (value.status === 408 || value.status === 429 || value.status >= 500);
 }
 
-/**
- * Updates only the latest location for the authenticated captain's active
- * assignment. The backend keeps no route history and purges the sample when
- * the assignment closes. Callers must invoke this from foreground-only logic.
- */
-export async function updateForegroundDispatchLocation(
-  actorId: string,
-  assignmentId: string,
-  sample: ForegroundDispatchLocation,
-): Promise<DshDispatchAssignment> {
-  validateSample(assignmentId, sample);
-  const scope = await resolveLocationScope(actorId, assignmentId);
-  const data = await request<{ assignment: DshDispatchAssignment }>(
-    `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/location`,
-    {
-      method: 'POST',
-      body: {
-        latitude: sample.latitude,
-        longitude: sample.longitude,
-        accuracyMeters: sample.accuracyMeters,
-        recordedAt: sample.recordedAt,
-      },
-    },
-  );
-  await clearPendingLocationIfExact(scope, assignmentId, sample);
-  return data.assignment;
-}
-
 export async function syncForegroundDispatchLocation(
   actorId: string,
   assignmentId: string,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
 import { CpMutedInline, CpPageHeader, CpStatePanel, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
@@ -177,4 +177,3 @@ export function CaptainCreateView(props: {
   );
 }
 
-export default CaptainCreateView;

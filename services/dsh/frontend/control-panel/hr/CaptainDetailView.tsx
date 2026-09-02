@@ -1,16 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { CpMutedInline, CpPageHeader, CpStateView, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Button, Text } from "@bthwani/ui-kit";
 
-import {
-  ENGAGEMENT_STATUS_LABEL_AR,
-  appendProviderDocument,
-  useCaptainDetailController,
-  type LicenseStatus,
-  type SupervisorCandidate } from "../../shared/workforce";
+import { ENGAGEMENT_STATUS_LABEL_AR, appendProviderDocument, useCaptainDetailController, type LicenseStatus, type SupervisorCandidate } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { ProviderActivationWorkspace } from "../shared";
 import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
@@ -270,4 +265,3 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
   );
 }
 
-export default CaptainDetailView;

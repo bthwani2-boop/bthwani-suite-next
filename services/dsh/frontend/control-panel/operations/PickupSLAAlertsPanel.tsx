@@ -2,13 +2,7 @@
 
 import React from 'react';
 import { Badge, Box, Button, Divider, StateView, Text } from '@bthwani/ui-kit';
-import {
-  acknowledgePickupSLAAlert,
-  fetchPickupSLAAlerts,
-  refreshPickupSLAAlerts,
-  type DshPickupSLAAlert,
-  type DshRefreshSLAAlertsResult,
-} from '../../shared/pickup/pickup-sla-alerts.api';
+import { acknowledgePickupSLAAlert, fetchPickupSLAAlerts, refreshPickupSLAAlerts, type DshPickupSLAAlert, type DshRefreshSLAAlertsResult } from '../../shared/pickup/pickup-sla-alerts.api';
 
 const LEG_LABELS: Record<string, string> = {
   awaiting_notify: 'بانتظار إشعار العميل',
@@ -120,4 +114,3 @@ export function PickupSLAAlertsPanel({
   );
 }
 
-export default PickupSLAAlertsPanel;

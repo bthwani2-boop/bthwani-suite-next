@@ -9,9 +9,6 @@ type RollbackReviewResponse =
 type DiagnosticsResponse =
   operations["get_dsh_operator_admin_diagnostics"]["responses"][200]["content"]["application/json"];
 
-export type DshAdministrationSurface =
-  | "control-panel";
-
 export type DshPermissionVocabularyEntry =
   operations["get_dsh_operator_admin_permission_vocabulary"]["responses"][200]["content"]["application/json"]["permissions"][number];
 export type DshRole =
@@ -19,9 +16,7 @@ export type DshRole =
 export type DshRolePermission = DshRole["permissions"][number];
 export type DshStaffMember =
   operations["listDshAdminStaff"]["responses"][200]["content"]["application/json"]["staff"][number];
-export type DshCanonicalRoleAssignment = NonNullable<RoleAssignmentReviewResponse["assignment"]>;
 export type DshAdministrationApprovalStatus = RoleAssignmentReviewResponse["approval"]["status"];
-export type DshMutationExecutionStatus = RoleAssignmentReviewResponse["approval"]["executionStatus"];
 export type DshRoleAssignmentApprovalStatus = DshAdministrationApprovalStatus;
 export type DshRoleChangeAction = RoleAssignmentReviewResponse["approval"]["actionType"];
 export type DshRoleAssignmentApproval = RoleAssignmentReviewResponse["approval"];

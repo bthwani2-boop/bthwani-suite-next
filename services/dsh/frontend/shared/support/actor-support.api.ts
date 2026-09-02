@@ -1,12 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
-import type {
-  DshAddMessageInput,
-  DshCreateTicketInput,
-  DshSenderRole,
-  DshSupportMessage,
-  DshSupportTicket,
-} from "./support.types";
+import type { DshAddMessageInput, DshCreateTicketInput, DshSenderRole, DshSupportMessage, DshSupportTicket } from "./support.types";
 import type { SupportMutationContext } from "./support-mutation-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "actor-support");
@@ -35,13 +29,6 @@ export async function createActorSupportTicket(
 export async function fetchActorSupportTickets(): Promise<readonly DshSupportTicket[]> {
   const data = await request<{ tickets: DshSupportTicket[] }>("/dsh/support/tickets");
   return data.tickets ?? [];
-}
-
-export async function fetchActorSupportTicket(ticketId: string): Promise<DshSupportTicket> {
-  const data = await request<{ ticket: DshSupportTicket }>(
-    `/dsh/support/tickets/${encodeURIComponent(ticketId)}`,
-  );
-  return data.ticket;
 }
 
 export async function fetchActorSupportMessages(

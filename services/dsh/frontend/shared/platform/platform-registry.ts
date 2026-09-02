@@ -1,19 +1,3 @@
-/**
- * Canonical navigation and ownership metadata for the sovereign Platform
- * control plane. Live metrics and workflow states come from
- * core/platform-control, while DSH operational policies remain bound to their
- * governed owners and are exposed inside the same unified sovereign section.
- */
-
-export const PLATFORM_RUNTIME_STATES = {
-  fixRequired: "FIX_REQUIRED",
-  partiallyBound: "PARTIALLY_BOUND",
-  unknownHealth: "UNKNOWN_HEALTH",
-  rollbackUnavailable: "ROLLBACK_UNAVAILABLE",
-  contractRequired: "CONTRACT_REQUIRED",
-  readOnlyBound: "READ_ONLY_BOUND",
-  operational: "OPERATIONAL",
-} as const;
 
 export type PlatformMainTabId =
   | "overview"

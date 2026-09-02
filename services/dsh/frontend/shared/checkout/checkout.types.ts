@@ -13,20 +13,6 @@ export type DshPaymentMethod = NonNullable<DshCreateIntentInput["paymentMethod"]
 export type DshFulfillmentMode = NonNullable<DshCreateIntentInput["fulfillmentMode"]>;
 export type DshIntentState = DshCheckoutIntent["state"];
 
-export type DshFulfillmentModesResponse =
-  paths["/dsh/client/cart/fulfillment-modes"]["get"]["responses"][200]["content"]["application/json"];
-export type DshFulfillmentModeAvailability =
-  DshFulfillmentModesResponse["modes"][number];
-
-/** J050: states that allow the user to interact and progress. */
-export type DshIntentPreviewState = Extract<
-  DshIntentState,
-  "draft" | "validating" | "ready" | "blocked"
->;
-
-/** J050: states that indicate active WLT payment processing. */
-export type DshIntentConfirmingState = Extract<DshIntentState, "confirming">;
-
 /** J050: terminal states — no further mutation possible from client. */
 export type DshCheckoutTerminalReason = Extract<DshIntentState, "cancelled" | "expired">;
 

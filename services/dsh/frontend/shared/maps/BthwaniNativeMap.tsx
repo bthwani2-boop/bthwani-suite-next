@@ -1,15 +1,9 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text, colorRoles, radius, spacing } from "@bthwani/ui-kit";
-import {
-  getDshMapRenderer,
-  type DshMapCoordinate,
-  type DshMapMarker,
-  type DshMapProps,
-} from "../mobile-capabilities";
+import { getDshMapRenderer, type DshMapCoordinate, type DshMapProps } from "../mobile-capabilities";
 
 export type BthwaniMapCoordinate = DshMapCoordinate;
-export type BthwaniMapMarker = DshMapMarker;
 
 export type BthwaniNativeMapProps = DshMapProps & {
   readonly emptyLabel?: string;

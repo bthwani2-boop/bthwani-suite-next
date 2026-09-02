@@ -1,26 +1,7 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { corrId, createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
 import type { operations } from "../../../clients/generated/dsh-api";
-import type {
-  CentralCatalogDomain,
-  CentralCatalogNode,
-  MasterProduct,
-  ProductProposal,
-  StoreAssortment,
-  ClientVisibleCatalogResponse,
-  CatalogAsset,
-  CatalogAssetLink,
-  AssetUploadIntent,
-  AssetUploadIntentInput,
-  AssetUpdateInput,
-  SeedStatus,
-  StoreAssortmentMetadataInput,
-  StoreAssortmentInventoryInput,
-  StoreAssortmentInventory,
-  StoreAssortmentPriceInput,
-  StoreAssortmentPrice,
-  StoreAssortmentCommercialReadback,
-} from "./central-catalog.types";
+import type { CentralCatalogDomain, CentralCatalogNode, MasterProduct, ProductProposal, StoreAssortment, CatalogAsset, CatalogAssetLink, AssetUploadIntent, AssetUploadIntentInput, SeedStatus, StoreAssortmentMetadataInput, StoreAssortmentInventory, StoreAssortmentPrice, StoreAssortmentCommercialReadback } from "./central-catalog.types";
 
 type JsonResponse<Operation extends keyof operations, Status extends keyof operations[Operation]["responses"]> =
   operations[Operation]["responses"][Status] extends { content: { "application/json": infer Body } } ? Body : never;
@@ -32,27 +13,20 @@ type JsonRequest<Operation extends keyof operations> = operations[Operation]["re
 
 type CatalogDomainsResponse = JsonResponse<"listCatalogDomains", 200>;
 type CatalogDomainCreateInput = JsonRequest<"createCatalogDomain">;
-type CatalogDomainUpdateInput = JsonRequest<"updateCatalogDomain">;
 type CatalogNodesResponse = JsonResponse<"listCatalogNodes", 200>;
 type CatalogNodeCreateInput = JsonRequest<"createCatalogNode">;
-type CatalogNodeUpdateInput = JsonRequest<"updateCatalogNode">;
 type MasterProductsResponse = JsonResponse<"listMasterProductsOperator", 200>;
 type MasterProductCreateInput = JsonRequest<"createMasterProduct">;
-type MasterProductUpdateInput = JsonRequest<"updateMasterProduct">;
 type MasterProductResponse = JsonResponse<"getMasterProductOperator", 200>;
 type ProductProposalsResponse = JsonResponse<"listProductProposals", 200>;
 type ProductProposalCreateInput = JsonRequest<"createPartnerProductProposal">;
-type ProductProposalUpdateInput = JsonRequest<"patchPartnerProductProposal">;
 type ProductProposalTransitionInput = JsonRequest<"transitionProductProposal">;
 type ProductProposalResponse = JsonResponse<"transitionProductProposal", 200>;
 type CatalogAssetsResponse = JsonResponse<"listCatalogAssets", 200>;
 type CatalogAssetUploadIntentResponse = JsonResponse<"createAssetUploadIntent", 201>;
 type CatalogAssetResponse = JsonResponse<"completeAssetUpload", 200>;
-type CatalogAssetUpdateInput = JsonRequest<"updateCatalogAsset">;
 type CatalogAssetReviewInput = JsonRequest<"reviewCatalogAsset">;
 type CatalogAssetResponseAfterReview = JsonResponse<"reviewCatalogAsset", 200>;
-type CatalogAssetLinkInput = JsonRequest<"linkCatalogAsset">;
-type CatalogAssetLinkResponse = JsonResponse<"linkCatalogAsset", 201>;
 type CatalogAssetLinksResponse = JsonResponse<"listCatalogAssetLinks", 200>;
 type CatalogSeedStatusResponse = JsonResponse<"getCatalogSeedStatus", 200>;
 type OperatorInventoryInput = JsonRequest<"updateOperatorStoreAssortmentInventory">;
@@ -82,17 +56,6 @@ export async function createCatalogDomain(input: CatalogDomainCreateInput): Prom
   return resp.domain;
 }
 
-export async function updateCatalogDomain(
-  domainId: string,
-  input: CatalogDomainUpdateInput,
-): Promise<CentralCatalogDomain> {
-  const resp = await request<JsonResponse<"updateCatalogDomain", 200>>(`/dsh/operator/catalog/domains/${encodeURIComponent(domainId)}`, {
-    method: "PATCH",
-    body: input,
-  });
-  return resp.domain;
-}
-
 export async function fetchCatalogNodes(query?: { domainId?: string; parentId?: string }): Promise<readonly CentralCatalogNode[]> {
   const params = new URLSearchParams();
   if (query?.domainId) params.set("domainId", query.domainId);
@@ -106,17 +69,6 @@ export async function fetchCatalogNodes(query?: { domainId?: string; parentId?: 
 export async function createCatalogNode(input: CatalogNodeCreateInput): Promise<CentralCatalogNode> {
   const resp = await request<JsonResponse<"createCatalogNode", 201>>("/dsh/operator/catalog/nodes", {
     method: "POST",
-    body: input,
-  });
-  return resp.node;
-}
-
-export async function updateCatalogNode(
-  nodeId: string,
-  input: CatalogNodeUpdateInput,
-): Promise<CentralCatalogNode> {
-  const resp = await request<JsonResponse<"updateCatalogNode", 200>>(`/dsh/operator/catalog/nodes/${encodeURIComponent(nodeId)}`, {
-    method: "PATCH",
     body: input,
   });
   return resp.node;
@@ -175,17 +127,6 @@ export async function fetchMasterProductsPage(query?: {
 export async function createMasterProduct(input: MasterProductCreateInput): Promise<MasterProduct> {
   const resp = await request<JsonResponse<"createMasterProduct", 201>>("/dsh/operator/catalog/master-products", {
     method: "POST",
-    body: input,
-  });
-  return resp.masterProduct;
-}
-
-export async function updateMasterProduct(
-  productId: string,
-  input: MasterProductUpdateInput,
-): Promise<MasterProduct> {
-  const resp = await request<JsonResponse<"updateMasterProduct", 200>>(`/dsh/operator/catalog/master-products/${encodeURIComponent(productId)}`, {
-    method: "PATCH",
     body: input,
   });
   return resp.masterProduct;
@@ -451,8 +392,6 @@ export function fetchPartnerProductProposals(
   );
 }
 
-
-
 export async function createPartnerProductProposal(input: {
   readonly storeId: string;
 } & ProductProposalCreateInput & {
@@ -554,10 +493,6 @@ export function fetchFieldProductProposals(
 
 // ─── Public Published Catalog ──────────────────────────────────────────────────
 
-export async function fetchPublishedCentralCatalog(storeId: string): Promise<ClientVisibleCatalogResponse> {
-  return publicRequest<JsonResponse<"getPublishedDshCatalog", 200>>(`/dsh/stores/${encodeURIComponent(storeId)}/catalog`);
-}
-
 export async function fetchSeedStatus(): Promise<SeedStatus> {
   return request<CatalogSeedStatusResponse>("/dsh/operator/catalog/seed-status");
 }
@@ -588,14 +523,6 @@ export async function completeAssetUpload(assetId: string): Promise<CatalogAsset
   return resp.asset;
 }
 
-export async function updateCatalogAsset(assetId: string, input: AssetUpdateInput): Promise<CatalogAsset> {
-  const resp = await request<JsonResponse<"updateCatalogAsset", 200>>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}`, {
-    method: "PATCH",
-    body: input,
-  });
-  return resp.asset;
-}
-
 export async function reviewCatalogAsset(assetId: string, input: CatalogAssetReviewInput): Promise<CatalogAsset> {
   const resp = await request<CatalogAssetResponseAfterReview>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/review`, {
     method: "POST",
@@ -609,22 +536,6 @@ export async function cleanupOrphanCatalogAssets(): Promise<number> {
     method: "POST",
   });
   return resp.deletedCount;
-}
-
-export async function simulateAssetScan(assetId: string, targetStatus: string): Promise<CatalogAsset> {
-  const resp = await request<{ asset: CatalogAsset }>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/simulate-scan`, {
-    method: "POST",
-    body: { targetStatus },
-  });
-  return resp.asset;
-}
-
-export async function linkCatalogAsset(assetId: string, input: CatalogAssetLinkInput): Promise<CatalogAssetLink> {
-  const resp = await request<CatalogAssetLinkResponse>(`/dsh/operator/catalog/assets/${encodeURIComponent(assetId)}/link`, {
-    method: "POST",
-    body: input,
-  });
-  return resp.link;
 }
 
 export async function unlinkCatalogAsset(assetId: string, linkId: string, query: { entityType: string; entityId: string }): Promise<void> {

@@ -111,13 +111,6 @@ export async function fetchOrderRescueCases(
   return data.rescueCases ?? [];
 }
 
-export async function fetchOrderRescueCase(caseId: string): Promise<DshGovernedOrderRescueCase> {
-  const data = await request<{ rescueCase: DshGovernedOrderRescueCase }>(
-    `/dsh/operator/support/order-rescue-cases/${encodeURIComponent(caseId)}`,
-  );
-  return data.rescueCase;
-}
-
 export async function updateOrderRescueCase(
   caseId: string,
   input: DshUpdateGovernedOrderRescueInput,

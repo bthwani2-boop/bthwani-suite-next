@@ -123,18 +123,6 @@ export async function checkServiceability(
   });
 }
 
-export async function fetchFulfillmentModes(
-  storeId: string,
-  addressId: string,
-) {
-  const params = new URLSearchParams();
-  params.set("storeId", storeId);
-  params.set("addressId", addressId);
-  return request<import("../checkout/checkout.types").DshFulfillmentModesResponse>(
-    `/dsh/client/cart/fulfillment-modes?${params.toString()}`,
-  );
-}
-
 export async function fetchOperatorCarts(state?: string): Promise<readonly DshCart[]> {
   const params = state ? `?state=${encodeURIComponent(state)}` : "";
   const data = await request<{ carts: DshCart[] }>(`/dsh/operator/carts${params}`);

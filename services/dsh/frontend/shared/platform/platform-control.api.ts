@@ -52,14 +52,6 @@ export function fetchPlatformVariables(): Promise<{ variables: PlatformVariable[
   return request<{ variables: PlatformVariable[] }>("/platform/v1/variables", { method: "GET" });
 }
 
-export function fetchPlatformVariable(key: string, scopeType = "global", scopeId = ""): Promise<{ variable: PlatformVariable }> {
-  const query = new URLSearchParams({ scopeType, scopeId });
-  return request<{ variable: PlatformVariable }>(
-    `/platform/v1/variables/${encodeURIComponent(key)}?${query.toString()}`,
-    { method: "GET" },
-  );
-}
-
 export function fetchPlatformFeatureFlags(): Promise<{ flags: PlatformFeatureFlag[] }> {
   return request<{ flags: PlatformFeatureFlag[] }>("/platform/v1/feature-flags", { method: "GET" });
 }
@@ -78,10 +70,6 @@ export function fetchPlatformAuditEvents(): Promise<{ events: PlatformAuditEvent
 
 export function fetchPlatformChangeSets(): Promise<{ changeSets: PlatformChangeSet[] }> {
   return request<{ changeSets: PlatformChangeSet[] }>("/platform/v1/change-sets", { method: "GET" });
-}
-
-export function fetchPlatformChangeSet(id: string): Promise<{ changeSet: PlatformChangeSet }> {
-  return request<{ changeSet: PlatformChangeSet }>(`/platform/v1/change-sets/${encodeURIComponent(id)}`, { method: "GET" });
 }
 
 export function createPlatformChangeSet(input: CreatePlatformChangeSetInput): Promise<{ changeSet: PlatformChangeSet }> {
@@ -136,10 +124,6 @@ export function rejectPlatformChangeSet(
 
 export function fetchPlatformRollouts(): Promise<{ rollouts: PlatformRollout[] }> {
   return request<{ rollouts: PlatformRollout[] }>("/platform/v1/rollouts", { method: "GET" });
-}
-
-export function fetchPlatformRollout(id: string): Promise<{ rollout: PlatformRollout }> {
-  return request<{ rollout: PlatformRollout }>(`/platform/v1/rollouts/${encodeURIComponent(id)}`, { method: "GET" });
 }
 
 export function fetchPlatformRolloutRecovery(id: string): Promise<{ recovery: PlatformRolloutRecoveryGuide }> {

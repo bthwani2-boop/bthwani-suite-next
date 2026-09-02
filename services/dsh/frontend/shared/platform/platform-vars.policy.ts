@@ -22,8 +22,6 @@ export const PLATFORM_VAR_QUICK_PICKS: Record<string, readonly string[]> = {
 // ── Mutation policy ───────────────────────────────────────────────────────────
 // No proposed-value mutation is applied locally or simulated in the UI.
 
-export type PlatformVarMutationAction = 'save-proposed' | 'apply' | 'rollback' | 'mark-contract-ready';
-
 export function isPlatformDesignVar(varKey: string): boolean {
   return varKey.startsWith('VAR_UI_');
 }

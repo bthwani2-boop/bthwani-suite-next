@@ -2,23 +2,10 @@
 
 import React from "react";
 import { useIdentitySession } from "@bthwani/core-identity";
-import {
-  CpMutedInline,
-  CpStatePanel,
-  CpStateView,
-  CpTextInput } from "@bthwani/control-panel/components";
+import { CpMutedInline, CpStatePanel, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
 import { Button, Text } from "@bthwani/ui-kit";
 import { corrId } from "../../shared/_kernel/dsh-http-request";
-import {
-  createProviderIncident,
-  getProviderPenaltyCommand,
-  getProviderOperationalCore,
-  listProviderIncidents,
-  promoteCaptainToBasic,
-  transitionProviderIncident,
-  type OperationalCoreResponse,
-  type ProviderIncident,
-  type ProviderIncidentStatus } from "../../shared/workforce";
+import { createProviderIncident, getProviderPenaltyCommand, getProviderOperationalCore, listProviderIncidents, promoteCaptainToBasic, transitionProviderIncident, type OperationalCoreResponse, type ProviderIncident, type ProviderIncidentStatus } from "../../shared/workforce";
 
 const selectStyle: React.CSSProperties = {
   minHeight: 44,
@@ -327,4 +314,3 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
   );
 }
 
-export default ProviderOperationalEnforcementPanel;

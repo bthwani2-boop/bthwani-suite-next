@@ -78,12 +78,6 @@ export function resolvePartnerOrderIssueDefaultCategory(
   return 'delayed-preparation';
 }
 
-export function getPartnerOrderIssueCategorySpec(
-  categoryId: DshPartnerSupportIssueCategoryId
-): PartnerOrderIssueCategorySpec {
-  return PARTNER_ORDER_ISSUE_CATEGORY_SPECS[categoryId];
-}
-
 type IssueCategoryCardProps = {
   category: PartnerOrderIssueCategorySpec;
   selected: boolean;

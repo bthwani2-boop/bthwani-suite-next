@@ -8,12 +8,6 @@ const { request } = createDshHttpClient(
   10000,
 );
 
-export function fetchOwnCaptainFinancialEligibility(): Promise<{ financialEligibility: DshCaptainFinancialEligibility }> {
-  return request<{ financialEligibility: DshCaptainFinancialEligibility }>(
-    "/dsh/captain/dispatch/financial-eligibility",
-  );
-}
-
 export function refreshOwnCaptainFinancialEligibility(): Promise<{ financialEligibility: DshCaptainFinancialEligibility }> {
   return request<{ financialEligibility: DshCaptainFinancialEligibility }>(
     "/dsh/captain/dispatch/financial-eligibility/refresh",

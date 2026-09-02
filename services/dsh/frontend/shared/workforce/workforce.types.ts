@@ -10,13 +10,8 @@ type Schemas = components["schemas"];
 type Responses = components["responses"];
 
 export type EngagementStatus = Schemas["EngagementStatus"];
-export type EngagementType = Schemas["EngagementType"];
 export type ProviderKind = Schemas["WorkforceKind"];
 export type LicenseStatus = NonNullable<Schemas["UpdateCaptainRequest"]["licenseStatus"]>;
-
-export type WorkforceFieldProfile = Schemas["FieldProfile"];
-export type WorkforceCaptainProfile = Schemas["CaptainProfile"];
-export type WorkforceEmployeeProfile = Schemas["EmployeeProfile"];
 
 export type FieldAgent = Schemas["FieldAgent"];
 export type Captain = Schemas["FieldAgent"];
@@ -56,11 +51,9 @@ export type ReferralSourceType = Schemas["ProviderOperationalCore"]["referralSou
 export type IdentityVerificationStatus = Schemas["ProviderOperationalCore"]["identityVerificationStatus"];
 export type ContractReviewStatus = Schemas["ProviderOperationalCore"]["contractReviewStatus"];
 export type ProviderOnboardingStage = Schemas["ProviderOperationalCore"]["onboardingStage"];
-export type CaptainClassification = Schemas["CaptainActivationCore"]["classification"];
 
 export type CaptainActivationCore = Schemas["CaptainActivationCore"];
 export type ProviderOperationalCore = Schemas["ProviderOperationalCore"];
-export type ActivationReadiness = Schemas["ActivationReadiness"];
 export type OperationalCoreResponse = NonNullable<Responses["OperationalCoreResponse"]["content"]["application/json"]>;
 export type OperationalCorePatch = Schemas["OperationalCorePatch"];
 
@@ -81,7 +74,3 @@ export const ENGAGEMENT_STATUS_LABEL_AR: Record<EngagementStatus, string> = {
   terminated: "منتهي",
 };
 
-export const ENGAGEMENT_TYPE_LABEL_AR: Record<EngagementType, string> = {
-  independent_contractor: "مقدم خدمة مستقل",
-  employee: "موظف رسمي",
-};

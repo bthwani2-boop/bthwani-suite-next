@@ -1,24 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  CpBadge,
-  CpStatePanel,
-  CpTable,
-  CpTableCell,
-  CpTableHeaderCell,
-  CpTextInput } from "@bthwani/control-panel/components";
+import { CpBadge, CpStatePanel, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput } from "@bthwani/control-panel/components";
 import { Button, Text } from "@bthwani/ui-kit";
-import {
-  createSovereignLeader,
-  getSovereignLeadershipReferenceData,
-  listSovereignLeadership,
-  workforceErrorMessage,
-  type EmployeePermissionBundleDescriptor,
-  type LeadershipEmploymentClass,
-  type SovereignLeadershipCreationResult,
-  type SovereignLeadershipRecord,
-  type SovereignLeadershipReferenceData } from "../../shared/workforce";
+import { createSovereignLeader, getSovereignLeadershipReferenceData, listSovereignLeadership, workforceErrorMessage, type EmployeePermissionBundleDescriptor, type LeadershipEmploymentClass, type SovereignLeadershipCreationResult, type SovereignLeadershipRecord, type SovereignLeadershipReferenceData } from "../../shared/workforce";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
@@ -351,4 +336,3 @@ export function SovereignLeadershipPanel() {
   );
 }
 
-export default SovereignLeadershipPanel;

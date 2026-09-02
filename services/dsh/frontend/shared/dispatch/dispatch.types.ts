@@ -5,8 +5,6 @@ export type DshGovernedDispatchAssignment = components["schemas"]["DshGovernedDi
 export type DshDispatchAssignmentSource = "order" | "special_request";
 export type DshAssignmentStatus = components["schemas"]["DshAssignmentStatus"];
 export type DshDeliveryStatus = components["schemas"]["DshDeliveryStatus"];
-export type DshDelivery = components["schemas"]["DshDelivery"];
-export type DshCreateAssignmentInput = components["schemas"]["DshCreateAssignmentRequest"];
 type GeneratedDshDeliveryException = components["schemas"]["DshDeliveryException"];
 type GeneratedDshDeliveryExceptionReasonCode = components["schemas"]["DshDeliveryExceptionReasonCode"];
 type GeneratedDshReportDeliveryExceptionInput = components["schemas"]["DshReportDeliveryExceptionRequest"];
@@ -21,16 +19,11 @@ export type DshReportDeliveryExceptionInput = GeneratedDshReportDeliveryExceptio
 export type DshDeliveryExceptionResolutionAction =
   components["schemas"]["DshResolveDeliveryExceptionRequest"]["action"];
 
-export type DshPartnerDispatchReference = components["schemas"]["DshPartnerDispatchReference"];
-
 type DshGovernedCreateAssignmentRequest =
   operations["createDshAssignment"]["requestBody"]["content"]["application/json"];
 export type DshGovernedCreateAssignmentInput = DshGovernedCreateAssignmentRequest & {
   readonly idempotencyKey: string;
 };
-
-export type DshCaptainDispatchProfileInput =
-  operations["upsertCaptainDispatchProfile"]["requestBody"]["content"]["application/json"];
 
 export type DshCaptainDispatchCandidate =
   operations["listCaptainDispatchCandidates"]["responses"][200]["content"]["application/json"]["candidates"][number];
@@ -72,10 +65,3 @@ export const ASSIGNMENT_STATUS_LABELS: Record<DshAssignmentStatus, string> = {
   cancelled: "ملغاة أو منتهية",
 };
 
-export const HANDOFF_EXCEPTION_REASON_LABELS: Record<
-  Extract<DshDeliveryExceptionReasonCode, "handoff_shortage" | "handoff_mismatch">,
-  string
-> = {
-  handoff_shortage: "نقص في محتوى الطرد",
-  handoff_mismatch: "محتوى الطرد لا يطابق الطلب",
-};

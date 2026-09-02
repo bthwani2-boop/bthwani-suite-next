@@ -22,8 +22,6 @@ export type DshPickupSessionListResponse = {
   readonly sessions: readonly DshPickupSession[];
 };
 
-export type DshVerifyPickupOtpRequest = components["schemas"]["DshVerifyPickupOtpRequest"];
-export type DshExtendPickupWindowRequest = components["schemas"]["DshExtendPickupWindowRequest"];
 export type DshPickupMarkReadyResponse = components["schemas"]["DshPickupMarkReadyResponse"];
 export type DshPickupCustomerArrivedResponse = components["schemas"]["DshPickupCustomerArrivedResponse"];
 export type DshPickupNotifyResponse = components["schemas"]["DshPickupNotifyResponse"] & {

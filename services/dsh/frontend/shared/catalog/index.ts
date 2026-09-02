@@ -3,7 +3,6 @@ import { reviewCatalogAssetOCC } from "./central-catalog-occ.api";
 
 export * from "./catalog.types";
 export * from "./client-catalog.types";
-export * from "./client-catalog.api";
 export * from "./catalog.states";
 export * from "./catalog.view-model";
 export * from "./central-catalog.types";
@@ -21,7 +20,6 @@ export {
   fetchOperatorReels,
   reviewGovernedReel,
   fetchOperatorReelMediaBlob,
-  fetchGovernedPublicReels,
 } from "./reels.api";
 export {
   ALLOWED_IMAGE_MIME_TYPES,
@@ -35,9 +33,6 @@ export {
   validateVideoFile,
   uploadAndLinkImage,
   uploadAndSubmitReel,
-  reviewReelAsOperator,
-  fetchPublicReels as fetchCatalogMediaPublicReels,
-  fetchOperatorReels as fetchCatalogMediaOperatorReels,
 } from "./catalog-media.controller-core";
 export type {
   AssetUploadProgress,
@@ -46,10 +41,8 @@ export type {
   UploadFileSource,
   UploadImageOptions,
   UploadReelVideoOptions,
-  GovernedReviewReelInput,
 } from "./catalog-media.controller-core";
 export {
-  updateCatalogAssetOCC as updateCatalogAsset,
 } from "./central-catalog-occ.api";
 
 /**

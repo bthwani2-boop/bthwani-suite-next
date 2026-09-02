@@ -1,29 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  CpDescriptionList,
-  CpDescriptionRow,
-  CpPageHeader,
-  CpMutedInline,
-  CpStateView,
-  CpTextInput,
-  CpTabs } from "@bthwani/control-panel/components";
+import { CpDescriptionList, CpDescriptionRow, CpPageHeader, CpMutedInline, CpStateView, CpTextInput, CpTabs } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Button, Text } from "@bthwani/ui-kit";
 
-import {
-  ENGAGEMENT_STATUS_LABEL_AR,
-  appendProviderDocument,
-  getEmployeeGovernance,
-  putEmployeeGovernance,
-  uploadEmployeeMedia,
-  useEmployeeDetailController,
-  type EmployeeEmploymentClass,
-  type EmployeeGovernanceProfile,
-  type EmployeeGuaranteeStatus,
-  type EmployeeGuaranteeType,
-  type SupervisorCandidate } from "../../shared/workforce";
+import { ENGAGEMENT_STATUS_LABEL_AR, appendProviderDocument, getEmployeeGovernance, putEmployeeGovernance, uploadEmployeeMedia, useEmployeeDetailController, type EmployeeEmploymentClass, type EmployeeGovernanceProfile, type EmployeeGuaranteeStatus, type EmployeeGuaranteeType, type SupervisorCandidate } from "../../shared/workforce";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
 
@@ -328,4 +310,3 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
   );
 }
 
-export default EmployeeDetailView;

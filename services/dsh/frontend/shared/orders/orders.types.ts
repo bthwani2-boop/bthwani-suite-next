@@ -4,7 +4,6 @@ type GeneratedDshOrder = components["schemas"]["DshOrder"];
 
 export type DshOrderStatus = components["schemas"]["DshOrderStatus"];
 
-export type DshOrderItem = components["schemas"]["DshOrderItem"];
 export type DshOrder = Omit<GeneratedDshOrder, "status"> & {
   readonly status: DshOrderStatus;
   readonly cancellationReasonCode?: string | null;
@@ -102,15 +101,6 @@ export type DshPreparationIssueList = {
   readonly pendingCustomerDecisionCount: number;
 };
 
-export type DshStorePreparationPolicy = {
-  readonly storeId: string;
-  readonly defaultPreparationMinutes: number;
-  readonly warningBeforeMinutes: number;
-  readonly version: number;
-  readonly updatedByActorId: string;
-  readonly updatedAt: string;
-};
-
 export type DshPartnerOrderAction =
   | "accept"
   | "reject"
@@ -186,41 +176,6 @@ export type DshFinancialClosureStatus =
 
 export type DshRejectOrderInput = {
   readonly reason: string;
-};
-
-export const CANCELLATION_ORDER_STATUSES: readonly DshOrderStatus[] = [
-  "cancelled_by_client",
-  "cancelled_by_store",
-  "cancelled_by_operator",
-  "cancelled_no_driver",
-  "failed_payment",
-  "failed_dispatch",
-];
-
-export function isOrderCancellationStatus(status: DshOrderStatus): boolean {
-  return CANCELLATION_ORDER_STATUSES.includes(status);
-}
-
-export const ORDER_STATUS_LABELS: Record<DshOrderStatus, string> = {
-  pending: "قيد الانتظار",
-  store_accepted: "تم القبول",
-  preparing: "قيد التجهيز",
-  ready_for_pickup: "جاهز للاستلام",
-  driver_assigned: "تم تعيين الكابتن",
-  driver_arrived_store: "وصل الكابتن للمتجر",
-  store_handoff_confirmed: "أكد المتجر التسليم للكابتن",
-  picked_up: "تم الاستلام",
-  arrived_customer: "وصل الكابتن للعميل",
-  returning_to_store: "جارٍ إرجاع الطلب إلى المتجر",
-  return_arrived_store: "وصل المرتجع وينتظر تأكيد المتجر",
-  returned_to_store: "أعيد الطلب إلى المتجر",
-  delivered: "تم التسليم",
-  cancelled_by_client: "ألغاه العميل",
-  cancelled_by_store: "ألغاه المتجر",
-  cancelled_by_operator: "ألغته العمليات",
-  cancelled_no_driver: "ألغي لعدم توفر كابتن",
-  failed_payment: "فشل الدفع",
-  failed_dispatch: "فشل الإسناد",
 };
 
 export const PREPARATION_SLA_LABELS: Record<DshPreparationSlaState, string> = {

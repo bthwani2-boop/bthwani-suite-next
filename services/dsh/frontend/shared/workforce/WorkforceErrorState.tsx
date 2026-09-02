@@ -36,4 +36,3 @@ export function WorkforceErrorState(props: { readonly message: string; readonly 
   );
 }
 
-export default WorkforceErrorState;

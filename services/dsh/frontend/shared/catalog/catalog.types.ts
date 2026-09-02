@@ -16,9 +16,3 @@ export type CatalogSubmission = {
   readonly createdAt: string;
 };
 
-export type CatalogSubmissionState =
-  | { readonly kind: "loading" }
-  | { readonly kind: "permission_denied" }
-  | { readonly kind: "empty" }
-  | { readonly kind: "error"; readonly message: string }
-  | { readonly kind: "success"; readonly submissions: readonly CatalogSubmission[] };

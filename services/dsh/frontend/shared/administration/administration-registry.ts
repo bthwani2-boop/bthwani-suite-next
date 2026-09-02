@@ -30,22 +30,6 @@ export const ADMINISTRATION_TRUTH_NOTICE = {
     "تعرض هذه المساحة إسقاطات DSH المعتمدة فقط. صلاحيات الجلسة الفعلية تصدر من Identity، وقرارات الشريك والكابتن تبقى لدى رحلاتها المالكة.",
 } as const;
 
-export function administrationStatusLabel(status: string): string {
-  switch (status) {
-    case "pending": return "معلق";
-    case "approved": return "معتمد";
-    case "rejected": return "مرفوض";
-    case "superseded": return "مستبدل بطلب جديد";
-    case "active": return "نشط";
-    case "suspended": return "موقوف";
-    case "blocked": return "محظور";
-    case "partner_active": return "شريك نشط";
-    case "ops_approved": return "معتمد تشغيليًا";
-    case "submitted": return "مقدم للمراجعة";
-    default: return status || "غير محدد";
-  }
-}
-
 export function administrationExecutionStatusLabel(status: string): string {
   switch (status) {
     case "not_started": return "لم يبدأ التنفيذ";

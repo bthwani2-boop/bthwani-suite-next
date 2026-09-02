@@ -1,14 +1,6 @@
-import {
-  DSH_DELIVERY_MODE_DEFINITIONS,
-  getDshDeliveryModeDefinition,
-  type DshFulfillmentDeliveryMode,
-} from '../delivery/delivery.contract';
+import { type DshFulfillmentDeliveryMode } from '../delivery/delivery.contract';
 import type { DshOnDemandPolicy, DshSurfaceId } from '../operations/dsh-operational.contract';
-import {
-  getDshSignalActorRoute,
-  type DshSignalEventKind,
-  type DshSignalPriority,
-} from '../marketing/dsh-signal-layer.model';
+import { type DshSignalEventKind } from '../marketing/dsh-signal-layer.model';
 
 /**
  * Presentation-only milestones used by the read-only cross-surface handoff
@@ -34,25 +26,6 @@ export type DshOrderJourneyStageId =
   | 'delivered'
   | 'cancellation_requested';
 
-type RecommendationProduct = {
-  id: string;
-  title: string;
-  priceLabel: string;
-  priceValue: number;
-  imageUri?: string;
-  description?: string;
-};
-
-type CartItem = {
-  id: string;
-  title: string;
-  priceLabel?: string;
-  priceValue?: number;
-  qty?: number;
-  storeId?: string;
-  storeName?: string;
-};
-
 export type DshCaptainOrderId = string;
 export type DshCaptainOrderServiceType = 'standard' | 'awnak' | 'shein-final-mile';
 export type DshCaptainOrderMode =
@@ -61,7 +34,6 @@ export type DshCaptainOrderMode =
   | 'detail'
   | 'chat'
   | 'bell';
-export type DshCaptainOrderStage = 'offer' | 'accepted' | 'pickup' | 'delivery' | 'proof' | 'closed';
 export type DshCaptainDeliveryActionId =
   | 'arrive_store'
   | 'pickup'
@@ -93,7 +65,6 @@ export type DshCaptainOrderMessage = {
 export type DshCaptainOrderAction =
   | DshCaptainDeliveryActionId;
 
-export type DshCaptainOrderProofStatus = 'idle' | 'pending' | 'uploaded' | 'verified' | 'failed';
 export type DshCaptainOrdersScreenState =
   | 'ready'
   | 'loading'
@@ -151,201 +122,6 @@ export function shouldShowDshPartnerOrderConversation(
 ): DshPartnerOrderConversationVisibility {
   return mode === 'bthwani_delivery' ? 'disabled-for-mode' : 'enabled';
 }
-
-export type DshPlaceholderStatus =
-  | 'ACCEPTED_PREVIEW_LABEL'
-  | 'BLOCKED_BY_CONTRACT'
-  | 'BLOCKED_BY_WLT'
-  | 'MUST_REPLACE_WITH_PREVIEW_UI';
-
-export type DshLookupFieldId = 'phone' | 'orderId' | 'customerId' | 'ticketId';
-type DshLookupInput = {
-  readonly key: DshLookupFieldId;
-  readonly label: string;
-  readonly value: string;
-  readonly summaryFirst: true;
-};
-
-type DshVerificationStatus = 'required' | 'verified' | 'blocked';
-type DshVerificationStep = {
-  readonly stepId: string;
-  readonly label: string;
-  readonly completed: boolean;
-};
-
-export type DshSignalRoute = {
-  readonly signalKind: DshSignalEventKind;
-  readonly routeId: string;
-  readonly auditRequired: boolean;
-  readonly priority: DshSignalPriority;
-  readonly priorityLabel: string;
-};
-
-export type DshRouteHintedAction = {
-  readonly actionId: string;
-  readonly label: string;
-  readonly routeHint: string;
-  readonly onDemandPolicy: DshOnDemandPolicy;
-  readonly routeId?: string;
-  readonly readOnly?: boolean;
-  readonly auditRequired?: boolean;
-  readonly reasonRequired?: boolean;
-};
-
-export type DshReadOnlyFinanceVisibility = {
-  readonly paymentVisibility: string;
-  readonly refundVisibility: string;
-  readonly settlementVisibility?: string;
-  readonly readOnly: boolean;
-  readonly mutationForbidden: boolean;
-  readonly calculationTruthOwner: string;
-  readonly routeHint: string;
-  readonly onDemandPolicy: string;
-  readonly placeholderClassification: DshPlaceholderStatus;
-};
-
-export type DshGlobalControlLink = DshRouteHintedAction & {
-  readonly surfaceId: DshSurfaceId;
-  readonly sectionId: DshControlPanelSectionId;
-};
-
-export type DshOrderRescueSeverity = 'warning' | 'danger';
-export type DshOrderRescueReason =
-  | 'item_unavailable'
-  | 'customer_not_reachable'
-  | 'store_closed_after_order'
-  | 'captain_no_show'
-  | 'captain_declined'
-  | 'pickup_failed'
-  | 'handoff_mismatch'
-  | 'delivery_failed'
-  | 'address_issue'
-  | 'payment_failure'
-  | 'wlt_visibility';
-export type DshOrderRescueOwner = 'support' | 'operations' | 'partner' | 'captain' | 'wlt_reference_only';
-export type DshOrderRescueNextActionId =
-  | 'replace_item'
-  | 'remove_item'
-  | 'wait_customer'
-  | 'change_delivery_mode'
-  | 'reassign_captain'
-  | 'convert_to_support_exception'
-  | 'create_follow_up_task'
-  | 'open_wlt_visibility';
-
-export type DshOrderRescueCase = {
-  readonly rescueId: string;
-  readonly orderId: string;
-  readonly customerId: string;
-  readonly customerName: string;
-  readonly issueKind: DshOrderRescueReason;
-  readonly severity: DshOrderRescueSeverity;
-  readonly blocker: string;
-  readonly allowedActions: readonly string[];
-  readonly forbiddenActions: readonly string[];
-  readonly nextBestAction: string;
-  readonly onDemandPolicy: DshOnDemandPolicy;
-  readonly wltBoundary: string;
-  readonly crossSurfaceLinks: readonly DshGlobalControlLink[];
-  readonly rescueReasonSelector: {
-    readonly selectedReason: DshOrderRescueReason;
-    readonly options: readonly DshOrderRescueReason[];
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly ownerSelection: {
-    readonly selectedOwner: DshOrderRescueOwner;
-    readonly options: readonly DshOrderRescueOwner[];
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly nextActionSelector: {
-    readonly selectedAction: DshOrderRescueNextActionId;
-    readonly options: readonly DshOrderRescueNextActionId[];
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly requiredEvidence: {
-    readonly reason: string;
-    readonly operatorNote: string;
-    readonly affectedEntity: string;
-    readonly auditRequired: true;
-    readonly reasonRequired: true;
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly supportHandoff: {
-    readonly ticketLink: string;
-    readonly escalationOwner: string;
-    readonly sla: string;
-    readonly routeHint: string;
-    readonly previewClassification: DshPlaceholderStatus;
-  };
-  readonly wltImpactVisibility: DshReadOnlyFinanceVisibility;
-  readonly decisionSignal: DshSignalRoute;
-};
-
-const ORDER_RESCUE_REASONS: readonly DshOrderRescueReason[] = [
-  'item_unavailable',
-  'customer_not_reachable',
-  'store_closed_after_order',
-  'captain_no_show',
-  'captain_declined',
-  'pickup_failed',
-  'handoff_mismatch',
-  'delivery_failed',
-  'address_issue',
-  'payment_failure',
-  'wlt_visibility',
-] as const;
-
-const ORDER_RESCUE_OWNERS: readonly DshOrderRescueOwner[] = [
-  'support',
-  'operations',
-  'partner',
-  'captain',
-  'wlt_reference_only',
-] as const;
-
-const ORDER_RESCUE_ACTIONS: readonly DshOrderRescueNextActionId[] = [
-  'replace_item',
-  'remove_item',
-  'wait_customer',
-  'change_delivery_mode',
-  'reassign_captain',
-  'convert_to_support_exception',
-  'create_follow_up_task',
-  'open_wlt_visibility',
-] as const;
-
-type DshOpsMonitoringItem = {
-  readonly entityId: string;
-  readonly entityLabel: string;
-  readonly lifecycleState: string;
-  readonly affectedSurface: 'control-panel' | 'app-client' | 'app-partner' | 'app-captain' | 'app-field';
-  readonly ownerQueue: string;
-  readonly status: string;
-  readonly statusTone: 'neutral' | 'success' | 'warning' | 'danger';
-  readonly primaryAction: string;
-  readonly secondaryAction?: string;
-  readonly routeHint: string;
-  readonly evidenceNeeded: boolean;
-  readonly onDemandDetailPolicy: 'summary-only' | 'detail-on-open' | 'evidence-on-open';
-  readonly supportTicketId?: string;
-  readonly auditEntryId?: string;
-};
-
-type DshWltFinanceAlert = {
-  readonly alertId: string;
-  readonly domain: 'payment' | 'refund' | 'settlement' | 'payout' | 'commission';
-  readonly label: string;
-  readonly count: number;
-  readonly statusTone: 'neutral' | 'success' | 'warning' | 'danger';
-  readonly wltBridgeNote: string;
-  readonly routeHint: string;
-};
-
-export const EXCEPTION_TICKET_MAP: Readonly<Record<string, { supportTicketId: string; auditEntryId?: string }>> = {
-  'EX-4101': { supportTicketId: 'TK-5101', auditEntryId: 'AU-7001' },
-  'EX-4102': { supportTicketId: 'TK-5102', auditEntryId: 'AU-7002' },
-  'EX-4103': { supportTicketId: 'TK-5103' },
-};
 
 // ─── Downstream transition handoffs ───────────────────────────────────────────
 
@@ -626,22 +402,6 @@ export function getSurfaceObservation(
   surfaceId: DshSurfaceId,
 ): DshSurfaceHandoffObservation | undefined {
   return handoff.surfaceObservations.find((o) => o.surfaceId === surfaceId);
-}
-
-function getHandoffsForDeliveryMode(
-  mode: DshFulfillmentDeliveryMode,
-): readonly DshOrderLifecycleHandoff[] {
-  return DSH_ORDER_LIFECYCLE_HANDOFFS.filter(
-    (h) => h.applicableModes.length === 0 || h.applicableModes.includes(mode),
-  );
-}
-
-function getHandoffsWithWltImpact(): readonly DshOrderLifecycleHandoff[] {
-  return DSH_ORDER_LIFECYCLE_HANDOFFS.filter((h) => h.wltImpact.eventKind !== 'none');
-}
-
-function getAuditableHandoffs(): readonly DshOrderLifecycleHandoff[] {
-  return DSH_ORDER_LIFECYCLE_HANDOFFS.filter((h) => h.auditRequired);
 }
 
 // ─── Partner Order Item contract types ───────────────────────────────────────
@@ -996,16 +756,8 @@ export const DSH_CONTROL_PANEL_GOVERNANCE_MAP: Readonly<Record<DshControlPanelSe
   },
 } as const;
 
-export const DSH_CONTROL_PANEL_GOVERNANCE_LIST = DSH_CONTROL_PANEL_SECTION_IDS.map(
-  (sectionId) => DSH_CONTROL_PANEL_GOVERNANCE_MAP[sectionId],
-) as readonly DshControlPanelGovernanceEntry[];
-
 export function getDshControlPanelGovernanceEntry(sectionId: DshControlPanelSectionId): DshControlPanelGovernanceEntry {
   return DSH_CONTROL_PANEL_GOVERNANCE_MAP[sectionId];
-}
-
-export function findDshControlPanelGovernanceSectionByFlowId(flowId: string): DshControlPanelGovernanceEntry | undefined {
-  return DSH_CONTROL_PANEL_GOVERNANCE_LIST.find((entry) => entry.relatedRegistryFlowIds.includes(flowId));
 }
 
 export function resolveDshControlPanelSectionLabel(sectionId: DshControlPanelSectionId): string {

@@ -4,20 +4,8 @@ import React from "react";
 import { CpMutedInline, CpStatePanel, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
 import { Button, Text } from "@bthwani/ui-kit";
 import { fetchPartners } from "../../shared/partner/partner.api";
-import {
-  getProviderOperationalCore,
-  listCaptains,
-  listEmployees,
-  listFieldAgents,
-  patchProviderOperationalCore } from "../../shared/workforce";
-import type {
-  CaptainActivationCore,
-  ContractReviewStatus,
-  IdentityVerificationStatus,
-  OperationalCoreResponse,
-  ProviderKind,
-  ProviderOnboardingStage,
-  ReferralSourceType } from "../../shared/workforce";
+import { getProviderOperationalCore, listCaptains, listEmployees, listFieldAgents, patchProviderOperationalCore } from "../../shared/workforce";
+import type { CaptainActivationCore, ContractReviewStatus, IdentityVerificationStatus, OperationalCoreResponse, ProviderKind, ProviderOnboardingStage, ReferralSourceType } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { useIdentitySession } from "@bthwani/core-identity";
 
@@ -462,4 +450,3 @@ export function ProviderOperationalCorePanel({ actorId, kind, canUpdate }: { rea
   );
 }
 
-export default ProviderOperationalCorePanel;

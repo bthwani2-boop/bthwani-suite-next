@@ -4,7 +4,7 @@
 // source of truth for "where a provider works"), not from Workforce's own
 // city table — Workforce mirrors the chosen zone's city locally only to
 // persist the DSH-owned service-area reference alongside the selected zone.
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { CpMutedInline, CpTabs } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
 import { fetchZones } from "../../shared/platform";
@@ -65,4 +65,3 @@ export function ZonePicker(props: {
   );
 }
 
-export default ZonePicker;

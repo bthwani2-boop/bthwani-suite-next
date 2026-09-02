@@ -5,7 +5,6 @@ type ClientProfileReadResponse =
 
 export type ClientProfile = ClientProfileReadResponse["profile"];
 export type ClientProfileLocale = ClientProfile["locale"];
-export type ClientProfileCurrency = ClientProfile["currencyPreference"];
 
 export type ClientProfilePreferencesInput =
   operations["patch_dsh_client_me_profile_preferences"]["requestBody"]["content"]["application/json"];

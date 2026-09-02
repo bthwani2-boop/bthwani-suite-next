@@ -1,11 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
-import type {
-  DshCreateIncidentInput,
-  DshIncident,
-  DshIncidentStatus,
-  DshUpdateIncidentInput,
-} from "./support.types";
+import type { DshCreateIncidentInput, DshIncident, DshIncidentStatus, DshUpdateIncidentInput } from "./support.types";
 import type { SupportMutationContext } from "./support-mutation-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "support-incidents");
@@ -46,13 +41,6 @@ export async function fetchGovernedIncidents(
     : "/dsh/operator/support/incidents";
   const data = await request<{ incidents: DshIncident[] }>(path);
   return data.incidents ?? [];
-}
-
-export async function fetchGovernedIncident(incidentId: string): Promise<DshIncident> {
-  const data = await request<{ incident: DshIncident }>(
-    `/dsh/operator/support/incidents/${encodeURIComponent(incidentId)}`,
-  );
-  return data.incident;
 }
 
 export async function updateGovernedIncident(

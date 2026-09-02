@@ -135,12 +135,13 @@ describe("field visits and readiness", () => {
 
 describe("campaigns, tickers, and partner offers", () => {
   const controller = source("../frontend/shared/marketing/use-marketing-controller.tsx");
+  const governedOffers = source("../frontend/shared/marketing/use-governed-partner-offers-controller.ts");
   const wltBoundaryGuard = source("../../../tools/guards/wlt-financial-boundary-gate.mjs");
 
   it("refreshes API truth after ticker and partner-offer mutations", () => {
     assert.match(controller, /createTicker[\s\S]*await load\(\)/);
     assert.match(controller, /updateTicker[\s\S]*await load\(\)/);
-    assert.match(controller, /updatePartnerOffer[\s\S]*await load\(\)/);
+    assert.match(governedOffers, /updatePartnerOffer[\s\S]*await load\(\)/);
     assert.match(controller, /submitPartnerSelfOffer[\s\S]*await load\(\)/);
   });
 

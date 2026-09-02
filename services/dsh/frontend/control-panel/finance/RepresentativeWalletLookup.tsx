@@ -3,21 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, StateView, Text } from "@bthwani/ui-kit";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
-import {
-  CpBadge,
-  CpMutedInline,
-  CpSelect,
-  CpTable,
-  CpTableCell,
-  CpTableHeaderCell,
-  CpTextInput } from "@bthwani/control-panel/components";
+import { CpBadge, CpMutedInline, CpSelect, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput } from "@bthwani/control-panel/components";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 import { formatWltMoney } from '@bthwani/dsh/finance';
-import type {
-  RepresentativeWalletActorType,
-  RepresentativeLedgerEntry,
-  RepresentativeWallet } from '@bthwani/dsh/wlt-boundary';
+import type { RepresentativeWalletActorType, RepresentativeLedgerEntry, RepresentativeWallet } from '@bthwani/dsh/wlt-boundary';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),
@@ -243,4 +233,3 @@ export function RepresentativeWalletLookup({ actorType: initialActorType = "clie
   );
 }
 
-export default RepresentativeWalletLookup;

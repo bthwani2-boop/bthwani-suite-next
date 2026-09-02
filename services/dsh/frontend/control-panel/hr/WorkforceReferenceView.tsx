@@ -5,11 +5,7 @@ import { useIdentitySession } from "@bthwani/core-identity";
 import { CpBadge, CpMutedInline, CpPageHeader, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
 import { SettingsPageFrame } from "@bthwani/control-panel/shell";
 import { Button, Text } from "@bthwani/ui-kit";
-import {
-  createWorkforceShift,
-  updateWorkforceShift,
-  useWorkforceReferenceData,
-  workforceErrorMessage } from "../../shared/workforce";
+import { createWorkforceShift, updateWorkforceShift, useWorkforceReferenceData, workforceErrorMessage } from "../../shared/workforce";
 import type { WorkforceShift } from "../../shared/workforce";
 import { corrId } from "../../shared/_kernel/dsh-http-request";
 
@@ -143,4 +139,3 @@ export function WorkforceReferenceView(props: { readonly onBack: () => void; rea
   );
 }
 
-export default WorkforceReferenceView;

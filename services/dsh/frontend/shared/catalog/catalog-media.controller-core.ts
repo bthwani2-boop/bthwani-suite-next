@@ -4,25 +4,11 @@
  * native File directly through `toUploadFileSource`.
  */
 import * as catalogMediaApi from "./central-catalog.api";
-import {
-  fetchGovernedPublicReels,
-  fetchOperatorReels as fetchGovernedOperatorReels,
-  reviewGovernedReel,
-  submitGovernedReel,
-} from "./reels.api";
+import { submitGovernedReel } from "./reels.api";
 import { uploadBinaryToPresignedUrl } from "../media/presigned-upload.client";
 import { corrId } from "../_kernel/dsh-http-request";
-import type {
-  CatalogAsset,
-  CatalogAssetLink,
-  AssetUploadProgress,
-} from "./central-catalog.types";
-import type {
-  GovernedPublicReel,
-  GovernedReel,
-  GovernedReelReviewInput,
-  GovernedReelSubmissionInput,
-} from "./reels.types";
+import type { CatalogAsset, CatalogAssetLink, AssetUploadProgress } from "./central-catalog.types";
+import type { GovernedReel, GovernedReelSubmissionInput } from "./reels.types";
 
 export type { AssetUploadProgress };
 
@@ -303,20 +289,3 @@ export async function uploadAndSubmitReel(opts: UploadReelVideoOptions): Promise
   }
 }
 
-export type GovernedReviewReelInput = GovernedReelReviewInput;
-
-export async function reviewReelAsOperator(reelId: string, input: GovernedReviewReelInput): Promise<GovernedReel> {
-  return reviewGovernedReel(reelId, input);
-}
-
-export async function fetchPublicReels(limit?: number): Promise<readonly GovernedPublicReel[]> {
-  return fetchGovernedPublicReels(limit);
-}
-
-export async function fetchOperatorReels(query?: {
-  status?: string;
-  limit?: number;
-  offset?: number;
-}): Promise<readonly GovernedReel[]> {
-  return fetchGovernedOperatorReels(query);
-}

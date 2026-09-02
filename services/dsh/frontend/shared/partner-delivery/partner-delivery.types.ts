@@ -16,10 +16,6 @@ export type DshPartnerDeliveryTaskResponse = Omit<components["schemas"]["DshPart
 export type DshPartnerDeliveryTaskListResponse = Omit<components["schemas"]["DshPartnerDeliveryTaskListResponse"], "tasks"> & {
   readonly tasks: readonly DshPartnerDeliveryTask[];
 };
-export type DshAssignPartnerDeliveryTaskRequest = components["schemas"]["DshAssignPartnerDeliveryTaskRequest"];
-export type DshSubmitPartnerDeliveryProofRequest = components["schemas"]["DshSubmitPartnerDeliveryProofRequest"];
-export type DshRaisePartnerDeliveryExceptionRequest = components["schemas"]["DshRaisePartnerDeliveryExceptionRequest"];
-export type DshPartnerDeliveryMutationRequest = components["schemas"]["DshPartnerDeliveryMutationRequest"];
 
 export type PartnerDeliveryErrorCode =
   | "NOT_FOUND"

@@ -1,12 +1,7 @@
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { corrId, createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
-import type {
-  GovernedPublicReel,
-  GovernedReel,
-  GovernedReelReviewInput,
-  GovernedReelSubmissionInput,
-} from "./reels.types";
+import type { GovernedReel, GovernedReelReviewInput, GovernedReelSubmissionInput } from "./reels.types";
 
 const baseUrl = resolveDshApiBaseUrl();
 const { request } = createDshHttpClient(baseUrl, "reels-corr");
@@ -88,10 +83,3 @@ export async function fetchOperatorReelMediaBlob(
   return response.blob();
 }
 
-export async function fetchGovernedPublicReels(limit = 20): Promise<readonly GovernedPublicReel[]> {
-  const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
-  const response = await publicRequest<{ readonly reels: readonly GovernedPublicReel[] }>(
-    `/dsh/public/reels?limit=${safeLimit}`,
-  );
-  return response.reels;
-}

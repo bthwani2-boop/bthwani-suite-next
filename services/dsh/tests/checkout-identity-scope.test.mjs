@@ -12,15 +12,8 @@ describe("checkout identity scope regression", () => {
     assert.match(source, /resolveMutationIdentityScope\(actorId,/);
   });
 
-  test("checkout controllers thread actorId from identity session", () => {
-    const controller = read("services/dsh/frontend/shared/checkout/use-checkout-controller.tsx");
+  test("checkout order flow threads actorId from identity session", () => {
     const flow = read("services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx");
-
-    assert.match(controller, /const identity = useIdentitySession\(\)/);
-    assert.match(controller, /const actorId = identity\.state\.kind === "authenticated" \? identity\.state\.identity\.subject : ""/);
-    assert.match(controller, /getOrCreateCheckoutAttempt\(actorId, input\)/);
-    assert.match(controller, /clearCheckoutAttempt\(actorId, attempt\.fingerprint\)/);
-    assert.match(controller, /\[actorId\]\);/);
 
     assert.match(flow, /const identity = useIdentitySession\(\)/);
     assert.match(flow, /const actorId = identity\.state\.kind === "authenticated" \? identity\.state\.identity\.subject : ""/);

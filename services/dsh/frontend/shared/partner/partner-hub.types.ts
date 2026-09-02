@@ -7,22 +7,6 @@ import type React from 'react';
 import type { Icon } from '@bthwani/ui-kit';
 import type { PartnerHubSection } from './partner.types';
 
-export type BThwaniAppearanceMode = 'lightPremium' | 'darkGlass';
-
-export type DshCanonicalStoreCard = {
-  readonly id?: string;
-  readonly sourceRecordId?: string;
-  readonly publishStage?: string;
-  readonly zoneLabel?: string;
-  readonly storeName?: string;
-  readonly cityLabel?: string;
-  readonly branchLabel?: string;
-  readonly managerName?: string;
-  readonly operatingHoursLabel?: string;
-  readonly deliveryReadinessLabel?: string;
-  readonly coverageSummary?: string;
-};
-
 export type PartnerOperationalModeId = 'pickup' | 'partner_delivery' | 'bthwani_delivery';
 
 export type PartnerOperationalMode = {

@@ -1,11 +1,5 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
-import type {
-  OperationalCorePatch,
-  OperationalCoreResponse,
-  ProviderAvailabilityNotice,
-  ProviderIncident,
-  ProviderKind,
-} from "./workforce.types";
+import type { OperationalCorePatch, OperationalCoreResponse, ProviderIncident, ProviderKind } from "./workforce.types";
 
 const { request } = createDshHttpClient("/api/workforce", "workforce-operational-core", 15000);
 
@@ -58,7 +52,3 @@ export async function listProviderIncidents(actorId: string, limit = 50): Promis
   return result.incidents;
 }
 
-export type CreateAvailabilityNoticeInput = Pick<
-  ProviderAvailabilityNotice,
-  "noticeType" | "startsAt" | "endsAt" | "serviceZoneId" | "reasonCode" | "note"
->;
