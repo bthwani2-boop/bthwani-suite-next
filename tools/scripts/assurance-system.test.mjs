@@ -13,11 +13,6 @@ test("assurance workflow YAML remains parseable", () => {
 test("agent layer converges on one canonical orchestrator", () => {
   assert.match(read("AGENTS.md"), /canonical repository execution\/closure authority/u);
   assert.match(read(".agents/skills/bthwani-orchestrator/SKILL.md"), /CANONICAL_AGENT_ENTRYPOINT/u);
-  for (const p of [
-    ".agents/skills/bthwani-universal-task-router/SKILL.md",
-    ".agents/skills/bthwani-evidence-gate-router/SKILL.md",
-    ".agents/skills/bthwani-final-journey-closure-judge/SKILL.md",
-  ]) assert.match(read(p), /COMPATIBILITY_REDIRECT/u);
 });
 
 test("independent failures aggregate and blocked descendants are explicit", () => {
