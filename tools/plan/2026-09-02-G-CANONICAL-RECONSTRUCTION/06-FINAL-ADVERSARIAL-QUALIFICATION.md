@@ -1,163 +1,242 @@
-# 06 — FINAL ADVERSARIAL QUALIFICATION
+# 06 — Final Adversarial Zero-Residue Qualification
 
 ## Purpose
 
-Prove that branch `g` has reached the intended canonical fixed point after all dynamic roots appear closed.
+لا تعلن انتهاء حملة الحذف لأن الوحدات المعروفة أغلقت. يجب إثبات Fixed Point جديد من Exact Candidate `g` عبر Full Branch-Wide adversarial sweep.
 
-This is not a merge-readiness check. It qualifies `g` only.
-
-## Final authority boundary
-
-This plan owns the final `g` campaign sequence and terminal state. The live orchestrator is applied here only for applicable cross-cutting verification/closure invariants, evidence validity, exact-candidate discipline, negative-space proof, and `GREEN != CLOSED`.
-
-Do not replace this final sequence with generic merge readiness, PR readiness, AUTO/NEXT selection, or another branch lifecycle. This campaign ends only at the `g`-specific fixed point defined below.
-
-## Step 10 — fresh branch-wide adversarial re-census
-
-Pin the exact candidate SHA and repeat a fresh read-only branch-wide structural census over the actual tracked tree.
-
-Do not rely only on previous affected cones or old root lists.
-
-Rebuild/validate:
+## 1. Pin candidate SHA
 
 ```text
-CURRENT_G_MODEL
-CANONICAL_G_TARGET
-CURRENT_TO_CANONICAL_STRUCTURAL_DELTA
-EVERY_ARTIFACT_RIGHT_TO_EXIST
-CANONICAL_OWNER_WRITER_UNIQUENESS
-NAMING_PATH_TOPOLOGY
-DEAD_STALE_OBSOLETE_RESIDUE
-RUNTIME_CONFIG_TOOLING_AUTHORITY
-DATA_SCHEMA_CONTRACT_GENERATED_AUTHORITY
-DEPENDENCIES_TESTS_FIXTURES_MOCKS
+FETCH REMOTE g
+→ RESOLVE EXACT CANDIDATE SHA
+→ PIN SHA
+→ BUILD FRESH ACTUAL TRACKED TREE
 ```
 
-Any material finding reopens the dynamic Root Graph and returns execution to `03`.
+كل Evidence نهائية يجب أن تشير إلى هذا SHA أو تعاد المصادقة عليها ضده.
 
-## Final structural sweep
+## 2. Fresh adversarial deletion census
 
-Run, where materially applicable:
+ابدأ من الصفر نسبيًا، ولا تفترض صحة disposition السابقة.
 
-`semantic duplicate scan → mutable-writer uniqueness → canonical-owner uniqueness → every-artifact right-to-exist proof → naming/path/topology review → dependency/cycle review → data/schema authority → contract/generated authority → runtime/config/env authority → script/tool/workflow authority → state-machine/policy/default/mapping duplication → dead/unreachable scan → legacy/history/archive/backup/copy/temp scan → compatibility residue → unused dependency/export/config/route/script/workflow → test/fixture/mock residue → reachable old authority → patch-shaped architecture scan → undispositioned artifact scan`.
-
-## Best-practice material conformance
-
-Require material outcomes:
+اختبر كل Material Artifact بالسؤال:
 
 ```text
-CLEAR_OWNERSHIP=PASS
-LOW_UNJUSTIFIED_COUPLING=PASS
-HIGH_COHESION=PASS
-PREDICTABLE_PATHS=PASS
-FRAMEWORK_NATIVE_STRUCTURE=PASS_OR_JUSTIFIED_EXCEPTION
-NO_CIRCULAR_OWNERSHIP=PASS
-EXPLICIT_CONTRACTS=PASS
-GENERATED_CODE_DERIVED_FROM_CANONICAL_SOURCE=PASS
-MINIMUM_NECESSARY_LAYERS=PASS
-CLEAR_RUNTIME_COMPOSITION=PASS
-TESTABILITY=PASS
-OBSERVABILITY=PASS_OR_JUSTIFIED_NA
-SECURITY=PASS
+WHAT REQUIRED RESPONSIBILITY DOES THIS STILL OWN?
+WHO REQUIRES IT?
+IS IT LIVE / BUILD / BOOTSTRAP / UPGRADE / RECOVERY REACHABLE?
+IS IT A WINNING AUTHORITY OR RESIDUE?
+WOULD DELETING IT LOSE REQUIRED TRUTH?
+```
+
+أي Artifact لا يملك جوابًا مثبتًا يعاد فتحه.
+
+## 3. Mandatory final scans
+
+نفذ حيث applicable:
+
+```text
+ORPHANED_FILE_SCAN
+ORPHANED_DIRECTORY_SCAN
+EMPTY_DIRECTORY_SCAN
+DEAD_SYMBOL_SCAN
+UNUSED_EXPORT_REEXPORT_SCAN
+UNUSED_PACKAGE_SCAN
+UNUSED_DEPENDENCY_SCAN
+DEAD_ROUTE_API_SCAN
+DEAD_RUNTIME_ENTRYPOINT_SCAN
+STALE_CONFIG_ENV_SCAN
+DEAD_SCRIPT_WORKFLOW_SCAN
+STALE_TEST_FIXTURE_MOCK_SNAPSHOT_SCAN
+SUPERSEDED_IMPLEMENTATION_SCAN
+DUPLICATE_LOSING_AUTHORITY_SCAN
+REACHABLE_OLD_AUTHORITY_SCAN
+COMPATIBILITY_RESIDUE_SCAN
+GENERATED_MANUAL_REPAIR_SCAN
+DATA_SCHEMA_OBSOLETE_STORAGE_SCAN
+BOOTSTRAP_UPGRADE_RECOVERY_DEPENDENCY_SCAN
+UNREACHABLE_ASSET_SCAN
+STALE_MANIFEST_SCAN
+OBSOLETE_DOC_PLAN_GOVERNANCE_SCAN
+OLD_TEMP_BACKUP_COPY_NAME_PROBE
+PATCH_RESIDUE_SCAN
+FILESYSTEM_NOISE_SCAN
+```
+
+## 4. Surviving-artifact right-to-exist gate
+
+كل Material Artifact باقٍ يجب أن يكون:
+
+```text
+KEEP_PROVEN
+```
+
+مع واحدة أو أكثر من Responsibilities المطلوبة المثبتة.
+
+ممنوع في الحالة النهائية:
+
+```text
+BLOCKED_BY_UNKNOWN
+KEEP_JUST_IN_CASE
+MAYBE_USED
+HISTORICAL_KEEP_WITHOUT_LIVE_REQUIREMENT
+PERMANENT_TEMP
+UNBOUNDED_COMPATIBILITY
+```
+
+ملاحظة: Historical Migration أو Recovery Artifact يمكن أن يكون `KEEP_PROVEN` عندما تكون وظيفته المطلوبة هي supported bootstrap/upgrade/recovery نفسها.
+
+## 5. Final negative-space proof
+
+لكل Deletion Unit مغلقة أعد probes مناسبة لأسماء ومسارات ورموز ومفاتيح Config وRoutes القديمة.
+
+يجب أن يثبت:
+
+```text
+DELETED_SYMBOL_REFS=0
+DELETED_PATH_REFS=0
+DELETED_IMPORT_REFS=0
+DELETED_EXPORT_REFS=0
+DELETED_ROUTE_REFS=0
+DELETED_CONFIG_ENV_REFS=0
+DELETED_SCRIPT_WORKFLOW_REFS=0
+DELETED_TEST_FIXTURE_REFS=0
+DELETED_RUNTIME_REACHABILITY=0
+LOSING_AUTHORITY_REACHABILITY=0
+```
+
+## 6. Required-truth preservation qualification
+
+الحذف النهائي لا ينجح إلا إذا اجتاز حيث applicable:
+
+```text
+PRODUCT_REQUIRED_BEHAVIOR=PASS
 DATA_INTEGRITY=PASS
-MAINTAINABILITY=PASS
+PERSISTED_READBACK=PASS_OR_NA
+SECURITY_GUARANTEES=PASS
+EXTERNAL_CONTRACTS=PASS_OR_NA
+CONTRACT_GENERATED_PARITY=PASS_OR_NA
+RUNTIME_COMPOSITION=PASS
+BUILD_BOOTSTRAP=PASS
+SUPPORTED_UPGRADE_RECOVERY=PASS_OR_NA
+TARGETED_AND_RELEVANT_TESTS=PASS
+OBSERVABILITY_REQUIRED_PATHS=PASS_OR_NA
 ```
 
-This is not style churn. Material non-standard structure that harms ownership, tooling, correctness, maintainability, security, or integrity must be corrected or strongly justified.
+`GREEN != CLEANUP_COMPLETE` إذا بقي residue مادي.
 
-## Negative-space gate
+## 7. Final zero-residue gate
 
-Require as applicable:
+لا تعلن Completion إذا كان أي Applicable Value مجهولًا أو غير صفر:
 
 ```text
+KNOWN_DELETE_PROVEN_NOT_EXECUTED=0
+KNOWN_RETIRE_AFTER_CUTOVER_NOT_EXECUTED=0
+KNOWN_MATERIAL_UNKNOWNS=0
+KNOWN_CLEANUP_OBLIGATIONS=0
+EVIDENCE_DEBT=0
+
+MATERIAL_DEAD_FILES=0
+MATERIAL_ORPHANED_DIRECTORIES=0
+MATERIAL_UNUSED_SYMBOLS=0
+MATERIAL_UNUSED_EXPORTS_REEXPORTS=0
+MATERIAL_UNUSED_PACKAGES=0
+MATERIAL_UNUSED_DEPENDENCIES=0
+MATERIAL_DEAD_ROUTES_APIS=0
+MATERIAL_DEAD_ENTRYPOINTS=0
+MATERIAL_STALE_CONFIG_ENV=0
+MATERIAL_DEAD_SCRIPTS_WORKFLOWS=0
+MATERIAL_STALE_TEST_FIXTURE_MOCK_SNAPSHOT=0
+MATERIAL_SUPERSEDED_IMPLEMENTATIONS=0
+MATERIAL_LOSING_DUPLICATE_AUTHORITIES=0
+REACHABLE_OLD_AUTHORITIES=0
+UNBOUNDED_COMPATIBILITY=0
+MATERIAL_GENERATED_MANUAL_REPAIR_RESIDUE=0
+MATERIAL_OBSOLETE_DATA_SCHEMA_RESIDUE=0
+MATERIAL_UNREACHABLE_ASSETS=0
+MATERIAL_STALE_MANIFEST_ENTRIES=0
+MATERIAL_OBSOLETE_PLAN_GOVERNANCE_AUTHORITY=0
+MATERIAL_PATCH_RESIDUE=0
+MATERIAL_FILESYSTEM_NOISE=0
+
+UNMIGRATED_REQUIRED_CONSUMERS=0
 OLD_WRITERS=0
 OLD_READERS=0
-OLD_IMPORTS_REEXPORTS=0
-OLD_ROUTES=0
-OLD_CONFIG_REFS=0
-OLD_SCRIPT_WORKFLOW_REFS=0
 OLD_RUNTIME_REACHABILITY=0
-OLD_NAME_PATH_REFS=0
-UNMIGRATED_CONSUMERS=0
-UNEXPECTED_GENERATED_DIFF=0
-UNBOUNDED_COMPATIBILITY=0
-THIRD_AUTHORITY=0
-EXPECTED_DELETIONS_MISSING=0
-UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
-MISLEADING_MATERIAL_FILENAMES=0
-MISLEADING_MATERIAL_DIRECTORY_NAMES=0
-MISPLACED_MATERIAL_ARTIFACTS=0
-DUPLICATE_MATERIAL_RESPONSIBILITY_TREES=0
-UNBOUNDED_OLD_PATH_ALIASES=0
-KNOWN_NONCANONICAL_MATERIAL_TOPOLOGY=0
-```
-
-## Exact final qualification
-
-Do not finish while any applicable value is unknown or nonzero:
-
-```text
-KNOWN_MATERIAL_ROOTS=0
-KNOWN_MATERIAL_GAPS=0
-KNOWN_MATERIAL_UNKNOWNS=0
-UNDISPOSITIONED_FINDINGS=0
-EVIDENCE_DEBT=0
-UNMIGRATED_CONSUMERS=0
-REACHABLE_OLD_AUTHORITIES=0
-PARALLEL_TRUTHS=0
-SHADOW_AUTHORITIES=0
-DUPLICATE_MUTABLE_WRITERS=0
-UNBOUNDED_COMPATIBILITY=0
-MATERIAL_DEAD_STALE_OBSOLETE_RESIDUE=0
-MATERIAL_UNUSED_SCRIPT_WORKFLOW_TOOLING=0
-MATERIAL_UNUSED_DEPENDENCY_CONFIG_ROUTE=0
-MATERIAL_FILESYSTEM_NOISE=0
-MISLEADING_FILENAMES=0
-MISLEADING_DIRECTORY_NAMES=0
-MISPLACED_FILES=0
-AMBIGUOUS_DIRECTORIES=0
-DUPLICATE_RESPONSIBILITY_TREES=0
-UNBOUNDED_COMPAT_PATHS=0
-UNOWNED_PACKAGES=0
-DEAD_SCRIPTS=0
-UNUSED_DEPENDENCIES=0
-KNOWN_MATERIAL_PATCH_SHAPED_ARCHITECTURE=0
-KNOWN_NONCANONICAL_MATERIAL_TOPOLOGY=0
-FINAL_CURRENT_CANONICAL_STRUCTURAL_DELTA=0_UNRESOLVED_MATERIAL_ITEMS
-CLEANUP_OBLIGATIONS=0
-MATERIAL_REGRESSIONS=0
-FRESH_BRANCH_WIDE_ADVERSARIAL_REAUDIT=PASS
-BEST_PRACTICE_MATERIAL_CONFORMANCE=PASS
 NEGATIVE_SPACE=PASS
+REQUIRED_TRUTH_REGRESSIONS=0
+FRESH_BRANCH_WIDE_ADVERSARIAL_REAUDIT=PASS
 ```
 
-## Plan self-cleanup
+## 8. Plan self-cleanup
 
-This plan owns campaign sequencing only; it is not Product/System/Data truth and not a permanent parallel governance authority. Before final completion, verify the plan package itself is not leaving obsolete duplicate authority, stale status files, historical root registries, temporary campaign evidence, or copied orchestrator laws that should instead remain referenced from their canonical owner.
+قبل الإغلاق افحص هذا المسار نفسه:
 
-The final live tree must be cleaner because of the campaign, including its tooling/planning residue.
+`tools/plan/2026-09-02-G-CANONICAL-RECONSTRUCTION/`
 
-## Final output
-
-Only after the exact candidate passes:
+اسأل لكل ملف:
 
 ```text
-G_RADICAL_CLEANUP_COMPLETE
+IS IT STILL LIVE CAMPAIGN AUTHORITY?
+IS IT DUPLICATED ELSEWHERE?
+IS ITS NAME/PATH NOW A MATERIAL MISLEADING RESIDUE?
+DOES ANY REQUIRED REFERENCE DEPEND ON THE CURRENT PATH?
+```
+
+إذا انتهت الحملة ولم يعد وجود الخطة مطلوبًا داخل Live Tree، أو ثبت أن اسمها التاريخي أصبح residue بلا مراجع، طبّق نفس Deletion Safety Gate عليها.
+
+لا تترك:
+
+```text
+stale status files
+temporary evidence
+historical candidate queues
+duplicate plan authority
+obsolete campaign artifacts
+```
+
+## 9. Exact final output
+
+بعد إثبات Fixed Point فقط استخدم:
+
+```text
+G_DEAD_RESIDUE_CLEANUP_COMPLETE
 EXACT_G_SHA=<immutable sha>
 LEVEL_4_EVIDENCE_STATE=PASS
-ROOT_CORRECTNESS_STATE=PASS
-STRUCTURAL_RECONSTRUCTION_STATE=PASS
-CANONICAL_UNIQUENESS_STATE=PASS
-CANONICAL_NAMING_PATH_TOPOLOGY_STATE=PASS
-BEST_PRACTICE_MATERIAL_CONFORMANCE_STATE=PASS
-ZERO_PARALLEL_TRUTH_STATE=PASS
-ZERO_RESIDUE_STATE=PASS
+DELETION_SAFETY_STATE=PASS
+REQUIRED_TRUTH_PRESERVATION_STATE=PASS
+ZERO_DEAD_RESIDUE_STATE=PASS
+ZERO_ORPHANED_ARTIFACT_STATE=PASS
+ZERO_UNUSED_MATERIAL_STATE=PASS
+ZERO_REACHABLE_SUPERSEDED_AUTHORITY_STATE=PASS
+ZERO_UNBOUNDED_COMPATIBILITY_STATE=PASS
 G_NOISE_BUDGET=ZERO_KNOWN_MATERIAL_NOISE
-KNOWN_REMAINING_ROOTS=0
-KNOWN_MATERIAL_GAPS=0
+KNOWN_DELETION_CANDIDATES=0
+KNOWN_CLEANUP_OBLIGATIONS=0
 KNOWN_MATERIAL_UNKNOWNS=0
+NEGATIVE_SPACE=PASS
+FRESH_BRANCH_WIDE_ADVERSARIAL_REAUDIT=PASS
 ```
 
-Then:
+ثم:
 
-`FREEZE EXACT G SHA → DO NOT OPEN PR → DO NOT MERGE → DO NOT REBASE/AUTO-SYNC → KEEP g ISOLATED → STOP`.
+```text
+FREEZE EXACT G SHA
+DO NOT OPEN PR
+DO NOT MERGE
+DO NOT REBASE
+DO NOT AUTO-SYNC
+KEEP g ISOLATED
+STOP
+```
+
+## Final governing law
+
+```text
+DO NOT REDESIGN WHAT ONLY NEEDS DELETION.
+DO NOT DELETE WHAT IS NOT PROVEN DEAD.
+DO NOT KEEP DEAD STRUCTURE FOR HISTORY.
+MIGRATE ONLY WHAT IS REQUIRED TO RETIRE THE LOSER.
+DELETE THE LOSER AND EVERY PROVEN NON-REQUIRED RESIDUE.
+PROVE ZERO REFERENCES, ZERO REACHABILITY, AND ZERO REQUIRED-TRUTH LOSS.
+```

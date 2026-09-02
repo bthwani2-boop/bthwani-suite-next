@@ -1,146 +1,291 @@
-# 00 — START HERE: `g` CANONICAL RECONSTRUCTION
+# G Dead / Obsolete / Residue Cleanup — Start Here
 
-## Mission
-
-Execute radical root-correct cleanup and reconstruction on isolated branch `g` without turning repository-wide discovery into a blocker for already-proven work.
+## 0. Campaign identity
 
 ```text
+REPOSITORY=bthwani2-boop/bthwani-suite-next
 TARGET_BRANCH=g
-SCOPE=ALL_MATERIAL_TRACKED_CONTENT_ON_G_ONLY
+BRANCH_SCOPE=ALL_MATERIAL_TRACKED_CONTENT_ON_G_ONLY
 OTHER_BRANCHES=OUT_OF_SCOPE
+CAMPAIGN_KIND=DELETION_ONLY
+COMPLETION_LEVEL=LEVEL_4
 PR=FORBIDDEN
 MERGE=FORBIDDEN
 AUTO_SYNC=FORBIDDEN
 PERIODIC_REBASE=FORBIDDEN
-MUTATION_AUTHORITY=ONE
+FORCE_PUSH=FORBIDDEN
+MATERIAL_MUTATION_AUTHORITY=ONE
 ```
 
-## Authority model
-
-This plan owns the `g` campaign sequence only. The live `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`, routed `01–05`, and materially applicable focus modules remain the canonical source of cross-cutting execution, safety, evidence, migration, verification, and closure invariants.
+هذه الحملة متخصصة حصريًا في اكتشاف وإزالة الأشياء التي لم تعد مطلوبة على `g`:
 
 ```text
-PRODUCT_SYSTEM_DATA_TRUTH=CANONICAL_OWNER
-G_RECONSTRUCTION_PLAN=CAMPAIGN_SEQUENCE
-ORCHESTRATOR=CROSS_CUTTING_EXECUTION_INVARIANTS
-TOOLS_TESTS_SCANNERS=EVIDENCE_ONLY
-HISTORICAL_PLANS_FINDINGS=EVIDENCE_ONLY
+DEAD
+ORPHANED
+STALE
+OBSOLETE
+UNREACHABLE
+UNUSED
+SUPERSEDED
+DUPLICATED_LOSING_AUTHORITY
+ABANDONED_TRANSITIONAL_RESIDUE
+PATCH_RESIDUE
+UNUSED_DEPENDENCY
+DEAD_SCRIPT_WORKFLOW
+STALE_TEST_FIXTURE_MOCK
+OBSOLETE_CONFIG_ROUTE_EXPORT
+FILESYSTEM_NOISE
 ```
 
-No tool finding, historical root ID, CI red, scanner result, compiler error, or easy diff may become execution authority by itself.
+الهدف ليس إعادة تصميم المشروع كله، وليس البحث عن ميزات أو Bugs عادية.
 
-## Governing principle
-
-`PRESERVE REQUIRED TRUTH, NOT EXISTING STRUCTURE`.
-
-The inherited tree is not sacred. Preserve only proven required product/system behavior, persisted data/integrity, externally required contracts, security guarantees, and genuinely canonical implementation value.
-
-When evidence proves the current shape is wrong, the allowed treatment is:
-
-`HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | BOUNDED_RETIREMENT`.
-
-## Primary execution loop
+القانون الأعلى:
 
 ```text
-PIN CURRENT HEAD
-↓
-FIND / CONFIRM HIGHEST PROVEN EXECUTABLE ROOT
-↓
-CONFIRM CANONICAL OWNER + SOURCE OF FIX
-↓
-MAP COMPLETE AFFECTED CONE
-↓
-CONFIRM INTENDED FINAL STATE
-↓
-EXECUTE ROOT CORRECTION
-↓
-MIGRATE / CUT OVER / CLEAN UP
-↓
-VERIFY + FALSIFY
-↓
-RE-PIN / RE-DIAGNOSE
-↓
-REPEAT
+DELETE ONLY WHAT IS PROVEN NOT REQUIRED.
+UNKNOWN != DELETABLE.
+HISTORY IS NOT A REASON TO KEEP LIVE RESIDUE.
+LOOKS_OLD != PROVEN_OBSOLETE.
 ```
 
-The campaign does **not** require a complete branch-wide census, complete `CURRENT g`, complete `CANONICAL g`, complete Structural Delta, or complete Root Graph before the first proven root may be executed.
+## 1. Campaign authority
 
-## ROOT-CORRECT EXECUTION GATE
+المسار الحالي يبقى معرف الحملة لتجنب كسر مراجع غير مثبتة قبل فحصها:
 
-Material mutation is allowed only when the selected root passes all applicable items below:
+`tools/plan/2026-09-02-G-CANONICAL-RECONSTRUCTION/`
+
+لكن سلطته أصبحت من الآن:
 
 ```text
-1. PIN_HEAD=PASS
-2. CANONICAL_OWNER_CONFIRMED=PASS
-3. CURRENT_DEFECT_AND_CAUSAL_ROOT_PROVEN=PASS
-4. COMPLETE_AFFECTED_CONE_IDENTIFIED=PASS
-5. INTENDED_FINAL_STATE_CONFIRMED=PASS
-6. ROOT_CORRECTION_EXECUTABLE=YES
-7. MIGRATION_CUTOVER_PLAN_COMPLETE=PASS_OR_NA
-8. LOSING_AUTHORITY_AND_RESIDUE_CLEANUP_DEFINED=PASS
-9. VERIFICATION_AND_NEGATIVE_SPACE_DEFINED=PASS
-10. REOPEN_CONDITIONS_DEFINED=PASS
+G_PLAN_ROLE=DEAD_RESIDUE_DELETION_SEQUENCE_DRIVER
+ORCHESTRATOR_ROLE=SAFETY + ROOT_CORRECTNESS + MIGRATION/CUTOVER + EXACT_SHA + EVIDENCE + VERIFICATION + CLOSURE
+TOOLS_TESTS_SCANNERS_ROLE=EVIDENCE_ONLY
+HISTORICAL_FINDINGS_ROLE=FALSIFICATION_PROBES_ONLY
 ```
 
-Core law:
+إذا ثبت لاحقًا أن اسم المسار نفسه بلا مراجع مطلوبة ويمكن تغييره بأمان، يعامل كـcleanup obligation. لا يغيّر أثناء discovery لمجرد تحسين الاسم.
 
-> **NO MUTATION WITHOUT A PROVEN ROOT; DO NOT REQUIRE KNOWING EVERY ROOT IN THE REPOSITORY BEFORE CLOSING THE FIRST PROVEN ROOT.**
+## 2. Exclusive sequence
 
-A root is not proven merely because an error exists. The proof must establish the actual Source-of-Defect, Source-of-Fix, canonical owner/writer where applicable, and enough of the affected cone to prevent partial migration, dual authority, hidden consumers, or unsafe deletion.
-
-## Branch-wide census role
-
-Branch-wide census remains required as a **continuous discovery and final qualification mechanism**, not as a pre-mutation hard gate.
-
-Use it to:
-
-- discover additional roots and higher causal parents;
-- challenge current ownership/boundary assumptions;
-- find shadow/parallel truth and duplicate writers;
-- find dead/stale/obsolete residue;
-- find naming/path/topology defects;
-- detect roots capable of preempting a planned descendant fix.
-
-Census may continue in parallel with root-correct execution on independently proven affected cones. If census discovers a higher root that invalidates the selected treatment, stop the descendant treatment and promote the higher root.
-
-## Historical findings
-
-Historical findings are probes only. For each candidate:
+نفذ بالترتيب:
 
 ```text
-PROVE LIVE ROOT → EXECUTE WHEN GATE PASSES
-DESCENDANT OF HIGHER ROOT → ATTACH / PREEMPT
-ALREADY FIXED → SUPERSEDED
-INCORRECT CLAIM → FALSE_POSITIVE
-INSUFFICIENT PROOF → EVIDENCE_ONLY
+00-START-HERE.md
+→ 01-BRANCH-WIDE-CENSUS-AND-CURRENT-STATE.md
+→ 02-CANONICAL-TARGET-AND-STRUCTURAL-DELTA.md
+→ 03-ROOT-SELECTION-AND-RECONSTRUCTION-EXECUTION.md
+→ 04-CLEANUP-DELETION-NAMING-AND-TOPOLOGY.md
+→ 05-REVERIFY-REDIAGNOSE-AND-REPEAT.md
+→ 06-FINAL-ADVERSARIAL-QUALIFICATION.md
 ```
 
-Numeric order, age, and previous labels have zero scheduling authority.
+المعنى الجديد للتسلسل:
 
-## Exact-HEAD safety
+```text
+PIN EXACT LIVE g
+→ CENSUS ALL MATERIAL TRACKED CONTENT
+→ BUILD LIVE-USE / REACHABILITY / OWNERSHIP MODEL
+→ IDENTIFY DELETION CANDIDATES
+→ PROVE REQUIRED VS NOT-REQUIRED
+→ BUILD COMPLETE REMOVAL DELTA
+→ RANK DELETION CLOSURE UNITS
+→ MIGRATE ONLY WHEN REQUIRED TO RETIRE A LOSING ARTIFACT
+→ CUT OVER
+→ DELETE
+→ REMOVE ALL RESIDUE
+→ VERIFY NEGATIVE SPACE
+→ RE-PIN
+→ REPEAT
+→ FRESH ADVERSARIAL RE-CENSUS
+→ ZERO-RESIDUE FIXED POINT
+```
 
-Immediately before every commit/push:
+## 3. Non-goals
 
-`EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA`.
+هذه الحملة لا تملك تلقائيًا:
 
-If false:
+```text
+GENERAL_FEATURE_DEVELOPMENT
+GENERAL_BUG_FIXING
+GENERAL_REARCHITECTURE
+STYLE_REFACTORING
+COSMETIC_RENAMING
+FRAMEWORK_MIGRATION
+PERFORMANCE_REWRITE
+NEW_SHARED_LAYER_CREATION
+NEW_SERVICE_CREATION
+NEW_ABSTRACTION_CREATION
+CROSS_BRANCH_CLEANUP
+```
 
-`FETCH → COMPARE → INVALIDATE AFFECTED EVIDENCE → RE-PIN → RE-DIAGNOSE → REAPPLY ONLY IF STILL VALID`.
+استثناء وحيد: تعديل غير حذفي مسموح فقط إذا كان **شرطًا سببيًا لازمًا** لإزالة Artifact خاسر، ويجب أن يتجه إلى Owner قائم ومثبت كلما أمكن، وأن يكون أصغر Migration/Cutover كامل يحقق الحذف.
 
-Never force-push over unseen work.
+## 4. Artifact disposition
 
-## Per-root closure
+كل Artifact مادي يجب أن ينتهي إلى حالة واحدة فقط:
 
-A root closes only after all applicable writers/readers/consumers are migrated, cutover is complete, obsolete authority/residue is removed, targeted verification passes, and negative-space searches prove the old path/authority is no longer required or reachable.
+```text
+KEEP_PROVEN
+DELETE_PROVEN
+RETIRE_AFTER_PROVEN_CUTOVER
+BLOCKED_BY_UNKNOWN
+```
 
-`GREEN != CLOSED`.
+ممنوع:
 
-## Final campaign qualification
+```text
+KEEP_JUST_IN_CASE
+DELETE_BECAUSE_UNUSED_ON_FIRST_SEARCH
+MAYBE_DEAD
+UNKNOWN_KEEP_FOREVER
+PERMANENT_TEMP
+ARCHIVE_IN_LIVE_TREE
+RENAME_OLD_TO_ARCHIVE
+WRAP_TWO_AUTHORITIES_WITH_A_THIRD
+```
 
-After no proven executable root remains, run the fresh branch-wide adversarial qualification in `06-FINAL-ADVERSARIAL-QUALIFICATION.md`. That is where complete branch-wide fixed-point proof is mandatory.
+## 5. Right-to-exist test
 
-## Success meaning
+لكل ملف/رمز/حزمة/مسار/Dependency/Workflow/Test/Config/Contract/Data Artifact اسأل:
 
-The target is:
+```text
+WHAT REQUIRED RESPONSIBILITY DOES IT OWN TODAY?
+WHO REQUIRES IT?
+WHO IMPORTS / CALLS / READS / WRITES IT?
+IS IT RUNTIME REACHABLE?
+IS IT BUILD / BOOTSTRAP / MIGRATION / UPGRADE REACHABLE?
+IS IT REFERENCED BY CONFIG / CI / SCRIPTS / GENERATED LINEAGE?
+IS IT THE WINNING AUTHORITY OR A LOSING COPY?
+IS IT REQUIRED FOR A SUPPORTED EXTERNAL CONTRACT?
+IS IT REQUIRED FOR DATA SAFETY OR RECOVERY?
+CAN ITS REQUIRED CONSUMERS ALREADY USE A SURVIVING OWNER?
+WHAT EXACT PROOF MAKES DELETION SAFE?
+```
 
-`CLEAR OWNERSHIP + UNIQUE WRITERS + CORRECT BOUNDARIES + TRUTHFUL NAMES/PATHS + COMPLETE MIGRATIONS + NO PARALLEL/SHADOW TRUTH + NO DEAD/STALE/OBSOLETE RESIDUE + NO PATCH-SHAPED ARCHITECTURE + ZERO KNOWN MATERIAL NOISE`.
+إذا لم يمكن الإجابة عن سؤال قد يغيّر قرار الحذف:
+
+`BLOCKED_BY_UNKNOWN`.
+
+## 6. Hard pre-mutation gate
+
+قبل أول Material Deletion:
+
+```text
+STEP 0 — FETCH AND PIN EXACT REMOTE g SHA
+STEP 1 — COMPLETE BRANCH-WIDE DELETION CENSUS
+STEP 2 — BUILD CURRENT LIVE-USE / REACHABILITY MODEL
+STEP 3 — BUILD SURVIVING REQUIRED-TRUTH MODEL
+STEP 4 — COMPUTE COMPLETE REMOVAL DELTA
+STEP 5 — SYNTHESIZE AND RANK DELETION CLOSURE UNITS
+ONLY THEN — FIRST MATERIAL MUTATION
+```
+
+حتى اكتمال Step 5:
+
+```text
+DELETE_AS_YOU_DISCOVER=FORBIDDEN
+RENAME_AS_YOU_DISCOVER=FORBIDDEN
+REFACTOR_AS_YOU_DISCOVER=FORBIDDEN
+CLEAN_AS_YOU_GO=FORBIDDEN
+READ_ONLY_DISCOVERY=REQUIRED
+```
+
+## 7. Deletion Closure Unit
+
+الوحدة التنفيذية هي:
+
+`SMALLEST CAUSALLY COMPLETE DELETION CLOSURE UNIT`
+
+وليست أصغر Diff.
+
+قد تكون:
+
+```text
+one dead file
+one orphaned directory tree
+one unused package
+one losing duplicate authority plus all its consumers
+one obsolete API/route plus callers/config/tests
+one dead script/workflow plus invocations
+one stale compatibility layer plus all references
+one unused dependency plus manifests/lock consequences
+one superseded config source plus readers
+```
+
+Closure لا يتحقق بمجرد `git rm`.
+
+يجب أن ينتهي إلى:
+
+```text
+REQUIRED_CONSUMERS_MIGRATED=PASS_OR_NA
+OLD_WRITERS=0
+OLD_READERS=0
+OLD_IMPORTS_REEXPORTS=0
+OLD_RUNTIME_REACHABILITY=0
+OLD_CONFIG_SCRIPT_WORKFLOW_REFS=0
+OLD_CONTRACT_GENERATED_REFS=0
+OLD_REQUIRED_TEST_FIXTURE_REFS=0
+OLD_PATH_NAME_REFS=0
+SUPERSEDED_ARTIFACT_DELETED=YES
+UNBOUNDED_COMPATIBILITY=0
+TARGETED_VERIFICATION=PASS
+NEGATIVE_SPACE=PASS
+REGRESSION_CHECK=PASS
+EVIDENCE_DEBT=0
+```
+
+## 8. Exact SHA discipline
+
+قبل أي Push:
+
+```text
+EXPECTED_REMOTE_G_SHA == ACTUAL_REMOTE_G_SHA
+```
+
+إذا تغير `g`:
+
+```text
+FETCH
+→ COMPARE
+→ INVALIDATE AFFECTED EVIDENCE
+→ RE-PIN
+→ RE-EVALUATE THE DELETION UNIT
+```
+
+ممنوع Force Push.
+
+## 9. Final campaign outcome
+
+الحملة لا تنتهي عند نفاد قائمة أولية.
+
+تنتهي فقط بعد Fresh Full-`g` adversarial re-census يثبت أن كل Known Material Artifact غير المطلوب قد أزيل، وأن ما بقي لديه Required Responsibility مثبتة.
+
+المخرج النهائي الوحيد:
+
+```text
+G_DEAD_RESIDUE_CLEANUP_COMPLETE
+EXACT_G_SHA=<immutable sha>
+LEVEL_4_EVIDENCE_STATE=PASS
+DELETION_SAFETY_STATE=PASS
+REQUIRED_TRUTH_PRESERVATION_STATE=PASS
+ZERO_DEAD_RESIDUE_STATE=PASS
+ZERO_ORPHANED_ARTIFACT_STATE=PASS
+ZERO_UNUSED_MATERIAL_STATE=PASS
+ZERO_REACHABLE_SUPERSEDED_AUTHORITY_STATE=PASS
+KNOWN_DELETION_CANDIDATES=0
+KNOWN_CLEANUP_OBLIGATIONS=0
+KNOWN_MATERIAL_UNKNOWNS=0
+NEGATIVE_SPACE=PASS
+```
+
+ثم:
+
+```text
+FREEZE EXACT G SHA
+DO NOT OPEN PR
+DO NOT MERGE
+DO NOT REBASE
+DO NOT AUTO-SYNC
+KEEP g ISOLATED
+STOP
+```
