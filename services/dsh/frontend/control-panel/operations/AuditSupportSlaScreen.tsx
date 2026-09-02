@@ -10,9 +10,10 @@ import {
 } from '@bthwani/ui-kit/web';
 import { AuditTrailDetailWorkspace } from './AuditTrailDetailWorkspace';
 import {
-  fetchDshRuntimeOrders,
-  type DshRuntimeOrderRow,
-} from '../../shared/operations/dsh-operational-runtime-adapter';
+  classifyOrderTruthFailure,
+  fetchOperatorOrderTruth,
+  type OrderTruth,
+} from '../../shared/order-truth';
 
 export type AuditSupportSlaScreenProps = {
   readonly hubHref: string;
@@ -20,7 +21,7 @@ export type AuditSupportSlaScreenProps = {
 };
 
 type RuntimeReviewState = {
-  readonly orders: readonly DshRuntimeOrderRow[];
+  readonly orders: readonly OrderTruth[];
   readonly isLoading: boolean;
   readonly error: string | null;
   readonly offline: boolean;
@@ -64,25 +65,24 @@ export function AuditSupportSlaScreen({
     let cancelled = false;
     setState((current) => ({ ...current, isLoading: true, error: null, offline: false }));
 
-    void fetchDshRuntimeOrders({ limit: 50 }).then((result) => {
+    void fetchOperatorOrderTruth({ limit: 50 }).then((orders) => {
       if (cancelled) return;
 
-      if (result.kind === 'ok') {
-        setState({
-          orders: result.orders.filter((order) => REVIEW_STATUSES.has(order.status)),
-          isLoading: false,
-          error: null,
-          offline: false,
-        });
-        return;
-      }
-
-      if (result.kind === 'offline') {
-        setState({ orders: [], isLoading: false, error: null, offline: true });
-        return;
-      }
-
-      setState({ orders: [], isLoading: false, error: result.message, offline: false });
+      setState({
+        orders: orders.filter((order) => REVIEW_STATUSES.has(order.status)),
+        isLoading: false,
+        error: null,
+        offline: false,
+      });
+    }).catch((error: unknown) => {
+      if (cancelled) return;
+      const failure = classifyOrderTruthFailure(error, 'operator');
+      setState({
+        orders: [],
+        isLoading: false,
+        error: failure.kind === 'offline' ? null : failure.message,
+        offline: failure.kind === 'offline',
+      });
     });
 
     return () => {
@@ -92,10 +92,13 @@ export function AuditSupportSlaScreen({
 
   const selectedOrder = state.orders.find((order) => order.id === selectedOrderId);
   const loaded = !state.isLoading && !state.error && !state.offline;
-  const evidenceLinkedCount = state.orders.filter((order) => Boolean(order.podMediaKey)).length;
   const failureCount = state.orders.filter((order) =>
-    order.status.startsWith('failed_') || Boolean(order.deliveryFailureReason),
+    order.status.startsWith('failed_'),
   ).length;
+  const timelineEventCount = state.orders.reduce(
+    (total, order) => total + order.statusTimeline.length,
+    0,
+  );
 
   const summaryKpi = [
     {
@@ -105,10 +108,10 @@ export function AuditSupportSlaScreen({
       tone: 'warning' as const,
     },
     {
-      id: 'evidence-linked',
-      label: 'إثباتات مرتبطة',
-      value: loaded ? String(evidenceLinkedCount) : '—',
-      tone: 'success' as const,
+      id: 'timeline-events',
+      label: 'أحداث الحالة المتاحة',
+      value: loaded ? String(timelineEventCount) : '—',
+      tone: 'neutral' as const,
     },
     {
       id: 'failures',
@@ -181,7 +184,7 @@ export function AuditSupportSlaScreen({
 
           {state.orders.map((order) => {
             const selected = order.id === selectedOrderId;
-            const danger = order.status.startsWith('failed_') || Boolean(order.deliveryFailureReason);
+            const danger = order.status.startsWith('failed_');
             return (
               <button
                 key={order.id}
@@ -216,7 +219,7 @@ export function AuditSupportSlaScreen({
                   tone={danger ? 'danger' : 'neutral'}
                 />
                 <span style={{ fontSize: '10px', color: 'var(--bthwani-control-panel-text-muted)' }}>
-                  {order.podMediaKey ? 'إثبات مرتبط' : 'دون إثبات مرتبط'}
+                  المالك الحالي: {order.currentOwner}
                 </span>
                 <span aria-hidden>{selected ? '◀' : '►'}</span>
               </button>

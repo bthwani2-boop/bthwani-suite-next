@@ -3,11 +3,11 @@
 import React from 'react';
 import { Box, KeyValueList, Surface, Text } from '@bthwani/ui-kit';
 import { WebControlPanelInspectorShell } from '@bthwani/ui-kit/web';
-import type { DshRuntimeOrderRow } from '../../shared/operations/dsh-operational-runtime-adapter';
+import type { OrderTruth } from '../../shared/order-truth';
 
 export type AuditTrailDetailWorkspaceProps = {
   readonly orderId?: string | undefined;
-  readonly order?: DshRuntimeOrderRow | undefined;
+  readonly order?: OrderTruth | undefined;
   readonly onClose?: (() => void) | undefined;
 };
 
@@ -46,14 +46,15 @@ export function AuditTrailDetailWorkspace({
             <KeyValueList
               items={[
                 { label: 'معرّف الطلب', value: order.id },
+                { label: 'رقم الطلب', value: order.orderNumber },
                 { label: 'المتجر', value: order.storeId },
-                { label: 'العميل', value: order.clientId },
+                { label: 'العميل', value: order.clientId ?? 'غير متاح في نطاق العمليات' },
                 { label: 'طريقة التنفيذ', value: order.fulfillmentMode },
                 { label: 'الحالة التشغيلية', value: order.status },
-                { label: 'الكابتن', value: order.captainId ?? 'غير معيّن' },
-                { label: 'حالة الكابتن', value: order.captainLifecycleStatus ?? 'غير متاحة' },
-                { label: 'إثبات التسليم', value: order.podMediaKey ? 'مرتبط' : 'غير مرتبط' },
-                { label: 'سبب فشل التوصيل', value: order.deliveryFailureReason ?? 'لا يوجد' },
+                { label: 'المالك الحالي', value: order.currentOwner },
+                { label: 'الإجراءات المسموحة', value: String(order.allowedActions.length) },
+                { label: 'حالة إسقاط الدفع', value: order.paymentStatusProjection },
+                { label: 'أحداث الحالة', value: String(order.statusTimeline.length) },
                 { label: 'آخر تحديث', value: new Date(order.updatedAt).toLocaleString('ar-YE') },
               ]}
             />
