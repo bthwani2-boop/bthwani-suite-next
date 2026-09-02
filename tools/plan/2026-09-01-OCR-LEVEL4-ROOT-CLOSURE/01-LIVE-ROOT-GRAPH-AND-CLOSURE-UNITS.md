@@ -1,301 +1,186 @@
-# LIVE ROOT GRAPH AND CLOSURE UNITS — `g`
+# LIVE ROOT GRAPH AND CLOSURE UNITS — `g` ONLY
 
-## 0. Purpose
+## 0. Scope and authority
 
-This file is the dynamic execution map for the dedicated radical-cleanup/restructure branch `g`.
+This is the dynamic execution map for **all material content that exists on branch `g` only**.
 
-It is not a static backlog. Every root status must be revalidated against the current exact remote `g` SHA before mutation.
+It does not authorize audit, mutation, synchronization, merge, rebase, or qualification of `master`, `ocr`, or any other branch.
+
+Current Root Graph entries are **not a file list and not a scope boundary**. They are only presently known/proven work. Fresh audit may discover additional roots anywhere inside `g`, and every such material finding enters this graph immediately.
 
 Allowed states:
 
-- `STILL_PROVEN_OPEN`
-- `FIXED_REVALIDATION_REQUIRED`
-- `SUPERSEDED`
-- `FALSE_POSITIVE`
-- `UNKNOWN_REQUIRES_PROOF`
-- `CLOSED_EXACT_SHA`
+`STILL_PROVEN_OPEN`
+`FIXED_REVALIDATION_REQUIRED`
+`SUPERSEDED`
+`FALSE_POSITIVE`
+`UNKNOWN_REQUIRES_PROOF`
+`CLOSED_EXACT_SHA`
+`BLOCKED_BY_OPEN_ROOTS`.
 
 No root may be called closed from historical evidence alone.
 
 ## 1. Root-classification law
 
-A symptom is promoted to a root only when its causal source is proven. CI job names, scanner findings, compiler errors, and UI symptoms are evidence inputs, not root identities.
+CI jobs, scanner findings, compiler errors, and UI symptoms are evidence inputs, not root identities.
 
-A local defect must be escalated to `POTENTIAL_STRUCTURAL_ROOT` when the same responsibility shows multiple indicators such as:
-
-- duplicate owners/writers;
-- repeated local fixes;
-- manual DTO/contract repairs;
-- manual mappings or mirrors;
-- multiple wrappers/adapters;
-- parallel directories or APIs;
-- conflicting defaults/config sources;
-- legacy compatibility dominating the implementation;
-- duplicated state machines/policies/validation;
-- unclear responsibility or widespread import indirection.
+Escalate to `POTENTIAL_STRUCTURAL_ROOT` when a responsibility shows multiple owners/writers, repeated local fixes, manual DTO/contract repairs, duplicate mappings/mirrors, wrappers/adapters, parallel directories/APIs, conflicting defaults/config sources, duplicated state machines/policies/validation, compatibility dominance, or unclear ownership.
 
 If structural root is proven:
 
-`STOP PATCHING DESCENDANTS → DEFINE MINIMUM CANONICAL TARGET → RESTRUCTURE ROOT → MIGRATE ALL CONSUMERS → CUT OVER → DELETE DEFECTIVE STRUCTURE`.
+`STOP PATCHING DESCENDANTS → DEFINE MINIMUM CANONICAL TARGET → RESTRUCTURE ROOT → MIGRATE COMPLETE AFFECTED CONE → CUT OVER → DELETE DEFECTIVE STRUCTURE → DELETE RESIDUE → PROVE ZERO REACHABILITY`.
 
-## 2. Live reclassification at audit pin `a86f546…`
+## 2. G isolation law
+
+No root may represent opening a PR, merging `g`, merging another branch into `g` for convenience, rebasing/syncing against another branch, or preparing mergeability.
+
+A narrow external intake is allowed only if an active `g` root proves it materially required and the intake is exact-SHA-aware and followed by evidence invalidation/re-diagnosis.
+
+## 3. Known root graph
 
 ### G-R0 — Exact-candidate evidence / DSH clean-install and backend red diagnosis
 
 **State:** `UNKNOWN_REQUIRES_PROOF`
 
-Known evidence:
-
-- exact-candidate workflow evidence for `a86f546…` was not discovered through the available commit-run query;
-- PR/merge-context run `33574719348` is useful but non-authoritative for exact-candidate closure;
-- runtime smoke passed in that run;
-- WLT database safety passed in that run;
-- DSH DB integration/clean-install, several backend jobs, and evidence aggregation were red.
-
-Required diagnosis:
-
-1. obtain exact-HEAD or reproducible equivalent evidence;
-2. classify each red as source defect, environment/evidence defect, or superseded failure;
-3. if DSH clean-install/bootstrap is defective, identify the highest schema/seed/migration root and close it as one data/bootstrap closure unit;
-4. do not weaken gates or reinterpret failure as success.
-
-Closure proof:
-
-`exact candidate evidence + clean install/readiness + affected backends + evidence aggregation + negative-space no hidden bypass`.
+Obtain exact-HEAD or reproducible equivalent evidence; diagnose each red to actual source; close any clean-install/bootstrap defect at schema/seed/migration root; never weaken gates.
 
 ### G-R1 — Cart mutation receipt invariant
 
 **State:** `FIXED_REVALIDATION_REQUIRED`
 
-Evidence:
-
-- commit `a86f546d9d4c5fa7fbcd0e27d7c7fbe92b2ff74e` explicitly closes the cart mutation receipt invariant.
-
-Required revalidation:
-
-- schema nullability and runtime scan semantics agree;
-- mutation receipt persistence/readback is atomic;
-- all cart mutation writers/readers use the same invariant;
-- no legacy receipt path remains;
-- clean-install schema contains the same constraint.
-
-Do not reopen as a coding root unless fresh evidence contradicts the fix.
+Revalidate the treatment in commit `a86f546d9d4c5fa7fbcd0e27d7c7fbe92b2ff74e`: schema/runtime parity, atomic persistence/readback, writer/reader uniqueness, zero legacy receipt paths, clean-install parity.
 
 ### G-R2 — Serviceability / geo canonical authority
 
 **State:** `STILL_PROVEN_OPEN`
 
-Live source inspection at the audit pin still shows serviceability semantics embedded in cart/runtime code rather than proven as one canonical geo/serviceability authority. The affected cone must be re-inventoried before mutation.
+Objective:
 
-Root objective:
+`ONE SERVICEABILITY MEANING → ONE CANONICAL OWNER/WRITER/POLICY → DERIVED CONSUMERS ONLY`.
 
-`ONE serviceability meaning → ONE canonical owner/writer/policy → derived consumers only`.
-
-Required treatment:
-
-- inventory city vocabulary/aliases, distance thresholds, eligibility decisions, missing-location semantics, delivery-zone/store coverage, admin/config writers, API contracts, and all app consumers;
-- choose canonical source;
-- migrate every decision path;
-- remove hardcoded/local shadow policies and duplicate mappings;
-- prove UNKNOWN/MISSING cannot silently become ELIGIBLE;
-- delete superseded serviceability code/config.
+Inventory all aliases, thresholds, eligibility decisions, missing-location semantics, zones/store coverage, admin/config writers, contracts, and app consumers. Migrate and delete local/shadow policies. `UNKNOWN/MISSING` must not become eligible.
 
 ### G-R3 — WLT financial production truth
 
 **State:** `UNKNOWN_REQUIRES_PROOF`
 
-Prior planning material marked WLT production truth incomplete; the merge-context run later showed WLT database safety passing. Neither fact is enough to declare the full financial cone open or closed.
-
-Revalidate:
-
-- canonical ledger/balance writer;
-- transaction idempotency;
-- mutation atomicity;
-- persisted readback;
-- DB readiness/clean install;
-- reconciliation;
-- generated/contracts;
-- runtime surfaces.
-
-If one canonical financial root is already healthy, mark prior findings `SUPERSEDED` rather than reimplementing them.
+Revalidate canonical financial writer, idempotency, atomicity, persisted readback, clean install/readiness, reconciliation, contracts/generated, and runtime surfaces. Mark stale findings `SUPERSEDED` rather than reimplementing them.
 
 ### G-R4 — Dispatch canonical contract collapse
 
 **State:** `UNKNOWN_REQUIRES_PROOF`
 
-Historical evidence indicated frontend repair of generated dispatch types. Revalidate on exact `g` before mutation.
+If manual frontend repairs of generated semantics survive:
 
-If still present:
-
-`runtime semantics → canonical contract → regenerate → migrate all consumers → delete Omit/intersection/manual enum/DTO repair layers`.
-
-Closure requires zero manual authority over generated wire semantics.
+`AUTHORITATIVE SEMANTICS → CANONICAL CONTRACT → REGENERATE → MIGRATE ALL CONSUMERS → DELETE REPAIR LAYERS`.
 
 ### G-R5 — Checkout / address / maps runtime binding
 
 **State:** `UNKNOWN_REQUIRES_PROOF`
 
-Revalidate product/runtime truth, not metadata labels.
-
-Affected cone includes:
-
-- address persistence/readback;
-- selected address identity;
-- map coordinates/geocoding;
-- serviceability integration;
-- checkout quote/order mutation;
-- missing/invalid address behavior;
-- permissions/offline/retry/recovery;
-- deep-link/navigation state;
-- all relevant surfaces.
-
-If multiple address/map/serviceability models exist, escalate to structural root and consolidate.
+Revalidate address persistence/identity, maps/geocoding, serviceability, checkout mutations, missing/invalid state, permissions/offline/retry/recovery, navigation, and all affected surfaces. Multiple models require structural consolidation.
 
 ### G-R6 — Client profile / locale / currency / consent truth
 
 **State:** `UNKNOWN_REQUIRES_PROOF`
 
-Historical findings must be freshly checked before mutation. Explicitly search for:
-
-- fabricated ready profile on missing/error states;
-- hardcoded locale/currency defaults representing business truth;
-- unsafe casts around locale/currency;
-- mutation state not reflected in UI/readback;
-- consent withdrawal without required confirmation/audit semantics;
-- multiple profile owners or duplicated preference models.
-
-Close only from canonical persisted/readback truth.
+Search fabricated ready state, hardcoded business defaults, unsafe casts, invisible mutation state, missing consent withdrawal semantics, and duplicated profile/preference owners. Close from persisted canonical truth only.
 
 ### G-R7 — Support / notifications / dispatch journeys
 
-**State:** `PARTIAL_FIX_REVALIDATION_REQUIRED`
+**State:** `FIXED_REVALIDATION_REQUIRED`
 
-Support direct-conversation serialization was changed by commit `d2f6ac31075c7638bbe93ff72c7f920d570ed7e8`.
-
-Do not treat that as full support closure. Revalidate:
-
-- support conversation identity/idempotency;
-- message persistence/readback;
-- authorization;
-- duplicate conversation prevention;
-- notifications delivery/read state;
-- dispatch handoffs/status recovery;
-- offline/error/retry/unknown outcome;
-- cross-role journeys.
-
-Any surviving duplicate conversation writer/state machine is a structural root.
+Commit `d2f6ac31075c7638bbe93ff72c7f920d570ed7e8` treated direct-conversation serialization. Revalidate the full affected journey: identity/idempotency, persistence, authorization, duplicate prevention, notifications, dispatch handoffs, error/retry/offline/unknown outcome, cross-role flows.
 
 ### G-R8 — Five-surface exact journey / UX closure
 
 **State:** `UNKNOWN_REQUIRES_PROOF`
 
-Revalidate all material journeys across client, partner, captain, field, and control panel against live runtime.
-
-Required journey-state coverage:
-
-`entry → loading → success → missing/empty → error → retry → offline/degraded → auth/permission → conflict/concurrency → mutation → unknown-outcome recovery → persisted readback → navigation/deep-link → cross-role handoff → accessibility → RTL/LTR → recovery`.
-
-Do not use metadata `ready`/`implemented` as proof.
+Revalidate client, partner, captain, field, and control-panel material journeys against live `g` runtime.
 
 ### G-R9 — Shared UI / shared runtime ownership and duplication
 
 **State:** `UNKNOWN_REQUIRES_PROOF`
 
-Revalidate:
-
-- `shared/ui-kit/**` contains only generic UI/design-system responsibility;
-- `shared/control-panel/**` contains only control-panel-specific composition;
-- `shared/data-runtime/**` contains runtime/query/storage/connectivity primitives, not business truth;
-- duplicated wrappers/components/formatters/mappings are consolidated or deleted;
-- type suppressions/casts do not conceal ownership/contract defects;
-- hardcoded business text/state is not duplicated across surfaces.
-
-If a shared layer merely wraps a true owner with no material value, migrate consumers and delete it.
+Prove unique responsibilities in shared subtrees; consolidate/delete duplicated wrappers/components/formatters/mappings; remove suppression that hides ownership/contract defects; delete shared layers without unique responsibility after migration.
 
 ### G-R10 — Core ownership/runtime truth
 
 **State:** `UNKNOWN_REQUIRES_PROOF`
 
-Do not delete `core/**` by name. Prove each subtree's sovereign cross-domain responsibility and runtime reachability.
-
-For each core package:
+For each core subtree:
 
 `owner → writers → readers → runtime binding → consumers → unique responsibility → disposition`.
 
-Anything without unique responsibility must be moved/merged/deleted after consumer migration.
+Anything lacking unique responsibility is move/merge/rewrite/delete material after migration.
 
-### G-R11 — Infra / topology / configuration canonicalization
-
-**State:** `STILL_PROVEN_CAMPAIGN_ROOT`
-
-This is a structural campaign root, not a single file bug.
-
-Audit:
-
-- executable runtime/config vs historical documentation;
-- duplicated env/config truth;
-- obsolete compose/workflow/script paths;
-- dead service definitions;
-- stale topology assumptions;
-- local vs CI divergence;
-- ports/health/readiness/seed/bootstrap ownership;
-- generated/runtime config mirrors.
-
-End state:
-
-`one executable topology per supported environment + no historical/shadow runtime authority`.
-
-### G-R12 — Repository-wide filesystem / semantic duplication / residue elimination
+### G-R11 — Infra / topology / configuration canonicalization on `g`
 
 **State:** `STILL_PROVEN_CAMPAIGN_ROOT`
 
-This is mandatory because `g` is the dedicated cleanup/restructure branch.
+Audit executable runtime/config, duplicated env/config truth, obsolete compose/workflow/script paths, dead service definitions, stale topology, CI/local divergence, ports/health/readiness/seed/bootstrap ownership, and generated/runtime mirrors.
 
-It covers every artifact class:
+### G-R12 — ALL-OF-`g` radical artifact cleanup / semantic duplication / residue elimination
 
-`line/symbol/file/directory/package/schema/contract/generated/config/test/fixture/mock/script/dependency/documentation-with-runtime-authority`.
+**State:** `STILL_PROVEN_CAMPAIGN_ROOT`
 
-Search and disposition:
+This root has **no predefined file boundary**. It covers every material artifact on `g`, including any artifact not mentioned elsewhere:
 
-- dead/unreachable;
-- stale/obsolete/superseded;
-- legacy/history/archive/backup/copy/tmp/temp/prototype/experimental;
-- duplicate mutable writers;
-- semantic duplicates;
-- manual mirrors/keep-in-sync layers;
-- wrappers without unique responsibility;
-- unused exports/routes/config/dependencies;
-- misplaced files/folders;
-- ambiguous owner;
-- compatibility without bounded removal.
+`line/symbol/file/file-family/directory/package/schema/contract/generated/config/env/script/workflow/test/fixture/mock/snapshot/dependency/devDependency/route/job/worker/manifest/asset/documentation-with-live-authority/other-material-artifact`.
 
-Every material hit must be `KEEP_PROVEN`, `REHOME`, `MERGE`, `SPLIT`, `REWRITE`, `REGENERATE`, `DELETE`, or `BOUNDED_RETIREMENT`.
+Mandatory targets include:
 
-### G-R13 — Fresh adversarial re-audit
+- dead/unreachable code/runtime;
+- stale/obsolete/superseded/legacy implementations;
+- history/archive/backup/copy/tmp/temp/prototype/experimental residue;
+- obsolete or duplicate scripts/workflows/tooling;
+- unused CLI/helpers;
+- semantic duplication and duplicate mutable writers;
+- mirrors/keep-in-sync layers;
+- wrappers/adapters/mappers without unique responsibility;
+- unused exports/routes/config/env/dependencies/plugins;
+- stale tests/fixtures/mocks/snapshots tied to superseded behavior;
+- misplaced artifacts/ambiguous ownership;
+- unbounded compatibility;
+- stale documents/manifests impersonating live authority.
+
+Every material artifact receives exactly one:
+
+`KEEP_PROVEN | HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | BOUNDED_RETIREMENT`.
+
+If an old file/script/folder/package/config/test/dependency has no proven current consumer or unique required responsibility, disposition is `DELETE`.
+
+### G-R13 — Fresh adversarial audit of all material content on `g`
 
 **State:** `BLOCKED_BY_OPEN_ROOTS`
 
-After the root queue first becomes empty, perform a fresh broad audit independent of historical findings.
+After the known queue first empties, perform a fresh independent branch-wide audit not constrained by prior root/file lists. Any material finding reopens the graph.
 
-A new material finding reopens the graph immediately.
+### G-R14 — Exact final `g` fixed-point qualification
 
-### G-R14 — Exact final `g` candidate qualification
+**State:** `BLOCKED_BY_OPEN_ROOTS`
 
-**State:** `BLOCKED_BY_G-R13`
+Pin one exact `g` SHA and qualify all material content of `g`: product, code, data, contracts, runtime, structure, security, UX, filesystem, scripts/workflows, dependencies, tests, negative-space, cleanup.
 
-Pin one exact `g` SHA and qualify product, code, data, contracts, runtime, structure, security, UX, negative-space, and cleanup on that exact candidate.
+### G-R15 — Isolation / freeze completion
 
-### G-R15 — `g → master` integration/requalification
+**State:** `BLOCKED_BY_OPEN_ROOTS`
 
-**State:** `OUTSIDE_ACTIVE_CLEANUP_CAMPAIGN`
+This is not an integration root.
 
-Only after `G_LEVEL4_CANDIDATE_READY`.
+After G-R14 passes:
 
-Integration is a separate boundary. Resulting master SHA must be separately requalified.
+```text
+EMIT G_RADICAL_CLEANUP_COMPLETE
+→ FREEZE EXACT G SHA
+→ DO NOT OPEN PR
+→ DO NOT MERGE
+→ DO NOT REBASE/SYNC FOR CONVENIENCE
+→ KEEP g ISOLATED
+→ STOP
+```
 
-## 3. Closure-unit declaration template
-
-Before material mutation declare:
+## 4. Closure-unit declaration
 
 ```text
 ROOT_ID=
@@ -313,10 +198,11 @@ WRITER_INVENTORY=
 READER_CONSUMER_INVENTORY=
 DATA_INVENTORY=
 CONTRACT_GENERATED_IMPACT=
+SCRIPT_WORKFLOW_CONFIG_DEPENDENCY_IMPACT=
 MIGRATION_BACKFILL_RECONCILIATION=
 CUTOVER=
 OLD_AUTHORITY_TO_DELETE=
-FILES_DIRS_PACKAGES_TO_DELETE_OR_REHOME=
+FILES_DIRS_PACKAGES_SCRIPTS_CONFIG_TESTS_DEPS_TO_DELETE_OR_REHOME=
 NEGATIVE_SPACE_SEARCH=
 TARGETED_VERIFICATION=
 EVIDENCE_INVALIDATION=
@@ -324,14 +210,11 @@ REMOTE_HEAD_CONCURRENCY_RISK=
 REOPEN_CONDITIONS=
 ```
 
-This declaration is not an approval gate. Once the root is proven, execute immediately.
+## 5. Root closure record
 
-## 4. Root closure record
-
-A root may be recorded `CLOSED_EXACT_SHA` only with:
+A root may be `CLOSED_EXACT_SHA` only with:
 
 ```text
-ROOT_ID=
 CLOSED_ON_G_SHA=
 CANONICAL_OWNER_PROOF=
 CANONICAL_WRITER_PROOF=
@@ -343,9 +226,11 @@ OLD_READERS=0
 OLD_IMPORTS=0
 OLD_ROUTES=0
 OLD_CONFIG_REFS=0
+OLD_SCRIPT_WORKFLOW_REFS=0
 OLD_RUNTIME_REACHABILITY=0
-SUPERSEDED_FILES_DELETED=
-SUPERSEDED_DIRS_DELETED=
+SUPERSEDED_LINES_FILES_DELETED=
+SUPERSEDED_DIRS_PACKAGES_DELETED=
+SUPERSEDED_SCRIPTS_CONFIG_TESTS_DEPS_DELETED=
 UNBOUNDED_COMPATIBILITY=0
 THIRD_AUTHORITY=0
 TARGETED_VERIFICATION=PASS
@@ -354,4 +239,4 @@ PERSISTED_READBACK=PASS_OR_NA
 EVIDENCE_DEBT=0
 ```
 
-Any failed field keeps the root open.
+Any failed or unknown field keeps the root open.

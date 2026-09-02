@@ -1,325 +1,242 @@
-# FILESYSTEM / MIGRATION / CLEANUP / DELETION MATRIX — `g`
+# FILESYSTEM / MIGRATION / CLEANUP / DELETION MATRIX — `g` ONLY
 
-## 0. Governing objective
+## 0. Governing scope
 
-`g` is the dedicated branch for radical cleanup and deep restructuring at **all repository granularities**.
+This matrix applies to **every material artifact that exists on branch `g` only**.
 
-The live repository is not an archive. Git history is the archive.
+There is no predefined file/folder/subsystem scope. No artifact is excluded merely because it was absent from the original plan or Root Graph.
 
-The desired fixed point is:
+Other branches are out of scope.
+
+Desired fixed point on `g`:
 
 `ONE MATERIAL MEANING → ONE CANONICAL OWNER → ONE CANONICAL WRITER → MINIMUM NECESSARY STRUCTURE → DERIVED CONSUMERS ONLY → ZERO MATERIAL RESIDUE`.
 
-Cleanup is not a final cosmetic phase. It is part of every root's causal closure.
+Git history is the archive. The live content of `g` is not an archive.
 
-## 1. Universal artifact inventory
+## 1. Universal inventory on `g`
 
-Every material affected cone must inventory, where applicable:
+Audit/disposition all material classes when encountered:
 
-- lines/statements and local branches;
-- functions/methods/symbols;
-- types/enums/state machines;
-- components/hooks/screens;
-- files/file families;
-- directories/subtrees;
-- packages/workspaces/modules;
-- service/core/shared boundaries;
-- routes/handlers/jobs/workers;
-- schema/tables/columns/indexes/constraints;
-- migrations/seeds/bootstrap/fixtures;
-- persisted data and derived projections;
-- contracts/OpenAPI/schema definitions;
-- generated clients/types/bindings;
-- mappings/adapters/wrappers;
-- runtime composition/registries;
-- config/env/defaults/feature flags;
-- scripts/tooling/workflows;
-- tests/mocks/fixtures/snapshots;
-- dependencies/devDependencies;
-- assets whose presence affects runtime/product truth;
-- documentation/manifests only when they act as live execution/product authority.
+`line/statement`, `function/symbol`, `type/enum/state machine`, `component/hook/screen`, `file/file-family`, `directory/subtree`, `package/workspace/module`, `service/core/shared/app boundary`, `route/handler/job/worker`, `schema/table/column/index/constraint`, `migration/seed/bootstrap`, `persisted data/projection`, `contract/OpenAPI/schema`, `generated client/type/binding`, `mapping/adapter/wrapper`, `runtime composition/registry`, `config/env/default/feature flag`, `script/CLI/helper/tooling/one-off utility`, `workflow/action/hook`, `test/mock/fixture/snapshot`, `dependency/devDependency/plugin`, `manifest/asset`, `documentation/plan with live authority`, and any other material artifact discovered on `g`.
 
-Nothing material inside the affected cone may remain unclassified.
+Nothing material may remain unclassified.
 
 ## 2. Mandatory dispositions
 
-Every material artifact receives exactly one proven disposition:
+Every material artifact gets exactly one proven disposition:
 
-- `KEEP_PROVEN` — unique, canonical, required responsibility;
-- `HARDEN` — correct owner/semantics, implementation requires strengthening;
-- `REFACTOR` — semantics correct, structure/typing/readability defective;
-- `REHOME` — correct responsibility, wrong owner/location;
-- `RENAME` — ambiguous/wrong naming affects ownership or maintenance;
-- `MERGE` — responsibility duplicated across artifacts;
-- `SPLIT` — one artifact mixes independent canonical responsibilities;
-- `REWRITE` — current abstraction encodes wrong semantics or defective structural model;
-- `REGENERATE` — derived artifact must come from canonical source;
-- `MIGRATE` — required data/consumer/config movement before cutover;
-- `DELETE` — no unique required responsibility remains;
-- `BOUNDED_RETIREMENT` — temporary compatibility only with explicit deletion trigger.
+`KEEP_PROVEN | HARDEN | REFACTOR | REHOME | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | MIGRATE | DELETE | BOUNDED_RETIREMENT`.
 
-No `UNKNOWN_KEEP`, `JUST_IN_CASE`, or permanent `TEMP` disposition exists.
+There is no `IGNORE`, `UNKNOWN_KEEP`, `JUST_IN_CASE`, `HISTORICAL_KEEP`, permanent `TEMP`, or `OUT_OF_SCOPE_BY_DEFAULT`.
 
-## 3. P0 structural-noise classes
+## 3. Old artifact deletion law
+
+Age/history creates no preservation right.
+
+For every old/legacy/stale file, directory, package, script, workflow, config, test, fixture, mock, snapshot, dependency, route, generated artifact, backup/copy/temp item, prototype, or compatibility shell on `g`, prove at least one:
+
+- unique canonical responsibility;
+- current required runtime consumer;
+- current required build/test/tooling/operations consumer;
+- required generated/derived status from canonical source;
+- supported bounded migration with explicit removal trigger;
+- required evidence under live governance.
+
+If none is proven:
+
+`DELETE`.
+
+Do not relocate obsolete artifacts into `archive`, `history`, `legacy`, `backup`, `old`, or similar live folders to avoid deletion.
+
+## 4. P0 structural-noise classes
 
 Treat as P0 when material/reachable:
 
-- duplicate authority;
-- parallel/shadow truth;
-- duplicate mutable writer;
-- duplicate decision/validation/policy/default;
-- duplicate state machine;
-- duplicate enum/vocabulary;
-- duplicate mapping/DTO/contract semantics;
-- duplicate runtime/config path;
-- duplicate component/abstraction with no unique responsibility;
-- manual mirror/keep-in-sync layer;
-- generated contract repair layer;
-- pass-through wrapper without material responsibility;
-- dead code/file/folder/package;
-- unreachable route/runtime;
-- stale/obsolete/superseded implementation;
-- legacy compatibility with no bounded removal;
-- historical/backup/copy/temp/prototype/experimental residue;
-- orphan or misplaced artifact;
-- ambiguous ownership;
-- unused dependency/export/route/config;
-- tests/fixtures/mocks tied only to superseded truth.
+`duplicate authority`, `parallel/shadow truth`, `duplicate mutable writer`, `duplicate decision/validation/policy/default`, `duplicate state machine`, `duplicate enum/vocabulary`, `duplicate mapping/DTO/contract semantics`, `duplicate runtime/config path`, `duplicate script/tool/workflow responsibility`, `manual mirror/keep-in-sync`, `generated repair`, `pass-through wrapper`, `dead code/file/folder/package`, `unreachable route/runtime`, `stale/obsolete/superseded implementation`, `legacy compatibility`, `historical/backup/copy/temp/prototype/experimental residue`, `orphan/misplaced artifact`, `ambiguous ownership`, `unused dependency/export/route/config/script/workflow`, `tests/fixtures/mocks tied only to superseded truth`.
 
-These are not automatically deleted from a keyword hit. They are **mandatory investigation targets** and must receive a proven disposition.
+Keyword hits are investigation targets, not blind-delete instructions. Every material hit needs proof and disposition.
 
-## 4. Semantic duplication law
+## 5. Semantic duplication
 
-Duplication is not textual equality.
+Duplication is semantic, not textual.
 
-Search for multiple implementations of the same material meaning, including:
+Search for multiple implementations of the same material meaning: eligibility, permission, serviceability, financial truth, status interpretation, allowed actions, retries/idempotency, state transitions, defaults/fallbacks, validation, normalization, locale/currency, role/capability vocabulary, address/location, pricing/fees, contract semantics, error-to-state mapping, and operational scripts/tools that perform the same responsibility.
 
-- eligibility decisions;
-- permissions/authorization decisions;
-- serviceability rules;
-- financial decisions;
-- status interpretation;
-- allowed-actions logic;
-- retries/idempotency semantics;
-- state transitions;
-- defaults/fallbacks;
-- validation;
-- normalization;
-- locale/currency meaning;
-- role/capability vocabulary;
-- address/location interpretation;
-- pricing/fee logic;
-- contract request/response meaning;
-- error-to-state mapping.
+When proven:
 
-When duplication is proven:
+`SELECT CANONICAL OWNER → MIGRATE WRITERS/READERS/TOOLING CONSUMERS → CUT OVER → DELETE LOSING AUTHORITY`.
 
-`SELECT CANONICAL OWNER → MIGRATE WRITERS/READERS → CUT OVER → DELETE LOSING AUTHORITY`.
+Do not solve two authorities with a third authority.
 
-Do not solve two authorities by creating a third shared mapper unless it is demonstrably derived and cannot redefine truth.
+## 6. Collapse before add
 
-## 5. Collapse-before-add rule
-
-Before adding a new:
-
-`package`, `shared layer`, `adapter`, `mapper`, `wrapper`, `service`, `registry`, `abstraction`, `compatibility path`, or `config source`, prove that an existing canonical owner cannot correctly absorb the responsibility.
+Before adding a package, directory, shared layer, adapter, mapper, wrapper, service, registry, abstraction, compatibility path, config source, script, or workflow, prove an existing canonical owner cannot absorb the responsibility.
 
 If it can:
 
 `ABSORB / CONSOLIDATE`.
 
-Before adding a shared solution for duplicated semantics, ask whether the duplication itself can be removed. Prefer elimination over centralized duplication management.
+Prefer eliminating duplication to managing it.
 
-## 6. Directory/package restructuring authority
+## 7. Directory/package authority
 
-If a directory/package has no unique material responsibility:
+If a directory/package has no unique responsibility:
 
-`INVENTORY CONSUMERS → MOVE REQUIRED CONTENT TO TRUE OWNERS → MIGRATE IMPORTS/CONFIG → DELETE DIRECTORY/PACKAGE`.
+`INVENTORY CONSUMERS → MOVE REQUIRED CONTENT → MIGRATE REFERENCES → DELETE TREE`.
 
-If it mixes unrelated responsibilities:
+If it mixes unrelated responsibilities: `SPLIT BY CANONICAL OWNER`.
 
-`SPLIT BY CANONICAL OWNER`.
+If two trees own the same responsibility:
 
-If two directories/packages own the same responsibility:
+`SELECT WINNER → MIGRATE COMPLETE CONE → MERGE REQUIRED VALUE → DELETE LOSER`.
 
-`SELECT WINNING CANONICAL OWNER → MIGRATE COMPLETE CONE → MERGE REQUIRED VALUE → DELETE LOSING TREE`.
+Do not preserve topology for diff-size convenience.
 
-If an existing name/layout falsely implies authority, rename/rehome it after complete reference migration.
+## 8. Script/tool/workflow authority
 
-Do not preserve topology merely to minimize diff size.
+Every script/tool/workflow on `g` must prove:
 
-## 7. Rewrite vs refactor
+`CURRENT PURPOSE`
+`CANONICAL OWNER`
+`SUPPORTED INVOCATION PATH`
+`CURRENT CONSUMERS`
+`WHY EXISTING CANONICAL TOOLING CANNOT ABSORB IT`.
 
-Use `REFACTOR` when canonical semantics are already correct and the defect is mainly organization, typing, readability, or implementation quality.
+If two perform the same responsibility, consolidate to one and delete the loser.
 
-Use `REWRITE` when:
+If a script duplicates product/runtime/config truth, move truth to the real owner and make the script derived/thin or delete it.
 
-- current abstraction encodes wrong product/system semantics;
-- parallel truths are structurally embedded;
-- compatibility layers dominate the implementation;
-- repeated local fixes would retain the defective model;
-- the existing structure prevents a single canonical writer/contract/storage truth;
-- verification of the existing shape is materially harder than replacement with a smaller canonical model.
+If a script/workflow has no supported invocation or required operational purpose, delete it.
 
-Do not rewrite healthy canonical code for style alone. Do not preserve structurally wrong code merely because rewriting changes many files.
+No script is preserved because it might be useful later.
 
-## 8. Data/schema migration law
+## 9. Rewrite vs refactor
 
-Any schema/data restructuring must prove:
+Use `REFACTOR` when semantics/ownership are already canonical.
 
-1. canonical target schema/constraints;
-2. clean-install/bootstrap truth;
-3. migration order;
-4. backfill/reconciliation for existing data;
-5. old and new writer behavior during cutover;
-6. persisted readback after migration;
-7. idempotency/atomicity where material;
-8. rollback/recovery semantics if migration can partially fail;
-9. removal of obsolete columns/tables/indexes/triggers/seeds only after zero required consumers;
-10. generated/contracts/runtime consumers updated to target semantics.
+Use `REWRITE` when the abstraction encodes wrong semantics, parallel truth is embedded, compatibility dominates, repeated local fixes preserve the defective model, or replacement creates a smaller/verifiable canonical structure.
 
-Never leave parallel mutable columns/tables as permanent compatibility truth.
+Do not rewrite healthy canonical code for style alone. Do not preserve structurally wrong code because the rewrite is large.
 
-## 9. Contract/generated migration law
+## 10. Data/schema migration
 
-When contract/generated truth changes:
+Schema/data restructuring must prove target schema/constraints, clean install/bootstrap, migration order, existing-data backfill/reconciliation, writer cutover, persisted readback, idempotency/atomicity where material, recovery semantics, and safe removal of obsolete mutable storage after zero consumers.
 
-`AUTHORITATIVE PRODUCT/RUNTIME SEMANTICS → CANONICAL CONTRACT → REGENERATE → MIGRATE ALL CONSUMERS → DELETE MANUAL REPAIR → VERIFY ZERO UNEXPECTED GENERATED DIFF`.
+No permanent parallel mutable columns/tables.
 
-Explicitly search for:
+## 11. Contract/generated migration
 
-- `Omit<Generated...>`;
-- type intersections used to repair generated shapes;
-- handwritten copies of generated enums/DTOs;
-- manual request/response overlays;
-- keep-in-sync comments;
-- direct edits to generated output;
-- runtime coercions that conceal contract drift.
+`AUTHORITATIVE SEMANTICS → CANONICAL CONTRACT → REGENERATE → MIGRATE ALL CONSUMERS → DELETE MANUAL REPAIR → ZERO UNEXPECTED GENERATED DIFF`.
 
-The final state must not require humans to manually synchronize two contract vocabularies.
+Search for generated-type `Omit`, repair intersections, handwritten enum/DTO copies, request/response overlays, keep-in-sync comments, direct generated edits, and runtime coercions hiding drift.
 
-## 10. Runtime/config canonicalization
+## 12. Runtime/config canonicalization
 
-Inventory every material runtime/config source:
+Inventory env, config, defaults, manifests, compose/workflow config, runtime registries, routes, feature flags, ports/endpoints, health/readiness/bootstrap declarations, and scripts that mutate/generate them.
 
-- environment variables;
-- config files;
-- default values;
-- service manifests;
-- compose/workflow configuration;
-- runtime registries;
-- route registrations;
-- feature flags;
-- ports/endpoints;
-- health/readiness/bootstrap declarations.
+For each material meaning prove one canonical source and derived consumers. Delete obsolete paths/defaults/scripts after cutover.
 
-For each material meaning, prove one canonical source and derived consumers.
-
-Delete obsolete config paths and defaults after cutover. `UNKNOWN` configuration must not silently become a plausible business default.
-
-## 11. Tests/fixtures/mocks
+## 13. Tests/fixtures/mocks
 
 Tests are evidence consumers, not alternate product authorities.
 
-For every structural change:
+Migrate tests to canonical behavior; delete tests for superseded behavior; delete fixtures/mocks/snapshots used only by deleted paths; never weaken assertions to manufacture green; add negative tests when needed to prove old authority is unreachable.
 
-- migrate tests to canonical behavior;
-- delete tests that validate superseded behavior;
-- delete fixtures/mocks used only by deleted paths;
-- do not weaken assertions to make a root appear green;
-- do not retain obsolete production compatibility solely because old tests depend on it;
-- add negative tests where necessary to prove old authority is unreachable.
+## 14. Dependency cleanup
 
-## 12. Dependency cleanup
+After every affected-cone migration:
 
-After each affected-cone migration:
-
-- identify packages no longer imported/referenced;
+- identify no-longer-referenced packages/plugins/tools;
 - remove obsolete dependencies/devDependencies;
-- remove corresponding configuration/plugins/scripts;
-- prove build/test/runtime do not rely on transitive accidental availability;
-- avoid replacing one unused dependency with a new abstraction dependency unless causally required.
+- remove corresponding config/scripts/workflows;
+- prove build/test/runtime does not rely on accidental transitive availability;
+- avoid replacement dependencies without causal need.
 
-## 13. Negative-space keyword sweep
+## 15. Negative-space sweep on `g`
 
-Periodically search, scoped first to the affected cone and finally repository-wide, for terms/patterns such as:
+Search affected cone and finally **all material content on `g`** for:
 
-`old`, `legacy`, `obsolete`, `deprecated`, `superseded`, `history`, `archive`, `backup`, `copy`, `tmp`, `temp`, `v2`, `v3`, `compat`, `fallback`, `mirror`, `shadow`, `duplicate`, `prototype`, `experimental`, `keep in sync`, `source of truth`, `canonical`, `TODO`, `FIXME`, `HACK`.
+`old`, `legacy`, `obsolete`, `deprecated`, `superseded`, `history`, `archive`, `backup`, `copy`, `tmp`, `temp`, `v2`, `v3`, `compat`, `fallback`, `mirror`, `shadow`, `duplicate`, `prototype`, `experimental`, `keep in sync`, `source of truth`, `canonical`, `TODO`, `FIXME`, `HACK`, `one-off`, `manual`.
 
-A hit is not automatic deletion. Every material hit must be classified:
+Every material hit becomes:
 
-`CANONICAL`, `DERIVED_REQUIRED`, `GENERATED_REQUIRED`, `BOUNDED_MIGRATION`, `FALSE_POSITIVE_WITH_REASON`, or `DELETE`.
+`CANONICAL | DERIVED_REQUIRED | GENERATED_REQUIRED | BOUNDED_MIGRATION | FALSE_POSITIVE_WITH_REASON | DELETE`.
 
-No material hit may remain unreviewed at final fixed point.
+## 16. Deletion proof
 
-## 14. Deletion proof
+Before deleting a material artifact prove as applicable:
 
-Before deleting a material artifact prove, as applicable:
+```text
+ZERO REQUIRED IMPORTS
+ZERO REQUIRED EXPORTS/REEXPORTS
+ZERO REQUIRED CALLERS
+ZERO RUNTIME ROUTES
+ZERO MUTABLE WRITERS
+ZERO REQUIRED READERS
+ZERO CONFIG REFERENCES
+ZERO SCRIPT/WORKFLOW INVOCATIONS
+ZERO CONTRACT/GENERATED REFERENCES
+ZERO REQUIRED TEST/FIXTURE/MOCK DEPENDENCY
+ZERO REQUIRED DATA MIGRATION DEPENDENCY
+ZERO SUPPORTED UPGRADE/OPERATIONS DEPENDENCY
+```
 
-`ZERO REQUIRED IMPORTS`
-`ZERO REQUIRED EXPORTS/RE-EXPORTS`
-`ZERO REQUIRED CALLERS`
-`ZERO RUNTIME ROUTES`
-`ZERO MUTABLE WRITERS`
-`ZERO REQUIRED READERS`
-`ZERO CONFIG REFERENCES`
-`ZERO CONTRACT/GENERATED REFERENCES`
-`ZERO REQUIRED TEST/FIXTURE/MOCK DEPENDENCY`
-`ZERO REQUIRED DATA MIGRATION DEPENDENCY`
-`ZERO SUPPORTED UPGRADE DEPENDENCY`.
+After deletion rerun reference and negative-space searches.
 
-After deletion, rerun negative-space/reference search to prove absence rather than assuming it.
+## 17. Move/rename/merge/split proof
 
-## 15. Move/rename/merge/split proof
+Trace/update:
 
-After any move/rename/merge/split/replace, trace and update:
-
-`imports → exports → re-exports → callers → routes → contracts → schemas → config → env → dependencies → tests → mocks → fixtures → generated artifacts → runtime registries → product journeys`.
+`imports → exports → reexports → callers → routes → contracts → schemas → config → env → scripts → workflows → dependencies → tests → mocks → fixtures → generated → runtime registries → product journeys`.
 
 Search both old path/name and old semantic vocabulary.
 
-A move is not closed while the old path survives as a forwarding compatibility shell without a bounded retirement requirement.
+A move is not closed while the old path survives as an unbounded forwarding shell.
 
-## 16. No cosmetic reorganization
+## 18. No cosmetic cleanup
 
 Forbidden final outcomes:
 
-- `legacy → archive` while still live;
-- `old → history` inside executable/source trees;
-- duplicate implementations hidden behind `common`;
-- multiple mappings hidden behind a shared mapper while both authorities remain;
-- mixed ownership moved into `utils`/`helpers`/`misc`;
-- parallel truths wrapped by a new abstraction that keeps both live;
-- new canonical implementation added while the old writer remains reachable.
+- `legacy → archive` while retained live;
+- `old → history` inside live trees;
+- duplicates hidden behind `common`;
+- duplicate mappings hidden behind shared mapping while authorities survive;
+- mixed responsibility dumped into `utils/helpers/misc`;
+- old scripts collected into archive folders instead of deleted;
+- parallel truths wrapped by a new abstraction;
+- new canonical implementation while old writer remains reachable.
 
-Cleaning means removing the structural cause, not moving the clutter.
+Cleaning means removing the structural cause, not relocating clutter.
 
-## 17. Mandatory cleanup proof per root
+## 19. Mandatory cleanup proof per root
 
-Before root closure answer with evidence:
+Before closure answer with evidence:
 
 ```text
 What old authority disappeared?
-What duplicate writer disappeared?
-What duplicate reader/mapping disappeared?
+What duplicate writer/reader/mapping disappeared?
 What obsolete lines/functions/files disappeared?
 What obsolete directories/packages disappeared?
+What obsolete scripts/workflows/tooling disappeared?
 What stale config/routes/contracts disappeared?
 What dependencies/tests/fixtures/mocks disappeared?
 What compatibility remains, why, and what deletes it?
-What proves zero old consumers?
+What proves zero old consumers/invocations?
 What proves no third authority was created?
-What proves no required data/behavior was lost?
+What proves no required data/behavior/operations capability was lost?
 ```
 
-If a root claims to replace/consolidate authority and none of the old structure disappeared, classify it as `CLOSURE_SUSPICION` and re-audit before closing.
+If a replacement/consolidation closes while no old structure disappeared, classify `CLOSURE_SUSPICION` and re-audit.
 
-## 18. Repository-wide final sweep
+## 20. Final branch-wide sweep
 
-Before `G_LEVEL4_CANDIDATE_READY`, execute a broad cleanup/restructure sweep covering:
+Before `G_RADICAL_CLEANUP_COMPLETE`, run a fresh sweep across **all material content of `g`**, not selected files:
 
-`semantic duplicate scan → mutable-writer uniqueness → contract authority → schema/data authority → state-machine/policy/default/mapping duplication → filesystem responsibility → dead/unreachable → legacy/history/temp/backup/copy → compatibility residue → unused dependency/export/config/route → generated/manual repair → test/fixture/mock residue → canonical ownership → reachable old authority`.
+`semantic duplicates → mutable-writer uniqueness → owner uniqueness → contract authority → schema/data authority → state-machine/policy/default/mapping duplication → filesystem responsibility → script/tool/workflow responsibility → dead/unreachable → legacy/history/temp/backup/copy → compatibility residue → unused dependency/export/config/route/script/workflow → generated/manual repair → test/fixture/mock residue → canonical ownership → reachable old authority → undispositioned artifacts`.
+
+Any material finding reopens the Root Graph.
 
 Final requirement:
 
-`REPOSITORY_NOISE_BUDGET = ZERO KNOWN MATERIAL NOISE`.
+`G_NOISE_BUDGET = ZERO KNOWN MATERIAL NOISE`.
