@@ -69,9 +69,13 @@ func (s *protectedStoreServer) handleReportDeliveryException(w http.ResponseWrit
 		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_MISMATCH", "body correlationId must match X-Correlation-ID")
 		return
 	}
+	if err := validateDeliveryExceptionReportNote(body.Note); err != nil {
+		writeDeliveryExceptionError(w, err)
+		return
+	}
 	item, err := dispatch.ReportDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID, dispatch.ReportDeliveryExceptionInput{
 		OperatorContextID: actor.OperatorContextID,
-		ReasonCode:        body.ReasonCode, Note: body.Note,
+		ReasonCode:        body.ReasonCode, Note: strings.TrimSpace(body.Note),
 		IdempotencyKey: idempotencyKey,
 		CorrelationID:  correlationID,
 		Latitude:       body.Latitude, Longitude: body.Longitude,

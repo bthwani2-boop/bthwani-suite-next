@@ -9,7 +9,6 @@ import (
 	"dsh-api/internal/auth"
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/media"
-	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
 
@@ -68,7 +67,7 @@ func DeliveryExceptionGovernanceMiddleware(
 				"/exceptions",
 			); ok {
 				r.SetPathValue("assignmentId", assignmentID)
-				governed.handleReportDeliveryExceptionGoverned(w, r)
+				governed.handleReportDeliveryException(w, r)
 				return
 			}
 			if exceptionID, ok := deliveryExceptionPathID(
@@ -83,54 +82,4 @@ func DeliveryExceptionGovernanceMiddleware(
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-// handleReportDeliveryExceptionGoverned keeps the domain primitive unchanged
-// while enforcing the delivery-exception evidence contract at the HTTP boundary. Location
-// remains optional so safety incidents can still be reported when GPS is denied;
-// the operational note is the mandatory human-readable evidence.
-func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
-	idempotencyKey, correlationID, ok := requireCaptainCommandIdentity(w, r)
-	if !ok {
-		return
-	}
-	w.Header().Set("X-Correlation-ID", correlationID)
-	var body struct {
-		ReasonCode    dispatch.DeliveryExceptionReasonCode `json:"reasonCode"`
-		Note          string                               `json:"note"`
-		CorrelationID string                               `json:"correlationId"`
-		Latitude      *float64                             `json:"latitude"`
-		Longitude     *float64                             `json:"longitude"`
-		ProofMediaRef string                               `json:"proofMediaRef"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-	if body.CorrelationID != "" && strings.TrimSpace(body.CorrelationID) != correlationID {
-		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_MISMATCH", "body correlationId must match X-Correlation-ID")
-		return
-	}
-	if err := validateDeliveryExceptionReportNote(body.Note); err != nil {
-		writeDeliveryExceptionError(w, err)
-		return
-	}
-	item, err := dispatch.ReportDeliveryException(s.db, r.PathValue("assignmentId"), actor.ID, dispatch.ReportDeliveryExceptionInput{
-		OperatorContextID: actor.OperatorContextID,
-		ReasonCode:        body.ReasonCode,
-		Note:              strings.TrimSpace(body.Note),
-		IdempotencyKey:    idempotencyKey,
-		CorrelationID:     correlationID,
-		Latitude:          body.Latitude,
-		Longitude:         body.Longitude,
-		ProofMediaRef:     strings.TrimSpace(body.ProofMediaRef),
-	})
-	if err != nil {
-		writeDeliveryExceptionError(w, err)
-		return
-	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"exception": marshalDeliveryException(item)})
 }
