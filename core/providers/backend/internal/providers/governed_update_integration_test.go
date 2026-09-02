@@ -25,7 +25,7 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 	if err != nil {
 		t.Fatalf("open database: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	baseCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	ctx := WithOperatorContext(baseCtx, "context-")
