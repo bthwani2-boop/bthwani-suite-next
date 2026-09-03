@@ -1,7 +1,7 @@
 # H Forensic Diagnosis and Causal Refoundation Synthesis
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: full census, required-truth extraction, semantic clustering, container/surface diagnosis, canonical target, structural delta, Source-of-Defect/Source-of-Fix proof and causal execution-unit synthesis.
+Owner: full branch census, required-truth extraction, hostile survival challenge, semantic clustering, systemic-catastrophe synthesis, container/surface diagnosis, canonical target, structural delta, Source-of-Defect/Source-of-Fix proof and causal execution-unit synthesis.
 
 ## 1. Diagnosis starts repository-wide
 
@@ -28,6 +28,8 @@ ORPHAN / DEAD / STALE / UNOWNED MATERIAL
 ```
 
 Machine census must be followed by semantic census.
+
+Stage A requires this census to be branch-wide, not restricted to the currently failing cone. Sampling, first-error inspection or root-local discovery cannot satisfy the pre-root survival challenge.
 
 ## 2. Required-truth extraction
 
@@ -107,6 +109,9 @@ WINNER_LOSER_VIEW
 CANONICAL_CONTAINER_VIEW
 END_TO_END_CAPABILITY_VIEW
 STRUCTURAL_DELTA_VIEW
+BRANCH_SURVIVAL_VIEW
+SYSTEMIC_CATASTROPHE_VIEW
+CATASTROPHE_TO_DESCENDANT_ROOT_VIEW
 ```
 
 They may exist in memory, generated output or temporary evidence. Their purpose is total accounting, not bureaucracy.
@@ -124,6 +129,8 @@ UNRESOLVED_CANONICAL_CONTAINER_ASSIGNMENTS=0
 UNMAPPED_MATERIAL_CAPABILITIES=0
 UNRESOLVED_STRUCTURAL_DELTA_ITEMS=0
 ```
+
+Before Stage B specifically, every material artifact/container must either have a proven current disposition or be mapped to an explicit Stage-B causal obligation; silent unreviewed structure is forbidden.
 
 ## 6. Artifact/container/surface disposition
 
@@ -155,6 +162,14 @@ UNCLASSIFIED
 ```
 
 `UNCLASSIFIED` and `BLOCKED_UNKNOWN` block closure; they do not create preservation rights.
+
+The survival burden is hostile:
+
+```text
+WHY_DOES_THIS_DESERVE_TO_SURVIVE?
+```
+
+is mandatory for material inherited structure. Current use, successful build, caller count or historical acceptance is not positive survival proof.
 
 ## 7. File and parent death test
 
@@ -305,6 +320,8 @@ WHAT_MUST_PREVENT_REGRESSION?
 
 Current topology is evidence, never a design constraint.
 
+During Stage A it is sufficient to design the canonical foundation and enough descendant shape to execute systemic cutovers safely; do not invent unnecessary local Stage-B implementation detail before shared foundations settle.
+
 ## 13. Complete delta
 
 Compute CURRENT → CANONICAL across at least:
@@ -327,26 +344,142 @@ ADMISSION / PREVENTION
 
 Delta items are causal evidence nodes, not a todo queue.
 
-## 14. Dynamic Root Graph and execution units
+Every material delta node must be classified into one of:
 
-Build the causal graph, then synthesize candidate execution units at the highest useful granularity.
+```text
+PRE_ROOT_SYSTEMIC_CATASTROPHE
+STAGE_B_CAUSAL_ROOT_OR_DESCENDANT
+LOCAL_FINDING_MAPPED_TO_A_CAUSAL_UNIT
+BLOCKED_UNKNOWN
+```
+
+The classification is causal. Warning count or file count alone cannot promote a finding to systemic status.
+
+## 14. Mandatory systemic-catastrophe synthesis
+
+Before normal Root Graph selection, synthesize a separate pre-root graph for conditions that poison the shared baseline.
+
+```text
+SYSTEMIC_CATASTROPHE =
+A PROVEN NONCANONICAL CONDITION THAT
+CROSSES OR CONTAMINATES MULTIPLE FUTURE ROOTS
+OR CORRUPTS A SHARED EXECUTION/OWNERSHIP/DATA/CONTRACT/RUNTIME/VERIFICATION SUBSTRATE,
+AND WHOSE EARLY REFOUNDATION MATERIALLY REDUCES
+THE COST, DISTORTION OR COMPLEXITY OF MULTIPLE LATER CLOSURES.
+```
+
+Strong systemic signals include:
+
+```text
+CROSS_ROOT_BLAST_RADIUS
+SHARED_AUTHORITY_CORRUPTION
+DUPLICATE_MUTABLE_AUTHORITY_ACROSS_SURFACES
+ROOT_CLOSURE_BLOCKING_POWER
+DIAGNOSIS_CONTAMINATION
+VERIFICATION_CONTAMINATION
+PARALLEL_TRUTH_MULTIPLIER
+COMPENSATION_LAYER_MULTIPLIER
+BAD_REPOSITORY/WORKSPACE/PACKAGE_TOPOLOGY
+BAD_DATABASE_OWNERSHIP_OR_MIGRATION_EPOCH
+DUPLICATE_CONTRACT_OR_GENERATED_LINEAGE
+REACHABLE_SUPERSEDED_RUNTIME/CONFIG
+CONFLICTING_GOVERNANCE/AGENT/TOOL_AUTHORITY
+HIGH_LEVERAGE_OBSOLETE_SUBTREE
+SHARED_CORE_COMMON_OWNERSHIP_REFUGE
+```
+
+A local bug, duplicate helper or isolated warning is not systemic merely because it is ugly.
+
+For every systemic candidate derive conceptually:
+
+```text
+CATASTROPHE_ID
+ACTUAL_SHARED_CAUSE
+AFFECTED_ROOT_FAMILIES / CAPABILITIES
+SHARED_SUBSTRATE
+WINNING_CANONICAL_FOUNDATION
+LOSING_AUTHORITIES/CONTAINERS
+REQUIRED_TRUTH_TO_SALVAGE
+COMPLETE_AFFECTED_CONE
+MIGRATION/CUTOVER
+DELETION/PRUNING
+ADMISSION/PREVENTION
+FALSIFICATION
+VALID_BLOCKERS
+```
+
+## 15. Systemic Catastrophe Graph, ROOT_TAX and ranking signals
+
+Build:
+
+```text
+SYSTEMIC_CATASTROPHE_GRAPH
+```
+
+before normal root traversal. Parent systemic causes must absorb descendant catastrophe symptoms where causally correct.
+
+Use `ROOT_TAX` as a qualitative diagnosis concept:
+
+```text
+ROOT_TAX =
+THE EXTRA MIGRATION, COMPATIBILITY, DIAGNOSIS, VERIFICATION,
+PARALLEL-AUTHORITY AND CLEANUP WORK THAT A SURVIVING SHARED DEFECT
+WOULD FORCE INTO FUTURE ROOTS.
+```
+
+Rank systemic candidates by demonstrated leverage, not by ease or raw count:
+
+```text
+TRUTH / DATA / SECURITY RISK
+CROSS_ROOT_BLOCKING_POWER
+SHARED_AUTHORITY_COLLAPSE
+NUMBER_AND_MATERIALITY_OF_ROOT_FAMILIES_AFFECTED
+DIAGNOSIS / VERIFICATION CONTAMINATION REMOVAL
+LOSING_STRUCTURE_DELETABLE
+COMPENSATION_LAYER_REMOVAL
+ROOT_TAX_REMOVAL
+FUTURE_COMPLEXITY_REDUCTION
+SAFE_COMPLETE_CUTOVER_FEASIBILITY
+```
+
+The governing question is:
+
+```text
+WHICH PROVEN REFOUNDATION, IF DONE NOW,
+MAKES THE LARGEST SET OF FUTURE ROOTS
+SMALLER, CLEANER, MORE INDEPENDENT AND EASIER TO CLOSE
+WITHOUT SACRIFICING REQUIRED TRUTH?
+```
+
+`02` synthesizes and ranks evidence. Campaign traversal and stage admission are owned by `05` and `04` respectively.
+
+## 16. Normal Dynamic Root Graph and execution units
+
+The normal Root Graph is the Stage-B causal graph after Stage-A systemic decontamination has passed its exit gate.
 
 ```text
 ROOT = HIGHEST_PROVEN_CAUSE_WHOSE_ELIMINATION_COLLAPSES_MATERIAL_DEFECT_CLUSTERS
 EXECUTION_UNIT = HIGHEST_CAUSALLY_COMPLETE_SAFE_CUTOVER_THAT_REMOVES_THE_MOST_PROVEN_NONCANONICAL_STRUCTURE
 ```
 
-Candidate units may be a whole top-level surface, domain, service, package family, subtree, migration epoch, contract lineage, CI control plane or narrower root.
+Candidate units may be a whole top-level surface, domain, service, package family, subtree, capability/journey, migration epoch, contract lineage, CI control plane or narrower root.
 
 Rank by structural leverage, canonical correctness, deletable losing structure and complete cutover—not ease.
 
-## 15. Source-of-Defect / Source-of-Fix execution gate
+```text
+NORMAL_ROOT_SELECTION_BEFORE_STAGE_A_EXIT_PASS = FORBIDDEN
+```
+
+A Stage-B graph may be prepared conceptually during Stage A for dependency analysis, but it cannot control mutation order while an executable systemic catastrophe survives.
+
+## 17. Source-of-Defect / Source-of-Fix execution gate
 
 Before material mutation establish compactly:
 
 ```text
 UNIT_ID
-ROOT_CAUSE_ID
+UNIT_STAGE
+ROOT_CAUSE_ID_OR_CATASTROPHE_ID
 CAUSAL_PROOF
 ACTUAL_SOURCE_OF_DEFECT
 REQUIRED_SOURCE_OF_FIX
@@ -382,7 +515,7 @@ WOULD_REQUIRE_MIGRATION
 TOO_LARGE_FOR_ONE_SESSION
 ```
 
-## 16. Patch-loop breaker and treatment adequacy
+## 18. Patch-loop breaker and treatment adequacy
 
 If work degenerates into:
 
@@ -390,29 +523,31 @@ If work degenerates into:
 LOCAL_ERROR → LOCAL_FIX → RELATED_ERROR → FALLBACK/WRAPPER → ANOTHER_SYMPTOM
 ```
 
-stop descendant patching, cluster symptoms, promote the shared parent and re-rank.
+stop descendant patching, cluster symptoms and ask first whether the shared parent is a Stage-A systemic catastrophe. If yes, promote it into the Systemic Catastrophe Graph. Otherwise promote the correct Stage-B causal parent and re-rank.
 
 Before accepting a write, be able to answer:
 
 ```text
-WHAT_ROOT_DOES_THIS_WRITE_REMOVE?
+WHAT_SYSTEMIC_CATASTROPHE_OR_ROOT_DOES_THIS_WRITE_REMOVE?
 WHAT_SOURCE_OF_DEFECT_DOES_IT_CHANGE?
 WHY_IS_THIS_THE_CANONICAL_SOURCE_OF_FIX?
-WHICH_DESCENDANT_FINDINGS_SHOULD_COLLAPSE?
+WHICH_DESCENDANT_FINDINGS_OR_ROOT_TAX_SHOULD_COLLAPSE?
 WHAT_OLD_STRUCTURE_BECOMES_DELETE_REQUIRED?
 ```
 
-If the root survives without the write, the write is not sufficient root treatment except as a bounded migration/cutover step.
+If the cause survives without the write, the write is not sufficient treatment except as a bounded migration/cutover step.
 
-## 17. Independent challenger pass
+## 19. Independent challenger pass
 
 Before committing a high-impact canonical target or irreversible treatment, run a logically independent falsification pass. This is not an approval workflow and must not delay a proven executable unit unnecessarily.
 
 Challenge at least:
 
 ```text
-IS_THE_FAVORED_ROOT_ACTUALLY_A_SYMPTOM?
+IS_THE_FAVORED_CAUSE_ACTUALLY_A_SYMPTOM?
 WHAT_HIGHER_CAUSAL_PARENT_ALSO_FITS?
+IS_THIS_REALLY_SYSTEMIC_OR_MERELY_LOCAL?
+WHAT_SHARED_SUBSTRATE_OR_DESCENDANT_ROOT_FAMILY_IS_MISSING?
 WHAT_EVIDENCE_WOULD_DISPROVE_THE_TARGET?
 WHAT_WRITER/READER/CONSUMER/HANDOFF_MAY_BE_MISSING?
 WHAT_OLD_AUTHORITY_COULD_STILL_BE_REACHABLE?
@@ -421,11 +556,11 @@ WHAT_RACE/RETRY/RESTART/LOST_RESPONSE_CASE_BREAKS_THE_MODEL?
 WHAT_EXTERNAL_OR_SECURITY_TRUST_ASSUMPTION_IS_UNPROVEN?
 ```
 
-A proven higher root immediately reopens ranking. Challenger output is evidence, never a second authority.
+A proven higher cause immediately reopens ranking. Challenger output is evidence, never a second authority.
 
-## 18. Stateful and trust-boundary modeling
+## 20. Stateful and trust-boundary modeling
 
-For materially stateful roots model enough of:
+For materially stateful units model enough of:
 
 ```text
 STATE
@@ -458,9 +593,9 @@ CANONICAL_MITIGATION_OWNER
 REQUIRED_FALSIFICATION_EVIDENCE
 ```
 
-These models exist only where material and are used to find higher roots faster; they are not mandatory documentation artifacts.
+These models exist only where material and are used to find higher causes faster; they are not mandatory documentation artifacts.
 
-## 19. Diagnosis freshness
+## 21. Diagnosis freshness
 
 After every material mutation unit:
 
@@ -469,9 +604,10 @@ RE-PIN h
 → UPDATE CURRENT
 → REFRESH CENSUS/DELTA
 → INVALIDATE AFFECTED EVIDENCE
-→ REBUILD ROOT GRAPH
-→ RE-SYNTHESIZE EXECUTION UNITS
-→ RE-RANK
+→ REBUILD SYSTEMIC_CATASTROPHE_GRAPH
+→ RE-SYNTHESIZE SYSTEMIC UNITS
+→ IF STAGE_A_EXIT_NOT_PROVEN: RE-RANK SYSTEMIC UNITS
+→ IF STAGE_A_EXIT_PROVEN: REBUILD NORMAL ROOT GRAPH / RE-SYNTHESIZE STAGE-B UNITS / RE-RANK
 ```
 
-Never execute a stale static queue after architecture changes.
+For a cross-cutting Stage-A change, refresh branch-wide enough to catch collapsed, newly exposed or invalidated systemic candidates. Never execute a stale static queue after architecture changes.
