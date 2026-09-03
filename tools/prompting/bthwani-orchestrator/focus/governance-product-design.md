@@ -69,14 +69,14 @@ Frontend may own presentation/navigation/transient editing state, but not a seco
 For every material screen/route/flow ask:
 
 ```text
-WHAT REQUIRED CAPABILITY DOES IT SERVE?
-WHICH ACTOR/JOURNEY?
-WHAT CANONICAL BACKEND/DATA/CONTRACT SUPPORTS IT?
-WHAT QUERY/MUTATION/STORE DOES IT USE?
-WHAT STATES/ACTIONS/READBACK DOES IT REPRESENT?
-IS BUSINESS TRUTH HARDCODED LOCALLY?
-IS A MOCK/FALLBACK HIDING A BACKEND GAP?
-IS THIS RESPONSIBILITY DUPLICATED BY ANOTHER SCREEN UNDER ANOTHER NAME/PATH?
+WHAT_REQUIRED_CAPABILITY_DOES_IT_SERVE?
+WHICH_ACTOR/JOURNEY?
+WHAT_CANONICAL_BACKEND/DATA/CONTRACT_SUPPORTS_IT?
+WHAT_QUERY/MUTATION/STORE_DOES_IT_USE?
+WHAT_STATES/ACTIONS/READBACK_DOES_IT_REPRESENT?
+IS_BUSINESS_TRUTH_HARDCODED_LOCALLY?
+IS_A_MOCK/FALLBACK_HIDING_A_BACKEND_GAP?
+IS_THIS_RESPONSIBILITY_DUPLICATED_BY_ANOTHER_SCREEN_UNDER_ANOTHER_NAME/PATH?
 ```
 
 If no required journey exists, delete the flow. If duplicate, migrate navigation/consumers to the winner and delete the losing screen/route/files.
@@ -98,20 +98,69 @@ ENTRY
 LOADING/PENDING
 SUCCESS
 EMPTY/MISSING
-VALIDATION FAILURE
-AUTH/AUTHZ FAILURE
-BUSINESS REJECTION
+VALIDATION_FAILURE
+AUTH/AUTHZ_FAILURE
+BUSINESS_REJECTION
 CONFLICT/CONCURRENCY
 OFFLINE/DEGRADED
 RETRY/IDEMPOTENCY
 CANCELLATION/REVERSAL
-CANONICAL READBACK
-CROSS-SURFACE CONSISTENCY
+CANONICAL_READBACK
+CROSS_SURFACE_CONSISTENCY
 ```
 
 Do not add UX compensation for broken domain ownership; repair the higher root.
 
-## 7. Durable truth vs mirrors
+## 7. Human-experience root altitude
+
+When a material root affects a user-facing journey, diagnose above local styling before patching presentation:
+
+```text
+USER/ACTOR_NEED
+→ JOURNEY/TASK
+→ INFORMATION_ARCHITECTURE
+→ INTERACTION / FEEDBACK / RECOVERY
+→ CONTENT / TERMINOLOGY
+→ DESIGN_TOKEN / COMPONENT / PATTERN_AUTHORITY
+→ SURFACE_COMPOSITION
+→ RENDERED_BEHAVIOR
+→ ACCESSIBILITY / LOCALIZATION / PERFORMANCE / USABILITY_EVIDENCE
+```
+
+High-leverage experience-root signals include:
+
+```text
+COMPETING_DESIGN/TOKEN_SOURCES
+UNJUSTIFIED_LOCAL_STYLE/TOKEN_OVERRIDES
+DUPLICATE_COMPONENT/PATTERN_AUTHORITY
+INCONSISTENT_STATE/ERROR_SEMANTICS
+MISSING_MATERIAL_COMPONENT_STATES
+CROSS_SURFACE_DIVERGENCE_WITHOUT_PRODUCT_REASON
+RENDERED_ONLY_DEFECTS
+HIGH_RISK_USABILITY_ASSUMPTIONS_PRESENTED_AS_FACT
+```
+
+Do not patch a screenshot when the shared component, token, content vocabulary, journey semantics or Product authority is the actual Source-of-Fix.
+
+This does not require design bureaucracy. It exists to promote the highest correct experience root and eliminate repeated local UI patches.
+
+## 8. Accessibility, localization and performance
+
+When material, account for:
+
+```text
+KEYBOARD/FOCUS/SEMANTIC_ACCESSIBILITY
+SCREEN_READER_MEANING
+CONTRAST/SCALING/REDUCED_MOTION WHERE APPLICABLE
+ARABIC/RTL/LTR/NUMBER/DATE/CURRENCY SEMANTICS
+RESPONSIVE/DEVICE-SIZE BEHAVIOR
+LOADING/PERCEIVED_PERFORMANCE
+RENDERING/NETWORK/STATE PERFORMANCE BOTTLENECKS
+```
+
+Do not create arbitrary numeric targets without a real Product/operations requirement. But do not claim a user-facing baseline correct while known material accessibility/localization/performance defects remain.
+
+## 9. Durable truth vs mirrors
 
 Material mutable Product truth must not live in synchronized mirrors.
 
@@ -119,54 +168,55 @@ Derived cache/read/frontend state must have explicit derivation/invalidation and
 
 Manual DTO/enum/status/error/business mappings that duplicate canonical contract/domain semantics are parallel-truth candidates and should be migrated/deleted when redundant.
 
-## 8. Historical value salvage
+## 10. Historical value salvage
 
 Old branches/dead code/docs may contain lost required behavior. Recover only proven required meaning.
 
 ```text
-SALVAGE MEANING
-→ PLACE UNDER NEW CANONICAL OWNER
-→ DO NOT RESURRECT OLD TOPOLOGY
+SALVAGE_MEANING
+→ PLACE_UNDER_NEW_CANONICAL_OWNER
+→ DO_NOT_RESURRECT_OLD_TOPOLOGY
 ```
 
-## 9. Governance is not privileged
+## 11. Governance is not privileged
 
 `governance/**` and governance-like docs are not automatically canonical because they describe process or Product intent.
 
 For every governance artifact determine:
 
 ```text
-DOES IT CONTAIN UNIQUE REQUIRED DURABLE TRUTH?
-IS THAT TRUTH ALREADY OWNED EXECUTABLY ELSEWHERE?
-DOES IT CONFLICT WITH LIVE PRODUCT/SYSTEM TRUTH?
-DOES IT CREATE A SECOND EXECUTION/APPROVAL/ROUTING AUTHORITY?
-WOULD EXTRACT→DELETE→MINIMAL-RECREATE BE CLEANER?
+DOES_IT_CONTAIN_UNIQUE_REQUIRED_DURABLE_TRUTH?
+IS_THAT_TRUTH_ALREADY_OWNED_EXECUTABLY_ELSEWHERE?
+DOES_IT_CONFLICT_WITH_LIVE_PRODUCT/SYSTEM_TRUTH?
+DOES_IT_CREATE_A_SECOND_EXECUTION/APPROVAL/ROUTING_AUTHORITY?
+WOULD_EXTRACT→DELETE→MINIMAL_RECREATE_BE_CLEANER?
 ```
 
 Delete stale, duplicative, obsolete or confusing governance. Preserve/recreate only unique truth that the canonical baseline actually needs.
 
 Do not automate governance prose merely to make it look authoritative.
 
-## 10. Documentation
+## 12. Documentation
 
 Documentation survives only when it owns unique required explanatory/operational truth not better represented elsewhere.
 
 Stale/contradictory docs must be corrected, absorbed or deleted. Historical prose cannot control execution.
 
-## 11. Product fixed-point proof
+## 13. Product fixed-point proof
 
 At final closure prove for every material capability:
 
 ```text
-REQUIRED CAPABILITY ACCOUNTED FOR
-CANONICAL OWNER/WRITER ACCOUNTED FOR
-DATA/PERSISTENCE ACCOUNTED FOR
-API/CONTRACT/GENERATED LINEAGE ACCOUNTED FOR WHERE APPLICABLE
-ALL MATERIAL SURFACES/SCREENS ACCOUNTED FOR
-ACTION→MUTATION→READBACK ACCOUNTED FOR
-NO FRONTEND/BACKEND SHADOW BUSINESS TRUTH
-NO ORPHAN REQUIRED SCREEN/API/BINDING/DATA
-NO PARALLEL PRODUCT TRUTH
-NO ORPHAN JOURNEY
-NO KNOWN REQUIRED CAPABILITY LOST DURING REFOUNDATION
+REQUIRED_CAPABILITY_ACCOUNTED_FOR
+CANONICAL_OWNER/WRITER_ACCOUNTED_FOR
+DATA/PERSISTENCE_ACCOUNTED_FOR
+API/CONTRACT/GENERATED_LINEAGE_ACCOUNTED_FOR_WHERE_APPLICABLE
+ALL_MATERIAL_SURFACES/SCREENS_ACCOUNTED_FOR
+ACTION→MUTATION→READBACK_ACCOUNTED_FOR
+NO_FRONTEND/BACKEND_SHADOW_BUSINESS_TRUTH
+NO_ORPHAN_REQUIRED_SCREEN/API/BINDING/DATA
+NO_PARALLEL_PRODUCT_TRUTH
+NO_ORPHAN_JOURNEY
+NO_KNOWN_REQUIRED_CAPABILITY_LOST_DURING_REFOUNDATION
+NO_KNOWN_MATERIAL_ACCESSIBILITY/LOCALIZATION/EXPERIENCE_GAP_WHERE_APPLICABLE
 ```
