@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Badge, Button, Surface, Text, colorRoles, spacing } from "@bthwani/ui-kit";
 import { usePartnerOrderRefundsQuery, useClientOrderRefundsQuery } from "./wlt-refund.queries";
 import type { WltRefundResponse } from "./wlt-refund.queries";
-import { formatWltMoney } from "../../shared/finance/wlt-money";
+import { formatWltMoney } from "../presentation/wlt-money";
 
 export type OrderRefundStatusCardProps = {
   readonly orderId: string;
