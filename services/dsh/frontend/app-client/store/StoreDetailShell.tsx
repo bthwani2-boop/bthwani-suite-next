@@ -12,8 +12,8 @@ import type { DshStoreDetailViewModel } from "../../shared/store";
 import type {
   CatalogCategory,
   CatalogProduct,
-} from "../../shared/catalog/client-catalog.types";
-import type { CatalogMedia } from "../../shared/catalog/catalog.types";
+} from "../../catalog/client-catalog.types";
+import type { CatalogMedia } from "../../catalog/catalog.types";
 import type { DshFulfillmentDeliveryMode } from "../../shared/delivery/delivery.contract";
 import { StoreDetailHeroSection } from "./StoreDetailHeroSection";
 import { StoreDetailCarousel } from "./StoreDetailCarousel";
