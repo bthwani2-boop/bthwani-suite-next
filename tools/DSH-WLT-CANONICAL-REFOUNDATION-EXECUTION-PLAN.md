@@ -7,643 +7,252 @@ TARGET_SERVICES: services/dsh + services/wlt
 COMPLETION_TARGET: LEVEL_4_FIXED_POINT
 TEMPORARY_ARTIFACT: YES
 SELF_DELETE_AFTER_VERIFIED_CLOSURE: REQUIRED
+PROGRESS_LEDGER: FORBIDDEN
 
 ---
 
-## 0. Purpose and temporary-life law
+## 0. Role, authority, and lifetime
 
-This file exists only to drive the complete canonical refoundation of `services/dsh` and `services/wlt` as one coherent product/system campaign.
+This file is a temporary execution guide for the complete DSH/WLT refoundation. It is not a permanent architecture document, runtime dependency, contract authority, product specification, status ledger, or archive.
 
-It is intentionally located under `tools/` and is **not** an orchestrator module, semantic owner, permanent governance document, runtime dependency, product contract, or long-lived repository authority.
+It must never become a second source of live repository state. Every execution decision is derived from exact live `h` and current evidence. Do not add checkboxes, mutable status fields, completed-file lists, or stale snapshots to this file.
 
-The file must be deleted from live `h` after all DSH/WLT refoundation closure gates in this plan pass and a final fresh re-census proves that no runtime, build, CI, contract, test, tool, documentation, or developer workflow depends on it.
+If execution is performed under the repository orchestrator, the orchestrator remains supreme. This file specializes the DSH/WLT campaign but does not weaken any repository-wide law.
+
+After verified closure:
 
 ```text
-PLAN_CREATED
-→ EXECUTE_DSH_WLT_REFOUNDATION
-→ VERIFY_FULL_CLOSURE
-→ VERIFY_PLAN_HAS_ZERO_LIVE_DEPENDENTS
+VERIFY_LEVEL_4_DSH_WLT_FIXED_POINT
+→ VERIFY_ZERO_LIVE_DEPENDENCIES_ON_THIS_FILE
 → DELETE_THIS_FILE
-→ VERIFY_DELETION
+→ RE_PIN_LIVE_h
+→ VERIFY_PATH_ABSENT
+→ VERIFY_ZERO_REFERENCES_TO_PATH
 ```
 
-The plan must never be preserved as archive/history/residue after completion. Git history is sufficient forensic archive.
+Git history is the only archive for this plan.
 
 ---
 
 ## 1. Mission
 
-Refound DSH and WLT from the highest correct semantic/product/system granularity down to files and symbols so that the final live branch contains:
+Refound DSH and WLT from semantic ownership first principles so the final repository expresses the product/system truth directly.
+
+Required final properties:
 
 ```text
 ONE_CANONICAL_OWNER_PER_MATERIAL_RESPONSIBILITY
-ONE_CANONICAL_PERSISTED_TRUTH_PER_BUSINESS_MEANING
-ONE_CANONICAL_CONTRACT_LINEAGE
-ONE_CANONICAL_BACKEND_IMPLEMENTATION_PATH
-ONE_CANONICAL_FRONTEND_CAPABILITY_PATH
-ONE_CANONICAL_RUNTIME/CONFIG_PATH_PER_ROLE
+ONE_CANONICAL_MUTABLE_AUTHORITY_PER_BUSINESS_MEANING
+ONE_REPRODUCIBLE_CONTRACT/GENERATION_LINEAGE
+ONE_CANONICAL_RUNTIME/CONFIG_AUTHORITY_PER_ROLE
+ONE_CANONICAL_APP_COMPOSITION/NAVIGATION_AUTHORITY_PER_DEPLOYABLE_APP
 ZERO_KNOWN_PARALLEL_OR_SHADOW_TRUTH
-ZERO_KNOWN_LEGACY/LOSING_CONTAINERS
+ZERO_KNOWN_LOSING/LEGACY_CONTAINERS
 ZERO_KNOWN_STALE_WRAPPERS/ALIASES/REEXPORTS
-ZERO_KNOWN_DUPLICATE_DTO/ENUM/API_AUTHORITIES
+ZERO_KNOWN_MANUAL_DTO/ENUM/OPERATION_MIRRORS
+ZERO_KNOWN_DUPLICATE_WRITERS
 ZERO_KNOWN_BACKEND↔CONTRACT↔FRONTEND_SEMANTIC_DRIFT
-ZERO_KNOWN_UNTREATED_DSH/WLT_STRUCTURAL_FINDINGS
+ZERO_KNOWN_PARTIAL_CUTOVERS
+ZERO_KNOWN_DSH/WLT_MATERIAL_FINDINGS
 ```
 
-The objective is not to make the current topology prettier. The objective is to preserve required product/system truth while rebuilding the minimum necessary canonical structure.
+The goal is not to beautify inherited folders. Preserve required value, rebuild canonical ownership, migrate consumers, and delete the losing topology.
 
 ---
 
-## 2. Non-negotiable execution laws
+## 2. Exact-live-state and recovery law
 
-### 2.1 Live-state law
-
-Every execution or resumed session starts from exact live `h`, not memory, old plan state, local assumptions, screenshots, or prior chat conclusions.
+Every new or resumed execution begins with:
 
 ```text
-PIN_LIVE_h
-→ INSPECT_CURRENT_TREE
-→ INSPECT_RELEVANT_HISTORY/DIFFS
-→ RECONSTRUCT_CURRENT_DSH_WLT_STATE
-→ IDENTIFY_OPEN_UNIT_OR_NEXT_FRONTIER
-→ EXECUTE
+PIN_EXACT_LIVE_h
+→ INSPECT_CURRENT_DSH_WLT_TREE
+→ INSPECT_RELEVANT_HISTORY_AND_DIFFS
+→ RECONSTRUCT_ACTIVE_OPEN_UNIT_IF_ANY
+→ RECONSTRUCT_MIGRATION/CUTOVER/DELETION_STATE
+→ INVALIDATE_STALE_EVIDENCE
+→ DERIVE_NEXT_REQUIRED_ACTION
 ```
 
-Any path/file listed in this plan is a **candidate or target concept**, not permission to mutate stale paths blindly. The executor must verify the current exact tree before mutation.
+Never mutate from memory, an old chat, this plan's examples, local-only assumptions, or a previously observed path.
 
-### 2.2 Hostile inheritance law
+If `h` moves during execution:
 
 ```text
-CURRENT_EXISTENCE != RIGHT_TO_EXIST
-CURRENT_USAGE != CANONICAL
-BUILD_GREEN != CANONICAL
-TEST_GREEN != CANONICAL
-HAS_CALLERS != DESERVES_TO_SURVIVE
+STOP_WRITING_TO_STALE_HEAD
+→ RE_PIN
+→ COMPARE_MOVEMENT
+→ RECONCILE_AFFECTED_CONE
+→ CONTINUE_FROM_CURRENT_TRUTH
 ```
 
-Required truth embedded in a losing structure must be salvaged and migrated; the losing structure itself must not survive merely because it contains useful behavior.
-
-### 2.3 No patch-campaign law
-
-Do not chase isolated errors file-by-file when the error is caused by a higher structural root.
-
-Prefer:
-
-```text
-CENSUS
-→ IDENTIFY_HIGHER_ROOT
-→ DESIGN_CANONICAL_TARGET
-→ MIGRATE_REQUIRED_TRUTH
-→ CUT_OVER_ALL_CONSUMERS
-→ DELETE_LOSERS
-→ VERIFY_NEGATIVE_SPACE
-```
-
-### 2.4 Complete cutover law
-
-A move/rename/merge is not closure.
-
-Closure requires:
-
-```text
-WINNER_EXISTS
-ALL_REQUIRED_TRUTH_MIGRATED
-ALL_REQUIRED_CONSUMERS_CUT_OVER
-LOSER_REACHABILITY=0
-LOSER_DELETED
-STALE_PARENT_PRUNED
-STALE_EXPORTS/CONFIG/TESTS/CONTRACTS_REMOVED
-RUNTIME_READBACK_PROVEN
-```
-
-### 2.5 No permanent campaign residue
-
-Do not create permanent `legacy`, `archive`, `old`, `_unused`, compatibility wrappers, re-export bridges, duplicate facades, or migration-only container trees unless a real external compatibility requirement is proven and bounded.
+A commit is a recovery checkpoint, not closure.
 
 ---
 
-## 3. Full scope
+## 3. Scope and affected-cone law
 
-The campaign covers **all material DSH/WLT ownership and parity surfaces**, including at minimum:
+Primary scope:
 
 ```text
 services/dsh/**
 services/wlt/**
-apps/** when consuming DSH/WLT capabilities
-contracts/** when shared contract components affect DSH/WLT
-core/** when DSH/WLT boundaries depend on it
-tools/** when DSH/WLT tooling/verification/generation depends on it
-.github/** when DSH/WLT assurance depends on it
-workspace/package/export/tsconfig/build metadata affecting DSH/WLT
-runtime/config/env/docker/compose/ports/health/readiness/jobs/workers
 ```
 
-Within the services, census must include:
+Mandatory affected-cone scope whenever DSH/WLT ownership reaches outside those roots:
 
 ```text
-backend/cmd
-backend/internal
-frontend
-database
-contracts
-clients/generated
-package.json
-project.json
-service.manifest.ts
-tsconfig*.json
-Docker/runtime config
-tests/fixtures/mocks/helpers
-scripts/guards/verifiers
+apps/**
+contracts/** shared contract primitives
+core/** or packages/** when consumed by DSH/WLT
+workspace/package/export/lockfile metadata
+tools/** generators/guards/scripts
+.github/** DSH/WLT assurance
+runtime/env/docker/compose/deployment/config
 ```
+
+Every structural unit must account for files, symbols, imports, exports, routes, manifests, generated outputs, tests, fixtures, mocks, DB schema, runtime registrations, workers, and external consumers in its complete affected cone.
 
 ---
 
-## 4. Required truth inventory before destructive mutation
+## 4. Product truth before topology
 
-Before deleting a candidate root, reconstruct the required truth it may contain.
+Before destructive mutation reconstruct required meaning from evidence, not inherited folder names.
 
-### 4.1 DSH required truth classes
-
-At minimum audit:
+For each material capability determine:
 
 ```text
 ACTORS
-client
-partner
-captain
-field
-operator/admin
-
-PRODUCT/CAPABILITY TRUTH
-stores
-catalog
-assortment/inventory/pricing where DSH-owned
-cart
-checkout orchestration
-orders
-cancellation
-pickup
-delivery
-dispatch
-serviceability/service areas
-addresses
-client profile
-partner operations
-fleet/team where genuinely distinct
-field assignment/readiness
-notifications
-marketing/promotions presentation/eligibility where DSH-owned
-support/incidents
-ratings
-special requests
-home/discovery
-administration/operations/analytics where genuinely required
-
-REQUIRED EXPERIENCE VALUE
-approved screen designs
-navigation/journey intent
-RTL/localization/accessibility
-required assets and interaction behavior
-
-REQUIRED OPERATIONAL VALUE
-idempotency
-state transitions
-retry/recovery
-outbox/saga behavior
-privacy/retention
-health/readiness
+REQUIRED_JOURNEYS
+STATES_AND_TRANSITIONS
+ALLOWED_ACTIONS
+AUTHENTICATION/AUTHORIZATION
+PERSISTED_FACTS
+FINANCIAL_EFFECTS
+EXTERNAL_INTEGRATIONS
+FAILURE/RETRY/REVERSAL_BEHAVIOR
+VISIBLE_FINAL_OUTCOME
 ```
 
-### 4.2 WLT required truth classes
-
-At minimum audit:
-
-```text
-wallet
-ledger
-payment sessions/payment operations
-refunds
-settlements
-commissions
-payouts
-reconciliation
-COD financial lifecycle
-collateral
-pricing/financial quotes
-promotion funding
-financial eligibility where genuinely WLT-owned
-commercial products/subscriptions/loyalty where genuinely required
-provider/financial-rail integration
-financial audit/idempotency/replay
-operator-context isolation
-```
-
-### 4.3 Preserve value, not inherited topology
-
-Existing good UI/behavior may be preserved while its old app/shared/container ownership is demolished.
+Preserve required behavior and approved experience value even when its current container is deleted.
 
 ```text
 ARCHITECTURE_REFOUNDATION != VISUAL_REDESIGN
 ```
 
-A screen is deleted only if the product journey itself fails existence proof, not because the file currently lives under a losing folder.
+A screen/flow survives only if a required journey exists. A container survives only if it has a unique canonical responsibility.
 
 ---
 
-## 5. Canonical DSH/WLT service boundary
+## 5. Canonical service boundary
 
-### 5.1 DSH owns operational commerce truth
+### 5.1 DSH
 
-DSH owns product/operational meaning such as:
+DSH owns operational commerce/delivery truth, including as applicable:
 
 ```text
-catalog/store/cart/checkout orchestration
-orders/delivery/dispatch/pickup
-serviceability
-operational partner/captain/field flows
-customer operational experience
+catalog/store/assortment operational truth
+cart
+checkout orchestration
+orders
+pickup
+delivery
+dispatch
+serviceability/addresses
+operational client/partner/captain/field journeys
+notifications/support/marketing operational semantics
 ```
 
-### 5.2 WLT owns financial truth
+### 5.2 WLT
 
-WLT owns financial meaning such as:
+WLT owns financial truth, including as applicable:
 
 ```text
 wallet/balance authority
-ledger
-payment state/provider outcome
-refund financial state
-settlement
-commission
-payout
+ledger/payment/refund
+settlement/commission/payout
 reconciliation
-financial pricing/funding where assigned to WLT
+COD financial lifecycle
+collateral
+financial pricing/funding/eligibility when truly financial
+financial provider/rail state
 ```
 
-### 5.3 Cross-service prohibition
+### 5.3 Cross-service rule
 
-DSH may store opaque WLT references/projections required for its operational flow, but must not become a second financial authority.
+DSH may hold WLT identifiers and explicitly derived non-authoritative projections required for operational flow. It must not become a second financial writer or policy authority.
 
-WLT may consume DSH evidence/references, but must not become owner of order/dispatch/workforce/store/special-request product truth merely because those domains trigger a financial effect.
+WLT may consume DSH evidence and references. It must not become owner of order, dispatch, workforce, store, or special-request product truth merely because those facts cause a financial effect.
 
-For every cross-service datum prove:
+For every cross-service fact prove:
 
 ```text
-OWNER
-SOURCE
+CANONICAL_OWNER
+CANONICAL_WRITER
+SOURCE_EVENT/API
 MUTABILITY
-TRANSPORT
 PERSISTENCE_IF_ANY
-DERIVED_OR_AUTHORITATIVE
+AUTHORITATIVE_OR_DERIVED
+CONSISTENCY/RETRY_MODEL
 READBACK
-FAILURE/RETRY_BEHAVIOR
 ```
 
 ---
 
-## 6. Canonical capability ownership matrix
+## 6. Canonical repository topology
 
-Build and maintain a live execution matrix during the campaign. Every material capability must map to exactly one semantic owner per layer.
+The final topology is semantic-capability-oriented. Diagrams below are conceptual targets; create only containers that prove a real responsibility.
 
-Required columns:
-
-| Capability | Product owner | DB owner | Go owner | HTTP owner | Contract owner | Generated binding | Frontend owner | External integration | Status |
-|---|---|---|---|---|---|---|---|---|---|
-
-Seed target examples, subject to live semantic proof:
-
-| Capability | Service | Target semantic owner |
-|---|---|---|
-| Catalog | DSH | `backend/internal/catalog` + `contracts/modules/catalog.openapi.yaml` + `frontend/catalog` |
-| Cart | DSH | `backend/internal/cart` + `contracts/modules/cart.openapi.yaml` + `frontend/cart` |
-| Checkout | DSH | `backend/internal/checkout` + `contracts/modules/checkout.openapi.yaml` + `frontend/checkout` |
-| Orders | DSH | `backend/internal/orders` + `contracts/modules/orders.openapi.yaml` + `frontend/orders` |
-| Payments | WLT | `backend/internal/payment` + `contracts/modules/payments.openapi.yaml` |
-| Ledger | WLT | `backend/internal/ledger` + exposed contract only where required |
-| Refunds | WLT | `backend/internal/refund` + `contracts/modules/refunds.openapi.yaml` |
-| Settlements | WLT | `backend/internal/settlement` + `contracts/modules/settlements.openapi.yaml` |
-| Commissions | WLT | `backend/internal/commission` when independent + `contracts/modules/commissions.openapi.yaml` |
-| Payouts | WLT | `backend/internal/payout` + `contracts/modules/payouts.openapi.yaml` |
-| Reconciliation | WLT | `backend/internal/reconciliation` + `contracts/modules/reconciliation.openapi.yaml` |
-
-Do not force these target names if the live census proves a better semantic boundary. What is mandatory is one justified owner and zero shadow owners.
-
----
-
-## 7. End-to-end truth-lineage law
-
-No material capability is closed until the applicable chain is proven end-to-end:
+### 6.1 Deployable applications
 
 ```text
-PERSISTED_TRUTH
-→ CANONICAL_WRITER
-→ DOMAIN_SEMANTICS
-→ HTTP/EVENT_TRANSPORT
-→ CANONICAL_CONTRACT
-→ GENERATED_BINDING
-→ REQUIRED_CONSUMER
-→ USER/SYSTEM_ACTION
-→ MUTATION
-→ PERSISTED_READBACK
-→ PRESENTED_RESULT
+apps/
+├── app-client/runtime/
+├── app-partner/runtime/
+├── app-captain/runtime/
+├── app-field/runtime/
+└── control-panel/runtime/
 ```
 
-For every exposed operation build a parity record containing:
+Each runtime owns only deployable-app concerns:
 
 ```text
-operationId/event
-capability owner
-backend handler
-backend domain call
-storage effect/read source
-OpenAPI definition
-request schema
-response schema
-error semantics
-security requirements
-generated client symbol
-frontend/controller consumer
-runtime verification result
+route files / route hierarchy
+navigation and deep links
+application composition root
+bootstrap/session wiring
+native/platform adapters
+Expo/Next configuration
+assets that are truly app-owned
+runtime observability/config
 ```
 
-If any link disagrees semantically, the unit remains open.
+Feature/domain truth does not live here.
 
----
-
-## 8. DSH target topology
-
-The conceptual target is capability-oriented DSH ownership with technical infrastructure separated from semantic domains.
+### 6.2 DSH
 
 ```text
 services/dsh/
 ├── backend/
 │   ├── cmd/
-│   │   ├── dsh-api/
-│   │   └── independent-job-entrypoints-only-if-proven/
 │   └── internal/
 │       ├── runtime/
 │       ├── transport/http/
 │       ├── integrations/
-│       │   ├── identity/
-│       │   ├── workforce/
-│       │   ├── platform/
-│       │   ├── wlt/
-│       │   ├── maps/
-│       │   └── media/
-│       ├── catalog/
-│       ├── cart/
-│       ├── checkout/
-│       ├── orders/
-│       ├── stores/
-│       ├── dispatch/
-│       ├── delivery/
-│       ├── notifications/
-│       ├── addresses/
-│       ├── profile/
-│       ├── support/
-│       └── ...only proven capabilities
+│       └── <semantic-capabilities>/
 ├── contracts/
 │   ├── dsh.openapi.yaml
 │   ├── modules/
 │   └── components/
 ├── clients/generated/
 ├── frontend/
-│   ├── catalog/
-│   ├── cart/
-│   ├── checkout/
-│   ├── orders/
-│   ├── delivery/
-│   ├── dispatch/
-│   ├── stores/
-│   ├── notifications/
-│   ├── profile/
-│   ├── addresses/
-│   ├── support/
-│   └── ...only proven capabilities
+│   └── <semantic-capabilities>/
 └── database/
 ```
 
-Do not create empty scaffolding merely to match this diagram.
+Prefer direct capability owners such as `catalog`, `cart`, `checkout`, `orders`, `delivery`, `dispatch`, `stores`, `notifications`, `support`, etc. Do not create umbrella folders such as `commerce` unless that folder itself owns real shared semantics rather than merely grouping children.
 
----
-
-## 9. DSH frontend refoundation law
-
-### 9.1 Apps are surfaces, not domain owners
-
-Legacy candidate roots such as:
-
-```text
-frontend/app-client
-frontend/app-partner
-frontend/app-captain
-frontend/app-field
-frontend/control-panel
-```
-
-must not remain semantic feature owners merely because a feature appears on one application surface.
-
-Actor-specific presentation may exist under the capability when genuinely different, while application runtime owns composition/navigation/bootstrap/deep links/native/platform wiring.
-
-### 9.2 Generic `shared` is presumed noncanonical until proven
-
-`frontend/shared` must be decomposed by semantic ownership. Do not move old app trees into `shared` and call that consolidation.
-
-### 9.3 Account is not automatically a domain
-
-UI groupings such as Account/My Space may compose profile, addresses, identity, notifications, support, benefits, preferences, finance, etc. The UI grouping does not create backend/storage authority.
-
-### 9.4 Screen responsibility
-
-Screen files own:
-
-```text
-layout
-presentation
-visual formatting
-loading/empty/error presentation
-local selection/modal/form interaction state
-accessibility/RTL/animation
-calling semantic actions
-```
-
-Screens do **not** own:
-
-```text
-business transitions
-permission truth
-financial calculations
-serviceability authority
-persistent business validation
-canonical statuses/enums
-allowed-action truth
-SQL
-```
-
-### 9.5 Frontend capability layer
-
-Capability frontend code may own:
-
-```text
-API invocation through generated binding
-query/cache orchestration
-mutations
-transient editing state
-view models/presentation derivation
-UX validation that is explicitly non-authoritative
-```
-
-Manual DTO/enum/status/action maps duplicating backend/contract truth are shadow-authority candidates.
-
----
-
-## 10. DSH backend refoundation law
-
-### 10.1 `cmd`
-
-`cmd/*/main.go` is process entry only.
-
-Target:
-
-```text
-main
-→ load config
-→ construct runtime
-→ run
-→ graceful shutdown
-```
-
-Business route registration, worker topology, provider construction, DB orchestration, and config parsing should move to justified runtime/composition ownership when currently concentrated in `main.go`.
-
-### 10.2 HTTP
-
-`internal/http` mega-package is a whole-subtree refoundation candidate.
-
-HTTP responsibility:
-
-```text
-decode request
-→ syntactic validation
-→ trusted context extraction
-→ call canonical capability
-→ encode canonical response/error
-```
-
-No SQL/business policy/financial decision/state-machine authority in handlers.
-
-### 10.3 Integrations
-
-External-service client packages should be named by the external boundary and must not masquerade as local domains.
-
-Candidate normalization:
-
-```text
-workforceclient → integrations/workforce
-platformclient  → integrations/platform
-wlt             → integrations/wlt where it is only WLT client/boundary
-mapproviders    → integrations/maps
-```
-
-Exact treatment requires live responsibility census.
-
-### 10.4 Sagas/outboxes/workers
-
-Saga/outbox/worker is an implementation mechanism, not automatically a top-level domain.
-
-Classify each by the business process/event owner, then absorb under the canonical owner or a justified integration boundary.
-
-Candidate examples:
-
-```text
-checkoutpaymentsaga → checkout
-checkoutfinanceoutbox → checkout/WLT integration after owner proof
-promotionfundingoutbox → promotion-funding owner
-wltoutbox → integrations/wlt when appropriate
-```
-
-Delete top-level pseudo-domain containers after complete cutover.
-
----
-
-## 11. DSH contract refoundation law
-
-### 11.1 One semantic module per capability
-
-Eliminate mixed parallel composition such as simultaneous topic `paths/*.yaml`, `components/schemas/*.yaml`, and separate journey/extension/truth OpenAPI files that describe overlapping capability truth.
-
-Target principle:
-
-```text
-ONE_SEMANTIC_CAPABILITY
-→ ONE_CANONICAL_OPENAPI_MODULE
-```
-
-### 11.2 Root contract
-
-`dsh.openapi.yaml` should become the thin canonical composition root, not a second business-domain mega-file.
-
-### 11.3 Generated lineage
-
-```text
-OpenAPI source
-→ deterministic bundle
-→ generated TypeScript binding
-→ consumers
-```
-
-Generated bundle/client are artifacts, not hand-edited truth.
-
-### 11.4 Manual adapters/mirrors
-
-Inventory and eliminate manual typed adapters that duplicate contract DTOs, enums, URLs, operation names, allowed actions, or response structures.
-
-Adapters may survive only when they add a proven non-duplicative boundary responsibility.
-
----
-
-## 12. DSH service-root metadata refoundation
-
-Audit together:
-
-```text
-capabilities.ts
-capability-map.ts
-surface-map.ts
-service.manifest.ts
-package.json
-project.json
-tsconfig.json
-tsconfig.*.json
-```
-
-Target rules:
-
-```text
-ONE_CAPABILITY_VOCABULARY
-ZERO_DUPLICATE_MANUAL_OPERATION_REGISTRIES
-SURFACE_MAP_DERIVED_OR_MINIMAL
-SERVICE_MANIFEST_MINIMAL
-PACKAGE_EXPORTS_MATCH_CANONICAL_TOPOLOGY
-TSCONFIG_DOES_NOT_PRESERVE_LOSING_APP/SHARED_TREES
-SPECIAL_COMPILER_ISLANDS_REQUIRE_REAL_BOUNDARY
-```
-
-Strong candidates after live proof:
-
-```text
-capabilities.ts → absorb/delete if only wrapper over capability-map
-capability-map.ts → refound/remove manual operation lists if OpenAPI metadata can own lineage
-surface-map.ts → derive/absorb if duplicate
-special tsconfig files → delete when no independent build boundary remains
-```
-
-Do not merge `package.json` and `project.json` merely because both contain scripts/targets; package-manager and Nx/workspace roles may remain distinct when justified.
-
----
-
-## 13. WLT target topology
-
-WLT must preserve strong financial capability boundaries while removing technical and actor/journey-shaped pseudo-domains.
+### 6.3 WLT
 
 ```text
 services/wlt/
@@ -653,330 +262,414 @@ services/wlt/
 │       ├── runtime/
 │       ├── transport/http/
 │       ├── integrations/
-│       │   ├── dsh/
-│       │   └── financial-rails-or-providers/
-│       ├── security/
-│       ├── wallet/
-│       ├── ledger/
-│       ├── payment/
-│       ├── refund/
-│       ├── settlement/
-│       ├── commission/          # only if independently proven
-│       ├── payout/
-│       ├── reconciliation/
-│       ├── pricing/
-│       ├── cod/
-│       ├── collateral/
-│       ├── promotionfunding/
-│       └── ...only proven financial capabilities
+│       ├── security/              # only if a distinct WLT security boundary is proven
+│       └── <financial-capabilities>/
 ├── contracts/
 │   ├── wlt.openapi.yaml
 │   ├── modules/
 │   └── components/
 ├── clients/generated/
+├── frontend/
+│   └── <financial-capabilities>/  # required where financial UI/presentation exists
 └── database/
 ```
 
-Do **not** collapse ledger, wallet, payment, refund, settlement, payout, and reconciliation into one giant `finance` package.
+Do not collapse wallet, ledger, payment, refund, settlement, payout, and reconciliation into a generic `finance` package.
 
 ---
 
-## 14. WLT backend disposition rules
+## 7. Frontend ownership law
 
-### 14.1 Strong capability candidates to preserve/refound
+### 7.1 Apps are shells, capabilities own features
+
+The current DSH app-shaped feature containers are losing topology after value migration:
 
 ```text
-ledger
+services/dsh/frontend/app-client
+services/dsh/frontend/app-partner
+services/dsh/frontend/app-captain
+services/dsh/frontend/app-field
+services/dsh/frontend/control-panel
+```
+
+Required treatment:
+
+```text
+CENSUS_FEATURE_VALUE
+→ MOVE_DOMAIN/PRESENTATION_VALUE_TO_CANONICAL_CAPABILITY
+→ MOVE_NAVIGATION/COMPOSITION/PLATFORM_VALUE_TO_apps/*/runtime
+→ UPDATE_ALL_IMPORTS/EXPORTS/ROUTES
+→ DELETE_APP_SHAPED_FEATURE_CONTAINER
+→ PROVE_OLD_PATH_REACHABILITY=0
+```
+
+Actor-specific presentation is allowed under the capability when behavior/UX genuinely differs:
+
+```text
+frontend/orders/presentation/client
+frontend/orders/presentation/partner
+frontend/orders/presentation/captain
+frontend/orders/presentation/control-panel
+```
+
+Do not create actor copies when one presentation works for multiple surfaces.
+
+### 7.2 Navigation/composition authority
+
+App route paths, tab hierarchy, deep links, back behavior, Expo Router/Next routing, and composition belong to `apps/*/runtime`.
+
+Capability code exposes semantic components/actions/callbacks. It does not call app route strings as business truth.
+
+### 7.3 `account` is information architecture, not automatic ownership
+
+Account/My Space may compose profile, addresses, identity, notifications, support, benefits, preferences, and financial surfaces. Those capabilities keep their real owners; the account page may remain only as shell/composition UI.
+
+### 7.4 Current `frontend/shared` must be demolished as an umbrella
+
+The existing DSH `frontend/shared` domain dump must not survive as a generic ownership refuge.
+
+```text
+REHOME_DOMAIN_VALUE_TO_REAL_CAPABILITY
+REHOME_PRESENTATIONAL_PRIMITIVES_TO_EXISTING_UI_OWNER_WHEN_TRULY_SHARED
+REHOME_RUNTIME_PLATFORM_CODE_TO_APP_RUNTIME_OR_REAL_RUNTIME_PACKAGE
+DELETE_SHARED_BARRELS/OLD_PATHS
+DELETE_CURRENT_SHARED_UMBRELLA_AFTER_CUTOVER
+```
+
+Do not recreate the same problem under another `shared/common/core` name.
+
+### 7.5 Current `frontend/wlt-boundary` must not remain a WLT feature tree inside DSH
+
+Financial feature value currently under DSH must move to WLT ownership:
+
+```text
+wallet/collateral/commission/payment/payout/ledger/refund/settlement/etc.
+→ services/wlt/frontend/<capability>
+```
+
+DSH may retain only a thin, explicit orchestration/integration boundary where DSH-specific flow truly requires one. No second WLT frontend domain tree may remain inside DSH.
+
+### 7.6 Platform/native code
+
+Expo/React-Native/Next-specific implementations such as native file pickers, URI handling, push registration, secure storage, device adapters, and platform routing belong in app runtime or a proven cross-app runtime package. Domain frontend accepts interfaces/ports where needed.
+
+### 7.7 Generic CSS declarations
+
+Generic web TypeScript declarations such as `*.module.css` are not DSH domain truth. Rehome them to the web app/runtime or repository-wide TypeScript/web configuration according to actual scope.
+
+### 7.8 Screen responsibility
+
+Screens own presentation and transient interaction state only. They must not own authoritative business transitions, permissions, prices/fees, financial calculations, serviceability, statuses, allowed actions, or persistent validation.
+
+---
+
+## 8. Backend architecture law
+
+### 8.1 Thin process entrypoints
+
+`cmd/*/main.go` owns process startup only:
+
+```text
+load config
+→ construct runtime
+→ run
+→ graceful shutdown
+```
+
+Move route registration, worker composition, DB/provider construction, and large config orchestration into `internal/runtime` or another explicitly justified composition owner.
+
+### 8.2 Transport
+
+HTTP transport owns:
+
+```text
+decode
+syntactic validation
+trusted context extraction
+call canonical capability
+encode response/error
+```
+
+No SQL, business policy, financial decision, state machine, or permission truth in transport handlers.
+
+### 8.3 Integrations
+
+External boundaries live under explicit integration ownership, for example:
+
+```text
+DSH: integrations/identity, workforce, platform, wlt, maps, media
+WLT: integrations/dsh, financial-rails/providers
+```
+
+An integration package translates/protects a remote boundary; it does not become owner of remote or local domain truth.
+
+### 8.4 Mechanisms are not domains
+
+Saga, outbox, worker, cache, health, retry, and provider routing are mechanisms. They live under the domain/runtime/integration owner that needs them unless an independent lifecycle genuinely requires a separate boundary.
+
+### 8.5 Go package shape
+
+Do not mechanically create `domain/application/usecase/repository/services/helpers/utils/common` layers for every capability. Prefer cohesive Go packages and split only for real semantic/lifecycle boundaries.
+
+Any hand-maintained file >400 logical LOC requires cohesion review; >700 is presumed noncanonical absent proof; >1000 blocks closure by default absent strong single-responsibility justification.
+
+---
+
+## 9. DSH backend high-priority structural targets
+
+Resolve these current structural candidates as systemic roots where evidence confirms:
+
+```text
+centralcatalog + catalogapproval → one canonical Catalog ownership boundary
+checkoutpaymentsaga / checkoutfinanceoutbox → checkout or explicit WLT integration mechanism
+internal/http → transport/http
+workforceclient/platformclient/mapproviders/WLT client → integrations/*
+large multi-responsibility main.go → thin cmd + runtime composition
+```
+
+Do not preserve old package names through aliases/reexports after cutover.
+
+---
+
+## 10. WLT backend ownership law
+
+### 10.1 Preserve real financial bounded contexts
+
+Strong candidates to remain independent when semantics confirm:
+
+```text
 wallet
+ledger
 payment
 refund
 settlement
+commission
 payout
 reconciliation
 pricing
-collateral
 cod
-penalty when independently justified
-promotionfunding when financial funding truth is WLT-owned
+collateral
+promotion funding
+penalty/adjustment if independently justified
+commercial if it proves one coherent context
 ```
 
-### 14.2 Technical top-level containers to challenge
+### 10.2 Technical top-level containers must be rehomed
 
-```text
-http
-shared
-health
-dshnotify
-dshoutbox
-provider
-```
-
-Likely target classes:
+Challenge and normally refound:
 
 ```text
 http → transport/http
 health → runtime/health
 dshnotify + dshoutbox → integrations/dsh
-provider → integrations/financial-rails or another proven provider boundary
-shared → eliminate by rehoming each responsibility
+provider → integrations/financial-rails/providers
+shared → decompose to real owners, then delete
 ```
 
-### 14.3 `shared` demolition target
+### 10.3 Reconciliation boundary
 
-Current generic responsibilities such as operator context, service auth, reference auth, response encoding, mutation receipt must be assigned to real owners such as:
+Explicitly disambiguate:
 
 ```text
-security/
-idempotency/ or owning financial capability
-transport/http/
+payment-specific provider reconciliation helper
+payout external-statement matching
+system/financial reconciliation case/process
 ```
 
-Then delete `internal/shared`.
+One semantic meaning gets one owner. Rename/move files so names reflect that meaning; delete misleading `canonical_*` or duplicate reconciliation files after migration.
 
-### 14.4 Reconciliation ownership audit
-
-Explicitly resolve overlap among:
+### 10.4 Settlement / payout / reconciliation
 
 ```text
-internal/reconciliation
-payment/*reconciliation*
-payout/*reconciliation*
+SETTLEMENT = what is owed and settlement lifecycle
+PAYOUT = actual disbursement/destination/provider execution lifecycle
+RECONCILIATION = proof/matching of internal vs external financial truth
 ```
 
-Define canonical meanings:
+Do not let one package silently own another's state machine.
 
-```text
-PAYMENT reconciliation-specific operation/helper
-vs
-SYSTEM/FINANCIAL reconciliation case/process
-vs
-PAYOUT external statement matching
-```
+### 10.5 COD / commission
 
-Use semantic ownership, not filenames. Remove misleading `canonical_*` files from losing owners after migration.
-
-### 14.5 Settlement / payout boundary
-
-Target semantic separation:
-
-```text
-SETTLEMENT = what is owed / settlement calculation and lifecycle
-PAYOUT     = actual disbursement destination/execution/provider lifecycle
-RECONCILIATION = proof/matching of internal and external financial truth
-```
-
-Move files according to meaning; do not preserve historical placement.
-
-### 14.6 COD / commission boundary
-
-Audit whether commission logic currently embedded in COD is independent financial responsibility. If yes:
-
-```text
-cod → reservation/collection/finalization financial flow
-commission → commission policy/lifecycle/posting/query
-```
-
-Delete duplicate/parallel commission paths afterward.
+COD owns reservation/collection/finalization financial flow. Commission owns commission policy/lifecycle/query/posting if it proves an independent responsibility. Commission code embedded in COD must migrate if it represents that separate meaning.
 
 ---
 
-## 15. WLT financial-reference shadow-truth audit
+## 11. Contract architecture and generated lineage
 
-Treat generic `reference` structures and `*_status_refs` storage as high-risk until proven.
+### 11.1 One canonical contract ownership tree
 
-For every reference table/model/API prove:
+Each service has one composition root:
 
 ```text
-canonical source entity
-derivation mechanism
-writer count
-mutability
-consistency guarantee
-rebuildability
-consumer list
-whether it can disagree with source
-whether any mutation reads it as authority
+dsh.openapi.yaml
+wlt.openapi.yaml
 ```
 
-Allowed outcomes:
+Each semantic capability has one canonical contract owner under `modules/`. A capability may use multiple physical files only when size/cohesion justifies it; those files must still form one owner and must not create parallel authorities.
+
+Domain schemas stay with their capability. `components/` is limited to genuinely cross-capability protocol/transport primitives.
+
+### 11.2 Generated artifacts
 
 ```text
-A) redundant mutable mirror → migrate consumers → delete mirror/table/code
-B) necessary derived projection → explicit non-authoritative projection with one-way derivation and rebuild semantics
-C) canonical truth incorrectly named as reference → rehome/rename to real owner
+CANONICAL_OPENAPI_SOURCE
+→ ONE_REPRODUCIBLE_COMPOSITION/GENERATION_TOOLCHAIN
+→ JUSTIFIED_GENERATED_OUTPUT_SET
+→ CONSUMERS
 ```
 
-No financial `*_ref` may remain ambiguous.
+Generated bundles/clients are derived artifacts, never manually edited truth. Deterministic generated files need not be tracked unless a real distribution/runtime requirement proves otherwise.
 
----
+### 11.3 No manual synchronized contract registries
 
-## 16. WLT contract refoundation law
+A module list, operation list, DTO list, or enum list must not be manually repeated across OpenAPI root, manifests, TypeScript maps, adapters, and frontend code.
 
-### 16.1 Canonical target modules
+If tooling requires a manifest, derive/generate it from the canonical source; do not maintain a second hand-synchronized module registry.
 
-Conceptual target:
+### 11.4 DSH capability/security metadata
+
+Manual operation arrays in `capability-map.ts` and overlapping authorization-capability registries must not remain independent authorities.
+
+Target:
 
 ```text
-contracts/
-├── wlt.openapi.yaml
-├── modules/
-│   ├── wallet.openapi.yaml
-│   ├── ledger.openapi.yaml           # only exposed operations
-│   ├── payments.openapi.yaml
-│   ├── refunds.openapi.yaml
-│   ├── settlements.openapi.yaml
-│   ├── commissions.openapi.yaml      # if separate capability
-│   ├── payouts.openapi.yaml
-│   ├── reconciliation.openapi.yaml
-│   ├── pricing.openapi.yaml
-│   ├── cod.openapi.yaml
-│   ├── collateral.openapi.yaml
-│   ├── commercial.openapi.yaml       # if retained as one real context
-│   ├── promotion-funding.openapi.yaml
-│   └── financial-eligibility.openapi.yaml # only if independent
-└── components/
-    └── common.openapi.yaml
+permission vocabulary → canonical Identity/Security owner
+server enforcement → backend authority
+operationId + declared security/capability metadata → canonical contract metadata
+surface composition → app/capability consumption metadata derived from canonical owners
 ```
 
-### 16.2 Generated bundle
+UI visibility may derive from permissions but must never be the enforcement authority.
 
-`contracts/generated/wlt.bundle.openapi.yaml` is generated-only and must never be edited as source. It may exist locally transiently but is not live canonical source.
+`capabilities.ts`, `surface-map.ts`, `authorization-capabilities.json`, `backend-route-classification.json`, and similar files each re-earn existence. Empty or duplicative artifacts are deleted; required derived metadata is generated from canonical sources.
 
-### 16.3 Manifest duplication
+### 11.5 WLT contract refoundation
 
-If both `wlt.openapi.yaml` and `contract.manifest.yaml` maintain the same manual module registry, reduce to one source. Generate/delete the second representation according to tooling needs.
-
-### 16.4 Operation-state residue
-
-`operation-state.json` must not remain a mixed contract/runtime/evidence authority. Move durable contract metadata into OpenAPI and runtime proof into verification/tests, then delete the file if no unique required responsibility remains.
-
-### 16.5 Overlay elimination
-
-Canonical business schema truth must not require permanent overlays for normal behavior.
-
-Strong merge candidates:
+The current WLT contract topology must converge by financial capability. Resolve, migrate, then delete losing fragments such as:
 
 ```text
-wlt.payment-session-capabilities.overlay.yaml
-→ payments.openapi.yaml
+payment-session capability overlay + DSH checkout handoff overlay
+→ payments canonical owner
 
-wlt.dsh-checkout-handoff.overlay.yaml
-→ canonical payment contract/boundary schemas
-```
+settlement-operations + settlement part of settlements-commissions
+→ settlements canonical owner
 
-Delete overlays after composition/consumer cutover.
+commission part of settlements-commissions
+→ commissions canonical owner when independent
 
-### 16.6 Known fragmentation candidates
-
-Resolve by semantic owner, then delete losing files:
-
-```text
-settlements-commissions + settlement-operations
-→ settlements + commissions
-
-payouts-destinations + payout-failure-boundary
-→ payouts
+payout destinations + payout failure boundary
+→ payouts canonical owner
 
 commercial-summary + commercial
-→ commercial if one context
+→ commercial owner if one coherent context
 
 store-onboarding-fee
-→ commercial if it is truly commercial fee policy
+→ commercial or another proven fee-policy owner
 
 special-request-quotes
-→ pricing if WLT only owns financial quote semantics
+→ pricing if WLT owns only financial quote semantics
 
 workforce-finance
-→ distribute to wallet/commission/payout/etc.; Workforce is a consumer/actor domain
+→ distribute to wallet/commission/payout/etc.; Workforce remains the actor/domain consumer
 
 captain-collateral
-→ collateral if actor-independent financial capability
+→ collateral when actor-independent
 
 dispatch-financial-eligibility
-→ financial eligibility or owning WLT capability; Dispatch is a DSH consumer
+→ financial eligibility or the actual financial owner; Dispatch remains DSH consumer
 ```
+
+`operation-state.json` must not remain a mixed contract/runtime/evidence authority. Salvage durable contract metadata into canonical contract metadata, keep verification evidence in tests/evidence systems, then delete it unless a unique live runtime responsibility is proven.
+
+### 11.6 Common component consistency
+
+All `$ref` targets must resolve from the canonical composition root. No contract may reference missing/renamed common response/schema symbols. Composition verification must fail closed on unresolved refs, duplicate operationIds, duplicate routes, or conflicting schemas.
 
 ---
 
-## 17. Contract and generated-client closure gate
+## 12. Database ownership and migration law
 
-For DSH and WLT independently prove:
-
-```text
-ONE_COMPOSITION_ROOT
-ONE_MODULE_PER_SEMANTIC_CAPABILITY
-ONE_COMMON_COMPONENT_OWNER
-ZERO_PERMANENT_SCHEMA_PATCH_OVERLAYS_FOR_NORMAL_TRUTH
-ZERO_MANUAL_DUPLICATE_OPERATION_REGISTRIES
-ZERO_MANUAL_DTO_MIRRORS
-ZERO_MANUAL_ENUM_MIRRORS
-ZERO_STALE_GENERATED_OUTPUT
-GENERATED_CLIENT_REGENERATES_DETERMINISTICALLY
-ALL_REQUIRED_CONSUMERS_USE_CANONICAL_BINDING_OR_PROVEN_BOUNDARY_ADAPTER
-BACKEND_ROUTE↔OPENAPI_OPERATION_PARITY=PASS
-```
-
----
-
-## 18. Database ownership and schema gate
-
-For every material persisted fact record:
+For every material persisted fact prove:
 
 ```text
-FACT_NAME
+FACT
 SERVICE_OWNER
 CAPABILITY_OWNER
 CANONICAL_TABLE/COLUMNS
 CANONICAL_WRITER
 READBACK_PATH
-CONSTRAINTS
-INDEXES
-IDEMPOTENCY/AUDIT REQUIREMENTS
-SECURITY/PII CLASSIFICATION
-FINANCIAL CLASSIFICATION
-DERIVED PROJECTIONS
-LOSING STORAGE AUTHORITIES
+CONSTRAINTS/INDEXES
+IDEMPOTENCY/AUDIT_REQUIREMENTS
+SECURITY/PII_CLASSIFICATION
+FINANCIAL_CLASSIFICATION
+DERIVED_PROJECTIONS
+LOSING_STORAGE_AUTHORITIES
 ```
 
-Reject:
+One truth does not mean one table. Normalized tables are valid. What is forbidden is multiple mutable authorities for the same meaning.
+
+Each service keeps one globally ordered canonical migration lane unless a real deployment boundary proves otherwise. Do not fragment migration ordering merely to mirror source-code capabilities.
+
+For destructive schema change:
 
 ```text
-multiple mutable stores for same business meaning
-second financial balance authority
-second ledger writer
-status mirror used as mutation authority
-compatibility columns with no live requirement
-stale tables kept only for old code
+PROVE_REQUIRED_DURABLE_TRUTH
+→ DESIGN_DETERMINISTIC_TRANSFORMATION/BACKFILL
+→ PROVE_ROLL_FORWARD/CUTOVER_ORDER
+→ EXECUTE
+→ RECONCILE_COUNTS_AND_INVARIANTS
+→ CUT_OVER_READERS/WRITERS
+→ DELETE_OBSOLETE_SCHEMA_AUTHORITY
+→ PROVE_READBACK
 ```
 
-When destructive DB change is required:
-
-```text
-prove required data
-→ design deterministic migration/backfill/reconciliation
-→ execute
-→ validate counts/invariants/readback
-→ cut over writers/readers
-→ delete obsolete schema authority
-```
-
-Do not weaken durable constraints merely to ease migration.
+Never weaken durable constraints to make migration easier.
 
 ---
 
-## 19. WLT heightened financial-safety gate
+## 13. WLT financial shadow-truth audit
 
-Before closing any financial refoundation unit prove all materially applicable claims:
+`reference` packages, `*_status_refs`, duplicated balances, materialized status copies, and financial projections are high-risk until proven.
+
+For every such structure determine:
 
 ```text
-CANONICAL_MONEY_OWNER
+SOURCE_ENTITY
+DERIVATION
+WRITERS
+MUTABILITY
+REBUILDABILITY
+CONSISTENCY_GUARANTEE
+CONSUMERS
+CAN_IT_DIVERGE
+IS_IT_USED_FOR_MUTATION_DECISIONS
+```
+
+Allowed outcomes only:
+
+```text
+REDUNDANT_MUTABLE_MIRROR → migrate consumers → delete
+NECESSARY_DERIVED_PROJECTION → explicit one-way, non-authoritative, rebuildable
+ACTUAL_CANONICAL_TRUTH_MISNAMED_AS_REFERENCE → rehome/rename to true owner
+```
+
+No ambiguous financial reference survives closure.
+
+---
+
+## 14. Heightened financial/security gate
+
+Before closing any WLT financial mutation path prove all applicable claims:
+
+```text
+CANONICAL_FINANCIAL_OWNER
 CANONICAL_LEDGER_WRITER
-BALANCED_DOUBLE_ENTRY
+BALANCED_POSTING_WHERE_LEDGER_APPLIES
 IDEMPOTENCY/EXACT_REPLAY
 TRANSACTION_ATOMICITY
 CONCURRENCY/LOCKING
 OPERATOR_CONTEXT_ISOLATION
-AUTHORIZED_PRINCIPAL_AUTHORITY
+AUTHORIZED_PRINCIPAL_SERVER_ENFORCEMENT
 AUDITABILITY
 PROVIDER_RESULT_PROVENANCE
 UNKNOWN_PROVIDER_RESULT_HANDLING
@@ -984,21 +677,21 @@ REFUND/REVERSAL_EFFECT
 SETTLEMENT/PAYOUT_SEPARATION
 RECONCILIATION_PATH
 CANONICAL_READBACK
-NO_PARALLEL_FINANCIAL_WRITER
+ZERO_PARALLEL_FINANCIAL_WRITERS
 ```
 
-Structural cleanup is not allowed to discard valid financial safeguards or tests.
+Never delete valid financial/security safeguards or tests merely to simplify topology.
 
 ---
 
-## 20. Runtime, config, jobs, and workers
+## 15. Runtime/config/jobs/workers
 
-Audit both services for:
+Audit and canonicalize:
 
 ```text
 env variables
 runtime config
-ports/base URLs
+base URLs/ports
 feature flags
 Docker/compose/deployment
 startup/bootstrap
@@ -1008,38 +701,46 @@ secret references
 observability/retry/backoff
 ```
 
-For each role require one canonical authority and remove stale aliases/config paths after cutover.
-
-Entry points should be thin. Worker ownership must follow the process/domain that creates the durable work, with integration-specific delivery owned at the integration boundary where appropriate.
+Each role gets one canonical authority. Remove stale aliases, duplicate flags, old endpoints, dead worker registrations, and obsolete config after cutover.
 
 ---
 
-## 21. Package/workspace/export/config cleanup
+## 16. Package/export/workspace law
 
-After each topology cutover update and verify:
+Public package exports must express semantic capability ownership, not losing app-shaped feature topology.
+
+After frontend cutover, app-shaped DSH exports such as:
 
 ```text
-package exports
-workspace references
-Nx project targets
-TypeScript include/exclude/path mappings
-Go imports/module paths
-Docker build contexts
-scripts/guards
-test imports
-CI path filters
-Graphify/tooling paths
+@bthwani/dsh/app-client
+@bthwani/dsh/app-partner
+@bthwani/dsh/app-captain
+@bthwani/dsh/app-field
+@bthwani/dsh/control-panel
+@bthwani/dsh/wlt-boundary
 ```
 
-Old topology must not survive as configuration residue.
+must be removed unless an export represents a proven thin runtime-neutral boundary with unique value. Normal target exports are capability-oriented, for example:
+
+```text
+@bthwani/dsh/catalog
+@bthwani/dsh/cart
+@bthwani/dsh/checkout
+@bthwani/dsh/orders
+@bthwani/wlt/payment
+@bthwani/wlt/wallet
+...
+```
+
+Update package manifests, Nx targets, tsconfig includes/path mappings, Go imports, Docker contexts, scripts, CI filters, and tooling paths in the same affected cone. Old topology may not survive in configuration.
+
+`package.json` and `project.json` are not duplicates by definition; each survives only if its package-manager/workspace role remains real.
 
 ---
 
-## 22. Test treatment law
+## 17. Test and assurance law
 
-Inherited tests are consumers/evidence, not automatic truth.
-
-Classify every materially affected test/helper/fixture/mock/snapshot:
+Classify every materially affected test/fixture/mock/snapshot/helper:
 
 ```text
 VALID_CANONICAL_SPEC
@@ -1051,7 +752,7 @@ MISSING_PREVENTION
 BROKEN_TEST_INFRA
 ```
 
-Actions:
+Treatment:
 
 ```text
 VALID_CANONICAL_SPEC → preserve/refound
@@ -1059,249 +760,347 @@ OBSOLETE_BEHAVIOR → delete
 DUPLICATE_COVERAGE → merge/delete
 WRONG_LAYER_SPEC → rewrite/rehome
 LOSING_TOPOLOGY_TEST → delete with loser
-MISSING_PREVENTION → add targeted proof
+MISSING_PREVENTION → add the smallest durable prevention proof
 ```
 
-Particularly preserve or rebuild valid WLT invariants for ledger conservation, idempotency, isolation, reconciliation, financial replay, and irreversible effects.
+Prefer native compiler/typecheck/test/schema/runtime checks over custom guards when they prove the same claim. Add custom guards only for a unique admission hole, and remove campaign-only guards after closure.
 
 ---
 
-## 23. Execution-unit template
+## 18. Execution strategy — systemic roots first, then vertical capabilities
 
-Every destructive/refoundation unit must record and satisfy the following before closure:
+Do not execute the campaign as long layer-only waves (`all contracts`, then `all backend`, then `all frontend`). That creates prolonged half-migrations and semantic drift.
+
+### Phase P0 — Recover exact state
+
+```text
+PIN h
+RECONSTRUCT ACTIVE UNIT
+RECONSTRUCT OPEN CUTOVERS
+RECONSTRUCT LOSERS STILL REQUIRED FOR MIGRATION
+```
+
+### Phase P1 — Full DSH/WLT census and canonical model
+
+Build an evidence-backed current map for:
+
+```text
+capabilities
+owners
+writers/readers
+DB facts
+routes/events
+contracts/generation
+frontend consumers
+app composition/navigation
+runtime/config/workers
+tests/assurance
+```
+
+Do not commit the census as a second permanent status authority.
+
+### Phase P2 — Close only systemic enabling catastrophes
+
+Examples of legitimate cross-capability systemic units:
+
+```text
+app runtime/composition ownership
+contract composition/generator authority
+service metadata/capability registry authority
+backend runtime/transport/integration topology
+WLT financial writer/reference authority map
+```
+
+Each systemic unit still requires full migration/cutover/deletion of its affected cone.
+
+### Phase P3 — Vertical capability refoundation
+
+After systemic prerequisites, close capabilities end-to-end. Select the highest-impact/root-tax capability dynamically from live evidence.
+
+Canonical vertical unit:
+
+```text
+PRODUCT MEANING
+→ DB TRUTH
+→ DOMAIN WRITER/READER
+→ TRANSPORT/EVENT
+→ OPENAPI CONTRACT
+→ GENERATED BINDING
+→ FRONTEND CONTROLLER/VIEW
+→ APP RUNTIME COMPOSITION/ROUTE
+→ USER/SYSTEM MUTATION
+→ PERSISTED READBACK
+→ DELETE ALL LOSERS
+→ NEGATIVE-SPACE VERIFY
+```
+
+Do not mark backend, contract, or frontend subparts separately closed while the capability chain remains split.
+
+### Phase P4 — Cross-capability residue and assurance cleanup
+
+Remove only residue not already deleted eagerly during units:
+
+```text
+stale dependencies
+stale package exports
+obsolete tsconfig/Nx entries
+obsolete tests/fixtures
+campaign-only tools/guards
+stale docs/governance references
+```
+
+This phase is not a garbage queue: known loser residue must be deleted as soon as its last migration dependency ends.
+
+### Phase P5 — Adversarial final re-census
+
+Freshly re-enumerate DSH/WLT and the affected repository cone from exact `h`; search for structural, semantic, financial, runtime, contract, and experience gaps from zero assumptions.
+
+---
+
+## 19. Execution-unit template
+
+Every active unit must reconstruct these fields from live state:
 
 ```text
 UNIT_ID
-LIVE_HEAD_AT_START
-CAPABILITY/ROOT
-WHY_THIS_IS_THE_CURRENT_HIGHEST_EXECUTABLE_ROOT
-CURRENT_STRUCTURAL_CENSUS
-CURRENT_SEMANTIC_RESPONSIBILITIES
+EXACT_H_SHA
+SOURCE_OF_DEFECT
+REQUIRED_SOURCE_OF_FIX
+WHY_THIS_IS_THE_HIGHEST_SAFE_EXECUTABLE_ROOT
 REQUIRED_TRUTH
-CURRENT_OWNERS
-PARALLEL/SHADOW_OWNERS
-CANONICAL_WINNER
-LOSERS
-UNKNOWN_ITEMS
-AFFECTED_CONE
-TARGET_TOPOLOGY
-DATA_MIGRATION_PLAN
-CODE_MIGRATION_PLAN
-CONTRACT_MIGRATION_PLAN
-FRONTEND_MIGRATION_PLAN
-RUNTIME/CONFIG_MIGRATION_PLAN
-TEST_MIGRATION_PLAN
+CURRENT_OWNERS/WRITERS/READERS
+SERIOUS_ALTERNATIVES_CONSIDERED
+RANKING_RELEVANT_UNKNOWNS
+CANONICAL_TARGET
+EXPECTED_LOSERS
+COMPLETE_AFFECTED_CONE
+DATA_MIGRATION
+CODE_MIGRATION
+CONTRACT/GENERATION_MIGRATION
+FRONTEND/APP_MIGRATION
+RUNTIME/CONFIG_MIGRATION
+TEST/ASSURANCE_MIGRATION
 CUTOVER_ORDER
 DELETION_ORDER
-NEGATIVE_SPACE_QUERIES
-STATIC_VERIFICATION
-DB_VERIFICATION
-RUNTIME_VERIFICATION
-E2E_READBACK
-RE_CENSUS_RESULT
-CLOSURE_STATUS
+PARENT_PRUNING
+POSITIVE_VERIFICATION
+NEGATIVE_SPACE/FALSIFICATION
+ADMISSION_PREVENTION
+FRESH_RE_CENSUS
 ```
 
-Unknown material ownership blocks destructive closure of the affected cone until resolved.
+Material unknowns that can change ownership or deletion safety must be resolved before destructive closure of that cone.
+
+Do not persist unit status into this plan.
 
 ---
 
-## 24. Preferred campaign sequence
+## 20. Concurrency and writer safety
 
-This sequence is a starting strategy, not a stale task queue. Re-rank after each significant cutover.
+Parallel execution is allowed only for proven disjoint affected cones.
 
 ```text
-R0  RECOVERY / EXACT LIVE-h STATE RECONSTRUCTION
-
-R1  FULL DSH+WLT CAPABILITY / OWNERSHIP / CONTRACT / STORAGE CENSUS
-
-R2  CONTRACT + GENERATED-LINEAGE REFOUNDATION
-    - DSH composition/modules/manual mirrors
-    - WLT composition/modules/overlays/manual mirrors
-
-R3  SERVICE-ROOT METADATA CONTROL-PLANE CLEANUP
-    - capability maps
-    - surface maps
-    - manifests
-    - package exports
-    - project/tsconfig islands
-
-R4  DSH BACKEND TOPOLOGY REFOUNDATION
-    - cmd/runtime
-    - transport/http
-    - integrations
-    - semantic capabilities
-    - saga/outbox absorption
-
-R5  DSH FRONTEND CAPABILITY REFOUNDATION
-    - preserve approved UI value
-    - move feature ownership out of app/shared trees
-    - generated contract consumption
-    - delete losing app/shared feature containers
-
-R6  WLT FINANCIAL AUTHORITY RECONSTRUCTION
-    - ledger/wallet/payment/refund
-    - settlement/commission/payout/reconciliation
-    - COD/collateral/pricing/funding
-    - reference shadow-truth elimination
-
-R7  WLT TECHNICAL-CONTAINER REFOUNDATION
-    - cmd/runtime
-    - http
-    - shared
-    - dsh integration
-    - provider integration
-
-R8  DSH↔WLT CROSS-SERVICE CONTRACT + RUNTIME CUTOVER
-
-R9  DB↔BACKEND↔CONTRACT↔GENERATED↔FRONTEND PARITY RE-CENSUS
-
-R10 TEST/TOOL/CONFIG/EXPORT/CI RESIDUE CLEANUP
-
-R11 ADVERSARIAL FULL DSH/WLT NEGATIVE-SPACE RE-CENSUS
-
-R12 LEVEL-4 FIXED POINT + DELETE THIS PLAN
+ONE_ACTIVE_WRITER_AUTHORITY_PER_OVERLAPPING_CONE
+RE_PIN_BEFORE_EACH_WRITE_SEQUENCE
+NO_TWO_SESSIONS_MUTATE_SHARED_CONTRACT/DB/EXPORT/RUNTIME_AUTHORITY_UNCOORDINATED
+HEAD_MOVEMENT_REQUIRES_RECONCILIATION
 ```
 
-If live evidence proves a higher systemic root during execution, preempt this order and treat the higher root first.
+Shared roots such as contract composition, package exports, migration manifests, runtime composition, and cross-service financial boundaries serialize dependent work.
 
 ---
 
-## 25. Negative-space closure gate
+## 21. Cutover and deletion gate
 
-For every closed unit and again globally at the end, prove zero known occurrences of materially relevant losing space:
+A move/rename/merge is not closure. A loser survives only while an explicit migration dependency remains.
+
+Required sequence:
 
 ```text
-OLD_PATH_REFERENCES=0
-LOSING_IMPORTS=0
-LOSING_PACKAGE_EXPORTS=0
-LOSING_ROUTE_REGISTRATIONS=0
-LOSING_OPENAPI_MODULE_REFERENCES=0
-LOSING_GENERATOR_INPUTS=0
-MANUAL_DTO_MIRRORS=0
-MANUAL_ENUM_MIRRORS=0
-MANUAL_ALLOWED_ACTION_MIRRORS=0
-DUPLICATE_API_CLIENTS=0
-DUPLICATE_MUTABLE_WRITERS=0
-SHADOW_FINANCIAL_AUTHORITIES=0
-STALE_TSCONFIG_INCLUDES=0
-STALE_NX_TARGETS=0
-STALE_TEST_HELPERS/FIXTURES=0
-STALE_RUNTIME_CONFIG=0
-STALE_WORKERS/JOBS=0
-STALE_WRAPPERS/ALIASES/REEXPORTS=0
-KNOWN_EMPTY/DEAD_CONTROL_ARTIFACTS=0
+CANONICAL_WINNER_BUILT
+→ REQUIRED_TRUTH_MIGRATED
+→ WRITERS_CUT_OVER
+→ READERS/CONSUMERS_CUT_OVER
+→ ROUTES/EXPORTS/CONFIG/NAVIGATION_CUT_OVER
+→ OLD_WRITES=0
+→ OLD_READERS=0
+→ DELETE_LOSER_AT_HIGHEST_SAFE_GRANULARITY
+→ DELETE_ALIASES/REEXPORTS/BRIDGES
+→ PRUNE_EMPTY/MEANINGLESS_PARENTS
+→ VERIFY_NEGATIVE_SPACE
 ```
 
-Positive proof that the new path works is insufficient if the losing path still survives.
+Internal compatibility wrappers are forbidden by default. A temporary compatibility boundary is allowed only for a proven external consumer that cannot cut over atomically, with explicit scope and removal condition.
 
 ---
 
-## 26. Per-capability closure gate
+## 22. Positive verification requirements
 
-A capability may be marked `CLOSED` only when all applicable checks pass:
+Use the highest material boundary affected by the unit. As applicable prove:
 
 ```text
-PRODUCT_MEANING_PROVEN
-CANONICAL_OWNER_PROVEN
-CANONICAL_STORAGE_PROVEN
-CANONICAL_WRITER_PROVEN
-CANONICAL_BACKEND_PROVEN
-CANONICAL_TRANSPORT_PROVEN
-CANONICAL_CONTRACT_PROVEN
-GENERATED_BINDING_PROVEN
-REQUIRED_FRONTEND_CONSUMERS_PROVEN
-SECURITY_PROVEN
-FINANCIAL_INVARIANTS_PROVEN_WHEN_APPLICABLE
+Go build/test
+TypeScript typecheck/build
+OpenAPI composition/ref resolution/operation uniqueness
+client regeneration determinism
+DB migration/reset/upgrade behavior
+schema constraints/indexes
+runtime startup/health/readiness
+worker/outbox/retry behavior
+API request/response/error semantics
+authorization rejection/acceptance
+mobile/web route composition
+real rendered/device behavior when materially changed
+mutation→persisted readback
+financial invariants
+```
+
+Green output proves only the claim it actually exercises.
+
+---
+
+## 23. Negative-space and falsification gate
+
+After each unit and globally at the end, search for:
+
+```text
+OLD_PATH_REFERENCES
+LOSING_IMPORTS/EXPORTS
+OLD_APP_FEATURE_EXPORTS
+OLD_SHARED_DOMAIN_IMPORTS
+OLD_WLT_BOUNDARY_FEATURE_IMPORTS
+LOSING_ROUTE_REGISTRATIONS
+LOSING_OPENAPI_MODULE_REFS
+LOSING_GENERATOR_INPUTS
+MANUAL_DTO/ENUM/STATUS/ACTION_MIRRORS
+MANUAL_OPERATION_REGISTRIES
+DUPLICATE_API_CLIENTS
+DUPLICATE_MUTABLE_WRITERS
+SHADOW_FINANCIAL_AUTHORITIES
+STALE_TSCONFIG/NX/WORKSPACE_PATHS
+STALE_RUNTIME_CONFIG/FLAGS/WORKERS
+STALE_TESTS/FIXTURES/MOCKS
+WRAPPERS/ALIASES/REEXPORTS
+EMPTY/MEANINGLESS_PARENTS
+MISLEADING_FILENAMES/DIRECTORIES
+UNJUSTIFIED_OVERSIZED/MULTI_RESPONSIBILITY_FILES
+UNUSED_DEPENDENCIES
+UNRESOLVED_OR_CONFLICTING_OPENAPI_REFS
+ORPHAN_SCREENS/APIS/BINDINGS/DATA
+```
+
+Positive proof of the new path is insufficient while a losing path remains reachable.
+
+---
+
+## 24. Per-capability closure gate
+
+A capability is closed only when all applicable claims pass on exact current `h`:
+
+```text
+REQUIRED_PRODUCT_MEANING_ACCOUNTED_FOR
+CANONICAL_OWNER_ACCOUNTED_FOR
+CANONICAL_STORAGE/WRITER_ACCOUNTED_FOR
+CANONICAL_BACKEND_ACCOUNTED_FOR
+CANONICAL_TRANSPORT_ACCOUNTED_FOR
+CANONICAL_CONTRACT_ACCOUNTED_FOR
+GENERATED_LINEAGE_REPRODUCIBLE
+ALL_REQUIRED_FRONTEND/SURFACE_CONSUMERS_ACCOUNTED_FOR
+APP_RUNTIME_COMPOSITION_ACCOUNTED_FOR
+SECURITY_ACCOUNTED_FOR
+FINANCIAL_INVARIANTS_ACCOUNTED_FOR_WHEN_APPLICABLE
 MIGRATION/CUTOVER_COMPLETE
+OLD_WRITES=0
+OLD_READERS/CONSUMERS=0
 LOSERS_DELETED
+CONFIG/EXPORT/TEST_RESIDUE=0
 NEGATIVE_SPACE_PASS
-STATIC/BUILD_PASS
-DB_PASS
-RUNTIME_PASS
-MATERIAL_E2E_READBACK_PASS
+RUNTIME/E2E_READBACK_PASS
+ADMISSION_HOLE_CLOSED
 FRESH_RE_CENSUS_PASS
 ```
 
 ---
 
-## 27. DSH Stage-A exit gate
+## 25. DSH structural exit gate
 
-DSH structural baseline is not qualified until a fresh exact-head re-census proves at minimum:
+DSH cannot be structurally qualified while any known instance remains of:
 
 ```text
-NO_KNOWN_APP_SHAPED_FEATURE_OWNERSHIP_WHERE_TOPIC_OWNER_REQUIRED
-NO_KNOWN_GENERIC_SHARED_DOMAIN_DUMPING
-NO_KNOWN_PARALLEL_CATALOG/ORDER/etc_FEATURE_TREES
-NO_KNOWN_HTTP_MEGA_DOMAIN_AUTHORITY
-NO_KNOWN_TOP_LEVEL_IMPLEMENTATION_MECHANISM_PSEUDO_DOMAINS
-NO_KNOWN_MANUAL_CONTRACT_MIRRORS
-NO_KNOWN_DUPLICATE_CAPABILITY/OPERATION_AUTHORITIES
-NO_KNOWN_STALE_PACKAGE/TS/NX_TOPOLOGY
-BACKEND↔CONTRACT↔FRONTEND_PARITY_PROVEN_FOR_MATERIAL_CAPABILITIES
+APP_SHAPED_FEATURE_OWNERSHIP_IN_services/dsh/frontend
+CURRENT_FRONTEND_SHARED_UMBRELLA_AS_DOMAIN_OWNER
+CURRENT_WLT_FEATURE_TREE_UNDER_DSH_FRONTEND
+DUPLICATE_CAPABILITY_TREES
+HTTP_MEGA_DOMAIN_AUTHORITY
+TOP_LEVEL_SAGA/OUTBOX_PSEUDO_DOMAINS_WITHOUT_JUSTIFICATION
+MANUAL_CONTRACT/DTO/ENUM/OPERATION_MIRRORS
+DUPLICATE_CAPABILITY/AUTHORIZATION_REGISTRIES
+APP_SHAPED_PACKAGE_EXPORTS_PRESERVING_OLD_TOPOLOGY
+TSCONFIG/NX/WORKSPACE_REFERENCES_TO_DELETED_TOPOLOGY
+GENERIC_WEB_TYPES_MISOWNED_BY_DSH_DOMAIN
+BACKEND↔CONTRACT↔FRONTEND_PARITY_GAPS
 ```
 
 ---
 
-## 28. WLT Stage-A exit gate
+## 26. WLT structural/financial exit gate
 
-WLT structural/financial baseline is not qualified until a fresh exact-head re-census proves at minimum:
+WLT cannot be qualified while any known instance remains of:
 
 ```text
-NO_KNOWN_GENERIC_SHARED_CONTAINER
-NO_KNOWN_HTTP_MEGA_DOMAIN_AUTHORITY
-NO_KNOWN_DSHNOTIFY/DSHOUTBOX_PSEUDO_DOMAINS
-NO_KNOWN_PAYMENT/SETTLEMENT/PAYOUT/RECONCILIATION_OWNERSHIP_AMBIGUITY
-NO_KNOWN_FINANCIAL_REFERENCE_SHADOW_TRUTH
-NO_KNOWN_ACTOR_OR_CONSUMER_SHAPED_FINANCIAL_CONTRACT_AUTHORITY
-NO_KNOWN_PERMANENT_PAYMENT_SCHEMA_OVERLAYS
-NO_KNOWN_DUPLICATE_SETTLEMENT/PAYOUT_CONTRACT_FRAGMENTATION
-NO_KNOWN_MANUAL_FINANCIAL_DTO/ENUM/API_MIRRORS
-NO_KNOWN_PARALLEL_LEDGER/BALANCE/FINANCIAL_WRITERS
-FINANCIAL_INVARIANTS_AND_READBACK_PROVEN
+GENERIC_SHARED_DOMAIN_CONTAINER
+HTTP_MEGA_DOMAIN_AUTHORITY
+DSHNOTIFY/DSHOUTBOX_AS_PSEUDO_DOMAINS
+PAYMENT/SETTLEMENT/PAYOUT/RECONCILIATION_OWNERSHIP_AMBIGUITY
+FINANCIAL_REFERENCE_SHADOW_TRUTH
+ACTOR/CONSUMER_SHAPED_FINANCIAL_CONTRACT_AUTHORITY
+PERMANENT_SCHEMA_OVERLAYS_FOR_NORMAL_PAYMENT_TRUTH
+DUPLICATE_SETTLEMENT/PAYOUT_CONTRACT_FRAGMENTATION
+MANUAL_FINANCIAL_DTO/ENUM/API_MIRRORS
+PARALLEL_LEDGER/BALANCE/FINANCIAL_WRITERS
+WLT_FEATURE_IMPLEMENTATION_STILL_OWNED_BY_DSH_FRONTEND
+UNVERIFIED_FINANCIAL_INVARIANTS_OR_READBACK
 ```
 
 ---
 
-## 29. Global DSH/WLT Level-4 fixed-point gate
+## 27. Global Level-4 DSH/WLT fixed-point gate
 
-The campaign is complete only when a **fresh final re-census on exact live `h`** proves:
+Completion requires a fresh adversarial re-census on exact live `h` proving:
 
 ```text
 KNOWN_MATERIAL_DSH_WLT_FINDINGS=0
-KNOWN_MATERIAL_PARALLEL_TRUTH=0
-KNOWN_MATERIAL_SHADOW_TRUTH=0
-KNOWN_MATERIAL_LOSING_CONTAINERS=0
-KNOWN_MATERIAL_LEGACY_RESIDUE=0
-KNOWN_MATERIAL_WRAPPERS/ALIASES=0
+KNOWN_MATERIAL_UNKNOWNS=0
+KNOWN_MATERIAL_PARTIAL_CUTOVERS=0
+KNOWN_MATERIAL_PARALLEL/SHADOW_TRUTH=0
+KNOWN_MATERIAL_LOSING/LEGACY_CONTAINERS=0
+KNOWN_MATERIAL_WRAPPERS/ALIASES/REEXPORTS=0
 KNOWN_MATERIAL_DUPLICATE_CONTRACT_AUTHORITIES=0
-KNOWN_MATERIAL_DUPLICATE_GENERATED/MANUAL_TYPES=0
+KNOWN_MATERIAL_MANUAL_GENERATED_MIRRORS=0
 KNOWN_MATERIAL_DUPLICATE_WRITERS=0
 KNOWN_MATERIAL_RUNTIME_CONFIG_DRIFT=0
-KNOWN_MATERIAL_STALE_TESTS/TOOLS/EXPORTS=0
+KNOWN_MATERIAL_STALE_TEST/TOOL/EXPORT/DEPENDENCY_RESIDUE=0
 KNOWN_MATERIAL_BACKEND↔CONTRACT↔FRONTEND_MISMATCH=0
-KNOWN_MATERIAL_UNVERIFIED_FINANCIAL_INVARIANTS=0
+KNOWN_MATERIAL_SECURITY/FINANCIAL_GAPS=0
+KNOWN_REQUIRED_CAPABILITIES_OR_JOURNEYS_LOST_DURING_REFOUNDATION=0
+FRESH_FALSIFICATION=PASS
+MATERIAL_BUILD/DB/RUNTIME/E2E_EVIDENCE=PASS
 ```
 
-Then run the final material verification suite for affected boundaries and prove no outstanding DSH/WLT unit remains open.
+The first green build or empty local task list is not completion.
 
 ---
 
-## 30. Mandatory self-deletion gate for this plan
+## 28. Mandatory self-deletion
 
-After Section 29 passes, this file becomes residue and **must be deleted**.
-
-Before deleting it prove:
+Only after Section 27 passes:
 
 ```text
-NO_SCRIPT_READS_THIS_FILE
-NO_CI_WORKFLOW_READS_THIS_FILE
-NO_BUILD_TARGET_READS_THIS_FILE
-NO_RUNTIME_READS_THIS_FILE
-NO_GENERATOR_READS_THIS_FILE
-NO_TEST_REQUIRES_THIS_FILE
-NO_GOVERNANCE/PROMPT_ROUTING_REQUIRES_THIS_FILE
-NO_OPEN_EXECUTION_UNIT_DEPENDS_ON_THIS_FILE
+VERIFY_NO_SCRIPT_READS_THIS_FILE
+VERIFY_NO_CI_WORKFLOW_READS_THIS_FILE
+VERIFY_NO_BUILD/RUNTIME/GENERATOR_READS_THIS_FILE
+VERIFY_NO_TEST/GOVERNANCE/PROMPT_ROUTING_REQUIRES_THIS_FILE
+VERIFY_NO_OPEN_UNIT_DEPENDS_ON_THIS_FILE
 ```
 
 Then:
@@ -1310,8 +1109,8 @@ Then:
 DELETE tools/DSH-WLT-CANONICAL-REFOUNDATION-EXECUTION-PLAN.md
 → RE_PIN_LIVE_h
 → VERIFY_PATH_ABSENT
-→ VERIFY_NO_REFERENCES_TO_PATH
-→ FINAL_FIXED_POINT_CONFIRMATION
+→ VERIFY_ZERO_REFERENCES_TO_PATH
+→ FINAL_DSH_WLT_FIXED_POINT_CONFIRMATION
 ```
 
 The final canonical repository must not retain this campaign plan.
