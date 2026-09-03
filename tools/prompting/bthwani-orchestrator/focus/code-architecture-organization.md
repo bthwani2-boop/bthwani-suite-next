@@ -44,7 +44,117 @@ SEMANTIC RESPONSIBILITY
 
 Target `MINIMUM NECESSARY FILES`, not `MINIMUM POSSIBLE FILES`. Do not manufacture god files, but do not preserve artificial fragmentation.
 
-## 4. Topology audit
+## 4. Naming and path truth law
+
+Names and paths are architecture. A file that contains correct code under a misleading name/path is still noncanonical.
+
+Every surviving material container must prove:
+
+```text
+NAME_MATCHES_ACTUAL_RESPONSIBILITY
+PATH_MATCHES_CANONICAL_OWNER
+DIRECTORY_NAME_MATCHES_BOUNDARY
+PACKAGE_NAME_MATCHES_OWNERSHIP
+PUBLIC_EXPORT_NAME_MATCHES_SEMANTICS
+TEST/FIXTURE/MOCK NAME MATCHES CANONICAL OWNER
+GENERATED NAME/LOCATION MATCHES GENERATOR LINEAGE
+MIGRATION NAME/SEQUENCE MATCHES CANONICAL MIGRATION CONTRACT
+```
+
+Reject or refound misleading/generic historical names such as these when they do not represent a genuinely canonical cross-cutting role:
+
+```text
+utils
+helpers
+common
+misc
+shared
+core
+legacy
+old
+new
+final
+final2
+v2/v3 without real version semantics
+tmp/temp
+copy
+backup
+compat
+adapter/wrapper when no unique boundary responsibility exists
+```
+
+Do not preserve an old import path with an internal alias/re-export just to avoid updating consumers.
+
+```text
+REHOME/RENAME
+→ UPDATE ALL IMPORTS/EXPORTS/ROUTES/MANIFESTS/TESTS
+→ DELETE OLD PATH
+→ PROVE OLD PATH REACHABILITY=0
+```
+
+At closure:
+
+```text
+MISLEADING_MATERIAL_FILENAMES=0
+MISLEADING_MATERIAL_DIRECTORIES=0
+MISPLACED_MATERIAL_FILES=0
+UNJUSTIFIED_GENERIC_CONTAINER_NAMES=0
+OLD_INTERNAL_PATH_ALIASES=0
+```
+
+## 5. File responsibility and size/complexity law
+
+Line count is a structural smell signal, not a substitute for semantic analysis.
+
+For hand-maintained source files, apply these default escalation gates unless the artifact type has a stronger domain-specific rule:
+
+```text
+>400 LOGICAL LOC  → MANDATORY COHESION / SPLIT REVIEW
+>700 LOGICAL LOC  → PRESUMED NONCANONICAL; SPLIT/REFOUND UNLESS STRONGLY JUSTIFIED
+>1000 LOGICAL LOC → CLOSURE BLOCKER BY DEFAULT FOR HAND-MAINTAINED SOURCE
+```
+
+Exceptions require positive proof, for example:
+
+```text
+DETERMINISTIC GENERATED OUTPUT
+DECLARATIVE SCHEMA/SPEC WHERE SPLITTING WOULD REDUCE CANONICAL CLARITY
+DATA/MIGRATION ARTIFACT WITH DOMAIN-JUSTIFIED ATOMICITY
+OTHER EXPLICITLY PROVEN SINGLE-RESPONSIBILITY CASE
+```
+
+Never split merely to satisfy a number. Never keep a God File merely because splitting is inconvenient.
+
+Evaluate together:
+
+```text
+RESPONSIBILITY_COUNT
+COHESION
+COUPLING
+IMPORT FAN-IN/FAN-OUT
+PUBLIC EXPORT COUNT
+CYCLOMATIC/COGNITIVE COMPLEXITY WHERE AVAILABLE
+NESTING
+MUTABLE STATE OWNERSHIP
+CROSS-DOMAIN DEPENDENCIES
+TESTABILITY
+CHANGE CO-VARIANCE
+```
+
+A small file can still be noncanonical if it is a useless wrapper, alias or fragment. A larger file can survive only when one cohesive responsibility genuinely requires it.
+
+At closure:
+
+```text
+UNJUSTIFIED_OVERSIZED_HAND_MAINTAINED_FILES=0
+UNJUSTIFIED_GOD_FILES=0
+UNJUSTIFIED_MULTI_RESPONSIBILITY_FILES=0
+UNJUSTIFIED_DEEP_NESTING=0
+UNJUSTIFIED_CIRCULAR_DEPENDENCIES=0
+UNJUSTIFIED_CROSS_DOMAIN_COUPLING=0
+```
+
+## 6. Topology audit
 
 Audit every material:
 
@@ -75,7 +185,7 @@ SHOULD CHILDREN BE REHOMED AND THE CONTAINER DELETED?
 WOULD WHOLE-SUBTREE REFOUNDATION REMOVE MORE DEBT CLEANLY?
 ```
 
-## 5. File death test
+## 7. File death test
 
 A surviving file must prove a unique cohesive role in the canonical file set.
 
@@ -101,7 +211,7 @@ ABSORB/MOVE REQUIRED VALUE
 → DELETE LOSING FILE
 ```
 
-## 6. Highest-safe deletion and upward pruning
+## 8. Highest-safe deletion and upward pruning
 
 ```text
 DEAD LINE
@@ -116,7 +226,7 @@ DEAD LINE
 
 After deletion/merge/rehome/split, recursively re-evaluate parents and remove every parent that has lost unique responsibility.
 
-## 7. Anti-fragmentation law
+## 9. Anti-fragmentation law
 
 Forbidden stable shapes:
 
@@ -142,7 +252,7 @@ REEXPORT/PASS_THROUGH/FORWARDER/SHIM/ALIAS RESIDUE=0
 EMPTY PARENTS=0
 ```
 
-## 8. Package/workspace/service survival
+## 10. Package/workspace/service survival
 
 A package/workspace/service survives only with coherent unique ownership and justified lifecycle/consumer boundaries.
 
@@ -150,7 +260,7 @@ Delete/collapse containers that are duplicate owners, compatibility holders, uti
 
 Remove manifests, exports, dependencies, config and lockfile ownership associated only with the loser.
 
-## 9. `core/**` and `shared/**`
+## 11. `core/**` and `shared/**`
 
 Heightened burden of proof:
 
@@ -163,7 +273,7 @@ Heightened burden of proof:
 
 Rehome domain-owned truth out of `core/shared` and delete losing wrappers/paths.
 
-## 10. Frontend structural ownership
+## 12. Frontend structural ownership
 
 For all web/mobile surfaces:
 
@@ -178,7 +288,7 @@ FORM VALIDATION DOES NOT BECOME SECOND BACKEND BUSINESS AUTHORITY
 
 Duplicate screens/flows serving the same material responsibility must converge to a canonical flow unless real actor/journey/state distinctions justify separation.
 
-## 11. Control/support surfaces
+## 13. Control/support surfaces
 
 `.agents/**`, `.github/**`, `.opencodereview/**`, `docs/**`, `tools/**`, `governance/**` are ordinary architectural surfaces for survival purposes.
 
@@ -194,7 +304,7 @@ EXTRACT UNIQUE REQUIRED VALUE
 
 Do not preserve a large control surface because deleting/rebuilding it feels aggressive.
 
-## 12. Structural completion
+## 14. Structural completion
 
 An affected architecture unit is not closed until:
 
@@ -206,5 +316,8 @@ EMPTY/MEANINGLESS PARENTS PRUNED
 WORKSPACE/MANIFEST/LOCKFILE OWNERSHIP UPDATED
 UNUSED DEPENDENCIES REMOVED
 NAMES/PATHS MATCH RESPONSIBILITIES
+MISLEADING NAMES/PATHS=0
+UNJUSTIFIED OVERSIZED/MULTI-RESPONSIBILITY FILES=0
+UNJUSTIFIED FRAGMENTATION=0
 NEGATIVE-SPACE SEARCH FINDS NO LOSING STRUCTURE
 ```
