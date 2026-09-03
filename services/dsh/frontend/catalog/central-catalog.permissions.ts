@@ -1,7 +1,7 @@
 import {
   hasServiceControlPanelPermission,
   type ControlPanelPermissionIdentity,
-} from "../session/control-panel-permissions";
+} from "../shared/session/control-panel-permissions";
 
 export type CatalogPermission =
   | "catalog.taxonomy.read"
