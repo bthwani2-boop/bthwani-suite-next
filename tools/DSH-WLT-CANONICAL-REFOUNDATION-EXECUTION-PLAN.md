@@ -17,7 +17,7 @@ This file is a temporary execution guide for the complete DSH/WLT refoundation. 
 
 It must never become a second source of live repository state. Every execution decision is derived from exact live `h` and current evidence. Do not add checkboxes, mutable status fields, completed-file lists, or stale snapshots to this file.
 
-If execution is performed under the repository orchestrator, the orchestrator remains supreme. This file specializes the DSH/WLT campaign but does not weaken any repository-wide law.
+If execution is performed under the repository orchestrator, the orchestrator remains supreme. This file specializes the DSH/WLT campaign but does not weaken repository-wide law.
 
 After verified closure:
 
@@ -36,16 +36,19 @@ Git history is the only archive for this plan.
 
 ## 1. Mission
 
-Refound DSH and WLT from semantic ownership first principles so the final repository expresses the product/system truth directly.
+Refound DSH and WLT from semantic ownership first principles so the final repository expresses product/system truth directly.
 
 Required final properties:
 
 ```text
 ONE_CANONICAL_OWNER_PER_MATERIAL_RESPONSIBILITY
 ONE_CANONICAL_MUTABLE_AUTHORITY_PER_BUSINESS_MEANING
+ONE_CANONICAL_CAPABILITY_VOCABULARY
 ONE_REPRODUCIBLE_CONTRACT/GENERATION_LINEAGE
 ONE_CANONICAL_RUNTIME/CONFIG_AUTHORITY_PER_ROLE
 ONE_CANONICAL_APP_COMPOSITION/NAVIGATION_AUTHORITY_PER_DEPLOYABLE_APP
+ONE_DIRECTIONAL_APP→SERVICE_DEPENDENCY
+ZERO_SERVICE→APP_RUNTIME_DEPENDENCY
 ZERO_KNOWN_PARALLEL_OR_SHADOW_TRUTH
 ZERO_KNOWN_LOSING/LEGACY_CONTAINERS
 ZERO_KNOWN_STALE_WRAPPERS/ALIASES/REEXPORTS
@@ -56,7 +59,7 @@ ZERO_KNOWN_PARTIAL_CUTOVERS
 ZERO_KNOWN_DSH/WLT_MATERIAL_FINDINGS
 ```
 
-The goal is not to beautify inherited folders. Preserve required value, rebuild canonical ownership, migrate consumers, and delete the losing topology.
+The goal is not to beautify inherited folders. Preserve required value, rebuild canonical ownership, migrate consumers, and delete losing topology.
 
 ---
 
@@ -74,7 +77,7 @@ PIN_EXACT_LIVE_h
 → DERIVE_NEXT_REQUIRED_ACTION
 ```
 
-Never mutate from memory, an old chat, this plan's examples, local-only assumptions, or a previously observed path.
+Never mutate from memory, an old chat, this plan's examples, local-only assumptions, or previously observed paths.
 
 If `h` moves during execution:
 
@@ -103,15 +106,15 @@ Mandatory affected-cone scope whenever DSH/WLT ownership reaches outside those r
 
 ```text
 apps/**
-contracts/** shared contract primitives
-core/** or packages/** when consumed by DSH/WLT
+contracts/** shared protocol primitives
+core/** or shared/** when consumed by DSH/WLT
 workspace/package/export/lockfile metadata
 tools/** generators/guards/scripts
 .github/** DSH/WLT assurance
 runtime/env/docker/compose/deployment/config
 ```
 
-Every structural unit must account for files, symbols, imports, exports, routes, manifests, generated outputs, tests, fixtures, mocks, DB schema, runtime registrations, workers, and external consumers in its complete affected cone.
+Every unit must account for files, symbols, imports, exports, routes, manifests, generated outputs, tests, fixtures, mocks, DB schema, runtime registrations, workers, and external consumers in its complete affected cone.
 
 ---
 
@@ -144,41 +147,52 @@ A screen/flow survives only if a required journey exists. A container survives o
 
 ---
 
-## 5. Canonical service boundary
+## 5. Canonical bounded-context ownership
 
 ### 5.1 DSH
 
-DSH owns operational commerce/delivery truth, including as applicable:
+DSH owns operational commerce and delivery truth, including as applicable:
 
 ```text
-catalog/store/assortment operational truth
+catalog
+store
+assortment/inventory operational truth
 cart
 checkout orchestration
-orders
+order
 pickup
 delivery
 dispatch
-serviceability/addresses
-operational client/partner/captain/field journeys
-notifications/support/marketing operational semantics
+serviceability
+address
+notification
+support
+marketing/promotion operational semantics
+client/partner/captain/field operational journeys
 ```
 
 ### 5.2 WLT
+
+WLT is an independent shared financial bounded context. It is not a DSH submodule and must remain reusable by future services and applications.
 
 WLT owns financial truth, including as applicable:
 
 ```text
 wallet/balance authority
-ledger/payment/refund
-settlement/commission/payout
+ledger
+payment
+refund
+settlement
+commission
+payout
 reconciliation
 COD financial lifecycle
 collateral
-financial pricing/funding/eligibility when truly financial
-financial provider/rail state
+financial pricing/funding/eligibility
+provider/financial-rail state
 ```
 
-### 5.3 Cross-service rule
+### 5.3 Cross-service law
 
 DSH may hold WLT identifiers and explicitly derived non-authoritative projections required for operational flow. It must not become a second financial writer or policy authority.
 
@@ -199,11 +213,11 @@ READBACK
 
 ---
 
-## 6. Canonical repository topology
+## 6. Canonical app ↔ service architecture
 
-The final topology is semantic-capability-oriented. Diagrams below are conceptual targets; create only containers that prove a real responsibility.
+### 6.1 Deployable apps are hosts/composition roots
 
-### 6.1 Deployable applications
+Canonical deployable roots:
 
 ```text
 apps/
@@ -214,22 +228,117 @@ apps/
 └── control-panel/runtime/
 ```
 
-Each runtime owns only deployable-app concerns:
+These runtimes own only deployable-app concerns:
 
 ```text
-route files / route hierarchy
+Expo Router / Next route hierarchy
 navigation and deep links
-application composition root
-bootstrap/session wiring
+tabs/shell/application composition
+bootstrap/session initialization
 native/platform adapters
-Expo/Next configuration
-assets that are truly app-owned
+secure storage/device integration
+push/deep-link platform wiring
+app-specific assets
+Expo/Next/build configuration
 runtime observability/config
 ```
 
-Feature/domain truth does not live here.
+They do not own DSH or WLT business capability implementations.
 
-### 6.2 DSH
+### 6.2 Services own reusable capability implementations
+
+Canonical dependency direction:
+
+```text
+apps/*/runtime
+    ↓ imports public capability entrypoints
+services/dsh/frontend/<capability>
+services/wlt/frontend/<capability>
+core/shared platform packages when genuinely cross-cutting
+```
+
+Forbidden reverse dependency:
+
+```text
+services/dsh/** → apps/*/runtime      FORBIDDEN
+services/wlt/** → apps/*/runtime      FORBIDDEN
+```
+
+A service must never know which deployable app hosts it.
+
+### 6.3 An app may compose multiple services
+
+The app is not “owned by DSH”. It may compose DSH, WLT, Identity, Workforce, Platform Control, and future services as peer capability providers.
+
+Example:
+
+```text
+apps/app-client/runtime
+├── route: /stores      → DSH Store capability
+├── route: /orders      → DSH Order capability
+├── route: /wallet      → WLT Wallet capability
+└── route: /profile     → Identity/Profile capability composition
+```
+
+The route is app-owned. The capability semantics and reusable screen/controller are service-owned.
+
+### 6.4 Host-specific composition vs domain-owned UI
+
+Use this decision law:
+
+```text
+REUSABLE DOMAIN/CAPABILITY UI
+→ owning service frontend
+
+APP ROUTE/TAB/SHELL/DEEP LINK
+→ apps/*/runtime
+
+CROSS-CAPABILITY PAGE COMPOSITION ONLY
+→ apps/*/runtime
+
+DOMAIN ORCHESTRATION / BUSINESS DECISION
+→ owning backend service
+
+DSH-SPECIFIC ADAPTATION OF WLT CAPABILITY
+→ DSH capability integration boundary, only if real adaptation exists
+```
+
+Do not move business orchestration into the app merely because two services appear on one screen.
+
+### 6.5 Current app-shaped DSH exports are transitional losers
+
+Current shapes such as:
+
+```text
+@bthwani/dsh/app-client
+@bthwani/dsh/app-partner
+@bthwani/dsh/app-captain
+@bthwani/dsh/app-field
+@bthwani/dsh/control-panel
+```
+
+must be replaced by semantic capability exports. The runtime should assemble capabilities instead of importing a monolithic `Dsh*Application` that makes DSH appear to own the whole app.
+
+Target style:
+
+```text
+@bthwani/dsh/catalog
+@bthwani/dsh/store
+@bthwani/dsh/cart
+@bthwani/dsh/checkout
+@bthwani/dsh/order
+@bthwani/dsh/delivery
+@bthwani/wlt/wallet
+@bthwani/wlt/payment
+@bthwani/wlt/payout
+...
+```
+
+---
+
+## 7. Canonical repository topology
+
+### 7.1 DSH
 
 ```text
 services/dsh/
@@ -239,20 +348,18 @@ services/dsh/
 │       ├── runtime/
 │       ├── transport/http/
 │       ├── integrations/
-│       └── <semantic-capabilities>/
+│       └── <semantic-capability>/
 ├── contracts/
 │   ├── dsh.openapi.yaml
 │   ├── modules/
 │   └── components/
 ├── clients/generated/
 ├── frontend/
-│   └── <semantic-capabilities>/
+│   └── <semantic-capability>/
 └── database/
 ```
 
-Prefer direct capability owners such as `catalog`, `cart`, `checkout`, `orders`, `delivery`, `dispatch`, `stores`, `notifications`, `support`, etc. Do not create umbrella folders such as `commerce` unless that folder itself owns real shared semantics rather than merely grouping children.
-
-### 6.3 WLT
+### 7.2 WLT
 
 ```text
 services/wlt/
@@ -262,27 +369,213 @@ services/wlt/
 │       ├── runtime/
 │       ├── transport/http/
 │       ├── integrations/
-│       ├── security/              # only if a distinct WLT security boundary is proven
-│       └── <financial-capabilities>/
+│       └── <financial-capability>/
 ├── contracts/
 │   ├── wlt.openapi.yaml
 │   ├── modules/
 │   └── components/
 ├── clients/generated/
 ├── frontend/
-│   └── <financial-capabilities>/  # required where financial UI/presentation exists
+│   └── <financial-capability>/
 └── database/
 ```
 
-Do not collapse wallet, ledger, payment, refund, settlement, payout, and reconciliation into a generic `finance` package.
+`services/wlt/frontend` is the canonical location for reusable WLT-owned frontend behavior/presentation because WLT is a shared bounded context and `services/wlt` is already the WLT workspace/package boundary.
+
+Do not create a second generic `packages/wlt-ui`, `shared/wlt`, or DSH-owned WLT feature tree unless a genuinely independent package lifecycle proves necessary.
 
 ---
 
-## 7. Frontend ownership law
+## 8. Canonical capability naming law
 
-### 7.1 Apps are shells, capabilities own features
+Names are architecture. Every surviving capability/topic name must describe stable business meaning, not historical implementation or a particular screen.
 
-The current DSH app-shaped feature containers are losing topology after value migration:
+### 8.1 Canonical naming grammar
+
+Use stable English domain nouns.
+
+Preferred canonical capability identifiers are singular or mass nouns:
+
+```text
+DSH
+catalog
+store
+cart
+checkout
+order
+delivery
+dispatch
+pickup
+serviceability
+address
+notification
+support
+marketing
+promotion
+rating
+special-request
+
+WLT
+wallet
+ledger
+payment
+refund
+settlement
+commission
+payout
+reconciliation
+pricing
+collateral
+cod
+promotion-funding
+commercial   # only if proven cohesive
+```
+
+Plural API resources are normal (`/orders`, `/payments`), but capability ownership names should remain stable domain concepts.
+
+### 8.2 Multi-word naming
+
+Canonical semantic ID / TypeScript / OpenAPI folder:
+
+```text
+special-request
+promotion-funding
+financial-eligibility
+```
+
+Go package/directory may use idiomatic lowercase without punctuation when required:
+
+```text
+specialrequest
+promotionfunding
+financialeligibility
+```
+
+These are language encodings of the same canonical semantic capability, not different topics.
+
+### 8.3 Names that are not domain capabilities by default
+
+The following are presumed noncanonical as semantic topic owners unless a unique responsibility is positively proven:
+
+```text
+home
+home-discovery
+account
+hub
+workspace
+workboard
+dashboard
+governance
+truth
+closure
+extensions
+runtime-extensions
+boundary
+finance
+operations
+administration
+common
+shared
+core
+misc
+central
+canonical
+new
+legacy
+v2/v3 without real version semantics
+```
+
+These words may describe UI composition or technical roles, but must not hide real domain ownership.
+
+Examples:
+
+```text
+home-discovery
+→ `home` is an app route; split actual meaning into store/discovery/marketing/etc.
+
+account
+→ app information architecture composing profile/address/identity/wallet/etc.
+
+finance
+→ too broad; replace with wallet/payment/settlement/payout/etc.
+
+catalog-governance
+→ if governance is merely catalog policy/approval, Catalog remains owner.
+
+order-truth
+→ Order is the owner; “truth” is not a second capability.
+
+payout-failure-boundary
+→ failure is a payout lifecycle state, not a domain.
+
+workforce-finance
+→ actor/consumer-shaped; distribute to actual WLT financial capabilities.
+```
+
+### 8.4 Actor names do not create capability ownership
+
+Do not create separate topics merely because the actor differs:
+
+```text
+client-orders
+partner-orders
+captain-orders
+field-orders
+```
+
+Prefer:
+
+```text
+order/
+  presentation/client
+  presentation/partner
+  presentation/captain
+```
+
+only when actor-specific presentation is truly required.
+
+### 8.5 Mechanisms do not create capability names
+
+Do not create top-level semantic topics from:
+
+```text
+saga
+outbox
+worker
+cache
+retry
+adapter
+provider
+handler
+controller
+repository
+```
+
+Place mechanisms under the capability/runtime/integration owner that needs them.
+
+### 8.6 Naming admission gate
+
+A new topic name is allowed only if all are proven:
+
+```text
+UNIQUE_STABLE_BUSINESS_MEANING
+CLEAR_CANONICAL_OWNER
+NOT_A_SCREEN_OR_ROUTE_NAME
+NOT_AN_ACTOR_PREFIX
+NOT_AN_IMPLEMENTATION_MECHANISM
+NOT_A_LIFECYCLE_PHASE_ONLY
+NOT_A_GENERIC_BUCKET
+NOT_DUPLICATE_OF_EXISTING_CAPABILITY
+NAME_MATCHES_BACKEND/CONTRACT/FRONTEND_TAXONOMY
+```
+
+---
+
+## 9. Frontend ownership law
+
+### 9.1 DSH app-shaped feature trees must disappear
+
+Current losing containers after value migration:
 
 ```text
 services/dsh/frontend/app-client
@@ -292,80 +585,72 @@ services/dsh/frontend/app-field
 services/dsh/frontend/control-panel
 ```
 
-Required treatment:
+Treatment:
 
 ```text
 CENSUS_FEATURE_VALUE
-→ MOVE_DOMAIN/PRESENTATION_VALUE_TO_CANONICAL_CAPABILITY
-→ MOVE_NAVIGATION/COMPOSITION/PLATFORM_VALUE_TO_apps/*/runtime
-→ UPDATE_ALL_IMPORTS/EXPORTS/ROUTES
+→ MOVE_DOMAIN/PRESENTATION_VALUE_TO_DSH_CAPABILITY
+→ MOVE_APP_COMPOSITION/NAVIGATION/PLATFORM_VALUE_TO_apps/*/runtime
+→ UPDATE_IMPORTS/EXPORTS/ROUTES
 → DELETE_APP_SHAPED_FEATURE_CONTAINER
 → PROVE_OLD_PATH_REACHABILITY=0
 ```
 
-Actor-specific presentation is allowed under the capability when behavior/UX genuinely differs:
+### 9.2 `frontend/shared` must not survive as a domain dump
+
+Rehome every child by semantic owner, then delete the umbrella and its barrels.
+
+Do not recreate the same problem as `common`, `core`, `features`, or another generic bucket.
+
+### 9.3 WLT frontend belongs to WLT
+
+WLT-owned reusable UI/controller/view-model/data-access belongs under:
 
 ```text
-frontend/orders/presentation/client
-frontend/orders/presentation/partner
-frontend/orders/presentation/captain
-frontend/orders/presentation/control-panel
+services/wlt/frontend/<financial-capability>
 ```
 
-Do not create actor copies when one presentation works for multiple surfaces.
-
-### 7.2 Navigation/composition authority
-
-App route paths, tab hierarchy, deep links, back behavior, Expo Router/Next routing, and composition belong to `apps/*/runtime`.
-
-Capability code exposes semantic components/actions/callbacks. It does not call app route strings as business truth.
-
-### 7.3 `account` is information architecture, not automatic ownership
-
-Account/My Space may compose profile, addresses, identity, notifications, support, benefits, preferences, and financial surfaces. Those capabilities keep their real owners; the account page may remain only as shell/composition UI.
-
-### 7.4 Current `frontend/shared` must be demolished as an umbrella
-
-The existing DSH `frontend/shared` domain dump must not survive as a generic ownership refuge.
+Examples:
 
 ```text
-REHOME_DOMAIN_VALUE_TO_REAL_CAPABILITY
-REHOME_PRESENTATIONAL_PRIMITIVES_TO_EXISTING_UI_OWNER_WHEN_TRULY_SHARED
-REHOME_RUNTIME_PLATFORM_CODE_TO_APP_RUNTIME_OR_REAL_RUNTIME_PACKAGE
-DELETE_SHARED_BARRELS/OLD_PATHS
-DELETE_CURRENT_SHARED_UMBRELLA_AFTER_CUTOVER
+services/wlt/frontend/wallet
+services/wlt/frontend/payment
+services/wlt/frontend/refund
+services/wlt/frontend/settlement
+services/wlt/frontend/commission
+services/wlt/frontend/payout
+services/wlt/frontend/collateral
 ```
 
-Do not recreate the same problem under another `shared/common/core` name.
+The WLT frontend consumes WLT generated bindings and exposes host-neutral capability entrypoints.
 
-### 7.5 Current `frontend/wlt-boundary` must not remain a WLT feature tree inside DSH
+It must not import DSH routes, DSH app navigation, DSH store/order implementation details, or app-runtime files.
 
-Financial feature value currently under DSH must move to WLT ownership:
+### 9.4 DSH-specific WLT usage
+
+If DSH Checkout uses WLT Payment:
 
 ```text
-wallet/collateral/commission/payment/payout/ledger/refund/settlement/etc.
-→ services/wlt/frontend/<capability>
+WLT owns payment state/contracts/reusable payment presentation
+DSH owns checkout orchestration and order/cart semantics
+APP owns route composition
 ```
 
-DSH may retain only a thin, explicit orchestration/integration boundary where DSH-specific flow truly requires one. No second WLT frontend domain tree may remain inside DSH.
+A DSH-specific adapter may exist only when it translates DSH checkout context into the WLT public contract without duplicating WLT business truth.
 
-### 7.6 Platform/native code
+### 9.5 Platform/native code
 
-Expo/React-Native/Next-specific implementations such as native file pickers, URI handling, push registration, secure storage, device adapters, and platform routing belong in app runtime or a proven cross-app runtime package. Domain frontend accepts interfaces/ports where needed.
+Expo/React-Native/Next-specific implementations such as file pickers, URI handling, push registration, secure storage, device adapters, and platform routing belong in app runtime or a proven cross-app runtime package. Capability frontend accepts ports/interfaces when needed.
 
-### 7.7 Generic CSS declarations
+### 9.6 Screen responsibility
 
-Generic web TypeScript declarations such as `*.module.css` are not DSH domain truth. Rehome them to the web app/runtime or repository-wide TypeScript/web configuration according to actual scope.
-
-### 7.8 Screen responsibility
-
-Screens own presentation and transient interaction state only. They must not own authoritative business transitions, permissions, prices/fees, financial calculations, serviceability, statuses, allowed actions, or persistent validation.
+Screens own presentation and transient interaction state only. They must not own authoritative transitions, permissions, prices/fees, financial calculations, serviceability, statuses, allowed actions, or persistent validation.
 
 ---
 
-## 8. Backend architecture law
+## 10. Backend architecture law
 
-### 8.1 Thin process entrypoints
+### 10.1 Thin process entrypoints
 
 `cmd/*/main.go` owns process startup only:
 
@@ -376,9 +661,9 @@ load config
 → graceful shutdown
 ```
 
-Move route registration, worker composition, DB/provider construction, and large config orchestration into `internal/runtime` or another explicitly justified composition owner.
+Move route registration, worker composition, DB/provider construction, and large config orchestration into canonical runtime/composition ownership.
 
-### 8.2 Transport
+### 10.2 Transport
 
 HTTP transport owns:
 
@@ -392,22 +677,22 @@ encode response/error
 
 No SQL, business policy, financial decision, state machine, or permission truth in transport handlers.
 
-### 8.3 Integrations
+### 10.3 Integrations
 
-External boundaries live under explicit integration ownership, for example:
+External boundaries live under explicit integration ownership:
 
 ```text
 DSH: integrations/identity, workforce, platform, wlt, maps, media
 WLT: integrations/dsh, financial-rails/providers
 ```
 
-An integration package translates/protects a remote boundary; it does not become owner of remote or local domain truth.
+An integration translates/protects a remote boundary; it does not become owner of remote or local domain truth.
 
-### 8.4 Mechanisms are not domains
+### 10.4 Mechanisms are not domains
 
-Saga, outbox, worker, cache, health, retry, and provider routing are mechanisms. They live under the domain/runtime/integration owner that needs them unless an independent lifecycle genuinely requires a separate boundary.
+Saga, outbox, worker, cache, health, retry, and provider routing live under the domain/runtime/integration owner that needs them unless an independent lifecycle genuinely requires a separate boundary.
 
-### 8.5 Go package shape
+### 10.5 Go package shape
 
 Do not mechanically create `domain/application/usecase/repository/services/helpers/utils/common` layers for every capability. Prefer cohesive Go packages and split only for real semantic/lifecycle boundaries.
 
@@ -415,27 +700,28 @@ Any hand-maintained file >400 logical LOC requires cohesion review; >700 is pres
 
 ---
 
-## 9. DSH backend high-priority structural targets
+## 11. DSH high-priority structural targets
 
-Resolve these current structural candidates as systemic roots where evidence confirms:
+Resolve from live evidence:
 
 ```text
-centralcatalog + catalogapproval → one canonical Catalog ownership boundary
+centralcatalog + catalogapproval → catalog
 checkoutpaymentsaga / checkoutfinanceoutbox → checkout or explicit WLT integration mechanism
 internal/http → transport/http
 workforceclient/platformclient/mapproviders/WLT client → integrations/*
 large multi-responsibility main.go → thin cmd + runtime composition
+frontend/app-* → semantic capabilities + app runtime composition
+frontend/shared → real capability owners
+frontend/wlt-boundary → WLT frontend or thin DSH integration only
 ```
 
-Do not preserve old package names through aliases/reexports after cutover.
+No old package path survives through aliases/reexports after cutover.
 
 ---
 
-## 10. WLT backend ownership law
+## 12. WLT backend ownership law
 
-### 10.1 Preserve real financial bounded contexts
-
-Strong candidates to remain independent when semantics confirm:
+Preserve real financial bounded contexts when semantics confirm:
 
 ```text
 wallet
@@ -449,14 +735,12 @@ reconciliation
 pricing
 cod
 collateral
-promotion funding
+promotion-funding
 penalty/adjustment if independently justified
-commercial if it proves one coherent context
+commercial if cohesive
 ```
 
-### 10.2 Technical top-level containers must be rehomed
-
-Challenge and normally refound:
+Challenge/refound technical top-level containers:
 
 ```text
 http → transport/http
@@ -466,37 +750,19 @@ provider → integrations/financial-rails/providers
 shared → decompose to real owners, then delete
 ```
 
-### 10.3 Reconciliation boundary
-
-Explicitly disambiguate:
-
-```text
-payment-specific provider reconciliation helper
-payout external-statement matching
-system/financial reconciliation case/process
-```
-
-One semantic meaning gets one owner. Rename/move files so names reflect that meaning; delete misleading `canonical_*` or duplicate reconciliation files after migration.
-
-### 10.4 Settlement / payout / reconciliation
+Semantic boundaries:
 
 ```text
 SETTLEMENT = what is owed and settlement lifecycle
-PAYOUT = actual disbursement/destination/provider execution lifecycle
+PAYOUT = actual disbursement/destination/provider execution
 RECONCILIATION = proof/matching of internal vs external financial truth
+COD = reservation/collection/finalization financial flow
+COMMISSION = commission policy/lifecycle/query/posting when independent
 ```
-
-Do not let one package silently own another's state machine.
-
-### 10.5 COD / commission
-
-COD owns reservation/collection/finalization financial flow. Commission owns commission policy/lifecycle/query/posting if it proves an independent responsibility. Commission code embedded in COD must migrate if it represents that separate meaning.
 
 ---
 
-## 11. Contract architecture and generated lineage
-
-### 11.1 One canonical contract ownership tree
+## 13. Contract architecture and generated lineage
 
 Each service has one composition root:
 
@@ -505,11 +771,7 @@ dsh.openapi.yaml
 wlt.openapi.yaml
 ```
 
-Each semantic capability has one canonical contract owner under `modules/`. A capability may use multiple physical files only when size/cohesion justifies it; those files must still form one owner and must not create parallel authorities.
-
-Domain schemas stay with their capability. `components/` is limited to genuinely cross-capability protocol/transport primitives.
-
-### 11.2 Generated artifacts
+Each semantic capability has one canonical contract owner under `modules/`. Multiple physical files are allowed only when cohesion/size justify them and they remain one authority.
 
 ```text
 CANONICAL_OPENAPI_SOURCE
@@ -518,17 +780,17 @@ CANONICAL_OPENAPI_SOURCE
 → CONSUMERS
 ```
 
-Generated bundles/clients are derived artifacts, never manually edited truth. Deterministic generated files need not be tracked unless a real distribution/runtime requirement proves otherwise.
+Generated bundles/clients are derived artifacts, never manually edited truth.
 
-### 11.3 No manual synchronized contract registries
+No module list, operation list, DTO list, or enum list may be manually synchronized across OpenAPI root, manifests, TypeScript maps, adapters, and frontend code.
 
-A module list, operation list, DTO list, or enum list must not be manually repeated across OpenAPI root, manifests, TypeScript maps, adapters, and frontend code.
+If tooling requires derived metadata, generate it from canonical sources.
 
-If tooling requires a manifest, derive/generate it from the canonical source; do not maintain a second hand-synchronized module registry.
+---
 
-### 11.4 DSH capability/security metadata
+## 14. DSH capability/security metadata cleanup
 
-Manual operation arrays in `capability-map.ts` and overlapping authorization-capability registries must not remain independent authorities.
+Manual operation arrays in capability maps and overlapping authorization-capability registries must not remain independent authorities.
 
 Target:
 
@@ -536,58 +798,67 @@ Target:
 permission vocabulary → canonical Identity/Security owner
 server enforcement → backend authority
 operationId + declared security/capability metadata → canonical contract metadata
-surface composition → app/capability consumption metadata derived from canonical owners
+surface composition → derived consumer metadata
 ```
 
-UI visibility may derive from permissions but must never be the enforcement authority.
-
-`capabilities.ts`, `surface-map.ts`, `authorization-capabilities.json`, `backend-route-classification.json`, and similar files each re-earn existence. Empty or duplicative artifacts are deleted; required derived metadata is generated from canonical sources.
-
-### 11.5 WLT contract refoundation
-
-The current WLT contract topology must converge by financial capability. Resolve, migrate, then delete losing fragments such as:
+Files such as these re-earn existence individually:
 
 ```text
-payment-session capability overlay + DSH checkout handoff overlay
-→ payments canonical owner
+capabilities.ts
+capability-map.ts
+surface-map.ts
+authorization-capabilities.json
+backend-route-classification.json
+service.manifest.ts
+```
+
+Delete empty/duplicative control artifacts. Generate derived metadata where needed.
+
+---
+
+## 15. WLT contract refoundation
+
+Converge current WLT contract topology by financial capability:
+
+```text
+payment-session capabilities overlay + DSH checkout handoff overlay
+→ payment
 
 settlement-operations + settlement part of settlements-commissions
-→ settlements canonical owner
+→ settlement
 
 commission part of settlements-commissions
-→ commissions canonical owner when independent
+→ commission when independent
 
 payout destinations + payout failure boundary
-→ payouts canonical owner
+→ payout
 
 commercial-summary + commercial
-→ commercial owner if one coherent context
+→ commercial if cohesive
 
 store-onboarding-fee
-→ commercial or another proven fee-policy owner
+→ commercial or proven fee-policy owner
 
 special-request-quotes
 → pricing if WLT owns only financial quote semantics
 
 workforce-finance
-→ distribute to wallet/commission/payout/etc.; Workforce remains the actor/domain consumer
+→ wallet/commission/payout/etc.
 
 captain-collateral
-→ collateral when actor-independent
+→ collateral
 
 dispatch-financial-eligibility
-→ financial eligibility or the actual financial owner; Dispatch remains DSH consumer
+→ actual WLT financial owner
 ```
 
-`operation-state.json` must not remain a mixed contract/runtime/evidence authority. Salvage durable contract metadata into canonical contract metadata, keep verification evidence in tests/evidence systems, then delete it unless a unique live runtime responsibility is proven.
+`operation-state.json` must not remain mixed contract/runtime/evidence authority. Salvage durable metadata, retain proof in verification/tests, then delete unless a unique live responsibility is proven.
 
-### 11.6 Common component consistency
-
-All `$ref` targets must resolve from the canonical composition root. No contract may reference missing/renamed common response/schema symbols. Composition verification must fail closed on unresolved refs, duplicate operationIds, duplicate routes, or conflicting schemas.
+All `$ref` targets must resolve. Composition verification must fail closed on unresolved refs, duplicate operationIds, duplicate routes, or conflicting schemas.
 
 ---
 
-## 12. Database ownership and migration law
+## 16. Database ownership and migration law
 
 For every material persisted fact prove:
 
@@ -606,9 +877,9 @@ DERIVED_PROJECTIONS
 LOSING_STORAGE_AUTHORITIES
 ```
 
-One truth does not mean one table. Normalized tables are valid. What is forbidden is multiple mutable authorities for the same meaning.
+One truth does not mean one table. Normalized tables are valid. Multiple mutable authorities for the same meaning are forbidden.
 
-Each service keeps one globally ordered canonical migration lane unless a real deployment boundary proves otherwise. Do not fragment migration ordering merely to mirror source-code capabilities.
+Each service keeps one globally ordered canonical migration lane unless a real deployment boundary proves otherwise.
 
 For destructive schema change:
 
@@ -623,15 +894,15 @@ PROVE_REQUIRED_DURABLE_TRUTH
 → PROVE_READBACK
 ```
 
-Never weaken durable constraints to make migration easier.
+Never weaken durable constraints merely to ease migration.
 
 ---
 
-## 13. WLT financial shadow-truth audit
+## 17. WLT financial shadow-truth audit
 
-`reference` packages, `*_status_refs`, duplicated balances, materialized status copies, and financial projections are high-risk until proven.
+Treat `reference` packages, `*_status_refs`, duplicated balances, materialized status copies, and financial projections as high-risk until proven.
 
-For every such structure determine:
+For each determine:
 
 ```text
 SOURCE_ENTITY
@@ -645,19 +916,19 @@ CAN_IT_DIVERGE
 IS_IT_USED_FOR_MUTATION_DECISIONS
 ```
 
-Allowed outcomes only:
+Allowed outcomes:
 
 ```text
 REDUNDANT_MUTABLE_MIRROR → migrate consumers → delete
 NECESSARY_DERIVED_PROJECTION → explicit one-way, non-authoritative, rebuildable
-ACTUAL_CANONICAL_TRUTH_MISNAMED_AS_REFERENCE → rehome/rename to true owner
+ACTUAL_CANONICAL_TRUTH_MISNAMED_AS_REFERENCE → rehome/rename
 ```
 
 No ambiguous financial reference survives closure.
 
 ---
 
-## 14. Heightened financial/security gate
+## 18. Heightened financial/security gate
 
 Before closing any WLT financial mutation path prove all applicable claims:
 
@@ -684,7 +955,7 @@ Never delete valid financial/security safeguards or tests merely to simplify top
 
 ---
 
-## 15. Runtime/config/jobs/workers
+## 19. Runtime/config/jobs/workers
 
 Audit and canonicalize:
 
@@ -705,42 +976,36 @@ Each role gets one canonical authority. Remove stale aliases, duplicate flags, o
 
 ---
 
-## 16. Package/export/workspace law
+## 20. Package/export/workspace law
 
-Public package exports must express semantic capability ownership, not losing app-shaped feature topology.
+`services/dsh` and `services/wlt` remain service workspace/package boundaries unless a stronger repository-wide decision changes that.
 
-After frontend cutover, app-shaped DSH exports such as:
+Public exports express semantic capabilities, not deployable apps.
 
-```text
-@bthwani/dsh/app-client
-@bthwani/dsh/app-partner
-@bthwani/dsh/app-captain
-@bthwani/dsh/app-field
-@bthwani/dsh/control-panel
-@bthwani/dsh/wlt-boundary
-```
+After cutover remove app-shaped exports and old `wlt-boundary` exports.
 
-must be removed unless an export represents a proven thin runtime-neutral boundary with unique value. Normal target exports are capability-oriented, for example:
+WLT frontend exports should be host-neutral capability exports from the WLT package. If React/UI exports are added, declare their actual runtime/peer dependencies explicitly; do not hide frontend dependencies behind generated-client-only metadata.
+
+Update in the same cone:
 
 ```text
-@bthwani/dsh/catalog
-@bthwani/dsh/cart
-@bthwani/dsh/checkout
-@bthwani/dsh/orders
-@bthwani/wlt/payment
-@bthwani/wlt/wallet
-...
+package.json exports/dependencies/peerDependencies
+project.json/Nx targets
+tsconfig includes/paths
+pnpm workspace/lockfile when affected
+Go imports
+Docker contexts
+scripts/guards
+CI path filters
 ```
-
-Update package manifests, Nx targets, tsconfig includes/path mappings, Go imports, Docker contexts, scripts, CI filters, and tooling paths in the same affected cone. Old topology may not survive in configuration.
 
 `package.json` and `project.json` are not duplicates by definition; each survives only if its package-manager/workspace role remains real.
 
 ---
 
-## 17. Test and assurance law
+## 21. Test and assurance law
 
-Classify every materially affected test/fixture/mock/snapshot/helper:
+Classify every affected test/fixture/mock/snapshot/helper:
 
 ```text
 VALID_CANONICAL_SPEC
@@ -760,18 +1025,18 @@ OBSOLETE_BEHAVIOR → delete
 DUPLICATE_COVERAGE → merge/delete
 WRONG_LAYER_SPEC → rewrite/rehome
 LOSING_TOPOLOGY_TEST → delete with loser
-MISSING_PREVENTION → add the smallest durable prevention proof
+MISSING_PREVENTION → add smallest durable prevention proof
 ```
 
-Prefer native compiler/typecheck/test/schema/runtime checks over custom guards when they prove the same claim. Add custom guards only for a unique admission hole, and remove campaign-only guards after closure.
+Prefer compiler/typecheck/test/schema/runtime checks over custom guards when they prove the same claim. Remove campaign-only guards after closure.
 
 ---
 
-## 18. Execution strategy — systemic roots first, then vertical capabilities
+## 22. Execution strategy — systemic roots then vertical capabilities
 
-Do not execute the campaign as long layer-only waves (`all contracts`, then `all backend`, then `all frontend`). That creates prolonged half-migrations and semantic drift.
+Do not execute long layer-only waves such as all contracts, then all backend, then all frontend.
 
-### Phase P0 — Recover exact state
+### P0 — Recover exact state
 
 ```text
 PIN h
@@ -780,12 +1045,12 @@ RECONSTRUCT OPEN CUTOVERS
 RECONSTRUCT LOSERS STILL REQUIRED FOR MIGRATION
 ```
 
-### Phase P1 — Full DSH/WLT census and canonical model
+### P1 — Full DSH/WLT census and canonical model
 
-Build an evidence-backed current map for:
+Map:
 
 ```text
-capabilities
+capabilities/names
 owners
 writers/readers
 DB facts
@@ -797,27 +1062,22 @@ runtime/config/workers
 tests/assurance
 ```
 
-Do not commit the census as a second permanent status authority.
+### P2 — Close systemic enabling catastrophes
 
-### Phase P2 — Close only systemic enabling catastrophes
-
-Examples of legitimate cross-capability systemic units:
+Examples:
 
 ```text
 app runtime/composition ownership
+canonical capability vocabulary/naming
 contract composition/generator authority
 service metadata/capability registry authority
 backend runtime/transport/integration topology
 WLT financial writer/reference authority map
 ```
 
-Each systemic unit still requires full migration/cutover/deletion of its affected cone.
+### P3 — Vertical capability refoundation
 
-### Phase P3 — Vertical capability refoundation
-
-After systemic prerequisites, close capabilities end-to-end. Select the highest-impact/root-tax capability dynamically from live evidence.
-
-Canonical vertical unit:
+Canonical unit:
 
 ```text
 PRODUCT MEANING
@@ -826,7 +1086,7 @@ PRODUCT MEANING
 → TRANSPORT/EVENT
 → OPENAPI CONTRACT
 → GENERATED BINDING
-→ FRONTEND CONTROLLER/VIEW
+→ SERVICE FRONTEND CONTROLLER/VIEW
 → APP RUNTIME COMPOSITION/ROUTE
 → USER/SYSTEM MUTATION
 → PERSISTED READBACK
@@ -834,39 +1094,39 @@ PRODUCT MEANING
 → NEGATIVE-SPACE VERIFY
 ```
 
-Do not mark backend, contract, or frontend subparts separately closed while the capability chain remains split.
+Do not mark backend, contract, frontend, or app-runtime subparts separately closed while the capability chain remains split.
 
-### Phase P4 — Cross-capability residue and assurance cleanup
+### P4 — Cross-capability residue cleanup
 
-Remove only residue not already deleted eagerly during units:
+Remove only residue not already deleted eagerly:
 
 ```text
 stale dependencies
-stale package exports
+stale exports
 obsolete tsconfig/Nx entries
 obsolete tests/fixtures
 campaign-only tools/guards
 stale docs/governance references
 ```
 
-This phase is not a garbage queue: known loser residue must be deleted as soon as its last migration dependency ends.
+### P5 — Adversarial final re-census
 
-### Phase P5 — Adversarial final re-census
-
-Freshly re-enumerate DSH/WLT and the affected repository cone from exact `h`; search for structural, semantic, financial, runtime, contract, and experience gaps from zero assumptions.
+Re-enumerate DSH/WLT and affected repository cone from exact `h` with zero inherited assumptions.
 
 ---
 
-## 19. Execution-unit template
+## 23. Execution-unit template
 
-Every active unit must reconstruct these fields from live state:
+Every active unit reconstructs from live state:
 
 ```text
 UNIT_ID
 EXACT_H_SHA
+CANONICAL_CAPABILITY_ID
+CURRENT_NAMES_AND_ALIASES
 SOURCE_OF_DEFECT
 REQUIRED_SOURCE_OF_FIX
-WHY_THIS_IS_THE_HIGHEST_SAFE_EXECUTABLE_ROOT
+WHY_THIS_IS_HIGHEST_SAFE_EXECUTABLE_ROOT
 REQUIRED_TRUTH
 CURRENT_OWNERS/WRITERS/READERS
 SERIOUS_ALTERNATIVES_CONSIDERED
@@ -877,7 +1137,8 @@ COMPLETE_AFFECTED_CONE
 DATA_MIGRATION
 CODE_MIGRATION
 CONTRACT/GENERATION_MIGRATION
-FRONTEND/APP_MIGRATION
+SERVICE_FRONTEND_MIGRATION
+APP_RUNTIME_MIGRATION
 RUNTIME/CONFIG_MIGRATION
 TEST/ASSURANCE_MIGRATION
 CUTOVER_ORDER
@@ -889,13 +1150,13 @@ ADMISSION_PREVENTION
 FRESH_RE_CENSUS
 ```
 
-Material unknowns that can change ownership or deletion safety must be resolved before destructive closure of that cone.
+Material unknowns that can change ownership or deletion safety must be resolved before destructive closure.
 
 Do not persist unit status into this plan.
 
 ---
 
-## 20. Concurrency and writer safety
+## 24. Concurrency and writer safety
 
 Parallel execution is allowed only for proven disjoint affected cones.
 
@@ -906,22 +1167,22 @@ NO_TWO_SESSIONS_MUTATE_SHARED_CONTRACT/DB/EXPORT/RUNTIME_AUTHORITY_UNCOORDINATED
 HEAD_MOVEMENT_REQUIRES_RECONCILIATION
 ```
 
-Shared roots such as contract composition, package exports, migration manifests, runtime composition, and cross-service financial boundaries serialize dependent work.
+Shared roots such as contract composition, package exports, migration manifests, runtime composition, canonical naming maps, and cross-service financial boundaries serialize dependent work.
 
 ---
 
-## 21. Cutover and deletion gate
+## 25. Cutover and deletion gate
 
 A move/rename/merge is not closure. A loser survives only while an explicit migration dependency remains.
-
-Required sequence:
 
 ```text
 CANONICAL_WINNER_BUILT
 → REQUIRED_TRUTH_MIGRATED
 → WRITERS_CUT_OVER
 → READERS/CONSUMERS_CUT_OVER
-→ ROUTES/EXPORTS/CONFIG/NAVIGATION_CUT_OVER
+→ SERVICE_FRONTEND_CUT_OVER
+→ APP_ROUTES/COMPOSITION_CUT_OVER
+→ EXPORTS/CONFIG_CUT_OVER
 → OLD_WRITES=0
 → OLD_READERS=0
 → DELETE_LOSER_AT_HIGHEST_SAFE_GRANULARITY
@@ -934,9 +1195,9 @@ Internal compatibility wrappers are forbidden by default. A temporary compatibil
 
 ---
 
-## 22. Positive verification requirements
+## 26. Positive verification requirements
 
-Use the highest material boundary affected by the unit. As applicable prove:
+As applicable prove:
 
 ```text
 Go build/test
@@ -959,16 +1220,20 @@ Green output proves only the claim it actually exercises.
 
 ---
 
-## 23. Negative-space and falsification gate
+## 27. Negative-space and falsification gate
 
-After each unit and globally at the end, search for:
+After each unit and globally search for:
 
 ```text
 OLD_PATH_REFERENCES
 LOSING_IMPORTS/EXPORTS
-OLD_APP_FEATURE_EXPORTS
+OLD_APP_SHAPED_DSH_EXPORTS
+OLD_Dsh*Application_MONOLITHIC_COMPOSITION
 OLD_SHARED_DOMAIN_IMPORTS
 OLD_WLT_BOUNDARY_FEATURE_IMPORTS
+SERVICE→APP_RUNTIME_IMPORTS
+DUPLICATE_CAPABILITY_NAMES_FOR_SAME_MEANING
+SCREEN/ACTOR/MECHANISM_SHAPED_TOPIC_NAMES
 LOSING_ROUTE_REGISTRATIONS
 LOSING_OPENAPI_MODULE_REFS
 LOSING_GENERATOR_INPUTS
@@ -993,11 +1258,12 @@ Positive proof of the new path is insufficient while a losing path remains reach
 
 ---
 
-## 24. Per-capability closure gate
+## 28. Per-capability closure gate
 
 A capability is closed only when all applicable claims pass on exact current `h`:
 
 ```text
+CANONICAL_CAPABILITY_NAME_PROVEN
 REQUIRED_PRODUCT_MEANING_ACCOUNTED_FOR
 CANONICAL_OWNER_ACCOUNTED_FOR
 CANONICAL_STORAGE/WRITER_ACCOUNTED_FOR
@@ -1005,7 +1271,8 @@ CANONICAL_BACKEND_ACCOUNTED_FOR
 CANONICAL_TRANSPORT_ACCOUNTED_FOR
 CANONICAL_CONTRACT_ACCOUNTED_FOR
 GENERATED_LINEAGE_REPRODUCIBLE
-ALL_REQUIRED_FRONTEND/SURFACE_CONSUMERS_ACCOUNTED_FOR
+CANONICAL_SERVICE_FRONTEND_ACCOUNTED_FOR_WHEN_UI_EXISTS
+ALL_REQUIRED_APP/SURFACE_CONSUMERS_ACCOUNTED_FOR
 APP_RUNTIME_COMPOSITION_ACCOUNTED_FOR
 SECURITY_ACCOUNTED_FOR
 FINANCIAL_INVARIANTS_ACCOUNTED_FOR_WHEN_APPLICABLE
@@ -1022,7 +1289,7 @@ FRESH_RE_CENSUS_PASS
 
 ---
 
-## 25. DSH structural exit gate
+## 29. DSH structural exit gate
 
 DSH cannot be structurally qualified while any known instance remains of:
 
@@ -1030,6 +1297,8 @@ DSH cannot be structurally qualified while any known instance remains of:
 APP_SHAPED_FEATURE_OWNERSHIP_IN_services/dsh/frontend
 CURRENT_FRONTEND_SHARED_UMBRELLA_AS_DOMAIN_OWNER
 CURRENT_WLT_FEATURE_TREE_UNDER_DSH_FRONTEND
+MONOLITHIC_DSH_APPLICATION_EXPORT_OWNING_APP_COMPOSITION
+DUPLICATE_OR_NONSTANDARD_CAPABILITY_NAMES
 DUPLICATE_CAPABILITY_TREES
 HTTP_MEGA_DOMAIN_AUTHORITY
 TOP_LEVEL_SAGA/OUTBOX_PSEUDO_DOMAINS_WITHOUT_JUSTIFICATION
@@ -1037,13 +1306,12 @@ MANUAL_CONTRACT/DTO/ENUM/OPERATION_MIRRORS
 DUPLICATE_CAPABILITY/AUTHORIZATION_REGISTRIES
 APP_SHAPED_PACKAGE_EXPORTS_PRESERVING_OLD_TOPOLOGY
 TSCONFIG/NX/WORKSPACE_REFERENCES_TO_DELETED_TOPOLOGY
-GENERIC_WEB_TYPES_MISOWNED_BY_DSH_DOMAIN
-BACKEND↔CONTRACT↔FRONTEND_PARITY_GAPS
+BACKEND↔CONTRACT↔FRONTEND↔APP_PARITY_GAPS
 ```
 
 ---
 
-## 26. WLT structural/financial exit gate
+## 30. WLT structural/financial exit gate
 
 WLT cannot be qualified while any known instance remains of:
 
@@ -1058,13 +1326,14 @@ PERMANENT_SCHEMA_OVERLAYS_FOR_NORMAL_PAYMENT_TRUTH
 DUPLICATE_SETTLEMENT/PAYOUT_CONTRACT_FRAGMENTATION
 MANUAL_FINANCIAL_DTO/ENUM/API_MIRRORS
 PARALLEL_LEDGER/BALANCE/FINANCIAL_WRITERS
-WLT_FEATURE_IMPLEMENTATION_STILL_OWNED_BY_DSH_FRONTEND
+WLT_FEATURE_IMPLEMENTATION_OWNED_BY_DSH_FRONTEND
+WLT_FRONTEND_COUPLED_TO_DSH_OR_SPECIFIC_APP_RUNTIME
 UNVERIFIED_FINANCIAL_INVARIANTS_OR_READBACK
 ```
 
 ---
 
-## 27. Global Level-4 DSH/WLT fixed-point gate
+## 31. Global Level-4 DSH/WLT fixed-point gate
 
 Completion requires a fresh adversarial re-census on exact live `h` proving:
 
@@ -1075,14 +1344,17 @@ KNOWN_MATERIAL_PARTIAL_CUTOVERS=0
 KNOWN_MATERIAL_PARALLEL/SHADOW_TRUTH=0
 KNOWN_MATERIAL_LOSING/LEGACY_CONTAINERS=0
 KNOWN_MATERIAL_WRAPPERS/ALIASES/REEXPORTS=0
+KNOWN_MATERIAL_DUPLICATE_OR_AMBIGUOUS_CAPABILITY_NAMES=0
 KNOWN_MATERIAL_DUPLICATE_CONTRACT_AUTHORITIES=0
 KNOWN_MATERIAL_MANUAL_GENERATED_MIRRORS=0
 KNOWN_MATERIAL_DUPLICATE_WRITERS=0
 KNOWN_MATERIAL_RUNTIME_CONFIG_DRIFT=0
 KNOWN_MATERIAL_STALE_TEST/TOOL/EXPORT/DEPENDENCY_RESIDUE=0
-KNOWN_MATERIAL_BACKEND↔CONTRACT↔FRONTEND_MISMATCH=0
+KNOWN_MATERIAL_BACKEND↔CONTRACT↔FRONTEND↔APP_MISMATCH=0
 KNOWN_MATERIAL_SECURITY/FINANCIAL_GAPS=0
 KNOWN_REQUIRED_CAPABILITIES_OR_JOURNEYS_LOST_DURING_REFOUNDATION=0
+APP→SERVICE_DEPENDENCY_DIRECTION=PASS
+WLT_MULTI_CONSUMER_INDEPENDENCE=PASS
 FRESH_FALSIFICATION=PASS
 MATERIAL_BUILD/DB/RUNTIME/E2E_EVIDENCE=PASS
 ```
@@ -1091,9 +1363,9 @@ The first green build or empty local task list is not completion.
 
 ---
 
-## 28. Mandatory self-deletion
+## 32. Mandatory self-deletion
 
-Only after Section 27 passes:
+Only after Section 31 passes:
 
 ```text
 VERIFY_NO_SCRIPT_READS_THIS_FILE
