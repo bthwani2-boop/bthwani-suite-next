@@ -23,7 +23,7 @@ import type {
   DshCart,
   DshFulfillmentMode,
 } from "../../commerce/cart";
-import type { CheckoutToOrderFlowState, DshPaymentMethod } from "../../shared/checkout";
+import type { CheckoutToOrderFlowState, DshPaymentMethod } from "../../commerce/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
 import { getDshDeliveryModeDefinition } from "../../shared/delivery/delivery.contract";
 import { useWltPaymentController } from "@bthwani/dsh/wlt-boundary";
