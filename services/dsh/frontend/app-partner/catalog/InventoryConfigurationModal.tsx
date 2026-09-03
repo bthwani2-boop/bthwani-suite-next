@@ -1,8 +1,8 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Button, Dialog, Text, TextField, spacing, resolveRowDirection, useDirection } from "@bthwani/ui-kit";
-import { fetchPartnerStoreAssortmentInventory, upsertPartnerStoreAssortmentInventory } from "../../shared/catalog";
-import type { StoreAssortmentInventory, StoreAssortmentInventoryInput } from "../../shared/catalog";
+import { fetchPartnerStoreAssortmentInventory, upsertPartnerStoreAssortmentInventory } from "../../catalog";
+import type { StoreAssortmentInventory, StoreAssortmentInventoryInput } from "../../catalog";
 
 type Props = {
   readonly visible: boolean;
