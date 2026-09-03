@@ -1,6 +1,6 @@
 import { getIdentityAccessToken } from "@bthwani/core-identity";
-import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../shared/_kernel/dsh-api-base-url";
+import { corrId, createDshHttpClient } from "../shared/_kernel/dsh-http-request";
 import type { GovernedReel, GovernedReelReviewInput, GovernedReelSubmissionInput } from "./reels.types";
 
 const baseUrl = resolveDshApiBaseUrl();
