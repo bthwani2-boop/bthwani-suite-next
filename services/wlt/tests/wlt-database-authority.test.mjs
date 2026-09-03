@@ -45,13 +45,13 @@ describe("WLT database authority", () => {
     assert.match(governedRunner, /LEGACY_MIGRATION_LEDGER_CONFLICT/);
   });
 
-  it("keeps WLT-904 as a real forward repair with a live invariant assertion", () => {
+  it("keeps canonical reconciliation claim guard with a live invariant assertion", () => {
     const migration = read(
-      "services/wlt/database/migrations/wlt-904_reconciliation_claim_guard_repair.sql",
+      "services/wlt/database/migrations/wlt-001_canonical_baseline.sql",
     );
     const invariant = read("services/wlt/database/tests/payout-destination-invariants.sql");
 
-    assert.match(migration, /CREATE OR REPLACE FUNCTION wlt_reject_duplicate_reconciliation_claim/);
+    assert.match(migration, /CREATE (?:OR REPLACE )?FUNCTION (?:public\.)?wlt_reject_duplicate_reconciliation_claim/);
     assert.match(migration, /CREATE TRIGGER wlt_single_reconciliation_claim_trigger/);
     assert.match(migration, /BEFORE UPDATE OF reconciliation_status/);
     assert.match(invariant, /wlt_single_reconciliation_claim_trigger/);

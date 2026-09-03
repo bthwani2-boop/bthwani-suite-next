@@ -49,13 +49,22 @@ function parseArgs(argv) {
 }
 
 function eugeneBinary() {
-  for (const candidate of ["eugene", path.join(process.env.RUNNER_TEMP || "", "eugene")]) {
-    if (!candidate) continue;
+  if (process.platform === "win32") {
     try {
-      execFileSync(candidate, ["--version"], { stdio: "ignore" });
-      return candidate;
+      execFileSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "eugene", "--version"], { stdio: "ignore" });
+      return "eugene";
     } catch {
-      // try next candidate
+      // not on path
+    }
+  } else {
+    for (const candidate of ["eugene", path.join(process.env.RUNNER_TEMP || "", "eugene")]) {
+      if (!candidate) continue;
+      try {
+        execFileSync(candidate, ["--version"], { stdio: "ignore" });
+        return candidate;
+      } catch {
+        // try next candidate
+      }
     }
   }
   console.error("eugene binary is not available on PATH (expected pinned 0.8.3)");
@@ -63,15 +72,26 @@ function eugeneBinary() {
 }
 
 function lintFile(binary, file) {
+  const normalizedFile = file.replace(/\\/g, "/");
   // eugene lint exits non-zero when findings exist; capture stdout for parsing.
   let stdout = "";
   try {
-    stdout = execFileSync(binary, ["lint", file], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    if (process.platform === "win32") {
+      stdout = execFileSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", binary, "lint", normalizedFile], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+    } else {
+      stdout = execFileSync(binary, ["lint", normalizedFile], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+    }
   } catch (error) {
     stdout = `${error.stdout || ""}`;
     if (!stdout && error.stderr) {
       // Hard parse/runtime failure (not a findings list) — fail closed loudly.
-      console.error(`eugene lint failed for ${file}: ${error.stderr}`);
+      console.error(`eugene lint failed for ${normalizedFile}: ${error.stderr}`);
       process.exit(2);
     }
   }
@@ -79,7 +99,7 @@ function lintFile(binary, file) {
   for (const line of stdout.split("\n")) {
     const match = line.match(/^(.*?):(\d+)\s+(E\d+|W\d+)\s+(.*)$/);
     if (match) {
-      findings.push({ file: match[1], line: Number(match[2]), hintId: match[3], message: match[4].trim() });
+      findings.push({ file: match[1].replace(/\\/g, "/"), line: Number(match[2]), hintId: match[3], message: match[4].trim() });
     }
   }
   return findings;

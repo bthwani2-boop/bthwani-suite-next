@@ -63,82 +63,34 @@ test("assortment contract is metadata-only and commercial fields are normalized"
   assert.doesNotMatch(paths, /oneOf:\s*[\s\S]{0,180}DshStoreAssortmentMetadataUpdateInput/);
 });
 
-test("commercial cutover is gated before legacy assortment columns are dropped", () => {
-  const migration = read("database/migrations/dsh-1077_catalog_commercial_cutover.sql");
+test("commercial catalog schema is normalized and legacy assortment columns are absent", () => {
+  const migration = read("database/migrations/dsh-001_canonical_baseline.sql");
   const seeds = [
     read("database/seeds/local/dsh-032_central_catalog_seed.local.sql"),
     read("database/seeds/local/dsh-960_client_storefront_catalog_completion.local.sql"),
     read("database/seeds/local/dsh-981_assortment_runtime_truth.local.sql"),
   ].join("\n");
-  const dropAt = migration.indexOf("DROP COLUMN IF EXISTS unit_price");
 
-  assert.match(migration, /^BEGIN;$/m);
-  assert.match(migration, /DSH1077_NORMALIZED_INVENTORY_INCOMPLETE/);
-  assert.match(migration, /DSH1077_NORMALIZED_INVENTORY_INVALID/);
-  assert.match(migration, /DSH1077_NORMALIZED_PRICE_INCOMPLETE/);
-  assert.match(migration, /DSH1077_NORMALIZED_INVENTORY_MISMATCH/);
-  assert.match(migration, /DSH1077_NORMALIZED_PRICE_MISMATCH/);
-  assert.ok(dropAt > migration.indexOf("$dsh1077_backfill_and_gate$"));
-  for (const legacyColumn of ["unit_price", "currency", "available", "stock_status", "available_before_pause"]) {
-    assert.match(migration, new RegExp(`DROP COLUMN IF EXISTS ${legacyColumn}`));
+  assert.match(migration, /CREATE TABLE public\.dsh_store_assortment_inventory/);
+  assert.match(migration, /CREATE TABLE public\.dsh_store_assortment_prices/);
+  assert.match(migration, /CREATE TABLE public\.dsh_master_products/);
+  assert.match(migration, /CREATE TABLE public\.dsh_store_assortments/);
+  assert.match(migration, /CREATE TABLE public\.dsh_catalog_legacy_archive/);
+
+  for (const legacyTable of [
+    "dsh_catalog_categories",
+    "dsh_catalog_products",
+    "dsh_catalog_media",
+    "dsh_catalog_revisions",
+    "dsh_catalog_audit",
+    "dsh_categories",
+  ]) {
+    assert.doesNotMatch(migration, new RegExp(`CREATE TABLE public\\.${legacyTable}\\b`));
   }
-  assert.match(migration, /DROP TRIGGER IF EXISTS trg_dsh_store_assortments_pause_restore_state/);
-  assert.match(migration, /DROP FUNCTION IF EXISTS dsh_assortment_sync_pause_restore_state/);
+
   assert.doesNotMatch(seeds, /\b(unit_price|available|stock_status)\b/);
   assert.match(seeds, /INSERT INTO dsh_store_assortment_inventory/);
   assert.match(seeds, /INSERT INTO dsh_store_assortment_prices/);
-});
-
-test("closure migration preserves legacy data before dropping local catalog tables", () => {
-  const migration = read("database/migrations/dsh-036_central_catalog_runtime_closure.sql");
-  const migrateProductsAt = migration.indexOf("INSERT INTO dsh_master_products");
-  const migrateAssortmentsAt = migration.indexOf("INSERT INTO dsh_store_assortments");
-  const dropProductsAt = migration.indexOf("DROP TABLE IF EXISTS dsh_catalog_products");
-
-  assert.ok(migrateProductsAt >= 0 && migrateProductsAt < dropProductsAt);
-  assert.ok(migrateAssortmentsAt >= 0 && migrateAssortmentsAt < dropProductsAt);
-  for (const table of [
-    "dsh_catalog_categories",
-    "dsh_catalog_products",
-    "dsh_catalog_media",
-    "dsh_catalog_revisions",
-    "dsh_catalog_audit",
-    "dsh_categories",
-  ]) {
-    assert.match(migration, new RegExp(`DROP TABLE IF EXISTS ${table}`));
-  }
-  assert.match(migration, /ALTER TABLE dsh_stores DROP COLUMN IF EXISTS category;/);
-});
-
-test("closure migration is atomic, gated, and archives legacy records", () => {
-  const migration = read("database/migrations/dsh-036_central_catalog_runtime_closure.sql");
-
-  // One atomic transaction: a failed gate rolls back every drop.
-  assert.match(migration, /^BEGIN;$/m);
-  assert.match(migration, /^COMMIT;$/m);
-  assert.ok(migration.indexOf("BEGIN;") < migration.indexOf("CREATE TABLE IF NOT EXISTS dsh_catalog_legacy_archive"));
-
-  // Every legacy table is archived as JSONB before any drop.
-  const dropAt = migration.indexOf("DROP TABLE IF EXISTS dsh_catalog_audit");
-  for (const source of [
-    "dsh_catalog_audit",
-    "dsh_catalog_revisions",
-    "dsh_catalog_categories",
-    "dsh_catalog_products",
-    "dsh_catalog_media",
-    "dsh_categories",
-  ]) {
-    const archiveAt = migration.indexOf(`'${source}:' || t.id`);
-    assert.ok(archiveAt >= 0 && archiveAt < dropAt, `${source} must be archived before drops`);
-  }
-
-  // Product-less media stays in DAM without an invalid NULL entity link.
-  assert.match(migration, /AND product_id IS NOT NULL/);
-  assert.match(migration, /WHERE product_id IS NOT NULL/);
-
-  // Verification gates abort the transaction before the drops.
-  const firstGateAt = migration.indexOf("RAISE EXCEPTION 'dsh-036 gate");
-  assert.ok(firstGateAt >= 0 && firstGateAt < dropAt);
 });
 
 

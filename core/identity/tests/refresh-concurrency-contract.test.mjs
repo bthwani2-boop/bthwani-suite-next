@@ -15,7 +15,7 @@ test("refresh concurrency is coordinated by Identity and PostgreSQL, not process
     contractManifest,
     serverSession,
   ] = await Promise.all([
-    read("core/identity/database/migrations/identity-022_refresh_rotation_concurrency.sql"),
+    read("core/identity/database/migrations/identity-001_canonical_baseline.sql"),
     read("core/identity/database/migrations/manifest.json"),
     read("core/identity/backend/internal/identity/refresh_concurrency.go"),
     read("core/identity/backend/internal/http/refresh_concurrency_boundary.go"),
@@ -43,7 +43,7 @@ test("refresh concurrency is coordinated by Identity and PostgreSQL, not process
   assert.match(overlay, /'409':/);
   assert.match(overlay, /REFRESH_ALREADY_ROTATED/);
   assert.match(contractManifest, /identity\.refresh-concurrency\.overlay\.yaml/);
-  assert.match(manifest, /identity-022_refresh_rotation_concurrency\.sql/);
+  assert.match(manifest, /identity-001_canonical_baseline\.sql/);
 
   assert.doesNotMatch(serverSession, /inFlightRefresh/);
   assert.doesNotMatch(serverSession, /new Map<string, Promise<TokenResponse>>/);

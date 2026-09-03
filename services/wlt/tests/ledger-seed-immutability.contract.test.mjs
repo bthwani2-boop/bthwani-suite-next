@@ -11,7 +11,7 @@ const repoRoot = path.resolve(import.meta.dirname, "../../..");
 const seedRoot = path.join(repoRoot, "services/wlt/database/seeds");
 const immutabilityMigration = path.join(
   repoRoot,
-  "services/wlt/database/migrations/wlt-115_ledger_immutability.sql",
+  "services/wlt/database/migrations/wlt-001_canonical_baseline.sql",
 );
 
 const IMMUTABLE_TABLES = ["wlt_ledger_entries", "wlt_ledger_lines", "wlt_ledger_transactions"];
@@ -39,7 +39,7 @@ test("the ledger immutability trigger still guards every ledger table", () => {
   for (const table of IMMUTABLE_TABLES) {
     assert.match(
       migration,
-      new RegExp(`BEFORE UPDATE OR DELETE ON ${table}`),
+      new RegExp(`BEFORE (?:UPDATE OR DELETE|DELETE OR UPDATE) ON (?:public\\.)?${table}`),
       `${table} must remain append-only`,
     );
   }

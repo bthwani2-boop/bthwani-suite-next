@@ -135,6 +135,10 @@ function checkImmutableDigestHistory(service, relativeDirectory, manifest) {
     throw new Error(`unable to read baseline manifest for ${service} at ${baseline}: ${detail}`);
   }
 
+  if ((manifest.epoch ?? 1) !== (baselineManifest.epoch ?? 1)) {
+    return [];
+  }
+
   const published = new Map((baselineManifest.migrations ?? []).filter((entry) => entry?.file && entry.sha256).map((entry) => [entry.file, entry.sha256]));
   const failures = [];
   const currentFiles = new Set((manifest.migrations ?? []).map((entry) => entry.file));

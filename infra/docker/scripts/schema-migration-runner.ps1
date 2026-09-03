@@ -579,7 +579,8 @@ INSERT INTO schema_migrations (
     }
 
     [void]$builder.AppendLine(@"
-UPDATE schema_migrations
+SELECT pg_catalog.set_config('search_path', 'public', false);
+UPDATE public.schema_migrations
 SET success = TRUE,
     dirty = FALSE,
     error_code = NULL,
@@ -596,7 +597,7 @@ WHERE service_name = $serviceLiteral AND migration_id = $migrationLiteral;
 DO `$bthwani`$
 BEGIN
   IF EXISTS (
-    SELECT 1 FROM schema_migrations
+    SELECT 1 FROM public.schema_migrations
     WHERE service_name = $serviceLiteral AND (dirty OR NOT success)
   ) THEN
     RAISE EXCEPTION 'DIRTY_MIGRATION_STATE_AFTER_RUN: service %', $serviceLiteral;

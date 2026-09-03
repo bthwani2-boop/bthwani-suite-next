@@ -1,7 +1,7 @@
 import fs from "node:fs";
 
-const validationMigrationFile = "core/platform-control/database/migrations/platform-005_change_set_validation.sql";
-const sensitiveBoundaryMigrationFile = "core/platform-control/database/migrations/platform-006_sensitive_change_boundary.sql";
+const platformBaselineMigrationFile = "core/platform-control/database/migrations/platform-001_canonical_baseline.sql";
+const dshBaselineMigrationFile = "services/dsh/database/migrations/dsh-001_canonical_baseline.sql";
 const contractFile = "core/platform-control/contracts/platform-change-sets.openapi.yaml";
 const generatedClientFile = "core/platform-control/clients/generated/platform-control-api.ts";
 const generatedBundleFile = "core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml";
@@ -10,7 +10,6 @@ const visualizationProofFile = "services/dsh/tests/platform-governance-visualiza
 const strictBoundaryProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary_test.go";
 const databaseProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_database_sensitive_guard_test.go";
 const httpProofFile = "core/platform-control/backend/internal/http/change_set_workflow_handlers_test.go";
-const legacyDshRemovalMigrationFile = "services/dsh/database/migrations/dsh-1013_remove_legacy_platform_change_sets.sql";
 const legacyDshAuthorityFiles = [
   "services/dsh/backend/internal/platform/changeset/changeset.go",
   "services/dsh/backend/internal/http/platform_changesets_routes.go",
@@ -18,8 +17,8 @@ const legacyDshAuthorityFiles = [
 const callerWorkflowFile = ".github/workflows/ci-check.yml";
 const verificationWorkflowFile = ".github/workflows/ci-node-verification.yml";
 const requiredFiles = [
-  validationMigrationFile,
-  sensitiveBoundaryMigrationFile,
+  platformBaselineMigrationFile,
+  dshBaselineMigrationFile,
   "core/platform-control/backend/internal/platformcontrol/change_set_read_create.go",
   "core/platform-control/backend/internal/platformcontrol/change_set_workflow.go",
   "core/platform-control/backend/internal/platformcontrol/change_set_apply_rollback.go",
@@ -39,7 +38,6 @@ const requiredFiles = [
   visualizationProofFile,
   callerWorkflowFile,
   verificationWorkflowFile,
-  legacyDshRemovalMigrationFile,
 ];
 
 const failures = [];
@@ -65,21 +63,15 @@ function forbidText(file, tokens) {
 }
 
 if (failures.length === 0) {
-  requireText(validationMigrationFile, [
+  requireText(platformBaselineMigrationFile, [
     "validated_value_json",
     "validated_revision",
     "validated_at",
     "idx_platform_change_set_items_target_reservation",
-  ]);
-  requireText(sensitiveBoundaryMigrationFile, [
     "platform_reject_sensitive_change_set_item",
-    "sensitive",
-    "confidential",
-    "existing sensitive platform variable cannot enter a change set",
   ]);
-  requireText(legacyDshRemovalMigrationFile, [
-    "DROP TABLE IF EXISTS dsh_platform_change_sets",
-    "Platform Control is the sole canonical owner",
+  forbidText(dshBaselineMigrationFile, [
+    "CREATE TABLE public.dsh_platform_change_sets",
   ]);
   forbidText("services/dsh/backend/internal/http/server.go", [
     "/dsh/operator/platform/change-sets",

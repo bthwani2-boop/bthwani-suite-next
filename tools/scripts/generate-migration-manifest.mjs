@@ -133,6 +133,7 @@ if (filesAfterRead.length !== files.length || filesAfterRead.some((file, index) 
 
 const manifest = {
   schemaVersion: 1,
+  epoch: existingManifest?.epoch ?? 2,
   service,
   ordering: "explicit",
   orderingSource: "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",

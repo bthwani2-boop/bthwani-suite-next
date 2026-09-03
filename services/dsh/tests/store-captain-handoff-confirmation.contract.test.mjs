@@ -12,7 +12,7 @@ test("partner handoff confirmation is one durable command with canonical replay"
   const domain = read("services/dsh/backend/internal/dispatch/store_captain_handoff.go");
   const receipt = read("services/dsh/backend/internal/dispatch/store_captain_handoff_command_receipts.go");
   const handler = read("services/dsh/backend/internal/http/store_captain_handoff.go");
-  const migration = read("services/dsh/database/migrations/dsh-1069_store_captain_handoff_command_receipts.sql");
+  const migration = read("services/dsh/database/migrations/dsh-001_canonical_baseline.sql");
   const contract = read("services/dsh/contracts/dsh.runtime-extensions.openapi.yaml");
 
   assert.match(attempt, /getOrCreateDurableMutationAttempt/);

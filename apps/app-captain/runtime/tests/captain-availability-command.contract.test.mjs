@@ -11,7 +11,7 @@ test("captain availability is one durable DSH command with canonical readback", 
   const api = read("services/dsh/frontend/shared/dispatch/dispatch.api.ts");
   const backend = read("services/dsh/backend/internal/dispatch/captain_availability.go");
   const handler = read("services/dsh/backend/internal/http/captain_availability.go");
-  const migration = read("services/dsh/database/migrations/dsh-1062_captain_availability_command_receipts.sql");
+  const migration = read("services/dsh/database/migrations/dsh-001_canonical_baseline.sql");
 
   assert.match(attempt, /getOrCreateDurableMutationAttempt/);
   assert.match(attempt, /resolveMutationIdentityScope/);

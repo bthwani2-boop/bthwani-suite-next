@@ -54,7 +54,7 @@ func TestNotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 	manifest := readNotificationGovernanceFixture(t, "../../../contracts/contract.manifest.yaml")
 	capabilities := readNotificationGovernanceFixture(t, "../../../capability-map.ts")
 	frontendTypes := readNotificationGovernanceFixture(t, "../../../frontend/shared/notifications/notifications.types.ts")
-	migration := readNotificationGovernanceFixture(t, "../../../database/migrations/dsh-088_notification_delivery_policy.sql")
+	migration := readNotificationGovernanceFixture(t, "../../../database/migrations/dsh-001_canonical_baseline.sql")
 
 	for _, snippet := range []string{
 		"/dsh/notifications/push-endpoints:",
@@ -111,12 +111,12 @@ func TestNotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 	}
 
 	for _, snippet := range []string{
-		"delivery_channels TEXT[]",
+		"delivery_channels text[]",
 		"dsh_notification_push_endpoints",
 		"dsh_notification_channel_deliveries",
-		"quiet_hours_start TIME",
-		"title_ar TEXT",
-		"deep_link_pattern TEXT",
+		"quiet_hours_start time",
+		"title_ar text",
+		"deep_link_pattern text",
 	} {
 		requireNotificationGovernanceSnippet(t, migration, snippet)
 	}

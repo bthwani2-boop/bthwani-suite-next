@@ -20,7 +20,7 @@ const dispatch = readFileSync(
   "utf8",
 );
 const migration = readFileSync(
-  resolve(process.cwd(), "services/dsh/database/migrations/dsh-1049_delivery_proof_review_idempotency.sql"),
+  resolve(process.cwd(), "services/dsh/database/migrations/dsh-001_canonical_baseline.sql"),
   "utf8",
 );
 

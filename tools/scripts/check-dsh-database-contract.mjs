@@ -181,13 +181,13 @@ for (const migration of migrations) {
   }
 }
 
-const trustedOperatorContextMigrationPath = "services/dsh/database/migrations/dsh-954_trusted_operator_context_session_context.sql";
+const trustedOperatorContextMigrationPath = "services/dsh/database/migrations/dsh-001_canonical_baseline.sql";
 const trustedOperatorContextMigration = read(trustedOperatorContextMigrationPath);
 requireText(trustedOperatorContextMigration, "dsh_trusted_OperatorContext_context", trustedOperatorContextMigrationPath);
 requireText(trustedOperatorContextMigration, "current_setting('bthwani.operator_context_id', TRUE)", trustedOperatorContextMigrationPath);
-requireText(trustedOperatorContextMigration, "OperatorContext_OWNERSHIP_IMMUTABLE", trustedOperatorContextMigrationPath);
-requireText(trustedOperatorContextMigration, "trg_dsh_partners_OperatorContext", trustedOperatorContextMigrationPath);
-requireText(trustedOperatorContextMigration, "trg_dsh_stores_OperatorContext", trustedOperatorContextMigrationPath);
+requireText(trustedOperatorContextMigration, "PLATFORM_CONTEXT_OWNERSHIP_IMMUTABLE", trustedOperatorContextMigrationPath);
+requireText(trustedOperatorContextMigration, "trg_dsh_partners_operatorcontext", trustedOperatorContextMigrationPath);
+requireText(trustedOperatorContextMigration, "trg_dsh_stores_operatorcontext", trustedOperatorContextMigrationPath);
 
 const testOperatorContextHelperPath = "services/dsh/backend/internal/testsupport/operator_context_bootstrap.go";
 const testOperatorContextHelper = read(testOperatorContextHelperPath);

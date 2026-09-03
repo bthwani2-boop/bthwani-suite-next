@@ -12,7 +12,7 @@ test("Captain delivery exceptions use one durable command identity end to end", 
   const domain = read("services/dsh/backend/internal/dispatch/delivery_exceptions.go");
   const handoff = read("services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions.go");
   const handler = read("services/dsh/backend/internal/http/dispatch.go");
-  const migration = read("services/dsh/database/migrations/dsh-1067_delivery_exception_command_identity.sql");
+  const migration = read("services/dsh/database/migrations/dsh-001_canonical_baseline.sql");
   const contract = read("services/dsh/contracts/paths/dispatch.paths.yaml");
 
   assert.match(attempt, /getOrCreateDurableMutationAttempt/);
@@ -28,8 +28,7 @@ test("Captain delivery exceptions use one durable command identity end to end", 
   assert.match(domain, /idempotency_key/);
   assert.match(handoff, /input\.IdempotencyKey/);
   assert.match(handler, /requireCaptainCommandIdentity/);
-  assert.match(migration, /ADD COLUMN IF NOT EXISTS idempotency_key/);
+  assert.match(migration, /idempotency_key/);
   assert.match(migration, /uq_dsh_delivery_exceptions_idempotency/);
-  assert.match(migration, /DROP CONSTRAINT IF EXISTS dsh_delivery_exceptions_correlation_unique/);
   assert.match(contract, /assignments\/\{assignmentId\}\/exceptions:[\s\S]*?CorrelationId/);
 });

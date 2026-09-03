@@ -238,7 +238,7 @@ test("client order ratings preserve one durable mutation through canonical readb
   );
   assert.match(backend, /pg_advisory_xact_lock/);
   assertMarkers(
-    "services/dsh/database/migrations/dsh-1060_provider_rating_mutation_idempotency.sql",
+    "services/dsh/database/migrations/dsh-001_canonical_baseline.sql",
     ["dsh_provider_rating_mutation_receipts", "uq_dsh_provider_rating_receipts_actor_key", "request_fingerprint"],
   );
 });
@@ -275,7 +275,7 @@ test("client preparation decisions keep one actor-scoped command until readback"
   );
   assert.match(backend, /customer_decision/);
   assertMarkers(
-    "services/dsh/database/migrations/dsh-1061_preparation_decision_idempotency.sql",
+    "services/dsh/database/migrations/dsh-001_canonical_baseline.sql",
     ["idempotency_key", "request_fingerprint", "uq_dsh_preparation_issue_events_idempotency"],
   );
 });
@@ -331,7 +331,7 @@ test("client special-request information responses replay through a canonical ex
   );
   assert.ok(handler.includes("Idempotency-Key"));
   const migration = assertMarkers(
-    "services/dsh/database/migrations/dsh-1065_special_request_information_response_idempotency.sql",
+    "services/dsh/database/migrations/dsh-001_canonical_baseline.sql",
     ["dsh_special_request_information_response_receipts", "exchange_id", "PRIMARY KEY"],
   );
   assert.ok(migration.includes("request_fingerprint"));
@@ -429,7 +429,7 @@ test("client profile mutations persist identity and reconcile partial saves", ()
     ["dsh_client_profile_mutation_receipts", "pg_advisory_xact_lock", "request_fingerprint"],
   );
   const migration = assertMarkers(
-    "services/dsh/database/migrations/dsh-1063_client_profile_mutation_idempotency.sql",
+    "services/dsh/database/migrations/dsh-001_canonical_baseline.sql",
     ["dsh_client_profile_mutation_receipts", "preferences", "consents"],
   );
   assert.ok(migration.includes("PRIMARY KEY (client_id, idempotency_key)"));

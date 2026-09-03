@@ -11,6 +11,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+  $PSNativeCommandUseErrorActionPreference = $false
+}
 Set-StrictMode -Version Latest
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../../../")).Path
@@ -96,7 +99,7 @@ function Invoke-ComposePsql {
     "compose", "--env-file", $EnvFile, "-f", $ComposeFile,
     "exec", "-T", "postgres", "psql",
     "-U", $config.User, "-d", $config.Database,
-    "-X", "-v", "ON_ERROR_STOP=1"
+    "-X", "-v", "ON_ERROR_STOP=1", "-v", "client_min_messages=warning"
   )
   if ($Quiet) { $arguments += "-q" }
 

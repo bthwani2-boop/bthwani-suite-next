@@ -12,7 +12,7 @@ test("captain delivery status is one durable DSH command with canonical readback
   const domain = read("services/dsh/backend/internal/dispatch/store_captain_handoff_idempotency.go");
   const receipt = read("services/dsh/backend/internal/dispatch/captain_delivery_command_receipts.go");
   const handler = read("services/dsh/backend/internal/http/store_captain_handoff.go");
-  const migration = read("services/dsh/database/migrations/dsh-1066_captain_delivery_status_command_receipts.sql");
+  const migration = read("services/dsh/database/migrations/dsh-001_canonical_baseline.sql");
   const contract = read("services/dsh/contracts/paths/dispatch.paths.yaml");
 
   assert.match(attempt, /getOrCreateDurableMutationAttempt/);

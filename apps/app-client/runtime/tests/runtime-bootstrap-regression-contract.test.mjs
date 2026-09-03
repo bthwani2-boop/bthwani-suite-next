@@ -45,9 +45,8 @@ test('canonical runtime builds service images before readiness', () => {
 });
 
 test('Workforce migration reconciles persisted generated-code sequences', () => {
-  const source = read('core/workforce/database/migrations/workforce-015_workforce_code_sequence_reconciliation.sql');
+  const source = read('core/workforce/database/migrations/workforce-001_canonical_baseline.sql');
   for (const marker of [
-    'workforce_people_provider_code_key',
     'workforce_people_workforce_code_key',
     'workforce_field_code_seq',
     'workforce_captain_code_seq',

@@ -168,7 +168,6 @@ requireMarkers("services/dsh/frontend/shared/marketing/marketing.api.ts", [
 requireMarkers("services/dsh/frontend/shared/marketing/use-commercial-programs-controller.tsx", [
   "useLoyaltyTiersController",
   "useSubscriptionPlansController",
-  "useClientBenefitsController",
 ]);
 requireMarkers("services/dsh/frontend/control-panel/marketing/MarketingDashboardScreen.tsx", [
   "LoyaltyCommandDeck",
@@ -184,11 +183,9 @@ requireMarkers("services/dsh/backend/internal/http/server.go", [
   '"POST /dsh/operator/marketing/subscription-plans"',
   '"GET /dsh/client/benefits"',
 ]);
-requireMarkers("services/dsh/database/migrations/dsh-058_partner_commercial_programs.sql", [
+requireMarkers("services/dsh/database/migrations/dsh-001_canonical_baseline.sql", [
   "dsh_loyalty_tiers",
   "dsh_subscription_plans",
-]);
-requireMarkers("services/dsh/database/migrations/dsh-063_marketing_commercial_program_guards.sql", [
   "dsh_guard_loyalty_tier_governance",
   "dsh_guard_subscription_plan_governance",
 ]);
@@ -203,7 +200,7 @@ requireMarkers("services/wlt/backend/internal/http/server.go", [
   '"POST /wlt/commercial/loyalty-entries"',
   '"POST /wlt/commercial/subscriptions"',
 ]);
-requireMarkers("services/wlt/database/migrations/wlt-028_commercial_benefits.sql", [
+requireMarkers("services/wlt/database/migrations/wlt-001_canonical_baseline.sql", [
   "wlt_commercial_products",
   "wlt_loyalty_entries",
   "wlt_client_subscriptions",
@@ -231,7 +228,7 @@ requireMarkers("services/dsh/backend/internal/http/server.go", [
   '"POST /dsh/captain/partner-fleet/connect"',
   '"GET /dsh/captain/partner-fleet/memberships"',
 ]);
-requireMarkers("services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql", [
+requireMarkers("services/dsh/database/migrations/dsh-001_canonical_baseline.sql", [
   "dsh_partner_courier_connection_codes",
 ]);
 

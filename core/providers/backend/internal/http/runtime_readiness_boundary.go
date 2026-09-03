@@ -14,7 +14,7 @@ import (
 
 const (
 	providersMigrationServiceName = "providers"
-	providersLatestMigration      = "providers-002_operator_execution_context.sql"
+	providersLatestMigration      = "providers-001_canonical_baseline.sql"
 	defaultReadinessProbeTimeout  = 2 * time.Second
 	defaultClockSkewLimit         = 5 * time.Second
 )

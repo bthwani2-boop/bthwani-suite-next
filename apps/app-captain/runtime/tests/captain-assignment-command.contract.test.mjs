@@ -11,7 +11,7 @@ test("captain accept and decline commands preserve identity across retries", () 
   const api = read("services/dsh/frontend/shared/dispatch/dispatch.api.ts");
   const backend = read("services/dsh/backend/internal/dispatch/captain_assignment_command_receipts.go");
   const handler = read("services/dsh/backend/internal/http/dispatch_governance_handlers.go");
-  const migration = read("services/dsh/database/migrations/dsh-1064_captain_assignment_command_receipts.sql");
+  const migration = read("services/dsh/database/migrations/dsh-001_canonical_baseline.sql");
   const contract = read("services/dsh/contracts/paths/dispatch.paths.yaml");
 
   assert.match(attempt, /getOrCreateDurableMutationAttempt/);

@@ -6,13 +6,11 @@ const read = (path) => readFileSync(path, "utf8");
 
 describe("partner unified multi-surface platform closure", () => {
   test("models OperatorContext-scoped legal partner, brand, store, transfer audit and readiness", () => {
-    const migration = read("services/dsh/database/migrations/dsh-958_partner_workspace_store_ownership.sql");
-    assert.match(migration, /CREATE TABLE IF NOT EXISTS dsh_partner_brands/);
-    assert.match(migration, /operator_context_id\s+TEXT\s+NOT NULL/);
-    assert.match(migration, /brand_id TEXT REFERENCES dsh_partner_brands/);
+    const migration = read("services/dsh/database/migrations/dsh-001_canonical_baseline.sql");
+    assert.match(migration, /CREATE TABLE public\.dsh_partner_brands/);
     assert.match(migration, /dsh_partner_store_transfer_audit/);
     assert.match(migration, /expected_store_version/);
-    assert.match(migration, /dsh_enforce_partner_store_OperatorContext_match/);
+    assert.match(migration, /dsh_enforce_partner_store_operatorcontext_match/i);
     assert.match(migration, /dsh_partner_store_readiness_v/);
   });
 
