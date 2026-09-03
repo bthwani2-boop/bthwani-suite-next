@@ -1,356 +1,209 @@
-# Live Execution, Reconstruction, Cutover, Cleanup and Finishing
+# H Live Refoundation, Migration and Cleanup
 
-## 1. Execution contract
+Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
+Owner: implementation, structural rewrite, migration, cutover, deletion, recursive pruning and finishing.
 
-Live mutation begins from the unified loop in `00` after `02` proves the selected treatment frontier executable and `05` has emitted the portable Closure Unit declaration when selection/decomposition was required.
+## 1. Execution principle
 
-There is no separate execution phase and no mandatory prepared plan artifact.
-
-Execution always begins from current live truth, never from stale plan assumptions:
-
-```text
-RE-RESOLVE TARGET / PR / HEAD
--> RECONCILE ACTIVE_WORKSET + VISIBLE CONCURRENT DELTA
--> REVALIDATE ONLY MATERIAL ASSUMPTIONS
--> CONFIRM SELECTED CLOSURE UNIT / HIGHEST EXECUTABLE ROOT
--> TREAT ACTUAL SOURCE-OF-DEFECT
--> VERIFY NEAREST INVALIDATED CLAIMS
--> INGEST NEW EVIDENCE
--> RE-DIAGNOSE IN MEMORY
--> RE-RANK
--> CONTINUE
-```
-
-New evidence that invalidates root/target/authority/migration/cutover/collision semantics stops only the affected cone. Re-enter `02`/`05` in memory and continue when safely derivable. Do not force the human through a preparation cycle or mandatory plan rewrite.
-
-An optional task-local plan may support the executor but never governs live truth or progress.
-
-## 2. Root-correct treatment sequence
-
-For each proven root inside the selected Closure Unit:
+Once the highest proven executable root is selected, implement the canonical target at the highest correct granularity.
 
 ```text
-DEFINE CANONICAL TARGET
--> ACTUAL SOURCE-OF-DEFECT
--> CANONICAL OWNER / WRITE PATH
--> ALL MATERIAL WRITERS / READERS / CONSUMERS
--> IMPLEMENT OWNER FIRST
--> ENFORCE INVARIANTS
--> UPDATE DOMAIN/BACKEND
--> UPDATE CONTRACTS/EVENTS/GENERATED CLIENTS
--> MIGRATE DATA/SCHEMA/BACKFILL
--> MIGRATE SHARED BINDINGS/CONTROLLERS
--> MIGRATE ALL SURFACES/ACTIONS
--> MIGRATE JOBS/PROVIDERS/INTEGRATIONS
--> ALIGN AUTH/SECURITY/AUDIT
--> ALIGN RUNTIME/CONFIG/OBSERVABILITY
--> PROVE FAILURE/IDEMPOTENCY/CONCURRENCY/RECOVERY
--> PROVE CANONICAL READBACK
--> CUT OVER ALL CALLERS
--> PROVE REQUIRED PRE-EXISTING CORRECT BEHAVIOR
--> PROVE ZERO USE OF OLD AUTHORITY
--> DELETE/RETIRE SUPERSEDED REACHABLE PATHS
--> REPAIR REFERENCES / TESTS / CONFIG / GENERATED CONSUMERS
--> STRUCTURAL FINISHING
--> RE-RUN INVALIDATED TOOLS/EVIDENCE
--> ADVERSARIALLY RE-DIAGNOSE
+ROOT_CORRECTNESS > DIFF_SIZE
+CANONICAL_BOUNDARY > CURRENT_BOUNDARY
+COMPLETE_CUTOVER > COMPATIBILITY_LAYER
+DELETE_LOSER > KEEP_IN_SYNC
+REFOUNDATION > PATCH_STACK
 ```
 
-If a root requires code/runtime/data/contract/schema/config mutation and none occurred at its proven Source-of-Fix, the root remains open. Planning/docs/comments/green-check manipulation count as zero treatment progress.
+Do not preserve structure merely to reduce immediate effort.
 
-## 3. Cosmetic-treatment rejection
+## 2. Mandatory execution order
+
+Unless evidence proves a different safe dependency order:
 
 ```text
-COSMETIC / PRESENTATIONAL / LOCAL SYMPTOM TREATMENT
-DOES NOT COUNT AS ROOT-CAUSE PROGRESS
-WHEN A PROVEN HIGHER SOURCE-OF-DEFECT EXISTS.
+1. DEFINE CANONICAL SEMANTICS/OWNER/WRITER/BOUNDARY
+2. CREATE OR REFOUND CANONICAL DATA/STRUCTURE
+3. CREATE/REGENERATE CANONICAL CONTRACT LINEAGE
+4. MIGRATE WRITERS
+5. MIGRATE READERS/CONSUMERS
+6. MIGRATE/BACKFILL/RECONCILE DATA WHEN REQUIRED
+7. CUT OVER RUNTIME/ROUTES/CONFIG
+8. DISABLE OLD WRITES
+9. PROVE ZERO OLD READERS/CONSUMERS
+10. DELETE LOSING AUTHORITIES
+11. DELETE OLD CONTAINERS/BRIDGES/COMPENSATIONS
+12. PRUNE EMPTY/REDUNDANT PARENTS UPWARD
+13. FINISH FILE/SYMBOL/DEPENDENCY CLEANUP
+14. REFOUND ADMISSION/PREVENTION
+15. VERIFY + FALSIFY
 ```
 
-The following are zero root-closure progress **unless they are necessary parts of a proven Source-of-Fix/migration/cutover/cleanup**:
+No half-migration closure.
 
-`renaming | extracting helper | adding condition | fallback | wrapper | adapter | suppression | test-only special case | moving code without re-ownership | comment/doc cleanup | local duplication reduction | merely greening a check`.
+## 3. Highest-safe deletion
+
+Deletion is a first-class operation, not post-cleanup.
+
+When a losing structure is proven unnecessary after value migration/cutover:
 
 ```text
-VISIBLE IMPROVEMENT != ROOT CORRECTION
-LOCAL CLEANLINESS != SYSTEM CLEANLINESS
-GREEN CHECK != SOURCE-OF-DEFECT REMOVED
+DELETE ITS SYMBOLS
+DELETE ITS FILES
+DELETE ITS DIRECTORY WHEN EMPTY OR SEMANTICALLY OBSOLETE
+DELETE ITS PACKAGE WHEN ITS RESPONSIBILITY MOVED/DIED
+DELETE ITS CONFIG/ROUTES/WORKFLOWS/TESTS/GENERATED OUTPUTS WHEN THEY ONLY SERVE THE LOSER
+REMOVE ITS DEPENDENCIES
+PRUNE ITS PARENT CONTAINERS RECURSIVELY
 ```
 
-Apply the Treatment Adequacy Gate owned by `02` before accepting material writes as progress.
+The target is the highest safe obsolete container, not the smallest removable line.
 
-## 4. Real-fix contract
+## 4. Directory/package death test
 
-A root is treated only when evidence supports:
+For every affected directory/package/module:
 
 ```text
-actual cause removed from implementation/runtime/data
-+ canonical implementation exists
-+ canonical owner/write path enforced
-+ affected writers/readers/consumers migrated
-+ contracts/data/runtime aligned
-+ required affected behavior preserved or intentionally migrated
-+ no half cutover / unintended affected regression
-+ obsolete/parallel implementation no longer authoritative/reachable
-+ directly related structural cleanup complete
+NO RESPONSIBILITY => DELETE
+DUPLICATE RESPONSIBILITY => MIGRATE TO WINNER THEN DELETE LOSER
+MIXED RESPONSIBILITIES => SPLIT INTO TRUE OWNERS THEN DELETE MIXED CONTAINER
+WRONG OWNER => REHOME
+PASS-THROUGH ONLY => REMOVE
+COMPATIBILITY ONLY => REMOVE AFTER CUTOVER
+DEAD/ORPHANED => DELETE
+CANONICAL COHESIVE OWNER => KEEP_PROVEN
 ```
 
-Smallest complete root-correct change is preferred. Smallest does not mean local. Complete does not mean rewrite everything.
+A directory surviving only because deleting it is inconvenient fails the gate.
 
-## 5. Semantic restructuring
+## 5. Structural rewrite escalation
 
-Derive structure from meaning:
-
-`Product Capability -> Canonical Owner -> Responsibility -> Domain Boundary -> Public Contract -> Data Ownership -> Dependency Direction -> Runtime Boundary -> Surface Composition -> Directory -> File`.
-
-A file move alone is not architecture cleanup.
-
-Structural treatment may require:
-
-`HARDEN | REFACTOR | MOVE | RENAME | MERGE | SPLIT | REWRITE | REGENERATE | DELETE`.
-
-Preserve proven value, not accidental structure.
-
-## 6. Directory and artifact completion
-
-Inspect the necessary hierarchy:
-
-`symbol -> function -> type/component -> file -> file family -> directory -> package/module -> service/surface -> domain`.
-
-Every materially affected remaining artifact must satisfy the structural completion contract from `02`.
-
-Mixed/unowned junk drawers, misleading ownership, pass-through layers, stale aliases and duplicated semantic authorities are findings, not style preferences.
-
-### 6.1 Pass-through abstraction rule
-
-A wrapper/adapter/helper/facade must own unique material value such as transformation, policy, protocol boundary, state, compatibility, security or orchestration.
-
-If it merely forwards calls/state and creates no unique justified boundary, classify it for inline/merge/delete after consumer proof.
-
-### 6.2 Generic-container rule
-
-Names like `utils`, `shared`, `common`, `helpers`, `legacy`, `old`, `archive`, `temp`, `backup` are not forbidden by name. A generic container with unrelated responsibilities or no canonical owner is a structural finding requiring reownership/split/merge/delete as proven.
-
-## 7. Canonical cutover
+Mandatory escalation to larger rewrite/rehome/merge/split when any of these is proven:
 
 ```text
-inventory writers/readers/consumers
--> prove canonical owner
--> introduce/fix canonical implementation
--> migrate facts/data/state
--> switch writers
--> switch readers/consumers
--> establish canonical persisted readback
--> remove dual-write / fallback / obsolete compatibility
--> remove obsolete routes/storage/declarations/config/tests/docs references
--> prove zero authoritative/reachable old path
+LOCAL FIX WOULD PRESERVE DUPLICATE AUTHORITY
+LOCAL FIX WOULD REQUIRE KEEP-IN-SYNC LOGIC
+LOCAL FIX WOULD ADD ANOTHER WRAPPER
+LOCAL FIX WOULD LEAVE WRONG OWNERSHIP
+LOCAL FIX WOULD LEAVE BAD PACKAGE/SERVICE BOUNDARY
+LOCAL FIX WOULD EXTEND AN OBSOLETE MIGRATION EPOCH
+LOCAL FIX WOULD PRESERVE REACHABLE SUPERSEDED RUNTIME
+LOCAL FIX WOULD KEEP PATCH/COMPENSATION ARCHITECTURE
 ```
 
-A new correct path beside an old reachable authority is not closure.
+Do not issue a patch under these conditions.
 
-## 8. Compatibility/legacy/fallback law
+## 6. Compatibility is forbidden by default
 
-Any reachable `legacy | compat | fallback | v1 | old | deprecated | temporary | migration bridge` path must have:
-
-`Owner | Real Consumer | Reason | One Canonical Authority | Start Condition | Expiry/Cutover Condition | Observability | Removal Trigger`.
-
-Without these, it is `DELETE_REQUIRED` once safe prerequisites are proven.
-
-Convenience is not a compatibility requirement.
-
-## 9. Generated outputs
-
-Apply `02` Generated-Output Law:
-
-`authoritative generator/schema/template/input -> fix -> regenerate -> verify consumers`.
-
-Do not directly patch generated output to make a check green unless that output is proven authoritative by design.
-
-## 10. Data/migration treatment
-
-When persistence changes:
-
-- use forward deterministic corrective migrations;
-- do not rewrite applied migration history for cosmetic cleanliness;
-- expand/backfill/switch/contract when real compatibility requires it;
-- prove fresh install and supported upgrade where material;
-- enforce invariants/constraints/indexes/FKs/checks as applicable;
-- handle duplicates/orphans/drift;
-- prove idempotency/restart/readback;
-- cut over old writers/readers;
-- remove obsolete authority after safe cutover.
-
-## 11. Reference integrity
-
-After `Delete/Rename/Move/Merge/Split/Refactor/Replace`, trace materially relevant:
-
-`imports | exports | re-exports | callers/callees | registrations | routes/navigation | contracts/schemas | configs/env | dependencies | tests/mocks/fixtures | docs/examples | build/CI entries | scripts/manifests | generated references | runtime bindings`.
-
-No stale alias/config/env/dependency/test may remain merely because compilation succeeds.
-
-## 12. Dependency/config/script hygiene
-
-Within the affected cone, inspect:
-
-`unused package | duplicate package responsibility | obsolete version bridge | stale script | dead npm/pnpm command | orphan workspace declaration | unused env var | obsolete feature flag | unused Docker stage | dead workflow/config | stale generated binding`.
-
-Material proven residue is treated in the same root closure.
-
-## 13. Test integrity and cleanup
-
-Correct sequence:
-
-`determine correct semantics -> fix system -> update/add falsifiable regression evidence -> remove obsolete test residue -> verify real behavior`.
-
-Forbidden: weakening/removing a valid test to fit wrong implementation, skip/disable/silence to obtain green, or test-only compatibility hacks as final state.
-
-After semantic change, classify obsolete/duplicate tests, dead fixtures, stale mocks, snapshots and tests for deleted behavior. Valid failing test -> fix system, not test expectations.
-
-## 14. Runtime/distributed correctness
-
-Prove as applicable:
-
-`candidate/process/schema/config freshness | idempotency | correlation | duplicate/replay | ordering | retry/backoff | timeout/unknown result | restart | compensation | reconciliation | provider authentication/signature | canonical persisted readback`.
-
-For financial mutation, callers/UI never become parallel money authority.
-
-## 15. Cleanup is treatment, not polish
-
-Act on proven:
-
-`dead | unreachable | stale | obsolete | superseded | duplicate | misplaced | unused | legacy | temporary | debug | workaround | fallback | parallel truth | unjustified compatibility | generated noise`.
+A compatibility layer may survive only when all are proven:
 
 ```text
-PROVEN DELETE_REQUIRED + PREREQUISITES SATISFIED
--> DELETE
--> REPAIR REFERENCES/CONFIG/TESTS/GENERATED CONSUMERS
--> PROVE ZERO REACHABILITY + ZERO REQUIRED VALUE LOSS
+EXTERNAL LIVE CONSUMER EXISTS
+ATOMIC MIGRATION IS NOT POSSIBLE NOW
+EXACT OWNER AND CONSUMERS ARE KNOWN
+LAYER HAS NO SECOND MUTABLE WRITER
+REMOVAL TRIGGER IS EXPLICIT
+RETIREMENT IS BOUNDED
 ```
 
-`NO-DELETE BIAS != SAFETY`.
+Otherwise migrate now and delete.
 
-Do not downgrade `DELETE_REQUIRED` to KEEP because deletion feels risky. New evidence may legitimately reclassify it; executor preference may not.
+`PERMANENT_TEMP`, `KEEP_JUST_IN_CASE`, `MAYBE_USED`, `LEGACY_FOR_SAFETY` are forbidden dispositions.
 
-## 16. Repository Finishing Pass
+## 7. Migration and data safety
 
-Before the Final Candidate, execute this **within the proven affected cone**:
+Destructive structural authority does not permit destructive uncertainty with durable data.
+
+Before changing persisted meaning prove:
 
 ```text
-ROOTS TREATED
--> FILE/FOLDER/PACKAGE OWNERSHIP
--> SEMANTIC + TEXTUAL DUPLICATION
--> DEAD/STALE/LEGACY/SUPERSEDED PATHS
--> WRAPPERS/INDIRECTION
--> NAMING/PLACEMENT
--> DEPENDENCY DIRECTION
--> CONFIG/ENV/FLAGS/SCRIPTS/DEPENDENCIES
--> TESTS/FIXTURES/MOCKS/SNAPSHOTS
--> GENERATED OUTPUTS
--> MISLEADING DOCS/COMMENTS/EXAMPLES
--> REFERENCE INTEGRITY
--> NEGATIVE SPACE
--> FINAL CANDIDATE
+SOURCE DATA SEMANTICS
+TARGET DATA SEMANTICS
+TRANSFORMATION
+BACKFILL/RECONCILIATION
+ROLL-FORWARD STRATEGY
+CUTOVER ORDER
+READBACK PROOF
+FINANCIAL/SECURITY INVARIANTS WHEN APPLICABLE
 ```
 
-This is not a separate cleanup phase; it is a required closure property of each treated root.
+Prefer deterministic roll-forward migration over preserving obsolete architecture.
 
-## 17. Self-driving failure loop
+## 8. Generated artifacts
 
-Tool/runtime/check failures encountered during execution are ingested under `02`:
+Generated outputs never become a second hand-maintained authority.
+
+For generated contracts/clients/types:
 
 ```text
-FAILURE
--> PROVENANCE
--> CLASSIFY TOOL CONDITION / FINDING
--> CLUSTER WITH EXISTING ROOTS
--> if higher root emerges: preempt affected descendant work
--> if executable: treat actual owner
--> rerun invalidated evidence
--> continue
+ONE GENERATOR SOURCE
+ONE REPRODUCIBLE TOOLCHAIN
+ONE CANONICAL OUTPUT LOCATION
+ZERO MANUAL MIRROR EDITS
+ZERO DUPLICATE GENERATED TREES
+ZERO STALE OUTPUT AFTER SOURCE CHANGE
 ```
 
-Do not ask the human what to do with a derivable deterministic failure. Human interaction is reserved for legitimate stop states owned by `00`.
+When lineage is wrong, refound lineage; do not hand-patch generated output.
 
-## 18. Git/ref mutation safety
+## 9. File-level finishing pass
 
-Before every material write batch and ref movement:
+Every materially affected surviving file must end with:
 
 ```text
-re-resolve live target/PR HEAD
--> classify concurrent delta under 01
--> re-check ACTIVE_WORKSET collision assumptions when relevant
--> build on latest reconciled parent
--> preserve foreign work
--> no force push
+DEAD_SYMBOLS=0
+UNUSED_EXPORTS=0
+DUPLICATE_LOCAL_SEMANTICS=0
+SHADOW_POLICY=0
+OBSOLETE_BRANCHES=0
+UNJUSTIFIED_SUPPRESSIONS=0
+STALE_TODO_FIXME_HACK=0
+MISLEADING_SYMBOL_NAMES=0
+UNNECESSARY_WRAPPERS=0
+LOSING_AUTHORITY_REFERENCES=0
 ```
 
-For remote atomic Git writes, build one candidate commit from the latest exact parent/tree, re-resolve target immediately before ref movement and update only by non-force fast-forward. If the target moved, reconcile/rebuild/reverify; never overwrite.
+This is not a license for cosmetic churn outside the causal cone; it is mandatory finishing inside it.
 
-## 19. Operational, reconciliation, resource-lifecycle and clean-state treatment
+## 10. Core/shared burden of proof
 
-When the selected root materially touches operational behavior, treatment includes the implementation needed to make the repaired truth observable, recoverable and bounded — not only logically correct in a unit test.
+`core/**` and `shared/**` are not preferred destinations.
 
-As applicable, execute the actual owner-side changes required for:
+A concern belongs there only when cross-domain ownership is genuinely canonical and proven by multiple stable consumers without embedding domain-specific mutable policy.
+
+If a `core`/`shared` abstraction hides a real domain owner, duplicates service logic, owns mutable business truth, or exists mainly to avoid choosing ownership, rehome it.
+
+## 11. No cleanup deferral
+
+Forbidden completion states:
 
 ```text
-CANONICAL SUCCESS / FAILURE / DEGRADATION SIGNALS
-CORRELATION / TRACEABILITY ACROSS HANDOFFS
-DATA RECONCILIATION / DRIFT DETECTION / REPAIR OWNERSHIP
-TIMEOUT / RETRY / BACKOFF / UNKNOWN-RESULT HANDLING
-RESOURCE ACQUIRE / RELEASE / CANCELLATION
-BOUNDED QUEUES / CACHES / RETRIES / CONCURRENCY
-RESTART / PROCESS-DEATH / RESUME SAFETY
-OFFLINE / INTERMITTENT-NETWORK RECOVERY
-BACKUP / RESTORE / FORWARD-RECOVERY CHANGES WHEN DATA RISK REQUIRES THEM
+NEW_CANONICAL_PATH_EXISTS + OLD_PATH_REACHABLE
+NEW_WRITER_EXISTS + OLD_WRITER_ACTIVE
+NEW_CONTRACT_EXISTS + OLD_CONTRACT_STILL_REFERENCED
+MIGRATION_DONE + BRIDGE_LEFT_PERMANENTLY
+ROOT_FIXED + TODO_CLEANUP_LATER
 ```
 
-Do not add observability as noise. A signal is justified only when it has a real operator/debugging/assurance consumer and distinguishes a material state that otherwise could fail silently.
+Cleanup belongs to the same root closure.
 
-Resource lifecycle is part of correctness where leaks or unbounded work can change availability or behavior. Inspect and treat, when material, open bodies/streams/files, database connections/transactions, goroutines/tasks, subscriptions/listeners/timers, caches, queues, retries and cancellation propagation.
+## 12. Deletion suspicion
 
-Data correctness is not implied by schema correctness. Where authoritative or distributed data can drift, treatment must establish the appropriate owner-side reconciliation/readback/repair path rather than introducing a second writer or manual shadow truth.
-
-Clean-state reproducibility obligations are verification-owned by `04`, but execution must remove hidden machine prerequisites: undeclared tools, manual DB edits, local-only generated source, secret/config assumptions or mutated workspace state that the exact candidate actually depends on.
-
-## 20. Material execution-obligation invariant
-
-Under mutation-authorized intent, every material finding inside the selected Closure Unit becomes an execution obligation once `02` has sufficiently proven its Root Cause, Canonical Target and Source-of-Fix.
+When a proven structural root closes with no losing structure removed, ask whether the execution merely added another layer.
 
 ```text
-PROVEN + EXECUTABLE + INSIDE SELECTED CLOSURE UNIT
-!= OPTIONAL RECOMMENDATION
+STRUCTURAL_ROOT_CLOSED_WITH_ZERO_LOSING_STRUCTURE_REMOVED
+=> MANDATORY_REINVESTIGATION
 ```
 
-A material finding may terminate only as:
+This is a suspicion trigger, not a blind deletion quota. If zero deletion is genuinely correct, evidence must prove why no losing structure existed.
 
-`TREATED_AND_VERIFIED | VERIFIED_UNCHANGED | N/A_PROVEN`
+## 13. Checkpoint discipline
 
-or through a legitimate stop state owned by `00`.
+A large root may require multiple direct commits on `h`.
 
-`FOUND | RECOMMENDED | SHOULD_FIX | TODO | FOLLOW_UP | LATER | DEFERRED | READY_TO_IMPLEMENT | IMPLEMENTATION_PLAN` are not terminal dispositions for an executable material obligation.
+Every checkpoint must be internally coherent and must not falsely claim closure.
 
-Known material migration, backfill, regeneration, cutover, writer/reader/consumer migration, reference repair, deletion, cleanup or finishing obligations tied to the selected root remain part of the same execution obligation even after the primary visible symptom disappears.
+Checkpoint labels should state the active root and whether migration/cutover/deletion remain.
 
-This section does not redefine finding status ownership from `02` or closure ownership from `04`; it defines the execution consequence of a sufficiently proven material finding while mutation is authorized.
-
-## 21. Human-experience findings are executable system findings
-
-When a material Product/UX/Interaction/Design finding lies inside the selected Closure Unit and its correct target behavior is derivable or otherwise proven under `focus/governance-product-design.md`, it is a real execution obligation, not presentation advice.
-
-Applicable findings may include:
-
-`missing capability | missing screen/action/state | broken navigation | missing feedback/readback | broken recovery | journey friction | terminology/state mismatch | design-authority drift | duplicate component/pattern authority | accessibility defect | RTL/localization defect | responsive defect | rendered-state defect | cross-surface UX inconsistency`.
-
-Treatment follows the highest proven Source-of-Fix rather than the visible screen:
-
-```text
-PRODUCT / UX SEMANTICS
--> DESIGN / CONTENT AUTHORITY
--> CANONICAL TOKEN / COMPONENT / PATTERN when applicable
--> SURFACE IMPLEMENTATION
--> ALL MATERIALLY AFFECTED CONSUMERS
--> RENDERED / INTERACTION / JOURNEY VERIFICATION UNDER 04
-```
-
-Concrete implementation structure remains owned by `focus/code-architecture-organization.md`; Product/UX meaning remains owned by `focus/governance-product-design.md`; exact rendered and journey proof remains owned by `04`.
-
-Do not close a user-facing root merely because backend semantics are correct. Do not close it merely because one rendered screen looks correct while journey, state, authority, accessibility, localization, recovery or cross-surface behavior remains materially wrong or unverified.
+Do not start a second overlapping mutation root before the active root closes or is explicitly blocked by a valid stop state.

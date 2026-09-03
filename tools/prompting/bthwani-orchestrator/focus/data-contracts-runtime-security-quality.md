@@ -1,61 +1,177 @@
-# Focus — Data, Contracts, Runtime, Security, Quality and Tool Evidence
+# Focus — Data, Contracts, Runtime, Security and Assurance
 
-## 1. Purpose
+Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
 
-Execution lens for data/database, contracts/API/events, runtime/infrastructure, security/auth, finance, testing/quality and tool/CI evidence.
+## 1. Data ownership
 
-Durable policy authority is owned by:
-
-- `governance/policies/engineering.md`;
-- `governance/policies/architecture-and-fullstack.md`;
-- `governance/policies/data-and-migrations.md`;
-- `governance/policies/runtime-reliability.md`;
-- `governance/policies/standards-and-quality.md`;
-- `governance/policies/security.md`;
-- `governance/policies/delivery.md` where delivery/release evidence is material;
-- applicable Product Truth for domain/financial meaning.
-
-Do not split one cross-boundary root into independent pseudo-projects.
-
-## 2. Data/contracts/runtime execution lens
-
-Trace the materially applicable path from canonical contract through auth/authz, handler/domain, persistence/event/provider, response/error and canonical readback to all consumers. For data changes include owner/schema/constraints/migration/backfill/reconciliation/cutover/concurrency/restart and old-writer elimination according to governance.
-
-For runtime claims prove current candidate/process/config/schema/provider identity and failure/recovery behavior sufficient to exclude stale execution.
-
-## 3. Security and finance
-
-Apply `security.md` and applicable Product Truth. UI visibility is never authorization. Caller-authored financial authority, direct balance/ledger truth outside WLT, unauthenticated provider evidence and unresolved external unknown results are forbidden final states where applicable.
-
-## 4. Tools are evidence producers
-
-CI, tests, Sonar, CodeQL, Semgrep, scanners, reviews and similar tools are sensors/analyzers, not Product/System authority.
-
-For every material output:
+For every material persisted fact prove:
 
 ```text
-retrieve raw result
--> account for findings/warnings/coverage limitations
--> validate/falsify/correlate/deduplicate
--> map to Root Graph
--> fix actual Source-of-Fix when relevant/authorized
--> rerun only invalidated/newly required proof
+CANONICAL DOMAIN OWNER
+CANONICAL WRITE PATH
+CANONICAL STORAGE
+INVARIANTS/CONSTRAINTS
+READBACK PATH
+LIFECYCLE/RETENTION WHEN MATERIAL
+SECURITY/FINANCIAL CLASSIFICATION WHEN MATERIAL
 ```
 
-`GREEN != CLOSED`; a tool failure is evidence, not automatically a separate objective or stop state.
+Multiple mutable stores for one truth are forbidden unless one is explicitly derived and non-authoritative.
 
-Do **not** turn normal product/root work into CI/workflow/scanner/toolchain remediation unless that is the explicit objective or a proven indispensable evidence blocker prevents the required claim. Do not create bypass or shadow assurance paths.
+## 2. Schema and migration refoundation
 
-## 5. Testing/verification
+Treat migration history as executable architecture, not sacred chronology.
 
-Tests are falsifiable evidence, not Product Truth. Select the smallest claim-specific unit/domain, contract/database, generated consistency, integration/journey, runtime/readback, security/isolation, migration, concurrency/restart, visual/accessibility/performance evidence capable of proving the affected claim; expand by risk and `04` closure requirements.
+Audit:
 
-Do not weaken valid tests/scanners or suppress material findings merely to obtain green.
+```text
+SCHEMA OWNERSHIP
+MIGRATION ORDER/EPOCHS
+DUPLICATE TABLES/COLUMNS
+OBSOLETE COMPATIBILITY COLUMNS
+BACKFILLS
+SEEDS/BOOTSTRAP
+CONSTRAINTS/INDEXES
+POLICIES/TRIGGERS
+GENERATED DB CONTRACTS
+```
 
-## 6. Operational lenses
+If the migration epoch is structurally wrong, refound the epoch/ownership model rather than repeatedly patching later migrations, subject to proven data-safety constraints.
 
-When material, deepen using governance for observability, privacy/data lifecycle, backup/restore, performance/capacity/resilience, supply-chain/provenance and human-experience telemetry. Do not invent numeric SLO/RPO/RTO targets or collect telemetry without a real decision/operations consumer.
+No destructive data transformation without deterministic migration/reconciliation evidence.
 
-## 7. Closure
+## 3. Contracts and generated lineage
 
-Close this focus only when affected data/contract/runtime/security/quality truth is consistent through consumers, required migration/cutover/recovery paths are proven, material tool evidence is accounted for, obsolete/shadow authority is removed and the exact candidate satisfies the applicable durable policies.
+Canonical contract law:
+
+```text
+ONE SOURCE CONTRACT
+ONE GENERATOR/TRANSFORM LINEAGE WHEN GENERATED
+ONE CANONICAL OUTPUT LOCATION PER CONSUMER SHAPE
+ZERO HAND-MAINTAINED MIRRORS
+ZERO STALE GENERATED OUTPUT
+ZERO DUPLICATE DTO/ENUM AUTHORITIES
+```
+
+Contract consumers migrate as part of the same root. Old contracts are deleted after cutover unless an external live consumer proves bounded compatibility is required.
+
+## 4. Runtime/config/infra
+
+Audit every material runtime authority:
+
+```text
+ENVIRONMENT VARIABLES
+CONFIG FILES
+FEATURE FLAGS
+PORTS/ENDPOINTS
+CONTAINER/COMPOSE/DEPLOYMENT
+STARTUP/BOOTSTRAP
+HEALTH/READINESS
+QUEUES/JOBS
+SECRETS REFERENCES
+OBSERVABILITY
+ROUTING/PROXY
+```
+
+One setting must not have competing authorities across env/config/scripts/workflows unless precedence is canonical, explicit and necessary.
+
+Delete stale runtime paths and configuration after cutover.
+
+## 5. Security and financial truth
+
+Authentication, authorization, sessions, secrets, PII, provider credentials, isolation and financial mutation receive heightened proof.
+
+Required principles:
+
+```text
+SERVER-SIDE AUTHORITY FOR SECURITY DECISIONS
+NO CLIENT-ONLY AUTHORIZATION
+LEAST PRIVILEGE
+NO SECRET MATERIAL IN REPOSITORY OUTPUTS
+IDEMPOTENT/TRACEABLE FINANCIAL MUTATION WHERE REQUIRED
+NO PARALLEL BALANCE/LEDGER WRITERS
+NO FLOATING FINANCIAL SOURCE OF TRUTH
+AUDITABLE CANONICAL READBACK
+```
+
+Do not delete or rewrite security/financial data structures until invariants and migration are proven.
+
+## 6. Tests are consumers, not truth by themselves
+
+Tests may reveal required behavior, but inherited tests can encode obsolete architecture.
+
+Classify failing/stale tests by canonical claim:
+
+```text
+VALID_CANONICAL_SPEC
+OBSOLETE_BEHAVIOR
+DUPLICATE_COVERAGE
+WRONG_LAYER_SPEC
+MISSING_PREVENTION
+BROKEN_TEST_INFRA
+```
+
+Update/delete tests with the root. Never weaken a valid assertion merely to obtain green output.
+
+## 7. CI and assurance authority
+
+CI exists to produce unique falsifiable evidence.
+
+Audit workflows/scripts/tools for:
+
+```text
+DUPLICATE VERIFICATION AUTHORITY
+PR-ONLY ASSUMPTIONS IN h CAMPAIGN
+STALE BRANCH AUTHORITY
+UNCONSUMED SCANNER OUTPUT
+SUPPRESSION/ALLOW-FAIL MASKING
+DUPLICATE CUSTOM GUARDS
+CAMPAIGN-ONLY RESIDUE
+EXCESSIVE COST WITHOUT UNIQUE CLAIM
+```
+
+Create/modify/delete workflows freely when needed by `h` refoundation. Prefer one durable authority per assurance claim.
+
+## 8. Evidence ingestion
+
+Every material tool result must be consumed:
+
+```text
+FINDING
+SEVERITY/MATERIALITY
+AFFECTED CLAIM
+ROOT MAPPING
+DISPOSITION
+REVERIFY REQUIREMENT
+LIMITATION
+```
+
+Do not equate scanner execution with finding closure.
+
+## 9. Dependencies and toolchain
+
+Every dependency/toolchain pin/workspace relation must re-earn existence.
+
+Delete unused dependencies after structural migration. Consolidate duplicate libraries when they encode the same responsibility. Keep separate dependencies only when capability/compatibility/risk proves separation is canonical.
+
+Toolchain/generated workflows should be reproducible and pinned appropriately for the assurance claim.
+
+## 10. Runtime and experience proof
+
+When behavior is material at runtime, static evidence alone is insufficient.
+
+Prove actual startup/request/persistence/readback/experience as applicable. Mobile/web rendered flows, backend endpoints, migrations, and integration paths are checked at the highest material boundary affected by the root.
+
+## 11. Final assurance cleanliness
+
+At fixed point:
+
+```text
+NO DUPLICATE MATERIAL CI AUTHORITIES
+NO CAMPAIGN-ONLY WORKFLOW RESIDUE
+NO STALE BRANCH-BOUND TRUST ASSUMPTION FOR h
+NO UNCONSUMED MATERIAL SECURITY/STATIC FINDINGS
+NO UNUSED MATERIAL DEPENDENCIES
+NO DUPLICATE CONTRACT/MIGRATION/RUNTIME AUTHORITIES
+NO KNOWN UNVERIFIED MATERIAL DATA/SECURITY/FINANCIAL CLAIMS
+```

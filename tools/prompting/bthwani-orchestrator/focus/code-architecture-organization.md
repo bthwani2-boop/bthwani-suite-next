@@ -1,39 +1,131 @@
-# Focus — Code Architecture, Organization, UI Implementation and Structural Quality
+# Focus — Code, Architecture and Repository Organization
 
-## 1. Purpose
+Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
 
-Execution lens for implementation architecture, repository structure, modules/packages/files, shared code, UI/component implementation, naming, dependencies, duplication and cleanup.
+## 1. Structural target
 
-Durable policy authority is **not this focus module**. Apply:
+Repository structure must reflect real semantic ownership, not accumulated history.
 
-- `governance/policies/engineering.md`;
-- `governance/policies/architecture-and-fullstack.md`;
-- `governance/policies/frontend-and-client.md`;
-- `governance/policies/standards-and-quality.md`;
-- `governance/product/EXPERIENCE-AND-DESIGN.md` when user experience/design is material.
+Required invariants:
 
-Product/System semantics remain owned by `governance/product/**` and are reconciled through `focus/governance-product-design.md`.
+```text
+ONE RESPONSIBILITY → ONE CANONICAL OWNER
+ONE OWNER → COHESIVE CONTAINER SET
+NO DUPLICATE RESPONSIBILITY TREES
+NO SHADOW SERVICES/PACKAGES
+NO PASS-THROUGH LAYERS WITHOUT UNIQUE VALUE
+NO "shared" AS A REFUGE FROM OWNERSHIP
+NO DIRECTORY KEPT ONLY BECAUSE IT EXISTS
+```
 
-## 2. Execution lens
+## 2. Topology audit
 
-Within the selected material cone, use governance to prove the actual owner/layer/responsibility, dependency direction, real consumers and complete vertical path. Do not infer architecture from directories or minimize the root to the first file containing a symptom.
+Audit every material:
 
-Inspect as materially applicable:
+```text
+SERVICE
+DOMAIN
+PACKAGE
+WORKSPACE
+MODULE
+DIRECTORY
+FILE
+PUBLIC EXPORT SURFACE
+ENTRYPOINT
+ROUTE/ADAPTER BOUNDARY
+```
 
-`semantic duplication | wrong owner/layer | dependency inversion | shared/common junk ownership | pass-through wrappers | generated forks | stale aliases | dead/legacy paths | dependency/package residue | mobile/client lifecycle | resource leaks | design-system forks | incomplete move/split/merge`.
+For each ask:
 
-## 3. Treatment
+```text
+WHAT RESPONSIBILITY DOES THIS CONTAINER OWN?
+IS THAT RESPONSIBILITY REQUIRED?
+IS THIS THE CORRECT OWNER?
+IS THERE ANOTHER CONTAINER OWNING THE SAME MEANING?
+CAN THIS BE COLLAPSED INTO A STRONGER CANONICAL OWNER?
+IS THIS ONLY A WRAPPER/BRIDGE/COMPATIBILITY SHELL?
+SHOULD ITS CHILDREN BE REHOMED AND THE CONTAINER DELETED?
+```
 
-Treat the highest actual Source-of-Fix, migrate all affected callers/consumers/generated outputs and perform the canonical cutover. A move/rename/helper extraction without corrected ownership and cleanup is zero root progress.
+## 3. Anti-fragmentation law
 
-Do not add wrappers, abstractions, packages or dependencies merely to make the local diff look cleaner; apply the standards adequacy gate in governance.
+Do not solve duplication by adding another abstraction layer unless it becomes the sole canonical owner and the old owners are removed.
 
-## 4. UI/client implementation
+Forbidden stable shapes:
 
-When UI is material, verify its implementation against Product Truth, durable experience policy and frontend/client policy: state/readback ownership, loading/empty/error/recovery, accessibility, RTL/localization, platform adaptation, resource lifecycle and server-side authorization boundary.
+```text
+A + B + SYNC WRAPPER
+OLD SERVICE + NEW SERVICE + ROUTING BRIDGE
+OLD PACKAGE + NEW PACKAGE + REEXPORT SHELL
+MULTIPLE "shared" TREES WITH OVERLAPPING POLICY
+LOCAL DOMAIN LOGIC COPIED INTO FRONTENDS
+DUPLICATE ADAPTERS THAT EMBED THE SAME MUTABLE POLICY
+```
 
-Visual polish does not substitute for correct journey/state/authority behavior.
+## 4. File and symbol structure
 
-## 5. Structural finishing
+A surviving file must have a coherent reason to exist.
 
-Before closure, inspect affected negative space for ownerless/misplaced artifacts, duplicated authority, stale imports/exports, pass-through indirection, obsolete dependencies, generated forks, legacy compatibility and unfinished migration. Known material residue tied to the root remains open under `04`.
+Refound when a file contains unrelated responsibilities, duplicate policy, multiple lifecycle authorities, stale compatibility branches or excessive forwarding logic.
+
+Split only when split creates true ownership boundaries. Merge when fragmentation creates artificial indirection.
+
+Names and paths are architecture. Rename/rehome when current naming materially misrepresents responsibility.
+
+## 5. Package/workspace survival
+
+A package/workspace survives only when it owns a coherent reusable boundary with real consumers and justified independent lifecycle/tooling.
+
+Delete or collapse packages that are:
+
+```text
+SINGLE-FILE PASS-THROUGH
+REEXPORT-ONLY
+DUPLICATE DOMAIN OWNER
+LEGACY COMPATIBILITY HOLDER
+UNOWNED UTILITY BUCKET
+EMPTY/NEAR-EMPTY AFTER MIGRATION
+CREATED ONLY TO MATCH OLD TOPOLOGY
+```
+
+Remove associated manifests/dependencies/config after deletion.
+
+## 6. `core/**` and `shared/**`
+
+Heightened burden of proof:
+
+- cross-cutting semantics must be real, stable and consumer-driven;
+- domain-specific mutable policy must remain with its domain owner;
+- a shared component may be reusable presentation, but not a second business-policy source;
+- a shared hook/store/client may not silently own domain truth that belongs to a service/domain;
+- duplicate `shared` trees should converge or be rehomed.
+
+## 7. Frontend structural ownership
+
+For all web/mobile surfaces:
+
+```text
+SCREEN/JOURNEY OWNER IS EXPLICIT
+STATE SOURCE IS CANONICAL
+DATA ACCESS DOES NOT DUPLICATE DOMAIN POLICY
+SHARED UI IS PRESENTATIONAL OR GENUINELY CROSS-SURFACE
+NAVIGATION/ROUTE AUTHORITY IS NOT DUPLICATED
+FORM VALIDATION DOES NOT BECOME A SECOND BACKEND RULE AUTHORITY
+```
+
+When the same business behavior is independently implemented across surfaces, choose the correct canonical source and derive/adapt rather than synchronize copies.
+
+## 8. Structural completion
+
+An affected topology root is not closed until:
+
+```text
+LOSING PACKAGES/DIRECTORIES/FILES REMOVED
+REEXPORT/BRIDGE RESIDUE REMOVED
+IMPORTS/EXPORTS POINT TO CANONICAL OWNERS
+EMPTY PARENTS PRUNED
+WORKSPACE/MANIFEST/LOCKFILE OWNERSHIP UPDATED
+UNUSED DEPENDENCIES REMOVED
+NAMES/PATHS MATCH RESPONSIBILITIES
+NEGATIVE-SPACE SEARCH FINDS NO LOSING STRUCTURE
+```

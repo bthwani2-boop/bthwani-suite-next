@@ -1,48 +1,118 @@
-# Focus — Product Meaning, UX Semantics and Durable Governance
+# Focus — Governance, Product and End-to-End Design
 
-## 1. Purpose
+Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
 
-Execution lens for Product/System semantics, actors, authorities, journeys, states, responsibilities, information architecture, UX/design meaning and governance reconciliation.
+## 1. Product/System truth is required value, not inherited implementation
 
-Durable authority is owned by:
+Reconstruct the capability model from actual required behavior:
 
-- `governance/GOVERNANCE.md`;
-- `governance/product/PRD.md`;
-- `governance/product/PRODUCT-TRUTH-SPEC.md`;
-- applicable `governance/product/contracts/*.product-truth.json`;
-- `governance/product/EXPERIENCE-AND-DESIGN.md`;
-- applicable `governance/policies/**`.
+```text
+ACTORS
+CAPABILITIES
+JOURNEYS
+STATES/TRANSITIONS
+OWNERSHIP/AUTHORIZATION
+PERSISTED FACTS
+FINANCIAL CONSEQUENCES
+EXTERNAL INTEGRATIONS
+OBSERVABLE OUTCOMES
+```
 
-This module owns only **how execution applies/reconciles** those authorities inside the root loop.
+Do not infer canonical Product/System truth solely from current routes, screens, tables or package names.
 
-## 2. Reconciliation
+## 2. End-to-end capability reconciliation
 
-For the material cone reconcile:
+For each material capability, trace as applicable:
 
-`Outcome | Actor | Responsibility | Authority | Journey | State/Transition | Preconditions | Decision Rules | Invariants | Handoffs | Owner | Writers/Readers/Consumers | Contract/Data/Runtime ownership | Cross-surface meaning`.
+```text
+HUMAN/EXTERNAL INTENT
+→ ENTRY SURFACE
+→ INPUT/VALIDATION
+→ AUTH/AUTHZ
+→ CONTRACT
+→ DOMAIN OWNER
+→ PERSISTENCE/INTEGRATION/EVENT
+→ CANONICAL READBACK
+→ ALL MATERIAL CONSUMING SURFACES
+```
 
-Classify governance representations as `CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN | DECISION_REQUIRED | N/A_PROVEN`.
+A UI-only or endpoint-only success is not closure when persisted/cross-surface truth is required.
 
-A local implementation/objective cannot silently redefine durable meaning, and governance text cannot substitute for fixing the actual system.
+## 3. One business meaning, one authority
 
-## 3. Governance write gate
+Search for duplicated business meaning across:
 
-Use the write gate in `governance/GOVERNANCE.md`. Before writing, verify the live smallest canonical owner and that the truth is proven, durable, reusable, materially important and not subject to an unresolved decision.
+```text
+BACKEND SERVICES
+FRONTEND STORES/HOOKS
+CONTROL PANEL
+MOBILE APPS
+SHARED LIBRARIES
+CONFIG
+DATABASE DEFAULTS/POLICIES
+DOCS
+TEST FIXTURES
+```
 
-Do not promote operation IDs, file paths, current bugs, branch state, task status or temporary runtime facts into governance merely because they were discovered.
+Choose one canonical authority for mutable business semantics and make other layers consumers/adapters.
 
-## 4. UX/design execution
+## 4. Actors and authorization
 
-Treat UX as operational meaning and use `EXPERIENCE-AND-DESIGN.md` for durable journey/IA/content/design/accessibility/localization semantics. Concrete implementation routes additionally through `focus/code-architecture-organization.md`.
+Actor identity, role, permission, scope and lifecycle must have canonical ownership.
 
-A design/prototype/tool map/token source/component implementation may be derived evidence; it does not become durable authority merely because a tool calls it canonical.
+Do not allow each application to invent role/permission truth independently.
 
-## 5. Decision gaps
+Security-sensitive Product decisions require explicit persisted/contract/runtime proof, not UI hiding.
 
-Require human durable Product/System decision only when multiple materially valid semantics remain after derivable evidence is exhausted. External Best Practice may inform engineering technique but cannot invent Product behavior.
+## 5. Journey completeness
 
-After a durable decision: propagate -> invalidate affected assumptions -> re-diagnose -> update target/ownership/migration -> execute actual system -> prove required behavior -> reconcile governance.
+For every canonical journey, account for:
 
-## 6. Finishing
+```text
+ENTRY
+SUCCESS
+VALIDATION FAILURE
+AUTH FAILURE
+BUSINESS REJECTION
+EMPTY STATE
+LOADING/PENDING
+RETRY/IDEMPOTENCY WHEN APPLICABLE
+CANCELLATION/REVERSAL WHEN APPLICABLE
+CANONICAL READBACK
+CROSS-SURFACE CONSISTENCY
+```
 
-Before closure, ensure materially touched governance no longer points to a stale owner/semantic model, no proven durable truth with future-misdirection risk remains missing, no transient/task fact was promoted unnecessarily, and no competing durable representation remains for the same material concept.
+Do not add UX states as compensation for broken domain ownership; fix the higher root first.
+
+## 6. Durable truth vs convenience mirrors
+
+Material mutable Product truth must not live in synchronized mirrors.
+
+If a frontend/cache/read model is derived, its derivation and invalidation must be explicit. It may not become a second writer.
+
+## 7. Historical value salvage
+
+Old branches or dead code may contain Product value missing from `h`. Salvage only when evidence proves the capability is still required.
+
+Recover the meaning into the new canonical design; do not resurrect obsolete topology to recover it.
+
+## 8. Documentation
+
+Documentation is authoritative only when the repository explicitly depends on it for durable Product/System truth.
+
+Stale or contradictory authoritative docs must be reconciled or deleted. Non-authoritative historical prose must not control execution.
+
+## 9. Product fixed-point proof
+
+At final closure prove, for every material capability:
+
+```text
+REQUIRED CAPABILITY ACCOUNTED FOR
+CANONICAL OWNER ACCOUNTED FOR
+CANONICAL WRITER ACCOUNTED FOR
+PERSISTENCE/CONTRACT ACCOUNTED FOR
+ALL MATERIAL SURFACES ACCOUNTED FOR
+NO PARALLEL PRODUCT TRUTH
+NO ORPHANED JOURNEY
+NO KNOWN REQUIRED CAPABILITY LOST DURING REFOUNDATION
+```

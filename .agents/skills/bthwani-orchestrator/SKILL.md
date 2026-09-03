@@ -1,32 +1,26 @@
 ---
 name: bthwani-orchestrator
-version: 2026.08.30-v1
-summary: Thin agent entrypoint into the canonical BThwani Root-Cause Orchestrator.
+version: 2026.09.03-h-refoundation-v1
+summary: Thin agent entrypoint into the canonical BThwani h refoundation orchestrator.
 status: CANONICAL_AGENT_ENTRYPOINT
 ---
 
 # BThwani Orchestrator Agent Adapter
 
-This file is an adapter, not a semantic owner.
+This file is an adapter only.
 
-Canonical authority:
+Canonical repository execution/closure authority:
+
 `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
 
-For every repository diagnosis, implementation, verification, cleanup, or closure task:
+For branch `h` refoundation work:
 
-1. Resolve the exact repository, user-targeted branch/ref, live SHA, and PR identity when applicable.
-2. Load `00-ORCHESTRATOR.md`.
-3. Follow its ownership graph and load `01`–`05` plus materially applicable `focus/*` owners.
-4. Use `.agents/skills/**` and `.agents/tools/**` only as bounded specialists/adapters selected under the orchestrator.
-5. Never redefine Product/System Truth, root ranking, Source-of-Fix, evidence dispositions, collision rules, PR lifecycle, or closure.
-6. A specialist result is evidence/advice to the active coordinator; it is not an independent approval or closure authority.
-
-Forbidden:
-- parallel routing truth;
-- parallel closure truth;
-- a second evidence policy;
-- agent metadata that overrides the orchestrator;
-- self-certification of the orchestrator.
+1. Pin exact live `h`.
+2. Load `00` through `05` and materially applicable `focus/*` owners.
+3. Execute the orchestrator's full forensic census → canonical model → Root Graph → refoundation → migration/cutover → deletion/pruning → verification/falsification → re-diagnosis loop.
+4. Use `.agents/skills/**` and `.agents/tools/**` only as bounded specialists chosen under the orchestrator.
+5. Never create a parallel scope, deletion, artifact-survival, root-ranking, CI, migration, compatibility or closure authority.
 
 Normal path:
-`HUMAN INTENT -> AGENT ADAPTER -> 00-ORCHESTRATOR -> applicable owners/focus -> bounded specialists/tools -> exact-candidate closure under 04`.
+
+`HUMAN INTENT → THIS ADAPTER → CANONICAL h ORCHESTRATOR → BOUNDED TOOLS/SPECIALISTS → EXACT-h EVIDENCE → ROOT GRAPH`

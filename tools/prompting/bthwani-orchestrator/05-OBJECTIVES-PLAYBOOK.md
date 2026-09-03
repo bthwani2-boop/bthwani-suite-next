@@ -1,486 +1,132 @@
-# BThwani Objectives Playbook
-
-## Discovery, Selection, Decomposition, Declaration and Cross-Window Coordination
+# H Root-Graph Campaign Playbook
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: Objective discovery / decomposition / adaptive traversal and campaign scheduling / elastic safe delegation / portable declaration / active-work collision selection
-Execution authority: `00-ORCHESTRATOR.md` through `04-VERIFY-REDIAGNOSE-CLOSE.md`
-Delivery authority: `governance/policies/delivery.md`
+Owner: campaign traversal after diagnosis. It does not create a session-sized objective queue.
 
-## 0. Purpose and authority boundary
+## 1. Campaign unit
 
-This owner answers one question:
-
-> **What is the next materially correct Closure Unit, at the right causal altitude and execution size, that can be declared clearly and executed safely against the current live state and all known concurrent work?**
-
-It owns objective discovery, selection, decomposition, adaptive traversal/campaign scheduling, elastic safe delegation, portable declaration and cross-window collision selection. It does **not** own Product/System truth, root-cause proof, mutation law, closure law, governance policy, repository status or evidence.
+The campaign unit is a proven causal root, not a file, ticket, failing check, prompt window or arbitrary milestone.
 
 ```text
-OBJECTIVE = current priority / intended closure outcome
-OBJECTIVE != AUTHORITY
-OBJECTIVE != PROJECT TRUTH
-OBJECTIVE != CLOSURE EVIDENCE
-ACTIVE_WORKSET = coordination input
-ACTIVE_WORKSET != PROJECT TRUTH
-EXECUTOR/MODEL != AUTHORITY
-PLAN != AUTHORITY
+ROOT_UNIT = HIGHEST_PROVEN_CAUSAL_AUTHORITY_OR_BOUNDARY_THAT_CAN_BE_SAFELY_REFOUNDED_AS_ONE_COMPLETE_CUTOVER
 ```
 
-Historical objective catalogs, prior prompts, old PR bodies, plans, examples and branch/SHA-specific text are discovery support only. Current truth is always re-resolved under the orchestrator.
-
-## 1. Operating model
-
-> **WIDE DISCOVERY; NARROW COMPLETE EXECUTION.**
-
-Maintain a project-wide orientation so a narrow task cannot create a narrow worldview. Execute the smallest complete root-correct cone that can reach honest exact-candidate closure without exporting material obligations to another objective.
-
-Do not optimize for the smallest diff, easiest file, first failing check, highest finding count, latest symptom, arbitrary catalog rank, arbitrary token/file budget or impressive rewrite.
-
-Optimize for:
-
-`highest proven systemic leverage + smallest complete canonical cutover + safe concurrency + shortest honest path to CLOSED`.
-
-## 2. Objective levels
-
-### 2.1 Project Frame
-
-Project-wide orientation needed to understand relationships between Product/System meaning, actors, domains, surfaces, contracts, data, runtime, security, delivery and governance.
-
-A broad Project Frame never authorizes repository-wide mutation by itself.
-
-### 2.2 Macro Objective
-
-A broad outcome family that may require multiple windows, for example Product/System truth, architecture/ownership, security/trust, runtime/configuration or release/promotion.
-
-A Macro Objective is orientation, not automatically one execution window.
-
-### 2.3 Closure Unit
-
-The preferred unit for one execution window:
-
-> **the smallest complete root or causally cohesive root cluster that can be treated End-to-End and reach exact-candidate closure without half migration, dual authority, deferred cleanup, deferred governance reconciliation or knowingly missing verification.**
-
-A Closure Unit may span many files, packages, domains and surfaces when one causal root requires them.
-
-### 2.4 Treatment Steps
-
-Rewrite, move, rename, split, merge, migrate, backfill, regenerate, cut over, delete, harden, verify and reconcile governance are treatment actions under `03`; they are not separate objectives when required by one root.
-
-## 3. Provider-neutral ACTIVE_WORKSET coordination
-
-Concurrent execution may occur across ChatGPT, Claude, Manus, Codex, other agents, IDEs or humans. Provider identity has no semantic authority.
-
-When concurrent execution is known or declared, the complete **human-known** active-work snapshot is REQUIRED before a new independent concurrent mutation may be selected or started:
+A root may encompass an entire:
 
 ```text
-ACTIVE_WORKSET:
-- ID: <portable coordination id>
-  OBJECTIVE: <one concise self-contained objective sentence>
-  EXECUTOR: <optional provider/agent/human label>
-  BRANCH_REF: <optional exact branch/ref>
-  STARTING_SHA: <optional immutable source identity>
-  STATUS: ACTIVE
+DOMAIN
+SERVICE BOUNDARY
+PACKAGE FAMILY
+DATABASE OWNERSHIP MODEL
+MIGRATION EPOCH
+CONTRACT/GENERATED LINEAGE
+RUNTIME/CONFIG AUTHORITY
+SHARED/CORE OWNERSHIP MODEL
+ASSURANCE/CI AUTHORITY
+REPOSITORY TOPOLOGY CLUSTER
 ```
 
-When no concurrent work is known, use `ACTIVE_WORKSET: NONE` conceptually; do not manufacture a registry.
+## 2. Campaign traversal
 
-The requirement is deliberately limited to work the human/coordinator actually knows is active. It does not demand impossible discovery of hidden external sessions. However, if concurrent work is known to exist and the available snapshot is materially incomplete, the coordinator MUST NOT claim a new mutation is `PARALLEL_SAFE` against the missing work.
-
-In that case:
+At every iteration:
 
 ```text
-READ-ONLY AUDIT / ROOT DISCOVERY -> MAY CONTINUE
-NEW PARALLEL MUTATION -> NOT AUTHORIZED AS PARALLEL_SAFE
-COLLISION STATUS -> UNKNOWN_COLLISION for the missing coordination cone
-IF HUMAN REQUESTS PARALLEL EXECUTION -> HUMAN_ACTION_REQUIRED for the missing known active-objective snapshot
+1. PIN EXACT h
+2. REFRESH MATERIAL EVIDENCE
+3. REBUILD/REFRESH ROOT GRAPH
+4. SELECT HIGHEST PROVEN EXECUTABLE ROOT
+5. DECLARE ITS COMPLETE CAUSAL CONE
+6. REFOUND + MIGRATE + CUT OVER + DELETE + PRUNE
+7. CLOSE ADMISSION HOLE
+8. VERIFY + FALSIFY ON EXACT h
+9. RE-PIN
+10. RE-DIAGNOSE
 ```
 
-Objective IDs are ephemeral coordination labels only. Do not create a repository registry merely to persist them.
+No static queue survives a material architectural change without re-ranking.
 
-Treat the human-declared `ACTIVE_WORKSET` as a collision constraint and revalidate all visible repository/ref evidence. An active objective may contain work not yet visible on the target branch; absence from the current tree is not proof of independence.
+## 3. Root ranking
 
-For every active objective, reconstruct enough of its expected exclusion cone as materially possible:
+Prefer roots that collapse the most systemic debt while establishing canonical ownership.
 
-`root/root-family | canonical authority | likely Source-of-Fix | domains/surfaces | writers/readers/consumers | expected write cone | contracts | data/schema/migrations | runtime/config | governance impact | cutover/integration ordering | verification dependencies`.
-
-Do not require the human to provide derived fields that can be safely inferred from the objective and live evidence.
-
-## 4. Live-state selection protocol
-
-Before selecting a Closure Unit:
-
-1. **Resolve live target identity** — repository, exact branch/ref or PR, current HEAD, base/trunk, PR identity and visible concurrent delta when material.
-2. **Resolve delivery position** — use live `governance/policies/delivery.md`; environment/delivery state sharpens the claim but never creates alternate Product Truth.
-3. **Orient at mandatory diagnostic altitude** — apply `02`: `Product/Operational Outcome -> Actor/Authority/Responsibility -> Capability/Journey -> State/Transition/Invariant/Handoff -> Canonical Ownership -> Contract/Data -> Service/Surface -> Runtime/Implementation/Test/Tool`.
-4. **Evaluate materially applicable focus families** — starting focus is never a closure ceiling.
-5. **Search positive and negative space** — classify materially relevant reality as `WRONG | MISSING | INCOMPLETE | CONFLICTING | DUPLICATED | MISOWNED | MISPLACED | OBSOLETE | UNPROVEN`.
-6. **Build the Root Graph** — cluster symptoms under causal parents; never create one objective per tool finding/file/screen.
-7. **Rank roots by the current `02` leverage law** — upstream depth, blocking power, canonical importance, blast radius, user/operational/security/data/finance risk, recurrence, structural multiplier, cosmetic impact.
-8. **Prove Source-of-Fix frontier** — enough actual Source-of-Defect, required Source-of-Fix, owner/write path, affected consumers, migration/cutover, obsolete implementation and proof must be known to execute safely.
-9. **Apply the Window-Fit Gate** — split only causally independent roots; keep together what one canonical cutover requires.
-10. **Apply ACTIVE_WORKSET collision analysis** — candidate must be safe against **every** active objective, not merely the most recent one. When known concurrency exists, §3 must be satisfied first.
-11. **Select the highest proven executable parallel-safe root** — if the highest root collides, do not distort it for concurrency; classify it and select the next highest genuinely parallel-safe root.
-12. **Declare the selected Closure Unit before mutation** under §5.
-13. **Execute under `00`–`04`** without waiting for confirmation unless a legitimate human decision/authority/safety stop exists or the human asked only for objective extraction.
-14. **After closure** — `RE-RESOLVE LIVE TRUTH -> RE-DIAGNOSE AFFECTED PROJECT FRAME -> INVALIDATE STALE ROOTS -> RE-RANK -> REFILL SAFE CAPACITY`.
-
-A previous queue is a hypothesis, never a schedule authority.
-
-## 5. Mandatory pre-execution objective declaration
-
-No material mutation for a newly selected Closure Unit begins before the coordinator emits one concise, self-contained, copyable objective sentence.
-
-This is a coordination checkpoint, **not** an approval gate. If the human already authorized execution, declare and continue immediately.
-
-Minimum declaration:
+Strong ranking signals:
 
 ```text
-SELECTED CLOSURE OBJECTIVE
-
-OBJECTIVE_ID: <ephemeral id when useful>
-OBJECTIVE: <one concise portable sentence>
-WHY_SELECTED: <brief root-leverage reason>
-ACTIVE_WORKSET_CHECK:
-  <active-id> -> <collision disposition>
-OVERALL_PARALLEL_STATUS: PARALLEL_SAFE
-PRIMARY_ROOT: <brief>
-PRIMARY_AUTHORITY_OR_SOURCE_OF_FIX: <brief if proven>
-EXPECTED_CLOSURE_CONE: <brief>
-EXECUTION: READY
+MULTIPLE MUTABLE AUTHORITIES
+PARALLEL/SHADOW TRUTH
+DUPLICATE RESPONSIBILITY TREES
+WRONG DOMAIN/SERVICE/PACKAGE OWNER
+BAD MIGRATION EPOCH
+DUPLICATE CONTRACT LINEAGE
+REACHABLE SUPERSEDED RUNTIME
+CROSS-REPOSITORY PATCH/BRIDGE PATTERN
+SYSTEMIC CI/ADMISSION HOLE
+HIGH HISTORICAL DEFECT CLUSTER DENSITY
 ```
 
-The `OBJECTIVE` sentence must be sufficient to paste into another provider/session without relying on hidden chat history.
+Do not prioritize merely because an issue is easy or currently red.
 
-The declaration fixes the intended root/closure outcome; it does not become a checklist ceiling. Descendant/exposed findings causally tied to the root remain inside the same closure. Independent roots discovered during execution are candidates for re-ranking unless a higher root invalidates the current treatment and triggers preemption under `02`/`04`.
+## 4. Complete root declaration
 
-When the human requests **selection only**, emit the declaration and stop without mutation. When execution is authorized, emit it and proceed in the same invocation.
-
-## 6. Window-Fit Gate
-
-A strong one-window Closure Unit normally has:
-
-- one primary root or tightly coupled root cluster;
-- sufficiently defined Canonical Target;
-- sufficiently proven Source-of-Fix;
-- known authoritative owner/write path;
-- bounded material writers/readers/consumers;
-- migration/cutover completable without exporting dual authority;
-- related deletion/finishing completable in the same closure;
-- materially required governance reconciliation completable in the same closure;
-- obtainable exact-candidate proof;
-- no unresolved higher semantic decision capable of invalidating treatment;
-- no independent root bundled only for comprehensiveness.
-
-> **Split by causal independence, never by arbitrary file count, line count, language, frontend/backend boundary, token count, model context or perceived visual size.**
-
-Do not split when pieces share the same canonical authority, one required migration/cutover, one state-machine transition, one persisted truth, one writer/reader migration or evidence dependency that prevents honest closure of the first half.
-
-If one indivisible root is large, preserve root correctness rather than manufacture a partial objective.
-
-## 7. Objective discovery families
-
-These are discovery axes, not execution order. Any family may yield the highest root.
-
-1. **Product/System/Operational Semantics + UX** — outcomes, actors, responsibilities, journeys, decisions, states, invariants, handoffs, success/failure/recovery/readback, missing semantics.
-2. **Security/Authorization/Trust/Financial Safety** — identity, sessions, object scope, operator/delegation context, service trust, privileged actions, secrets, replay, financial mutations.
-3. **Architecture/Ownership/Dependency Graph** — canonical owners, boundaries, dependency direction, shared ownership, cycles, deep/internal bypasses, package/export truth, unjustified abstraction.
-4. **Contracts/APIs/Events/Generated Bindings** — contract authority, runtime alignment, generated provenance, compatibility, shadow endpoints, consumer drift.
-5. **Data/Database/Migration/Reconciliation** — ownership, writers/readers, schemas, constraints, transactions, idempotency/concurrency, migration/backfill, projections/caches, historical repair.
-6. **Runtime/Infrastructure/Configuration/Observability** — startup, topology, service dependencies, environment/config authority, secrets, containers, providers, readiness, jobs/queues, failure/recovery.
-7. **UI/Design System/Accessibility/Rendering** — presentation implementation against proven Product/UX semantics, state binding, responsive/RTL/accessibility/rendered evidence.
-8. **Verification/Tests/Invariants/Evidence** — evidence able to falsify material claims across positive/negative, contracts, DB, runtime, security, journey, concurrency and recovery.
-9. **CI/Quality/Security Analysis/Review Control Paths** — workflow authority, exact-candidate identity, event ownership, permissions, analyzer/review provenance, duplicate assurance paths and cost.
-10. **Reliability/Failure/Concurrency/Recovery** — retry, timeout, unknown results, races, ordering, restart, compensation, reconciliation and recoverability.
-11. **Performance/Scalability/Resource Efficiency** — query plans, N+1, payload/pagination, pools, CPU/memory, backpressure, rendering, assets/bundles, build/test control-path cost.
-12. **Privacy/Data Lifecycle/Backup/Restore/DR** — collection, access, minimization, retention, deletion, logs/evidence exposure, backups, restore proof and recovery objectives.
-13. **Supply Chain/Build/Artifact Provenance** — locked dependencies/actions, generated outputs, build inputs, artifact identity, reproducibility and attestations where governed.
-14. **Release/Deployment/Promotion/Rollback/Stores** — source-to-artifact lineage, staging, migrations, readiness, rollout, rollback/forward-fix, store distribution.
-15. **Developer Toolchain/Local Feedback Loop** — canonical tools, clean install/startup, device/mobile transport, bootstrap/reset, generation, hidden machine prerequisites.
-16. **External Providers/Boundary Integrations** — provider ownership, credentials, callbacks/webhooks, timeout/retry/idempotency, quotas, reconciliation and domain leakage.
-17. **Governance/Durable Project Memory** — governance impact is always assessed; durable truth is reconciled only after underlying truth is proven under the governance write gate.
-18. **Structural Finishing/Repository Hygiene** — normally a closure obligation, independent only when structure itself is a material root capable of causing misownership, wrong future writes or operational/developer harm.
-
-## 8. Delivery-stage selection map
-
-Use the current delivery position as an evidence/risk lens:
-
-| Position | Common objective roots worth testing |
-| --- | --- |
-| Requirement / Change Intent | Product outcome, actors/authority, missing decisions, acceptance semantics, blast radius |
-| Local Development | root-correct implementation, architecture, contracts, data, security, UI, providers, cleanup |
-| Local Verification | clean-state reproducibility, invariants, failure paths, migration/runtime/journey proof |
-| Remote CI / Security / Quality | independent exact-candidate analysis, trust, execution effectiveness, finding lifecycle |
-| PR / Review | candidate identity, consumer completeness, semantic/security/architecture review, stale evidence |
-| Exact Candidate Closure | affected-cone proof, negative space, no half cutover or residue |
-| Protected Integration | base movement, merge-candidate integrity, integration conflicts, post-merge invariants |
-| Release Build / Provenance | reproducibility, immutable artifact identity, supply-chain provenance, environment inputs |
-| Staging / Pre-Production | production-relevant runtime, providers, migrations, journeys, failure/recovery, observability |
-| Release Readiness | unresolved risk, security/privacy/finance, rollback/forward-fix, capacity/operations |
-| Production Deployment | approved lineage, config/secrets, migration/deploy ordering, protected operations |
-| Post-Deployment Verification | production health, journey/readback, reconciliation, regressions, observability |
-| Store Release / Rollout | production binary qualification, signing/entitlements, staged rollout, store policy |
-| Post-Release Observation | SLO/user impact, latent failure, incident signals, reconciliation and durable lessons |
-
-Exact promotion law remains owned by `delivery.md`.
-
-## 9. Material-harm overlay
-
-Catastrophic harm is a ranking overlay after semantic/root discovery, not the first diagnostic altitude.
-
-Elevate proven roots capable of unauthorized privileged action, financial corruption/loss, durable data loss/corruption, privacy/credential exposure, irreversible migration damage, false success that drives harmful action, unsafe production startup/deployment, unrecoverable material journey state or promotion of a different artifact from the one qualified.
-
-A catastrophic symptom still yields to a proven higher causal parent when the parent is the real Source-of-Defect.
-
-## 10. Collision dispositions
-
-Compare every candidate against every active objective. Use:
+Before mutation, establish:
 
 ```text
-PARALLEL_SAFE
-DEPENDENT
-OVERLAPPING_AUTHORITY
-OVERLAPPING_WRITE_SET
-SHARED_CUTOVER
-EVIDENCE_DEPENDENT
-DIRECT_CONFLICT
-UNKNOWN_COLLISION
+ROOT_ID
+CAUSAL_PROOF
+CANONICAL_TARGET
+VALUE_TO_PRESERVE
+LOSING_AUTHORITIES/CONTAINERS
+AFFECTED WRITERS
+AFFECTED READERS/CONSUMERS
+DATA/CONTRACT MIGRATION
+CUTOVER
+DELETION/PRUNING
+ADMISSION/PREVENTION
+VERIFICATION/FALSIFICATION
+VALID BLOCKERS
 ```
 
-Only `PARALLEL_SAFE` is sufficient for independent concurrent mutation.
+If this cannot be stated, diagnosis is not execution-ready.
 
-`UNKNOWN_COLLISION` means serialize mutation until independence is proven; it is not permission to guess.
+## 5. Large roots
 
-A candidate colliding with even one active objective is not parallel-safe overall.
+A root is not divided because it is large.
 
-Do not use execution context as proof of semantic independence. Physical separation does not prevent two agents from redefining the same authority or producing incompatible cutovers.
+Use sequential coherent checkpoints when needed, but preserve one active mutation authority and one declared canonical cutover.
 
-## 11. Governance impact in objective synthesis
+A checkpoint may be temporarily non-final but must not introduce an uncontrolled second truth. If unavoidable during migration, the transitional duality must be bounded, explicit, single-write where possible, and removed before root closure.
 
-Every selected objective assesses whether treatment may alter durable Product/System meaning, ownership, boundaries, policy or delivery semantics.
+## 6. Independent inherited debt
 
-Do not create governance because a task happened. Do not leave materially touched governance stale when the completed root proves it wrong, conflicting, incomplete or durably missing. Detailed mutation rules remain owned by `focus/governance-product-design.md`.
+Discovery may expose roots unrelated to the active root. Add them to the dynamic Root Graph with evidence; do not mutate them opportunistically if they overlap or would destabilize the active cutover.
 
-## 12. Objective synthesis grammar
+This preserves speed by avoiding random context switching while still maintaining broad repository awareness.
 
-A strong portable objective contains only what is unique to the selected closure:
+## 7. Historical branches and defects
 
-1. material outcome;
-2. selected root/root family;
-3. target context with mandatory live re-resolution;
-4. canonical authority expectation if already proven;
-5. affected-cone intent including all causally required consumers;
-6. delivery-stage relevance only when material;
-7. explicit non-overlap with active independent work when relevant;
-8. inheritance of `00`–`04` for diagnosis, execution, cleanup, verification and closure.
+Historical branches are read-only falsification/salvage sources. Historical defect lists are clustering evidence.
 
-Avoid copying generic execution/security/cleanup/verification law into every objective.
+Never convert old branch topology or old task ordering into campaign order.
 
-### Portable objective template
+## 8. Root closure output
+
+For each closed root record compact evidence:
 
 ```text
-OBJECTIVE: On the current live <target>, close <selected root/outcome> from its proven canonical
-owner/Source-of-Fix across the complete causally affected cone, including every required consumer,
-contract, data, runtime, surface and governance consequence, without colliding with <ACTIVE_WORKSET>,
-and reach exact-candidate closure under the current BThwani orchestrator with no half cutover,
-parallel authority or root-related residue.
+ROOT_ID
+OLD_AUTHORITY_REMOVED
+NEW_CANONICAL_AUTHORITY
+MIGRATION/CUTOVER_RESULT
+DELETED/PRUNED CONTAINERS
+ADMISSION_HOLE_RESULT
+EXACT_H_SHA
+VERIFICATION RESULT
+NEGATIVE-SPACE RESULT
+NEW ROOT GRAPH STATE
 ```
 
-## 13. Selection output contract
+Do not keep a second durable campaign plan merely to mirror this state; Git history plus canonical live repository/evidence is preferred.
 
-When asked to select/recommend the next objective, return:
+## 9. Fixed point
 
-```text
-LIVE_TARGET
-DELIVERY_POSITION
-MACRO_FAMILY
-SELECTED_CLOSURE_UNIT
-ROOT_LEVERAGE_REASON
-SOURCE_OF_FIX_STATUS
-ACTIVE_WORKSET_COLLISION_MATRIX
-OVERALL_PARALLEL_STATUS
-SESSION_FIT = HIGH | MEDIUM | LOW
-OBJECTIVE_TEXT
-```
-
-`SESSION_FIT` is a qualitative complexity judgment, not a time/token promise.
-
-When the human requests only the objective sentence, return only `OBJECTIVE_TEXT`.
-
-## 14. Fast invocation patterns
-
-### Select only
-
-```text
-Use the canonical BThwani orchestrator including `05-OBJECTIVES-PLAYBOOK.md`.
-Re-resolve the live target, ingest the complete human-declared ACTIVE_WORKSET, audit deeply enough
-to rebuild/rerank the material Root Graph, select the highest executable Session-Sized Closure Unit
-that is PARALLEL_SAFE against every active objective, and emit its portable objective declaration.
-Do not mutate.
-```
-
-### Select and execute
-
-```text
-Use the canonical BThwani orchestrator including `05-OBJECTIVES-PLAYBOOK.md`.
-Re-resolve the live target and ACTIVE_WORKSET, audit/model/rank roots, select the highest executable
-parallel-safe Session-Sized Closure Unit, emit the portable objective declaration before mutation,
-then immediately execute it through exact-candidate closure under `00`–`04` unless a legitimate stop exists.
-```
-
-### Continue after another agent finishes
-
-```text
-Re-resolve live truth, remove only genuinely finished objectives from ACTIVE_WORKSET, reconcile any
-visible integrated delta, invalidate stale root assumptions, rerank and refill the highest safe closure capacity.
-```
-
-## 15. Anti-patterns
-
-Do not select:
-
-- `make CI green`, `fix these files`, `remove warnings`, `increase coverage` as outcomes;
-- repository cleanup as a parking lot for debt that belongs to earlier roots;
-- rewrite-everything mega objectives;
-- one objective per tool finding/file/screen;
-- arbitrary frontend/backend/language partitions of one root;
-- partial objectives that defer rename/import/delete/migration/verification obligations of one cutover;
-- a historically ranked catalog item without live proof;
-- a colliding objective merely because another execution context exists;
-- a lower-value root while a higher parallel-safe root is already proven executable.
-
-## 16. Final selection principle
-
-> **Do not ask which catalog item comes next. Ask: what is the highest materially proven way the current system can still be wrong, what is its highest causal root, and what is the smallest complete root-correct Closure Unit that can be closed now without colliding with active work or transferring its obligations elsewhere?**
-
-That is the objective to declare and, when authorized, execute immediately.
-
-## 17. Convergence queue and fixed-point selection law
-
-For broad/AUTO repository or system work, maintain only a **task-local/in-memory convergence queue**; never create a durable root registry merely to track execution. Each discovered independent material root receives one current state such as:
-
-```text
-ACTIVE
-PROVEN_NEXT
-CONSEQUENCE_OF_ACTIVE
-INDEPENDENT_UNRANKED
-BLOCKED_BY_LEGITIMATE_STOP
-OWNED_BY_ACTIVE_WORKSET
-N/A_PROVEN
-CLOSED_ON_CURRENT_LINEAGE
-```
-
-The queue is not a schedule authority. After every coherent Closure Unit checkpoint:
-
-```text
-RE-PIN LIVE HEAD
--> INGEST NEW LOCAL/REMOTE/CONCURRENT EVIDENCE
--> INVALIDATE STALE ROOT ASSUMPTIONS
--> REBUILD AFFECTED ROOT GRAPH
--> RE-RANK ALL STILL-LIVE ROOTS
--> SELECT HIGHEST EXECUTABLE ROOT
-```
-
-No independently discovered material root may be silently dropped because the original task list ended, a tool became green, a lower root was fixed or context shifted. It must be closed, proven obsolete/duplicate/N/A, owned by a declared non-overlapping active objective, or mapped to a legitimate stop state.
-
-When the convergence queue appears empty, do **not** immediately claim repository/system completion. Trigger the fresh broad adversarial re-audit required by `00`/`04`. Any new material root refills the queue and restarts incremental closure. Only a clean fresh audit may support fixed-point and Level-4 selection/closure claims.
-
-For repository-wide `AUTO/NEXT` execution, objective selection therefore converges by repeated highest-root closure rather than by a precomputed catalog. `WIDE DISCOVERY; NARROW COMPLETE EXECUTION` remains the rule throughout.
-
-## 18. Adaptive multi-axis traversal and elastic campaign scheduling
-
-Root ranking and treatment traversal are separate decisions:
-
-```text
-ROOT SELECTION = HIGHEST PROVEN EXECUTABLE CAUSAL ROOT FIRST
-TREATMENT TRAVERSAL = ADAPTIVE MULTI-AXIS
-```
-
-After the root and Source-of-Fix frontier are sufficiently proven, but before the first material mutation for that Closure Unit, build only the live graph dimensions capable of changing treatment, cutover, collision or proof:
-
-```text
-CAUSAL GRAPH
-AUTHORITY / OWNERSHIP GRAPH
-DOMAIN / SERVICE GRAPH
-SURFACE / ACTOR GRAPH
-JOURNEY / HANDOFF GRAPH
-STATE / TRANSITION GRAPH
-CONTRACT / EVENT GRAPH
-DATA-LINEAGE GRAPH
-RUNTIME / PROVIDER GRAPH
-SECURITY / TRUST GRAPH
-GOVERNANCE GRAPH
-REPOSITORY-STRUCTURE GRAPH
-EVIDENCE / INVALIDATION GRAPH
-```
-
-Select the primary traversal mode from evidence, not habit:
-
-```text
-TOP_DOWN_CAUSAL
-VERTICAL_END_TO_END
-HORIZONTAL_AUTHORITY
-CROSS_SURFACE_JOURNEY
-SERVICE_CHAIN
-STATE_TRANSITION
-DATA_LINEAGE
-SECURITY_TRUST_BOUNDARY
-STRUCTURAL_TREE
-GOVERNANCE_GRAPH
-MULTI_AXIS_HYBRID
-```
-
-Before mutation, hold a task-local **Execution Topology Contract** containing enough of:
-
-```text
-PRIMARY_TRAVERSAL_AXIS
-SECONDARY_FALSIFICATION_AXES
-CAUSAL_ROOT_ORDER
-AUTHORITY_ORDER
-MIGRATION / CUTOVER ORDER
-DATA ORDER
-SURFACE / HANDOFF ORDER
-SERIALIZATION_POINTS
-PARALLEL_SAFE_CONES
-VERIFICATION_ORDER
-REOPEN / RECOMPUTE CONDITIONS
-```
-
-This contract is coordination state, not durable governance. Recompute affected parts after a re-pin whenever new evidence or concurrent delta changes a root, owner, dependency, cutover, consumer or verification obligation.
-
-### 18.1 Maximum useful safe parallelism
-
-The scheduling objective is **maximum useful safe parallelism**, never a fixed worker count and never parallelism for appearance.
-
-Read-only discovery/challenge may fan out aggressively across independent graph regions or lenses when real subagent capability exists. Mutation workers are admitted only for Closure Units proven `PARALLEL_SAFE` against every active objective and every other simultaneously scheduled mutator.
-
-The coordinator continuously performs:
-
-```text
-DISCOVER BOUNDED WORK UNITS
--> BUILD DEPENDENCY / COLLISION GRAPH
--> SELECT MAXIMAL USEFUL SET OF MUTUALLY PARALLEL_SAFE UNITS
--> DELEGATE MINIMUM SUFFICIENT CONTEXT
--> COLLECT PROVENANCE + FINDINGS + WRITE SET + PROOF LIMITS
--> INTEGRATE THROUGH ONE COORDINATOR
--> RE-PIN / RE-RANK / REFILL CAPACITY IMMEDIATELY
-```
-
-Do not wait for a batch barrier when one safe slot becomes available. Do not split by file, language, frontend/backend or surface merely to increase worker count. Prefer causal/authority-independent cones.
-
-The following authorities remain singular per invocation/workspace:
-
-```text
-ONE PRIMARY COORDINATOR
-ONE PRODUCT/SYSTEM RECONCILIATION AUTHORITY
-ONE ROOT-RANKING AUTHORITY
-ONE INTEGRATION / REF-MOVEMENT AUTHORITY
-ONE FINAL CLOSURE AUTHORITY
-```
-
-A worker may own a bounded mutation cone only after its authority, dependencies, allowed writes, forbidden writes, required cutover and verification are explicit. Shared canonical-owner changes, source/generated pairs, shared migrations/cutovers and unresolved evidence dependencies serialize.
-
-### 18.2 Level-4 baseline scheduling
-
-An empty root queue triggers **baseline discovery**, not completion. For repository/system Level 4, schedule fresh passes for every baseline family required by `00 §14` and prove them under `04 §22`. A discovered material defect becomes a new root and re-enters normal highest-root scheduling.
-
-Baseline passes are sparse and evidence-driven: they must cover every material live area, but they must not become brute-force Cartesian products or mechanical execution of every tool.
+When the dynamic Root Graph reaches zero, hand control to `04-VERIFY-REDIAGNOSE-CLOSE.md` for the fresh full-repository recensus and Level-4 adversarial qualification.
