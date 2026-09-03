@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Box, Text, TextField } from "@bthwani/ui-kit";
-import type { CentralCatalogDomain, CentralCatalogNode } from "../../../shared/catalog";
+import type { CentralCatalogDomain, CentralCatalogNode } from "../../../catalog";
 
 export type CategoryPickerProps = {
   value: string; // The selected node ID or domain ID
