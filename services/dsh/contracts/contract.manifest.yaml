@@ -89,7 +89,7 @@ clientMetadata:
   - id: dsh-checkout
     contract: ./dsh.checkout.openapi.yaml
     clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
-    adapterOwner: ../frontend/shared/checkout
+    adapterOwner: ../frontend/commerce/checkout
   - id: dsh-order-truth
     contract: ./dsh.order-truth.openapi.yaml
     clientStrategy: STANDALONE_MANUAL_TYPED_ADAPTER
