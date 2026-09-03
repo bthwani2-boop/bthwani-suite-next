@@ -4,8 +4,8 @@ import { useState } from "react";
 import { CpPageHeader, CpStatePanel, CpStateView, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { Button } from "@bthwani/ui-kit";
-import { useOperatorCartsController } from "../../shared/cart";
-import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
+import { useOperatorCartsController } from "../../commerce/cart";
+import type { DshCart, DshFulfillmentMode } from "../../commerce/cart";
 import { CartSyncDiagnostics } from "../carts/CartSyncDiagnostics";
 
 const FULFILLMENT_LABELS: Record<DshFulfillmentMode, string> = {
