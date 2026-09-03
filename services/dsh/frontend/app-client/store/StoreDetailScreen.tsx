@@ -8,7 +8,7 @@ import type {
 import type { DshFulfillmentDeliveryMode } from "../../shared/delivery/delivery.contract";
 import { StoreDetailShell } from "./StoreDetailShell";
 import { useIdentitySession } from "@bthwani/core-identity";
-import { useCartController } from "../../shared/cart";
+import { useCartController } from "../../commerce/cart";
 
 type Props = Readonly<{
   storeId: string;
