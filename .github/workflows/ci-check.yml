@@ -2,6 +2,8 @@ name: BThwani h Verification
 run-name: h verify ${{ inputs.expected_head_sha || github.sha }} @ ${{ inputs.expected_base_sha || 'parent' }}
 
 on:
+  push:
+    branches: [h]
   workflow_call:
     inputs:
       full_scope: {type: boolean, required: false, default: false}
