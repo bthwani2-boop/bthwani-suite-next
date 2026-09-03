@@ -3,7 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import { Button, colorRoles } from "@bthwani/ui-kit";
 
-import { formatWltMoney, parseWltMajorInputToMinorUnits } from "@bthwani/dsh/finance";
+import { formatWltMoney, parseWltMajorInputToMinorUnits } from "@bthwani/dsh/wlt-boundary";
 import { useSubscriptionPlansController, type SubscriptionPlanRecord } from "../../../shared/marketing";
 
 export function SubscriptionsCommandDeck() {
