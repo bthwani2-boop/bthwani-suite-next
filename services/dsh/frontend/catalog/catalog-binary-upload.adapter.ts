@@ -1,4 +1,4 @@
-import { rewriteMobileDevPresignedMediaUrl } from "../_kernel/mobile-dev-gateway";
+import { rewriteMobileDevPresignedMediaUrl } from "../shared/_kernel/mobile-dev-gateway";
 
 export async function uploadCatalogBinary(input: {
   readonly uploadUrl: string;
