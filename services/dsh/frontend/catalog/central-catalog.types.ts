@@ -1,4 +1,4 @@
-import type { components } from "../../../clients/generated/dsh-api";
+import type { components } from "../../clients/generated/dsh-api";
 
 type CatalogSchema<Name extends keyof components["schemas"]> = components["schemas"][Name];
 
