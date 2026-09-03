@@ -122,8 +122,8 @@ describe("DSH/WLT frontend truth authority", () => {
   });
 
   it("keeps catalog controllers free of DSH-owned financial policy authority", () => {
-    const controller = read("services/dsh/frontend/shared/catalog/use-central-catalog-controller.tsx");
-    const occClient = read("services/dsh/frontend/shared/catalog/central-catalog-occ.api.ts");
+    const controller = read("services/dsh/frontend/catalog/use-central-catalog-controller.tsx");
+    const occClient = read("services/dsh/frontend/catalog/central-catalog-occ.api.ts");
 
     for (const marker of [
       "CatalogPlatformPolicy",
