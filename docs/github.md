@@ -1,73 +1,88 @@
-# GitHub CI operating model
+# GitHub Evidence Model for `h`
 
-This document describes the canonical control plane. It does not override `AGENTS.md`, `governance/GOVERNANCE.md`, or `governance/policies/delivery.md`.
+Status: EVIDENCE_AND_OPERATIONS_REFERENCE_ONLY
 
-## Canonical lifecycle
+Canonical repository execution/closure authority for the `h` refoundation campaign is:
 
-GitHub live state is authoritative for every remote candidate. The relevant identity is `repository + open PR + head ref/SHA + base ref/SHA`. A previous commit, synthetic merge SHA, or previous workflow run is never a substitute for the current candidate.
+`tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
 
-```text
-DEVELOP LOCALLY
-  -> nearest targeted verification
-  -> fix
-  -> continue
+This document does not own campaign stage, execution order, root/systemic-unit selection, mutation authority, artifact survival, migration/cutover, deletion, admission or completion.
 
-WHEN REMOTE EVIDENCE HAS VALUE
-  -> pnpm ci:check
-  -> exact live Base-to-Head affected verification
-  -> collect and fix every current red root
+## `h` campaign boundary
 
-WHEN READY TO MERGE
-  -> pnpm ci:close
-  -> exact live candidate
-  -> Full CI preflight
-  -> heavy analyzers only after Full CI passes
-  -> exact Final Closure status
-  -> merge
-```
-
-Normal commits, pushes, PR synchronization, PR opening, reopening, and `ready_for_review` do not start remote verification automatically. There are no polling, label, `workflow_run`, `repository_dispatch`, queue, or hidden state-machine replacements.
-
-## User interface
-
-The only remote user commands are:
+For the canonical-baseline refoundation campaign:
 
 ```text
-pnpm ci:check
-pnpm ci:close
+MUTABLE_REFOUNDATION_AUTHORITY = h
+DIRECT_FAST_FORWARD_MUTATION_ON_h = ALLOWED
+PR_FROM_h = FORBIDDEN
+PR_TO_h = FORBIDDEN
+MERGE_INTO_h = FORBIDDEN
+MERGE_FROM_h = FORBIDDEN
+REBASE_h_ON_OTHER_BRANCH = FORBIDDEN
+FORCE_PUSH_h = FORBIDDEN
+DEFAULT_BRANCH_OR_master = NOT_h_AUTHORITY
 ```
 
-Both commands require a clean working tree, then resolve the repository, current branch, live HEAD, open PR, and live base through GitHub before dispatching a workflow pinned to the exact local HEAD SHA. `ci:check` accepts no user routing flags. `ci:close` requires exactly one open, non-draft PR and accepts no analyzer or runtime options. Uncommitted local changes are never included in remote evidence.
+Historical PR/default-branch workflows, merge protection, old integration conventions and prior branch policies are forensic evidence only. They do not control current `h` execution.
 
-## Affected verification
+## Exact candidate identity
 
-`ci:check` uses the exact Git diff from the live PR base to the current PR head. The Router only identifies affected owners/modules: Node/frontend, DSH, WLT, Identity, Workforce, Platform, Providers, Contracts, Database, Infrastructure, CI control plane, and Dependencies. It does not infer verification from business words in filenames and it does not read previous workflow history.
-
-A changed backend always runs the corresponding backend verification. A Node-only change does not run unrelated backends. Contract, database, infrastructure, dependency, and CI-control-plane changes run their applicable material checks. A successful Router with a skipped applicable worker is not a successful candidate.
-
-## Final Closure
-
-Final Closure is `workflow_dispatch` only. It first resolves and checks out the exact live PR candidate and derives applicability from one Git-native `git diff --name-only BASE HEAD` result. It does not use the GitHub PR files endpoint with a 100-file limit.
-
-The order is fail-closed and intentional:
+Every material GitHub evidence claim for `h` must be attributable to an exact current commit SHA.
 
 ```text
-RESOLVE EXACT LIVE CANDIDATE
-  -> FULL CI PREFLIGHT
-  -> if red: stop; no heavy analyzer starts
-  -> if green: Sonar, CodeQL, Semgrep, Security, Dependency, Lockfile, and Docker checks in parallel when applicable
-  -> aggregate all results
-  -> publish BThwani / Change Closure on the exact HEAD
+BRANCH_NAME != EVIDENCE_IDENTITY
+CURRENT_EXACT_h_SHA = REQUIRED
+PREVIOUS_GREEN_SHA != CURRENT_PASS
 ```
 
-A new commit produces a different exact SHA, so earlier evidence cannot satisfy current-head merge protection. The status names are `BThwani / Change Verification`, `BThwani / Change Closure`, and `BThwani / Static Repository Baseline`; these statuses do not claim repository-wide closure by presence on `master` alone.
+Before each coherent mutation batch, resolve live remote `h`. If the head moved, inspect the intervening delta and invalidate affected evidence before writing.
 
-OpenCodeReview is the canonical deterministic inspection authority for Final Closure through the reusable `.github/workflows/open-code-review.yml` workflow. It binds its scope, resolved rules, reviewable files, exact diff, hashes, and evidence envelope to the exact candidate, and Final Closure consumes its required outputs. It does not claim semantic reasoning or human approval. `repository-baseline.yml` is the single post-merge default-branch analysis authority (CodeQL + Sonar + health) and the weekly scheduled baseline.
+## GitHub Actions role
 
-## Verification discipline
+GitHub Actions are evidence producers only. They may build, test, scan, render, exercise runtime behavior and publish attributable evidence, but they cannot certify canonical architecture or repository completion by themselves.
 
-A failed remote run is handled by collecting all available red results, normalizing and correlating them, identifying executable root causes, applying root-correct fixes, cleaning the affected cone, and rerunning the smallest authoritative verification. A green result is not accepted across candidates, PRs, or SHAs. Before any closure or merge claim, the live candidate and current branch protection requirements must be resolved again.
+```text
+CI_GREEN != CANONICAL
+CI_GREEN != CLOSED
+WORKFLOW_SUCCESS != STAGE_A_PASS
+WORKFLOW_SUCCESS != LEVEL_4_COMPLETION
+```
 
-## Platform enforcement
+Persistent workflows survive only when they prove a unique durable assurance claim for the canonical baseline. Duplicate, PR-only, default-branch-dependent, obsolete, campaign-only or compensatory workflows must be refounded or deleted when their role ends.
 
-Tracked files cannot prove live GitHub branch protection. The canonical integration branch must remain protected in GitHub live configuration with pull-request-required merging and the two exact-candidate statuses above as required checks. The repository configuration should be read back after any settings mutation; this change does not silently alter protection settings.
+Every authoritative `h` workflow must avoid hidden authority from another branch and must bind its evidence to the exact `h` candidate it evaluates.
+
+## Verification and findings
+
+A failed or successful GitHub check is consumed into the orchestrator's causal model. Tool output is not an execution queue.
+
+For each material result determine:
+
+```text
+AFFECTED_CLAIM
+SYSTEMIC_CATASTROPHE / ROOT / UNIT MAPPING
+EVIDENCE FRESHNESS
+RESULT / DISPOSITION
+WHAT IT PROVES
+WHAT IT DOES NOT PROVE
+REVERIFY REQUIREMENT
+```
+
+Missing, cancelled, skipped, stale, superseded or materially incomplete evidence is never converted to PASS.
+
+## Final-baseline workflow
+
+`.github/workflows/final-closure.yml` may collect broad exact-`h` evidence. Its successful status is evidence for the checks it actually executes; it is not the repository completion authority.
+
+Only the canonical orchestrator may emit the official completion token, and only after Stage A has passed, Stage B has reached an empty dynamic root graph, and `04-VERIFY-REDIAGNOSE-CLOSE.md` has completed the required fresh adversarial full-repository qualification on the final exact `h` SHA.
+
+## Live GitHub configuration
+
+Branch protection, rulesets, status contexts and other mutable GitHub configuration are current external repository-platform facts. Read them when material to a claim; do not infer them from tracked documentation.
+
+The `h` refoundation campaign itself does not require PR-based merge protection or a default-branch integration workflow as a prerequisite for direct authorized mutation.
+
+## Survival rule
+
+This document survives only as a concise evidence/operations reference. If its material content becomes fully represented by the orchestrator and executable workflows with no unique explanatory value, it should be deleted rather than retained as a second control-plane description.
