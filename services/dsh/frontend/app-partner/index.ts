@@ -1,8 +1,8 @@
 export { DshPartnerApplication } from './DshPartnerApplication';
 export type { DshPartnerApplicationProps } from './DshPartnerApplication';
 
-export { configureCatalogMobileFilePicker } from '../shared/catalog';
-export type { CatalogMobileFileKind, UploadFileSource } from '../shared/catalog';
+export { configureCatalogMobileFilePicker } from '../catalog';
+export type { CatalogMobileFileKind, UploadFileSource } from '../catalog';
 
 export {
   DSH_PARTNER_HUB_SECTIONS,
