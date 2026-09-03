@@ -1,7 +1,7 @@
 # H Refoundation Scope and Authority Rules
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: branch authority, repository-wide mutation scope, truth reconciliation, forensic-source use, exact-head discipline, execution-recovery authority, stage/preemption authority, execution-unit boundaries and artifact survival.
+Owner: branch authority, repository-wide mutation scope, hostile survival law, structural-garbage survival prohibition, truth reconciliation, forensic-source use, exact-head discipline, execution recovery, A0/A1/A2/B stage authority, deferral authority, preemption authority, execution-unit boundaries and artifact survival.
 
 ## 1. Branch law
 
@@ -26,7 +26,7 @@ Normal fast-forward commits directly to `h` are authorized. No branch protection
 
 ## 2. Historical branches are forensic only
 
-All old refs, including `master`, `g`, `ocr`, `f` and feature/history branches, may be read to recover or falsify facts.
+All old refs, including `master`, `g`, `ocr`, `f` and feature/history branches, may be read only to recover or falsify facts.
 
 Allowed:
 
@@ -48,7 +48,7 @@ OLD_BRANCH == INTEGRATION_SOURCE
 OLD_BRANCH_TOPOLOGY == PRESERVATION_REQUIREMENT
 ```
 
-Recovered value must re-earn canonical status and be placed under the new canonical owner; do not revive historical containers just to recover behavior.
+Recovered value must re-earn canonical status and be placed under the new canonical owner. Do not revive historical containers merely to recover behavior.
 
 ## 3. Truth reconciliation law
 
@@ -66,7 +66,7 @@ OLD_BRANCH != AUTOMATIC_TRUTH
 CURRENT_SCREEN/API/PATH != AUTOMATIC_CANONICAL_TARGET
 ```
 
-Keep evidence classes distinct when reconciling a material meaning:
+Keep evidence classes distinct:
 
 ```text
 EXPLICIT_CURRENT_HUMAN_INTENT
@@ -82,9 +82,7 @@ EXTERNAL_TECHNICAL_EVIDENCE
 FORENSIC/HISTORICAL_SUPPORT
 ```
 
-Canonical truth is reconstructed from the strongest consistent current evidence and first-principles ownership model. Contradictions trigger diagnosis; they are never resolved by blindly preferring the current file, current docs, current database shape or current test.
-
-This law exists to enable more aggressive refoundation safely, not to create a documentation gate.
+Canonical truth is reconstructed from the strongest consistent current evidence and first-principles ownership model. Contradictions trigger diagnosis; they are never resolved by blindly preferring current shape.
 
 ## 4. Exact-head discipline
 
@@ -114,9 +112,7 @@ STOP WRITE
 
 Never overwrite unseen work. Never force. After every push verify remote `h` and re-pin.
 
-## 4.1 Execution-recovery authority and head movement
-
-Interrupted execution is recovered from repository evidence, not conversational continuity.
+## 4.1 Execution-recovery authority
 
 ```text
 EXECUTION_RECOVERY_AUTHORITY =
@@ -128,50 +124,27 @@ LIVE_REMOTE_h
 + NONSTALE_EVIDENCE
 ```
 
-The following are non-authoritative recovery aids only:
+Non-authoritative aids only:
 
 ```text
-CHAT_CONTEXT = CONVENIENCE_ONLY
-AGENT_MEMORY = CONVENIENCE_ONLY
-LAST_ERROR_MESSAGE = FORENSIC_HINT_ONLY
-COMMIT_MESSAGE = FORENSIC_HINT_ONLY
-OLD_BRANCH = FORENSIC_SOURCE_ONLY
+CHAT_CONTEXT
+AGENT_MEMORY
+LAST_ERROR_MESSAGE
+COMMIT_MESSAGE
+OLD_BRANCH
 ```
 
-A commit title may guide discovery but never proves what changed, which causal unit owns the change, or whether that unit closed. Inspect actual material diffs and the current tree/reachability state.
+A commit title may guide discovery but never proves causal ownership or closure. Inspect actual diffs and current reachability.
 
-If a previous known `h` SHA exists and differs from current live `h`:
-
-```text
-COMPARE PREVIOUS_KNOWN_H..CURRENT_LIVE_h
-→ ENUMERATE MATERIAL COMMITS
-→ INSPECT ACTUAL MATERIAL DIFFS
-→ CLASSIFY EFFECT ON THE ACTIVE/PRIOR UNIT
-→ INVALIDATE ONLY AFFECTED PROOF
-→ RECONSTRUCT CURRENT EXECUTION STATE
-```
-
-Each material intervening change must be classified, as applicable, as:
+Recovery reconstructs:
 
 ```text
-CONTINUES_ACTIVE_UNIT
-COMPLETES_ACTIVE_UNIT
-EXTENDS_ACTIVE_UNIT
-CONFLICTS_WITH_ACTIVE_UNIT
-INVALIDATES_ACTIVE_UNIT_ASSUMPTION
-INTRODUCES_HIGHER_CAUSAL_ROOT
-INTRODUCES_SYSTEMIC_CATASTROPHE
-INDEPENDENT_NONOVERLAPPING_CHANGE
-LOW_RISK_GARBAGE_ONLY
-```
-
-Recovery must also reconstruct the current campaign stage:
-
-```text
-ACTIVE_CAMPAIGN_STAGE = STAGE_A_SYSTEMIC_BASELINE_DECONTAMINATION | STAGE_B_NORMAL_ROOT_CLOSURE
-STAGE_A_EXIT_STATE
+ACTIVE_CAMPAIGN_STAGE = STAGE_A0_HOSTILE_TRIAGE | STAGE_A1_DESTRUCTIVE_REFOUNDATION | STAGE_A2_ADVERSARIAL_QUALIFICATION | STAGE_B_NORMAL_ROOT_CLOSURE
+STAGE_A0_ADMISSION_STATE
+STAGE_A2_EXIT_STATE
 ACTIVE_OPEN_UNIT
 ACTIVE_UNIT_STAGE
+EXECUTION_UNIT_STATE
 RECOVERY_FRONTIER
 ```
 
@@ -180,44 +153,56 @@ HEAD_MOVED != START_OVER
 HEAD_MOVED != IGNORE_DELTA
 ```
 
-If no prior SHA is available, inspect enough recent commit history and current reachability to establish the campaign stage, the last proven closed unit, any active open unit, and its first unfinished material obligation before normal candidate selection.
+## 4.2 Open-unit states and preemption
 
-Git history answers `WHAT HAPPENED?`; it does not answer `WHAT IS CANONICAL?`. Current canonical status must still be proven under `00`/`02`/`03`/`04`.
-
-## 4.2 Systemic-catastrophe preemption authority
-
-An open unit normally retains priority until its migration/cutover/deletion obligations close. Do not use Stage A as permission for random context switching.
-
-A proven systemic catastrophe may preempt or supersede an open unit only when at least one is established:
+An open unit is classified as exactly one of:
 
 ```text
-SYSTEMIC_CATASTROPHE_SUPERSEDES_ACTIVE_UNIT_CANONICAL_MODEL
-SYSTEMIC_CATASTROPHE_IS_REQUIRED_PREREQUISITE_OF_ACTIVE_UNIT
-SYSTEMIC_CATASTROPHE_IS_HIGHER_SHARED_CAUSE_OF_ACTIVE_UNIT_MATERIAL_FAILURES
+OPEN_CRITICAL
+OPEN_SAFE_CHECKPOINT
 ```
 
-Then:
+`OPEN_CRITICAL` applies when abandoning the current unit would leave material transitional risk, including as applicable:
 
 ```text
-RECLASSIFY ACTIVE UNIT UNDER THE HIGHER SYSTEMIC UNIT
-→ PRESERVE ALREADY-CORRECT REQUIRED WORK
-→ INVALIDATE WRONG/STALE ASSUMPTIONS
-→ EXECUTE THE HIGHER CANONICAL CUTOVER
+WINNER_AND_LOSER_BOTH_REACHABLE
+PARTIAL_DATA_MIGRATION
+MIXED_OLD_NEW_WRITERS
+MIXED_OLD_NEW_CONSUMERS
+PARTIAL_RUNTIME_CUTOVER
+PARTIAL_CONTRACT_OR_GENERATED_CUTOVER
+SECURITY/FINANCIAL/EXTERNAL_CONSUMER_TRANSITION
 ```
 
-Otherwise:
+While `OPEN_CRITICAL`, preemption is allowed only when the higher pre-root catastrophe:
 
 ```text
-OPEN_CRITICAL_PARTIAL_CUTOVER
-→ RESUME FROM RECOVERY_FRONTIER
-→ NO INDEPENDENT SYSTEMIC OR NORMAL ROOT SWITCH
+SUPERSEDES_ACTIVE_UNIT_CANONICAL_MODEL
+OR IS_REQUIRED_PREREQUISITE_OF_ACTIVE_UNIT
+OR IS_HIGHER_CAUSE_OF_ACTIVE_UNIT_MATERIAL_FAILURES
 ```
 
-This preemption law is causal, not convenience-based.
+`OPEN_SAFE_CHECKPOINT` means current `h` is coherent, no dangerous dual authority/partial cutover survives, and the unit can safely pause. A proven dominant higher-leverage pre-root catastrophe may preempt an `OPEN_SAFE_CHECKPOINT` after re-ranking under `02`/`05`.
 
-## 5. Absolute repository scope
+```text
+STARTED_FIRST != PERMANENT_PRIORITY
+SAFE_CHECKPOINT + DOMINANT_HIGHER_BASELINE_CATASTROPHE => PREEMPT_ALLOWED
+```
 
-Every material tracked artifact on `h` is in scope, including:
+This law prevents both unsafe context switching and conservative attachment to a lower-value unit.
+
+## 5. Absolute repository scope and accounting burden
+
+Every tracked artifact on `h` is accounted by default.
+
+```text
+TRACKED_ARTIFACT_DEFAULT=ACCOUNT_REQUIRED
+NONMATERIAL=POSITIVE_PROOF_REQUIRED
+```
+
+Scope includes every tracked line/symbol/file/directory/package/workspace/service/domain/database object/migration/contract/generated output/runtime/config/infra artifact/frontend artifact/test/fixture/mock/workflow/tool/doc/governance/agent/dependency/lockfile/topology element.
+
+At minimum explicitly cover:
 
 ```text
 PRODUCT / ACTORS / JOURNEYS / STATES / TRANSITIONS
@@ -236,19 +221,15 @@ tests/** / fixtures/** / mocks/** / snapshots/**
 DEPENDENCIES / WORKSPACES / LOCKFILE / REPOSITORY TOPOLOGY
 ```
 
-No path, name or category has preservation immunity.
+No path/name/category has preservation immunity. Sampling cannot satisfy branch-wide coverage.
 
 ## 6. Hostile-inheritance survival law
-
-Inherited structure starts with:
 
 ```text
 CURRENT_CONTAINER_DEFAULT=DOES_NOT_SURVIVE_UNLESS_PROVEN_CANONICAL
 ```
 
-This applies to line, symbol, file, directory, package, service, database object, workflow, tool, doc, governance artifact and top-level surface.
-
-A surviving material container must prove, as applicable:
+A surviving tracked container must prove, as applicable:
 
 ```text
 REQUIRED=TRUE
@@ -276,49 +257,97 @@ DELETE
 BLOCKED_UNKNOWN
 ```
 
-`BLOCKED_UNKNOWN` blocks closure; it never means keep just in case.
+`BLOCKED_UNKNOWN` blocks dependent selection/closure; it never means keep just in case.
 
-## 6.1 Mandatory branch-wide survival challenge before normal root closure
+## 6.1 Known-garbage survival prohibition
 
-Stage A applies the hostile-inheritance law across the branch before Stage B may start.
-
-The audit is not satisfied by sampling, by the current failure cone, or by reviewing only files touched by a candidate root. Material repository structure must be accounted for branch-wide so that later roots are not built on unexamined shared debt.
-
-At minimum challenge every material:
+This is a supreme structural law:
 
 ```text
-TOP_LEVEL_SURFACE
-WORKSPACE
-PACKAGE
-SERVICE / DOMAIN BOUNDARY
-SHARED / CORE / COMMON-LIKE AUTHORITY
-DATABASE / MIGRATION AUTHORITY
-CONTRACT / GENERATED LINEAGE
-RUNTIME / CONFIG / INFRA AUTHORITY
-ASSURANCE / CI CONTROL PLANE
-TOOLS / DOCS / GOVERNANCE / AGENT AUTHORITY
-DEPENDENCY / LOCKFILE OWNERSHIP
-LARGE OR HIGH-FAN-IN SUBTREE
+KNOWN_GARBAGE_SURVIVAL=FORBIDDEN
+KNOWN_LOSING_CONTAINER_SURVIVAL=FORBIDDEN
+KNOWN_STRUCTURAL_DEFECT_SURVIVAL=FORBIDDEN_EXCEPT_ACTIVE_SAFE_MIGRATION_DEPENDENCY
 ```
 
-And account for lower artifacts sufficiently to derive all material container/authority verdicts and identify systemic debt.
-
-Required question is not `WHY DELETE THIS?`; it is:
+The following are transitional discovery states only and never treatment/closure:
 
 ```text
-WHY DOES THIS MATERIAL STRUCTURE DESERVE TO SURVIVE THE CANONICAL BASELINE?
+FOUND
+CLASSIFIED
+MAPPED
+CLUSTERED
+ASSIGNED_TO_ROOT
+DOCUMENTED
+RECORDED
+DEFERRED
 ```
-
-Every material artifact/container must be dispositioned or mapped to an explicit later Stage-B causal unit; unknown classification cannot be silently deferred.
 
 ```text
-KEEP_PROVEN REQUIRES POSITIVE EVIDENCE
-CURRENT_USAGE DOES NOT SATISFY SURVIVAL
-CURRENT_BUILD_SUCCESS DOES NOT SATISFY SURVIVAL
-MANY_CALLERS DOES NOT SATISFY SURVIVAL
+MAPPED != TREATED
+CLASSIFIED != TREATED
+CLUSTERED != TREATED
+ASSIGNED_TO_ROOT != TREATED
 ```
 
-Stage A does not require prematurely implementing every local Stage-B root. It requires complete branch-wide accounting plus execution of every proven executable systemic catastrophe whose survival would tax, distort, block or contaminate multiple later roots.
+A proven loser may remain temporarily only while required truth is being extracted or while it is a proven necessary dependency of an active safe migration/cutover. The moment its last required dependency ends:
+
+```text
+DELETE_NOW_AT_HIGHEST_SAFE_CANONICAL_GRANULARITY
+```
+
+Forbidden stable outcomes:
+
+```text
+COLLECT_GARBAGE_IN_NEW_CONTAINER
+MOVE_GARBAGE_WITHOUT_ELIMINATING_RESPONSIBILITY
+RENAME_GARBAGE_AS_CLEANUP
+MERGE_LOSERS_INTO_NEW_SHARED_DUMP
+BEAUTIFY_NONCANONICAL_CONTAINER
+ARCHIVE_LOSER
+LEGACY_JUST_IN_CASE
+CLEANUP_BACKLOG_FOR_PROVEN_LOSER
+```
+
+## 6.2 Stage-B deferral requires isolation proof
+
+A known defect or artifact may be deferred from pre-root structural refoundation to Stage B only if all applicable isolation claims are positively proven:
+
+```text
+SURVIVING_CONTAINER_IS_CANONICAL
+NO_BAD_PARENT_CONTAINER
+NO_WRONG_PACKAGE/SERVICE/DOMAIN_BOUNDARY
+NO_CROSS_ROOT_AUTHORITY
+NO_SHARED_MUTABLE_WRITER
+NO_SHARED_RUNTIME_OR_CONFIG_EFFECT
+NO_REPOSITORY_TOPOLOGY_EFFECT
+NO_DATABASE_OWNERSHIP_OR_MIGRATION_EPOCH_EFFECT
+NO_CONTRACT_OR_GENERATED_LINEAGE_EFFECT
+NO_VERIFICATION_OR_DIAGNOSIS_CONTAMINATION
+NO_HIGH_FAN_IN_COMPENSATION
+NO_PARALLEL_OR_SHADOW_TRUTH
+NO_COMPATIBILITY_OR_LEGACY_STRUCTURAL_DEBT
+NO_PARENT_PRE_ROOT_BASELINE_CATASTROPHE
+NO_MATERIAL_ROOT_TAX
+NO_STRUCTURAL_DEMOLITION_TARGET_ABOVE_IT
+```
+
+If any applicable claim is false or unknown, Stage-B deferral is forbidden.
+
+```text
+STAGE_B_IS_NOT_A_GARBAGE_DUMP
+```
+
+## 6.3 Ranking-relevant unknown law
+
+If an unresolved unknown can materially change which pre-root catastrophe dominates, lower candidate mutation is forbidden until the unknown is resolved or proven non-ranking-changing.
+
+```text
+RANKING_RELEVANT_UNKNOWN
+→ RESOLVE_OR_PROVE_NONDOMINANT
+→ THEN_SELECT
+```
+
+Do not attack the easiest understood catastrophe while a potentially higher foundational catastrophe remains materially unknown.
 
 ## 7. Used does not mean canonical
 
@@ -331,30 +360,9 @@ DIFFERENT_PATH != DIFFERENT_RESPONSIBILITY
 
 A heavily used wrong authority is migrated and deleted; caller count is not preservation proof.
 
-Semantic responsibility is derived from behavior, data, decisions, writers/readers, contract meaning, state transitions and consumer outcome—not filenames or current directories.
-
 ## 8. Dynamic mutation authority
 
-The orchestrator may select the highest safely executable unit required to realize the canonical target:
-
-```text
-WHOLE REPOSITORY STRUCTURAL PASS
-TOP-LEVEL SURFACE
-DOMAIN
-SERVICE
-CAPABILITY/JOURNEY
-PACKAGE FAMILY
-DIRECTORY SUBTREE
-FILE/SYMBOL CLUSTER
-DATABASE OWNERSHIP MODEL
-MIGRATION EPOCH
-CONTRACT/GENERATED LINEAGE
-RUNTIME/CONFIG/INFRA SURFACE
-ASSURANCE/CI CONTROL PLANE
-GOVERNANCE/TOOLS/DOCS AUTHORITY SURFACE
-```
-
-Within that unit it may:
+The orchestrator may execute the highest correct safe unit from line/symbol through repository topology and may:
 
 ```text
 DELETE
@@ -376,45 +384,36 @@ CUT OVER
 DECOMMISSION
 REBUILD
 DELETE WHOLE SUBTREE
+DELETE WHOLE LOSING SURFACE
 RECREATE MINIMAL CANONICAL SUBTREE
+RECREATE MINIMAL CANONICAL SURFACE
 ```
 
-There is no minimal-diff, minimal-file-count or existing-path preservation requirement.
-
-During Stage A, mutation selection is constrained further by `02`/`05`: systemic units outrank normal independent roots until the Stage-A exit gate owned by `04` passes.
+There is no minimal-diff, minimal-file-count, current-path or inherited-container preservation requirement.
 
 ## 9. Surface/subtree death test
 
-For every materially suspect surface—including `.agents`, `.github`, `.opencodereview`, `docs`, `tools`, `governance`—ask:
+For every suspect surface/container ask:
 
 ```text
-DOES THIS SURFACE OWN UNIQUE REQUIRED CANONICAL VALUE?
-IS ITS CURRENT STRUCTURE THE BEST CANONICAL CONTAINER?
+DOES IT OWN UNIQUE REQUIRED CANONICAL VALUE?
+IS ITS CURRENT BOUNDARY ITSELF CANONICAL?
 DOES IT DUPLICATE/CONFLICT WITH ANOTHER AUTHORITY?
 DOES IT EXIST MAINLY TO COMPENSATE FOR HISTORICAL DEFECTS?
-DOES IT CAUSE EXECUTION CONFUSION OR PARALLEL GOVERNANCE?
-WOULD EXTRACT→DELETE→MINIMAL-RECREATE BE CLEANER AND FASTER?
+DOES IT CAUSE EXECUTION CONFUSION OR PARALLEL TRUTH?
+CAN REQUIRED VALUE BE SALVAGED INTO A STRONGER OWNER?
+WOULD DELETE→MINIMAL-RECREATE REMOVE MORE PROVEN DEBT THAN IN-PLACE REPAIR?
 ```
 
-If wholesale refoundation is proven superior:
-
-```text
-EXTRACT UNIQUE REQUIRED VALUE
-→ DELETE LOSING SUBTREE
-→ RECREATE ONLY MINIMUM CANONICAL MATERIAL
-→ UPDATE ALL CONSUMERS/REFERENCES
-→ PROVE ZERO OLD REACHABILITY
-```
-
-Do not patch a structurally invalid surface merely because it contains many files.
+If the container itself is structurally invalid, in-place preservation requires rebuttal proof under `03`; otherwise refoundation is mandatory.
 
 ## 10. Safety boundaries
 
-Aggressive structural authority does not permit destructive uncertainty for:
+Aggressive structural authority never permits blind destruction of:
 
 ```text
 IRREVERSIBLE DURABLE DATA
-EXTERNAL LIVE CONSUMERS
+EXTERNAL LIVE CONSUMER CONTRACTS
 SECURITY/TRUST
 FINANCIAL STATE
 MIGRATION/CUTOVER
@@ -424,7 +423,12 @@ LIVE RUNTIME
 
 For these, preserve required truth first, prove migration/cutover, then delete the loser.
 
-Ordinary repository deletion/rehome/rewrite on `h` is not a protected action once the canonical disposition and affected consumers are proven.
+```text
+SAFETY = EXECUTABILITY GATE
+SAFETY != SMALLER_UNIT_PREFERENCE
+```
+
+If a higher candidate is safe and executable, a lower candidate cannot win merely because it is easier.
 
 ## 11. Single execution-session law
 
@@ -435,11 +439,7 @@ PARALLEL_EXECUTION_AGENTS=FORBIDDEN
 MAX_ACTIVE_OVERLAPPING_MATERIAL_MUTATION_UNITS=1
 ```
 
-All repository mutation, root selection, migration, cutover, deletion, refoundation and closure decisions for `h` execute through one continuous authority/session.
-
-This is a coordination law, not a size limiter. The single session may execute a very large Root/Surface/Service/Domain/Control-Plane refoundation when that is the highest correct unit.
-
-Within the same execution session, independent read-only evidence collection may run concurrently only when it cannot mutate repository truth or create competing execution authority. GitHub Actions may also fan out independent verification jobs; that is evidence parallelism, not parallel execution authority.
+Read-only discovery should use maximum-safe parallelism when it materially improves census speed without creating competing authority.
 
 ```text
 SINGLE_SESSION != SMALL_CHANGE
@@ -447,15 +447,11 @@ SINGLE_SESSION != SERIAL_BUG_CHASING
 SINGLE_SESSION = ONE_DECISION_AND_MUTATION_AUTHORITY
 ```
 
-Do not split a canonical cutover due to token count, session length, file count, frontend/backend boundary or perceived complexity.
+Do not shrink a canonical cutover for token count, session length, file count or cross-layer breadth.
 
 ## 12. GitHub Actions authority
 
-On `h`, GitHub Actions may be created, rewritten, dispatched or deleted as needed.
-
-No workflow receives survival rights because it existed before `h`.
-
-Persistent workflows must own unique durable assurance. Campaign-only workflows must disappear when their evidence role ends. PR/default-branch assumptions inherited from old branches are not `h` authority.
+On `h`, GitHub Actions may be created, rewritten, dispatched or deleted as needed. Persistent workflows survive only with unique durable assurance. Campaign-only workflows disappear when their evidence role ends. PR/default/old-branch assumptions are not `h` authority.
 
 ## 13. Precedence
 
@@ -468,11 +464,9 @@ CURRENT EXPLICIT HUMAN INTENT
 → FORENSIC HISTORICAL SOURCES
 ```
 
-Historical plans, prompts, docs, branches and CI conventions cannot override the canonical refoundation package.
-
 ## 14. Valid blockers
 
-Only material unknowns that can alter safe truth preservation or canonical design may halt mutation:
+Only unknowns that can alter safe truth preservation, canonical target, dominant candidate or safe cutover may halt dependent mutation:
 
 ```text
 UNRESOLVED IRREVERSIBLE DATA RISK
@@ -481,6 +475,7 @@ UNKNOWN CURRENT h HEAD MOVEMENT
 MISSING REQUIRED HUMAN PRODUCT DECISION
 MISSING REQUIRED SECRET/CREDENTIAL/ENVIRONMENT
 BLOCKED_UNKNOWN THAT CHANGES CANONICAL TARGET
+RANKING_RELEVANT_UNKNOWN
 ```
 
-Large deletion, many callers, unfamiliar structure or extensive migration are not blockers by themselves.
+Large deletion, many callers, unfamiliar structure, large migration, large blast radius or whole-subtree replacement are not blockers by themselves.
