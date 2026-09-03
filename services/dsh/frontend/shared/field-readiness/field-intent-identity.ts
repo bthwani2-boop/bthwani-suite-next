@@ -93,14 +93,14 @@ export function sha256Hex(value: string): string {
       b = a;
       a = (temp1 + temp2) >>> 0;
     }
-    hash[0] = (hash[0]! + a) >>> 0;
-    hash[1] = (hash[1]! + b) >>> 0;
-    hash[2] = (hash[2]! + c) >>> 0;
-    hash[3] = (hash[3]! + d) >>> 0;
-    hash[4] = (hash[4]! + e) >>> 0;
-    hash[5] = (hash[5]! + f) >>> 0;
-    hash[6] = (hash[6]! + g) >>> 0;
-    hash[7] = (hash[7]! + h) >>> 0;
+    hash[0] = (hash[0] + a) >>> 0;
+    hash[1] = (hash[1] + b) >>> 0;
+    hash[2] = (hash[2] + c) >>> 0;
+    hash[3] = (hash[3] + d) >>> 0;
+    hash[4] = (hash[4] + e) >>> 0;
+    hash[5] = (hash[5] + f) >>> 0;
+    hash[6] = (hash[6] + g) >>> 0;
+    hash[7] = (hash[7] + h) >>> 0;
   }
   return hash.map((word) => word.toString(16).padStart(8, "0")).join("");
 }
@@ -219,7 +219,8 @@ export function buildFieldIntentFingerprint(operation: string, payload: unknown)
   // The digest is a transport-sized index, not the sole authority: the full
   // versioned normalized envelope and original payload remain in this module
   // and in the durable queue for validation/reconstruction.
-  return `field-intent:v${FIELD_INTENT_SCHEMA_VERSION}:${operationType}:${encodeURIComponent(String(entityKey))}:${sha256Hex(JSON.stringify(normalized))}`;
+  const normalizedEntityKey = requiredString(entityKey, `${operationType} entity key`);
+  return `field-intent:v${FIELD_INTENT_SCHEMA_VERSION}:${operationType}:${encodeURIComponent(normalizedEntityKey)}:${sha256Hex(JSON.stringify(normalized))}`;
 }
 
 export function createFieldMutationIdentity(
