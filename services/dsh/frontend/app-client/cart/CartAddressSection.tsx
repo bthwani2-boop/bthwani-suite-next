@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Badge, Button, StateView, Surface, Text, colorRoles, radius, spacing } from "@bthwani/ui-kit";
 import type { DshClientAddress } from "../../shared/client-address";
-import type { DshCart, DshServiceabilityState } from "../../shared/cart";
+import type { DshCart, DshServiceabilityState } from "../../commerce/cart";
 
 function formatAddressLabel(label: string): string {
   if (!label || label.startsWith("runtime-") || label.startsWith("addr-")) {
