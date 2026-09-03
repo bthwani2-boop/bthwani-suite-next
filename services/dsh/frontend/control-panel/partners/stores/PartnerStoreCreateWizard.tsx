@@ -7,8 +7,8 @@ import {
   CpStateView,
   CpTextInput } from "@bthwani/control-panel/components";
 import { createPartnerStore } from "../../../shared/partner";
-import { fetchCatalogDomains } from "../../../shared/catalog/central-catalog.api";
-import type { CentralCatalogDomain } from "../../../shared/catalog/central-catalog.types";
+import { fetchCatalogDomains } from "../../../catalog/central-catalog.api";
+import type { CentralCatalogDomain } from "../../../catalog/central-catalog.types";
 
 export type PartnerStoreCreateWizardProps = {
   readonly partnerId: string;
