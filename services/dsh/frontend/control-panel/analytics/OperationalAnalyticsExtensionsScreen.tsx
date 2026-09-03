@@ -11,7 +11,7 @@ import {
   CpStateView,
   CpTabs } from "@bthwani/control-panel/components";
 import { MetricsPageFrame } from "@bthwani/control-panel/shell";
-import { formatWltMoney } from "@bthwani/dsh/finance";
+import { formatWltMoney } from "@bthwani/dsh/wlt-boundary";
 import {
   fetchCaptainPerformanceAnalytics,
   fetchFieldPerformanceAnalytics,

@@ -7,7 +7,7 @@ import { WebControlPanelDecisionRow, WebControlPanelKpiStrip, WebControlPanelQue
 import styles from '../shared/control-panel-surface.module.css';
 import { FINANCIAL_CLOSURE_LABELS, OrderPreparationReadbackCard, useOrderPreparationReadback } from '../../shared/orders';
 import { OrderTruthReadbackSummary } from '../../shared/order-truth';
-import { formatWltMoney } from '@bthwani/dsh/finance';
+import { formatWltMoney } from '@bthwani/dsh/wlt-boundary';
 import { useOperatorOrderWorkboard } from '../../shared/operations/use-operator-order-workboard';
 import type { OperationsFocusParams, OperatorOrderWorkboardRow } from '../../shared/operations';
 import { resolveRuntimeOrderStatusTone } from '../shared/ControlPanelDshDecisionBoard';

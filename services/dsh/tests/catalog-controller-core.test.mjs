@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 
 const {
   resolveCatalogError,
-} = await import("../dist/services/dsh/frontend/catalog/catalog.controller-core.js");
+} = await import("../dist/services/dsh/frontend/shared/catalog/catalog.controller-core.js");
 const { resolvePublishedCatalogState } = await import(
-  "../dist/services/dsh/frontend/catalog/catalog.view-model.js",
+  "../dist/services/dsh/frontend/shared/catalog/catalog.view-model.js",
 );
 
 const catalog = (products = [], categories = []) => ({

@@ -13,7 +13,7 @@ import {
   type CaptainCashInSession,
 } from "./captain-cash-in.api";
 import { allocateCaptainCollateral, fetchOwnCaptainCollateral } from "../collateral/captain-collateral.api";
-import { formatWltMoney } from "../../shared/finance/wlt-money";
+import { formatWltMoney } from "../presentation/wlt-money";
 
 type PanelState = "idle" | "loading" | "ready" | "unknown" | "success" | "error";
 

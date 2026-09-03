@@ -11,7 +11,7 @@ import {
   presentWltPaymentSessionStatus,
   requiresWltPaymentReconciliation,
   type WltPaymentSessionTimeline } from '@bthwani/dsh/wlt-boundary';
-import { formatWltMoney } from '@bthwani/dsh/finance';
+import { formatWltMoney } from '@bthwani/dsh/wlt-boundary';
 import {
   loadPaymentSessionTimeline,
   refreshPaymentSessionProviderStatus,

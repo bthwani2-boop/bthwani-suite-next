@@ -15,7 +15,7 @@ import {
   type Commission,
   type RepresentativeActorType,
 } from "./commission.api";
-import { formatWltMoney } from "../../shared/finance/wlt-money";
+import { formatWltMoney } from "../presentation/wlt-money";
 
 type CommissionPanelState =
   | { readonly kind: "loading" }

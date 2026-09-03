@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const money = await import("../dist/services/dsh/frontend/shared/finance/wlt-money.js");
+const money = await import("../dist/services/dsh/frontend/wlt-boundary/presentation/wlt-money.js");
 
 test("currency fraction digits follow ISO metadata", () => {
   assert.equal(money.resolveWltCurrencyFractionDigits("YER"), 0);

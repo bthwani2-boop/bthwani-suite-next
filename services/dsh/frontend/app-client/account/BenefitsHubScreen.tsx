@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { ScrollScreen, StateView, Text, TopBar, spacing, colorRoles } from "@bthwani/ui-kit";
-import { formatWltMoney } from "@bthwani/dsh/finance";
+import { formatWltMoney } from "@bthwani/dsh/wlt-boundary";
 import { useSubscriptionLifecycleController } from "../../shared/marketing/use-subscription-lifecycle-controller";
 import type {
   ClientBenefitsPayload,

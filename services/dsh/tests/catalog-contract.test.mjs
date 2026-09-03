@@ -32,7 +32,7 @@ test("Cart serviceability is address-scoped across the contract, handler, and cl
   const pathSource = fs.readFileSync(new URL("../contracts/paths/cart-serviceability.paths.yaml", import.meta.url), "utf8");
   const schemaSource = fs.readFileSync(new URL("../contracts/components/schemas/cart-serviceability.schemas.yaml", import.meta.url), "utf8");
   const handler = fs.readFileSync(new URL("../backend/internal/http/cart.go", import.meta.url), "utf8");
-  const cartApi = fs.readFileSync(new URL("../frontend/shared/cart/cart.api.ts", import.meta.url), "utf8");
+  const cartApi = fs.readFileSync(new URL("../frontend/commerce/cart/cart.api.ts", import.meta.url), "utf8");
 
   assert.match(contract, /CartServiceabilityRequest:/);
   assert.match(schemaSource, /required: \[storeId, addressId, fulfillmentMode\]/);

@@ -6,7 +6,7 @@ import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { CpBadge, CpMutedInline, CpSelect, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput } from "@bthwani/control-panel/components";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
-import { formatWltMoney } from '@bthwani/dsh/finance';
+import { formatWltMoney } from '@bthwani/dsh/wlt-boundary';
 import type { RepresentativeWalletActorType, RepresentativeLedgerEntry, RepresentativeWallet } from '@bthwani/dsh/wlt-boundary';
 
 const { request } = createDshHttpClient(
