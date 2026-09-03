@@ -1,7 +1,7 @@
-# H Verification, Re-Diagnosis and Fixed-Point Closure
+# H Verification, Compliance, Re-Diagnosis and Fixed-Point Closure
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: exact-h evidence, fail-closed finding lifecycle, Stage-A0 admission, Stage-A1 unit closure, Stage-A2 adversarial structural qualification, demolition/negative-space proof, Stage-B root closure, final full-repository recensus and Level-4 fixed-point qualification.
+Owner: exact-h evidence, finding terminality, A0 admission, A1 unit closure, A2 adversarial structural qualification, continuous-execution compliance, checkpoint legality, Stage-B closure, negative-space/falsification and Level-4 fixed-point qualification.
 
 ## 1. Evidence proves claims, not activity
 
@@ -11,68 +11,45 @@ GREEN != CLOSED
 ZERO_EXIT != FINDINGS_CLOSED
 MAPPED != TREATED
 CLASSIFIED != TREATED
-UPLOADED_ARTIFACT != EVIDENCE_CONSUMED
-STATIC_PASS != RUNTIME_PROOF
-SOURCE_CONFIG_CORRECT != RENDERED_DEVICE_CORRECT
-STAGE_A_ACTIVITY != STAGE_A_PASS
+CHECKPOINT != COMPLETION
+COMMIT != CLOSURE
+UNIT_CLOSED != CAMPAIGN_COMPLETE
+STAGE_PASS != CAMPAIGN_COMPLETE
 ```
-
-Never turn a failed check directly into a local patch without causal classification.
 
 ## 2. Exact-h evidence provenance
 
-Every closure/admission claim must be reconstructable with:
+Every closure claim must be reconstructable with:
 
 ```text
 EXACT_H_SHA
 CAMPAIGN_STAGE
-CLAIM / CATASTROPHE / ROOT / UNIT
+UNIT_OR_CATASTROPHE_OR_ROOT
+CLAIM
 EVIDENCE_SOURCE
-COMMAND / RUN / JOB / CHECK / ARTIFACT / SCENARIO
-INPUTS / BASE WHEN APPLICABLE
-ENVIRONMENT / RUNNER / DEVICE WHEN RELEVANT
-RESULT / DISPOSITION
+RESULT
 WHAT_IT_PROVES
 WHAT_IT_DOES_NOT_PROVE
 FRESHNESS
 INVALIDATION_TRIGGER
-RAW_FINDINGS_AND_TERMINAL_DISPOSITIONS
 ```
 
-Changed candidate/input/authority/schema/generator/runtime/security boundary/consumer cone invalidates dependent proof. Re-pin after every material push.
+Head movement invalidates only affected evidence, then execution continues from the reconstructed frontier.
 
-## 3. Evidence dispositions are fail-closed
+## 3. Finding terminality
 
-Every claim ends in exactly one:
-
-```text
-PASS
-FAIL
-BLOCKED_BY
-N/A_PROVEN
-NOT_COVERED
-STALE
-SUPERSEDED
-BLOCKED_UNKNOWN
-```
-
-Missing/skipped/cancelled evidence never becomes PASS.
-
-## 4. Finding lifecycle is fail-closed
-
-Transitional states are not closure:
+Transitional states:
 
 ```text
 FOUND
 CLASSIFIED
-MAPPED
 CLUSTERED
 ASSIGNED
 MAPPED_TO_PRE_ROOT_CATASTROPHE
 MAPPED_TO_STAGE_B_ROOT
 ```
 
-Terminal finding outcomes only:
+Terminal states only:
 
 ```text
 TREATED_AND_VERIFIED
@@ -80,7 +57,7 @@ FALSE_POSITIVE_PROVEN
 AUTHORIZED_INTENTIONAL_CONDITION
 TOOL_LIMITATION_PROVEN
 STALE_OR_SUPERSEDED_WITH_PROOF
-N/A_PROVEN
+N_A_PROVEN
 LEGITIMATE_BLOCKER
 ```
 
@@ -89,45 +66,36 @@ KNOWN_MAPPED_BUT_UNTREATED_FINDING > 0
 => RELEVANT_STAGE_GATE_FAILS
 ```
 
-A Stage-B mapping is terminally acceptable before Stage B only when `01`/`02` isolation proof proves the container and all ancestors are structurally canonical and the remaining issue is genuinely semantic/behavioral.
+## 4. Continuous-execution compliance gate
 
-## 5. Recovery evidence law
+Before accepting any checkpoint, unit closure, stage transition or final completion, verify the campaign is not violating continuous-engagement law.
 
-Historic pass/deletion/cutover claims are not current by default.
-
-During recovery reconcile against:
+Required invariants before final completion:
 
 ```text
-CURRENT_EXACT_h_SHA
-CHANGED_CONE_SINCE_PROOF
-CURRENT_AUTHORITY_WRITER_CONSUMER_STATE
-CURRENT_SCHEMA_CONTRACT_GENERATOR_RUNTIME_STATE
-CURRENT_PRE_ROOT_CATASTROPHE_STATE
-CURRENT_NEGATIVE_SPACE
-CURRENT_EXECUTION_UNIT_STATE
+CAMPAIGN_ENGAGED=TRUE
+NEXT_REQUIRED_ACTION_IS_DERIVED_OR_LEGITIMATELY_BLOCKED
+NO_IDLE_STATE
+NO_WAITING_FOR_NEXT
+NO_PAUSE_AFTER_COMMIT
+NO_PAUSE_AFTER_UNIT
+NO_PAUSE_AFTER_STAGE
+NO_RECOMMENDATIONS_ONLY_WHEN_EXECUTION_IS_READY
+NO_DERIVABLE_AUTHORIZED_WORK_LEFT_UNEXECUTED_AT_A_STOP_POINT
 ```
 
-For claimed deletion/cutover actively check as applicable:
+If any fail:
 
 ```text
-OLD_PATH
-OLD_SYMBOL
-OLD_IMPORT_EXPORT_REEXPORT_ALIAS
-OLD_ROUTE_EVENT_JOB_REGISTRATION
-OLD_WRITER
-OLD_READER_CONSUMER
-OLD_GENERATED_MIRROR_BINDING
-OLD_WORKSPACE_PACKAGE_DEPENDENCY_ENTRY
-OLD_CONFIG_ENV_FLAG_SCRIPT
-OLD_RUNTIME_REGISTRATION
-OLD_DATABASE_OR_MIGRATION_AUTHORITY
+ORCHESTRATOR_COMPLIANCE_FAILURE
+→ CHECKPOINT_NOT_TERMINAL
+→ RECONSTRUCT_CONTROL_STATE
+→ EXECUTE_NEXT_REQUIRED_ACTION
 ```
 
-If losing reachability survives, the unit is open.
+## 5. A0 admission gate
 
-## 6. Stage A0 admission gate — candidate universe before normal mutation
-
-Normal Stage-A1 mutation is forbidden until exact current `h` proves:
+Normal A1 mutation requires exact-current proof of:
 
 ```text
 FULL_TRACKED_TREE_ENUMERATION=PASS
@@ -150,17 +118,11 @@ TOP_CANDIDATE_SET=ESTABLISHED
 RANKING_RELEVANT_UNKNOWNS=0
 ```
 
-`SUFFICIENT` means enough evidence exists that additional unknown discovery is not reasonably capable of changing the dominant high-level candidate ordering, except new evidence discovered later.
+Certain-dead immediate deletion under `03` remains allowed during A0.
 
-Certain-dead immediate deletion under `03` is the only mutation exception during A0.
+## 6. A1 execution-ready gate
 
-```text
-FIRST_CATASTROPHE_FOUND != A0_PASS
-```
-
-## 7. Stage A1 dominant-catastrophe execution-ready gate
-
-Before mutation of a selected pre-root catastrophe prove:
+Before mutation of a selected catastrophe prove:
 
 ```text
 CATASTROPHE_ID
@@ -179,11 +141,11 @@ EXPECTED_DEMOLITION_TARGETS=DEFINED
 EXPECTED_PARENT_PRUNING=DEFINED
 ```
 
-If a structural catastrophe has no expected demolition target, require explicit proof that no losing structure exists; otherwise mutation is forbidden.
+If execution-ready and no legitimate blocker exists, remaining in analysis-only mode fails compliance.
 
-## 8. Execution-unit closure gate
+## 7. Execution-unit closure gate
 
-For every material unit, as applicable prove:
+Prove as applicable:
 
 ```text
 ACTUAL_SOURCE_OF_DEFECT_REMOVED
@@ -209,10 +171,9 @@ ZERO_MAPPED_BUT_UNTREATED_FINDINGS_IN_UNIT
 NEGATIVE_SPACE=PASS
 ```
 
-For a refoundation of an invalid container additionally prove:
+For invalid-container refoundation additionally prove:
 
 ```text
-OLD_CONTAINER_ABSENT_OR_PROVEN_CANONICAL_NA
 DEMOLITION_PLAN_EXECUTED
 EXPECTED_LOSERS_ACCOUNTED
 NO_BEAUTIFIED_LOSER_SURVIVES
@@ -221,238 +182,180 @@ NO_NEW_WRAPPER_AROUND_OLD_AUTHORITY
 STRUCTURAL_YIELD_REALIZED_OR_VARIANCE_EXPLAINED
 ```
 
-## 9. Stage-A1 catastrophe closure gate
+## 8. Unit closure is a transition, not a stop
 
-A pre-root catastrophe is not closed because the replacement works.
-
-Prove as applicable:
+When a unit closes, verification must emit the next required control transition:
 
 ```text
-PRE_ROOT_BASELINE_CATASTROPHE_REMOVED
-FOUNDATIONAL_SOURCE_OF_DEFECT_REMOVED
-WINNING_CANONICAL_FOUNDATION_EXISTS
-REQUIRED_TRUTH_PRESERVED
-ALL_AFFECTED_WRITERS_MIGRATED
-ALL_AFFECTED_READERS_CONSUMERS_MIGRATED
-OLD_SHARED_OR_FOUNDATIONAL_WRITERS=0
-OLD_SHARED_OR_FOUNDATIONAL_READERS=0
-OLD_RUNTIME_REGISTRATIONS=0
-OLD_CONFIG_ROUTES_ALIASES=0
-LOSING_AUTHORITIES=0
-LOSING_CONTAINERS_SUBTREES=0
-COMPAT_BRIDGE_WRAPPER_ALIAS_COMPENSATION=0
-WORKSPACE_PACKAGE_DEPENDENCY_RESIDUE=0
-DIAGNOSIS_CONTAMINATION_REMOVED
-VERIFICATION_CONTAMINATION_REMOVED
-ROOT_TAX_REDUCED_OR_ELIMINATED
-STRUCTURAL_YIELD_VERIFIED
-CATASTROPHE_NEGATIVE_SPACE=PASS
-ADMISSION_PREVENTION_HOLE_CLOSED
+UNIT_CLOSED
+→ RE_PIN_REQUIRED
+→ RE_CENSUS_REQUIRED
+→ RE_DIAGNOSE_REQUIRED
+→ RE_RANK_REQUIRED
+→ NEXT_UNIT_SELECTION_REQUIRED
+→ EXECUTION_REQUIRED_IF_NOT_BLOCKED
 ```
 
-A new foundation layered over the old one is FAIL.
+A closure result that omits this continuation while work remains is incomplete.
 
-## 10. Stage A2 — adversarial structural qualification
+## 9. Checkpoint legality
 
-When A1 appears to have no remaining dominant pre-root catastrophes, do not enter Stage B. Rebuild the structural evidence from zero on exact current `h`.
+A checkpoint is valid only as a recovery point.
 
-Required adversarial sweeps:
+It must preserve enough state to reconstruct:
 
 ```text
-FULL_TRACKED_TREE_CENSUS_FROM_ZERO
-FULL_FILE_DIRECTORY_CONTAINER_SURVIVAL_CHALLENGE
-FULL_WORKSPACE_PACKAGE_DEPENDENCY_CENSUS
-FULL_DOMAIN_SERVICE_SHARED_CORE_TOPOLOGY_AUDIT
-FULL_OWNER_WRITER_READER_CONSUMER_SWEEP
-FULL_DATABASE_MIGRATION_AUTHORITY_AUDIT
-FULL_CONTRACT_GENERATED_SSOT_AUDIT
-FULL_RUNTIME_CONFIG_INFRA_AUTHORITY_SWEEP
-FULL_CI_ASSURANCE_CONTROL_PLANE_SWEEP
-FULL_TOOLS_GOVERNANCE_AGENTS_DOCS_AUTHORITY_SWEEP
-FULL_LEGACY_COMPAT_BRIDGE_ALIAS_WRAPPER_SWEEP
-FULL_DEAD_OR_ORPHANED_TRACKED_ARTIFACT_SWEEP
-FULL_WRONG_OWNER_WRONG_PATH_BOUNDARY_SWEEP
-FULL_PARALLEL_SHADOW_TRUTH_SWEEP
-FULL_NEGATIVE_SPACE
-FULL_STAGE_B_DEFERRAL_FALSIFICATION
+CURRENT_STAGE
+CURRENT_UNIT
+UNIT_STATE
+RECOVERY_FRONTIER
+MIGRATION_CUTOVER_STATE
+LOSER_DELETION_STATE
+NEXT_REQUIRED_ACTION
 ```
 
-## 11. Stage-A2 exit gate — zero structural garbage
-
-Stage B is forbidden until all applicable exact-current claims pass:
+A checkpoint is never a normal stopping justification.
 
 ```text
-UNCLASSIFIED_TRACKED_ARTIFACTS=0
-UNDISPOSITIONED_TRACKED_ARTIFACTS=0
-UNPROVEN_NONMATERIAL_CLASSIFICATIONS=0
-UNREVIEWED_TOP_LEVEL_SURFACES=0
-UNREVIEWED_WORKSPACES=0
-UNREVIEWED_PACKAGES=0
-UNREVIEWED_SERVICES_OR_DOMAIN_BOUNDARIES=0
-UNRESOLVED_CONTAINER_VERDICTS=0
+CHECKPOINT + NO_BLOCKER + REMAINING_EXECUTABLE_WORK
+=> MUST_CONTINUE
+```
 
+## 10. A2 adversarial zero-garbage qualification
+
+Stage B is forbidden until fresh exact-current evidence proves:
+
+```text
 KNOWN_PRE_ROOT_BASELINE_CATASTROPHES=0
 KNOWN_STRUCTURAL_GARBAGE=0
 KNOWN_DEAD_TRACKED_FILES=0
 KNOWN_DEAD_TRACKED_DIRECTORIES=0
-KNOWN_DEAD_PACKAGES_OR_WORKSPACES=0
-KNOWN_STRUCTURALLY_INVALID_SERVICES_OR_DOMAINS=0
-KNOWN_HIGH_LEVERAGE_OBSOLETE_SUBTREES=0
-KNOWN_WRONG_OWNER_CONTAINERS=0
-KNOWN_WRONG_PATH_OR_BOUNDARY_CONTAINERS=0
+KNOWN_DEAD_PACKAGES_WORKSPACES=0
+KNOWN_STRUCTURALLY_INVALID_SERVICES_DOMAINS_SURFACES=0
+KNOWN_WRONG_OWNER_OR_WRONG_PATH_CONTAINERS=0
 KNOWN_PASS_THROUGH_ONLY_CONTAINERS=0
 KNOWN_COMPATIBILITY_ONLY_CONTAINERS=0
 KNOWN_HISTORICAL_COMPENSATION_CONTAINERS=0
-KNOWN_PARALLEL_OR_SHADOW_AUTHORITIES=0
+KNOWN_PARALLEL_SHADOW_AUTHORITIES=0
 KNOWN_DUPLICATE_MUTABLE_WRITERS=0
 KNOWN_UNJUSTIFIED_WRAPPERS_ALIASES_REEXPORTS=0
 KNOWN_LEGACY_RESIDUE=0
-KNOWN_BAD_MIGRATION_EPOCHS=0
-KNOWN_DUPLICATE_CONTRACT_GENERATED_LINEAGES=0
-KNOWN_REACHABLE_SUPERSEDED_RUNTIME_CONFIG=0
-KNOWN_DIAGNOSIS_CONTAMINATORS=0
-KNOWN_VERIFICATION_CONTAMINATORS=0
-KNOWN_GOVERNANCE_AGENT_TOOL_AUTHORITY_CONFLICTS=0
 KNOWN_DEFERRED_STRUCTURAL_GARBAGE=0
 KNOWN_MAPPED_BUT_UNTREATED_STRUCTURAL_FINDINGS=0
 UNPROVEN_STAGE_B_DEFERRALS=0
-RANKING_RELEVANT_UNKNOWNS=0
-PRE_ROOT_BASELINE_FRONTIER=EMPTY
-FRESH_ADVERSARIAL_A2_RECENSUS=PASS
+UNCLASSIFIED_TRACKED_ARTIFACTS=0
+UNDISPOSITIONED_TRACKED_ARTIFACTS=0
 ```
 
-This does **not** require every semantic/business defect to be fixed before Stage B. A remaining Stage-B root is allowed only when its entire containing structure/ancestor chain passed canonical isolation proof and the remaining defect is genuinely semantic/behavioral/product/system logic.
+A2 pass must transition immediately into Stage B when semantic roots remain.
 
 ```text
-STAGE_B_IS_FOR_TRUE_ROOTS_INSIDE_CANONICAL_STRUCTURE
-STAGE_B_IS_NOT_FOR_STRUCTURAL_GARBAGE
+A2_PASS + STAGE_B_ROOTS_EXIST
+=> ENTER_STAGE_B_AND_EXECUTE
 ```
 
-## 12. Stage-B root closure gate
+## 11. Stage-B closure
 
-Stage-B units inherit §8. Additionally, if any Stage-B diagnosis reveals structural invalidity above the local root:
+Stage B handles only semantic/product/system roots inside proven canonical structure.
+
+Each root must satisfy the same migrate/cutover/delete/admission/negative-space discipline where applicable.
+
+If Stage-B evidence disproves structural canonicality:
 
 ```text
-STAGE_A2_QUALIFICATION=STALE
-→ CLASSIFY_PRE_ROOT_CATASTROPHE
-→ RETURN_TO_A0_OR_A1_AS_REQUIRED
+A2_QUALIFICATION=STALE
+→ RETURN_TO_A0_OR_A1
+→ CONTINUE_CAMPAIGN
 ```
 
-Do not repair a semantic root inside a newly disproven container.
-
-## 13. Failure classification before mutation
-
-Classify material verification failures as:
-
-```text
-ACTIVE_UNIT_SYMPTOM
-PRE_ROOT_CATASTROPHE_EVIDENCE
-NEW_HIGHER_ROOT_EVIDENCE
-STRUCTURAL_GARBAGE_SURVIVAL
-DEMOLITION_PLAN_FAILURE
-ANCESTOR_EXONERATION_FAILURE
-STAGE_A0_ADMISSION_FAILURE
-STAGE_A2_EXIT_FAILURE
-VERIFIER_IMPLEMENTATION_FAILURE
-EVIDENCE_COLLECTOR_FAILURE
-ENV_INFRA_FAILURE
-AUTHORITY_PERMISSION_CREDENTIAL_FAILURE
-EXTERNAL_PROVIDER_FAILURE
-FLAKY_OR_NONDETERMINISTIC
-STALE_TEST_SEMANTICS
-STALE_EVIDENCE
-EXPECTED_TRANSITIONAL_FAILURE_INSIDE_OPEN_UNIT
-UNKNOWN
-```
-
-Higher structural evidence stops descendant patching.
-
-## 14. Falsification is mandatory
+## 12. Falsification
 
 Actively search for:
 
 ```text
 OLD_AUTHORITY_REFERENCES
 SECOND_WRITERS
-DUPLICATE_SEMANTICS_UNDER_DIFFERENT_NAMES
-SHADOW_CONFIG_CONTRACT_DTO_ENUM_MAPPINGS
+DUPLICATE_SEMANTICS
+SHADOW_CONFIG_CONTRACT_DTO_ENUM_MAPPING
 MANUAL_GENERATED_MIRRORS
 COMPAT_FORWARDER_REEXPORT_ALIAS_PATHS
-EMPTY_MEANINGLESS_PARENT_CONTAINERS
+EMPTY_MEANINGLESS_PARENTS
 ORPHAN_SCREENS_APIS_BINDINGS_DATA
-TEST_FIXTURE_MOCK_RESIDUE
+RETIRED_TOPOLOGY_IN_TESTS_FIXTURES_MOCKS
 CI_GOVERNANCE_AGENT_TOOL_PARALLEL_AUTHORITIES
-CAMPAIGN_ONLY_TOOL_WORKFLOW_RESIDUE
-RUNTIME_REGISTRATION_OF_DELETED_PATHS
+STALE_RUNTIME_REGISTRATION
 STALE_CONFIG_ENV_FLAGS_SCRIPTS
 UNUSED_DEPENDENCIES
 HALF_MIGRATIONS
 MISLEADING_NAMES_WRONG_OWNER_PATHS
-OVERSIZED_MULTI_RESPONSIBILITY_FILES
-GENERIC_SHARED_CORE_UTILITY_REFUGES
-CIRCULAR_CROSS_DOMAIN_COUPLING
-HIGH_FAN_IN_OBSOLETE_SUBTREES
-SURVIVING_ROOT_TAX
-MAPPED_BUT_UNTREATED_FINDINGS
-GARBAGE_AGGREGATED_IN_NEW_CONTAINER
-BEAUTIFIED_OLD_CONTAINER
-UNPROVEN_STAGE_B_DEFERRAL
+HIGH_FAN_IN_COMPENSATORY_SUBTREES
+ROOT_TAX_SURVIVAL
+PAUSED_OR_IDLE_EXECUTION_WITH_DERIVABLE_WORK
 ```
 
-Text search alone is insufficient where runtime/generated/database/build/external reachability can survive.
-
-## 15. Admission-hole proof
-
-For every material defect/catastrophe prove:
+## 13. Re-diagnose after every material unit
 
 ```text
-DEFECT_REMOVED
-+
-SYSTEM_THAT_ADMITTED_OR_FAILED_TO_DETECT_IT_REFOUNDED_OR_PROVEN_CORRECT
-```
-
-Never weaken a gate to obtain green.
-
-## 16. Re-diagnose after every unit
-
-```text
-RE-PIN h
-→ INVALIDATE_AFFECTED_EVIDENCE
+RE_PIN_h
 → REFRESH_AFFECTED_CENSUS
-→ RE-RUN_NEGATIVE_SPACE
-→ REFRESH_PRE_ROOT_CATASTROPHE_GRAPH
-→ REFRESH_DOMINANCE_RANKING
+→ INVALIDATE_AFFECTED_EVIDENCE
+→ REFRESH_STRUCTURAL_SEMANTIC_AUTHORITY_GRAPHS
+→ RE_RUN_NEGATIVE_SPACE
+→ RE_SYNTHESIZE_CURRENT_STAGE_GRAPH
+→ RE_RANK
+→ DERIVE_NEXT_REQUIRED_ACTION
+→ EXECUTE_IF_NOT_BLOCKED
 ```
 
-Cross-cutting changes require broad fresh census.
+## 14. Final full-repository fixed-point qualification
 
-## 17. Final adversarial full-repository qualification
+The first empty Stage-B graph is not completion.
 
-When Stage-B Root Graph appears empty, independently rebuild from zero and prove at minimum:
+Run a fresh full-repository adversarial recensus from zero.
+
+Final completion requires:
 
 ```text
-UNREVIEWED_TRACKED_ARTIFACTS=0
-UNDISPOSITIONED_TRACKED_ARTIFACTS=0
+A0_ADMISSION=PASS_OR_SUPERSEDED_BY_FRESHER_FINAL_CENSUS
+A1_FRONTIER=EMPTY
+A2_STRUCTURAL_QUALIFICATION=PASS
+STAGE_B_ROOT_GRAPH=EMPTY
+KNOWN_GARBAGE=0
+KNOWN_LOSERS=0
+KNOWN_ROOTS=0
+KNOWN_STRUCTURAL_DEFECTS=0
+KNOWN_SEMANTIC_DEFECTS=0
+KNOWN_MAPPED_BUT_UNTREATED_FINDINGS=0
+KNOWN_UNKNOWNS=0
+KNOWN_PARTIAL_CUTOVERS=0
+KNOWN_COMPAT_RESIDUE=0
+KNOWN_ORCHESTRATOR_COMPLIANCE_FAILURES=0
+FRESH_FULL_REPOSITORY_RECENSUS=PASS
+FRESH_FALSIFICATION=PASS
+LEVEL_4_EVIDENCE_STATE=PASS
+```
+
+## 15. Only normal stop
+
+The only normal non-blocked stop is the proven Level-4 fixed point.
+
+Valid completion token:
+
+```text
+H_TRUSTWORTHY_CANONICAL_BASELINE_REFOUNDATION_COMPLETE
+EXACT_H_SHA=<immutable sha>
+CONTINUOUS_CAMPAIGN_EXECUTION=PASS
+A0_HOSTILE_TRIAGE=PASS
+A1_DESTRUCTIVE_REFOUNDATION_FRONTIER=EMPTY
+A2_ADVERSARIAL_STRUCTURAL_QUALIFICATION=PASS
+STAGE_B_ROOT_GRAPH=EMPTY
+LEVEL_4_EVIDENCE_STATE=PASS
+KNOWN_GARBAGE=0
+KNOWN_LOSERS=0
+KNOWN_ROOTS=0
 KNOWN_MATERIAL_DEFECTS=0
 KNOWN_MATERIAL_UNKNOWNS=0
-KNOWN_REMAINING_ROOTS=0
-KNOWN_PRE_ROOT_BASELINE_CATASTROPHES=0
-KNOWN_STRUCTURAL_GARBAGE=0
-KNOWN_MAPPED_BUT_UNTREATED_FINDINGS=0
-PARALLEL_TRUTHS_SHADOW_AUTHORITIES_DUPLICATE_WRITERS=0
-LOSING_AUTHORITIES_CONTAINERS=0
-RESPONSIBILITY_LESS_FILES_DIRECTORIES_PACKAGES=0
-DEFECT_ABSORPTION_STRUCTURES=0
-UNJUSTIFIED_FRAGMENTATION=0
-MISLEADING_NAMES_PATHS=0
-UNBOUNDED_COMPATIBILITY=0
-NEW_BASELINE_ACCEPTED_MIGRATION_DEBT=0
-END_TO_END_PRODUCT_DATA_CONTRACT_UI_PARITY=PASS
-SECURITY_FINANCIAL_INTEGRITY=PASS
-FINAL_NEGATIVE_SPACE=PASS
-FINAL_ADVERSARIAL_RECENSUS=PASS
-FINAL_EXACT_H_CI=PASS
-FINAL_CI_SHA_MATCH=PASS
+KNOWN_ORCHESTRATOR_COMPLIANCE_FAILURES=0
 ```
 
-Only then may `00` emit the official Level-4 completion token.
+Anything weaker is a recovery checkpoint, not completion.
