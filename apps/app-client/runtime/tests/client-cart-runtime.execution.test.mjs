@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const policyUrl = new URL(
-  "../../../../services/dsh/frontend/shared/cart/cart.policy.ts",
+  "../../../../services/dsh/frontend/commerce/cart/cart.policy.ts",
   import.meta.url,
 );
 const queueUrl = new URL(
-  "../../../../services/dsh/frontend/shared/cart/cart-sync.queue.ts",
+  "../../../../services/dsh/frontend/commerce/cart/cart-sync.queue.ts",
   import.meta.url,
 );
 
