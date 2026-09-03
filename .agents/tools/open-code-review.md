@@ -1,47 +1,51 @@
-# OpenCodeReview Tool Policy
+# OpenCodeReview Tool Adapter
+
+Status: OPTIONAL_EVIDENCE_TOOL
 
 ## Purpose
 
-OpenCodeReview (`ocr`) is the canonical deterministic inspection authority for CI and Final Closure. It owns:
+OpenCodeReview (`ocr`) is an optional deterministic inspection tool. It may:
 
-- select the bounded review scope;
-- apply project include/exclude rules;
-- resolve file-specific review rules;
-- expose the exact diff/context for the pinned candidate.
+- select a bounded review scope;
+- apply include/exclude rules;
+- resolve file-specific review guidance;
+- expose exact diff/context for a pinned candidate.
 
-OpenCodeReview does not claim semantic reasoning, approval, or human review. It does not own an LLM provider, model credential, or repository authority beyond its deterministic inspection contract.
+It owns no Product/System truth, repository architecture, campaign stage, mutation order, canonical target, CI authority, approval, release decision, Stage-A/Stage-B transition or completion claim.
 
-## Credential boundary
+Canonical repository execution/closure authority for branch `h` is:
 
-The canonical delegation path must not depend on:
+`tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
 
-- `COPILOT_GITHUB_TOKEN`;
-- `OCR_LLM_*`;
-- an OpenAI/Anthropic API key solely for OpenCodeReview;
-- a model-specific CLI embedded inside the OCR wrapper.
+OCR output is evidence only and must be causally classified and consumed under the orchestrator.
 
-The reusable `.github/workflows/open-code-review.yml` workflow invokes `tools/scripts/invoke-open-code-review-toolchain.ps1`, verifies the pinned package, and publishes exact-candidate context, resolved rules, reviewable files, diff, hashes, and a consumed evidence envelope. Final Closure requires that workflow and consumes its `opencodereview-context` evidence; it is not an orphan artifact or a second reviewer authority. This context claim cannot satisfy `analysis:opencodereview-semantic`.
+## Credential and mutation boundary
+
+The adapter must not depend on an embedded LLM provider or model-specific secret merely to produce deterministic review context.
+
+The tool must not mutate repository source while inspecting it. Setup/repair actions that change local tool configuration are operational maintenance only and are not repository refoundation authority.
 
 ## Use when
 
-- reviewing a dirty workspace, one commit, or a branch range;
-- deterministic inclusion, exclusion, and rule mapping is useful;
-- a bounded pre-review is requested.
+- a bounded deterministic pre-review is materially useful;
+- exact inclusion/exclusion and rule mapping are useful;
+- the current execution unit needs another falsification/evidence source.
 
-## Do not use when
+## Do not use as
 
-- no code review is requested;
-- the CLI is unavailable and installation is outside scope;
-- formal product, finance, governance, CI, QA, security, release, risk, or final approval is required.
+- Product/System truth;
+- root/systemic-unit selector;
+- CI or Final Closure controller;
+- security/finance/governance approval authority;
+- substitute for compiler/test/runtime/device evidence;
+- substitute for negative-space or migration/cutover proof.
 
 ## Workflow
 
-1. Pin the exact review subject.
-2. Run `ocr delegate preview` with `.opencodereview/rule.json`.
-3. Record included and excluded paths.
-4. Run `ocr delegate rule` for the reviewable paths.
-5. Inspect the exact diff and only necessary surrounding context.
-6. Preserve the tool output and cryptographic identity as required CI evidence.
-7. Keep tests, runtime proof, security scanners, and product decisions separate.
+1. Pin the exact subject being inspected.
+2. Run only the minimum OCR operation needed (`preview`, `rules`, `audit`, or `verify`).
+3. Preserve exact scope, rules, diff/context and tool identity when materially relevant.
+4. Map any material finding to the current Stage-A systemic catastrophe, Stage-B root, or an independently classified finding.
+5. Keep OCR limitations explicit; deterministic review context does not prove semantic correctness.
 
-OpenCodeReview may not mutate source during inspection and may not self-promote its output into semantic approval.
+There is no required `.github/workflows/open-code-review.yml` authority on `h`. If a future workflow invokes OCR, that workflow must independently re-earn unique assurance value under the orchestrator and remains an evidence producer only.
