@@ -11,8 +11,8 @@ import {
   spacing,
   radius,
 } from '@bthwani/ui-kit';
-import { fetchPartnerTaxonomy } from '../../shared/catalog';
-import type { CentralCatalogDomain, CentralCatalogNode } from '../../shared/catalog';
+import { fetchPartnerTaxonomy } from '../../catalog';
+import type { CentralCatalogDomain, CentralCatalogNode } from '../../catalog';
 
 export type CategoryManagementScreenProps = {
   storeId: string;
