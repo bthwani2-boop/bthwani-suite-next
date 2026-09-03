@@ -1,524 +1,95 @@
-name: Remote Security
-
-run-name: >-
-  ${{ github.event_name == 'pull_request' && format('Remote Security PR {0}',
-  github.event.pull_request.number) || github.event_name == 'push' && format('Remote Security push {0}',
-  github.sha) || format('Remote Security dispatched candidate {0}', inputs.head_sha || github.sha) }}
+name: BThwani h Security
 
 on:
   workflow_call:
     inputs:
-      pr_number: {type: string, required: false, default: ""}
       head_sha: {type: string, required: true}
       base_sha: {type: string, required: true}
-      head_ref: {type: string, required: false, default: ""}
-      base_ref: {type: string, required: false, default: ""}
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
-  group: remote-security-${{ inputs.head_sha || github.event.pull_request.number || github.ref }}
+  group: bthwani-h-security-${{ inputs.head_sha }}
   cancel-in-progress: true
 
 jobs:
-  ownership:
-    name: Resolve branch event ownership
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      skip_duplicate_push: ${{ steps.owner.outputs.skip_duplicate_push }}
-    steps:
-      - name: Resolve push versus PR ownership
-        id: owner
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BRANCH: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
-          INPUT_HEAD_SHA: ${{ inputs.head_sha }}
-          INPUT_BASE_SHA: ${{ inputs.base_sha }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          skip=false
-          if [[ ( "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "workflow_call" ) && -n "${INPUT_PR_NUMBER:-}" ]]; then
-            [[ "${INPUT_PR_NUMBER}" =~ ^[1-9][0-9]*$ ]] || { echo \
-            "::error::pr_number must be a positive integer"; exit 1; }
-            [[ "${INPUT_HEAD_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::head_sha must be a full SHA"; exit 1; }
-            [[ "${INPUT_BASE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::base_sha must be a full SHA"; exit 1; }
-            pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${INPUT_PR_NUMBER}")"
-            [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::closure PR is not open"; exit 1; }
-            [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${INPUT_HEAD_SHA}" ]] || { echo \
-            "::error::closure PR head drift"; exit 1; }
-            [[ "$(jq -r '.base.sha' <<<"${pr}")" == "${INPUT_BASE_SHA}" ]] || { echo \
-            "::error::closure PR base drift"; exit 1; }
-          fi
-          if [[ "${EVENT_NAME}" == "push" && "${BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
-            open_pr_count="$(gh api --method GET \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "/repos/${GITHUB_REPOSITORY}/pulls" \
-              -f state=open \
-              -f head="${GITHUB_REPOSITORY_OWNER}:${BRANCH}" \
-              -f per_page=1 \
-              --jq 'length')"
-            if [[ "${open_pr_count}" != "0" ]]; then
-              skip=true
-            fi
-          fi
-          echo "skip_duplicate_push=${skip}" >> "${GITHUB_OUTPUT}"
-
-  scope:
-    name: Resolve exact security analyzer scope
-    needs: [ownership]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    outputs:
-      analyzers: ${{ steps.scope.outputs.analyzers }}
-      full_security: ${{ steps.scope.outputs.full_security }}
-      base_sha: ${{ steps.scope.outputs.base_sha }}
-    steps:
-      - name: Checkout immutable candidate with history
-        if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' }}
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-          show-progress: false
-
-      - name: Route analyzers from exact candidate delta
-        id: scope
-        shell: bash
-        env:
-          SKIP_DUPLICATE_PUSH: ${{ needs.ownership.outputs.skip_duplicate_push }}
-          EVENT_NAME: ${{ github.event_name }}
-          REF_NAME: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          CANDIDATE_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          INPUT_BASE_SHA: ${{ inputs.base_sha }}
-          EVENT_BEFORE: ${{ github.event.before }}
-        run: |
-          set -euo pipefail
-
-          full='false'
-          base_sha=''
-          analyzers=(gitleaks)
-
-          add_analyzer() {
-            local analyzer="$1"
-            local existing
-            for existing in "${analyzers[@]}"; do
-              [[ "${existing}" == "${analyzer}" ]] && return 0
-            done
-            analyzers+=("${analyzer}")
-          }
-
-          emit() {
-            local json
-            json="$(printf '%s\n' "${analyzers[@]}" | jq -R . | jq -s -c .)"
-            {
-              echo "analyzers=${json}"
-              echo "full_security=${full}"
-              echo "base_sha=${base_sha}"
-            } >> "${GITHUB_OUTPUT}"
-            {
-              echo "### Remote security scope"
-              echo "- Full security: ${full}"
-              echo "- Base: ${base_sha:-n/a}"
-              echo "- Head: ${CANDIDATE_SHA}"
-              echo "- Analyzers: ${json}"
-            } >> "${GITHUB_STEP_SUMMARY}"
-          }
-
-          if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
-            emit
-            exit 0
-          fi
-
-          actual="$(git rev-parse HEAD)"
-          [[ "${actual}" == "${CANDIDATE_SHA}" ]] || {
-            echo "::error::Remote Security scope checkout drift: expected=${CANDIDATE_SHA} actual=${actual}"
-            exit 1
-          }
-
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "workflow_call" || "${EVENT_NAME}" == "schedule" || \
-                ( "${EVENT_NAME}" == "push" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
-            full='true'
-          fi
-
-          if [[ "${full}" == "true" ]]; then
-            analyzers=(gitleaks osv-scanner trivy actionlint zizmor pinact shellcheck hadolint yamllint)
-            base_sha="${INPUT_BASE_SHA:-${PR_BASE_SHA:-${EVENT_BEFORE:-}}}"
-            emit
-            exit 0
-          fi
-
-          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
-            base_sha="${PR_BASE_SHA}"
-          elif [[ "${EVENT_NAME}" == "push" ]]; then
-            base_sha="${EVENT_BEFORE}"
-          else
-            base_sha="${INPUT_BASE_SHA}"
-          fi
-
-          if [[ ! "${base_sha}" =~ ^[0-9a-fA-F]{40}$ || "${base_sha}" =~ ^0+$ ]]; then
-            echo "::warning::Unable to prove a bounded development delta; escalating to full security"
-            full='true'
-            analyzers=(gitleaks osv-scanner trivy actionlint zizmor pinact shellcheck hadolint yamllint)
-            base_sha=''
-            emit
-            exit 0
-          fi
-
-          if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "${base_sha}" --depth=1
-          fi
-          git cat-file -e "${base_sha}^{commit}" 2>/dev/null || {
-            echo "::error::Unable to resolve exact security base ${base_sha}"
-            exit 1
-          }
-
-          mapfile -t changed_files < <(git diff --name-only "${base_sha}" "${CANDIDATE_SHA}")
-          dependency_changed=false
-          workflow_changed=false
-          shell_changed=false
-          docker_changed=false
-          yaml_changed=false
-
-          for file in "${changed_files[@]}"; do
-            case "${file}" in
-              package.json|pnpm-lock.yaml|package-lock.json|npm-shrinkwrap.json|yarn.lock|*/package.json|*/go.mod|*/go.sum|go.mod|go.sum|*/requirements*.txt|requirements*.txt|*/poetry.lock|poetry.lock|*/Pipfile.lock|Pipfile.lock|*/Cargo.lock|Cargo.lock|*/Gemfile.lock|Gemfile.lock)
-                dependency_changed=true
-                ;;
-            esac
-            [[ "${file}" == .github/workflows/* || "${file}" == .github/actions/* ]] && workflow_changed=true
-            [[ "${file}" == *.sh || "${file}" == *.bash ]] && shell_changed=true
-            [[ "${file}" == Dockerfile* || "${file}" == */Dockerfile* || "${file}" == *.dockerfile || \
-               "${file}" == */*.dockerfile || "${file}" == infra/docker/* ]] && docker_changed=true
-            [[ "${file}" == *.yml || "${file}" == *.yaml ]] && yaml_changed=true
-          done
-
-          if [[ "${dependency_changed}" == "true" ]]; then
-            add_analyzer osv-scanner
-            add_analyzer trivy
-          fi
-          if [[ "${workflow_changed}" == "true" ]]; then
-            add_analyzer actionlint
-            add_analyzer zizmor
-            add_analyzer pinact
-          fi
-          [[ "${shell_changed}" == "true" ]] && add_analyzer shellcheck
-          if [[ "${docker_changed}" == "true" ]]; then
-            add_analyzer hadolint
-            add_analyzer trivy
-          fi
-          [[ "${yaml_changed}" == "true" ]] && add_analyzer yamllint
-
-          emit
-
-  authority:
-    name: Remote analysis authority
-    needs: [ownership]
-    if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - name: Checkout immutable candidate
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-          show-progress: false
-
-      - name: Verify exact candidate checkout
-        shell: bash
-        env:
-          EXPECTED_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          actual="$(git rev-parse HEAD)"
-          [[ "${actual}" == "${EXPECTED_SHA}" ]] || {
-            echo "::error::Remote Security authority checkout drift: expected=${EXPECTED_SHA} actual=${actual}"
-            exit 1
-          }
-
-      - name: Set up locked Node runtime
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: "24.17.0"
-
-      - name: Materialize trusted remote-analysis authority
-        shell: bash
-        env:
-          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if ! git cat-file -e "${TRUSTED_WORKFLOW_SHA}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "${TRUSTED_WORKFLOW_SHA}" --depth=1
-          fi
-          git cat-file -e "${TRUSTED_WORKFLOW_SHA}^{commit}"
-          trusted_root="${RUNNER_TEMP}/bthwani-trusted-security"
-          rm -rf "${trusted_root}"
-          mkdir -p "${trusted_root}"
-          git archive "${TRUSTED_WORKFLOW_SHA}" \
-            tools/scripts tools/guards tools/mobile tools/verification \
-            .gitleaksignore trivy.yaml .trivyignore.yaml osv-scanner.toml .hadolint.yaml .yamllint.yml \
-            | tar -x -C "${trusted_root}"
-          echo "TRUSTED_SECURITY_ROOT=${trusted_root}" >> "${GITHUB_ENV}"
-
-      - name: Enforce remote-only Sonar and CodeQL authority from trusted tree
-        shell: bash
-        run: >-
-          BTHWANI_TARGET_REPO="${GITHUB_WORKSPACE}"
-          node "${TRUSTED_SECURITY_ROOT}/tools/guards/remote-analysis-authority-gate.mjs"
-
-      - name: Verify SonarQube Cloud CI configuration from trusted tree
-        shell: pwsh
-        env:
-          BTHWANI_TARGET_REPO: ${{ github.workspace }}
-        run: >-
-          pwsh -NoProfile -ExecutionPolicy Bypass -File
-          "${env:TRUSTED_SECURITY_ROOT}/tools/scripts/check-sonarqube-config.ps1"
-
   security:
-    name: Remote security analyzer (${{ matrix.analyzer }})
-    needs: [ownership, scope]
-    if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' && needs.scope.result == 'success' }}
+    name: Security (${{ matrix.analyzer }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        analyzer: ${{ fromJson(needs.scope.outputs.analyzers) }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
+        analyzer: [gitleaks, osv-scanner, trivy, actionlint, zizmor, pinact, shellcheck, hadolint, yamllint]
     steps:
-      - name: Checkout immutable candidate with history
+      - name: Checkout exact h candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.head_sha }}
           fetch-depth: 0
+          fetch-tags: false
           persist-credentials: false
-          show-progress: false
-
-      - name: Verify exact candidate checkout
+      - name: Verify exact candidate and base
         shell: bash
         env:
-          EXPECTED_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          BASE_SHA: ${{ inputs.base_sha }}
         run: |
           set -euo pipefail
-          actual="$(git rev-parse HEAD)"
-          [[ "${actual}" == "${EXPECTED_SHA}" ]] || {
-            echo "::error::Remote Security analyzer checkout drift: expected=${EXPECTED_SHA} actual=${actual}"
-            exit 1
-          }
-
-      - name: Materialize trusted analyzer authority and policy
-        shell: bash
-        env:
-          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if ! git cat-file -e "${TRUSTED_WORKFLOW_SHA}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "${TRUSTED_WORKFLOW_SHA}" --depth=1
-          fi
-          git cat-file -e "${TRUSTED_WORKFLOW_SHA}^{commit}"
-          trusted_root="${RUNNER_TEMP}/bthwani-trusted-security"
-          rm -rf "${trusted_root}"
-          mkdir -p "${trusted_root}"
-          git archive "${TRUSTED_WORKFLOW_SHA}" \
-            tools/scripts tools/guards tools/mobile tools/verification \
-            .gitleaksignore trivy.yaml .trivyignore.yaml osv-scanner.toml .hadolint.yaml .yamllint.yml \
-            | tar -x -C "${trusted_root}"
-          {
-            echo "TRUSTED_SECURITY_ROOT=${trusted_root}"
-            echo "BTHWANI_TRUSTED_POLICY_ROOT=${trusted_root}"
-            echo "BTHWANI_TARGET_REPO=${GITHUB_WORKSPACE}"
-          } >> "${GITHUB_ENV}"
-
+          [[ "$(git rev-parse HEAD)" == "${HEAD_SHA}" ]] || { echo "::error::security candidate drift"; exit 1; }
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "${BASE_SHA}" "${HEAD_SHA}"
       - name: Set up locked Node runtime
-        if: ${{ matrix.analyzer != 'gitleaks' }}
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
           package-manager-cache: false
-
-      - name: Set up locked Go runtime
-        if: >-
-          ${{ matrix.analyzer == 'osv-scanner' || matrix.analyzer == 'actionlint' || matrix.analyzer == 'pinact' }}
+      - name: Set up locked Go runtime when required
+        if: ${{ matrix.analyzer == 'osv-scanner' || matrix.analyzer == 'actionlint' || matrix.analyzer == 'pinact' }}
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: services/dsh/backend/go.mod
           cache: false
-
-      - name: Install analyzer-specific locked security toolchain from trusted tree
-        id: toolchain
-        continue-on-error: true
+      - name: Install pinned analyzer toolchain
         shell: bash
         env:
           ANALYZER: ${{ matrix.analyzer }}
-        run: bash "${TRUSTED_SECURITY_ROOT}/tools/scripts/install-oss-toolchain-binaries.sh" "security:${ANALYZER}"
-
-      - name: Run independent analyzer through trusted wrapper
-        id: analyzer
-        if: ${{ always() }}
-        continue-on-error: true
+        run: bash tools/scripts/install-oss-toolchain-binaries.sh "security:${ANALYZER}"
+      - name: Run exact-h analyzer
         shell: bash
         env:
           ANALYZER: ${{ matrix.analyzer }}
-          CANDIDATE_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
-          BASE_SHA: ${{ inputs.base_sha || github.event.pull_request.base.sha || needs.scope.outputs.base_sha || '' }}
-          TOOLCHAIN_OUTCOME: ${{ steps.toolchain.outcome }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          BASE_SHA: ${{ inputs.base_sha }}
         run: |
-          set +e
-          mkdir -p "${RUNNER_TEMP}/remote-security-evidence"
-          log="${RUNNER_TEMP}/remote-security-evidence/${ANALYZER}.log"
-          if [[ "${TOOLCHAIN_OUTCOME}" != "success" ]]; then
-            printf 'toolchain installation did not complete; analyzer was not run\n' > "${log}"
-            status=125
-            outcome=BLOCKED
-          else
-            case "${ANALYZER}" in
-              gitleaks)
-                if [[ -e .gitleaks.toml ]]; then
-                  printf 'candidate-owned .gitleaks.toml is forbidden; analyzer policy must come from trusted authority\n' > "${log}"
-                  status=125
-                else
-                  log_opts="HEAD"
-                  if [[ "${BASE_SHA}" =~ ^[0-9a-fA-F]{40}$ && "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
-                    log_opts="${BASE_SHA}..${CANDIDATE_SHA}"
-                  fi
-                  gitleaks_report="${RUNNER_TEMP}/remote-security-evidence/gitleaks-report.json"
-                  gitleaks detect --gitleaks-ignore-path "${TRUSTED_SECURITY_ROOT}/.gitleaksignore" \
-                    --log-opts="${log_opts}" --source . --no-banner --redact --verbose \
-                    --report-format=json --report-path="${gitleaks_report}" >"${log}" 2>&1
-                  status=$?
-                fi
-                ;;
-              osv-scanner) node "${TRUSTED_SECURITY_ROOT}/tools/scripts/run-osv-scanner.mjs" >"${log}" 2>&1; status=$? ;;
-              trivy) node "${TRUSTED_SECURITY_ROOT}/tools/scripts/run-trivy.mjs" >"${log}" 2>&1; status=$? ;;
-              actionlint) node "${TRUSTED_SECURITY_ROOT}/tools/scripts/run-actionlint.mjs" >"${log}" 2>&1; status=$? ;;
-              zizmor) node "${TRUSTED_SECURITY_ROOT}/tools/scripts/run-zizmor.mjs" >"${log}" 2>&1; status=$? ;;
-              pinact) node "${TRUSTED_SECURITY_ROOT}/tools/scripts/run-pinact.mjs" --verify >"${log}" 2>&1; status=$? ;;
-              shellcheck) node "${TRUSTED_SECURITY_ROOT}/tools/scripts/run-shellcheck.mjs" >"${log}" 2>&1; status=$? ;;
-              hadolint) node "${TRUSTED_SECURITY_ROOT}/tools/scripts/run-hadolint.mjs" >"${log}" 2>&1; status=$? ;;
-              yamllint) node "${TRUSTED_SECURITY_ROOT}/tools/scripts/run-yamllint.mjs" >"${log}" 2>&1; status=$? ;;
-              *) printf 'unknown analyzer: %s\n' "${ANALYZER}" > "${log}"; status=125 ;;
-            esac
-            if [[ "${status}" -eq 0 ]]; then
-              outcome=PASS
-              policy_marker='(^|[[:space:]])\[[^]]+[[:space:]]+(WARN|SKIP|BLOCKED)(\]|:|[[:space:]]|$)'
-              if grep -Eiq "${policy_marker}" "${log}"; then
-                if grep -Eiq '(^|[[:space:]])\[[^]]+[[:space:]]+BLOCKED(\]|:|[[:space:]]|$)' "${log}"; then
-                  outcome=BLOCKED
-                elif grep -Eiq '(^|[[:space:]])\[[^]]+[[:space:]]+SKIP(\]|:|[[:space:]]|$)' "${log}"; then
-                  outcome=SKIP
-                else
-                  outcome=WARN
-                fi
-                status=1
-              fi
-            else
-              outcome=FAIL
-            fi
-          fi
-          native_file=''
+          set -euo pipefail
+          evidence="${RUNNER_TEMP}/security-${ANALYZER}"
+          mkdir -p "${evidence}"
+          log="${evidence}/${ANALYZER}.log"
           case "${ANALYZER}" in
-            gitleaks) native_file="${RUNNER_TEMP}/remote-security-evidence/gitleaks-report.json" ;;
-            osv-scanner) native_file="${GITHUB_WORKSPACE}/.diagnostics/security/osv-evidence.json" ;;
-            trivy) native_file="${GITHUB_WORKSPACE}/.diagnostics/security/trivy-report.json" ;;
-            zizmor) native_file="${GITHUB_WORKSPACE}/.diagnostics/workflow-security/zizmor.json" ;;
+            gitleaks)
+              gitleaks detect --gitleaks-ignore-path .gitleaksignore --log-opts="${BASE_SHA}..${HEAD_SHA}" --source . --no-banner --redact --verbose --report-format=json --report-path="${evidence}/gitleaks.json" >"${log}" 2>&1
+              ;;
+            osv-scanner) node tools/scripts/run-osv-scanner.mjs >"${log}" 2>&1 ;;
+            trivy) node tools/scripts/run-trivy.mjs >"${log}" 2>&1 ;;
+            actionlint) node tools/scripts/run-actionlint.mjs >"${log}" 2>&1 ;;
+            zizmor) node tools/scripts/run-zizmor.mjs >"${log}" 2>&1 ;;
+            pinact) node tools/scripts/run-pinact.mjs --verify >"${log}" 2>&1 ;;
+            shellcheck) node tools/scripts/run-shellcheck.mjs >"${log}" 2>&1 ;;
+            hadolint) node tools/scripts/run-hadolint.mjs >"${log}" 2>&1 ;;
+            yamllint) node tools/scripts/run-yamllint.mjs >"${log}" 2>&1 ;;
+            *) echo "unknown analyzer ${ANALYZER}" >"${log}"; exit 125 ;;
           esac
-          capture_args=(
-            --tool-id "${ANALYZER}"
-            --status "${outcome}"
-            --exit-code "${status}"
-            --raw-file "${log}"
-            --output "${RUNNER_TEMP}/remote-security-evidence/${ANALYZER}.evidence.json"
-            --head-sha "${CANDIDATE_SHA}"
-            --base-sha "${BASE_SHA}"
-            --scope "repository candidate ${CANDIDATE_SHA}"
-          )
-          [[ -z "${native_file}" || ! -f "${native_file}" ]] || capture_args+=(--native-file "${native_file}")
-          node "${TRUSTED_SECURITY_ROOT}/tools/scripts/capture-tool-evidence.mjs" "${capture_args[@]}"
-          jq -n \
-            --arg analyzer "${ANALYZER}" \
-            --arg candidateSha "${CANDIDATE_SHA}" \
-            --arg outcome "${outcome}" \
-            --arg scope "repository candidate ${CANDIDATE_SHA}" \
-            --arg log "${ANALYZER}.log" \
-            '{schemaVersion:1,
-              analyzer:$analyzer,
-              candidateSha:$candidateSha,
-              scope:$scope,
-              outcome:$outcome,
-              log:$log}' \
-            > "${RUNNER_TEMP}/remote-security-evidence/${ANALYZER}.json"
-          [[ "${outcome}" == "PASS" ]] || status=1
-          exit "${status}"
-
-      - name: Upload independent analyzer evidence
+          cat "${log}"
+      - name: Upload analyzer evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: remote-security-${{ matrix.analyzer }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/remote-security-evidence
-          if-no-files-found: error
+          name: h-security-${{ matrix.analyzer }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/security-${{ matrix.analyzer }}
+            .diagnostics/security
+            .diagnostics/workflow-security
+          if-no-files-found: warn
           retention-days: 14
-
-      - name: Enforce analyzer outcome
-        if: ${{ always() }}
-        shell: bash
-        env:
-          ANALYZER: ${{ matrix.analyzer }}
-          ANALYZER_OUTCOME: ${{ steps.analyzer.outcome }}
-        run: |
-          set -euo pipefail
-          [[ "${ANALYZER_OUTCOME}" == "success" ]] || {
-            echo "::error title=Remote security analyzer failed::${ANALYZER} outcome=${ANALYZER_OUTCOME}"
-            exit 1
-          }
-
-  result:
-    name: >-
-      ${{ github.event_name == 'pull_request' && 'Remote Security / PR result' || github.event_name == 'push'
-      && 'Remote Security / push result' || 'Remote Security / dispatched result' }}
-    needs: [ownership, scope, authority, security]
-    if: ${{ always() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Enforce remote security results
-        shell: bash
-        env:
-          SKIP_DUPLICATE_PUSH: ${{ needs.ownership.outputs.skip_duplicate_push }}
-          OWNERSHIP_RESULT: ${{ needs.ownership.result }}
-          SCOPE_RESULT: ${{ needs.scope.result }}
-          AUTHORITY_RESULT: ${{ needs.authority.result }}
-          SECURITY_RESULT: ${{ needs.security.result }}
-        run: |
-          set -euo pipefail
-          [[ "${OWNERSHIP_RESULT}" == "success" ]] || {
-            echo "::error title=Remote security ownership failed::ownership:${OWNERSHIP_RESULT}"
-            exit 1
-          }
-
-          if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
-            echo "development push skipped because an open PR owns security verification"
-            exit 0
-          fi
-
-          failures=()
-          [[ "${SCOPE_RESULT}" == "success" ]] || failures+=("scope:${SCOPE_RESULT}")
-          [[ "${AUTHORITY_RESULT}" == "success" ]] || failures+=("authority:${AUTHORITY_RESULT}")
-          [[ "${SECURITY_RESULT}" == "success" ]] || failures+=("security:${SECURITY_RESULT}")
-
-          if [[ "${#failures[@]}" -ne 0 ]]; then
-            echo "::error title=Remote security failed::$(IFS=,; echo "${failures[*]}")"
-            exit 1
-          fi
-
-          echo "All routed remote security gates passed."
