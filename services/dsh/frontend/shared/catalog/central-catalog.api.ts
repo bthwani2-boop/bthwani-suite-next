@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { corrId, createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
 import type { operations } from "../../../clients/generated/dsh-api";
 import type { CentralCatalogDomain, CentralCatalogNode, MasterProduct, ProductProposal, StoreAssortment, CatalogAsset, CatalogAssetLink, AssetUploadIntent, AssetUploadIntentInput, SeedStatus, StoreAssortmentMetadataInput, StoreAssortmentInventory, StoreAssortmentPrice, StoreAssortmentCommercialReadback } from "./central-catalog.types";
 
@@ -39,7 +39,6 @@ type PriceResponse = JsonResponse<"createPartnerStoreAssortmentPrice", 200>;
 
 const baseUrl = resolveDshApiBaseUrl();
 const { request } = createDshHttpClient(baseUrl, "central-catalog-corr");
-const { request: publicRequest } = createDshPublicHttpClient(baseUrl);
 
 // ─── Operator APIs ────────────────────────────────────────────────────────────
 
@@ -401,7 +400,8 @@ export async function createPartnerProductProposal(input: {
   if (!storeId) {
     throw new Error("storeId is required for partner product proposals");
   }
-  const { storeId: _storeId, idempotencyKey, ...requestBody } = input;
+  const { storeId: ignoredStoreId, idempotencyKey, ...requestBody } = input;
+  void ignoredStoreId;
   const resp = await request<JsonResponse<"createPartnerProductProposal", 201>>(
     `/dsh/partner/catalog/product-proposals?storeId=${encodeURIComponent(storeId)}`,
     {
@@ -579,8 +579,7 @@ export async function putEntityImage(
       endpoint = `/dsh/operator/catalog/product-proposals/${encodedEntityId}/images/${encodedRole}`;
       break;
     default: {
-      const exhaustive: never = entityType;
-      throw new Error(`Unsupported catalog entity type: ${exhaustive}`);
+      throw new Error("Unsupported catalog entity type");
     }
   }
 

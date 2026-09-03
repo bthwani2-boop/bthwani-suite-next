@@ -1,11 +1,10 @@
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { corrId, createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
 import type { GovernedReel, GovernedReelReviewInput, GovernedReelSubmissionInput } from "./reels.types";
 
 const baseUrl = resolveDshApiBaseUrl();
 const { request } = createDshHttpClient(baseUrl, "reels-corr");
-const { request: publicRequest } = createDshPublicHttpClient(baseUrl);
 
 export async function submitGovernedReel(
   input: GovernedReelSubmissionInput,
@@ -82,4 +81,3 @@ export async function fetchOperatorReelMediaBlob(
   }
   return response.blob();
 }
-

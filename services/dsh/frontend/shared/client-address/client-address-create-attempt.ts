@@ -1,4 +1,3 @@
-import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
 import { resolveMutationIdentityScope } from "@bthwani/data-runtime/mutation-identity-scope";
 import type { DshAddressMutationContext, DshClientAddressDraft } from "./client-address.types";
 import { secureRandomId } from "../_kernel/secure-random.ts";

@@ -1,8 +1,6 @@
-import type { CatalogSubmission } from "./catalog.types";
 import type { CatalogState } from "./client-catalog.types";
 import {
   catalogErrorState,
-  catalogLoadingState,
   catalogPermissionDeniedState,
 } from "./catalog.states";
 

@@ -18,8 +18,6 @@ import {
   classifyCartLoad,
   classifyCartLoadError,
   classifyServiceability,
-  resolveQuantityRemoval,
-  shouldLoadCart,
 } from "./cart.policy";
 
 export { resolveQuantityRemoval, shouldLoadCart } from "./cart.policy";

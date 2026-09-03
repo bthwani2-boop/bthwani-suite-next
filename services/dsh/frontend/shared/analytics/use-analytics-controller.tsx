@@ -5,7 +5,6 @@ import {
   fetchDeliveryAnalytics,
   fetchSupportAnalytics,
   fetchStoreAnalytics,
-  fetchPartnerPerformance,
 } from "./analytics.api";
 import {
   platformKpisIdle, platformKpisLoading, platformKpisSuccess, platformKpisError,
@@ -13,7 +12,6 @@ import {
   deliveryAnalyticsIdle, deliveryAnalyticsLoading, deliveryAnalyticsSuccess, deliveryAnalyticsError,
   supportAnalyticsIdle, supportAnalyticsLoading, supportAnalyticsSuccess, supportAnalyticsError,
   storeAnalyticsIdle, storeAnalyticsLoading, storeAnalyticsSuccess, storeAnalyticsError,
-  partnerPerfIdle, partnerPerfLoading, partnerPerfSuccess, partnerPerfError,
 } from "./analytics.states";
 import type { DshAnalyticsPeriod } from "./analytics.types";
 
@@ -64,30 +62,4 @@ export function useOperatorAnalyticsDashboardController(authKind = "unauthentica
   const reload = useCallback(() => void load(period), [load, period]);
 
   return { platformState, orderState, deliveryState, supportState, storeState, reload };
-}
-
-function usePartnerPerformanceController(
-  authKind = "unauthenticated",
-  period: DshAnalyticsPeriod = "today",
-  storeId = "",
-) {
-  const [state, setState] = useState(partnerPerfIdle());
-
-  const load = useCallback(async (p: DshAnalyticsPeriod) => {
-    setState(partnerPerfLoading());
-    try {
-      const data = await fetchPartnerPerformance(p, storeId);
-      setState(partnerPerfSuccess(data));
-    } catch (err) {
-      setState(partnerPerfError(resolveMessage(err)));
-    }
-  }, [storeId]);
-
-  useEffect(() => {
-    if (isAuthenticated(authKind)) void load(period);
-  }, [authKind, period, load]);
-
-  const reload = useCallback(() => void load(period), [load, period]);
-
-  return { state, reload };
 }

@@ -1,4 +1,4 @@
-import type { DshPlatformKpis, DshOrderAnalytics, DshDeliveryAnalytics, DshPartnerPerformance, DshStoreAnalytics } from "./analytics.types";
+import type { DshPlatformKpis, DshOrderAnalytics, DshDeliveryAnalytics, DshStoreAnalytics } from "./analytics.types";
 
 export type DshPlatformKpisViewModel = {
   readonly fulfillmentRate: string;
@@ -96,24 +96,6 @@ export function buildStoreAnalyticsViewModel(data: DshStoreAnalytics): DshStoreA
   const healthTone = readinessRate >= 80 ? "success" : readinessRate >= 50 ? "warning" : "danger";
   return {
     readinessRate: `${readinessRate}%`,
-    healthTone,
-  };
-}
-
-export type DshPartnerPerformanceViewModel = {
-  readonly acceptanceRate: string;
-  readonly rejectionRate: string;
-  readonly healthTone: "success" | "warning" | "danger";
-};
-
-function buildPartnerPerformanceViewModel(data: DshPartnerPerformance): DshPartnerPerformanceViewModel {
-  const total = data.totalOrders;
-  const acceptanceRate = total > 0 ? Math.round((data.acceptedOrders / total) * 100) : 0;
-  const rejectionRate = total > 0 ? Math.round((data.rejectedOrders / total) * 100) : 0;
-  const healthTone = acceptanceRate >= 90 ? "success" : acceptanceRate >= 70 ? "warning" : "danger";
-  return {
-    acceptanceRate: `${acceptanceRate}%`,
-    rejectionRate: `${rejectionRate}%`,
     healthTone,
   };
 }
