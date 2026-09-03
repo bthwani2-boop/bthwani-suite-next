@@ -1,6 +1,6 @@
-import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { corrId } from "../_kernel/dsh-http-request";
-import type { DshMediaAsset } from "../media/dsh-media-api.client";
+import { resolveDshApiBaseUrl } from "../shared/_kernel/dsh-api-base-url";
+import { corrId } from "../shared/_kernel/dsh-http-request";
+import type { DshMediaAsset } from "../shared/media/dsh-media-api.client";
 import { uploadCatalogBinary } from "./catalog-binary-upload.adapter";
 import {
   completeAssetUpload,
