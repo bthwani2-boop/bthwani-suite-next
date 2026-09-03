@@ -1,11 +1,11 @@
 # H Live Refoundation, Migration and Destructive Cleanup
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: canonical implementation, highest-granularity refoundation, migration, cutover, deletion, recursive pruning and structural finishing.
+Owner: Stage-A systemic baseline refoundation, Stage-B canonical implementation, highest-granularity reconstruction, migration, cutover, deletion, recursive pruning and structural finishing.
 
 ## 1. Execution law
 
-Once diagnosis selects the highest correct execution unit, implement the canonical target at that granularity.
+Once diagnosis selects the highest correct execution unit permitted by the current campaign stage, implement the canonical target at that granularity.
 
 ```text
 ROOT_CORRECTNESS > DIFF_SIZE
@@ -13,10 +13,63 @@ CANONICAL_BOUNDARY > CURRENT_BOUNDARY
 COMPLETE_CUTOVER > COMPATIBILITY_LAYER
 DELETE_LOSER > KEEP_IN_SYNC
 REFOUNDATION > PATCH_STACK
-WHOLE-SURFACE REFOUNDATION > MANY LOCAL PATCHES WHEN THE SURFACE IS THE ROOT
+WHOLE-SURFACE REFOUNDATION > MANY LOCAL PATCHES WHEN THE SURFACE IS THE CAUSE
+SYSTEMIC_FOUNDATION_REFOUNDATION > REPEATED_ROOT_TAX
 ```
 
 Do not preserve structure to reduce immediate effort.
+
+Stage B normal roots cannot be used to evade an executable Stage-A systemic catastrophe.
+
+## 1.1 Stage-A systemic refoundation execution law
+
+Stage A exists to make the branch a trustworthy substrate on which normal roots can later be closed.
+
+For every selected systemic catastrophe execute the complete shared causal cone, not one visible descendant symptom:
+
+```text
+SALVAGE REQUIRED TRUTH
+→ ESTABLISH WINNING CANONICAL SHARED FOUNDATION / OWNER / WRITER / BOUNDARY
+→ BUILD THE MINIMUM NECESSARY CANONICAL CONTAINER SET
+→ MIGRATE AFFECTED DATA / CONTRACTS / GENERATED LINEAGE
+→ MIGRATE ALL MATERIAL WRITERS
+→ MIGRATE ALL MATERIAL READERS / CONSUMERS / ROOT FAMILIES
+→ CUT OVER RUNTIME / ROUTES / CONFIG / NAVIGATION / WORKSPACES AS APPLICABLE
+→ DISABLE OLD WRITES
+→ PROVE ZERO OLD READERS / CONSUMERS / REGISTRATIONS
+→ DELETE LOSING SHARED AUTHORITIES
+→ DELETE LOSING PACKAGES / SERVICES / SUBTREES / CONTROL SURFACES
+→ DELETE LEGACY / COMPAT / BRIDGE / FORWARDER / REEXPORT / ALIAS / COMPENSATION STRUCTURE
+→ REMOVE MANIFEST / DEPENDENCY / LOCKFILE / CONFIG RESIDUE
+→ PRUNE PARENTS UPWARD
+→ REFOUND ADMISSION / PREVENTION
+→ VERIFY SYSTEMIC NEGATIVE SPACE
+→ RE-CENSUS THE BRANCH-WIDE SYSTEMIC FRONTIER
+```
+
+A Stage-A treatment is incomplete if the shared defect no longer fails locally but still taxes later roots through surviving topology, compatibility or duplicated authority.
+
+## 1.2 Delete-and-minimal-recreate preference for structurally invalid surfaces
+
+When evidence shows that a surface/subtree is predominantly noncanonical, duplicated, compensatory, wrong-owner or historically accreted, do not preserve its shape merely because some required value is embedded in it.
+
+Preferred treatment:
+
+```text
+FORENSICALLY EXTRACT UNIQUE REQUIRED VALUE
+→ DESIGN MINIMAL CANONICAL REPLACEMENT FROM FIRST PRINCIPLES
+→ DELETE THE NONCANONICAL SURFACE/SUBTREE AT THE HIGHEST SAFE GRANULARITY
+→ RECREATE ONLY MATERIAL THAT EARNS CANONICAL EXISTENCE
+→ MIGRATE ALL REFERENCES / CONSUMERS
+→ PROVE ZERO OLD PATH / AUTHORITY / RUNTIME REACHABILITY
+```
+
+```text
+DELETE_MORE != BETTER
+DELETE_PROVEN_LOSING_STRUCTURE_AT_MAXIMUM_SAFE_CANONICAL_GRANULARITY = REQUIRED
+```
+
+Aggressive refoundation is structural, not blind data destruction.
 
 ## 2. Preferred treatment model
 
@@ -52,6 +105,7 @@ DEAD LINE?
 → CAN THE FILE DIE OR BE ABSORBED?
 → CAN THE DIRECTORY DIE/COLLAPSE?
 → CAN THE PACKAGE/SERVICE/SUBTREE DIE?
+→ CAN THE TOP-LEVEL SURFACE DIE/BE REFOUNDED?
 → DELETE AT THE HIGHEST SAFE CANONICAL GRANULARITY
 ```
 
@@ -114,6 +168,35 @@ FORENSICALLY EXTRACT UNIQUE REQUIRED VALUE
 
 Use this for control-plane/governance/tooling/doc surfaces as readily as product code when evidence supports it.
 
+## 6.1 Systemic catastrophe treatment examples by substrate
+
+When proven as the shared cause, execute at that substrate rather than patching descendants:
+
+```text
+BAD REPOSITORY/WORKSPACE/PACKAGE TOPOLOGY
+→ REFOUND TOPOLOGY / REHOME OWNERS / DELETE LOSING WORKSPACES OR PACKAGES
+
+SHARED/CORE/COMMON OWNERSHIP REFUGE
+→ EXTRACT DOMAIN TRUTH / ESTABLISH TRUE OWNERS / DELETE SHADOW SHARED POLICY
+
+BAD DATABASE OWNERSHIP OR MIGRATION EPOCH
+→ PRESERVE DURABLE TRUTH / REFOUND EPOCH OR OWNERSHIP / CUT OVER / DELETE SHADOW AUTHORITIES
+
+DUPLICATE CONTRACT/GENERATED LINEAGE
+→ CHOOSE CANONICAL SOURCE / REGENERATE / MIGRATE CONSUMERS / DELETE MIRRORS
+
+RUNTIME/CONFIG AUTHORITY FRAGMENTATION
+→ ESTABLISH ONE CANONICAL AUTHORITY / CUT OVER REGISTRATIONS / DELETE STALE PATHS
+
+CI/ASSURANCE CONTROL-PLANE CORRUPTION
+→ DEFINE CANONICAL CLAIMS / REFOUND CONTROL PLANE / DELETE DUPLICATE OR FALSE AUTHORITIES
+
+GOVERNANCE/AGENT/TOOL AUTHORITY CONFLICT
+→ SALVAGE UNIQUE REQUIRED TRUTH / DELETE CONFLICTING SURFACE / RECREATE MINIMUM AUTHORITY
+```
+
+These are treatment shapes, not proof that any named substrate is currently defective.
+
 ## 7. Structural rewrite escalation
 
 Escalation is mandatory when a local fix would:
@@ -128,6 +211,7 @@ EXTEND A BAD MIGRATION EPOCH
 PRESERVE SUPERSEDED RUNTIME
 PRESERVE PATCH/COMPENSATION ARCHITECTURE
 PRESERVE CONFUSING GOVERNANCE/CI/TOOL AUTHORITY
+LEAVE A PROVEN SYSTEMIC ROOT_TAX IN PLACE
 ```
 
 Do not issue the local patch under those conditions.
@@ -155,6 +239,8 @@ MOVE TO archive/legacy/history
 CREATE CLEANUP BACKLOG
 LEAVE DEAD SHELL
 ```
+
+This lane is not a substitute for Stage-A systemic refoundation. High-impact shared garbage, wrong topology or parallel authority must be promoted to the systemic unit rather than chipped away through the low-risk lane.
 
 ## 9. Upward recursive pruning
 
@@ -189,7 +275,8 @@ OLD_EXPORT_NAMES=0
 OLD_BARREL_REEXPORTS=0
 OLD_INTERNAL_ALIASES=0
 OLD_ROUTE_REGISTRATIONS=0
-OLD_TEST/FIXTURE/MOCK/SNAPSHOT RESIDUE=0
+OLD_TEST/FIXTURE/MOCK/SNAPSHOT_RESIDUE=0
+OLD_WORKSPACE/MANIFEST/DEPENDENCY_RESIDUE=0
 ```
 
 Internal migration shells are forbidden by default.
@@ -203,6 +290,16 @@ Otherwise:
 ```text
 MIGRATE NOW
 → DELETE NOW
+```
+
+During Stage A especially:
+
+```text
+KEEP_JUST_IN_CASE = FORBIDDEN
+ARCHIVE_OLD_TREE = FORBIDDEN
+DEPRECATED_BUT_REACHABLE = FORBIDDEN
+OLD_AND_NEW_IN_PARALLEL = FORBIDDEN
+CLEANUP_LATER = FORBIDDEN
 ```
 
 ## 12. Durable data and database safety
@@ -256,6 +353,8 @@ DATA/STORAGE
 
 A clean backend plus disconnected frontend is open.
 
+For Stage-A shared foundations, trace every materially affected descendant root family far enough to prove that no consumer remains dependent on the losing shared authority.
+
 ## 15. File/surface finishing
 
 Every materially affected surviving file must end with:
@@ -291,7 +390,8 @@ Forbidden:
 NEW_PATH_EXISTS + OLD_PATH_REACHABLE
 NEW_WRITER_EXISTS + OLD_WRITER_ACTIVE
 NEW_CONTRACT_EXISTS + OLD_CONTRACT_REFERENCED
-MIGRATION_DONE + PERMANENT BRIDGE
+MIGRATION_DONE + PERMANENT_BRIDGE
+SYSTEMIC_FOUNDATION_REFOUNDED + OLD_SHARED_SUBSTRATE_REACHABLE
 ROOT_FIXED + CLEANUP_LATER
 ```
 
@@ -303,8 +403,20 @@ If a structural refoundation closes with zero losing structure removed, re-inves
 
 Zero deletion is acceptable only with evidence that no losing structure existed.
 
+For a Stage-A systemic catastrophe, also challenge whether the claimed treatment actually reduced the shared `ROOT_TAX`; a new foundation layered on top of the old one is not decontamination.
+
 ## 18. Checkpoints
 
 Large units may span multiple direct commits on `h`. Each checkpoint must be coherent, exact-head safe and explicitly incomplete until migration/cutover/deletion/pruning and falsification are done.
 
-Do not start an overlapping mutation unit before the active one closes or is materially blocked.
+Every checkpoint must retain:
+
+```text
+UNIT_STAGE
+UNIT_ID
+CANONICAL_TARGET
+CURRENT_MIGRATION/CUTOVER_STATE
+REMAINING_LOSER_DELETION_STATE
+```
+
+Do not start an overlapping mutation unit before the active one closes or is materially blocked. A Stage-A checkpoint never authorizes premature Stage-B entry.
