@@ -10,7 +10,7 @@ import {
   createCheckoutIntent,
   fetchCheckoutIntent,
 } from "./checkout.api";
-import { useCreateOrderTruthController } from "../order-truth/use-order-truth-controller";
+import { useCreateOrderTruthController } from "../../shared/order-truth/use-order-truth-controller";
 import type {
   DshCheckoutIntent,
   DshCheckoutTerminalReason,
