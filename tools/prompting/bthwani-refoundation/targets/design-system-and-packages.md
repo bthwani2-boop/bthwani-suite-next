@@ -60,7 +60,34 @@ Apps/services should not hardcode brand colors, typography scales, spacing syste
 
 One visual identity does not require identical implementation across platforms. Web and React Native may render differently while consuming the same semantic design language.
 
-## 4. Cohesion audit of current UI Kit
+Brand identity assets and naming must have one canonical reusable source when truly shared; app-store/app-specific icon packaging may remain with the deployable app while deriving from approved brand assets.
+
+## 4. Accessibility, directionality and responsive behavior
+
+A unified visual system is not complete if it only unifies color/components.
+
+The Design System must explicitly account for all applicable:
+
+```text
+RTL/LTR direction semantics
+Arabic-first layout correctness where required
+logical start/end spacing instead of accidental left/right coupling
+accessible contrast
+type scale/readability
+screen-reader labels/roles/state semantics
+keyboard/focus behavior on web
+minimum touch targets on mobile
+reduced-motion behavior
+responsive/breakpoint semantics on web
+safe-area/platform conventions on native
+loading/empty/error/disabled/focus/pressed states
+```
+
+Directionality primitives/tokens must not be independently reimplemented by each app or Control Panel.
+
+Accessibility semantics that belong to a domain action remain represented by the domain/presentation owner; the Design System supplies reusable accessible primitives/patterns.
+
+## 5. Cohesion audit of current UI Kit
 
 Large/mixed files such as current appearance/foundation/locales artifacts must be decomposed only by real responsibility.
 
@@ -77,7 +104,9 @@ localization of design-system-owned generic component strings
 
 Do not split only to satisfy LOC thresholds; do not preserve God Files to avoid migration.
 
-## 5. Localization ownership
+App-specific appearance preference persistence belongs to app/platform ownership unless a proven reusable technical package owns it; it must not become a second design-token authority.
+
+## 6. Localization ownership
 
 Design System may own only strings intrinsic to reusable components/patterns when necessary, for example generic accessibility/loading/control labels.
 
@@ -92,7 +121,7 @@ Store approval     → Store/Catalog owner according to actual meaning
 
 Do not turn `locales.ts` into a repository-wide translation authority.
 
-## 6. `shared/control-panel` disposition
+## 7. `shared/control-panel` disposition
 
 Decompose by responsibility:
 
@@ -114,7 +143,7 @@ Misleading domain-shaped frames with no domain semantics (for example a finance-
 
 After cutover: `shared/control-panel` is absent.
 
-## 7. `shared/data-runtime` disposition
+## 8. `shared/data-runtime` disposition
 
 Do not rename the current mixed package wholesale.
 
@@ -143,7 +172,7 @@ DOES_IT_DUPLICATE_IDENTITY_OR_DOMAIN AUTHORITY
 
 Only create a reusable package when the package admission gate passes. App-specific native implementation belongs in the app. Security/session semantics belong to Identity. Rename ambiguous concepts such as mutation-identity scope when they actually describe idempotency/install scoping rather than identity authority.
 
-## 8. Resilience disposition
+## 9. Resilience disposition
 
 Reliability behavior is required, but the current `shared/resilience` package is not automatically canonical merely because DSH/WLT import it.
 
@@ -165,12 +194,12 @@ Then choose one:
 ```text
 ADOPT_MATURE_LIBRARY_AND_DELETE_LOCAL_PACKAGE
 REFOUND_MINIMAL_LOCAL_PACKAGE_WITH_PROVEN_UNIQUE_VALUE
-ABSORB_SMALL_MECHANISM_INTO_INTEGRATION OWNER IF REUSE DOES_NOT_JUSTIFY_PACKAGE
+ABSORB_SMALL_MECHANISM_INTO_INTEGRATION OWNER IF REUSE_DOES_NOT_JUSTIFY_PACKAGE
 ```
 
 Retry/fallback/financial reconciliation policy must remain with the operation/integration owner, not in a one-size-fits-all resilience package.
 
-## 9. Package admission gate
+## 10. Package admission gate
 
 Every package under `packages/` must prove:
 
@@ -185,7 +214,25 @@ TESTABLE_IN_ISOLATION
 NAME_DESCRIBES_ACTUAL_RESPONSIBILITY
 ```
 
-## 10. Exit gate
+## 11. Design-system verification and prevention
+
+As applicable verify:
+
+```text
+token uniqueness / no duplicate semantic brand authority
+web typecheck/build
+native typecheck/build
+RTL/LTR representative rendering
+accessible-state behavior
+responsive representative rendering
+component/pattern contract tests
+visual regression or screenshot evidence for material reusable primitives/patterns
+no direct hard-coded brand-system drift in consumers where canonical tokens exist
+```
+
+Visual regression snapshots are evidence, not design truth. Obsolete snapshots tied to losing topology must be deleted/rebaselined only after the canonical visual behavior is proven.
+
+## 12. Exit gate
 
 ```text
 shared/=ABSENT
@@ -201,4 +248,7 @@ APP_SPECIFIC_NATIVE_CODE_IN_GENERIC_PACKAGE=0
 DOMAIN_TRANSLATIONS_IN_DESIGN_SYSTEM=0
 MISLEADING_CONTROL_PANEL_FRAME_NAMES=0
 UNJUSTIFIED_LOCAL_RESILIENCE_PACKAGE=0
+DUPLICATE_RTL/DIRECTION_SYSTEMS=0
+MATERIAL_ACCESSIBILITY_GAPS_IN_REUSABLE_COMPONENTS=0
+UNCONTROLLED_HARDCODED_BRAND_STYLE_DRIFT=0
 ```

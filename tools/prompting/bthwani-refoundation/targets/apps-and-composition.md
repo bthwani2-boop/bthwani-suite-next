@@ -28,6 +28,43 @@ CENSUS_PARENT_AND_RUNTIME_CONTENT
 
 For Control Panel, classify any helper scripts outside `runtime` separately; app-start helper code may stay at app root only if app-owned, otherwise move to appropriate `tools/` ownership before flattening.
 
+### 1.1 Deployable identity invariants during path flattening
+
+A repository path refoundation must not accidentally create a new mobile application identity or detach the app from its existing build/update/credential lineage.
+
+Before and after flattening every Expo app, explicitly inventory and preserve or intentionally migrate all applicable identity/configuration facts:
+
+```text
+Expo projectId / EAS project association
+slug/owner when material
+Android applicationId/package
+Android signing/credential association
+iOS bundleIdentifier
+iOS signing/credential association
+URL scheme/deep-link identity
+runtimeVersion/update URL/update channel semantics
+EAS build/update workflow project-root assumptions
+app store identity where already established
+notification/native entitlement identifiers
+Sentry/observability project binding where app-specific
+```
+
+Changing `apps/<app>/runtime` to `apps/<app>` is a repository topology change, not permission to generate a new EAS project, package ID, bundle ID, signing identity, update lineage, or app-store identity.
+
+For Control Panel and other web hosts, preserve or intentionally migrate all applicable deployment identity, environment-variable ownership, route/base-path, build-root, hosting-project, and observability bindings.
+
+Required cutover proof:
+
+```text
+OLD_PROJECT_ROOT_REFERENCES=0
+DEPLOYABLE_IDENTITY_UNINTENTIONAL_CHANGE=0
+EAS/BUILD/UPDATE_BINDINGS=PASS
+NATIVE_PACKAGE/BUNDLE_IDENTIFIERS=EXPECTED
+DEEP_LINK/SCHEME_BINDINGS=EXPECTED
+```
+
+Whether a remote rebuild/update is required is an execution-time consequence of the actual native/config/fingerprint delta and release mechanism; never infer it solely from the folder move.
+
 ## 2. Host ownership
 
 Apps own:
@@ -78,7 +115,7 @@ An independent recommendation/discovery capability is admitted only with proven 
 Settings is usually composition:
 
 ```text
-appearance/theme          → app/design-system/platform
+appearance/theme          → app preference binding + design-system token/theme authority
 language                  → localization owner
 notification preferences  → notification owner
 security/session           → Identity
@@ -217,4 +254,8 @@ GENERIC_SEARCH_AS_FALSE_DOMAIN
 NATIVE_ADAPTER_MISOWNED_BY_DOMAIN
 APP_SHAPED_DSH_EXPORTS
 OLD_WORKSPACE/EAS/CI/SCRIPT_PATHS
+UNINTENTIONAL_EAS_PROJECT_IDENTITY_CHANGE
+UNINTENTIONAL_ANDROID_PACKAGE_CHANGE
+UNINTENTIONAL_IOS_BUNDLE_ID_CHANGE
+BROKEN_UPDATE/DEEPLINK/SIGNING/OBSERVABILITY_BINDINGS
 ```

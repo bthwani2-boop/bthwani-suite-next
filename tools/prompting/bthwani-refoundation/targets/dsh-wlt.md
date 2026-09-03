@@ -97,6 +97,8 @@ Do not duplicate one working presentation merely to mirror actor names.
 
 `services/dsh/frontend/wlt-boundary` must not remain a WLT feature tree inside DSH. Move WLT-owned wallet/payment/refund/settlement/commission/payout/etc. value to WLT; retain only genuinely DSH-specific translation/orchestration under an explicit DSH integration boundary.
 
+Generic web/runtime declarations such as CSS-module typings must be owned by the actual web/app/package TypeScript runtime scope, not by DSH merely because they were historically located under `services/dsh/frontend`.
+
 ## 5. Capability naming
 
 Prefer stable semantic nouns.
@@ -203,11 +205,77 @@ CANONICAL_OPENAPI_SOURCE
 
 No manually synchronized module/operation/DTO/enum/status/action registries.
 
-WLT contract consolidation must resolve inherited overlays/actor-shaped files into real financial owners such as payment, settlement, commission, payout, pricing, collateral, and financial eligibility.
-
 Mixed runtime/evidence files such as operation-state style artifacts must re-earn a unique live responsibility; durable metadata belongs with canonical sources and proof belongs in tests/evidence.
 
 All refs resolve; duplicate operationIds/routes/conflicting schemas fail closed.
+
+### 8.1 DSH capability/security metadata convergence
+
+Current or inherited metadata/control files must re-earn existence individually rather than remaining independent truth registries merely because tooling consumes them.
+
+High-risk candidate classes include:
+
+```text
+capabilities.ts
+capability-map.ts
+surface-map.ts
+authorization-capabilities.json
+backend-route-classification.json
+service.manifest.ts
+manual operation arrays
+manual capability→permission maps
+manual surface/route capability registries
+```
+
+Canonical target:
+
+```text
+permission vocabulary/identity semantics → canonical Identity/Security owner
+server authorization enforcement         → backend/service authority
+operationId + declared security metadata  → canonical service contract when contract-level
+surface/app composition metadata          → derived consumer metadata when needed
+empty/duplicate classification artifacts  → delete
+```
+
+A manifest may survive only when it has a unique machine-consumed role that cannot be derived more safely from stronger canonical sources. Generated/derived metadata must be reproducible and non-authoritative.
+
+### 8.2 WLT inherited contract convergence candidates
+
+Do not preserve actor/consumer/lifecycle-shaped contract fragments as independent authorities. During live census, converge inherited material by actual financial owner, including when the current files still exist:
+
+```text
+payment-session capability overlay + DSH checkout handoff overlay
+→ payment
+
+settlement-operations + settlement portion of settlements/commissions fragments
+→ settlement
+
+commission portion of mixed settlement/commission fragments
+→ commission when independently justified
+
+payout-destination + payout-failure boundary fragments
+→ payout
+
+commercial-summary + commercial fragments
+→ commercial only if one cohesive responsibility is proven
+
+store-onboarding-fee
+→ commercial or precise fee-policy owner
+
+special-request financial quote fragments
+→ pricing when WLT owns only financial quote semantics
+
+workforce-finance actor-shaped fragments
+→ distribute to wallet/commission/payout/etc.
+
+captain-collateral
+→ collateral
+
+dispatch-financial-eligibility
+→ actual WLT financial eligibility/financial owner
+```
+
+This is a semantic convergence map, not permission to assume current filenames still exist. Re-pin before treatment and preserve only required contract truth.
 
 ## 9. Database law
 
@@ -278,9 +346,13 @@ DUPLICATE_OR_AMBIGUOUS_CAPABILITY_NAMES
 HTTP_MEGA_DOMAIN_AUTHORITY
 TOP_LEVEL_MECHANISM_PSEUDO_DOMAINS
 MANUAL_CONTRACT/DTO/ENUM/OPERATION_MIRRORS
+DUPLICATE_CAPABILITY/AUTHORIZATION/METADATA_REGISTRIES
 DUPLICATE_WRITERS
 WLT_REFERENCE_SHADOW_TRUTH
+ACTOR/CONSUMER_SHAPED_WLT_CONTRACT_AUTHORITIES
+PERMANENT_PAYMENT/SETTLEMENT/PAYOUT_OVERLAY_FRAGMENTATION
 WLT_FRONTEND_COUPLING_TO_DSH_OR_APP
 UNVERIFIED_FINANCIAL_INVARIANTS
 BACKEND↔CONTRACT↔FRONTEND↔APP_PARITY_GAPS
+MISOWNED_GENERIC_WEB_TYPE_DECLARATIONS
 ```

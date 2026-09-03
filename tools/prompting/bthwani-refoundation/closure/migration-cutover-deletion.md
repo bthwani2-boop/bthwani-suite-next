@@ -30,11 +30,17 @@ Every active unit derives from live state:
 ```text
 UNIT_ID
 EXACT_H_SHA
+CANONICAL_CAPABILITY_OR_SYSTEM_OWNER
+CURRENT_NAMES/ALIASES
 SOURCE_OF_DEFECT
 REQUIRED_SOURCE_OF_FIX
 WHY_HIGHEST_SAFE_EXECUTABLE_ROOT
 REQUIRED_TRUTH
 CURRENT_OWNER/WRITER/READERS
+APP_ROUTE/COMPOSITION_OWNER_WHEN_APPLICABLE
+PEER_SERVICE/EXTERNAL_DEPENDENCIES
+SERIOUS_ALTERNATIVES_CONSIDERED
+MATERIAL_UNKNOWNS_THAT_CAN_CHANGE_OWNERSHIP_OR_DELETION_SAFETY
 CANONICAL_TARGET
 EXPECTED_LOSERS
 COMPLETE_AFFECTED_CONE
@@ -42,7 +48,7 @@ DATA_MIGRATION
 CODE_MIGRATION
 CONTRACT/GENERATION_MIGRATION
 FRONTEND/APP_MIGRATION
-RUNTIME/CONFIG_MIGRATION
+RUNTIME/CONFIG/DEPLOYMENT_IDENTITY_MIGRATION
 TEST/ASSURANCE_MIGRATION
 CUTOVER_ORDER
 DELETION_ORDER
@@ -55,20 +61,24 @@ FRESH_RE_CENSUS
 
 Do not persist unit status into this package.
 
+Material unknowns that can change the canonical owner, durable data transform, public contract, financial/security behavior, deployable identity, or deletion safety must be resolved before destructive closure.
+
 ## 3. Systemic roots before long vertical work
 
 During Stage A, favor high-yield systemic roots that reduce repeated closure tax, including when proven:
 
 ```text
 TOP_LEVEL core/shared TAXONOMY
-apps/*/runtime PASS-THROUGH TOPOLOGY
+apps/*/runtime PASS-THROUGH TOPOLOGY + DEPLOYABLE IDENTITY PRESERVATION
 DESIGN SYSTEM AUTHORITY
+PLATFORM-CONTROL SCOPE/AUTHORITY
 PROVIDER SECRET/CONTROL-PLANE/DATA-PLANE SPLIT
 WORKFORCE RELATIONSHIP/ROLE MODEL
 CONTRACT COMPOSITION/GENERATED CATALOG AUTHORITY
+DSH CAPABILITY/SECURITY/METADATA REGISTRY AUTHORITY
 APP↔SERVICE DEPENDENCY DIRECTION
 BACKEND runtime/transport/integration TOPOLOGY
-WLT FINANCIAL WRITER/REFERENCE AUTHORITY
+WLT FINANCIAL WRITER/REFERENCE/CONTRACT AUTHORITY
 ```
 
 Do not use this list as a fixed queue; live root ranking and recovery frontier decide the next unit.
@@ -114,7 +124,9 @@ No constraint weakening just to ease migration.
 
 Financial/security data requires heightened proof, reversible/roll-forward-safe execution where applicable, and reconciliation.
 
-## 6. Public API/package path migration
+For destructive model changes such as Workforce relationship/role separation or provider-secret migration, define an explicit source-to-target fact map before mutation; do not merely relax the old schema and leave both models live.
+
+## 6. Public API/package/path/deployable migration
 
 Internal repository consumers must cut over atomically where feasible.
 
@@ -128,6 +140,8 @@ TWO_EXPORTS_FOR_SAME_OWNER
 ```
 
 External consumers outside atomic control may justify a bounded compatibility layer only with explicit evidence, scope, telemetry/migration condition, and deletion trigger.
+
+When moving deployable app roots, preserve established application/deployment identity unless an intentional migration explicitly says otherwise. Repository path cleanup must not silently create new Expo/EAS/app-store/signing/update/hosting identities.
 
 ## 7. Concurrency
 
@@ -172,6 +186,8 @@ provider credentials JSONB secret authority
 Workforce mutually exclusive employee/captain/field model
 root contracts manual master index/common dumping
 infra-owned provider behavioral fixtures
+manual/duplicate capability-security-operation metadata registries
+manual readiness/closure manifests acting as evidence authority
 old package/workspace/Go replace/Docker/script/CI paths
 ```
 
@@ -193,5 +209,6 @@ LOSING_CONTAINER=ABSENT
 PARENT_RESIDUE=0
 WORKSPACE/DEPENDENCY_RESIDUE=0
 COMPATIBILITY_RESIDUE=0
+STALE_TEST/FIXTURE/MOCK_RESIDUE=0
 NEGATIVE_SPACE=PASS
 ```

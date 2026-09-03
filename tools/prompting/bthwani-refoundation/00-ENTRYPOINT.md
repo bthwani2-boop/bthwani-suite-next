@@ -1,6 +1,6 @@
 # BThwani Canonical Refoundation Target Package — Entrypoint
 
-PACKAGE_REVISION: 1
+PACKAGE_REVISION: 2
 PACKAGE_CLASS: TEMPORARY_CANONICAL_TARGET_SPECIALIZATION
 TARGET_REPOSITORY: bthwani2-boop/bthwani-suite-next
 TARGET_BRANCH: h
@@ -49,12 +49,12 @@ Live `h` and fresh evidence are the only present-state authority.
 Define the temporary repository-wide canonical target needed to refound the inherited topology into explicit ownership:
 
 ```text
-DEPLOYABLE HOST        → apps/
-BOUNDED CONTEXT/SERVICE→ services/
-REUSABLE TECHNICAL CODE→ packages/
-CROSS-SERVICE WIRE LAW → contracts/
-ENVIRONMENT/DEPLOYMENT → infra/
-EXECUTION/DEV TOOLING  → tools/
+DEPLOYABLE HOST         → apps/
+BOUNDED CONTEXT/SERVICE → services/
+REUSABLE TECHNICAL CODE → packages/
+CROSS-SERVICE WIRE LAW  → contracts/
+ENVIRONMENT/DEPLOYMENT  → infra/
+EXECUTION/DEV TOOLING   → tools/
 ```
 
 Primary structural outcomes:
@@ -64,6 +64,7 @@ REMOVE core/ AS A TOP-LEVEL OWNERSHIP CLASS
 REMOVE shared/ AS A TOP-LEVEL OWNERSHIP CLASS
 REMOVE apps/*/runtime WHEN IT IS ONLY A PASS-THROUGH PARENT
 DO NOT CREATE A GENERIC PROVIDERS GOD SERVICE
+REFOUND PLATFORM-CONTROL WITHOUT TURNING IT INTO A CONFIGURATION GOD SERVICE
 REFOUND UI-KIT AS A REAL DESIGN SYSTEM
 REFOUND WORKFORCE AROUND PERSON + ENGAGEMENT + OPERATIONAL ROLE
 KEEP SERVICE CONTRACTS SOVEREIGN
@@ -92,19 +93,22 @@ Do not select a new target from this package when the orchestrator recovery law 
 
 ```text
 targets/apps-and-composition.md
-  Deployable app flattening, host ownership, navigation/composition, Account/Home/Login/Search/Settings/Notification host rules.
+  Deployable app flattening, stable app/deployment identity, host ownership, navigation/composition, Account/Home/Login/Search/Settings/Notification host rules.
 
 targets/dsh-wlt.md
-  DSH operational ownership, WLT financial independence, frontend/backend/contracts/database/capability topology.
+  DSH operational ownership, WLT financial independence, frontend/backend/contracts/database/capability topology, metadata-authority cleanup and financial contract convergence.
 
 targets/identity-workforce.md
   Identity authority and Workforce refoundation around orthogonal engagement and operational-role axes.
+
+targets/platform-control.md
+  Platform Control service admission, variables/flags/change/rollout/audit authority, provider-control-plane limits, and anti-god-service boundaries.
 
 targets/providers-and-integrations.md
   External integration control plane, domain-owned ports/adapters, secrets, sandbox/simulation, retry/fallback/reconciliation.
 
 targets/design-system-and-packages.md
-  shared/ demolition, design-system refoundation, package admission, data-runtime/resilience/control-panel disposition.
+  shared/ demolition, design-system refoundation, RTL/accessibility/platform consistency, package admission, data-runtime/resilience/control-panel disposition.
 
 targets/contracts-and-protocols.md
   Sovereign service contracts, cross-service protocol primitives, generated API catalog, contract lineage.
@@ -142,7 +146,23 @@ STOP_WRITING_TO_STALE_HEAD
 → CONTINUE_FROM_CURRENT_TRUTH
 ```
 
-## 5. Package lifetime
+## 5. Package completeness law
+
+Splitting this package into modules must not lose material decisions from the former temporary DSH/WLT plan or from later approved repository-wide refoundation decisions.
+
+Before changing package structure or deleting a module:
+
+```text
+CENSUS_MATERIAL_LAWS_AND_TARGET_DECISIONS
+→ MAP_EACH_TO_ONE_CANONICAL_MODULE
+→ PROVE_NO_MATERIAL_DECISION_DROPPED
+→ PROVE_NO_CONFLICTING_DUPLICATE_CREATED
+→ ONLY_THEN_DELETE/MERGE/REHOME
+```
+
+Examples and current-path candidates may be removed when stale, but their underlying durable law must remain represented where still material.
+
+## 6. Package lifetime
 
 This package exists only to specialize the active refoundation campaign.
 

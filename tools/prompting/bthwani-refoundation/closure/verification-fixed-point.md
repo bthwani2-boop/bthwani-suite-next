@@ -19,7 +19,35 @@ AFFECTED_CONE
 
 Stale evidence is invalid after material head movement in its cone.
 
-## 2. Positive verification
+## 2. Test/assurance classification
+
+Every affected test, fixture, mock, snapshot, simulator mapping, helper, and custom guard must be classified before closure:
+
+```text
+VALID_CANONICAL_SPEC
+OBSOLETE_BEHAVIOR
+DUPLICATE_COVERAGE
+WRONG_LAYER_SPEC
+LOSING_TOPOLOGY_TEST
+MISSING_PREVENTION
+BROKEN_TEST_INFRA
+```
+
+Required treatment:
+
+```text
+VALID_CANONICAL_SPEC → preserve/refound
+OBSOLETE_BEHAVIOR → delete
+DUPLICATE_COVERAGE → merge/delete
+WRONG_LAYER_SPEC → rewrite/rehome
+LOSING_TOPOLOGY_TEST → delete with loser
+MISSING_PREVENTION → add smallest durable prevention proof
+BROKEN_TEST_INFRA → repair/refound or prove/remove obsolete harness
+```
+
+Do not preserve tests merely because they are green. A test that asserts losing architecture is evidence against closure, not evidence for it.
+
+## 3. Positive verification
 
 As applicable execute and prove:
 
@@ -42,11 +70,33 @@ notification event→delivery→native route when affected
 search owner→query→results when affected
 financial mutation→provider/reconciliation→ledger/readback
 security/secret negative tests
+design-system RTL/LTR/accessibility/platform behavior when affected
 ```
 
 A passing check proves only the claim it exercises.
 
-## 3. Required negative-space census
+## 4. Deployable identity verification
+
+When `apps/*/runtime` is flattened or app config/build roots move, verify applicable identity and delivery invariants independently of source/build green status:
+
+```text
+Expo/EAS project association unchanged or intentionally migrated
+Android package/applicationId expected
+Android signing/credential association expected
+iOS bundleIdentifier expected
+iOS signing/credential association expected
+slug/owner/scheme/deep-link bindings expected
+runtimeVersion/update URL/channel semantics expected
+EAS build/update project-root assumptions updated
+app-store identity not unintentionally forked
+notification/native entitlements still bound
+app-specific observability bindings still correct
+Control Panel/web hosting/build-root/base-path/env bindings expected
+```
+
+A successful local Metro/Next build does not prove remote EAS/update/store/hosting identity correctness.
+
+## 5. Required negative-space census
 
 After each unit and globally search for:
 
@@ -74,21 +124,25 @@ DUPLICATE AUTH/SESSION AUTHORITIES
 GENERIC common/shared/core PACKAGE OR CONTRACT DUMPS
 MANUAL MASTER OPENAPI INDEX
 MANUAL DTO/ENUM/STATUS/ACTION/OPERATION MIRRORS
+DUPLICATE CAPABILITY/AUTHORIZATION/METADATA REGISTRIES
+MANUAL READINESS/CLOSURE MANIFEST AS EVIDENCE AUTHORITY
 DUPLICATE MUTABLE WRITERS
 FINANCIAL SHADOW REFERENCES
 APP HOME/ACCOUNT/SETTINGS/SEARCH FALSE DOMAINS
 ACTOR-PREFIXED DUPLICATE CAPABILITIES
-STALE TESTS/FIXTURES/MOCKS
+STALE TESTS/FIXTURES/MOCKS/SNAPSHOTS/GUARDS
 WRAPPERS/ALIASES/REEXPORTS
 EMPTY/MEANINGLESS PARENTS
 UNJUSTIFIED OVERSIZED/MULTI-RESPONSIBILITY FILES
 UNUSED DEPENDENCIES
 ORPHAN ROUTES/APIS/BINDINGS/DATA
+UNINTENTIONAL DEPLOYABLE IDENTITY DRIFT
+DUPLICATE BRAND/RTL/DIRECTION TOKEN SYSTEMS
 ```
 
 Positive proof of a winner is insufficient while a loser remains reachable.
 
-## 4. Structural target gates
+## 6. Structural target gates
 
 ### Repository topology
 
@@ -112,6 +166,16 @@ CONTROL_PLANE/DATA_PLANE_SPLIT=PASS
 FINANCIAL_UNKNOWN_OUTCOME_RECONCILIATION=PASS
 ```
 
+### Platform Control
+
+```text
+PLATFORM_CONTROL_SCOPE_PROVEN=PASS
+PLATFORM_CONTROL_GOD_SERVICE=0
+DOMAIN_DATA_PLANE_EXECUTION_IN_PLATFORM_CONTROL=0
+DUPLICATE_CONFIG/FLAG/VARIABLE_AUTHORITIES=0
+MANUAL_READINESS/CLOSURE_EVIDENCE_AUTHORITY=0
+```
+
 ### Workforce
 
 ```text
@@ -127,6 +191,8 @@ WLT_FINANCIAL_AUTHORITY=PASS
 ```text
 ONE_SEMANTIC_DESIGN_TOKEN_AUTHORITY=PASS
 WEB/NATIVE PLATFORM BOUNDARIES=PASS
+RTL/LTR_DIRECTION_AUTHORITY=PASS
+MATERIAL_ACCESSIBILITY=PASS
 DUPLICATE_BRAND_SYSTEMS=0
 DOMAIN_TRANSLATIONS_IN_DESIGN_SYSTEM=0
 shared/control-panel RESIDUE=0
@@ -142,7 +208,17 @@ UNRESOLVED_REFS=0
 MANUAL_GENERATED_MIRRORS=0
 ```
 
-## 5. Per-capability closure
+### Deployable apps
+
+```text
+DIRECT_APP_ROOTS=PASS
+DEPLOYABLE_IDENTITY_UNINTENTIONAL_CHANGE=0
+EAS/BUILD/UPDATE/HOSTING_BINDINGS=PASS
+SERVICE_OWNS_APP_COMPOSITION=0
+APP_OWNS_BUSINESS_TRUTH=0
+```
+
+## 7. Per-capability closure
 
 A material capability is closed only when all applicable links are accounted for:
 
@@ -163,12 +239,13 @@ FINANCIAL INVARIANTS
 MIGRATION/CUTOVER
 LOSER DELETION
 RUNTIME READBACK
+TEST/ASSURANCE DISPOSITION
 NEGATIVE SPACE
 PREVENTION
 FRESH RE-CENSUS
 ```
 
-## 6. Repository Level-4 fixed point
+## 8. Repository Level-4 fixed point
 
 Completion requires a fresh adversarial full-repository census proving:
 
@@ -187,15 +264,16 @@ KNOWN_MATERIAL_STALE_TEST/TOOL/EXPORT/DEPENDENCY_RESIDUE=0
 KNOWN_MATERIAL_BACKEND↔CONTRACT↔FRONTEND↔APP MISMATCH=0
 KNOWN_MATERIAL_SECURITY/FINANCIAL_GAPS=0
 KNOWN_REQUIRED_CAPABILITIES_OR_JOURNEYS_LOST=0
+KNOWN_DEPLOYABLE_IDENTITY_DRIFT=0
 FRESH_FALSIFICATION=PASS
 MATERIAL_BUILD/DB/RUNTIME/E2E=PASS
 ```
 
 The first green build, commit, or empty local task list is not completion.
 
-## 7. Temporary package self-deletion
+## 9. Temporary package self-deletion
 
-Only after Section 6 passes and no open unit depends on this package:
+Only after Section 8 passes and no open unit depends on this package:
 
 ```text
 VERIFY_NO_SCRIPT_READS tools/prompting/bthwani-refoundation
