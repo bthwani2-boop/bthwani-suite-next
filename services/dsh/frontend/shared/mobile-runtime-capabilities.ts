@@ -16,20 +16,23 @@ import {
   type DshMapProps,
   type DshMapRenderer,
   type DshVideoRenderer,
-  type DshVideoSurfaceProps,
-} from "./mobile-capabilities";
+} from "./mobile-capabilities.ts";
 
 type ReactRuntime = {
   readonly useEffect: (effect: () => void | (() => void), dependencies: readonly unknown[]) => void;
   readonly useRef: <T>(initialValue: T) => { current: T };
-  readonly createElement: (...args: any[]) => any;
+  readonly createElement: (
+    component: unknown,
+    props: unknown,
+    ...children: unknown[]
+  ) => React.ReactElement;
 };
 
 type MapRuntime = {
   readonly React: ReactRuntime;
-  readonly MapView: any;
-  readonly Marker: any;
-  readonly providerGoogle: any;
+  readonly MapView: unknown;
+  readonly Marker: unknown;
+  readonly providerGoogle: unknown;
   readonly infoColor: string;
 };
 
@@ -121,7 +124,7 @@ function createDshRuntimeMap(runtime: MapRuntime): DshMapRenderer {
     );
   }
 
-  return DshRuntimeMap as DshMapRenderer;
+  return DshRuntimeMap;
 }
 
 export function configureDshMobileCapabilities(modules: DshMobileCapabilityModules): void {
