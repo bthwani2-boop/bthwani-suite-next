@@ -18,11 +18,11 @@ import {
 import {
   useCartController,
   useServiceabilityController,
-} from "../../shared/cart";
+} from "../../commerce/cart";
 import type {
   DshCart,
   DshFulfillmentMode,
-} from "../../shared/cart";
+} from "../../commerce/cart";
 import type { CheckoutToOrderFlowState, DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
 import { getDshDeliveryModeDefinition } from "../../shared/delivery/delivery.contract";
