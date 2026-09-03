@@ -4,7 +4,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { TextField, Text, SegmentedControl, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { FieldPartnerDraftForm } from '../../shared/field-onboarding';
-import type { CentralCatalogDomain } from '../../shared/catalog/central-catalog.types';
+import type { CentralCatalogDomain } from '../../catalog/central-catalog.types';
 
 const LEGAL_IDENTITY_TYPES: readonly {
   readonly value: FieldPartnerDraftForm['legalIdentityType'];
