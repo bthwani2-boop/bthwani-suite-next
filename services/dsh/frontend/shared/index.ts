@@ -1,6 +1,5 @@
 export * from './administration';
 export * from './analytics';
-export * as cart from './cart';
 export * from './catalog';
 export * from './checkout';
 export * as clientProfile from './client-profile';
