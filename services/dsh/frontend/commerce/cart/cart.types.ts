@@ -1,4 +1,4 @@
-import type { DshFulfillmentDeliveryMode } from "../delivery/delivery.contract";
+import type { DshFulfillmentDeliveryMode } from "../../shared/delivery/delivery.contract";
 import type { paths } from "@bthwani/dsh/openapi";
 
 // Canonical source: shared/delivery/delivery.contract.ts (DshFulfillmentDeliveryMode).
