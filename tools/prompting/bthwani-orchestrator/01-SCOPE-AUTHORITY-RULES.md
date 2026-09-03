@@ -1,7 +1,7 @@
 # H Refoundation Scope and Authority Rules
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: branch authority, repository-wide mutation scope, truth reconciliation, forensic-source use, exact-head discipline, execution-unit boundaries and artifact survival.
+Owner: branch authority, repository-wide mutation scope, truth reconciliation, forensic-source use, exact-head discipline, execution-recovery authority, execution-unit boundaries and artifact survival.
 
 ## 1. Branch law
 
@@ -113,6 +113,65 @@ STOP WRITE
 ```
 
 Never overwrite unseen work. Never force. After every push verify remote `h` and re-pin.
+
+## 4.1 Execution-recovery authority and head movement
+
+Interrupted execution is recovered from repository evidence, not conversational continuity.
+
+```text
+EXECUTION_RECOVERY_AUTHORITY =
+LIVE_REMOTE_h
++ COMMIT_GRAPH
++ MATERIAL_COMMIT_DIFFS
++ CURRENT_LIVE_TREE
++ CURRENT_REFERENCES/REACHABILITY
++ NONSTALE_EVIDENCE
+```
+
+The following are non-authoritative recovery aids only:
+
+```text
+CHAT_CONTEXT = CONVENIENCE_ONLY
+AGENT_MEMORY = CONVENIENCE_ONLY
+LAST_ERROR_MESSAGE = FORENSIC_HINT_ONLY
+COMMIT_MESSAGE = FORENSIC_HINT_ONLY
+OLD_BRANCH = FORENSIC_SOURCE_ONLY
+```
+
+A commit title may guide discovery but never proves what changed, which causal unit owns the change, or whether that unit closed. Inspect actual material diffs and the current tree/reachability state.
+
+If a previous known `h` SHA exists and differs from current live `h`:
+
+```text
+COMPARE PREVIOUS_KNOWN_H..CURRENT_LIVE_h
+→ ENUMERATE MATERIAL COMMITS
+→ INSPECT ACTUAL MATERIAL DIFFS
+→ CLASSIFY EFFECT ON THE ACTIVE/PRIOR UNIT
+→ INVALIDATE ONLY AFFECTED PROOF
+→ RECONSTRUCT CURRENT EXECUTION STATE
+```
+
+Each material intervening change must be classified, as applicable, as:
+
+```text
+CONTINUES_ACTIVE_UNIT
+COMPLETES_ACTIVE_UNIT
+EXTENDS_ACTIVE_UNIT
+CONFLICTS_WITH_ACTIVE_UNIT
+INVALIDATES_ACTIVE_UNIT_ASSUMPTION
+INTRODUCES_HIGHER_CAUSAL_ROOT
+INDEPENDENT_NONOVERLAPPING_CHANGE
+LOW_RISK_GARBAGE_ONLY
+```
+
+```text
+HEAD_MOVED != START_OVER
+HEAD_MOVED != IGNORE_DELTA
+```
+
+If no prior SHA is available, inspect enough recent commit history and current reachability to establish the last proven closed unit, any active open unit, and its first unfinished material obligation before new-root selection.
+
+Git history answers `WHAT HAPPENED?`; it does not answer `WHAT IS CANONICAL?`. Current canonical status must still be proven under `00`/`02`/`03`/`04`.
 
 ## 5. Absolute repository scope
 
