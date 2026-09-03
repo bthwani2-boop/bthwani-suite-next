@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Surface, Text, colorRoles, radius, spacing } from "@bthwani/ui-kit";
-import type { DshFulfillmentMode, DshPricingQuote } from "../../shared/cart";
+import type { DshFulfillmentMode, DshPricingQuote } from "../../commerce/cart";
 import { formatWltMoney } from "@bthwani/dsh/wlt-boundary";
 
 export function CartQuoteSummary({
