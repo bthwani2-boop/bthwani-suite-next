@@ -1,7 +1,7 @@
 # BThwani Relentless Canonical Baseline Refoundation Orchestrator
 
-PACKAGE_REVISION: 31
-REFOUNDATION_PROFILE_REVISION: 6
+PACKAGE_REVISION: 32
+REFOUNDATION_PROFILE_REVISION: 7
 PACKAGE_CLASS: RELENTLESS_CONTINUOUS_DEMOLITION_FIRST_CANONICAL_REFOUNDATION_ENGINE
 PROJECT: bthwani-suite-next
 TARGET_BRANCH: h
@@ -428,6 +428,19 @@ If A2 passes and roots remain, enter Stage B immediately.
 ## 15. Stage B — true causal roots only
 
 Stage B handles semantic/product/system roots only inside structurally canonical containers.
+
+```text
+STAGE_B_CLOSURE_UNIT = HIGHEST_CAUSALLY_CORRECT_SEMANTIC_PRODUCT/SYSTEM_ROOT
+```
+
+When that root is a material cross-layer capability:
+
+```text
+LAYER_ONLY_CLOSURE=FORBIDDEN
+VERTICAL_CAPABILITY_CLOSURE=REQUIRED
+```
+
+Stage B must not declare isolated backend, contract, frontend or app fragments closed while the material semantic chain remains split.
 
 After each root:
 

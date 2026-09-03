@@ -323,25 +323,61 @@ ONE_CANONICAL_SOURCE
 
 Fix source/generator/schema, regenerate, migrate consumers, delete stale outputs.
 
-## 16. End-to-end cutover
+## 16. Vertical semantic-capability closure
 
-When materially applicable:
+When a material Product/System capability crosses layers, the execution unit is the complete semantic capability chain at the highest causally correct root, not an isolated implementation layer.
 
 ```text
-DATA_STORAGE
-→ BACKEND_DOMAIN
-→ API_EVENT
+PRODUCT/SYSTEM MEANING
+→ ACTOR/JOURNEY/STATE
+→ CANONICAL DATA/STORAGE
+→ CANONICAL WRITER/READER
+→ DOMAIN/SYSTEM OWNER
+→ TRANSPORT/EVENT
 → CONTRACT
-→ GENERATED_BINDING
-→ FRONTEND_DATA
-→ COMPONENT_SCREEN
-→ USER_ACTION
-→ PERSISTED_READBACK
+→ GENERATED BINDING
+→ FRONTEND/PRESENTATION
+→ APP/HOST COMPOSITION
+→ USER/SYSTEM ACTION
+→ MUTATION/OBSERVATION
+→ PERSISTED/OBSERVABLE READBACK
+→ ALL MATERIAL SURFACE CONSUMERS
+→ LOSER DELETION
+→ NEGATIVE SPACE
 ```
 
-A partially connected replacement is `OPEN_CRITICAL`.
+```text
+BACKEND_SUBPART_GREEN != CAPABILITY_CLOSED
+CONTRACT_SUBPART_GREEN != CAPABILITY_CLOSED
+FRONTEND_SUBPART_GREEN != CAPABILITY_CLOSED
+APP_SUBPART_GREEN != CAPABILITY_CLOSED
+```
 
-## 17. Compliance correction
+Do not close layer fragments independently while the material capability chain remains split. A partially connected replacement is `OPEN_CRITICAL`.
+
+This vertical law does not prohibit a Stage-A layer-wide refoundation when a cross-cutting structural layer is itself the proven highest-yield systemic root.
+
+## 17. Same-unit supporting-residue cleanup
+
+When the current root fix makes a supporting artifact obsolete, treat that residue inside the same execution unit:
+
+```text
+OBSOLETE_TEST
+OBSOLETE_FIXTURE/MOCK/SNAPSHOT
+OBSOLETE_GUARD
+OBSOLETE_WORKFLOW
+OBSOLETE_SCRIPT
+OBSOLETE_ALLOWLIST/SUPPRESSION
+OBSOLETE_ALIAS/WRAPPER
+OBSOLETE_EVIDENCE_HELPER
+→ DELETE_OR_REFOUND_IN_THE_SAME_EXECUTION_UNIT
+```
+
+```text
+DO_NOT_CREATE_A_FUTURE_CLEANUP_CAMPAIGN_FOR_RESIDUE_CREATED_BY_THE_CURRENT_FIX
+```
+
+## 18. Compliance correction
 
 If execution starts beautifying, collecting, deferring or stopping around a proven loser:
 

@@ -192,6 +192,26 @@ CENSUS_MATERIAL_LAWS_AND_TARGET_DECISIONS
 
 Examples and current-path candidates may be removed when stale, but their underlying durable law must remain represented where still material.
 
+## 6A. Durable-law promotion gate
+
+This temporary package may discover or express a law whose scope is broader than the current repository target.
+
+A general durable law must not remain owned only by this temporary package.
+
+```text
+GENERALIZABLE_DURABLE_LAW_DISCOVERED
+→ IDENTIFY_EXISTING_ORCHESTRATOR_SEMANTIC_OWNER
+→ PROMOTE/STRENGTHEN_OWNER
+→ REMOVE_OR_REDUCE_DUPLICATE_GENERAL_VARIANT_HERE
+→ KEEP_ONLY_TARGET_SPECIFIC_SPECIALIZATION
+```
+
+```text
+TEMPORARY_PACKAGE_MUST_NOT_BE_STRONGER_THAN_ITS_DURABLE_OWNER_ON_A_GENERAL_LAW
+```
+
+This package may repeat a short target-specific consequence for usability, but the durable semantic owner must contain the complete general rule.
+
 ## 7. Package lifetime
 
 This package exists only to specialize the active refoundation campaign.

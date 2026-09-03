@@ -104,12 +104,115 @@ BUSINESS_REJECTION
 CONFLICT/CONCURRENCY
 OFFLINE/DEGRADED
 RETRY/IDEMPOTENCY
-CANCELLATION/REVERSAL
+DUPLICATE/REPEATED_SUBMISSION
+UNKNOWN_OUTCOME
+PARTIAL/INDETERMINATE_STATE
+PROCESS_RESTART/RESUME
+STALE_CLIENT/STALE_READ
+CROSS_SERVICE_HANDOFF
+OUT_OF_ORDER/DUPLICATE_EVENT
+CANCELLATION/COMPENSATION/REVERSAL
 CANONICAL_READBACK
 CROSS_SURFACE_CONSISTENCY
 ```
 
 Do not add UX compensation for broken domain ownership; repair the higher root.
+
+A journey is not complete only because its happy path terminates.
+
+```text
+UNKNOWN MUST REMAIN UNKNOWN UNTIL RECONCILED
+DO_NOT_FABRICATE_SUCCESS_FROM_TIMEOUT_OR_MISSING_CONFIRMATION
+```
+
+### 6.1 Material surface-interaction census
+
+For every materially affected user/operator surface, enumerate applicable interactive entrypoints rather than proving only that the screen renders:
+
+```text
+ROUTE
+PAGE/SCREEN
+LAYOUT/SECTION
+TAB
+MENU
+CARD/LIST/TABLE ACTION
+DIALOG/MODAL/DRAWER
+FORM/FIELD
+BUTTON
+ACTIONABLE ICON
+LINK
+GESTURE
+FILTER
+SEARCH
+SORT
+PAGINATION
+REFRESH/PULL-TO-REFRESH
+CONFIRMATION
+NOTIFICATION ACTION
+BACK ACTION
+DEEP LINK
+```
+
+For every material action prove as applicable:
+
+```text
+VISIBILITY
+ENABLED/DISABLED STATE
+ACTOR/ROLE/SCOPE
+INPUT
+HANDLER/CONTROLLER
+CANONICAL CAPABILITY OWNER
+CONTRACT/API/EVENT
+LOADING/PENDING STATE
+DUPLICATE-ACTION / IDEMPOTENCY BEHAVIOR
+BACKEND/SYSTEM EFFECT
+PERSISTED/OBSERVABLE READBACK
+ERROR MAPPING
+RETRY/RECOVERY
+NAVIGATION/FINAL VISIBLE RESULT
+```
+
+```text
+RENDERED != WIRED
+CLICKABLE != FUNCTIONAL
+LOCAL_SUCCESS != PERSISTED_SUCCESS
+VISIBLE_CONTROL_WITHOUT_REQUIRED_EFFECT = OPEN_FINDING
+```
+
+### 6.2 Operator/control-surface correlation
+
+For any Product/System journey that materially requires operator observation, intervention, approval, support, reconciliation, investigation or audit, prove the applicable operator/control surface:
+
+```text
+END_USER/SERVICE ACTION
+→ CANONICAL SYSTEM EFFECT
+→ OPERATOR-VISIBLE STATE WHEN REQUIRED
+→ ALLOWED OPERATOR ACTIONS
+→ SERVER-SIDE AUTHORIZATION
+→ AUDITABLE RESULT
+→ CANONICAL READBACK
+```
+
+```text
+CONTROL_PANEL_REQUIRED = WHEN_PRODUCT/OPERATIONS_REQUIRE_IT
+```
+
+Do not manufacture an admin surface for every capability. Do not close an operator-dependent capability while its required operational visibility or intervention path is missing.
+
+### 6.3 Actor/scope/organization non-conflation
+
+```text
+ACTOR != ROLE
+ROLE != ENGAGEMENT
+ENGAGEMENT != ORGANIZATION
+ORGANIZATION != AUTHORIZATION_SCOPE
+PARTNER != TENANT_BY_DEFAULT
+STORE != TENANT_BY_DEFAULT
+OPERATOR_CONTEXT != TENANT
+AUTHORIZATION_SCOPE != ORGANIZATION_ID
+```
+
+`TENANT` is admitted only when the Product/System model proves a real tenancy boundary with independent isolation/lifecycle semantics.
 
 ## 7. Human-experience root altitude
 
@@ -168,14 +271,42 @@ Derived cache/read/frontend state must have explicit derivation/invalidation and
 
 Manual DTO/enum/status/error/business mappings that duplicate canonical contract/domain semantics are parallel-truth candidates and should be migrated/deleted when redundant.
 
-## 10. Historical value salvage
+## 10. Forensic/reference value and experience salvage
 
-Old branches/dead code/docs may contain lost required behavior. Recover only proven required meaning.
+Old branches, dead code, historical docs and external reference systems may contain required value without having any right to donate their authority or topology.
 
 ```text
-SALVAGE_MEANING
-→ PLACE_UNDER_NEW_CANONICAL_OWNER
-→ DO_NOT_RESURRECT_OLD_TOPOLOGY
+DISCOVER_REQUIRED_VALUE
+→ PROVE_CURRENT_PRODUCT/SYSTEM_RELEVANCE
+→ EXTRACT_REQUIRED_BEHAVIOR / EXPERIENCE / INVARIANT / EDGE_CASE / FAILURE_MODE / ASSET
+→ MAP_TO_CURRENT_CANONICAL_OWNER
+→ REIMPLEMENT_OR_REHOME_AGAINST_CURRENT_CONTRACTS
+→ VERIFY
+→ DELETE/IGNORE_DONOR_SHAPE
+```
+
+```text
+DONOR_VALUE != DONOR_AUTHORITY
+GOOD_UX != RIGHT_TO_COPY_OLD_TOPOLOGY
+REFERENCE_SELECTION != ADOPTION_SELECTION
+NEVER_IMPORT_DONOR_AUTHORITY
+NEVER_IMPORT_DONOR_TOPOLOGY_BY_DEFAULT
+NEVER_IMPORT_DONOR_MOCK/FALLBACK_AS_PRODUCT_TRUTH
+```
+
+Refoundation must preserve required experience value without preserving a losing container:
+
+```text
+REFOUNDATION != AUTOMATIC_PRODUCT_REDESIGN
+REFOUNDATION != AUTOMATIC_VISUAL_REDESIGN
+DEMOLISHING_A_CONTAINER != PERMISSION_TO_LOSE_REQUIRED_EXPERIENCE_VALUE
+
+CENSUS_REQUIRED_BEHAVIOR
+→ CENSUS_APPROVED_INTERACTION_VALUE
+→ CENSUS_REQUIRED_ASSETS
+→ CENSUS_ACCESSIBILITY/RTL/PLATFORM_VALUE
+→ REHOME_VALUE
+→ ONLY_THEN_DELETE_LOSER
 ```
 
 ## 11. Governance is not privileged

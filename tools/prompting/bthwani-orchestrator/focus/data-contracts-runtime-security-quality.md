@@ -88,6 +88,48 @@ Manual frontend business mappings, enums, DTOs, allowed-action logic or status i
 
 A clean backend and clean frontend that disagree semantically are not closed.
 
+### 4.1 Cross-service facts, projections and mirrors
+
+For every material cross-service fact/reference/projection/cache prove as applicable:
+
+```text
+CANONICAL_SOURCE_OWNER
+CANONICAL_WRITER
+SOURCE_EVENT/API
+DERIVATION
+MUTABILITY
+PERSISTENCE
+AUTHORITATIVE_OR_DERIVED
+REBUILDABILITY_IF_DERIVED
+CONSISTENCY_GUARANTEE / RETRY_MODEL
+CONSUMERS
+READBACK
+CAN_IT_DIVERGE
+IS_IT_USED_FOR_AUTHORITATIVE_MUTATION_DECISIONS
+```
+
+```text
+DERIVED != AUTHORITATIVE
+CACHED != CANONICAL
+MATERIALIZED != SECOND_WRITER
+```
+
+Classify material mirrors:
+
+```text
+REDUNDANT_MUTABLE_MIRROR
+→ MIGRATE CONSUMERS
+→ DELETE
+
+NECESSARY_DERIVED_PROJECTION
+→ ONE-WAY
+→ NON-AUTHORITATIVE
+→ REBUILDABLE
+
+CANONICAL_TRUTH_MISOWNED_OR_MISNAMED
+→ REHOME/RENAME
+```
+
 ## 5. Runtime/config/infra
 
 Audit every material runtime authority:
@@ -125,6 +167,95 @@ JOB/QUEUE REPLAY / IDEMPOTENCY
 
 Do not invent arbitrary SLO/RPO/RTO numbers without a real requirement. But known material operational gaps block a trustworthy baseline.
 
+### 6.1 Material mutation / operational failure contract
+
+For every material mutation or externally consequential operation, prove as applicable:
+
+```text
+ACTOR / TRUSTED CONTEXT
+PRECONDITIONS
+ALLOWED STATE
+FORBIDDEN STATE
+COMMAND/ACTION
+STATE TRANSITION
+DURABLE DATA EFFECT
+FINANCIAL EFFECT
+EXTERNAL PROVIDER EFFECT
+IDEMPOTENCY / REPLAY IDENTITY
+TRANSACTION BOUNDARY
+CONCURRENCY / LOCKING
+TIMEOUT
+RETRY / BACKOFF
+PARTIAL FAILURE
+UNKNOWN OUTCOME
+COMPENSATION / REVERSAL
+AUDIT
+CANONICAL READBACK
+CROSS-SURFACE FINAL RESULT
+```
+
+```text
+A timeout is not proof of failure.
+A returned success is not proof of durable commitment unless the required readback proves it.
+UNKNOWN MUST REMAIN UNKNOWN UNTIL RECONCILED.
+```
+
+### 6.2 Version-skew and compatibility gate
+
+When a contract/schema/event/client/runtime change can coexist with independently deployed consumers, enumerate every deployment combination that can materially occur.
+
+Examples only when the deployment model permits them:
+
+```text
+CURRENT_MOBILE → NEW_BACKEND
+NEW_MOBILE → COMPATIBLE_EXISTING_BACKEND
+CURRENT_CONTROL_PANEL → NEW_BACKEND
+GENERATED_CLIENT_VERSION → CONTRACT_VERSION
+OLD_EVENT_PRODUCER → NEW_CONSUMER
+NEW_EVENT_PRODUCER → COMPATIBLE_OLD_CONSUMER
+LOCAL_CACHE/PERSISTED_CLIENT_SCHEMA → NEW_SERVER_SEMANTICS
+FEATURE_FLAG_OFF/ON SAFE DEFAULT
+ROLL_FORWARD PATH
+ROLLBACK PATH
+```
+
+```text
+TEST_ONLY_VERSION_COMBINATIONS_THAT_CAN_EXIST_IN_REAL_DEPLOYMENT
+INDEFINITE_DUAL_SEMANTICS=FORBIDDEN
+COMPATIBILITY_JUST_IN_CASE=FORBIDDEN
+COMPATIBILITY_WINDOW_REQUIRES_OWNER_SCOPE_CUTOVER_CONDITION_REMOVAL_TRIGGER
+```
+
+Internal consumers under atomic repository control should normally cut over and delete the old path rather than manufacture compatibility.
+
+### 6.3 Observability semantics
+
+Material operations must expose enough attributable evidence to reconstruct the operation without leaking sensitive truth.
+
+As applicable:
+
+```text
+CORRELATION_ID
+REQUEST_ID
+ACTOR_ID
+TRUSTED_OPERATOR_CONTEXT
+OPERATION/COMMAND_IDENTITY
+IDEMPOTENCY/REPLAY_IDENTITY
+CANONICAL_ERROR_CODE
+STATE_TRANSITION / AUDIT_EVENT
+PROVIDER_PROVENANCE
+LATENCY / FAILURE / RETRY_SIGNAL
+RECONCILIATION_SIGNAL
+PII/SECRET_REDACTION
+```
+
+```text
+LOGGED != AUDITED
+METRIC != BUSINESS_TRUTH
+TRACE != AUTHORIZATION
+OBSERVABILITY MUST NOT BECOME A SECOND STATE AUTHORITY
+```
+
 ## 7. Security and financial truth
 
 Authentication, authorization, sessions, secrets, PII, provider credentials, isolation and financial mutation receive heightened proof.
@@ -141,6 +272,8 @@ AUDITABLE CANONICAL READBACK
 ```
 
 Aggressive structural deletion never waives truth-preservation/migration proof for security or money.
+
+Development/bootstrap credentials must not define normal Identity credential policy. Credential/verification strength, abuse controls and rate limits derive from current Identity/Security requirements, not historical development examples.
 
 ## 8. Tests are consumers, not truth by themselves
 

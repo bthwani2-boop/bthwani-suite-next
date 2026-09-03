@@ -273,7 +273,71 @@ Heightened burden of proof:
 
 Rehome domain-owned truth out of `core/shared` and delete losing wrappers/paths.
 
-## 12. Frontend structural ownership
+## 12. Deployable-host versus capability ownership
+
+Deployable apps/hosts own composition concerns:
+
+```text
+ROUTES
+NAVIGATION
+TABS/SHELL
+DEEP LINKS
+CROSS-CAPABILITY PAGE COMPOSITION
+BOOTSTRAP/BINDING
+NATIVE/OS ADAPTERS
+APP-SPECIFIC ASSETS
+BUILD/DEPLOYABLE CONFIG
+```
+
+Services/bounded contexts own reusable capability semantics and truth:
+
+```text
+BUSINESS/SYSTEM CAPABILITY SEMANTICS
+BUSINESS RULES
+DURABLE TRUTH
+CANONICAL WRITERS
+SERVICE CONTRACTS
+GENERATED CLIENT LINEAGE
+REUSABLE CAPABILITY PRESENTATION WHEN JUSTIFIED
+```
+
+```text
+WHERE_IT_APPEARS != WHO_OWNS_IT
+APP_HOST != BUSINESS_CAPABILITY_OWNER
+services → apps = FORBIDDEN
+apps → service public capability entrypoints = ALLOWED
+```
+
+Account, Home, Settings, dashboard and aggregate Search are composition/Information Architecture by default, not business-domain admission.
+
+### 12.1 Semantic naming/admission law
+
+A new semantic owner/package/topic is admitted only when all materially applicable conditions are proven:
+
+```text
+UNIQUE_STABLE_RESPONSIBILITY
+CLEAR_CANONICAL_OWNER
+NOT_A_PAGE_OR_ROUTE
+NOT_AN_ACTOR_PREFIX
+NOT_A_VENDOR_NAME_UNLESS_ADAPTER
+NOT_AN_IMPLEMENTATION_MECHANISM
+NOT_A_GENERIC_BUCKET
+NOT_DUPLICATE_OF_EXISTING_OWNER
+NAME_MATCHES_CONTRACT/BACKEND/FRONTEND MEANING
+```
+
+```text
+ACTOR != CAPABILITY_OWNER
+ROUTE != CAPABILITY_OWNER
+SCREEN != CAPABILITY_OWNER
+IMPLEMENTATION_MECHANISM != DOMAIN
+```
+
+Actor-specific names such as `client-orders`, `partner-orders` or `captain-orders` do not create separate canonical capabilities merely because presentation/permission differs.
+
+Mechanism names such as `saga`, `outbox`, `worker`, `cache`, `retry`, `provider`, `handler`, `controller` or `repository` do not become business domains merely because many files exist beneath them.
+
+## 13. Frontend structural ownership
 
 For all web/mobile surfaces:
 
@@ -288,7 +352,7 @@ FORM VALIDATION DOES NOT BECOME SECOND BACKEND BUSINESS AUTHORITY
 
 Duplicate screens/flows serving the same material responsibility must converge to a canonical flow unless real actor/journey/state distinctions justify separation.
 
-## 13. Control/support surfaces
+## 14. Control/support surfaces
 
 `.agents/**`, `.github/**`, `.opencodereview/**`, `docs/**`, `tools/**`, `governance/**` are ordinary architectural surfaces for survival purposes.
 
@@ -304,7 +368,7 @@ EXTRACT UNIQUE REQUIRED VALUE
 
 Do not preserve a large control surface because deleting/rebuilding it feels aggressive.
 
-## 14. Structural completion
+## 15. Structural completion
 
 An affected architecture unit is not closed until:
 

@@ -1,5 +1,17 @@
 # Cross-Boundary Dependency and Ownership Laws
 
+This temporary module does not own the general architecture/data/product laws it summarizes. Durable general-law authority remains with the applicable `tools/prompting/bthwani-orchestrator/focus/*` semantic owner.
+
+The sections below are target-package specialization and repository-refoundation consequences only.
+
+```text
+GENERAL_LAW → DURABLE_ORCHESTRATOR_FOCUS_OWNER
+TARGET_SPECIFIC_CONSEQUENCE → THIS_TEMPORARY_PACKAGE
+CONFLICT_OR_SCOPE_AMBIGUITY → DURABLE_OWNER_WINS
+```
+
+Do not strengthen a general rule only here. Promote the durable owner first, then keep only the target-specific consequence needed by this package.
+
 ## 1. Dependency direction
 
 Canonical high-level dependency direction:

@@ -100,6 +100,8 @@ LOSING STORAGE AUTHORITIES
 
 Multiple mutable session/credential/actor authorities for the same meaning are forbidden.
 
+Development/bootstrap credentials or historical examples must not define normal Identity credential policy. Credential/verification strength, rate limits and abuse controls derive from current Identity/Security requirements.
+
 Each Identity deployment/storage boundary uses one globally ordered canonical migration lane unless a truly independent storage/deployment boundary proves otherwise.
 
 Heightened security closure must prove applicable:

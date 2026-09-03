@@ -77,6 +77,30 @@ Product feature/capability taxonomy belongs to Governance/services, not `tools/m
 
 A mobile tool must not decide that concepts such as `homeDiscovery`, `account`, `finance`, `operations` or actor-prefixed features are canonical Product owners.
 
+### 4.1 General material-artifact admission
+
+Before creating or retaining a material Guard/Script/Registry/Manifest/Report/Matrix/Generated Inventory/Workflow Helper prove:
+
+```text
+UNIQUE_RESPONSIBILITY
+CANONICAL_OWNER
+REAL_CONSUMER
+WHY_NOT_DERIVABLE
+WHY_NOT_EPHEMERAL_CI_EVIDENCE
+VALIDATION_METHOD
+UPDATE_TRIGGER
+INVALIDATION_TRIGGER
+RETIREMENT_CONDITION
+NO_PARALLEL_AUTHORITY
+```
+
+```text
+CAN_BE_DERIVED + NO_UNIQUE_RUNTIME_ROLE
+→ DO_NOT_HAND_MAINTAIN
+```
+
+Do not manufacture a permanent registry merely because temporary execution evidence is useful.
+
 ## 5. Guard survival law
 
 Every custom guard must prove a unique durable invariant that cannot be enforced more directly/simply by compiler, type system, linter, contract generator, database constraint, dependency graph, test or runtime check.

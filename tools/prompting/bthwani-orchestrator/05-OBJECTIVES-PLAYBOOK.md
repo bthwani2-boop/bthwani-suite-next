@@ -164,6 +164,20 @@ ENTER_STAGE_B_IMMEDIATELY
 
 Stage B closes only true semantic/product/system roots inside proven canonical structure.
 
+Prefer complete vertical semantic-capability closure over long layer-only waves when a capability crosses layers.
+
+```text
+FORBIDDEN_DEFAULT:
+ALL_BACKEND_FIRST
+ALL_CONTRACTS_FIRST
+ALL_FRONTEND_FIRST
+ALL_APPS_FIRST
+```
+
+when those waves would leave material capabilities partially connected.
+
+Systemic layer-wide refoundation remains valid in Stage A when the layer itself is the proven highest-yield structural root.
+
 Cycle:
 
 ```text

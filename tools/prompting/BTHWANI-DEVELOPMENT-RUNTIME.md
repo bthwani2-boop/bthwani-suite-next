@@ -4,6 +4,11 @@
 **Primary phase:** Development / refoundation / integration  
 **Repository:** `bthwani2-boop/bthwani-suite-next`  
 **Scope:** Practical development runtime, external development services, local tooling, OTP/SMS, media, financial simulators, and integration verification.
+**Execution authority:** NONE
+**Closure authority:** NONE
+**Current repository-state authority:** NONE
+**Product/System truth authority:** NONE
+**Runtime command authority:** Live canonical scripts and configuration
 
 ---
 
@@ -942,7 +947,7 @@ This development profile does **not** require:
 
 # 27. Default Development Stack
 
-This is the canonical simple default unless a specific task requires otherwise.
+This is the default development operating profile unless a specific task or current canonical runtime/config authority requires otherwise.
 
 ```text
 BTHWANI DEVELOPMENT STACK

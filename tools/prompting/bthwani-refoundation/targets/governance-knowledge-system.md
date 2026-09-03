@@ -29,9 +29,38 @@ SELF_CERTIFICATION: FORBIDDEN
 
 Labels such as `ACTIVE_CANONICAL` must not be used as proof that content is correct. Existing self-certifying labels are treatment candidates.
 
+`DEPRECATED` or `SUPERSEDED` does not grant survival rights. A superseded governance artifact remains live only when it owns unique still-required explanatory/decision value that cannot be represented more cleanly by the current owner or Git history.
+
+Otherwise:
+
+```text
+ABSORB_REQUIRED_VALUE
+→ UPDATE_REFERENCES
+→ DELETE
+```
+
+ADRs may survive as decision-rationale artifacts when that rationale is itself durable required value; they do not become current-rule authority.
+
 ## 3. Canonical information architecture
 
-The final governance tree should converge semantically toward:
+The following is an illustrative semantic taxonomy, not a required directory/file tree. Create only the minimum governance structure justified by real durable meaning.
+
+```text
+CREATE_GOVERNANCE_ARTIFACT_ONLY_IF:
+REQUIRED_DURABLE_MEANING
++ UNIQUE_CANONICAL_RESPONSIBILITY
++ NO_EXISTING_CANONICAL_HOME
++ NO_EXECUTABLE_SOURCE_CAN_REPRESENT_IT_BETTER
++ NO_DUPLICATION
++ REAL_DISCOVERABILITY_VALUE
+
+OTHERWISE:
+MERGE / ABSORB / DELETE / DO_NOT_CREATE
+
+MINIMUM_SUFFICIENT_GOVERNANCE > MAXIMUM_DOCUMENTATION_COVERAGE
+```
+
+Illustrative taxonomy:
 
 ```text
 governance/
@@ -73,7 +102,7 @@ governance/
     └── adr/
 ```
 
-Do not create empty placeholders mechanically. A directory/file survives only when required durable meaning exists.
+Do not create empty placeholders mechanically. The illustration above is not a checklist. A directory/file survives only when required durable meaning exists and the artifact-admission test above passes.
 
 ## 4. Project and stakeholder model
 
