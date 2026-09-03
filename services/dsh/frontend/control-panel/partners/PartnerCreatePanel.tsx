@@ -4,8 +4,8 @@ import { Button } from "@bthwani/ui-kit";
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { usePartnerWorkspaceListController } from "../../shared/partner";
-import { fetchCatalogDomains } from "../../shared/catalog/central-catalog.api";
-import type { CentralCatalogDomain } from "../../shared/catalog/central-catalog.types";
+import { fetchCatalogDomains } from "../../catalog/central-catalog.api";
+import type { CentralCatalogDomain } from "../../catalog/central-catalog.types";
 
 type Controller = ReturnType<typeof usePartnerWorkspaceListController>;
 
