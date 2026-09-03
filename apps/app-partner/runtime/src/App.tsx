@@ -1,16 +1,11 @@
-import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colorRoles } from "@bthwani/ui-kit";
 import { File as ExpoFile } from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
 import * as SecureStore from "expo-secure-store";
 import {
   configureCatalogMobileFilePicker,
-  DshPartnerSurface,
-  IdentitySessionGate,
-  PartnerFieldRatingGate,
-  useDshMobilePushRegistration,
+  DshPartnerApplication,
   type CatalogMobileFileKind,
   type DshPartnerNavigation,
   type DshPartnerNavigationRoute,
@@ -23,10 +18,11 @@ import {
   configureIdentitySessionStorage,
   type SessionStorageAdapter,
   resolveIdentityApiBaseUrl,
-  useIdentitySession,
 } from "@bthwani/core-identity";
 import { getOrCreatePartnerDeviceFingerprint } from "./config/partner-device-fingerprint";
 import { usePartnerAppearance } from "./appearance";
+
+const PARTNER_PUSH_SCHEME = "bthwani-partner-next";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -73,30 +69,19 @@ export type PartnerAppProps = {
   readonly navigation: DshPartnerNavigation;
 };
 
-function AppContent({ route, navigation }: PartnerAppProps) {
+export default function App(props: PartnerAppProps) {
   const insets = useSafeAreaInsets();
-  const identity = useIdentitySession();
   const appearance = usePartnerAppearance();
-  useDshMobilePushRegistration(identity.state.kind, "app-partner", "bthwani-partner-next");
 
   return (
     <View style={[styles.root, { paddingBottom: insets.bottom }]}>
-      <View style={styles.screen}>
-        <IdentitySessionGate requiredRole="partner" requiredSurface="app-partner">
-          <PartnerFieldRatingGate>
-            <DshPartnerSurface route={route} navigation={navigation} appearance={appearance} />
-          </PartnerFieldRatingGate>
-        </IdentitySessionGate>
-      </View>
+      <DshPartnerApplication
+        {...props}
+        appearance={appearance}
+        pushScheme={PARTNER_PUSH_SCHEME}
+      />
     </View>
   );
 }
 
-export default function App(props: PartnerAppProps) {
-  return <AppContent {...props} />;
-}
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colorRoles.surfaceMuted },
-  screen: { flex: 1 },
-});
+const styles = StyleSheet.create({ root: { flex: 1 } });

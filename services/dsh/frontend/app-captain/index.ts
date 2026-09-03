@@ -6,6 +6,8 @@
  * services/dsh by relative filesystem path.
  */
 
+export { DshCaptainApplication } from "./DshCaptainApplication";
+export type { DshCaptainApplicationProps } from "./DshCaptainApplication";
 export { DshCaptainSurface } from "./DshCaptainSurface";
 
 export type {

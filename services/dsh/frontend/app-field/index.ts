@@ -1,4 +1,6 @@
 // app-field public API
+export { DshFieldApplication } from './DshFieldApplication';
+export type { DshFieldApplicationProps } from './DshFieldApplication';
 export { DshFieldSurface } from './components/DshFieldSurface';
 
 export type {

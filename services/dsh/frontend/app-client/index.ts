@@ -1,3 +1,5 @@
+export { DshClientApplication } from "./DshClientApplication";
+export type { DshClientApplicationProps } from "./DshClientApplication";
 export { DshClientSurface } from "./DshClientSurface";
 export type { DshClientSurfaceProps } from "./DshClientSurface";
 export {

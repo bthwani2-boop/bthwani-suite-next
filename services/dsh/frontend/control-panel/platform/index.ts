@@ -3,5 +3,6 @@ export { StoreOnboardingFeePolicySection } from "./StoreOnboardingFeePolicySecti
 export { ProviderRegistryPanel } from "./ProviderRegistryPanel";
 export { MapsProviderInspector } from "./MapsProviderInspector";
 export { PlatformDashboardScreen } from "./PlatformDashboardScreen";
+export { PlatformWorkspaceScreen } from "./PlatformWorkspaceScreen";
 export { PlatformGovernanceVisual } from "./PlatformGovernanceVisual";
 export { SovereignLeadershipPanel } from "./SovereignLeadershipPanel";

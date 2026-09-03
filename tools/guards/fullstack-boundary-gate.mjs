@@ -3,7 +3,10 @@ import path from "node:path";
 import { fail, findImportSpecifiers, lineNumber, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
 import { parseIndexedContractModules, parseOpenApiContract } from "./_openapi-utils.mjs";
 import { MUTATION_METHODS, extractApiCallSites, pathsAreCompatible } from "./lib/api-operations.mjs";
-import { isForbiddenAppRuntimeDshImport } from "./lib/fullstack-boundary-rules.mjs";
+import {
+  findRuntimeOwnershipViolations,
+  isForbiddenAppRuntimeDshImport,
+} from "./lib/fullstack-boundary-rules.mjs";
 
 const guardId = "fullstack-boundary-gate";
 const violations = [];
@@ -120,6 +123,10 @@ for (const file of listCodeFiles()) {
   const isShared = file.startsWith("shared/") || file.includes("/frontend/shared/");
   const isControlPanel = startsWithAny(file, CONTROL_PANEL_ROOTS);
   const isMobile = startsWithAny(file, MOBILE_ROOTS);
+
+  for (const message of findRuntimeOwnershipViolations(file, content)) {
+    violations.push({ file, message: `FORBIDDEN: ${message}` });
+  }
 
   if (!file.startsWith("tools/guards/") && (/PUT\s+\/dsh\/operator\/workforce\/scopes\//.test(content) || /handleUpdateOperatorWorkforceScopes/.test(content))) {
     violations.push({

@@ -1,23 +1,11 @@
-import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import {
-  ClientOrderRatingGate,
-  DshClientPlatformProvider,
-  DshClientSurface,
-  IdentitySessionGate,
-  useDshMobilePushRegistration,
+  DshClientApplication,
   type DshClientNavigation,
-  type DshClientRoute,
   type DshClientPlatform,
+  type DshClientRoute,
 } from "@bthwani/dsh/app-client";
-import {
-  createClientEphemeralId,
-  openClientExternalUrl,
-  performClientSelectionHaptic,
-  shareClientTextDocument,
-} from "./platform/client-platform-actions";
-import { ClientRemoteImage } from "./media/ClientRemoteImage";
 import { secureRandomId } from "@bthwani/dsh/mobile-capabilities";
 import {
   configureIdentityDeviceFingerprintProvider,
@@ -25,9 +13,17 @@ import {
   configureIdentitySessionStorage,
   type SessionStorageAdapter,
   resolveIdentityApiBaseUrl,
-  useIdentitySession,
 } from "@bthwani/core-identity";
+import {
+  createClientEphemeralId,
+  openClientExternalUrl,
+  performClientSelectionHaptic,
+  shareClientTextDocument,
+} from "./platform/client-platform-actions";
+import { ClientRemoteImage } from "./media/ClientRemoteImage";
 import { getOrCreateClientDeviceFingerprint } from "./config/client-device-fingerprint";
+
+const CLIENT_PUSH_SCHEME = "bthwani-client-next";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -64,24 +60,12 @@ const clientPlatform: DshClientPlatform = {
   shareTextDocument: shareClientTextDocument,
 };
 
-function AppContent({ route, navigation }: ClientAppProps) {
-  const identity = useIdentitySession();
-  useDshMobilePushRegistration(identity.state.kind, "app-client", "bthwani-client-next");
+export default function App(props: ClientAppProps) {
   return (
-    <View style={styles.root}>
-      <IdentitySessionGate requiredRole="client" requiredSurface="app-client">
-        <ClientOrderRatingGate>
-          <DshClientPlatformProvider platform={clientPlatform}>
-            <DshClientSurface route={route} navigation={navigation} />
-          </DshClientPlatformProvider>
-        </ClientOrderRatingGate>
-      </IdentitySessionGate>
-    </View>
+    <DshClientApplication
+      {...props}
+      platform={clientPlatform}
+      pushScheme={CLIENT_PUSH_SCHEME}
+    />
   );
 }
-
-export default function App(props: ClientAppProps) {
-  return <AppContent {...props} />;
-}
-
-const styles = StyleSheet.create({ root: { flex: 1 } });

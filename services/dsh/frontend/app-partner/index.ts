@@ -1,3 +1,7 @@
+// Canonical application boundary
+export { DshPartnerApplication } from './DshPartnerApplication';
+export type { DshPartnerApplicationProps } from './DshPartnerApplication';
+
 // UI surface
 export { DshPartnerSurface } from './DshPartnerSurface';
 export { PartnerFieldRatingGate } from './ratings/PartnerFieldRatingGate';
