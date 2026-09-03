@@ -5,8 +5,8 @@ import { Dialog, Text, TextField, spacing, resolveRowDirection, useDirection } f
 import {
   createPartnerStoreAssortmentPrice,
   fetchPartnerStoreAssortmentPrices,
-} from "../../shared/catalog";
-import type { StoreAssortmentPrice, StoreAssortmentPriceInput } from "../../shared/catalog";
+} from "../../catalog";
+import type { StoreAssortmentPrice, StoreAssortmentPriceInput } from "../../catalog";
 
 type Props = {
   readonly visible: boolean;
