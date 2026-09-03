@@ -11,7 +11,7 @@ x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
 x-bthwani-client-generation: DISABLED
-x-bthwani-adapter-owner: frontend/shared/catalog/reels.api.ts
+x-bthwani-adapter-owner: frontend/catalog/reels.api.ts
 servers:
 - url: /
 tags:
