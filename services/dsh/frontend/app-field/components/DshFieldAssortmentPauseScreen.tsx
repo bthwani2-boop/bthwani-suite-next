@@ -17,8 +17,8 @@ import {
   pauseFieldStoreAssortment,
   resumeFieldStoreAssortment,
   type AssortmentPauseState,
-} from "../../shared/catalog";
-import { fetchMasterProductById } from "../../shared/catalog/central-catalog.api";
+} from "../../catalog";
+import { fetchMasterProductById } from "../../catalog/central-catalog.api";
 import {
   classifyGovernedError,
   createGovernedProblem,
