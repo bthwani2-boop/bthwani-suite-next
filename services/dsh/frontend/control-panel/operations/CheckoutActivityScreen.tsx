@@ -14,8 +14,8 @@ import {
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
-import { useOperatorCheckoutController } from "../../shared/checkout";
-import type { DshCheckoutIntent, DshFulfillmentMode, DshIntentState } from "../../shared/checkout";
+import { useOperatorCheckoutController } from "../../commerce/checkout";
+import type { DshCheckoutIntent, DshFulfillmentMode, DshIntentState } from "../../commerce/checkout";
 import { useOperationsCapabilities } from "../../shared/operations";
 
 const FULFILLMENT_LABELS: Record<DshFulfillmentMode, string> = {
