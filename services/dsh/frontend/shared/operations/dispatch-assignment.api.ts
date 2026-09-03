@@ -1,4 +1,4 @@
-import { createDshHttpClient } from '../_kernel/dsh-http-request';
+import { createDshHttpClient, DshRequestError } from '../_kernel/dsh-http-request';
 import { secureRandomId } from '../_kernel/secure-random.ts';
 import type {
   DshGovernedCreateAssignmentInput,
@@ -24,11 +24,11 @@ export async function assignOrderToCaptain(
   const captainId = input.captainId.trim();
   const serviceAreaCode = input.serviceAreaCode.trim();
   const idempotencyKey = input.idempotencyKey.trim();
-  if (!orderId) throw { kind: 'invalid_request', message: 'orderId is required' };
-  if (!captainId) throw { kind: 'invalid_request', message: 'captainId is required' };
-  if (!serviceAreaCode) throw { kind: 'invalid_request', message: 'serviceAreaCode is required' };
+  if (!orderId) throw new DshRequestError('invalid_request', { message: 'orderId is required' });
+  if (!captainId) throw new DshRequestError('invalid_request', { message: 'captainId is required' });
+  if (!serviceAreaCode) throw new DshRequestError('invalid_request', { message: 'serviceAreaCode is required' });
   if (idempotencyKey.length < 16) {
-    throw { kind: 'invalid_request', message: 'idempotencyKey must contain at least 16 characters' };
+    throw new DshRequestError('invalid_request', { message: 'idempotencyKey must contain at least 16 characters' });
   }
   const result = await request<{ assignment: DshGovernedDispatchAssignment; replayed?: boolean }>(
     '/dsh/operator/dispatch/assignments',

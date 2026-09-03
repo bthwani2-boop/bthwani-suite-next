@@ -1,7 +1,7 @@
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient, DshRequestError } from "../_kernel/dsh-http-request";
 import type {
   DshAnalyticsPeriod,
   DshAnalyticsWindowInput,
@@ -134,8 +134,13 @@ export function buildOperationalAnalyticsExportUrl(window: DshAnalyticsWindowInp
 export async function fetchOperationalAnalyticsExport(window: DshAnalyticsWindowInput): Promise<Blob> {
   const cookieMode = baseUrl.startsWith("/");
   const token = cookieMode ? undefined : getIdentityAccessToken();
+  const correlationId = corrId("analytics-export");
   if (!cookieMode && !token) {
-    throw { kind: "http", status: 401, message: "missing identity access token" };
+    throw new DshRequestError("http", {
+      status: 401,
+      message: "missing identity access token",
+      correlationId,
+    });
   }
 
   let response: Response;
@@ -146,7 +151,7 @@ export async function fetchOperationalAnalyticsExport(window: DshAnalyticsWindow
         method: "GET",
         headers: {
           Accept: "text/csv",
-          "X-Correlation-ID": corrId("analytics-export"),
+          "X-Correlation-ID": correlationId,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         ...(cookieMode ? { credentials: "include" as const } : {}),
@@ -154,15 +159,15 @@ export async function fetchOperationalAnalyticsExport(window: DshAnalyticsWindow
       },
     );
   } catch (error) {
-    throw {
-      kind: "network",
+    throw new DshRequestError("network", {
       message: error instanceof Error ? error.message : "analytics export network error",
-    };
+      correlationId,
+    });
   }
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw { kind: "http", status: response.status, body };
+    throw new DshRequestError("http", { status: response.status, body, correlationId });
   }
   return response.blob();
 }

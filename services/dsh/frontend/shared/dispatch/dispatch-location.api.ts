@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from '../_kernel/dsh-api-base-url';
-import { createDshHttpClient } from '../_kernel/dsh-http-request';
+import { createDshHttpClient, DshRequestError } from '../_kernel/dsh-http-request';
 import { bthwaniSensitiveStorage } from '@bthwani/data-runtime/sensitive-storage-adapter';
 import { resolveMutationIdentityScope } from '@bthwani/data-runtime/mutation-identity-scope';
 import type { DshDispatchAssignment } from './dispatch.types';
@@ -51,7 +51,7 @@ async function resolveLocationScope(actorId: string, assignmentId: string): Prom
   const normalizedActorId = actorId.trim();
   const normalizedAssignmentId = assignmentId.trim();
   if (!normalizedActorId || !normalizedAssignmentId) {
-    throw { kind: 'invalid_request', message: 'captain and assignment identity are required' };
+    throw new DshRequestError('invalid_request', { message: 'captain and assignment identity are required' });
   }
   const identity = await resolveMutationIdentityScope(normalizedActorId, {
     entityId: `location:${normalizedAssignmentId}`,
@@ -71,18 +71,18 @@ function sameSample(left: ForegroundDispatchLocation, right: ForegroundDispatchL
 }
 
 function validateSample(assignmentId: string, sample: ForegroundDispatchLocation): void {
-  if (!assignmentId.trim()) throw { kind: 'invalid_request', message: 'assignmentId is required' };
+  if (!assignmentId.trim()) throw new DshRequestError('invalid_request', { message: 'assignmentId is required' });
   if (!Number.isFinite(sample.latitude) || sample.latitude < -90 || sample.latitude > 90) {
-    throw { kind: 'invalid_request', message: 'latitude is invalid' };
+    throw new DshRequestError('invalid_request', { message: 'latitude is invalid' });
   }
   if (!Number.isFinite(sample.longitude) || sample.longitude < -180 || sample.longitude > 180) {
-    throw { kind: 'invalid_request', message: 'longitude is invalid' };
+    throw new DshRequestError('invalid_request', { message: 'longitude is invalid' });
   }
   if (!Number.isFinite(sample.accuracyMeters) || sample.accuracyMeters <= 0 || sample.accuracyMeters > 100) {
-    throw { kind: 'invalid_request', message: 'accuracyMeters must be between 0 and 100' };
+    throw new DshRequestError('invalid_request', { message: 'accuracyMeters must be between 0 and 100' });
   }
   if (!sample.recordedAt || Number.isNaN(Date.parse(sample.recordedAt))) {
-    throw { kind: 'invalid_request', message: 'recordedAt must be an RFC3339 timestamp' };
+    throw new DshRequestError('invalid_request', { message: 'recordedAt must be an RFC3339 timestamp' });
   }
 }
 
@@ -244,7 +244,7 @@ export async function flushPendingForegroundDispatchLocations(actorId = ''): Pro
   readonly discarded: number;
 }> {
   const normalizedActorId = actorId.trim();
-  if (!normalizedActorId) throw { kind: 'invalid_request', message: 'captain identity is required' };
+  if (!normalizedActorId) throw new DshRequestError('invalid_request', { message: 'captain identity is required' });
   const scope = await resolveLocationScope(normalizedActorId, 'outbox');
   const pendingLocations = await listPendingLocations(scope);
   let sent = 0;

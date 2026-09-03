@@ -6,7 +6,7 @@
 
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { corrId } from "../_kernel/dsh-http-request";
+import { corrId, DshRequestError } from "../_kernel/dsh-http-request";
 
 export type FieldMediaPickResult = {
   readonly uri: string;
@@ -26,7 +26,7 @@ async function appendPickedFile(form: FormData, file: FieldMediaPickResult): Pro
 
   if (isBrowserObjectUrl) {
     const response = await fetch(file.uri);
-    if (!response.ok) throw { kind: "media", status: response.status };
+    if (!response.ok) throw new DshRequestError("http", { status: response.status });
     const blob = await response.blob();
     form.append("file", blob, file.name);
     return;
@@ -62,7 +62,8 @@ export async function uploadProviderMedia(
   const baseUrl = resolveDshApiBaseUrl();
   const cookieMode = baseUrl.startsWith("/");
   const token = cookieMode ? undefined : getIdentityAccessToken();
-  if (!cookieMode && !token) throw { kind: "http", status: 401 };
+  const correlationId = corrId("provider-media");
+  if (!cookieMode && !token) throw new DshRequestError("http", { status: 401, correlationId });
 
   const form = new FormData();
   await appendPickedFile(form, file);
@@ -73,13 +74,13 @@ export async function uploadProviderMedia(
     method: "POST",
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "X-Correlation-ID": corrId("provider-media"),
+      "X-Correlation-ID": correlationId,
       "X-Operator-Context-ID": operatorContextId,
     },
     body: form,
     ...(cookieMode ? { credentials: "include" as const } : {}),
   });
-  if (!response.ok) throw { kind: "http", status: response.status };
+  if (!response.ok) throw new DshRequestError("http", { status: response.status, correlationId });
   const data = (await response.json()) as { mediaRef: string };
   return data.mediaRef;
 }
@@ -92,7 +93,8 @@ async function uploadFieldMediaForOwner(
   const baseUrl = resolveDshApiBaseUrl();
   const cookieMode = baseUrl.startsWith("/");
   const token = cookieMode ? undefined : getIdentityAccessToken();
-  if (!cookieMode && !token) throw { kind: "http", status: 401 };
+  const correlationId = corrId("field-media");
+  if (!cookieMode && !token) throw new DshRequestError("http", { status: 401, correlationId });
 
   const form = new FormData();
   if (owner.partnerId) form.append("partnerId", owner.partnerId);
@@ -107,12 +109,12 @@ async function uploadFieldMediaForOwner(
     method: "POST",
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "X-Correlation-ID": corrId("field-media"),
+      "X-Correlation-ID": correlationId,
     },
     body: form,
     ...(cookieMode ? { credentials: "include" as const } : {}),
   });
-  if (!response.ok) throw { kind: "http", status: response.status };
+  if (!response.ok) throw new DshRequestError("http", { status: response.status, correlationId });
   const data = (await response.json()) as { mediaRef: string };
   return data.mediaRef;
 }
