@@ -77,19 +77,15 @@ export const DSH_SUPPORT_ISSUE_TYPES = [
   'other',
 ] as const;
 
-type DshSupportIssueType = (typeof DSH_SUPPORT_ISSUE_TYPES)[number];
-
 function visibility(
   surfaceId: DshOperationsSupportSurfaceId,
   mode: DshOperationsSupportVisibilityMode,
   routeHint: string,
   notes?: string
 ): DshOperationsSupportFlowVisibility {
-  const result: any = { surfaceId, mode, routeHint };
-  if (notes !== undefined) {
-    result.notes = notes;
-  }
-  return result;
+  return notes === undefined
+    ? { surfaceId, mode, routeHint }
+    : { surfaceId, mode, routeHint, notes };
 }
 
 const cpOwnerLabel = 'لوحة التحكم';

@@ -150,12 +150,16 @@ export async function extendPickupWindow(
  * routine no-show recovery; the operator surface remains read-only except for
  * the separately permissioned emergency extension route.
  */
-export async function reschedulePickupWindow(
-  _orderId: string,
-  _input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
-  _commandId?: string,
+export function reschedulePickupWindow(
+  orderId: string,
+  input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+  commandId?: string,
 ): Promise<DshPickupSessionResponse> {
-  throw new Error("Operator pickup rescheduling is not supported; use the partner-owned recovery flow.");
+  void input;
+  void commandId;
+  return Promise.reject(new Error(
+    `Operator pickup rescheduling is not supported for ${orderId}; use the partner-owned recovery flow.`,
+  ));
 }
 
 function classified(

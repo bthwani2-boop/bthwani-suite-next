@@ -106,8 +106,35 @@ type CanonicalOrderShape = {
   }[];
 };
 
+type CanonicalOrderItem = NonNullable<CanonicalOrderShape["items"]>[number];
+
+function hasAllowedActions(value: unknown): value is readonly DshPartnerOrderAction[] {
+  return Array.isArray(value) && value.every((action): action is DshPartnerOrderAction => (
+    action === "accept"
+      || action === "reject"
+      || action === "prepare"
+      || action === "ready"
+      || action === "revise_estimate"
+      || action === "report_issue"
+      || action === "resolve_issue"
+      || action === "handoff"
+  ));
+}
+
+function hasPreparationIssues(value: unknown): value is readonly DshPreparationIssue[] {
+  return Array.isArray(value);
+}
+
+function hasOrderItems(value: unknown): value is readonly CanonicalOrderItem[] {
+  return Array.isArray(value);
+}
+
+function normalizeStatus(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function resolvePartnerStatus(status: unknown): PartnerOrderStatus {
-  const value = String(status ?? "").trim();
+  const value = normalizeStatus(status);
   return statusMap[value] ?? statusMap[value.toLowerCase()] ?? "needs_accept";
 }
 
@@ -214,16 +241,16 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
   const raw = order as unknown as CanonicalOrderShape;
   const orderId = String(raw.id ?? "");
   if (!orderId) throw new Error("partner order response is missing id");
-  if (!Array.isArray(raw.allowedActions)) {
+  if (!hasAllowedActions(raw.allowedActions)) {
     throw new Error(`partner order ${orderId} is missing server allowedActions`);
   }
   if (!raw.preparation || raw.preparation.orderId !== orderId) {
     throw new Error(`partner order ${orderId} is missing governed preparation timing`);
   }
-  if (!Array.isArray(raw.preparationIssues)) {
+  if (!hasPreparationIssues(raw.preparationIssues)) {
     throw new Error(`partner order ${orderId} is missing governed preparation issues`);
   }
-  if (!Array.isArray(raw.items)) {
+  if (!hasOrderItems(raw.items)) {
     throw new Error(`partner order ${orderId} is missing immutable order items`);
   }
   const version = Number(raw.version);

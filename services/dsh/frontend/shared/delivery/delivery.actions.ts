@@ -7,18 +7,20 @@ import { useCaptainOrderRuntime, type CaptainDeliveryExceptionDraft } from './us
 import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle.policy';
 import { fetchCaptainDeliveryProof } from '../delivery-proof/delivery-proof.api';
 import { classifyDispatchError } from '../dispatch/dispatch.api';
+import type { CaptainInboxState, DeclineSheetState, DeliveryActionState } from './delivery.lifecycle';
+import type { CaptainPodState } from '../media/pod/pod-upload-flow';
 
 export type DeliveryActionsDeps = {
   captainRuntimeId: string;
   activeAssignmentId: string;
   resetOrderState: () => void;
   refreshInbox: () => void | Promise<void>;
-  setInboxState: (s: any) => void;
+  setInboxState: (s: CaptainInboxState) => void;
   setIsDeclineSheetVisible: (v: boolean) => void;
-  setDeclineSheetState: (s: any) => void;
-  setDeliveryActionState: (s: any) => void;
+  setDeclineSheetState: (s: DeclineSheetState) => void;
+  setDeliveryActionState: (s: DeliveryActionState) => void;
   setDeliveryActionMessage: (s: string | null) => void;
-  setCaptainPodState: (s: any) => void;
+  setCaptainPodState: (s: CaptainPodState) => void;
 };
 
 export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {

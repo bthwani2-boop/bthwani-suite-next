@@ -73,6 +73,10 @@ const OPERATOR_STATUS_TRANSITIONS: Readonly<Record<string, readonly OperatorMuta
   approved: ['cancelled'],
 };
 
+function isOperatorMutableStatus(value: string): value is OperatorMutableStatus {
+  return OPERATOR_STATUSES.includes(value as OperatorMutableStatus);
+}
+
 function isDispatchOwnedRequest(request: DshSpecialRequestResponse): boolean {
   return DISPATCH_OWNED_STATUSES.has(request.status);
 }
@@ -85,7 +89,7 @@ function operatorStatusOptions(request: DshSpecialRequestResponse): readonly Ope
   const currentStatus = request.status === 'submitted' ? 'under_review' : request.status;
   const options = new Set<OperatorMutableStatus>([
     ...(OPERATOR_STATUS_TRANSITIONS[request.status] ?? []),
-    ...(OPERATOR_STATUSES.includes(currentStatus as OperatorMutableStatus) ? [currentStatus as OperatorMutableStatus] : []),
+    ...(isOperatorMutableStatus(currentStatus) ? [currentStatus] : []),
   ]);
   return OPERATOR_STATUSES.filter((status) => options.has(status));
 }
@@ -123,7 +127,10 @@ function parsePositiveMinorUnits(value: string): number {
 
 function DetailValue({ label, value }: { readonly label: string; readonly value: unknown }) {
   if (value === null || value === undefined || value === '') return null;
-  return <Text role="bodySm">{label}: {String(value)}</Text>;
+  const displayValue = typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+    ? String(value)
+    : JSON.stringify(value) ?? '';
+  return <Text role="bodySm">{label}: {displayValue}</Text>;
 }
 
 function ExecutionEvidence({ detail }: { readonly detail: SpecialRequestDetailBundle | undefined }) {
@@ -206,7 +213,7 @@ export function OperatorSpecialRequestsWorkbench({
   }, [focusParams?.requestId, getOne]);
 
   const updateForm = React.useCallback((field: keyof OperatorForm, value: string) => {
-    setForm((current) => current ? ({ ...current, [field]: value } as OperatorForm) : current);
+    setForm((current) => current ? { ...current, [field]: value } : current);
     setFeedback(null);
   }, []);
 
@@ -469,7 +476,9 @@ export function OperatorSpecialRequestsWorkbench({
               <>
                 <label>
                   الحالة التشغيلية
-                  <select value={form.status} onChange={(event) => updateForm('status', event.target.value as OperatorMutableStatus)} disabled={pendingAction !== null}>
+                  <select value={form.status} onChange={(event) => {
+                    if (isOperatorMutableStatus(event.target.value)) updateForm('status', event.target.value);
+                  }} disabled={pendingAction !== null}>
                     {operatorStatusOptions(selectedRequest).map((status) => <option key={status} value={status}>{status}</option>)}
                   </select>
                 </label>
