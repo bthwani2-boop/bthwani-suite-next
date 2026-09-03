@@ -28,6 +28,8 @@ test("allows app runtime imports resolved through the public package boundary", 
 
 test("allows a thin mobile runtime that composes the canonical DSH application boundary", () => {
   const source = `
+    import { Platform } from "react-native";
+    import { createBthwaniQueryClient } from "@bthwani/data-runtime";
     import { DshCaptainApplication, type DshCaptainNavigation } from "@bthwani/dsh/app-captain";
     export default function App({ route, navigation }) {
       return <DshCaptainApplication route={route} navigation={navigation} pushScheme="captain" />;
@@ -44,7 +46,10 @@ test("rejects mobile runtime ownership of DSH surfaces, gates, fetches, and prod
     import {
       DshCaptainSurface,
       IdentitySessionGate,
+      WorkforceAccessGate,
+      WorkforceProfileProvider,
       fetchCaptainOperationalReadiness,
+      useWorkforceProfile,
       type DshCaptainNavigation,
     } from "@bthwani/dsh/app-captain";
   `;
@@ -54,7 +59,10 @@ test("rejects mobile runtime ownership of DSH surfaces, gates, fetches, and prod
   );
   assert.ok(appViolations.some((item) => item.includes("DshCaptainSurface")));
   assert.ok(appViolations.some((item) => item.includes("IdentitySessionGate")));
+  assert.ok(appViolations.some((item) => item.includes("WorkforceAccessGate")));
+  assert.ok(appViolations.some((item) => item.includes("WorkforceProfileProvider")));
   assert.ok(appViolations.some((item) => item.includes("fetchCaptainOperationalReadiness")));
+  assert.ok(appViolations.some((item) => item.includes("useWorkforceProfile")));
   assert.ok(appViolations.some((item) => item.includes("DshCaptainApplication")));
 
   assert.deepEqual(

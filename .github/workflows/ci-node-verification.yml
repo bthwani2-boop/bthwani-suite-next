@@ -71,7 +71,6 @@ jobs:
             nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
             nx-
       - name: Set up locked Go runtime for generated Go contracts
-        if: ${{ inputs.contracts == 'true' }}
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: core/identity/clients/go/identityauth/go.mod
@@ -135,6 +134,7 @@ jobs:
         run: |
           node --test tools/scripts/detect-ci-context.test.mjs
           node --test tools/scripts/ci-verification-window.test.mjs
+          node --test tools/scripts/ci-node-bootstrap-policy.test.mjs
           node --test tools/scripts/ci-runtime-bootstrap-policy.test.mjs
           node --test tools/scripts/detect-ci-context.property.test.mjs
       - name: Verify Platform contract and generated client when affected

@@ -11,7 +11,7 @@ const APPLICATION_BOUNDARY = Object.freeze({
 
 function nonTypeDshAppImports(content) {
   const imports = [];
-  const pattern = /import\s*\{([\s\S]*?)\}\s*from\s*["']@bthwani\/dsh\/app-(client|partner|captain|field)["'];?/gu;
+  const pattern = /import\s*\{([^}]*)\}\s*from\s*["']@bthwani\/dsh\/app-(client|partner|captain|field)["'];?/gu;
   for (const match of content.matchAll(pattern)) {
     const app = match[2];
     for (const rawBinding of match[1].split(",")) {
