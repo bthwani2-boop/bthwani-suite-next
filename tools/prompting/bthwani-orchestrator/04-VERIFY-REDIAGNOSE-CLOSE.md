@@ -1,7 +1,7 @@
 # H Verification, Re-Diagnosis and Fixed-Point Closure
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: exact-h evidence, finding accounting, falsification, deletion proof, admission proof, fresh full recensus and Level-4 fixed-point qualification.
+Owner: exact-h evidence, recovered-evidence freshness, finding accounting, falsification, deletion proof, admission proof, fresh full recensus and Level-4 fixed-point qualification.
 
 ## 1. Evidence proves claims, not architecture or activity
 
@@ -43,6 +43,57 @@ RAW_FINDINGS_AND_DISPOSITIONS
 Evidence without adequate provenance cannot support a stronger claim than its provenance.
 
 Changed candidate, input, environment, authority, generator, schema, runtime, security boundary or consumer cone invalidates dependent proof. Re-pin remote `h` after every material push.
+
+## 2.1 Interrupted-execution evidence recovery
+
+A prior execution claim is not automatically current merely because it appears in Git history, a commit title, a previous CI result, a prior chat, or an earlier checkpoint.
+
+```text
+HISTORIC_PASS != CURRENT_PASS
+HISTORIC_DELETION_CLAIM != CURRENT_ABSENCE_PROOF
+HISTORIC_CUTOVER_CLAIM != CURRENT_ZERO_OLD_REACHABILITY
+COMMIT_MESSAGE != VERIFICATION_EVIDENCE
+```
+
+During session recovery, reconcile every material prior proof used to locate the active unit against:
+
+```text
+CURRENT_EXACT_h_SHA
+CHANGED_CONE_SINCE_PROOF
+CURRENT_AUTHORITY/WRITER/CONSUMER_STATE
+CURRENT_SCHEMA/CONTRACT/GENERATOR/RUNTIME_STATE WHEN APPLICABLE
+CURRENT_NEGATIVE_SPACE
+```
+
+Use the existing fail-closed evidence dispositions from §3. Proof that was invalidated by intervening changes becomes `STALE`; newer adequate exact evidence may make it `SUPERSEDED`; an unexecuted material claim is `NOT_COVERED`. Do not manufacture a new recovery-only PASS state.
+
+Recovery should rerun only proof invalidated or newly required by the intervening change cone, except where the change is cross-cutting or final qualification requires broad fresh proof.
+
+For any claimed deletion, migration or cutover, recovery must actively check materially applicable current absence/reachability surfaces, including:
+
+```text
+OLD_PATH
+OLD_SYMBOL
+OLD_IMPORT/EXPORT/REEXPORT/ALIAS
+OLD_ROUTE/EVENT/JOB/REGISTRATION
+OLD_WRITER
+OLD_READER/CONSUMER
+OLD_GENERATED_MIRROR/BINDING
+OLD_WORKSPACE/PACKAGE/DEPENDENCY_ENTRY
+OLD_CONFIG/ENV/FLAG/SCRIPT
+OLD_RUNTIME_REGISTRATION
+OLD_DATABASE_OR_MIGRATION_AUTHORITY WHEN APPLICABLE
+```
+
+If a losing authority/container remains materially reachable, the execution unit is open regardless of historical completion language.
+
+```text
+RECOVERED_NEGATIVE_SPACE_FAIL
+→ UNIT_OPEN
+→ RETURN TO THE FIRST UNFINISHED MATERIAL OBLIGATION
+```
+
+Textual zero-reference search alone remains insufficient where non-textual/runtime/generated/database/external reachability can survive.
 
 ## 3. Evidence dispositions are fail-closed
 
@@ -284,6 +335,8 @@ RE-PIN h
 → RE-SYNTHESIZE_CAUSAL_ROOT_GRAPH
 → RE-RANK
 ```
+
+The same invalidation law applies when an interrupted session reconstructs intervening commits: refresh the structural graphs invalidated by the actual changed cone before resuming mutation.
 
 For cross-cutting topology, ownership, database, migration-epoch, contract-authority, runtime/config, verification-authority or repository-control-plane changes, use a broad fresh re-census rather than selective refresh.
 
