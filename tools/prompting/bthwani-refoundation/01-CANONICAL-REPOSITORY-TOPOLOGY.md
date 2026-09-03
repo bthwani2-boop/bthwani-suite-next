@@ -20,7 +20,8 @@ bthwani-suite-next/
 │   ├── wlt/
 │   ├── identity/
 │   ├── workforce/
-│   └── platform-control/
+│   ├── platform-control/     # only if independent control-plane service admission remains proven
+│   └── <other-proven-peer-services>/
 │
 ├── packages/
 │   ├── design-system/
@@ -38,7 +39,9 @@ bthwani-suite-next/
 └── tools/
 ```
 
-This is a semantic classification target, not permission to create empty placeholder directories.
+This is a semantic classification target, not permission to create empty placeholder directories or a closed universe of future services.
+
+A peer service such as Notification or Search is admitted only when independent responsibility/lifecycle/persistence/API/runtime evidence proves it. Similar logic applies to Platform Control: current evidence makes it a strong service candidate, but inherited placement/name does not exempt it from service-admission proof.
 
 ## 2. Losing top-level ownership classes
 
@@ -47,7 +50,7 @@ This is a semantic classification target, not permission to create empty placeho
 ```text
 core/identity          → services/identity
 core/workforce         → services/workforce
-core/platform-control  → services/platform-control
+core/platform-control  → services/platform-control if service admission remains proven; otherwise rehome its required truth to actual owners
 core/providers         → decompose according to targets/providers-and-integrations.md
 
 shared/ui-kit          → salvage/refound into packages/design-system
@@ -103,9 +106,11 @@ Package names should identify the deployable, not the removed wrapper:
 @bthwani/control-panel
 ```
 
+Deployable identity preservation requirements are owned by `targets/apps-and-composition.md`.
+
 ## 4. Service topology
 
-A service is a bounded context with independent business/system authority, not merely a folder of shared functions.
+A service is a bounded context/system authority with independent business/system responsibility, not merely a folder of shared functions.
 
 Where materially applicable, prefer this conceptual shape:
 
@@ -149,7 +154,29 @@ CLEAR_DEPENDENCY_DIRECTION
 
 Generic names such as `common`, `shared`, `core`, `client-runtime`, `query-runtime`, `platform`, `utils`, or `helpers` require heightened proof and are forbidden when they hide multiple responsibilities.
 
-## 6. Contracts topology
+## 6. Public export/package/workspace law
+
+Public package exports must express semantic ownership, not losing topology, page names or actor-shaped mega-libraries.
+
+After a rehome/cutover, update the complete affected cone as applicable:
+
+```text
+package.json name/exports/dependencies/peerDependencies
+project.json/Nx targets
+tsconfig include/paths/project references
+pnpm-workspace.yaml / lockfile
+Go imports/modules/go.work/replace directives
+Docker build contexts/compose paths
+scripts/guards/generators
+CI workflow path filters
+EAS/Expo/Next build-root assumptions
+```
+
+`package.json` and `project.json` are not duplicates by definition; each survives only while its toolchain/workspace role remains real.
+
+Do not preserve old paths through internal aliases/reexports merely to reduce migration effort.
+
+## 7. Contracts topology
 
 Service business contracts remain with their service.
 
@@ -157,7 +184,7 @@ Root `contracts/` owns only genuinely cross-service wire/protocol primitives, ge
 
 See `targets/contracts-and-protocols.md`.
 
-## 7. Infrastructure topology
+## 8. Infrastructure topology
 
 `infra/` owns environment/deployment composition only.
 
@@ -165,7 +192,7 @@ It may own local compose, local data-plane provisioning, observability tooling, 
 
 See `targets/infra-and-runtime.md`.
 
-## 8. Naming law
+## 9. Naming law
 
 Canonical names describe stable responsibility.
 
@@ -202,7 +229,9 @@ field-*
 
 Actor, page, route, mechanism, lifecycle phase, or implementation technology must not masquerade as a business owner.
 
-## 9. Topology exit gate
+Canonical semantic IDs may use idiomatic language encodings without changing meaning, e.g. `promotion-funding` in TypeScript/OpenAPI and `promotionfunding` as an idiomatic Go package. Different language encoding does not create a second capability.
+
+## 10. Topology exit gate
 
 Repository topology cannot pass structural qualification while any known instance remains of:
 
@@ -211,6 +240,7 @@ TOP_LEVEL_core_ROOT
 TOP_LEVEL_shared_ROOT
 PASS_THROUGH_apps/*/runtime_LAYER_WITHOUT_UNIQUE_ROLE
 GENERIC_PROVIDER_GOD_SERVICE
+UNPROVEN_PLATFORM_CONTROL_GOD_SERVICE
 BUSINESS_TRUTH_IN_packages
 BUSINESS_CONTRACT_AUTHORITY_IN_ROOT_contracts
 BUSINESS_FIXTURES_OR_APP_CONFIG_OWNED_BY_infra

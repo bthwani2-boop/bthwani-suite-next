@@ -298,6 +298,8 @@ LOSING_STORAGE_AUTHORITIES
 
 One truth does not mean one table. Multiple mutable authorities for the same meaning are forbidden.
 
+Each service must have one globally ordered canonical migration lane unless a real independent deployment/storage boundary positively proves the need for another lane. Historical migration chronology is executable architecture, not sacred structure; stale/parallel migration authorities must converge without losing applied durable truth.
+
 Destructive schema change requires deterministic transform/backfill, roll-forward/cutover plan, reconciliation, reader/writer cutover, obsolete-schema deletion, and readback proof.
 
 ## 10. Financial shadow-truth and security gate
@@ -348,6 +350,7 @@ TOP_LEVEL_MECHANISM_PSEUDO_DOMAINS
 MANUAL_CONTRACT/DTO/ENUM/OPERATION_MIRRORS
 DUPLICATE_CAPABILITY/AUTHORIZATION/METADATA_REGISTRIES
 DUPLICATE_WRITERS
+PARALLEL_SERVICE_MIGRATION_AUTHORITIES
 WLT_REFERENCE_SHADOW_TRUTH
 ACTOR/CONSUMER_SHAPED_WLT_CONTRACT_AUTHORITIES
 PERMANENT_PAYMENT/SETTLEMENT/PAYOUT_OVERLAY_FRAGMENTATION

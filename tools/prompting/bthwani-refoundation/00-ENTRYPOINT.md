@@ -1,6 +1,6 @@
 # BThwani Canonical Refoundation Target Package — Entrypoint
 
-PACKAGE_REVISION: 2
+PACKAGE_REVISION: 3
 PACKAGE_CLASS: TEMPORARY_CANONICAL_TARGET_SPECIALIZATION
 TARGET_REPOSITORY: bthwani2-boop/bthwani-suite-next
 TARGET_BRANCH: h
@@ -70,6 +70,7 @@ REFOUND WORKFORCE AROUND PERSON + ENGAGEMENT + OPERATIONAL ROLE
 KEEP SERVICE CONTRACTS SOVEREIGN
 KEEP ROOT contracts/ NON-BUSINESS AND NON-RUNTIME-AUTHORITATIVE
 KEEP infra/ LIMITED TO ENVIRONMENT/DEPLOYMENT COMPOSITION
+PROVE REQUIRED TRUTH + OWNERSHIP + COMPLETE AFFECTED CONE BEFORE DELETION
 ```
 
 Required truth is preserved even when its inherited container is deleted.
@@ -84,12 +85,26 @@ For execution of this refoundation:
 4. Load this file.
 5. Load `01-CANONICAL-REPOSITORY-TOPOLOGY.md`.
 6. Load `02-CROSS-BOUNDARY-DEPENDENCY-LAWS.md`.
-7. Load every materially affected file under `targets/`.
-8. Load both files under `closure/` before mutation/closure decisions.
+7. Load `03-REQUIRED-TRUTH-CENSUS-MATRICES.md`.
+8. Load every materially affected file under `targets/`.
+9. Load both files under `closure/` before mutation/closure decisions.
 
 Do not select a new target from this package when the orchestrator recovery law proves an `ACTIVE_OPEN_UNIT` already exists.
 
-## 3. Target modules
+## 3. Foundational modules
+
+```text
+01-CANONICAL-REPOSITORY-TOPOLOGY.md
+  Canonical top-level taxonomy, losing roots, service/package/contracts/infra classification and topology exit rules.
+
+02-CROSS-BOUNDARY-DEPENDENCY-LAWS.md
+  Dependency direction, ownership chains, cross-service facts, contract/integration/secrets/reliability/naming admission.
+
+03-REQUIRED-TRUTH-CENSUS-MATRICES.md
+  Product truth before topology, required-truth preservation, canonical ownership matrix, no-forgotten-surface inventory, lineage proof and Stage-A treatment admission.
+```
+
+## 4. Target modules
 
 ```text
 targets/apps-and-composition.md
@@ -117,7 +132,7 @@ targets/infra-and-runtime.md
   Local/deployment infrastructure, compose, secrets binding, test simulators, environment ownership, observability.
 ```
 
-## 4. Exact-state and recovery law
+## 5. Exact-state and recovery law
 
 This package contains target decisions, not a snapshot of current state.
 
@@ -146,7 +161,7 @@ STOP_WRITING_TO_STALE_HEAD
 → CONTINUE_FROM_CURRENT_TRUTH
 ```
 
-## 5. Package completeness law
+## 6. Package completeness law
 
 Splitting this package into modules must not lose material decisions from the former temporary DSH/WLT plan or from later approved repository-wide refoundation decisions.
 
@@ -162,7 +177,7 @@ CENSUS_MATERIAL_LAWS_AND_TARGET_DECISIONS
 
 Examples and current-path candidates may be removed when stale, but their underlying durable law must remain represented where still material.
 
-## 6. Package lifetime
+## 7. Package lifetime
 
 This package exists only to specialize the active refoundation campaign.
 

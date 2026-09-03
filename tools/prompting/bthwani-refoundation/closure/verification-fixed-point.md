@@ -47,6 +47,10 @@ BROKEN_TEST_INFRA → repair/refound or prove/remove obsolete harness
 
 Do not preserve tests merely because they are green. A test that asserts losing architecture is evidence against closure, not evidence for it.
 
+Prefer compiler/typecheck/schema/runtime/test guarantees over custom guards when they prove the same claim. Campaign-only guards and one-off verification helpers must be removed after their durable prevention role is replaced or no longer required.
+
+Heightened WLT assurance must preserve/refound applicable invariants such as ledger conservation/balanced posting, idempotency/replay, isolation/concurrency, reconciliation, refunds/reversals, provider provenance and unknown-outcome handling.
+
 ## 3. Positive verification
 
 As applicable execute and prove:
@@ -61,6 +65,7 @@ DB reset/upgrade/migration/backfill behavior
 constraints/indexes/idempotency
 runtime startup/health/readiness
 worker/outbox/retry/reconciliation behavior
+API request/response/error semantics
 auth acceptance/rejection/session lifecycle
 provider sandbox/local-simulator adapter behavior
 webhook verification/replay/idempotency
@@ -98,9 +103,11 @@ A successful local Metro/Next build does not prove remote EAS/update/store/hosti
 
 ## 5. Required negative-space census
 
-After each unit and globally search for:
+After each unit and globally search for all applicable losing or shadow material, including:
 
 ```text
+OLD_PATH_REFERENCES
+LOSING_IMPORTS/EXPORTS
 OLD core/ PATHS
 OLD shared/ PATHS
 OLD apps/*/runtime PATHS
@@ -114,11 +121,17 @@ APP_SHAPED_DSH_EXPORTS
 Dsh*Application MONOLITHIC COMPOSITION
 DSH frontend/shared
 DSH frontend/wlt-boundary feature ownership
+OLD_ROUTE_REGISTRATIONS
+OLD_OPENAPI_MODULE_REFS
+OLD_GENERATOR_INPUTS
+STALE_PUBLIC_EXPORTS/PACKAGE_EXPORTS
+DUPLICATE_API_CLIENTS/BINDINGS
 GENERIC PROVIDERS SERVICE/API/CLIENT
 credentials JSONB PROVIDER SECRET AUTHORITY
 SECRET VALUES IN GIT/API/CLIENT/AUDIT
 GENERIC Provider.execute ABSTRACTION
 BLIND FINANCIAL FALLBACK
+UNRECONCILED_UNKNOWN_FINANCIAL_OUTCOME
 WORKFORCE employee/captain/field MUTUAL-EXCLUSIVE RELATIONSHIP MODEL
 DUPLICATE AUTH/SESSION AUTHORITIES
 GENERIC common/shared/core PACKAGE OR CONTRACT DUMPS
@@ -127,15 +140,23 @@ MANUAL DTO/ENUM/STATUS/ACTION/OPERATION MIRRORS
 DUPLICATE CAPABILITY/AUTHORIZATION/METADATA REGISTRIES
 MANUAL READINESS/CLOSURE MANIFEST AS EVIDENCE AUTHORITY
 DUPLICATE MUTABLE WRITERS
+STALE/SHADOW DATABASE AUTHORITIES
+PARALLEL SERVICE MIGRATION AUTHORITIES
 FINANCIAL SHADOW REFERENCES
 APP HOME/ACCOUNT/SETTINGS/SEARCH FALSE DOMAINS
 ACTOR-PREFIXED DUPLICATE CAPABILITIES
+NOTIFICATION INFRA OWNING SOURCE BUSINESS TRUTH
+APP OWNING NOTIFICATION BUSINESS TRUTH
+SEARCH INDEX TREATED AS SOURCE DOMAIN TRUTH
+STALE_RUNTIME_CONFIG/FLAGS/WORKERS/JOBS
 STALE TESTS/FIXTURES/MOCKS/SNAPSHOTS/GUARDS
-WRAPPERS/ALIASES/REEXPORTS
+WRAPPERS/ALIASES/REEXPORTS/BRIDGES
 EMPTY/MEANINGLESS PARENTS
+MISLEADING FILENAMES/DIRECTORIES/PACKAGE NAMES
 UNJUSTIFIED OVERSIZED/MULTI-RESPONSIBILITY FILES
 UNUSED DEPENDENCIES
-ORPHAN ROUTES/APIS/BINDINGS/DATA
+UNRESOLVED/CONFLICTING OPENAPI REFS
+ORPHAN SCREENS/ROUTES/APIS/BINDINGS/DATA
 UNINTENTIONAL DEPLOYABLE IDENTITY DRIFT
 DUPLICATE BRAND/RTL/DIRECTION TOKEN SYSTEMS
 ```
@@ -169,7 +190,7 @@ FINANCIAL_UNKNOWN_OUTCOME_RECONCILIATION=PASS
 ### Platform Control
 
 ```text
-PLATFORM_CONTROL_SCOPE_PROVEN=PASS
+PLATFORM_CONTROL_SCOPE_PROVEN=PASS_OR_SERVICE_REHOMED
 PLATFORM_CONTROL_GOD_SERVICE=0
 DOMAIN_DATA_PLANE_EXECUTION_IN_PLATFORM_CONTROL=0
 DUPLICATE_CONFIG/FLAG/VARIABLE_AUTHORITIES=0
@@ -218,7 +239,38 @@ SERVICE_OWNS_APP_COMPOSITION=0
 APP_OWNS_BUSINESS_TRUTH=0
 ```
 
-## 7. Per-capability closure
+### DSH/WLT ownership
+
+```text
+DSH_APP_SHAPED_FEATURE_OWNERS=0
+DSH_FRONTEND_SHARED_UMBRELLA=0
+WLT_FEATURE_TREE_UNDER_DSH=0
+DUPLICATE_CAPABILITY/AUTHORIZATION/METADATA_REGISTRIES=0
+WLT_REFERENCE_SHADOW_TRUTH=0
+ACTOR/CONSUMER_SHAPED_WLT_CONTRACT_AUTHORITY=0
+PARALLEL_FINANCIAL_WRITERS=0
+WLT_FRONTEND_HOST_COUPLING=0
+```
+
+## 7. Stage-A target qualification gate
+
+This package does not own orchestrator stage transitions, but its structural targets are not qualified for Stage B while any applicable target-specific structural gate remains open.
+
+Before claiming package-level structural qualification, fresh evidence must prove:
+
+```text
+REQUIRED_TRUTH/CANONICAL_OWNERSHIP MATRICES COMPLETE FOR TREATED ROOTS
+NO_FORGOTTEN_SURFACE GATE=PASS
+KNOWN_TARGET_STRUCTURAL_FINDINGS=0
+KNOWN_TARGET_STRUCTURAL_UNKNOWNS=0
+KNOWN_DEFERRED_STRUCTURAL_GARBAGE=0
+KNOWN_PARTIAL_STRUCTURAL_CUTOVERS=0
+NEGATIVE_SPACE=PASS
+```
+
+The orchestrator may impose stronger A0/A1/A2 requirements; those always win.
+
+## 8. Per-capability closure
 
 A material capability is closed only when all applicable links are accounted for:
 
@@ -245,7 +297,7 @@ PREVENTION
 FRESH RE-CENSUS
 ```
 
-## 8. Repository Level-4 fixed point
+## 9. Repository Level-4 fixed point
 
 Completion requires a fresh adversarial full-repository census proving:
 
@@ -256,6 +308,7 @@ KNOWN_MATERIAL_PARTIAL_CUTOVERS=0
 KNOWN_MATERIAL_PARALLEL/SHADOW_TRUTH=0
 KNOWN_MATERIAL_LOSING_CONTAINERS=0
 KNOWN_MATERIAL_WRAPPERS/ALIASES/REEXPORTS=0
+KNOWN_MATERIAL_DUPLICATE_OR_AMBIGUOUS_CAPABILITY_NAMES=0
 KNOWN_MATERIAL_DUPLICATE_CONTRACT_AUTHORITIES=0
 KNOWN_MATERIAL_MANUAL_GENERATED_MIRRORS=0
 KNOWN_MATERIAL_DUPLICATE_WRITERS=0
@@ -265,15 +318,24 @@ KNOWN_MATERIAL_BACKEND↔CONTRACT↔FRONTEND↔APP MISMATCH=0
 KNOWN_MATERIAL_SECURITY/FINANCIAL_GAPS=0
 KNOWN_REQUIRED_CAPABILITIES_OR_JOURNEYS_LOST=0
 KNOWN_DEPLOYABLE_IDENTITY_DRIFT=0
+APP→SERVICE_DEPENDENCY_DIRECTION=PASS
+APP_COMPOSITION_OWNERSHIP=PASS
+IDENTITY_AUTH_SESSION_SINGLE_AUTHORITY=PASS
+ACCOUNT_HOME_SETTINGS_OWNERSHIP=PASS
+NOTIFICATION_RESPONSIBILITY_SPLIT=PASS
+SEARCH_RESPONSIBILITY_SPLIT=PASS
+WLT_MULTI_CONSUMER_INDEPENDENCE=PASS
+PLATFORM_CONTROL_SCOPE=PROVEN_OR_REHOMED
+DESIGN_SYSTEM_AUTHORITY=PASS
 FRESH_FALSIFICATION=PASS
 MATERIAL_BUILD/DB/RUNTIME/E2E=PASS
 ```
 
 The first green build, commit, or empty local task list is not completion.
 
-## 9. Temporary package self-deletion
+## 10. Temporary package self-deletion
 
-Only after Section 8 passes and no open unit depends on this package:
+Only after Section 9 passes and no open unit depends on this package:
 
 ```text
 VERIFY_NO_SCRIPT_READS tools/prompting/bthwani-refoundation
