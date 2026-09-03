@@ -1,6 +1,6 @@
 ---
 name: bthwani-orchestrator
-version: 2026.09.03-h-refoundation-v3
+version: 2026.09.03-h-refoundation-v4
 summary: Thin agent entrypoint into the canonical aggressive h refoundation orchestrator.
 status: CANONICAL_AGENT_ENTRYPOINT
 ---
@@ -21,9 +21,10 @@ For branch `h` refoundation work:
 4. The execution unit may be a root, subtree, package family, service, domain, top-level surface, migration epoch, contract lineage, runtime/config authority, assurance/CI control plane, or governance/tools/docs surface when that is the highest causally complete safe cutover.
 5. Treat `.agents/**`, `.github/**`, `.opencodereview/**`, `docs/**`, `tools/**`, `governance/**` and every other inherited surface as noncanonical until proven; no adapter or historical structure receives preservation immunity.
 6. Use `.agents/skills/**` and `.agents/tools/**` only as bounded specialists selected under the orchestrator.
-7. Never create a parallel scope, deletion, artifact-survival, root-ranking, execution-order, CI, migration, compatibility or closure authority.
-8. Never impose minimal-diff, session-sized, file-by-file, PR, merge, approval, durable-plan or keep-by-default constraints on the `h` campaign.
+7. Repository mutation and execution authority is single-session only: no parallel mutating sessions, no parallel execution agents and no competing coordinators. Independent read-only evidence may fan out only inside the same controlling execution session and only when it cannot mutate repository truth.
+8. Never create a parallel scope, deletion, artifact-survival, root-ranking, execution-order, CI, migration, compatibility or closure authority.
+9. Never impose minimal-diff, session-sized, file-by-file, PR, merge, approval, durable-plan or keep-by-default constraints on the `h` campaign.
 
 Normal path:
 
-`HUMAN INTENT → THIS ADAPTER → CANONICAL h ORCHESTRATOR → WIDE EVIDENCE → HIGHEST CORRECT EXECUTION UNIT → REFOUND/CUTOVER/DELETE → EXACT-h FALSIFICATION`
+`HUMAN INTENT → THIS ADAPTER → ONE EXECUTION SESSION → CANONICAL h ORCHESTRATOR → WIDE EVIDENCE → HIGHEST CORRECT EXECUTION UNIT → REFOUND/CUTOVER/DELETE → EXACT-h FALSIFICATION`
