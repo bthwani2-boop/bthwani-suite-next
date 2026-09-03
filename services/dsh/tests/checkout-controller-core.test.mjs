@@ -6,10 +6,10 @@ const {
   resolveCheckoutSubmitError,
   resolveCheckoutSubmitSuccess,
   resolveOperatorCheckoutLoadState,
-} = await import("../dist/services/dsh/frontend/shared/checkout/checkout.controller-core.js");
+} = await import("../dist/services/dsh/frontend/commerce/checkout/checkout.controller-core.js");
 const {
   checkoutIntentHasWltSession,
-} = await import("../dist/services/dsh/frontend/shared/checkout/checkout.view-model.js");
+} = await import("../dist/services/dsh/frontend/commerce/checkout/checkout.view-model.js");
 
 const intent = (overrides = {}) => ({
   id: "intent-1",
