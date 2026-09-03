@@ -89,7 +89,7 @@ test("coverage command failure reports the resolved executable without masking t
 });
 
 test("coverage planning is source-authority based and keeps DSH LCOV separate from broad verification", () => {
-  assert.deepEqual(planCoverageSuites(["services/dsh/frontend/shared/catalog/a.ts"]), ["dsh"]);
+  assert.deepEqual(planCoverageSuites(["services/dsh/frontend/catalog/a.ts"]), ["dsh"]);
   assert.deepEqual(planCoverageSuites(["shared/data-runtime/src/a.ts"]), ["data-runtime"]);
   assert.deepEqual(planCoverageSuites(["core/identity/clients/identity-session-store.ts"]), ["identity"]);
   assert.deepEqual(planCoverageSuites(["apps/control-panel/runtime/next.config.mjs"]), ["control-panel-config"]);
