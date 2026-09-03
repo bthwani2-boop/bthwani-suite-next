@@ -1,7 +1,6 @@
 export * from './administration';
 export * from './analytics';
 export * from './catalog';
-export * from './checkout';
 export * as clientProfile from './client-profile';
 
 // Delivery public surface is expanded explicitly here so app runtime
@@ -38,8 +37,5 @@ export * from './store';
 export * from './support';
 export * from './hr';
 
-// Resolve intentional cross-domain name overlaps without weakening either
-// domain barrel. Analytics owns the public performance projection; checkout
-// owns the public fulfillment-mode alias consumed by client surfaces.
+// Analytics owns the public performance projection exposed by this barrel.
 export { fetchPartnerPerformance } from './analytics';
-export type { DshFulfillmentMode } from './checkout';
