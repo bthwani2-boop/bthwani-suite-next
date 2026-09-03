@@ -4,7 +4,7 @@ import React from "react";
 import { Button, colorRoles } from "@bthwani/ui-kit";
 import {
   minorUnitsToWltMajorInput,
-  parseWltMajorInputToMinorUnits } from "@bthwani/dsh/finance";
+  parseWltMajorInputToMinorUnits } from "@bthwani/dsh/wlt-boundary";
 import {
   CpRetryButton,
   CpSelect,
