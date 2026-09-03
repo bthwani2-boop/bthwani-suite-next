@@ -1,1 +1,1 @@
-export * from "./wlt-money";
+export * from "../../wlt-boundary/presentation/wlt-money";
