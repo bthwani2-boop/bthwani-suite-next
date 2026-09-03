@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Badge, Button, Icon, Surface, Text, alpha, colorRoles, radius, spacing } from "@bthwani/ui-kit";
-import type { DshCart, DshCartItem, DshCartItemValidation, DshFulfillmentMode } from "../../shared/cart";
+import type { DshCart, DshCartItem, DshCartItemValidation, DshFulfillmentMode } from "../../commerce/cart";
 import { formatWltMoney } from "@bthwani/dsh/wlt-boundary";
 import { getDshDeliveryModeDefinition } from "../../shared/delivery/delivery.contract";
 
@@ -110,12 +110,10 @@ export function CartItemsSection({
           return (
             <View key={item.id} style={styles.itemCard}>
               <View style={styles.itemMainRow}>
-                {/* 1. Item Icon / Thumbnail (Right side in RTL) */}
                 <View style={styles.itemIconBox}>
                   <Text style={{ fontSize: 20 }}>🛍️</Text>
                 </View>
 
-                {/* 2. Item Info (Middle) */}
                 <View style={styles.itemInfo}>
                   <Text role="bodyStrong" numberOfLines={2} style={styles.itemTitle}>
                     {item.productName}
@@ -142,7 +140,6 @@ export function CartItemsSection({
                   ) : null}
                 </View>
 
-                {/* 3. Stepper & Remove Action (Left side in RTL) */}
                 <View style={styles.itemRightActions}>
                   <View style={styles.stepperContainer}>
                     <Pressable
