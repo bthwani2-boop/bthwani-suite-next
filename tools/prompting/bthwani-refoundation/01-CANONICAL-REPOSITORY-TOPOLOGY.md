@@ -36,7 +36,9 @@ bthwani-suite-next/
 │   ├── local/
 │   └── deployment/     # only when real deployment/IaC responsibility exists
 │
-└── tools/
+├── governance/         # durable project/system/product/engineering meaning only
+├── docs/               # human development/operations/reference guidance only
+└── tools/              # automation, generation, inspection and evidence only
 ```
 
 This is a semantic classification target, not permission to create empty placeholder directories or a closed universe of future services.
@@ -192,7 +194,35 @@ It may own local compose, local data-plane provisioning, observability tooling, 
 
 See `targets/infra-and-runtime.md`.
 
-## 9. Naming law
+## 9. Governance, documentation and tooling topology
+
+These roots are canonical only when their authority boundaries remain strict:
+
+```text
+governance/
+  → durable project/product/system/architecture/security/quality/delivery meaning
+  !→ live execution state, runtime truth, API/DB duplication, campaign ledger
+
+docs/
+  → human onboarding/development/operations/reference guidance
+  !→ Product Truth, business authority, contract authority, release approval
+
+tools/
+  → automation, generation, inspection, verification/evidence, local developer helpers
+  !→ Product capability taxonomy, architecture ownership registry, mutable business truth
+```
+
+Service/app-specific tooling belongs with the service/app when its lifecycle and semantics are local to that owner. Only genuinely cross-repository tooling belongs under top-level `tools/`.
+
+Governance, docs and tools refoundation is specialized by:
+
+```text
+targets/governance-knowledge-system.md
+targets/documentation-and-runbooks.md
+targets/tooling-assurance-and-automation.md
+```
+
+## 10. Naming law
 
 Canonical names describe stable responsibility.
 
@@ -231,7 +261,7 @@ Actor, page, route, mechanism, lifecycle phase, or implementation technology mus
 
 Canonical semantic IDs may use idiomatic language encodings without changing meaning, e.g. `promotion-funding` in TypeScript/OpenAPI and `promotionfunding` as an idiomatic Go package. Different language encoding does not create a second capability.
 
-## 10. Topology exit gate
+## 11. Topology exit gate
 
 Repository topology cannot pass structural qualification while any known instance remains of:
 
@@ -250,6 +280,10 @@ OLD_GO_REPLACE_PATHS
 OLD_DOCKER_PATHS
 OLD_TSCONFIG/NX/CI_PATHS
 INTERNAL_ALIASES_PRESERVING_LOSING_TOPOLOGY
+GOVERNANCE_SELF_CERTIFYING_OR_STALE_OWNER_AUTHORITY
+DOCS_DUPLICATING_PRODUCT/CONTRACT/DATA_TRUTH
+TOOLS_MANUAL_ARCHITECTURE/OWNERSHIP_REGISTRIES
+TOOLS_GUARDS_ENFORCING_LOSING_TOPOLOGY
 ```
 
 Move/rename alone does not satisfy this gate. Required value must be re-owned, all consumers cut over, and losers deleted.

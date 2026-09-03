@@ -1,6 +1,6 @@
 # BThwani Canonical Refoundation Target Package — Entrypoint
 
-PACKAGE_REVISION: 4
+PACKAGE_REVISION: 5
 PACKAGE_CLASS: TEMPORARY_CANONICAL_TARGET_SPECIALIZATION
 TARGET_REPOSITORY: bthwani2-boop/bthwani-suite-next
 TARGET_BRANCH: h
@@ -49,12 +49,14 @@ Live `h` and fresh evidence are the only present-state authority.
 Define the temporary repository-wide canonical target needed to refound the inherited topology into explicit ownership:
 
 ```text
-DEPLOYABLE HOST         → apps/
-BOUNDED CONTEXT/SERVICE → services/
-REUSABLE TECHNICAL CODE → packages/
-CROSS-SERVICE WIRE LAW  → contracts/
-ENVIRONMENT/DEPLOYMENT  → infra/
-EXECUTION/DEV TOOLING   → tools/
+DEPLOYABLE HOST          → apps/
+BOUNDED CONTEXT/SERVICE  → services/
+REUSABLE TECHNICAL CODE  → packages/
+CROSS-SERVICE WIRE LAW   → contracts/
+ENVIRONMENT/DEPLOYMENT   → infra/
+DURABLE PROJECT MEANING  → governance/
+HUMAN GUIDANCE/RUNBOOKS  → docs/
+AUTOMATION/EVIDENCE      → tools/
 ```
 
 Primary structural outcomes:
@@ -71,6 +73,9 @@ REFOUND WORKFORCE AROUND PERSON + ENGAGEMENT + OPERATIONAL ROLE
 KEEP SERVICE CONTRACTS SOVEREIGN
 KEEP ROOT contracts/ NON-BUSINESS AND NON-RUNTIME-AUTHORITATIVE
 KEEP infra/ LIMITED TO ENVIRONMENT/DEPLOYMENT COMPOSITION
+REFOUND governance/ AS COMPLETE DURABLE PROJECT MEMORY WITHOUT SELF-CERTIFYING OR EXECUTION AUTHORITY
+REFOUND docs/ AS HUMAN GUIDANCE WITHOUT PRODUCT/SYSTEM TRUTH DUPLICATION
+REFOUND tools/ AS AUTOMATION/EVIDENCE ONLY; REMOVE MANUAL/PARALLEL ARCHITECTURE AUTHORITIES
 PROVE REQUIRED TRUTH + OWNERSHIP + COMPLETE AFFECTED CONE BEFORE DELETION
 ```
 
@@ -131,6 +136,15 @@ targets/contracts-and-protocols.md
 
 targets/infra-and-runtime.md
   Local/deployment infrastructure, compose, secrets binding, test simulators, environment ownership, observability.
+
+targets/governance-knowledge-system.md
+  Durable project-memory architecture, authority classes, stakeholders/actors, capabilities/journeys, source-of-truth map, ADRs, security/finance/architecture knowledge, Product Truth cleanup.
+
+targets/documentation-and-runbooks.md
+  Developer onboarding, development/operations/reference documentation, runbook ownership, generated reference preference, stale-guidance elimination.
+
+targets/tooling-assurance-and-automation.md
+  Tool taxonomy, manual-registry demolition, guard survival law, service/app-specific tool rehoming, pass-through cleanup, CI/evidence boundaries.
 ```
 
 ## 5. Exact-state and recovery law

@@ -191,7 +191,26 @@ NOT_DUPLICATE_OF_EXISTING_OWNER
 NAME_MATCHES_CONTRACT/BACKEND/FRONTEND MEANING
 ```
 
-## 10. Cross-boundary exit gate
+## 10. Governance, documentation and tooling boundary law
+
+Knowledge and automation surfaces must not compete with executable owners:
+
+```text
+governance = durable meaning / policy / ownership intent
+docs       = human guidance
+tools      = automation / derivation / evidence
+
+governance != runtime state
+docs != Product Truth
+tools != architecture authority
+tools != product capability registry
+```
+
+When implementation-specific traceability is useful, prefer deterministic derivation from canonical executable sources over a hand-maintained mirror. A manual tool configuration may exist only for a genuine tool-specific setting that cannot be derived and must not redefine Product/System ownership.
+
+Durable governance may point to executable owners but must not copy endpoint/table/component inventories as independent truth. Runbooks must resolve current commands/routes/config from live canonical sources when material.
+
+## 11. Cross-boundary exit gate
 
 At closure prove:
 
@@ -205,4 +224,7 @@ MANUAL_CONTRACT_MIRRORS=0
 UNCLASSIFIED_CROSS_SERVICE_PROJECTIONS=0
 BLIND_FINANCIAL_PROVIDER_FALLBACK=0
 OLD_PATH_ALIASES=0
+GOVERNANCE↔EXECUTABLE_AUTHORITY_CONFLICTS=0
+DOCS_AS_PARALLEL_PRODUCT/CONTRACT_TRUTH=0
+TOOLS_AS_MANUAL_ARCHITECTURE/OWNERSHIP_AUTHORITY=0
 ```
