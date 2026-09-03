@@ -5,8 +5,8 @@
  */
 import * as catalogMediaApi from "./central-catalog.api";
 import { submitGovernedReel } from "./reels.api";
-import { uploadBinaryToPresignedUrl } from "../media/presigned-upload.client";
-import { corrId } from "../_kernel/dsh-http-request";
+import { uploadBinaryToPresignedUrl } from "../shared/media/presigned-upload.client";
+import { corrId } from "../shared/_kernel/dsh-http-request";
 import type { CatalogAsset, CatalogAssetLink, AssetUploadProgress } from "./central-catalog.types";
 import type { GovernedReel, GovernedReelSubmissionInput } from "./reels.types";
 
