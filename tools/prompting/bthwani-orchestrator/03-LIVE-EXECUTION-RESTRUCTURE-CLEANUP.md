@@ -1,11 +1,11 @@
-# H Live Refoundation, Migration and Cleanup
+# H Live Refoundation, Migration and Destructive Cleanup
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: implementation, structural rewrite, migration, cutover, deletion, recursive pruning and finishing.
+Owner: canonical implementation, highest-granularity refoundation, migration, cutover, deletion, recursive pruning and structural finishing.
 
-## 1. Execution principle
+## 1. Execution law
 
-Once the highest proven executable root is selected, implement the canonical target at the highest correct granularity.
+Once diagnosis selects the highest correct execution unit, implement the canonical target at that granularity.
 
 ```text
 ROOT_CORRECTNESS > DIFF_SIZE
@@ -13,140 +13,250 @@ CANONICAL_BOUNDARY > CURRENT_BOUNDARY
 COMPLETE_CUTOVER > COMPATIBILITY_LAYER
 DELETE_LOSER > KEEP_IN_SYNC
 REFOUNDATION > PATCH_STACK
+WHOLE-SURFACE REFOUNDATION > MANY LOCAL PATCHES WHEN THE SURFACE IS THE ROOT
 ```
 
-Do not preserve structure merely to reduce immediate effort.
+Do not preserve structure to reduce immediate effort.
 
-## 2. Mandatory execution order
+## 2. Preferred treatment model
 
-Unless evidence proves a different safe dependency order:
+For each selected unit:
 
 ```text
-1. DEFINE CANONICAL SEMANTICS/OWNER/WRITER/BOUNDARY
-2. CREATE OR REFOUND CANONICAL DATA/STRUCTURE
-3. CREATE/REGENERATE CANONICAL CONTRACT LINEAGE
-4. MIGRATE WRITERS
-5. MIGRATE READERS/CONSUMERS
-6. MIGRATE/BACKFILL/RECONCILE DATA WHEN REQUIRED
-7. CUT OVER RUNTIME/ROUTES/CONFIG
-8. DISABLE OLD WRITES
-9. PROVE ZERO OLD READERS/CONSUMERS
-10. DELETE LOSING AUTHORITIES
-11. DELETE OLD CONTAINERS/BRIDGES/COMPENSATIONS
-12. PRUNE EMPTY/REDUNDANT PARENTS UPWARD
-13. FINISH FILE/SYMBOL/DEPENDENCY CLEANUP
-14. REFOUND ADMISSION/PREVENTION
-15. VERIFY + FALSIFY
+SALVAGE REQUIRED TRUTH
+→ ESTABLISH CANONICAL OWNER/WRITER/BOUNDARY
+→ BUILD MINIMUM NECESSARY CANONICAL CONTAINER SET
+→ MIGRATE DATA/CONTRACTS/GENERATED LINEAGE
+→ MIGRATE ALL WRITERS
+→ MIGRATE ALL READERS/CONSUMERS
+→ CUT OVER RUNTIME/ROUTES/CONFIG/NAVIGATION
+→ DISABLE OLD WRITES
+→ PROVE ZERO OLD READERS
+→ DELETE LOSING AUTHORITIES
+→ DELETE LOSING FILES/DIRECTORIES/PACKAGES/SERVICES/SURFACES
+→ DELETE OLD ALIASES/REEXPORTS/ROUTES/TEST RESIDUE
+→ PRUNE PARENTS UPWARD
+→ REFOUND ADMISSION/PREVENTION
+→ VERIFY + FALSIFY
 ```
 
 No half-migration closure.
 
-## 3. Highest-safe deletion
+## 3. Delete at the highest safe canonical granularity
 
-Deletion is a first-class operation, not post-cleanup.
-
-When a losing structure is proven unnecessary after value migration/cutover:
+When dead/losing material is found, do not automatically delete only the smallest item.
 
 ```text
-DELETE ITS SYMBOLS
-DELETE ITS FILES
-DELETE ITS DIRECTORY WHEN EMPTY OR SEMANTICALLY OBSOLETE
-DELETE ITS PACKAGE WHEN ITS RESPONSIBILITY MOVED/DIED
-DELETE ITS CONFIG/ROUTES/WORKFLOWS/TESTS/GENERATED OUTPUTS WHEN THEY ONLY SERVE THE LOSER
-REMOVE ITS DEPENDENCIES
-PRUNE ITS PARENT CONTAINERS RECURSIVELY
+DEAD LINE?
+→ CAN THE SYMBOL DIE?
+→ CAN THE FILE DIE OR BE ABSORBED?
+→ CAN THE DIRECTORY DIE/COLLAPSE?
+→ CAN THE PACKAGE/SERVICE/SUBTREE DIE?
+→ DELETE AT THE HIGHEST SAFE CANONICAL GRANULARITY
 ```
 
-The target is the highest safe obsolete container, not the smallest removable line.
+The highest safe obsolete container is the target.
 
-## 4. Directory/package death test
+## 4. File death test
 
-For every affected directory/package/module:
+Every affected file must answer:
 
 ```text
-NO RESPONSIBILITY => DELETE
+DOES IT OWN A UNIQUE COHESIVE CANONICAL RESPONSIBILITY?
+IS IT A REQUIRED MEMBER OF THE MINIMUM NECESSARY FILE SET?
+CAN ITS REQUIRED VALUE BE ABSORBED INTO A BETTER CANONICAL FILE?
+IS IT REEXPORT/PASS-THROUGH/FORWARDER/SHIM/ALIAS ONLY?
+IS IT A HISTORICAL COMPENSATION SHELL?
+```
+
+If no unique reason remains:
+
+```text
+MIGRATE REQUIRED VALUE
+→ UPDATE ALL CONSUMERS
+→ DELETE FILE
+```
+
+A used wrong file is migrated and deleted, not kept.
+
+## 5. Directory/package/service/surface death test
+
+For every affected container:
+
+```text
+NO UNIQUE RESPONSIBILITY => DELETE
 DUPLICATE RESPONSIBILITY => MIGRATE TO WINNER THEN DELETE LOSER
-MIXED RESPONSIBILITIES => SPLIT INTO TRUE OWNERS THEN DELETE MIXED CONTAINER
-WRONG OWNER => REHOME
+MIXED RESPONSIBILITIES => SPLIT/REHOME THEN DELETE MIXED CONTAINER
+WRONG OWNER => REHOME THEN DELETE OLD PATH
 PASS-THROUGH ONLY => REMOVE
-COMPATIBILITY ONLY => REMOVE AFTER CUTOVER
+COMPATIBILITY ONLY => REMOVE AFTER BOUNDED CUTOVER
+HISTORICAL COMPENSATION => ABSORB REQUIRED VALUE THEN DELETE
 DEAD/ORPHANED => DELETE
 CANONICAL COHESIVE OWNER => KEEP_PROVEN
 ```
 
-A directory surviving only because deleting it is inconvenient fails the gate.
+This applies through top-level surfaces including `.agents`, `.github`, `.opencodereview`, `docs`, `tools`, `governance`.
 
-## 5. Structural rewrite escalation
+## 6. Whole-subtree refoundation
 
-Mandatory escalation to larger rewrite/rehome/merge/split when any of these is proven:
+When a subtree is structurally noisy, contradictory, duplicated or largely compensatory, do not spend multiple roots cleaning files individually.
 
-```text
-LOCAL FIX WOULD PRESERVE DUPLICATE AUTHORITY
-LOCAL FIX WOULD REQUIRE KEEP-IN-SYNC LOGIC
-LOCAL FIX WOULD ADD ANOTHER WRAPPER
-LOCAL FIX WOULD LEAVE WRONG OWNERSHIP
-LOCAL FIX WOULD LEAVE BAD PACKAGE/SERVICE BOUNDARY
-LOCAL FIX WOULD EXTEND AN OBSOLETE MIGRATION EPOCH
-LOCAL FIX WOULD PRESERVE REACHABLE SUPERSEDED RUNTIME
-LOCAL FIX WOULD KEEP PATCH/COMPENSATION ARCHITECTURE
-```
-
-Do not issue a patch under these conditions.
-
-## 6. Compatibility is forbidden by default
-
-A compatibility layer may survive only when all are proven:
+Preferred pattern:
 
 ```text
-EXTERNAL LIVE CONSUMER EXISTS
-ATOMIC MIGRATION IS NOT POSSIBLE NOW
-EXACT OWNER AND CONSUMERS ARE KNOWN
-LAYER HAS NO SECOND MUTABLE WRITER
-REMOVAL TRIGGER IS EXPLICIT
-RETIREMENT IS BOUNDED
+FORENSICALLY EXTRACT UNIQUE REQUIRED VALUE
+→ DESIGN MINIMAL CANONICAL REPLACEMENT
+→ DELETE NONCANONICAL SUBTREE
+→ RECREATE ONLY REQUIRED CANONICAL MATERIAL
+→ UPDATE EVERY REFERENCE/CONSUMER
+→ PROVE ZERO OLD PATH/AUTHORITY REACHABILITY
 ```
 
-Otherwise migrate now and delete.
+Use this for control-plane/governance/tooling/doc surfaces as readily as product code when evidence supports it.
 
-`PERMANENT_TEMP`, `KEEP_JUST_IN_CASE`, `MAYBE_USED`, `LEGACY_FOR_SAFETY` are forbidden dispositions.
+## 7. Structural rewrite escalation
 
-## 7. Migration and data safety
+Escalation is mandatory when a local fix would:
 
-Destructive structural authority does not permit destructive uncertainty with durable data.
+```text
+PRESERVE DUPLICATE AUTHORITY
+REQUIRE KEEP-IN-SYNC LOGIC
+ADD ANOTHER WRAPPER
+LEAVE WRONG OWNERSHIP
+LEAVE BAD PACKAGE/SERVICE/DOMAIN BOUNDARY
+EXTEND A BAD MIGRATION EPOCH
+PRESERVE SUPERSEDED RUNTIME
+PRESERVE PATCH/COMPENSATION ARCHITECTURE
+PRESERVE CONFUSING GOVERNANCE/CI/TOOL AUTHORITY
+```
+
+Do not issue the local patch under those conditions.
+
+## 8. Fast garbage elimination
+
+Low-risk garbage that has no required truth, consumer, authority, durable state, external contract, migration role or security/compliance purpose is removed immediately.
+
+Before deleting the found item, apply the highest-safe-granularity test.
+
+```text
+PROVEN UNUSED + NOT REQUIRED
+→ DELETE NOW AT HIGHEST SAFE GRANULARITY
+→ SEARCH REFERENCES
+→ PRUNE PARENTS
+→ RUN AFFECTED VERIFICATION
+```
+
+Forbidden:
+
+```text
+KEEP JUST IN CASE
+COMMENT OUT
+MOVE TO archive/legacy/history
+CREATE CLEANUP BACKLOG
+LEAVE DEAD SHELL
+```
+
+## 9. Upward recursive pruning
+
+After every delete/merge/rehome/split:
+
+```text
+RE-EVALUATE SYMBOL
+→ FILE
+→ DIRECTORY
+→ PACKAGE
+→ SERVICE/BOUNDARY
+→ TOP-LEVEL SURFACE
+```
+
+Delete/collapse every parent that lost its unique responsibility.
+
+```text
+LOSING_TRUTH_REMOVED + LOSING_CONTAINER_SURVIVES_WITHOUT_UNIQUE_VALUE = OPEN
+```
+
+## 10. Merge/rehome completion
+
+A merge/rehome is incomplete until:
+
+```text
+REQUIRED_VALUE_ABSORBED=YES
+ALL_REQUIRED_CONSUMERS_MIGRATED=YES
+LOSING_CONTAINERS_DELETED=YES_OR_NA
+OLD_FILE_PATHS=0
+OLD_IMPORT_PATHS=0
+OLD_EXPORT_NAMES=0
+OLD_BARREL_REEXPORTS=0
+OLD_INTERNAL_ALIASES=0
+OLD_ROUTE_REGISTRATIONS=0
+OLD_TEST/FIXTURE/MOCK/SNAPSHOT RESIDUE=0
+```
+
+Internal migration shells are forbidden by default.
+
+## 11. Compatibility
+
+Compatibility survives only with proof of a live unavoidable external consumer, exact ownership, bounded retirement, no second mutable writer and explicit removal trigger.
+
+Otherwise:
+
+```text
+MIGRATE NOW
+→ DELETE NOW
+```
+
+## 12. Durable data and database safety
+
+Aggressive structure removal does not permit blind destruction of durable truth.
 
 Before changing persisted meaning prove:
 
 ```text
-SOURCE DATA SEMANTICS
-TARGET DATA SEMANTICS
+SOURCE SEMANTICS
+TARGET SEMANTICS
 TRANSFORMATION
 BACKFILL/RECONCILIATION
 ROLL-FORWARD STRATEGY
 CUTOVER ORDER
-READBACK PROOF
+READBACK
 FINANCIAL/SECURITY INVARIANTS WHEN APPLICABLE
 ```
 
-Prefer deterministic roll-forward migration over preserving obsolete architecture.
+If the migration epoch itself is corrupt, refound the epoch rather than patching hundreds of migration artifacts by default.
 
-## 8. Generated artifacts
+## 13. Contracts/generated lineage
 
-Generated outputs never become a second hand-maintained authority.
-
-For generated contracts/clients/types:
+Generated outputs are derived, never hand-maintained parallel truth.
 
 ```text
-ONE GENERATOR SOURCE
-ONE REPRODUCIBLE TOOLCHAIN
-ONE CANONICAL OUTPUT LOCATION
-ZERO MANUAL MIRROR EDITS
-ZERO DUPLICATE GENERATED TREES
-ZERO STALE OUTPUT AFTER SOURCE CHANGE
+ONE CANONICAL SOURCE
+→ ONE REPRODUCIBLE GENERATION TOOLCHAIN
+→ JUSTIFIED GENERATED OUTPUT SET
+→ ZERO MANUAL MIRRORS
+→ ZERO STALE GENERATED TREES
 ```
 
-When lineage is wrong, refound lineage; do not hand-patch generated output.
+Refound bad lineage; do not hand-patch generated output.
 
-## 9. File-level finishing pass
+## 14. End-to-end cutover
+
+When product behavior is material, migrate the complete vertical chain as applicable:
+
+```text
+DATA/STORAGE
+→ BACKEND/DOMAIN
+→ API/EVENT
+→ CONTRACT
+→ GENERATED BINDING
+→ FRONTEND DATA
+→ COMPONENT/SCREEN
+→ USER ACTION/MUTATION
+→ PERSISTED READBACK
+```
+
+A clean backend plus disconnected frontend is open.
+
+## 15. File/surface finishing
 
 Every materially affected surviving file must end with:
 
@@ -158,52 +268,43 @@ SHADOW_POLICY=0
 OBSOLETE_BRANCHES=0
 UNJUSTIFIED_SUPPRESSIONS=0
 STALE_TODO_FIXME_HACK=0
-MISLEADING_SYMBOL_NAMES=0
+MISLEADING_NAMES=0
 UNNECESSARY_WRAPPERS=0
 LOSING_AUTHORITY_REFERENCES=0
 ```
 
-This is not a license for cosmetic churn outside the causal cone; it is mandatory finishing inside it.
-
-## 10. Core/shared burden of proof
-
-`core/**` and `shared/**` are not preferred destinations.
-
-A concern belongs there only when cross-domain ownership is genuinely canonical and proven by multiple stable consumers without embedding domain-specific mutable policy.
-
-If a `core`/`shared` abstraction hides a real domain owner, duplicates service logic, owns mutable business truth, or exists mainly to avoid choosing ownership, rehome it.
-
-## 11. No cleanup deferral
-
-Forbidden completion states:
+Every affected surface must end with:
 
 ```text
-NEW_CANONICAL_PATH_EXISTS + OLD_PATH_REACHABLE
+RESPONSIBILITY_LESS_FILES=0
+RESPONSIBILITY_LESS_DIRECTORIES=0
+REEXPORT/PASS_THROUGH/FORWARDER/SHIM RESIDUE=0
+UNJUSTIFIED_FRAGMENTATION=0
+LOSING_SUBTREES=0
+```
+
+## 16. No cleanup deferral
+
+Forbidden:
+
+```text
+NEW_PATH_EXISTS + OLD_PATH_REACHABLE
 NEW_WRITER_EXISTS + OLD_WRITER_ACTIVE
-NEW_CONTRACT_EXISTS + OLD_CONTRACT_STILL_REFERENCED
-MIGRATION_DONE + BRIDGE_LEFT_PERMANENTLY
-ROOT_FIXED + TODO_CLEANUP_LATER
+NEW_CONTRACT_EXISTS + OLD_CONTRACT_REFERENCED
+MIGRATION_DONE + PERMANENT BRIDGE
+ROOT_FIXED + CLEANUP_LATER
 ```
 
-Cleanup belongs to the same root closure.
+Cleanup is part of the same refoundation unit.
 
-## 12. Deletion suspicion
+## 17. Deletion suspicion
 
-When a proven structural root closes with no losing structure removed, ask whether the execution merely added another layer.
+If a structural refoundation closes with zero losing structure removed, re-investigate whether another layer was merely added.
 
-```text
-STRUCTURAL_ROOT_CLOSED_WITH_ZERO_LOSING_STRUCTURE_REMOVED
-=> MANDATORY_REINVESTIGATION
-```
+Zero deletion is acceptable only with evidence that no losing structure existed.
 
-This is a suspicion trigger, not a blind deletion quota. If zero deletion is genuinely correct, evidence must prove why no losing structure existed.
+## 18. Checkpoints
 
-## 13. Checkpoint discipline
+Large units may span multiple direct commits on `h`. Each checkpoint must be coherent, exact-head safe and explicitly incomplete until migration/cutover/deletion/pruning and falsification are done.
 
-A large root may require multiple direct commits on `h`.
-
-Every checkpoint must be internally coherent and must not falsely claim closure.
-
-Checkpoint labels should state the active root and whether migration/cutover/deletion remain.
-
-Do not start a second overlapping mutation root before the active root closes or is explicitly blocked by a valid stop state.
+Do not start an overlapping mutation unit before the active one closes or is materially blocked.
