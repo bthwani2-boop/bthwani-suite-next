@@ -4,7 +4,7 @@ import { useStorefrontController } from "../../shared/storefront";
 import type {
   CatalogCategory,
   CatalogProduct,
-} from "../../shared/catalog/client-catalog.types";
+} from "../../catalog/client-catalog.types";
 import type { DshFulfillmentDeliveryMode } from "../../shared/delivery/delivery.contract";
 import { StoreDetailShell } from "./StoreDetailShell";
 import { useIdentitySession } from "@bthwani/core-identity";
