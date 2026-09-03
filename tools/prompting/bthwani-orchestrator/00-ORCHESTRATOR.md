@@ -1,7 +1,7 @@
 # BThwani Canonical Baseline Refoundation Orchestrator
 
-PACKAGE_REVISION: 25
-REFOUNDATION_PROFILE_REVISION: 2
+PACKAGE_REVISION: 26
+REFOUNDATION_PROFILE_REVISION: 3
 PACKAGE_CLASS: TRUSTWORTHY_CANONICAL_BASELINE_REFOUNDATION_ENGINE
 PROJECT: bthwani-suite-next
 TARGET_BRANCH: h
@@ -69,13 +69,13 @@ Exactly nine files are semantic owners in this package:
 
 1. `00-ORCHESTRATOR.md` — mission, package ownership, operating loop, invocation, global non-negotiables and stop states.
 2. `01-SCOPE-AUTHORITY-RULES.md` — `h` branch authority, all-repository scope, mutation authority, old-branch forensic use, exact-head discipline, concurrency and artifact survival law.
-3. `02-DIAGNOSE-ROOT-CAUSE.md` — full forensic census, truth extraction, semantic clustering, historical-defect absorption analysis and evidence-to-root diagnosis.
+3. `02-DIAGNOSE-ROOT-CAUSE.md` — full forensic census, truth extraction, semantic clustering, historical-defect absorption analysis, Source-of-Defect/Source-of-Fix and evidence-to-root diagnosis.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — canonical model, Root Graph, refoundation, migration, cutover, highest-safe deletion, recursive pruning and structural finishing.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-`h` evidence, failure classification, falsification, closure gates, fresh re-census and Level-4 fixed-point qualification.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-`h` evidence, finding accounting, failure classification, falsification, closure gates, fresh re-census and Level-4 fixed-point qualification.
 6. `05-OBJECTIVES-PLAYBOOK.md` — dynamic execution-unit selection and campaign traversal; it does not own session-sized objectives or AUTO/NEXT bug queues.
 7. `focus/code-architecture-organization.md` — architecture, semantic containers, topology, files/directories/packages/services, anti-fragmentation and structural UI ownership.
-8. `focus/governance-product-design.md` — Product/System truth, actors, journeys, screens, UX, end-to-end capability meaning and durable truth reconciliation.
-9. `focus/data-contracts-runtime-security-quality.md` — database/migrations, contracts/generated bindings, runtime/config/infra, security/finance, tests/CI/admission, dependencies and assurance.
+8. `focus/governance-product-design.md` — Product/System truth, actors, journeys, screens, UX, accessibility/localization, end-to-end capability meaning and durable truth reconciliation.
+9. `focus/data-contracts-runtime-security-quality.md` — database/migrations, contracts/generated bindings, runtime/config/infra, security/finance, operational truth, tests/CI/admission, dependencies and assurance.
 
 One material law has one owner. Other files reference it rather than create a competing variant.
 
@@ -344,7 +344,80 @@ BLOCKED_UNKNOWN THAT CAN CHANGE THE CANONICAL TARGET
 
 Do not stop merely because the unit is large, deletion is extensive, many callers require migration, a whole subtree must be rebuilt, or the existing structure is familiar.
 
-## 13. Completion
+## 13. Anti-weakening / anti-bureaucracy invariant
+
+No future orchestrator change, helper, plan, workflow, agent adapter or governance layer may weaken this refoundation profile by introducing any of the following as a default execution law:
+
+```text
+KEEP_BY_DEFAULT
+MINIMAL_DIFF_BIAS
+SMALLEST_ROOT_BIAS
+SESSION_SIZED_ROOT
+TOKEN_SIZED_ROOT
+FILE_BY_FILE_REQUIRED_EXECUTION
+SERVICE_BY_SERVICE_REQUIRED_EXECUTION
+PR_REQUIRED_FOR_h
+MERGE_REQUIRED_FOR_h
+DEFAULT_BRANCH_AUTHORITY_FOR_h
+MANDATORY_DURABLE_PLAN
+MANDATORY_DURABLE_LEDGER
+HUMAN_APPROVAL_GATE_FOR_DERIVABLE_MUTATION
+CLEANUP_LATER
+LOSING_CONTAINER_SURVIVAL
+COMPATIBILITY_JUST_IN_CASE
+THIRD_AUTHORITY_WRAPPER
+```
+
+A new process/rule is justified only if it materially improves one or more of:
+
+```text
+ROOT_CORRECTNESS
+TRUTH_PRESERVATION
+STRUCTURAL_DEBT_ELIMINATION
+MIGRATION/CUTOVER_SAFETY
+EVIDENCE_FIDELITY
+FALSIFIABILITY
+EXECUTION_SPEED
+FUTURE_COMPLEXITY_REDUCTION
+```
+
+without creating a competing authority or avoidable execution friction.
+
+## 14. Proven material obligations are executable, not recommendations
+
+Under mutation-authorized `h` mode:
+
+```text
+PROVEN + EXECUTABLE + MATERIAL + INSIDE_ACTIVE_UNIT
+!= OPTIONAL_RECOMMENDATION
+```
+
+Such an obligation must terminate as one of:
+
+```text
+TREATED_AND_VERIFIED
+VERIFIED_UNCHANGED
+N/A_PROVEN
+LEGITIMATE_STOP_STATE
+```
+
+The following are never terminal states for an executable material obligation:
+
+```text
+FOUND
+RECOMMENDED
+SHOULD_FIX
+TODO
+FOLLOW_UP
+LATER
+DEFERRED
+READY_TO_IMPLEMENT
+IMPLEMENTATION_PLAN
+```
+
+Known material migration, backfill, regeneration, cutover, consumer migration, deletion, pruning, reference repair and admission-hole obligations remain part of the same execution unit after the visible symptom disappears.
+
+## 15. Completion
 
 Only `04` may declare the campaign fixed point.
 
