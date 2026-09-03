@@ -1,55 +1,103 @@
-# H Root-Graph Campaign Playbook
+# H Dynamic Refoundation Campaign Playbook
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: campaign traversal after diagnosis. It does not create a session-sized objective queue.
+Owner: campaign traversal and selection of the highest correct mutation unit. It does not create AUTO/NEXT queues, session-sized objectives, or bug-chasing order.
 
-## 1. Campaign unit
+## 1. Campaign unit is dynamic
 
-The campaign unit is a proven causal root, not a file, ticket, failing check, prompt window or arbitrary milestone.
+The campaign is not forced to execute one file, one bug, one service, or one root at a time.
 
-```text
-ROOT_UNIT = HIGHEST_PROVEN_CAUSAL_AUTHORITY_OR_BOUNDARY_THAT_CAN_BE_SAFELY_REFOUNDED_AS_ONE_COMPLETE_CUTOVER
-```
+Choose the highest causally complete and safely executable unit that removes the most proven noncanonical structure while preserving required truth.
 
-A root may encompass an entire:
+Allowed unit shapes:
 
 ```text
+WHOLE REPOSITORY STRUCTURAL PASS
+TOP-LEVEL SURFACE
 DOMAIN
-SERVICE BOUNDARY
+SERVICE
+CAPABILITY/JOURNEY
 PACKAGE FAMILY
+DIRECTORY SUBTREE
+FILE/SYMBOL CLUSTER
 DATABASE OWNERSHIP MODEL
 MIGRATION EPOCH
 CONTRACT/GENERATED LINEAGE
-RUNTIME/CONFIG AUTHORITY
-SHARED/CORE OWNERSHIP MODEL
-ASSURANCE/CI AUTHORITY
-REPOSITORY TOPOLOGY CLUSTER
+RUNTIME/CONFIG/INFRA SURFACE
+ASSURANCE/CI CONTROL PLANE
+GOVERNANCE/TOOLS/DOCS AUTHORITY SURFACE
+SINGLE CAUSAL ROOT
 ```
 
-## 2. Campaign traversal
+```text
+EXECUTION_UNIT != SESSION_SIZE
+EXECUTION_UNIT != SMALLEST DIFF
+EXECUTION_UNIT != FIRST ERROR
+```
 
-At every iteration:
+## 2. Selection criterion
+
+Prefer the candidate that maximizes:
+
+```text
+STRUCTURAL LEVERAGE
+CANONICAL OWNERSHIP CORRECTION
+PARALLEL-TRUTH COLLAPSE
+LOSING-CONTAINER DELETION
+COMPENSATION-LAYER REMOVAL
+END-TO-END PARITY RESTORATION
+ADMISSION-HOLE CLOSURE
+FUTURE COMPLEXITY REDUCTION
+```
+
+while retaining a safe, complete migration/cutover path.
+
+Do not choose a smaller candidate merely because it is easier to explain or faster to patch.
+
+## 3. Wide discovery, decisive mutation
+
+At every cycle:
 
 ```text
 1. PIN EXACT h
-2. REFRESH MATERIAL EVIDENCE
-3. REBUILD/REFRESH ROOT GRAPH
-4. SELECT HIGHEST PROVEN EXECUTABLE ROOT
-5. DECLARE ITS COMPLETE CAUSAL CONE
-6. REFOUND + MIGRATE + CUT OVER + DELETE + PRUNE
-7. CLOSE ADMISSION HOLE
-8. VERIFY + FALSIFY ON EXACT h
-9. RE-PIN
-10. RE-DIAGNOSE
+2. RUN WIDE READ-ONLY CENSUS ACROSS MATERIAL SURFACES
+3. REFRESH CURRENT/CANONICAL/DELTA
+4. REBUILD CAUSAL ROOT GRAPH
+5. SYNTHESIZE CANDIDATE EXECUTION UNITS
+6. SELECT HIGHEST CORRECT SAFE UNIT
+7. DECLARE COMPLETE CAUSAL CONE
+8. SALVAGE REQUIRED VALUE
+9. REFOUND / MIGRATE / CUT OVER
+10. DELETE LOSERS AT HIGHEST SAFE GRANULARITY
+11. PRUNE UPWARD
+12. REFOUND ADMISSION/PREVENTION
+13. VERIFY + FALSIFY ON EXACT h
+14. RE-PIN
+15. RE-DIAGNOSE + RE-RANK
 ```
 
-No static queue survives a material architectural change without re-ranking.
+No static queue survives architectural change without revalidation.
 
-## 3. Root ranking
+## 4. Broad surface refoundation is first-class
 
-Prefer roots that collapse the most systemic debt while establishing canonical ownership.
+If `.agents`, `.github`, `.opencodereview`, `docs`, `tools`, `governance` or another surface is proven broadly noncanonical, duplicated or confusing, it may become one execution unit.
 
-Strong ranking signals:
+Preferred treatment when justified:
+
+```text
+EXTRACT UNIQUE REQUIRED VALUE
+→ DESIGN MINIMAL CANONICAL SURFACE
+→ DELETE NONCANONICAL SUBTREE
+→ RECREATE ONLY REQUIRED MATERIAL
+→ UPDATE ALL REFERENCES/CONSUMERS
+→ FALSIFY OLD-SURFACE ABSENCE
+```
+
+Do not create dozens of micro-roots to preserve a bad surface layout.
+
+## 5. Root-ranking signals
+
+Strong signals for a high-priority unit:
 
 ```text
 MULTIPLE MUTABLE AUTHORITIES
@@ -57,27 +105,29 @@ PARALLEL/SHADOW TRUTH
 DUPLICATE RESPONSIBILITY TREES
 WRONG DOMAIN/SERVICE/PACKAGE OWNER
 BAD MIGRATION EPOCH
-DUPLICATE CONTRACT LINEAGE
+DUPLICATE CONTRACT/GENERATED LINEAGE
 REACHABLE SUPERSEDED RUNTIME
-CROSS-REPOSITORY PATCH/BRIDGE PATTERN
+PATCH/BRIDGE/COMPENSATION PATTERN
 SYSTEMIC CI/ADMISSION HOLE
-HIGH HISTORICAL DEFECT CLUSTER DENSITY
+CONFLICTING GOVERNANCE/AGENT/TOOL AUTHORITY
+HIGH DEFECT-CLUSTER DENSITY
 ```
 
-Do not prioritize merely because an issue is easy or currently red.
+A high warning count alone is not ranking proof.
 
-## 4. Complete root declaration
+## 6. Execution-ready declaration
 
-Before mutation, establish:
+Before mutation state compactly:
 
 ```text
-ROOT_ID
+UNIT_ID
+UNIT_SHAPE
 CAUSAL_PROOF
 CANONICAL_TARGET
 VALUE_TO_PRESERVE
 LOSING_AUTHORITIES/CONTAINERS
-AFFECTED WRITERS
-AFFECTED READERS/CONSUMERS
+COMPLETE AFFECTED CONE
+WRITERS/READERS/CONSUMERS
 DATA/CONTRACT MIGRATION
 CUTOVER
 DELETION/PRUNING
@@ -86,47 +136,74 @@ VERIFICATION/FALSIFICATION
 VALID BLOCKERS
 ```
 
-If this cannot be stated, diagnosis is not execution-ready.
+If this cannot be stated, discovery is not execution-ready.
 
-## 5. Large roots
+## 7. Large units are not shrunk for convenience
 
-A root is not divided because it is large.
-
-Use sequential coherent checkpoints when needed, but preserve one active mutation authority and one declared canonical cutover.
-
-A checkpoint may be temporarily non-final but must not introduce an uncontrolled second truth. If unavoidable during migration, the transitional duality must be bounded, explicit, single-write where possible, and removed before root closure.
-
-## 6. Independent inherited debt
-
-Discovery may expose roots unrelated to the active root. Add them to the dynamic Root Graph with evidence; do not mutate them opportunistically if they overlap or would destabilize the active cutover.
-
-This preserves speed by avoiding random context switching while still maintaining broad repository awareness.
-
-## 7. Historical branches and defects
-
-Historical branches are read-only falsification/salvage sources. Historical defect lists are clustering evidence.
-
-Never convert old branch topology or old task ordering into campaign order.
-
-## 8. Root closure output
-
-For each closed root record compact evidence:
+Forbidden shrink reasons:
 
 ```text
-ROOT_ID
-OLD_AUTHORITY_REMOVED
-NEW_CANONICAL_AUTHORITY
-MIGRATION/CUTOVER_RESULT
-DELETED/PRUNED CONTAINERS
-ADMISSION_HOLE_RESULT
-EXACT_H_SHA
-VERIFICATION RESULT
-NEGATIVE-SPACE RESULT
-NEW ROOT GRAPH STATE
+TOO MANY FILES
+TOO MANY PACKAGES
+TOO MANY CALLERS
+TOO MUCH DELETION
+TOO MUCH MIGRATION
+FRONTEND AND BACKEND BOTH AFFECTED
+TOO LARGE FOR ONE SESSION
 ```
 
-Do not keep a second durable campaign plan merely to mirror this state; Git history plus canonical live repository/evidence is preferred.
+Use coherent checkpoints while preserving one unit identity and one final canonical cutover.
 
-## 9. Fixed point
+A checkpoint is never a closed unit while old authority/containers remain reachable.
 
-When the dynamic Root Graph reaches zero, hand control to `04-VERIFY-REDIAGNOSE-CLOSE.md` for the fresh full-repository recensus and Level-4 adversarial qualification.
+## 8. Independent inherited debt
+
+Wide discovery may expose unrelated roots while another unit is mutating.
+
+Record them in the dynamic graph; do not opportunistically patch them if they overlap or destabilize the active cutover.
+
+This avoids random context switching without reverting to conservative micro-execution.
+
+## 9. Historical sources
+
+Old branches, plans, prompts and defect lists are forensic evidence only.
+
+They may reveal required value or defect clusters, but never dictate current topology, branch integration or execution order.
+
+## 10. Fast garbage lane
+
+Proven low-risk garbage need not wait for a large unit if deletion cannot alter canonical truth or a live contract.
+
+```text
+PROVE UNUSED/UNREQUIRED
+→ CHECK HIGHEST SAFE GRANULARITY
+→ DELETE
+→ PRUNE
+→ VERIFY
+```
+
+If the finding reveals a higher structural root, stop the local lane and promote the higher unit instead.
+
+## 11. Closure output
+
+For every closed unit record only compact evidence:
+
+```text
+UNIT_ID
+OLD AUTHORITIES/CONTAINERS REMOVED
+NEW CANONICAL AUTHORITY/CONTAINER SET
+MIGRATION/CUTOVER RESULT
+DELETED/PRUNED STRUCTURE
+ADMISSION-HOLE RESULT
+EXACT_H_SHA
+VERIFICATION/FALSIFICATION RESULT
+NEW ROOT-GRAPH STATE
+```
+
+Do not create another durable campaign plan mirroring this state. Git history + live canonical repository + evidence are preferred.
+
+## 12. Fixed point
+
+When the dynamic graph first reaches zero, hand control to `04-VERIFY-REDIAGNOSE-CLOSE.md` for a fresh full-repository recensus from zero.
+
+The first empty graph is only a candidate fixed point.
