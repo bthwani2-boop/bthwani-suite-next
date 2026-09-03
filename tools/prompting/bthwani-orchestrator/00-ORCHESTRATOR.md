@@ -1,6 +1,6 @@
 # BThwani Canonical Baseline Refoundation Orchestrator
 
-PACKAGE_REVISION: 27
+PACKAGE_REVISION: 28
 REFOUNDATION_PROFILE_REVISION: 3
 PACKAGE_CLASS: TRUSTWORTHY_CANONICAL_BASELINE_REFOUNDATION_ENGINE
 PROJECT: bthwani-suite-next
@@ -67,12 +67,12 @@ DO NOT PRESERVE A PATH, PACKAGE, TOOL, WORKFLOW, DOC OR GOVERNANCE LAYER WITHOUT
 
 Exactly nine files are semantic owners in this package:
 
-1. `00-ORCHESTRATOR.md` — mission, package ownership, operating loop, invocation, global non-negotiables and stop states.
-2. `01-SCOPE-AUTHORITY-RULES.md` — `h` branch authority, all-repository scope, mutation authority, old-branch forensic use, exact-head discipline, concurrency and artifact survival law.
+1. `00-ORCHESTRATOR.md` — mission, package ownership, operating loop, invocation, mandatory session-recovery entry gate, global non-negotiables and stop states.
+2. `01-SCOPE-AUTHORITY-RULES.md` — `h` branch authority, all-repository scope, mutation authority, old-branch forensic use, exact-head discipline, execution-recovery authority, concurrency and artifact survival law.
 3. `02-DIAGNOSE-ROOT-CAUSE.md` — full forensic census, truth extraction, semantic clustering, historical-defect absorption analysis, Source-of-Defect/Source-of-Fix and evidence-to-root diagnosis.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — canonical model, Root Graph, refoundation, migration, cutover, highest-safe deletion, recursive pruning and structural finishing.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-`h` evidence, finding accounting, failure classification, falsification, closure gates, fresh re-census and Level-4 fixed-point qualification.
-6. `05-OBJECTIVES-PLAYBOOK.md` — dynamic execution-unit selection and campaign traversal; it does not own session-sized objectives or AUTO/NEXT bug queues.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-`h` evidence, recovered-evidence freshness, finding accounting, failure classification, falsification, closure gates, fresh re-census and Level-4 fixed-point qualification.
+6. `05-OBJECTIVES-PLAYBOOK.md` — dynamic execution-unit selection, interrupted-unit reconstruction and campaign traversal; it does not own session-sized objectives or AUTO/NEXT bug queues.
 7. `focus/code-architecture-organization.md` — architecture, semantic containers, topology, canonical naming/path ownership, file cohesion/size/complexity discipline, files/directories/packages/services, anti-fragmentation and structural UI ownership.
 8. `focus/governance-product-design.md` — Product/System truth, actors, journeys, screens, UX, accessibility/localization, end-to-end capability meaning and durable truth reconciliation.
 9. `focus/data-contracts-runtime-security-quality.md` — database/migrations, contracts/generated bindings, runtime/config/infra, security/finance, operational truth, tests/CI/admission, dependencies and assurance.
@@ -206,11 +206,70 @@ CONTEXT_WINDOW != ARCHITECTURE_BOUNDARY
 
 Wide parallel read-only discovery is encouraged when it reduces uncertainty. Mutation checkpoints may span multiple commits, but a partial checkpoint is never a closed unit.
 
+## 6.1 Resume / interrupted-execution recovery law
+
+Every new or resumed `h` execution session must reconstruct current execution state before normal root selection.
+
+```text
+RESUME = EXECUTION_STATE_RECONSTRUCTION
+RESUME != RESTART
+NEW_CHAT != NEW_ROOT
+LAST_COMMIT != ROOT_CLOSURE
+COMMIT != ROOT
+```
+
+Supreme recovery rules:
+
+```text
+NEVER RESUME FROM MEMORY.
+NEVER RESUME FROM CHAT HISTORY ALONE.
+NEVER RESUME FROM THE LAST ERROR MESSAGE.
+NEVER RESUME FROM COMMIT TITLES ALONE.
+NEVER ASSUME THE LAST COMMIT MEANS THE EXECUTION UNIT IS CLOSED.
+NEVER SELECT A NEW INDEPENDENT ROOT WHILE A PRIOR UNIT REMAINS PARTIALLY CUT OVER.
+```
+
+Mandatory session-entry gate:
+
+```text
+PIN LIVE h
+→ INSPECT MATERIAL HISTORY AND ACTUAL DIFFS
+→ RECONSTRUCT CAUSAL EXECUTION UNITS
+→ IDENTIFY LAST PROVEN CLOSED UNIT
+→ IDENTIFY ACTIVE OPEN UNIT, IF ANY
+→ VERIFY CURRENT WINNER/LOSER/MIGRATION/CUTOVER STATE
+→ INVALIDATE STALE EVIDENCE
+→ RECHECK MATERIAL NEGATIVE SPACE
+→ FIND RECOVERY_FRONTIER
+→ RESUME FIRST UNFINISHED MATERIAL OBLIGATION
+```
+
+If and only if no open execution unit survives reconstruction:
+
+```text
+RE-CENSUS
+→ RE-RANK
+→ SELECT THE NEXT HIGHEST CAUSAL UNIT
+```
+
+A partial cutover preempts independent new-root selection unless new evidence proves a higher causal root that supersedes the active unit.
+
+```text
+CONVERSATION_CONTEXT = CONVENIENCE_ONLY
+AGENT_MEMORY = CONVENIENCE_ONLY
+COMMIT_HISTORY = EXECUTION_FORENSICS
+LIVE_h + CURRENT_REACHABILITY + NONSTALE_EVIDENCE = EXECUTION_RECOVERY_REALITY
+```
+
+Detailed recovery authority is owned by `01`, recovered-evidence validity by `04`, and causal-unit reconstruction / `RECOVERY_FRONTIER` by `05`.
+
 ## 7. Unified refoundation loop
 
 ```text
-PIN EXACT h
-→ FULL MACHINE FORENSIC CENSUS
+SESSION RECOVERY GATE
+→ PIN EXACT h
+→ RESUME OPEN UNIT FROM RECOVERY_FRONTIER IF ONE EXISTS
+→ OTHERWISE FULL MACHINE FORENSIC CENSUS
 → WIDE READ-ONLY DISCOVERY
 → EXTRACT REQUIRED PRODUCT/SYSTEM/DATA/SECURITY/CONTRACT TRUTH
 → BUILD CURRENT MODEL
