@@ -29,7 +29,7 @@ test("partner commercial truth has one canonical inventory and price resource", 
   const paths = read("contracts/paths/catalog.paths.yaml");
   const routes = read("backend/internal/http/catalog_unified_routes.go");
   const handlers = read("backend/internal/http/catalog_inventory_pricing_handlers.go");
-  const client = read("frontend/shared/catalog/central-catalog.api.ts");
+  const client = read("frontend/catalog/central-catalog.api.ts");
   const partnerCatalog = read("frontend/app-partner/catalog/PartnerCatalogManagementScreen.tsx");
 
   for (const path of [
