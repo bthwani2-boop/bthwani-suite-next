@@ -1,5 +1,5 @@
 import React from "react";
-import { configureSecureRandomUuidProvider, secureRandomId } from "./_kernel/secure-random";
+import { configureSecureRandomUuidProvider, secureRandomId } from "./_kernel/secure-random.ts";
 
 export { secureRandomId };
 
@@ -171,31 +171,30 @@ export type DshLinkingAdapter = {
   readonly addUrlListener: (listener: (url: string) => void) => DshLinkingSubscription;
 };
 
-const unavailable = (capability: string): never => {
-  throw new DshNativeCapabilityUnavailable(capability);
-};
+const unavailable = (capability: string): Promise<never> =>
+  Promise.reject(new DshNativeCapabilityUnavailable(capability));
 
 let locationAdapter: DshLocationAdapter = {
-  hasServicesEnabled: async () => false,
-  requestForegroundPermissions: async () => unavailable("location"),
-  getCurrentPosition: async () => unavailable("location"),
+  hasServicesEnabled: () => Promise.resolve(false),
+  requestForegroundPermissions: () => unavailable("location"),
+  getCurrentPosition: () => unavailable("location"),
 };
 
 let imagePickerAdapter: DshImagePickerAdapter = {
-  requestCameraPermissions: async () => unavailable("imagePicker"),
-  requestMediaLibraryPermissions: async () => unavailable("imagePicker"),
-  launchCamera: async () => unavailable("imagePicker"),
-  launchImageLibrary: async () => unavailable("imagePicker"),
+  requestCameraPermissions: () => unavailable("imagePicker"),
+  requestMediaLibraryPermissions: () => unavailable("imagePicker"),
+  launchCamera: () => unavailable("imagePicker"),
+  launchImageLibrary: () => unavailable("imagePicker"),
 };
 
 let documentPickerAdapter: DshDocumentPickerAdapter = {
-  getDocument: async () => unavailable("documentPicker"),
+  getDocument: () => unavailable("documentPicker"),
 };
 
 let mapRenderer: DshMapRenderer | null = null;
 let videoRenderer: DshVideoRenderer | null = null;
 let linkingAdapter: DshLinkingAdapter = {
-  getInitialUrl: async () => null,
+  getInitialUrl: () => Promise.resolve(null),
   addUrlListener: () => ({ remove: () => undefined }),
 };
 let notificationRuntime: DshMobileNotificationRuntime = {
@@ -203,10 +202,10 @@ let notificationRuntime: DshMobileNotificationRuntime = {
   defaultActionIdentifier: "expo.modules.notifications.actions.DEFAULT",
   initialize: () => undefined,
   androidNativePushConfigured: () => false,
-  ensurePermission: async () => false,
-  resolveDeviceId: async () => unavailable("notifications"),
-  getPushToken: async () => unavailable("notifications"),
-  openUrl: async () => false,
+  ensurePermission: () => Promise.resolve(false),
+  resolveDeviceId: () => unavailable("notifications"),
+  getPushToken: () => unavailable("notifications"),
+  openUrl: () => Promise.resolve(false),
 };
 
 export function configureDshLocationAdapter(adapter: DshLocationAdapter): void {
@@ -297,8 +296,10 @@ export function createDshExpoLocationAdapter(module: unknown): DshLocationAdapte
 
 export function createDshBrowserLocationAdapter(): DshLocationAdapter {
   return {
-    hasServicesEnabled: async () => typeof navigator !== "undefined" && Boolean(navigator.geolocation),
-    requestForegroundPermissions: async () => ({ granted: typeof navigator !== "undefined" && Boolean(navigator.geolocation) }),
+    hasServicesEnabled: () => Promise.resolve(typeof navigator !== "undefined" && Boolean(navigator.geolocation)),
+    requestForegroundPermissions: () => Promise.resolve({
+      granted: typeof navigator !== "undefined" && Boolean(navigator.geolocation),
+    }),
     getCurrentPosition: () => new Promise<DshLocationPosition>((resolve, reject) => {
       if (typeof navigator === "undefined" || !navigator.geolocation) {
         reject(new DshNativeCapabilityUnavailable("location"));
@@ -425,7 +426,7 @@ export function createDshExpoNotificationRuntime(modules: {
     initialize: () => {
       if (modules.platform === "web") return;
       notifications.setNotificationHandler({
-        handleNotification: async () => ({
+        handleNotification: () => Promise.resolve({
           shouldShowBanner: true,
           shouldShowList: true,
           shouldPlaySound: true,
