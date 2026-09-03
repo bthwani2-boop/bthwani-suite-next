@@ -45,6 +45,837 @@ Then BThwani must implement the required truth inside its canonical owners using
 
 ---
 
+## 1A. BEST-IN-CLASS PRIORITY NAVIGATION
+
+### 1A.1 Reference selection is not adoption selection
+
+The selection rule for reference/falsification is intentionally broader than the selection rule for direct adoption.
+
+~~~text
+REFERENCE_SELECTION
+!=
+DEPENDENCY_ADOPTION_SELECTION
+~~~
+
+For reference use, do not reject a system merely because it is:
+
+~~~text
+PAID
+COMMERCIAL
+OPEN_CORE
+GPL/AGPL
+JAVA
+PYTHON
+RUBY
+PHP
+TYPESCRIPT
+A DIFFERENT DATABASE
+TOO_LARGE_TO_SELF_HOST
+NOT_A_BTHWANI_STACK_MATCH
+~~~
+
+If the system is one of the strongest/mature references for the exact root and its public code/docs/design material can expose missing logic, edge cases, state machines, contracts, operational controls, or failure handling, it may be used as a reference.
+
+For direct code reuse, dependency, or runtime adoption, the stricter license, stack, ownership, cost, maintenance, operations, and source-of-truth gates in this document still apply.
+
+Therefore:
+
+~~~text
+BEST_REFERENCE
+→ chosen for semantic maturity and falsification power
+
+BEST_COMPONENT_TO_ADOPT
+→ chosen only after adoption gates pass
+~~~
+
+A paid or differently licensed system may be a P1 reference while remaining forbidden for direct adoption.
+
+### 1A.2 Anti-distraction priority law
+
+The corpus is hierarchical. Do not browse every reference merely because it is listed.
+
+For every active BThwani root/question:
+
+~~~text
+IDENTIFY_EXACT_QUESTION
+→ SELECT_THE_RELEVANT_DOMAIN_PRIORITY_LIST
+→ CONSULT_P1
+→ ANSWER_SUFFICIENT_AND_NO_MATERIAL_UNKNOWN?
+    YES → STOP_EXTERNAL_RESEARCH
+    NO  → CONSULT_P2
+→ ANSWER_SUFFICIENT_AND_NO_MATERIAL_UNKNOWN?
+    YES → STOP_EXTERNAL_RESEARCH
+    NO  → CONSULT_P3
+→ CONTINUE_ONLY_IF_A_SPECIFIC_GAP/CONTRADICTION_REMAINS
+~~~
+
+Default maximum:
+
+~~~text
+ORDINARY_ROOT
+→ P1 only if sufficient
+→ P1 + P2 if incomplete
+→ P1 + P2 + P3 only if still materially unresolved
+
+FINANCIAL_OR_SECURITY_ROOT
+→ minimum P1 + one independent P2 cross-check
+→ P3 only on disagreement, missing invariant, or unresolved failure mode
+
+P4/P5/P6
+→ specialist fallback or adversarial falsification only
+→ never routine reading
+~~~
+
+This prevents corpus breadth from becoming execution delay.
+
+### 1A.3 Stop condition
+
+External reference research for a specific question stops when all are true:
+
+~~~text
+QUESTION_HAS_A_CLEAR_ANSWER
+APPLICABLE_INVARIANTS_IDENTIFIED
+APPLICABLE_EDGE_CASES_IDENTIFIED
+FAILURE/RECOVERY_BEHAVIOR_IDENTIFIED
+BTHWANI_OWNER_IDENTIFIED
+BTHWANI_GAP_CLASSIFIED
+NO_MATERIAL_CONTRADICTION_REMAINS
+NO_HIGH_RISK_UNKNOWN_REMAINS
+~~~
+
+Do not continue to P2/P3 merely to collect more examples.
+
+### 1A.4 Specialist override
+
+Priority is by question, not brand prestige.
+
+Examples:
+
+~~~text
+"How should unknown payment outcomes be handled?"
+→ PAYMENTS P1/P2
+
+"How should stale captain GPS be classified?"
+→ TELEMETRY/DISPATCH P1
+
+"How should fine-grained relationship authorization work?"
+→ AUTHORIZATION P1
+
+"How should refunds hit an internal ledger?"
+→ LEDGER/WALLET P1
+~~~
+
+### 1A.5 Ranking meaning
+
+~~~text
+P1 = DEFAULT FIRST REFERENCE
+P2 = FIRST FALLBACK / INDEPENDENT CROSS-CHECK
+P3 = SECOND FALLBACK / DIFFERENT ARCHITECTURAL VIEW
+P4 = SPECIALIST OR FALSIFICATION SOURCE
+P5+ = DEEP SPECIALIST / LAST-RESORT REFERENCE
+~~~
+
+Ranking means reference efficiency for BThwani, not a universal claim that one product is objectively superior to every other product.
+
+---
+
+## 1B. BEST-IN-CLASS PRIORITY INDEX
+
+All URLs below are reference entry points. Prefer official documentation or official repositories. Re-verify current URLs, licensing, and product status before direct code reuse or dependency adoption.
+
+### 1B.1 Commerce core / cart / checkout / order / fulfillment
+
+**P1 — Shopify**
+- Docs: https://shopify.dev/docs
+- Use first for: mature commerce semantics, cart/checkout/order/fulfillment, inventory behavior, refunds, discounts, webhooks, and admin/operator workflows.
+- Mode: REFERENCE_ONLY unless a specific provider/API integration is independently selected.
+
+**P2 — Adobe Commerce / Magento Open Source**
+- Docs: https://developer.adobe.com/commerce/
+- Repository: https://github.com/magento/magento2
+- Use for: implementation detail, catalog/order/inventory/admin extensibility and a second mature commerce model.
+
+**P3 — commercetools**
+- Docs: https://docs.commercetools.com/
+- Use for: composable commerce boundaries, carts/orders/inventory/pricing, API-first modeling, resource versioning and optimistic concurrency concepts.
+
+**P4 — Saleor**
+- Repository: https://github.com/saleor/saleor
+- Docs: https://docs.saleor.io/
+- Use for: inspectable checkout/order/payment/inventory/permissions logic and contract organization.
+
+**P5 — Medusa**
+- Repository: https://github.com/medusajs/medusa
+- Docs: https://docs.medusajs.com/
+- Use for: modular commerce flows and open implementation comparison.
+
+**P6 — Spree**
+- Repository: https://github.com/spree/spree
+- Docs: https://spreecommerce.org/docs/
+- Use only if higher priorities leave a gap.
+
+**P7 — Sylius**
+- Repository: https://github.com/Sylius/Sylius
+- Docs: https://docs.sylius.com/
+- Use as a final domain-driven commerce counterexample.
+
+**STOP:** If P1 answers the product-semantic question and no implementation-level gap remains, do not read P2-P7.
+
+### 1B.2 Multi-vendor marketplace / Partner / seller operations
+
+**P1 — Mirakl**
+- Entry: https://www.mirakl.com/
+- Use for: enterprise marketplace operator/seller separation, onboarding/governance, offers, commissions and marketplace operations.
+- Mode: REFERENCE_ONLY using public material.
+
+**P2 — Mercur**
+- Repository: https://github.com/mercurjs/mercur
+- Use for: inspectable multi-vendor marketplace logic, seller teams, vendor onboarding, offers, commissions, payouts and admin/vendor surfaces.
+
+**P3 — Sharetribe**
+- Docs: https://www.sharetribe.com/docs/
+- Use for: marketplace actors, listings, transactions, operator/user boundaries and journey comparison.
+
+**P4 — Medusa**
+- Repository: https://github.com/medusajs/medusa
+- Use only when a marketplace question needs comparison with a modular commerce implementation.
+
+**P5 — Adobe Commerce ecosystem concepts**
+- Docs: https://developer.adobe.com/commerce/
+- Use for mature extensibility/operator counterexamples where applicable.
+
+BThwani extraction priorities:
+
+~~~text
+PARTNER_ONBOARDING
+SELLER_MEMBERSHIP
+STORE_OWNERSHIP
+CATALOG_MUTATION_AUTHORITY
+OFFER_OWNERSHIP
+ORDER_PARTITIONING
+COMMISSION
+REFUND_ALLOCATION
+SETTLEMENT_ELIGIBILITY
+PAYOUT
+SUSPENSION
+OPERATOR_OVERRIDE
+AUDIT
+~~~
+
+### 1B.3 Delivery / dispatch / captain operations
+
+**P1 — Fleetbase**
+- Repository: https://github.com/fleetbase/fleetbase
+- Site: https://fleetbase.io/
+- Use for: broad inspectable logistics, dispatch, fleet/order execution and operator workflows.
+
+**P2 — Uber Engineering**
+- Engineering: https://www.uber.com/blog/engineering/
+- Use for: high-scale dispatch, marketplace matching, geospatial systems, reliability and real-time operational patterns.
+- Mode: REFERENCE_ONLY.
+
+**P3 — DoorDash Engineering**
+- Engineering: https://careersatdoordash.com/engineering-blog/
+- Use for: delivery marketplace, dispatch, logistics optimization and operational reliability.
+- Mode: REFERENCE_ONLY.
+
+**P4 — Traccar**
+- Repository: https://github.com/traccar/traccar
+- Docs: https://www.traccar.org/documentation/
+- Use when the question is telemetry, location, geofencing, freshness, offline/reconnect or location provenance.
+
+**P5 — VROOM**
+- Repository: https://github.com/VROOM-Project/vroom
+- Use only for vehicle/route optimization.
+
+**P6 — OpenTripPlanner**
+- Repository: https://github.com/opentripplanner/OpenTripPlanner
+- Use only if multimodal-routing concepts become materially relevant.
+
+Specialist override: GPS/telemetry questions start with Traccar; optimization questions start with VROOM.
+
+### 1B.4 Maps / routing / geocoding / serviceability
+
+**P1 — Google Maps Platform**
+- Docs: https://developers.google.com/maps
+- Use first because BThwani already has Google Maps integration and for routing/geocoding/places operational semantics.
+
+**P2 — Mapbox**
+- Docs: https://docs.mapbox.com/
+- Use for independent provider comparison and port/fallback validation.
+
+**P3 — Valhalla**
+- Repository: https://github.com/valhalla/valhalla
+- Use for inspectable self-hosted routing-engine concepts.
+
+**P4 — OSRM**
+- Repository: https://github.com/Project-OSRM/osrm-backend
+- Use for route-engine internals.
+
+**P5 — VROOM**
+- Repository: https://github.com/VROOM-Project/vroom
+- Use for multi-stop/vehicle optimization.
+
+**P6 — PostGIS**
+- Docs: https://postgis.net/documentation/
+- Use for canonical internal geospatial data, spatial constraints, indexes and serviceability semantics.
+
+### 1B.5 Payments / external financial rails / payment orchestration
+
+**P1 — Stripe**
+- Docs: https://docs.stripe.com/
+- Use for: payment lifecycle, idempotency, webhooks, retries, refunds, disputes, asynchronous outcomes, provenance and API design.
+
+**P2 — Adyen**
+- Docs: https://docs.adyen.com/
+- Use for: enterprise authorization/capture/refund, idempotency, webhooks, unknown/transient outcomes and reconciliation-oriented provider operations.
+
+**P3 — Hyperswitch**
+- Repository: https://github.com/juspay/hyperswitch
+- Docs: https://docs.hyperswitch.io/
+- Use for: inspectable payment orchestration, connectors, retries, routing and provider abstraction.
+
+**P4 — PayPal / Braintree**
+- PayPal: https://developer.paypal.com/docs/
+- Braintree: https://developer.paypal.com/braintree/docs/
+- Use as another mainstream provider lifecycle and webhook/refund counterexample.
+
+**P5 — Airwallex**
+- Docs: https://www.airwallex.com/docs
+- Use only if payout/cross-border/provider-operation semantics remain unresolved.
+
+High-risk rule: material payment mutations require P1 + P2 cross-check even if P1 appears sufficient.
+
+### 1B.6 Wallet / ledger / accounting / reconciliation
+
+**P1 — Modern Treasury Ledgers**
+- Docs: https://docs.moderntreasury.com/ledgers/docs/overview
+- Use for: immutable/double-entry ledger concepts, atomicity, transaction statuses, balances, linking money movement to ledger and reconciliation.
+
+**P2 — TigerBeetle**
+- Repository: https://github.com/tigerbeetle/tigerbeetle
+- Docs: https://docs.tigerbeetle.com/
+- Use for: transfer invariants, idempotency, pending/post/void semantics, timeouts, concurrency and balance correctness.
+
+**P3 — Formance Ledger**
+- Repository: https://github.com/formancehq/ledger
+- Docs: https://docs.formance.com/
+- Use for: inspectable ledger/posting/account modeling.
+
+**P4 — Blnk**
+- Repository: https://github.com/blnkfinance/blnk
+- Docs: https://docs.blnkfinance.com/
+- Use for: transaction lineage, inflight transactions, refund/reconciliation and recovery concepts.
+
+**P5 — Apache Fineract**
+- Repository: https://github.com/apache/fineract
+- Docs: https://fineract.apache.org/
+- Use for broad mature financial-account lifecycle comparisons.
+
+**P6 — Cala**
+- Repository: https://github.com/GaloyMoney/cala
+- Use as a deep specialist ledger counterexample after fresh maintenance verification.
+
+High-risk rule: ledger closure normally uses P1 + P2; use P3 only when implementation detail or another invariant remains missing.
+
+### 1B.7 Identity / authentication / sessions
+
+**P1 — Keycloak**
+- Repository: https://github.com/keycloak/keycloak
+- Docs: https://www.keycloak.org/documentation
+- Use for: mature authentication, sessions, OAuth2/OIDC/SAML, MFA, federation and security administration.
+
+**P2 — ZITADEL**
+- Repository: https://github.com/zitadel/zitadel
+- Docs: https://zitadel.com/docs
+- Use for: modern multi-tenant/B2B identity, organizations, roles and audit.
+
+**P3 — Ory**
+- GitHub: https://github.com/ory
+- Docs: https://www.ory.sh/docs/
+- Use for: API-first identity/session architecture and separation of identity components.
+
+**P4 — Authentik**
+- Repository: https://github.com/goauthentik/authentik
+- Docs: https://docs.goauthentik.io/
+- Use for federation/SSO/provider flows and operator administration.
+
+**P5 — SuperTokens**
+- Repository: https://github.com/supertokens/supertokens-core
+- Docs: https://supertokens.com/docs
+- Use for application-centric sessions/login edge cases.
+
+### 1B.8 Fine-grained authorization / permissions
+
+**P1 — OpenFGA**
+- Repository: https://github.com/openfga/openfga
+- Docs: https://openfga.dev/docs
+- Use for relationship-based/Zanzibar-style authorization.
+
+**P2 — Keycloak Authorization Services**
+- Docs: https://www.keycloak.org/docs/latest/authorization_services/
+- Use for RBAC/ABAC/context/resource/scope policy models.
+
+**P3 — Ory Keto**
+- Repository: https://github.com/ory/keto
+- Docs: https://www.ory.sh/keto/docs/
+- Use for a second relationship/permission architecture.
+
+**P4 — Cerbos**
+- Repository: https://github.com/cerbos/cerbos
+- Docs: https://docs.cerbos.dev/
+- Use for policy decision/enforcement separation.
+
+**P5 — Casbin**
+- Repository: https://github.com/casbin/casbin
+- Docs: https://casbin.org/docs/
+- Use for compact RBAC/ABAC comparison.
+
+### 1B.9 Notifications / inbox / preferences / multi-channel delivery
+
+**P1 — Knock**
+- Docs: https://docs.knock.app/
+- Use for: mature notification workflows, in-app feed/inbox, preferences, routing, batching/digests and multi-channel semantics.
+
+**P2 — Courier**
+- Docs: https://www.courier.com/docs/
+- Use for: routing, preference centers, channel choices, templates and notification API concepts.
+
+**P3 — Novu**
+- Repository: https://github.com/novuhq/novu
+- Docs: https://docs.novu.co/
+- Use for inspectable open-source workflow/inbox/preferences behavior.
+
+**P4 — OneSignal**
+- Docs: https://documentation.onesignal.com/
+- Use for mobile push delivery, segmentation and push lifecycle.
+
+**P5 — Braze**
+- Docs: https://www.braze.com/docs/
+- Use only for advanced enterprise messaging/personalization counterexamples.
+
+Source business facts remain owned by DSH/WLT/etc.; notification references do not become business authority.
+
+### 1B.10 Search / catalog discovery
+
+**P1 — Algolia**
+- Docs: https://www.algolia.com/doc/
+- Use for product/catalog search UX, indexing, ranking, facets, typo tolerance and filters.
+
+**P2 — Elasticsearch**
+- Docs: https://www.elastic.co/guide/
+- Use for mature distributed search/query/aggregation/relevance concepts.
+
+**P3 — OpenSearch**
+- Repository: https://github.com/opensearch-project/OpenSearch
+- Docs: https://docs.opensearch.org/
+- Use for open distributed search/analytics comparison.
+
+**P4 — Typesense**
+- Repository: https://github.com/typesense/typesense
+- Docs: https://typesense.org/docs/
+- Use for developer-friendly product/geo search.
+
+**P5 — Meilisearch**
+- Repository: https://github.com/meilisearch/meilisearch
+- Docs: https://www.meilisearch.com/docs
+- Use for lightweight typo-tolerant search/ranking.
+
+Specialist rule: product search starts at Algolia; deep distributed-search architecture starts at Elasticsearch/OpenSearch.
+
+### 1B.11 Durable workflows / sagas / long-running orchestration
+
+**P1 — Temporal**
+- Repository: https://github.com/temporalio/temporal
+- Docs: https://docs.temporal.io/
+- Use for durable execution, retries, timers, compensations and crash recovery.
+
+**P2 — Restate**
+- Repository: https://github.com/restatedev/restate
+- Docs: https://docs.restate.dev/
+- Use for durable functions/objects and idempotent execution.
+
+**P3 — Cadence**
+- Repository: https://github.com/uber/cadence
+- Docs: https://cadenceworkflow.io/docs/
+- Use for a mature alternative workflow model.
+
+**P4 — Inngest**
+- Docs: https://www.inngest.com/docs
+- Use only as a developer-experience/event-driven counterexample.
+
+Do not add a workflow engine merely because a saga/outbox exists; first prove native mechanisms are insufficient.
+
+### 1B.12 Observability / errors / metrics / traces / logs
+
+**P1 — OpenTelemetry**
+- GitHub: https://github.com/open-telemetry
+- Docs: https://opentelemetry.io/docs/
+- Use for telemetry conventions, traces/metrics/logs and context propagation.
+
+**P2 — Sentry**
+- Docs: https://docs.sentry.io/
+- GitHub: https://github.com/getsentry
+- Use for application errors, releases and mobile/web tracing.
+
+**P3 — Grafana stack**
+- Docs: https://grafana.com/docs/
+- Use for dashboards, logs, traces, metrics and operational composition.
+
+**P4 — Prometheus**
+- Repository: https://github.com/prometheus/prometheus
+- Docs: https://prometheus.io/docs/
+- Use for metrics, labels and alerting semantics.
+
+**P5 — Datadog**
+- Docs: https://docs.datadoghq.com/
+- Use only as an enterprise operability counterexample.
+
+### 1B.13 Backoffice / ERP / operational administration
+
+**P1 — Odoo**
+- Repository: https://github.com/odoo/odoo
+- Docs: https://www.odoo.com/documentation/
+- Use for broad operations/admin/workforce/accounting/inventory workflows and mature backoffice IA.
+
+**P2 — ERPNext**
+- Repository: https://github.com/frappe/erpnext
+- Docs: https://docs.frappe.io/erpnext
+- Use for inspectable ERP, operations, accounting, inventory and HR workflows.
+
+**P3 — OrangeHRM**
+- Repository: https://github.com/orangehrm/orangehrm
+- Use when Workforce/HR-specific employee lifecycle questions remain unresolved.
+
+**P4 — Microsoft Dynamics 365**
+- Docs: https://learn.microsoft.com/dynamics365/
+- Use only for enterprise backoffice workflow comparison where public docs are sufficient.
+
+These systems do not justify a generic ERP god service.
+
+### 1B.14 Workforce / HR / employee lifecycle
+
+**P1 — Odoo HR**
+- Docs: https://www.odoo.com/documentation/
+- Use for employee, attendance, time-off, recruitment and operational HR workflows.
+
+**P2 — ERPNext HR**
+- Docs: https://docs.frappe.io/erpnext
+- Use for employee records, shifts, attendance and onboarding.
+
+**P3 — OrangeHRM**
+- Repository: https://github.com/orangehrm/orangehrm
+- Use for dedicated HR lifecycle comparison.
+
+**P4 — Workday public concepts**
+- Entry: https://www.workday.com/
+- Use only for high-level enterprise HR falsification where public material is sufficient.
+
+Do not collapse Identity, Person, Engagement and Operational Role into one actor blob.
+
+### 1B.15 Customer support / operator service
+
+**P1 — Zendesk**
+- Docs: https://developer.zendesk.com/documentation/
+- Use for ticket lifecycle, requester/agent boundaries, status, SLA/escalation and audit.
+
+**P2 — Intercom**
+- Docs: https://developers.intercom.com/
+- Use for conversations, customer support/inbox and operator/customer context.
+
+**P3 — Chatwoot**
+- Repository: https://github.com/chatwoot/chatwoot
+- Docs: https://www.chatwoot.com/docs/
+- Use for inspectable omnichannel support/inbox workflows.
+
+**P4 — Zammad**
+- Repository: https://github.com/zammad/zammad
+- Docs: https://docs.zammad.org/
+- Use for helpdesk/ticket/audit/operator workflow comparison.
+
+### 1B.16 Feature flags / configuration / Platform Control
+
+**P1 — LaunchDarkly**
+- Docs: https://docs.launchdarkly.com/
+- Use for mature flag lifecycle, targeting, environments, rollout and audit.
+
+**P2 — OpenFeature**
+- GitHub: https://github.com/open-feature
+- Docs: https://openfeature.dev/docs/
+- Use for vendor-neutral feature-flag API semantics.
+
+**P3 — Unleash**
+- Repository: https://github.com/Unleash/unleash
+- Docs: https://docs.getunleash.io/
+- Use for inspectable flag strategy/environments/rollout.
+
+**P4 — Flagsmith**
+- Repository: https://github.com/Flagsmith/flagsmith
+- Docs: https://docs.flagsmith.com/
+- Use for another open remote-config/flag model.
+
+Feature flags do not authorize Platform Control to own unrelated business configuration.
+
+### 1B.17 Promotions / discounts / loyalty
+
+**P1 — Shopify**
+- Docs: https://shopify.dev/docs
+- Use for discount lifecycle, combinability, targeting and cart/order effects.
+
+**P2 — Talon.One**
+- Docs: https://docs.talon.one/
+- Use for advanced promotion/loyalty rules, campaigns, budgets, coupons and effects.
+
+**P3 — Voucherify**
+- Docs: https://docs.voucherify.io/
+- Use for coupons, promotions, loyalty, validation and redemption lifecycle.
+
+**P4 — Saleor**
+- Docs: https://docs.saleor.io/
+- Use for inspectable promotion implementation comparison.
+
+**P5 — Medusa**
+- Docs: https://docs.medusajs.com/
+- Use only if implementation details remain unresolved.
+
+### 1B.18 Fraud / payment risk
+
+**P1 — Stripe Radar**
+- Docs: https://docs.stripe.com/radar
+- Use for payment fraud/risk signals, rules and review outcomes.
+
+**P2 — Adyen risk management**
+- Docs: https://docs.adyen.com/risk-management/
+- Use for enterprise payment-risk rules and result handling.
+
+**P3 — Sift**
+- Docs: https://developers.sift.com/
+- Use for abuse/fraud event modeling and decision workflows.
+
+**P4 — Fingerprint**
+- Docs: https://dev.fingerprint.com/
+- Use for device-intelligence concepts only when required.
+
+Fraud providers produce signals/decisions; BThwani owns canonical business action/audit semantics.
+
+### 1B.19 Object storage / media
+
+**P1 — Amazon S3 semantics**
+- Docs: https://docs.aws.amazon.com/s3/
+- Use for object semantics, presigned access, lifecycle, metadata and multipart upload.
+
+**P2 — Cloudflare R2**
+- Docs: https://developers.cloudflare.com/r2/
+- Use because BThwani development may use R2 and it is S3-compatible.
+
+**P3 — MinIO**
+- Repository: https://github.com/minio/minio
+- Docs: https://min.io/docs/
+- Use for local/self-hosted S3-compatible conformance.
+
+Domain code depends on ObjectStorage semantics, not an S3/R2/MinIO business authority.
+
+### 1B.20 Secrets / credentials / sensitive configuration
+
+**P1 — HashiCorp Vault**
+- Repository: https://github.com/hashicorp/vault
+- Docs: https://developer.hashicorp.com/vault/docs
+- Use for secret references, leases, rotation, dynamic secrets and audit.
+
+**P2 — AWS Secrets Manager**
+- Docs: https://docs.aws.amazon.com/secretsmanager/
+- Use for managed secret versioning/rotation/injection patterns.
+
+**P3 — SOPS**
+- Repository: https://github.com/getsops/sops
+- Use for encrypted configuration/secrets workflow concepts.
+
+**P4 — Doppler**
+- Docs: https://docs.doppler.com/
+- Use as a managed secrets/config developer-experience counterexample.
+
+### 1B.21 API contracts / generation / compatibility
+
+**P1 — OpenAPI Specification**
+- Spec: https://spec.openapis.org/oas/latest.html
+- Use for canonical HTTP API contract semantics.
+
+**P2 — oapi-codegen**
+- Repository: https://github.com/oapi-codegen/oapi-codegen
+- Use if BThwani needs one Go OpenAPI generation lineage.
+
+**P3 — Redocly**
+- Docs: https://redocly.com/docs/
+- Use for OpenAPI lint/bundle/governance concepts.
+
+**P4 — Pact**
+- GitHub: https://github.com/pact-foundation
+- Docs: https://docs.pact.io/
+- Use for consumer/provider contract testing concepts.
+
+**P5 — Schemathesis**
+- Repository: https://github.com/schemathesis/schemathesis
+- Docs: https://schemathesis.readthedocs.io/
+- Use for property/fuzz-style OpenAPI testing when applicable.
+
+### 1B.22 Integration testing / failure injection / real infrastructure proof
+
+**P1 — Testcontainers-Go**
+- Repository: https://github.com/testcontainers/testcontainers-go
+- Use for real PostgreSQL/Redis/service dependencies in deterministic integration tests.
+
+**P2 — WireMock**
+- Repository: https://github.com/wiremock/wiremock
+- Docs: https://wiremock.org/docs/
+- Use for provider simulators, timeout/duplicate/unknown-result behavior and API conformance.
+
+**P3 — Toxiproxy**
+- Repository: https://github.com/Shopify/toxiproxy
+- Use for latency, disconnect, timeout and network-failure simulation.
+
+**P4 — Pact**
+- Docs: https://docs.pact.io/
+- Use when consumer/provider compatibility is the unresolved risk.
+
+**P5 — k6**
+- Repository: https://github.com/grafana/k6
+- Docs: https://grafana.com/docs/k6/
+- Use for load/performance only when performance becomes a proven closure criterion.
+
+---
+
+## 1C. ROOT-TO-REFERENCE ROUTER
+
+Use this table to avoid broad browsing.
+
+| BThwani root/question | Start here | First fallback | Specialist/deep fallback |
+|---|---|---|---|
+| Cart / checkout / order | Shopify | Adobe Commerce | commercetools / Saleor |
+| Partner / marketplace | Mirakl | Mercur | Sharetribe |
+| Catalog / inventory | Shopify | Adobe Commerce | commercetools / Saleor |
+| Dispatch | Fleetbase | Uber Engineering | DoorDash Engineering |
+| Captain GPS / geofence | Traccar | Google Maps | Mapbox |
+| Routing | Google Maps | Mapbox | Valhalla / OSRM |
+| Route optimization | VROOM | Google/Mapbox optimization docs | Valhalla |
+| Payment provider lifecycle | Stripe | Adyen | Hyperswitch |
+| Unknown financial result | Adyen | Stripe | Hyperswitch |
+| Wallet / ledger | Modern Treasury | TigerBeetle | Formance |
+| Reconciliation | Modern Treasury | Adyen | Blnk / Formance |
+| Identity / sessions | Keycloak | ZITADEL | Ory |
+| Relationship authorization | OpenFGA | Keycloak AuthZ | Ory Keto |
+| Notification workflow | Knock | Courier | Novu |
+| Push delivery | OneSignal | Expo/FCM official docs | Novu |
+| Product search | Algolia | Elasticsearch | OpenSearch / Typesense |
+| Durable workflow | Temporal | Restate | Cadence |
+| Tracing / telemetry contract | OpenTelemetry | Grafana | Sentry |
+| Error/release observability | Sentry | OpenTelemetry | Grafana |
+| Backoffice operations | Odoo | ERPNext | Dynamics concepts |
+| Workforce / HR | Odoo HR | ERPNext HR | OrangeHRM |
+| Support | Zendesk | Intercom | Chatwoot |
+| Feature flags / rollout | LaunchDarkly | OpenFeature | Unleash |
+| Promotions / loyalty | Shopify | Talon.One | Voucherify |
+| Payment fraud/risk | Stripe Radar | Adyen Risk | Sift |
+| Object storage | S3 semantics | R2 | MinIO |
+| Secrets | Vault | AWS Secrets Manager | SOPS |
+| OpenAPI contract | OpenAPI spec | oapi-codegen | Redocly / Pact |
+| Real integration proof | Testcontainers-Go | WireMock | Toxiproxy / Pact |
+
+---
+
+## 1D. REFERENCE QUERY CARD
+
+Before consulting the corpus, reduce the root to a concrete question.
+
+Example:
+
+~~~text
+ACTIVE_ROOT:
+WLT payment unknown-result handling
+
+QUESTION:
+Provider timed out after a payment mutation. What state must BThwani persist and when is retry safe?
+
+P1:
+Adyen
+
+P1_FINDINGS_REQUIRED:
+- idempotency behavior
+- timeout/transient semantics
+- webhook/reconciliation behavior
+- safe retry condition
+
+P2_CROSS_CHECK:
+Stripe
+
+STOP_WHEN:
+- canonical BThwani UNKNOWN state is defined
+- reconciliation path is defined
+- retry safety is defined
+- provider provenance is defined
+- tests can falsify duplicate charge / lost result
+~~~
+
+Another example:
+
+~~~text
+ACTIVE_ROOT:
+Captain live location
+
+QUESTION:
+When must a position be considered stale and how should reconnect/out-of-order events behave?
+
+P1:
+Traccar
+
+P2:
+Google Maps/provider semantics only if needed
+
+STOP_WHEN:
+- position timestamp/provenance is defined
+- freshness/staleness rule is defined
+- out-of-order behavior is defined
+- offline/reconnect behavior is defined
+- DSH remains canonical delivery owner
+~~~
+
+This card is temporary reasoning/evidence, not a durable campaign-state ledger.
+
+---
+
+## 1E. Corpus expansion law
+
+Do not add a new reference because it is popular.
+
+A new reference enters this file only when it provides material value not sufficiently represented by the higher-priority corpus:
+
+~~~text
+NEW_REFERENCE_ADMISSION
+=
+UNIQUE_FALSIFICATION_VALUE
+OR
+UNIQUE_SPECIALIST_DEPTH
+OR
+CLEARLY_STRONGER_CURRENT_P1/P2
+~~~
+
+If a source merely duplicates existing P4/P5 material:
+
+~~~text
+DO_NOT_ADD
+~~~
+
+If an existing P1 becomes stale, inaccessible, materially weaker, or no longer exposes useful public evidence:
+
+~~~text
+RE-RANK
+→ PROMOTE_STRONGER_REFERENCE
+→ KEEP_LIST_SHORT
+~~~
+
+The goal is maximum semantic coverage with minimum browsing fan-out.
+
+---
+
 ## 2. Non-negotiable stack preservation
 
 External-source research does **not** authorize a platform rewrite.
