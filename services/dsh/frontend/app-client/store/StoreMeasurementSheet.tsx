@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { alpha, colorPalette, colorRoles } from "@bthwani/ui-kit";
-import type { CatalogProduct } from "../../shared/catalog/client-catalog.types";
+import type { CatalogProduct } from "../../catalog/client-catalog.types";
 
 export type StoreMeasurementSheetProps = {
   readonly product: CatalogProduct | null;
