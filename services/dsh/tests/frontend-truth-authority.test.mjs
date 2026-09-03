@@ -46,8 +46,8 @@ function relativeToRepository(absolutePath) {
 }
 
 const retiredParallelAuthorities = [
-  "services/dsh/frontend/shared/checkout/checkout-contract.ts",
-  "services/dsh/frontend/shared/checkout/dsh-client-binding.contracts.ts",
+  "services/dsh/frontend/commerce/checkout/checkout-contract.ts",
+  "services/dsh/frontend/commerce/checkout/dsh-client-binding.contracts.ts",
   "services/dsh/frontend/shared/identity-access/dsh-role-permission.model.ts",
   "services/dsh/frontend/shared/identity-access/surface-visibility.policy.ts",
   "services/dsh/frontend/shared/catalog/central-catalog.controller-core.ts",
