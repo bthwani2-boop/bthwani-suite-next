@@ -1,5 +1,5 @@
-import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../shared/_kernel/dsh-api-base-url";
+import { createDshHttpClient } from "../shared/_kernel/dsh-http-request";
 import type { StoreAssortment } from "./central-catalog.types";
 import type {
   AssortmentPauseState,
