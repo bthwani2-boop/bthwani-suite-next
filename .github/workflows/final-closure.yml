@@ -1,204 +1,129 @@
-name: BThwani Final Closure
-run-name: Final Closure PR ${{ inputs.pr_number }}
+name: BThwani h Final Baseline
+run-name: h final ${{ inputs.expected_head_sha || github.sha }} @ ${{ inputs.expected_base_sha || 'parent' }}
 
 on:
   workflow_dispatch:
     inputs:
-      pr_number:
-        description: Open PR number to close exactly
-        required: true
-        type: string
       expected_head_sha:
-        description: Optional exact expected PR head SHA
+        description: Exact h candidate SHA; defaults to dispatched h SHA
         required: false
         type: string
       expected_base_sha:
-        description: Optional exact expected PR base SHA
+        description: Exact ancestor base SHA; defaults to candidate first parent
         required: false
         type: string
 
-# The privileged closure definition is expected to run from the protected
-# default branch. Individual jobs receive only the permissions they need.
 permissions:
   contents: read
 
 concurrency:
-  group: bthwani-final-closure-${{ inputs.pr_number }}
+  group: bthwani-h-final-${{ inputs.expected_head_sha || github.sha }}
   cancel-in-progress: true
 
 env:
   GH_TOKEN: ${{ github.token }}
+  TRUSTED_H_BRANCH: h
 
 jobs:
   resolve:
-    name: Resolve exact live PR candidate
+    name: Resolve exact h final candidate
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      pull-requests: read
+    timeout-minutes: 10
     outputs:
-      pr_number: ${{ steps.identity.outputs.pr_number }}
-      head_ref: ${{ steps.identity.outputs.head_ref }}
       head_sha: ${{ steps.identity.outputs.head_sha }}
-      base_ref: ${{ steps.identity.outputs.base_ref }}
       base_sha: ${{ steps.identity.outputs.base_sha }}
-      dependency_changed: ${{ steps.classification.outputs.dependency_changed }}
-      docker_changed: ${{ steps.classification.outputs.docker_changed }}
-      risk_classes: ${{ steps.classification.outputs.risk_classes }}
-      required_jobs: ${{ steps.classification.outputs.required_jobs }}
-      changed_count: ${{ steps.classification.outputs.changed_count }}
-      rendered_web_required: ${{ steps.classification.outputs.rendered_web_required }}
-      mobile_evidence_required: ${{ steps.classification.outputs.mobile_evidence_required }}
-      sonar_required: ${{ steps.classification.outputs.sonar_required }}
-      closure_required_claims: ${{ steps.classification.outputs.closure_required_claims }}
     steps:
-      - name: Resolve live PR identity from trusted workflow definition
-        id: identity
-        shell: bash
-        env:
-          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
-          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          set -euo pipefail
-          [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]] || {
-            echo "::error::Final Closure workflow definition must run from ${DEFAULT_BRANCH}, got ${GITHUB_REF_NAME}"
-            exit 1
-          }
-          [[ "${INPUT_PR_NUMBER}" =~ ^[1-9][0-9]*$ ]] || { echo "::error::an open PR number is required"; exit 1; }
-          pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${INPUT_PR_NUMBER}")"
-          [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::PR is not open"; exit 1; }
-          [[ "$(jq -r '.draft' <<<"${pr}")" == "false" ]] || { echo "::error::Final Closure requires a non-draft PR"; exit 1; }
-          head_ref="$(jq -r '.head.ref' <<<"${pr}")"
-          head_sha="$(jq -r '.head.sha' <<<"${pr}")"
-          base_ref="$(jq -r '.base.ref' <<<"${pr}")"
-          base_sha="$(jq -r '.base.sha' <<<"${pr}")"
-          [[ -z "${EXPECTED_HEAD_SHA:-}" || "${EXPECTED_HEAD_SHA}" == "${head_sha}" ]] || { echo "::error::expected head SHA is stale"; exit 1; }
-          [[ -z "${EXPECTED_BASE_SHA:-}" || "${EXPECTED_BASE_SHA}" == "${base_sha}" ]] || { echo "::error::expected base SHA is stale"; exit 1; }
-          {
-            echo "pr_number=${INPUT_PR_NUMBER}"
-            echo "head_ref=${head_ref}"
-            echo "head_sha=${head_sha}"
-            echo "base_ref=${base_ref}"
-            echo "base_sha=${base_sha}"
-          } >> "${GITHUB_OUTPUT}"
-
-      - name: Checkout trusted workflow context for data-only classification
+      - name: Checkout exact h candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ inputs.expected_head_sha || github.sha }}
           fetch-depth: 0
           fetch-tags: false
           persist-credentials: false
-      - name: Checkout exact candidate for data-only classification
+      - name: Verify final candidate identity
+        id: identity
         shell: bash
         env:
-          EXPECTED_SHA: ${{ steps.identity.outputs.head_sha }}
-          GH_TOKEN: ${{ github.token }}
+          INPUT_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          INPUT_BASE_SHA: ${{ inputs.expected_base_sha }}
         run: |
           set -euo pipefail
-          [[ "${EXPECTED_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::exact candidate SHA required"; exit 1; }
-          git -c "http.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}" fetch --no-tags origin "${EXPECTED_SHA}"
-          git switch --detach FETCH_HEAD
-          [[ "$(git rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || { echo "::error::candidate checkout drift"; exit 1; }
-
-      - name: Set up locked Node runtime for trusted classifier
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: "24.17.0"
-          package-manager-cache: false
-
-      - name: Classify exact diff with trusted default-branch router
-        id: classification
-        shell: bash
-        env:
-          BASE_SHA: ${{ steps.identity.outputs.base_sha }}
-          HEAD_SHA: ${{ steps.identity.outputs.head_sha }}
-          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          git cat-file -e "${BASE_SHA}^{commit}"
-          git cat-file -e "${HEAD_SHA}^{commit}"
-          git merge-base --is-ancestor "${BASE_SHA}" "${HEAD_SHA}"
-          mapfile -t files < <(git diff --name-only --diff-filter=ACMRDTUXB "${BASE_SHA}" "${HEAD_SHA}" --)
-          changed_files="$(printf '%s\n' "${files[@]}")"
-          trusted_router="${RUNNER_TEMP}/detect-ci-context.mjs"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/detect-ci-context.mjs" \
-            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_router}"
-          [[ -s "${trusted_router}" ]] || { echo "::error::trusted CI router could not be loaded"; exit 1; }
-          classification_json="${RUNNER_TEMP}/final-classification.json"
-          CI_BASE_SHA="${BASE_SHA}" \
-          CI_HEAD_SHA="${HEAD_SHA}" \
-          CI_CHANGED_FILES="${changed_files}" \
-          node "${trusted_router}" > "${classification_json}"
-          jq -e '.base_sha and .head_sha and (.changed_count | type == "number")' "${classification_json}" >/dev/null
-          echo "docker_changed=$(jq -r '.infrastructure' "${classification_json}")" >> "${GITHUB_OUTPUT}"
+          [[ "${GITHUB_REF_NAME}" == "${TRUSTED_H_BRANCH}" ]] || {
+            echo "::error::Final baseline must run from h; got ${GITHUB_REF_NAME}"
+            exit 1
+          }
+          actual_head="$(git rev-parse HEAD)"
+          head_sha="${INPUT_HEAD_SHA:-${GITHUB_SHA}}"
+          [[ "${head_sha}" =~ ^[0-9a-fA-F]{40}$ && "${actual_head}" == "${head_sha}" ]] || {
+            echo "::error::exact h candidate mismatch"
+            exit 1
+          }
+          base_sha="${INPUT_BASE_SHA:-}"
+          if [[ -z "${base_sha}" ]]; then
+            base_sha="$(git rev-parse "${head_sha}^")"
+          fi
+          [[ "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::exact base SHA required"; exit 1; }
+          git cat-file -e "${base_sha}^{commit}"
+          git merge-base --is-ancestor "${base_sha}" "${head_sha}" || {
+            echo "::error::final base is not an ancestor of h candidate"
+            exit 1
+          }
           {
-            echo "### Exact final candidate"
-            echo "- PR: #${{ steps.identity.outputs.pr_number }}"
-            echo "- Head: ${{ steps.identity.outputs.head_ref }}@${HEAD_SHA}"
-            echo "- Base: ${{ steps.identity.outputs.base_ref }}@${BASE_SHA}"
-            echo "- Changed files: $(jq -r '.changed_count' "${classification_json}")"
-            echo "- Risk classes: $(jq -r '.risk_classes | join(",")' "${classification_json}")"
+            echo "head_sha=${head_sha}"
+            echo "base_sha=${base_sha}"
+          } >> "${GITHUB_OUTPUT}"
+          {
+            echo "### h final exact candidate"
+            echo "- head: ${head_sha}"
+            echo "- base: ${base_sha}"
+            echo "- branch authority: h"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   ci:
-    name: Full CI preflight
+    name: Full exact-h verification
     needs: [resolve]
     if: ${{ needs.resolve.result == 'success' }}
     permissions:
       actions: read
       contents: read
-      pull-requests: read
       statuses: write
     uses: ./.github/workflows/ci-check.yml
     with:
-      pr_number: ${{ needs.resolve.outputs.pr_number }}
       expected_head_sha: ${{ needs.resolve.outputs.head_sha }}
       expected_base_sha: ${{ needs.resolve.outputs.base_sha }}
-      full_scope: false
+      full_scope: true
 
   sonar:
-    name: SonarQube exact analysis
+    name: Sonar full exact-h analysis
     needs: [resolve]
     if: ${{ needs.resolve.result == 'success' }}
     permissions:
       actions: read
       contents: read
-      pull-requests: read
     uses: ./.github/workflows/sonarqube.yml
     secrets: inherit
     with:
-      pr_number: ${{ needs.resolve.outputs.pr_number }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
-      head_ref: ${{ needs.resolve.outputs.head_ref }}
-      base_ref: ${{ needs.resolve.outputs.base_ref }}
       trusted_scan: true
-      full_scope: false
+      full_scope: true
 
   codeql:
-    name: CodeQL exact analysis
+    name: CodeQL full exact-h analysis
     needs: [resolve]
     if: ${{ needs.resolve.result == 'success' }}
     permissions:
       actions: read
       contents: read
-      pull-requests: read
       security-events: write
     uses: ./.github/workflows/codeql.yml
     with:
-      pr_number: ${{ needs.resolve.outputs.pr_number }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
-      head_ref: ${{ needs.resolve.outputs.head_ref }}
-      base_ref: ${{ needs.resolve.outputs.base_ref }}
-      full_scope: false
+      full_scope: true
 
   semgrep:
-    name: Semgrep exact analysis
+    name: Semgrep full exact-h analysis
     needs: [resolve]
     if: ${{ needs.resolve.result == 'success' }}
     permissions:
@@ -207,41 +132,23 @@ jobs:
     with:
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
-      full_scope: false
+      full_scope: true
 
   security:
-    name: Security exact analysis
+    name: Security exact-h analysis
     needs: [resolve]
     if: ${{ needs.resolve.result == 'success' }}
     permissions:
       contents: read
-      pull-requests: read
     uses: ./.github/workflows/security-remote.yml
     with:
-      pr_number: ${{ needs.resolve.outputs.pr_number }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
-      head_ref: ${{ needs.resolve.outputs.head_ref }}
-      base_ref: ${{ needs.resolve.outputs.base_ref }}
 
-
-  opencodereview:
-    name: OpenCodeReview exact-candidate inspection
+  rendered-web:
+    name: Rendered Web exact-h evidence
     needs: [resolve]
     if: ${{ needs.resolve.result == 'success' }}
-    permissions:
-      contents: read
-    uses: ./.github/workflows/open-code-review.yml
-    with:
-      pr_number: ${{ needs.resolve.outputs.pr_number }}
-      base_ref: ${{ needs.resolve.outputs.base_ref }}
-      head_sha: ${{ needs.resolve.outputs.head_sha }}
-      base_sha: ${{ needs.resolve.outputs.base_sha }}
-
-  rendered-web-baseline:
-    name: Rendered Web exact-candidate baseline
-    needs: [resolve]
-    if: ${{ needs.resolve.result == 'success' && needs.resolve.outputs.rendered_web_required == 'true' }}
     permissions:
       contents: read
     uses: ./.github/workflows/rendered-web-evidence.yml
@@ -249,520 +156,105 @@ jobs:
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
 
-  rendered-web-evidence:
-    name: Validate material rendered-Web host evidence
-    needs: [resolve, rendered-web-baseline]
-    if: ${{ needs.resolve.result == 'success' && needs.resolve.outputs.rendered_web_required == 'true' && needs.rendered-web-baseline.result == 'success' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pull-requests: read
-      issues: read
-    steps:
-      - name: Load trusted evidence validator
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TRUSTED_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          validator="${RUNNER_TEMP}/verify-pr-evidence-comments.mjs"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28'             "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/verify-pr-evidence-comments.mjs"             -f "ref=${TRUSTED_SHA}" --jq '.content' | base64 --decode > "${validator}"
-          [[ -s "${validator}" ]]
-          echo "EVIDENCE_VALIDATOR=${validator}" >> "${GITHUB_ENV}"
-
-      - name: Validate rendered Web attestation
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: node "${EVIDENCE_VALIDATOR}" rendered "${{ needs.resolve.outputs.pr_number }}" "${{ needs.resolve.outputs.head_sha }}"
-
-  mobile-evidence:
-    name: Validate material mobile device evidence
-    needs: [resolve]
-    if: ${{ needs.resolve.result == 'success' && needs.resolve.outputs.mobile_evidence_required == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pull-requests: read
-      issues: read
-    steps:
-      - name: Load trusted evidence validator
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TRUSTED_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          validator="${RUNNER_TEMP}/verify-pr-evidence-comments.mjs"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28'             "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/verify-pr-evidence-comments.mjs"             -f "ref=${TRUSTED_SHA}" --jq '.content' | base64 --decode > "${validator}"
-          [[ -s "${validator}" ]]
-          echo "EVIDENCE_VALIDATOR=${validator}" >> "${GITHUB_ENV}"
-
-      - name: Validate mobile device attestation
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: node "${EVIDENCE_VALIDATOR}" mobile "${{ needs.resolve.outputs.pr_number }}" "${{ needs.resolve.outputs.head_sha }}"
   dependency:
-    name: Dependency review when applicable
+    name: Dependency exact-h review
     needs: [resolve]
-    if: ${{ needs.resolve.result == 'success' && needs.resolve.outputs.dependency_changed == 'true' }}
+    if: ${{ needs.resolve.result == 'success' }}
     permissions:
       contents: read
-      pull-requests: read
     uses: ./.github/workflows/dependency-review.yml
     with:
-      pr_number: ${{ needs.resolve.outputs.pr_number }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
-      base_ref: ${{ needs.resolve.outputs.base_ref }}
-      head_ref: ${{ needs.resolve.outputs.head_ref }}
+      base_ref: ${{ needs.resolve.outputs.base_sha }}
+      head_ref: ${{ needs.resolve.outputs.head_sha }}
       expected_sha: ${{ needs.resolve.outputs.head_sha }}
 
   lockfile:
-    name: Lockfile integrity when applicable
+    name: Lockfile exact-h integrity
     needs: [resolve]
-    if: ${{ needs.resolve.result == 'success' && needs.resolve.outputs.dependency_changed == 'true' }}
+    if: ${{ needs.resolve.result == 'success' }}
     permissions:
       contents: read
     uses: ./.github/workflows/lockfile-integrity.yml
     with:
-      pr_number: ${{ needs.resolve.outputs.pr_number }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
 
   docker:
-    name: Docker policy when applicable
+    name: Docker exact-h hardening
     needs: [resolve]
-    if: ${{ needs.resolve.result == 'success' && needs.resolve.outputs.docker_changed == 'true' }}
+    if: ${{ needs.resolve.result == 'success' }}
     permissions:
       contents: read
     uses: ./.github/workflows/docker-runtime-hardening.yml
     with:
-      pr_number: ${{ needs.resolve.outputs.pr_number }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
 
+  mobile-evidence:
+    name: Mobile device evidence — NOT_COVERED until real device authority exists
+    needs: [resolve]
+    if: ${{ needs.resolve.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Fail closed instead of accepting human/PR attestation
+        shell: bash
+        run: |
+          echo "::error::NOT_COVERED: final mobile/device evidence requires a real executable device authority; PR comments/self-attestation are forbidden."
+          exit 1
+
   final:
-    name: BThwani / Change Closure
-    needs: [resolve, ci, sonar, codeql, semgrep, security, opencodereview, rendered-web-baseline, rendered-web-evidence, mobile-evidence, dependency, lockfile, docker]
+    name: BThwani / h Final Baseline
+    needs: [resolve, ci, sonar, codeql, semgrep, security, rendered-web, dependency, lockfile, docker, mobile-evidence]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 5
     permissions:
-      actions: read
       contents: read
-      pull-requests: read
       statuses: write
     steps:
-      - name: Enforce fail-closed exact closure after complete evidence collection
+      - name: Enforce complete exact-h evidence collection
         shell: bash
         env:
-          HEAD_SHA: ${{ needs.resolve.outputs.head_sha || inputs.expected_head_sha }}
-          BASE_SHA: ${{ needs.resolve.outputs.base_sha || inputs.expected_base_sha }}
-          PR_NUMBER: ${{ needs.resolve.outputs.pr_number || inputs.pr_number }}
-          RESOLVE_RESULT: ${{ needs.resolve.result }}
-          CI_RESULT: ${{ needs.ci.result }}
-          SONAR_RESULT: ${{ needs.sonar.result }}
-          CODEQL_RESULT: ${{ needs.codeql.result }}
-          SEMGREP_RESULT: ${{ needs.semgrep.result }}
-          SECURITY_RESULT: ${{ needs.security.result }}
-          OPENCODEREVIEW_RESULT: ${{ needs.opencodereview.result }}
-          OPENCODEREVIEW_CONTEXT_SHA256: ${{ needs.opencodereview.outputs.context_sha256 }}
-          OPENCODEREVIEW_ARTIFACT_IDENTITY: ${{ needs.opencodereview.outputs.artifact_identity }}
-          OPENCODEREVIEW_PACKAGE_INTEGRITY: ${{ needs.opencodereview.outputs.package_integrity }}
-          OPENCODEREVIEW_TOOL_VERSION: ${{ needs.opencodereview.outputs.tool_version }}
-          RENDERED_WEB_BASELINE_RESULT: ${{ needs.rendered-web-baseline.result }}
-          RENDERED_WEB_RESULT: ${{ needs.rendered-web-evidence.result }}
-          MOBILE_EVIDENCE_RESULT: ${{ needs.mobile-evidence.result }}
-          RENDERED_WEB_REQUIRED: ${{ needs.resolve.outputs.rendered_web_required }}
-          MOBILE_EVIDENCE_REQUIRED: ${{ needs.resolve.outputs.mobile_evidence_required }}
-          DEPENDENCY_RESULT: ${{ needs.dependency.result }}
-          DEPENDENCY_CHANGED: ${{ needs.resolve.outputs.dependency_changed }}
-          LOCKFILE_RESULT: ${{ needs.lockfile.result }}
-          DOCKER_RESULT: ${{ needs.docker.result }}
-          DOCKER_CHANGED: ${{ needs.resolve.outputs.docker_changed }}
+          RESOLVE: ${{ needs.resolve.result }}
+          CI: ${{ needs.ci.result }}
+          SONAR: ${{ needs.sonar.result }}
+          CODEQL: ${{ needs.codeql.result }}
+          SEMGREP: ${{ needs.semgrep.result }}
+          SECURITY: ${{ needs.security.result }}
+          RENDERED_WEB: ${{ needs.rendered-web.result }}
+          DEPENDENCY: ${{ needs.dependency.result }}
+          LOCKFILE: ${{ needs.lockfile.result }}
+          DOCKER: ${{ needs.docker.result }}
+          MOBILE: ${{ needs.mobile-evidence.result }}
+          HEAD_SHA: ${{ needs.resolve.outputs.head_sha || inputs.expected_head_sha || github.sha }}
         run: |
           set -euo pipefail
+          [[ "${GITHUB_REF_NAME}" == "${TRUSTED_H_BRANCH}" ]] || { echo "::error::final status authority is h only"; exit 1; }
           failures=()
           for pair in \
-            "resolve:${RESOLVE_RESULT}" \
-            "full-ci:${CI_RESULT}" \
-            "sonar:${SONAR_RESULT}" \
-            "codeql:${CODEQL_RESULT}" \
-            "semgrep:${SEMGREP_RESULT}" \
-            "security:${SECURITY_RESULT}" \
-            "opencodereview:${OPENCODEREVIEW_RESULT}"; do
+            "resolve:${RESOLVE}" "ci:${CI}" "sonar:${SONAR}" "codeql:${CODEQL}" "semgrep:${SEMGREP}" \
+            "security:${SECURITY}" "rendered-web:${RENDERED_WEB}" "dependency:${DEPENDENCY}" \
+            "lockfile:${LOCKFILE}" "docker:${DOCKER}" "mobile:${MOBILE}"; do
             name="${pair%%:*}"
             result="${pair#*:}"
             [[ "${result}" == "success" ]] || failures+=("${name}:${result}")
           done
-          if (( ${#failures[@]} == 0 )); then
-            [[ "${OPENCODEREVIEW_CONTEXT_SHA256}" =~ ^[0-9a-fA-F]{64}$ ]] || failures+=("opencodereview:context_sha256-missing")
-            [[ -n "${OPENCODEREVIEW_ARTIFACT_IDENTITY}" ]] || failures+=("opencodereview:artifact_identity-missing")
-            [[ -n "${OPENCODEREVIEW_PACKAGE_INTEGRITY}" ]] || failures+=("opencodereview:package_integrity-missing")
-            [[ "${OPENCODEREVIEW_TOOL_VERSION}" == "1.9.9" ]] || failures+=("opencodereview:tool_version-mismatch")
-          fi
-          if [[ "${RENDERED_WEB_REQUIRED}" == "true" ]]; then
-            [[ "${RENDERED_WEB_BASELINE_RESULT}" == "success" ]] || failures+=("rendered-web-baseline:NOT_COVERED:${RENDERED_WEB_BASELINE_RESULT}")
-            [[ "${RENDERED_WEB_RESULT}" == "success" ]] || failures+=("rendered-web:NOT_COVERED:${RENDERED_WEB_RESULT}")
-          fi
-          if [[ "${MOBILE_EVIDENCE_REQUIRED}" == "true" ]]; then
-            [[ "${MOBILE_EVIDENCE_RESULT}" == "success" ]] || failures+=("mobile-device:NOT_COVERED:${MOBILE_EVIDENCE_RESULT}")
-          fi
-          if [[ "${DEPENDENCY_CHANGED}" == "true" ]]; then
-            [[ "${DEPENDENCY_RESULT}" == "success" ]] || failures+=("dependency:${DEPENDENCY_RESULT}")
-            [[ "${LOCKFILE_RESULT}" == "success" ]] || failures+=("lockfile:${LOCKFILE_RESULT}")
-          fi
-          if [[ "${DOCKER_CHANGED}" == "true" ]]; then
-            [[ "${DOCKER_RESULT}" == "success" ]] || failures+=("docker:${DOCKER_RESULT}")
-          fi
-          if (( ${#failures[@]} == 0 )); then
-            live_pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
-            [[ "$(jq -r '.state' <<<"${live_pr}")" == "open" ]] || failures+=("target:closed")
-            [[ "$(jq -r '.draft' <<<"${live_pr}")" == "false" ]] || failures+=("target:draft")
-            [[ "$(jq -r '.head.sha' <<<"${live_pr}")" == "${HEAD_SHA}" ]] || failures+=("target:head-moved")
-            [[ "$(jq -r '.base.sha' <<<"${live_pr}")" == "${BASE_SHA}" ]] || failures+=("target:base-moved")
-          fi
-          if (( ${#failures[@]} )); then
-            if [[ "${HEAD_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
-              gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
-                "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
-                -f state=failure -f context='BThwani / Change Closure' \
-                -f description="Final Closure failed: $(IFS=,; echo "${failures[*]}")" >/dev/null || true
-              gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
-                "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
-                -f state=failure -f context='BThwani / Final Closure' \
-                -f description="Final Closure failed: $(IFS=,; echo "${failures[*]}")" >/dev/null || true
-            fi
-            echo "::error::Final Closure failed for ${HEAD_SHA:-unknown}: $(IFS=,; echo "${failures[*]}")"
-            exit 1
-          fi
-          echo "Exact PR #${PR_NUMBER} evidence gate passed for ${HEAD_SHA}; success status is withheld until the closure manifest is generated and uploaded."
-
-      - name: Checkout exact candidate for the closure manifest
-        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ needs.resolve.outputs.head_sha }}
-          fetch-depth: 0
-          fetch-tags: false
-          persist-credentials: false
-
-      - name: Collect every available analyzer artifact and completed job log
-        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
-        shell: bash
-        env:
-          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
-        run: |
-          set -euo pipefail
-          evidence_root="closure-raw-evidence"
-          mkdir -p "${evidence_root}/artifacts" "${evidence_root}/jobs"
-          artifacts="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100")"
-          while IFS= read -r artifact; do
-            artifact_id="$(jq -r '.id' <<<"${artifact}")"
-            artifact_name="$(jq -r '.name' <<<"${artifact}")"
-            archive="${RUNNER_TEMP}/closure-artifact-${artifact_id}.zip"
-            target="${evidence_root}/artifacts/${artifact_id}"
-            mkdir -p "${target}"
-            gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${archive}"
-            while IFS= read -r entry; do
-              [[ -n "${entry}" && "${entry}" != ".." && "${entry}" != /* && "${entry}" != ../* && \
-                "${entry}" != */../* && "${entry}" != */.. ]] || {
-                echo "::error::unsafe evidence artifact path in ${artifact_name}"
-                exit 1
-              }
-            done < <(unzip -Z1 "${archive}")
-            unzip -q "${archive}" -d "${target}"
-            jq -n --arg name "${artifact_name}" --argjson id "${artifact_id}" \
-              '{artifactId:$id,artifactName:$name}' > "${target}/artifact-metadata.json"
-          done < <(jq -c '.artifacts[]' <<<"${artifacts}")
-
-          gh api --paginate -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs?filter=all&per_page=100" \
-            --jq '.jobs[] | select(.status == "completed") | @base64' |
-          while IFS= read -r encoded; do
-            job="$(base64 --decode <<<"${encoded}")"
-            job_id="$(jq -r '.id' <<<"${job}")"
-            job_name="$(jq -r '.name' <<<"${job}")"
-            conclusion="$(jq -r '.conclusion // "unknown"' <<<"${job}")"
-            if [[ "${conclusion}" == "skipped" ]]; then
-              echo "Skipping non-executed optional job ${job_name}; applicability is dispositioned by the trusted diff classification."
-              continue
-            fi
-            log="${evidence_root}/jobs/job-${job_id}.log"
-            if ! gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/actions/jobs/${job_id}/logs" > "${log}"; then
-              printf '[GITHUB-JOB-LOG BLOCKED] completed job log could not be retrieved\n' > "${log}"
-              conclusion='failure'
-            fi
-            outcome='FAIL'
-            if [[ "${conclusion}" == "success" ]]; then
-              outcome='PASS'
-            fi
-            jq -n \
-              --arg analyzer "github-job-${job_id}" \
-              --arg candidateSha "${HEAD_SHA}" \
-              --arg outcome "${outcome}" \
-              --arg scope "completed job: ${job_name}" \
-              --arg log "job-${job_id}.log" \
-              '{schemaVersion:1,analyzer:$analyzer,candidateSha:$candidateSha,scope:$scope,outcome:$outcome,log:$log}' \
-              > "${evidence_root}/jobs/job-${job_id}.json"
-          done
-
-      - name: Load trusted universal evidence consumer
-        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
-        shell: bash
-        env:
-          TRUSTED_WORKFLOW_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          trusted_root="${RUNNER_TEMP}/bthwani-evidence-consumer/tools/scripts"
-          mkdir -p "${trusted_root}/lib"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/consume-evidence-artifacts.mjs" \
-            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_root}/consume-evidence-artifacts.mjs"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/lib/evidence-envelope.mjs" \
-            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_root}/lib/evidence-envelope.mjs"
-          [[ -s "${trusted_root}/consume-evidence-artifacts.mjs" && -s "${trusted_root}/lib/evidence-envelope.mjs" ]]
-          node --check "${trusted_root}/consume-evidence-artifacts.mjs"
-          node --check "${trusted_root}/lib/evidence-envelope.mjs"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/verify-closure-required-claims.mjs" \
-            -f "ref=${TRUSTED_WORKFLOW_SHA}" --jq '.content' | base64 --decode > "${trusted_root}/verify-closure-required-claims.mjs"
-          [[ -s "${trusted_root}/verify-closure-required-claims.mjs" ]]
-          node --check "${trusted_root}/verify-closure-required-claims.mjs"
-          echo "TRUSTED_EVIDENCE_CONSUMER=${trusted_root}/consume-evidence-artifacts.mjs" >> "${GITHUB_ENV}"
-          echo "TRUSTED_CLOSURE_CLAIMS=${trusted_root}/verify-closure-required-claims.mjs" >> "${GITHUB_ENV}"
-
-      - name: Consume all tool evidence into one exact-candidate Root Graph
-        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
-        shell: bash
-        env:
-          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
-          BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
-        run: |
-          set -euo pipefail
-          mkdir -p closure-evidence
-          consumer_exit=0
-          node "${TRUSTED_EVIDENCE_CONSUMER}" \
-            --input-dir closure-raw-evidence \
-            --output-dir closure-evidence \
-            --head-sha "${HEAD_SHA}" \
-            --base-sha "${BASE_SHA}" \
-            --required-tools "$(node "${TRUSTED_CLOSURE_CLAIMS}" --claims '${{ needs.resolve.outputs.closure_required_claims }}' --print-required-tools)" \
-            || consumer_exit=$?
-          [[ -s closure-evidence/evidence-consumption.json && -s closure-evidence/root-graph.json ]]
-          cat closure-evidence/evidence-consumption.json
-          [[ "${consumer_exit}" == "0" ]] || {
-            echo "::error::unconsumed, unmapped, uncovered, or open tool evidence remains"
-            exit "${consumer_exit}"
-          }
-
-      - name: Publish generated exact-candidate closure manifest
-        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
-        shell: bash
-        env:
-          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
-          BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
-          HEAD_REF: ${{ needs.resolve.outputs.head_ref }}
-          BASE_REF: ${{ needs.resolve.outputs.base_ref }}
-          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
-          CHANGED_COUNT: ${{ needs.resolve.outputs.changed_count }}
-          RISK_CLASSES: ${{ needs.resolve.outputs.risk_classes }}
-          REQUIRED_JOBS: ${{ needs.resolve.outputs.required_jobs }}
-          REQUIRED_CLAIMS: ${{ needs.resolve.outputs.closure_required_claims }}
-          CI_RESULT: ${{ needs.ci.result }}
-          SONAR_RESULT: ${{ needs.sonar.result }}
-          CODEQL_RESULT: ${{ needs.codeql.result }}
-          SEMGREP_RESULT: ${{ needs.semgrep.result }}
-          SECURITY_RESULT: ${{ needs.security.result }}
-          OPENCODEREVIEW_RESULT: ${{ needs.opencodereview.result }}
-          OPENCODEREVIEW_CONTEXT_SHA256: ${{ needs.opencodereview.outputs.context_sha256 }}
-          OPENCODEREVIEW_ARTIFACT_IDENTITY: ${{ needs.opencodereview.outputs.artifact_identity }}
-          OPENCODEREVIEW_PACKAGE_INTEGRITY: ${{ needs.opencodereview.outputs.package_integrity }}
-          OPENCODEREVIEW_TOOL_VERSION: ${{ needs.opencodereview.outputs.tool_version }}
-          MANIFEST_RENDERED_WEB_BASELINE_RESULT: ${{ needs.rendered-web-baseline.result }}
-          MANIFEST_RENDERED_WEB_RESULT: ${{ needs.rendered-web-evidence.result }}
-          MANIFEST_MOBILE_EVIDENCE_RESULT: ${{ needs.mobile-evidence.result }}
-          MANIFEST_RENDERED_WEB_REQUIRED: ${{ needs.resolve.outputs.rendered_web_required }}
-          MANIFEST_MOBILE_EVIDENCE_REQUIRED: ${{ needs.resolve.outputs.mobile_evidence_required }}
-          DEPENDENCY_RESULT: ${{ needs.dependency.result }}
-          LOCKFILE_RESULT: ${{ needs.lockfile.result }}
-          DOCKER_RESULT: ${{ needs.docker.result }}
-        run: |
-          set -euo pipefail
-          git cat-file -e "${BASE_SHA}^{commit}"
-          git merge-base --is-ancestor "${BASE_SHA}" "${HEAD_SHA}"
-          merge_base="$(git merge-base "${BASE_SHA}" "${HEAD_SHA}")"
-          mapfile -t files < <(git diff --name-only --diff-filter=ACMRDTUXB "${BASE_SHA}" "${HEAD_SHA}" --)
-          mapfile -t migrations < <(printf '%s\n' "${files[@]}" | grep -E '/database/migrations/' || true)
-          mapfile -t manifests < <(printf '%s\n' "${files[@]}" | grep -E '/database/migrations/manifest\.json$' || true)
-          amendments_touched=false
-          printf '%s\n' "${files[@]}" | grep -qx 'tools/verification/migration-amendments.json' && amendments_touched=true
-          [[ -s closure-evidence/evidence-consumption.json && -s closure-evidence/root-graph.json ]] || {
-            echo "::error::universal evidence consumption outputs are missing"
-            exit 1
-          }
-          computed_disposition="$(jq -r --arg headSha "${HEAD_SHA}" '
-            if .closed == true
-              and .allToolEvidenceConsumed == true
-              and .nonPassingExecution == 0
-              and .notApplicableExecution == 0
-              and .rootGraphPresent == true
-              and .rootGraphCandidateIdentity == $headSha
-              and .rootQueue == 0
-              and .sourceOfFixUnresolved == 0
-              and .requiredCleanup == 0
-              and .invalidatedProofsPending == 0
-            then "PASS" else "NOT_COVERED" end
-          ' closure-evidence/evidence-consumption.json)"
-          [[ "${computed_disposition}" == "PASS" ]] || {
-            echo "::error::exact-candidate evidence did not prove a PASS disposition"
-            exit 1
-          }
-          manifest="$(mktemp -d)/closure-manifest.json"
-          jq -n \
-            --arg schema "bthwani-closure-manifest/3" \
-            --arg repository "${GITHUB_REPOSITORY}" \
-            --arg runUrl "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            --arg generatedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --arg prNumber "${PR_NUMBER}" \
-            --arg headRef "${HEAD_REF}" \
-            --arg headSha "${HEAD_SHA}" \
-            --arg baseRef "${BASE_REF}" \
-            --arg baseSha "${BASE_SHA}" \
-            --arg mergeBase "${merge_base}" \
-            --argjson changedFiles "${CHANGED_COUNT}" \
-            --argjson files "$(printf '%s\n' "${files[@]}" | jq -R . | jq -s .)" \
-            --arg riskClasses "${RISK_CLASSES}" \
-            --arg requiredJobs "${REQUIRED_JOBS}" \
-            --arg requiredClaims "${REQUIRED_CLAIMS}" \
-            --argjson migrations "$(printf '%s\n' "${migrations[@]}" | jq -R . | jq -s .)" \
-            --argjson migrationManifests "$(printf '%s\n' "${manifests[@]}" | jq -R . | jq -s .)" \
-            --arg amendmentsTouched "${amendments_touched}" \
-            --arg ciResult "${CI_RESULT}" \
-            --arg sonarResult "${SONAR_RESULT}" \
-            --arg codeqlResult "${CODEQL_RESULT}" \
-            --arg semgrepResult "${SEMGREP_RESULT}" \
-            --arg securityResult "${SECURITY_RESULT}" \
-            --arg opencodereviewResult "${OPENCODEREVIEW_RESULT}" \
-            --arg ocrContextSha256 "${OPENCODEREVIEW_CONTEXT_SHA256}" \
-            --arg ocrArtifactIdentity "${OPENCODEREVIEW_ARTIFACT_IDENTITY}" \
-            --arg ocrPackageIntegrity "${OPENCODEREVIEW_PACKAGE_INTEGRITY}" \
-            --arg ocrToolVersion "${OPENCODEREVIEW_TOOL_VERSION}" \
-            --arg changeDisposition "${computed_disposition}" \
-            --arg renderedWebBaselineResult "${MANIFEST_RENDERED_WEB_BASELINE_RESULT}" \
-            --arg renderedWebResult "${MANIFEST_RENDERED_WEB_RESULT}" \
-            --arg mobileEvidenceResult "${MANIFEST_MOBILE_EVIDENCE_RESULT}" \
-            --arg renderedWebRequired "${MANIFEST_RENDERED_WEB_REQUIRED}" \
-            --arg mobileEvidenceRequired "${MANIFEST_MOBILE_EVIDENCE_REQUIRED}" \
-            --arg dependencyResult "${DEPENDENCY_RESULT}" \
-            --arg lockfileResult "${LOCKFILE_RESULT}" \
-            --arg dockerResult "${DOCKER_RESULT}" \
-            --slurpfile evidenceConsumption closure-evidence/evidence-consumption.json \
-            --slurpfile rootGraph closure-evidence/root-graph.json \
-            '{
-              schema: $schema,
-              source: "generated-from-git-truth",
-              repository: $repository,
-              generatedAt: $generatedAt,
-              runUrl: $runUrl,
-              evidenceCollection: "parallel-independent-after-exact-resolution",
-              pr: {number: ($prNumber | tonumber), headRef: $headRef, headSha: $headSha, baseRef: $baseRef, baseSha: $baseSha, mergeBaseSha: $mergeBase},
-              candidate: {changedFiles: $changedFiles, files: $files},
-              mandatoryProofs: {riskClasses: ($riskClasses | split(",") | map(select(length > 0))), requiredJobs: ($requiredJobs | split(",") | map(select(length > 0))), requiredClaims: ($requiredClaims | split(",") | map(select(length > 0)))},
-              migrations: {changed: $migrations, manifests: $migrationManifests, amendmentsRegistryTouched: ($amendmentsTouched == "true")},
-              analysis: {ci: $ciResult, sonar: $sonarResult, codeql: $codeqlResult, semgrep: $semgrepResult, security: $securityResult, opencodereviewContext: {claim: "analysis:opencodereview-context", result: $opencodereviewResult, contextSha256: $ocrContextSha256, artifactIdentity: $ocrArtifactIdentity, packageIntegrity: $ocrPackageIntegrity, toolVersion: $ocrToolVersion}, dependency: $dependencyResult, lockfile: $lockfileResult, docker: $dockerResult},
-              evidenceConsumption: $evidenceConsumption[0],
-              rootGraph: $rootGraph[0],
-              assuranceClaims: {
-                changeVerification: {context: "BThwani / Change Verification", disposition: $changeDisposition},
-                changeClosure: {context: "BThwani / Change Closure", disposition: $changeDisposition},
-                repositoryBaseline: {context: "BThwani / Static Repository Baseline", disposition: "NOT_EVALUATED"},
-                repositoryClosure: {context: "BThwani / Repository Closure", disposition: "NOT_CLAIMED"}
-              },
-              experienceEvidence: {
-                renderedWeb: {
-                  required: ($renderedWebRequired == "true"),
-                  baselineResult: $renderedWebBaselineResult,
-                  evidenceResult: $renderedWebResult,
-                  disposition: (if $renderedWebRequired == "true" then (if ($renderedWebBaselineResult == "success" and $renderedWebResult == "success") then "PASS" else "NOT_COVERED" end) else "N/A_PROVEN" end)
-                },
-                mobileDevice: {
-                  required: ($mobileEvidenceRequired == "true"),
-                  evidenceResult: $mobileEvidenceResult,
-                  disposition: (if $mobileEvidenceRequired == "true" then (if $mobileEvidenceResult == "success" then "PASS" else "NOT_COVERED" end) else "N/A_PROVEN" end)
-                }
-               }
-            }' > "${manifest}"
-          mkdir -p closure-evidence
-          cp "${manifest}" closure-evidence/closure-manifest.json
-          {
-            echo "### BThwani generated closure manifest (Git truth)"
-            echo "- PR #${PR_NUMBER}: ${HEAD_REF}@${HEAD_SHA} <- ${BASE_REF}@${BASE_SHA}"
-            echo "- Changed files: ${CHANGED_COUNT} (migrations: ${#migrations[@]}, amendment registry touched: ${amendments_touched})"
-            echo "- Risk classes: ${RISK_CLASSES:-none}"
-            echo "- Required jobs: ${REQUIRED_JOBS:-none}"
-            echo "- Required claims: ${REQUIRED_CLAIMS:-none}"
-            echo "- Manifest artifact: closure-manifest.json (this run)"
-          } >> "${GITHUB_STEP_SUMMARY}"
-          cat "${manifest}"
-
-      - name: Upload generated closure manifest
-        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: closure-manifest-${{ needs.resolve.outputs.pr_number }}-${{ needs.resolve.outputs.head_sha }}
-          path: closure-evidence
-          if-no-files-found: error
-          retention-days: 90
-
-      - name: Publish Final Closure failure after any gate or publication failure
-        if: ${{ failure() }}
-        shell: bash
-        env:
-          HEAD_SHA: ${{ needs.resolve.outputs.head_sha || inputs.expected_head_sha }}
-        run: |
-          set -euo pipefail
-          if [[ "${HEAD_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
-            gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
-              -f state=failure -f context='BThwani / Change Closure' \
-              -f description="Final Closure workflow or evidence publication failed" >/dev/null || true
-            gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
-              -f state=failure -f context='BThwani / Final Closure' \
-              -f description="Final Closure workflow or evidence publication failed" >/dev/null || true
-          fi
-
-      - name: Publish Final Closure success only after manifest publication
-        if: ${{ success() }}
-        shell: bash
-        env:
-          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
-          BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
-          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
-        run: |
-          set -euo pipefail
-          live_pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
-          [[ "$(jq -r '.state' <<<"${live_pr}")" == "open" ]]
-          [[ "$(jq -r '.draft' <<<"${live_pr}")" == "false" ]]
-          [[ "$(jq -r '.head.sha' <<<"${live_pr}")" == "${HEAD_SHA}" ]]
-          [[ "$(jq -r '.base.sha' <<<"${live_pr}")" == "${BASE_SHA}" ]]
+          context='BThwani / h Final Baseline'
           target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          state=success
+          description='Exact h final baseline evidence passed'
+          if (( ${#failures[@]} )); then
+            state=failure
+            description="h final baseline OPEN: $(IFS=,; echo "${failures[*]}")"
+          fi
           gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
             "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
-            -f state=success -f context='BThwani / Change Closure' \
-            -f description="Exact PR #${PR_NUMBER} closure and manifest passed" \
-            -f target_url="${target_url}" >/dev/null
-          gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
-            -f state=success -f context='BThwani / Final Closure' \
-            -f description="Exact PR #${PR_NUMBER} closure and manifest passed" \
-            -f target_url="${target_url}" >/dev/null
-          echo "Exact PR #${PR_NUMBER} Final Closure published only after manifest upload for ${HEAD_SHA}"
+            -f state="${state}" -f context="${context}" -f description="${description}" -f target_url="${target_url}" >/dev/null
+          if [[ "${state}" != "success" ]]; then
+            echo "::error::${description}"
+            exit 1
+          fi
+          echo "Exact h final baseline evidence passed for ${HEAD_SHA}."
