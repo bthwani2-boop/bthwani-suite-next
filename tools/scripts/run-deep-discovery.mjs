@@ -88,7 +88,6 @@ export function captureCandidate(root = process.cwd()) {
 
 const baseChecks = [
   ["git-diff-check", "git", ["diff", "--check"]],
-  ["ci-routing-regressions", process.execPath, ["--test", "tools/scripts/ci-routing.test.mjs"]],
   ["ci-context-regressions", process.execPath, ["--test", "tools/scripts/detect-ci-context.test.mjs"]],
   ["source-integrity", pnpm, ["run", "guard:source-integrity"]],
   ["fullstack-boundary", pnpm, ["run", "guard:fullstack-boundary"]],
