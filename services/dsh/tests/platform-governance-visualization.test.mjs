@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (path) => fs.readFileSync(path, "utf8");
 
 const page = read("apps/control-panel/runtime/src/app/(shell)/dsh/platform/page.tsx");
+const workspace = read("services/dsh/frontend/control-panel/platform/PlatformWorkspaceScreen.tsx");
 const dashboard = read("services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx");
 const platformIndex = read("services/dsh/frontend/control-panel/platform/index.ts");
 const visual = read("services/dsh/frontend/control-panel/platform/PlatformGovernanceVisual.tsx");
@@ -15,8 +16,10 @@ const identityContract = read("core/identity/clients/generated/identity-api.ts")
 const platformServer = read("core/platform-control/backend/internal/http/server.go");
 
 test("platform governance renders the live visualization on the sovereign platform page", () => {
-  assert.match(page, /PlatformDashboardScreen/);
-  assert.match(page, /<PlatformDashboardScreen\s*\/>/);
+  assert.match(page, /PlatformWorkspaceScreen/);
+  assert.match(page, /<PlatformWorkspaceScreen\s*\/>/);
+  assert.match(workspace, /PlatformDashboardScreen/);
+  assert.match(workspace, /<PlatformDashboardScreen\s*\/>/);
   assert.match(dashboard, /PlatformGovernanceVisual/);
   assert.match(dashboard, /<PlatformGovernanceVisual\s*\/>/);
   assert.match(platformIndex, /export \{ PlatformGovernanceVisual \}/);

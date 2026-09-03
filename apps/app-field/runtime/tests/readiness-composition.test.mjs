@@ -5,25 +5,24 @@ import test from "node:test";
 const root = new URL("../../../../", import.meta.url);
 const read = (relative) => readFile(new URL(relative, root), "utf8");
 
-test("UnifiedReadinessWrapper fails closed when DSH readiness is loading or unavailable", async () => {
-  const source = await read("apps/app-field/runtime/src/App.tsx");
+test("DSH field readiness boundary fails closed when readiness is loading or unavailable", async () => {
+  const [application, boundary] = await Promise.all([
+    read("services/dsh/frontend/app-field/DshFieldApplication.tsx"),
+    read("services/dsh/frontend/shared/readiness/DshOperationalReadinessBoundary.tsx"),
+  ]);
 
-  const wrapperMatch = source.match(/function UnifiedReadinessWrapper[\s\S]+?function AppContent/);
-  assert.ok(wrapperMatch, "UnifiedReadinessWrapper should exist");
-  const wrapperCode = wrapperMatch[0];
-
-  assert.doesNotMatch(wrapperCode, /return null;/);
-  assert.match(wrapperCode, /<ActivityIndicator/);
-  assert.match(wrapperCode, /setReadiness\(null\)/);
-  assert.match(wrapperCode, /let active = true/);
-  assert.match(wrapperCode, /if \(active\) setReadiness\(gate\)/);
-  assert.match(wrapperCode, /if \(active\) setUnavailable\(true\)/);
-  assert.match(wrapperCode, /readinessRefreshToken/);
-  assert.match(wrapperCode, /fetchFieldOperationalReadiness/);
-  assert.match(wrapperCode, /if \(unavailable\)/);
-  assert.match(wrapperCode, /ReadinessGateScreen/);
-  assert.match(wrapperCode, /if \(!readiness\.ready\)/);
-  assert.match(wrapperCode, /return <>{children}<\/>;/);
-  assert.match(wrapperCode, /\.catch\(\(\) =>/);
-  assert.doesNotMatch(wrapperCode, /blockerReasons|ELIGIBILITY_UNAVAILABLE|fetchWorkforceReadiness/);
+  assert.match(application, /fetchFieldOperationalReadiness/);
+  assert.match(application, /<DshOperationalReadinessBoundary/);
+  assert.doesNotMatch(application, /fetchWorkforceReadiness/);
+  assert.doesNotMatch(boundary, /return null;/);
+  assert.match(boundary, /<ActivityIndicator/);
+  assert.match(boundary, /setState\(\{ kind: "loading" \}\)/);
+  assert.match(boundary, /let active = true/);
+  assert.match(boundary, /if \(active\) setState\(\{ kind: "decision", readiness \}\)/);
+  assert.match(boundary, /if \(active\) setState\(\{ kind: "unavailable" \}\)/);
+  assert.match(boundary, /refreshToken/);
+  assert.match(boundary, /if \(state\.kind === "unavailable"\)/);
+  assert.match(boundary, /if \(!state\.readiness\.ready\)/);
+  assert.match(boundary, /return <>\{children\}<\/>;/);
+  assert.match(boundary, /\.catch\(\(\) =>/);
 });

@@ -6,15 +6,19 @@ const root = new URL("../../../../", import.meta.url);
 const read = (relative) => readFile(new URL(relative, root), "utf8");
 
 test("field app uses the canonical DSH readiness boundary", async () => {
-  const [fieldApp, fieldReadinessApi, nativeWorkforce] = await Promise.all([
+  const [runtimeApp, fieldApplication, fieldReadinessApi, nativeWorkforce] = await Promise.all([
     read("apps/app-field/runtime/src/App.tsx"),
+    read("services/dsh/frontend/app-field/DshFieldApplication.tsx"),
     read("services/dsh/frontend/app-field/field-operational-readiness.api.ts"),
     read("services/dsh/frontend/shared/workforce/workforce-me.api.ts"),
   ]);
 
-  assert.match(fieldApp, /from "@bthwani\/dsh\/app-field"/);
-  assert.match(fieldApp, /fetchFieldOperationalReadiness/);
-  assert.doesNotMatch(fieldApp, /workforce-me\.api|fetchWorkforceReadiness|getReadinessGate/);
+  assert.match(runtimeApp, /from "@bthwani\/dsh\/app-field"/);
+  assert.match(runtimeApp, /<DshFieldApplication/);
+  assert.doesNotMatch(runtimeApp, /fetchFieldOperationalReadiness|DshOperationalReadinessBoundary|fetchWorkforceReadiness/);
+  assert.match(fieldApplication, /fetchFieldOperationalReadiness/);
+  assert.match(fieldApplication, /DshOperationalReadinessBoundary/);
+  assert.match(fieldApplication, /<WorkforceProfileProvider>/);
 
   assert.match(fieldReadinessApi, /\/dsh\/field\/me\/readiness/);
   assert.match(fieldReadinessApi, /createDshHttpClient/);

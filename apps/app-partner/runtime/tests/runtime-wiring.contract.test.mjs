@@ -6,21 +6,27 @@ const root = new URL("../../../../", import.meta.url);
 const read = (relative) => readFile(new URL(relative, root), "utf8");
 
 test("partner app composes canonical identity, rating, catalog media, push, and router boundaries", async () => {
-  const source = await read("apps/app-partner/runtime/src/App.tsx");
+  const [runtime, application] = await Promise.all([
+    read("apps/app-partner/runtime/src/App.tsx"),
+    read("services/dsh/frontend/app-partner/DshPartnerApplication.tsx"),
+  ]);
 
-  assert.match(source, /requiredRole="partner"/);
-  assert.match(source, /requiredSurface="app-partner"/);
-  assert.match(source, /<PartnerFieldRatingGate>/);
-  assert.match(source, /<DshPartnerSurface route=\{route\} navigation=\{navigation\} appearance=\{appearance\} \/>/);
-  assert.match(source, /configureCatalogMobileFilePicker\(pickCatalogFile\)/);
-  assert.match(source, /DocumentPicker\.getDocumentAsync/);
-  assert.match(source, /copyToCacheDirectory: true/);
-  assert.match(source, /configureIdentityDeviceFingerprintProvider/);
-  assert.match(source, /SecureStore/);
-  assert.match(source, /from "@bthwani\/dsh\/mobile-capabilities"/);
-  assert.match(source, /secureRandomId/);
-  assert.doesNotMatch(source, /Crypto\.randomUUID/);
-  assert.match(source, /useDshMobilePushRegistration\(identity\.state\.kind, "app-partner", "bthwani-partner-next"\)/);
+  assert.match(runtime, /<DshPartnerApplication/);
+  assert.match(runtime, /appearance=\{appearance\}/);
+  assert.match(runtime, /pushScheme=\{PARTNER_PUSH_SCHEME\}/);
+  assert.match(runtime, /configureCatalogMobileFilePicker\(pickCatalogFile\)/);
+  assert.match(runtime, /DocumentPicker\.getDocumentAsync/);
+  assert.match(runtime, /copyToCacheDirectory: true/);
+  assert.match(runtime, /configureIdentityDeviceFingerprintProvider/);
+  assert.match(runtime, /SecureStore/);
+  assert.match(runtime, /from "@bthwani\/dsh\/mobile-capabilities"/);
+  assert.match(runtime, /secureRandomId/);
+  assert.doesNotMatch(runtime, /Crypto\.randomUUID/);
+  assert.match(application, /requiredRole="partner"/);
+  assert.match(application, /requiredSurface="app-partner"/);
+  assert.match(application, /<PartnerFieldRatingGate>/);
+  assert.match(application, /<DshPartnerSurface route=\{route\} navigation=\{navigation\} appearance=\{appearance\} \/>/);
+  assert.match(application, /useDshMobilePushRegistration\(identity\.state\.kind, "app-partner", pushScheme\)/);
 });
 
 test("partner runtime owns persisted appearance and reconciles memory to durable readback", async () => {

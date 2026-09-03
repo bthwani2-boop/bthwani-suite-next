@@ -37,12 +37,15 @@ describe("J001 Identity readiness control surfaces", () => {
   test("maps detailed Identity readiness to dashboard, platform and administration", () => {
     const dashboardBarrel = read("services/dsh/frontend/control-panel/dashboard/index.ts");
     const platformPage = read("apps/control-panel/runtime/src/app/(shell)/dsh/platform/page.tsx");
+    const platformWorkspace = read("services/dsh/frontend/control-panel/platform/PlatformWorkspaceScreen.tsx");
     const administration = read("services/dsh/frontend/control-panel/administration/GovernedAdministrationScreen.tsx");
 
     assert.match(dashboardBarrel, /export \{ IdentityRuntimeHealthPanel \}/);
-    assert.match(platformPage, /identity-health/);
-    assert.match(platformPage, /الخدمات والجاهزية — Identity/);
-    assert.match(platformPage, /<IdentityRuntimeHealthPanel/);
+    assert.match(platformPage, /PlatformWorkspaceScreen/);
+    assert.match(platformPage, /<PlatformWorkspaceScreen \/>/);
+    assert.match(platformWorkspace, /identity-health/);
+    assert.match(platformWorkspace, /الخدمات والجاهزية — Identity/);
+    assert.match(platformWorkspace, /<IdentityRuntimeHealthPanel/);
     assert.match(administration, /<IdentityRuntimeHealthPanel/);
   });
 });

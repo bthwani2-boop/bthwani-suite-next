@@ -58,8 +58,8 @@ test("all four mobile apps keep required foreground provider capabilities", () =
     path.join(repoRoot, "services/dsh/frontend/shared/dispatch/dispatch-location.api.ts"),
     "utf8",
   );
-  assert.ok(captainTransport.includes("Callers must invoke this from foreground-only logic."));
-  assert.ok(captainTransport.includes("backend keeps no route history"));
+  assert.ok(captainTransport.includes("bthwani.captain.foreground-location.v2"));
+  assert.ok(captainTransport.includes("DSH remains the sole owner of accepted"));
 });
 
 test("each app receives its own scoped Android Maps key", () => {

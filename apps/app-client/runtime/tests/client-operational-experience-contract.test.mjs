@@ -49,7 +49,7 @@ test("client native wiring leaves inbound URL navigation to Expo Router", () => 
   assert.match(platform, /linking: Linking/);
 });
 
-test("client platform capabilities cross the runtime boundary through the DSH adapter", () => {
+test("client platform capabilities cross the runtime boundary through the DSH application", () => {
   const surface = assertMarkers(
     "services/dsh/frontend/app-client/DshClientSurface.tsx",
     ["useDshClientPlatform", "selectionHaptic", "openExternalUrl"],
@@ -57,9 +57,14 @@ test("client platform capabilities cross the runtime boundary through the DSH ad
   assert.doesNotMatch(surface, /apps\/app-client\/runtime/);
   const runtime = assertMarkers(
     "apps/app-client/runtime/src/App.tsx",
-    ["DshClientPlatformProvider", "RemoteImage: ClientRemoteImage", "selectionHaptic: performClientSelectionHaptic", "shareTextDocument: shareClientTextDocument"],
+    ["DshClientApplication", "RemoteImage: ClientRemoteImage", "selectionHaptic: performClientSelectionHaptic", "shareTextDocument: shareClientTextDocument"],
   );
-  assert.match(runtime, /<DshClientPlatformProvider platform=\{clientPlatform\}>/);
+  assert.match(runtime, /<DshClientApplication[\s\S]*platform=\{clientPlatform\}/);
+  const application = assertMarkers(
+    "services/dsh/frontend/app-client/DshClientApplication.tsx",
+    ["DshClientPlatformProvider", "<DshClientPlatformProvider platform={platform}>", "DshClientSurface"],
+  );
+  assert.doesNotMatch(application, /apps\/app-client\/runtime/);
 });
 
 test("client discovery exposes real search, cached images, and a persistent donor-style reels launcher", () => {

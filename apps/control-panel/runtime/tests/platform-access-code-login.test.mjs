@@ -56,15 +56,18 @@ test("leadership form rejects an end date before the start date", () => {
   assert.match(panel, /نهاية التكليف \(اختيارية\)/);
 });
 
-test("sovereign platform leadership reads and creation are permission-gated at the consumer", () => {
+test("sovereign platform leadership reads and creation are permission-gated in the DSH consumer", () => {
   const page = read("apps/control-panel/runtime/src/app/(shell)/dsh/platform/page.tsx");
+  const workspace = read("services/dsh/frontend/control-panel/platform/PlatformWorkspaceScreen.tsx");
   const panel = read("services/dsh/frontend/control-panel/platform/SovereignLeadershipPanel.tsx");
 
-  assert.match(page, /hasServiceControlPanelPermission/);
-  assert.match(page, /leadership:read/);
-  assert.match(page, /leadership:create/);
-  assert.match(page, /leadershipVisible/);
-  assert.match(page, /canReadHealth/);
+  assert.match(page, /PlatformWorkspaceScreen/);
+  assert.match(page, /<PlatformWorkspaceScreen \/>/);
+  assert.match(workspace, /hasServiceControlPanelPermission/);
+  assert.match(workspace, /leadership:read/);
+  assert.match(workspace, /leadership:create/);
+  assert.match(workspace, /leadershipVisible/);
+  assert.match(workspace, /canReadHealth/);
   assert.match(panel, /const canRead = hasServiceControlPanelPermission/);
   assert.match(panel, /const canCreate = hasServiceControlPanelPermission/);
   assert.match(panel, /canRead \? listSovereignLeadership\(\)/);

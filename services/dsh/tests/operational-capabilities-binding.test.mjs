@@ -176,14 +176,15 @@ describe("operational capability verification hygiene", () => {
       assert.equal(exists(`../../../.github/workflows/${workflow}`), false, `${workflow} must remain removed`);
     }
     assert.equal(exists("../../../.github/workflows/ci.yml"), false);
-    assert.match(contextualCi, /run-name: BThwani CI/);
-    assert.match(contextualCi, /name: BThwani CI/);
+    assert.match(contextualCi, /run-name: h verify/);
+    assert.match(contextualCi, /name: BThwani h Verification/);
+    assert.match(contextualCi, /branches: \[h\]/);
     assert.match(contextualCi, /workflow_call:/);
     assert.match(contextualCi, /workflow_dispatch:/);
     assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-node-verification\.yml/);
     assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-backends\.yml/);
     assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-runtime\.yml/);
-    assert.match(contextualCi, /BThwani \/ Change Verification/);
+    assert.match(contextualCi, /BThwani \/ h Verification/);
     assert.doesNotMatch(contextualCi, /BThwani CI \/ (?:PR|check|push|dispatched) result/);
   });
 
