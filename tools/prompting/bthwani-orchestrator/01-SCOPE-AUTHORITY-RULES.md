@@ -1,7 +1,7 @@
 # H Refoundation Scope and Authority Rules
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: branch authority, mutation scope, forensic sources, exact-head discipline, concurrency and artifact survival.
+Owner: branch authority, repository-wide mutation scope, forensic-source use, exact-head discipline, execution-unit boundaries and artifact survival.
 
 ## 1. Branch law
 
@@ -9,19 +9,7 @@ Owner: branch authority, mutation scope, forensic sources, exact-head discipline
 MUTABLE_REFOUNDATION_AUTHORITY=h
 ```
 
-`h` is the only branch that may be mutated by this campaign.
-
-Initial refoundation identity:
-
-```text
-INITIAL_H_SHA=c29e848413ad64c85feca0e0b5d9fa468a6754bd
-```
-
-That SHA is historical identity, not a permanently frozen execution target. Every write begins from the current exact remote `h` SHA.
-
-No branch protection or ruleset is required for `h`.
-
-Campaign prohibitions:
+`h` is the only mutable refoundation branch. It is not a feature/integration/PR branch.
 
 ```text
 PR_FROM_h=FORBIDDEN
@@ -34,116 +22,96 @@ FORCE_PUSH_h=FORBIDDEN
 BLIND_CHERRY_PICK_OF_OLD_STRUCTURE=FORBIDDEN
 ```
 
-Normal fast-forward commits directly on `h` are the delivery mechanism.
+Normal fast-forward commits directly to `h` are authorized. No branch protection/ruleset is required for this campaign.
 
-## 2. Old branches are forensic sources, never baselines
+## 2. Historical branches are forensic only
 
-Any historical branch may be read when it can reduce uncertainty:
+All old refs, including `master`, `g`, `ocr`, `f` and feature/history branches, may be read to recover or falsify facts.
 
-```text
-master
-g
-ocr
-f
-historical feature branches
-other old refs
-```
-
-Allowed uses:
+Allowed:
 
 ```text
 COMPARE
 TRACE HISTORY
-RECOVER PROVEN LOST PRODUCT VALUE
-UNDERSTAND OLD DATA/CONTRACT BEHAVIOR
+RECOVER PROVEN REQUIRED VALUE
+UNDERSTAND DATA/CONTRACT HISTORY
 FALSIFY CURRENT ASSUMPTIONS
 EXAMINE REMOVED CAPABILITIES
 ```
 
-Forbidden inference:
+Forbidden:
 
 ```text
 OLD_BRANCH == BASELINE
 OLD_BRANCH == CANONICAL_TRUTH
 OLD_BRANCH == INTEGRATION_SOURCE
-OLD_BRANCH_HEAD == EXECUTION_AUTHORITY
+OLD_BRANCH_TOPOLOGY == PRESERVATION_REQUIREMENT
 ```
 
-Value recovered from an old branch must re-earn canonical status and be reimplemented/recovered under the new owner; do not import historical structure merely because it contains useful behavior.
+Recovered value must re-earn canonical status and be placed under the new canonical owner; do not revive historical containers just to recover behavior.
 
-## 3. Exact-head write discipline
+## 3. Exact-head discipline
 
-Before every coherent write batch:
+Before every coherent mutation batch:
 
 ```text
-FETCH/RESOLVE REMOTE h
+RESOLVE REMOTE h
 → RECORD EXPECTED_REMOTE_H_SHA
-→ READ/DIAGNOSE AGAINST THAT SHA
+→ DIAGNOSE AGAINST THAT SHA
 ```
 
-Immediately before moving the ref:
+Immediately before write:
 
 ```text
 RESOLVE ACTUAL_REMOTE_H_SHA
 ```
 
-If:
+If it differs:
 
 ```text
-ACTUAL_REMOTE_H_SHA != EXPECTED_REMOTE_H_SHA
-```
-
-then:
-
-```text
-STOP THAT WRITE
+STOP WRITE
 → INSPECT DELTA
-→ INVALIDATE AFFECTED ASSUMPTIONS/EVIDENCE
+→ INVALIDATE AFFECTED EVIDENCE
 → RE-PIN
 → RE-DIAGNOSE
 ```
 
-Never overwrite unseen work. Never force.
+Never overwrite unseen work. Never force. After every push verify remote `h` and re-pin.
 
-After push:
+## 4. Absolute repository scope
 
-```text
-VERIFY REMOTE h SHA
-→ RE-PIN
-```
-
-## 4. Complete repository scope
-
-The refoundation scope is every material tracked artifact on `h`, including but not limited to:
+Every material tracked artifact on `h` is in scope, including:
 
 ```text
-PRODUCT CAPABILITIES / ACTORS / JOURNEYS / STATES / TRANSITIONS
-DATABASES / SCHEMAS / TABLES / COLUMNS / INDEXES / CONSTRAINTS / POLICIES
-MIGRATIONS / SEEDS / BACKFILLS / BOOTSTRAP
-DOMAIN MODELS / SERVICES / USE CASES / HANDLERS / REPOSITORIES / JOBS
-APIs / ROUTES / EVENTS / WEBHOOKS / COMMANDS
-CONTRACTS / DTOs / ENUMs / GENERATED TYPES / CLIENTS / BINDINGS
-FRONTEND DATA / STORES / CACHES / HOOKS / VIEW MODELS
-COMPONENTS / SCREENS / NAVIGATION / FORMS / UX STATES
+PRODUCT / ACTORS / JOURNEYS / STATES / TRANSITIONS
+DATABASE / SCHEMA / TABLE / COLUMN / INDEX / CONSTRAINT / POLICY
+MIGRATION / SEED / BACKFILL / BOOTSTRAP
+DOMAIN / SERVICE / USE CASE / HANDLER / REPOSITORY / JOB
+API / ROUTE / EVENT / WEBHOOK / COMMAND
+CONTRACT / DTO / ENUM / GENERATED TYPE / CLIENT / BINDING
+FRONTEND DATA / STORE / CACHE / HOOK / VIEW MODEL
+COMPONENT / SCREEN / NAVIGATION / FORM / UX STATE
 core/** / shared/** / services/** / packages/** / apps/**
-runtime/** / config/** / infra/** / tools/** / scripts/** / .github/**
+runtime/** / config/** / infra/**
+.agents/** / .github/** / .opencodereview/**
+docs/** / tools/** / governance/**
 tests/** / fixtures/** / mocks/** / snapshots/**
-DEPENDENCIES / WORKSPACES / LOCKFILE-RELEVANT AUTHORITIES
-AUTHORITATIVE DOCUMENTATION WHEN IT DEFINES OPERATING TRUTH
-REPOSITORY TOPOLOGY ITSELF
+DEPENDENCIES / WORKSPACES / LOCKFILE / REPOSITORY TOPOLOGY
 ```
 
-No path receives immunity from audit because it is named `core`, `shared`, `legacy`, `infra`, `generated`, `test`, `tool`, `docs` or similar.
+No path, name or category has preservation immunity.
 
-## 5. Artifact survival law
+## 5. Hostile-inheritance survival law
 
-The default for inherited material containers is:
+Inherited structure starts with:
 
 ```text
 CURRENT_CONTAINER_DEFAULT=DOES_NOT_SURVIVE_UNLESS_PROVEN_CANONICAL
 ```
 
-A surviving artifact must prove, as applicable:
+This applies to line, symbol, file, directory, package, service, database object, workflow, tool, doc, governance artifact and top-level surface.
+
+A surviving material container must prove, as applicable:
 
 ```text
 REQUIRED=TRUE
@@ -171,25 +139,101 @@ DELETE
 BLOCKED_UNKNOWN
 ```
 
-`BLOCKED_UNKNOWN` blocks closure; it is not `KEEP JUST IN CASE`.
+`BLOCKED_UNKNOWN` blocks closure; it never means keep just in case.
 
-## 6. Mutation authority
-
-When `00` establishes the `h` refoundation mode, mutation authority includes all actions needed to realize the proven canonical target:
+## 6. Used does not mean canonical
 
 ```text
-DELETE / REWRITE / RESTRUCTURE / REHOME / RENAME / MERGE / SPLIT
-COLLAPSE / CONSOLIDATE / REGENERATE / MIGRATE / BACKFILL
-RECONCILE / CUT OVER / DECOMMISSION / REBUILD
+USED != CANONICAL
+HAS_CALLERS != DESERVES_TO_EXIST
+DIFFERENT_NAME != DIFFERENT_RESPONSIBILITY
+DIFFERENT_PATH != DIFFERENT_RESPONSIBILITY
 ```
 
-Do not shrink a proven root to reduce diff size.
+A heavily used wrong authority is migrated and deleted; caller count is not preservation proof.
 
-Safety constraints remain mandatory for:
+Semantic responsibility is derived from behavior, data, decisions, writers/readers, contract meaning, state transitions and consumer outcome—not filenames or current directories.
+
+## 7. Dynamic mutation authority
+
+The orchestrator may select the highest safely executable unit required to realize the canonical target:
 
 ```text
-IRREVERSIBLE DATA
-EXTERNAL CONSUMERS
+WHOLE REPOSITORY STRUCTURAL PASS
+TOP-LEVEL SURFACE
+DOMAIN
+SERVICE
+CAPABILITY/JOURNEY
+PACKAGE FAMILY
+DIRECTORY SUBTREE
+FILE/SYMBOL CLUSTER
+DATABASE OWNERSHIP MODEL
+MIGRATION EPOCH
+CONTRACT/GENERATED LINEAGE
+RUNTIME/CONFIG/INFRA SURFACE
+ASSURANCE/CI CONTROL PLANE
+GOVERNANCE/TOOLS/DOCS AUTHORITY SURFACE
+```
+
+Within that unit it may:
+
+```text
+DELETE
+REWRITE
+RESTRUCTURE
+REMODEL
+REHOME
+MOVE
+RENAME
+MERGE
+SPLIT
+COLLAPSE
+CONSOLIDATE
+REGENERATE
+MIGRATE
+BACKFILL
+RECONCILE
+CUT OVER
+DECOMMISSION
+REBUILD
+DELETE WHOLE SUBTREE
+RECREATE MINIMAL CANONICAL SUBTREE
+```
+
+There is no minimal-diff, minimal-file-count or existing-path preservation requirement.
+
+## 8. Surface/subtree death test
+
+For every materially suspect surface—including `.agents`, `.github`, `.opencodereview`, `docs`, `tools`, `governance`—ask:
+
+```text
+DOES THIS SURFACE OWN UNIQUE REQUIRED CANONICAL VALUE?
+IS ITS CURRENT STRUCTURE THE BEST CANONICAL CONTAINER?
+DOES IT DUPLICATE/CONFLICT WITH ANOTHER AUTHORITY?
+DOES IT EXIST MAINLY TO COMPENSATE FOR HISTORICAL DEFECTS?
+DOES IT CAUSE EXECUTION CONFUSION OR PARALLEL GOVERNANCE?
+WOULD EXTRACT→DELETE→MINIMAL-RECREATE BE CLEANER AND FASTER?
+```
+
+If wholesale refoundation is proven superior:
+
+```text
+EXTRACT UNIQUE REQUIRED VALUE
+→ DELETE LOSING SUBTREE
+→ RECREATE ONLY MINIMUM CANONICAL MATERIAL
+→ UPDATE ALL CONSUMERS/REFERENCES
+→ PROVE ZERO OLD REACHABILITY
+```
+
+Do not patch a structurally invalid surface merely because it contains many files.
+
+## 9. Safety boundaries
+
+Aggressive structural authority does not permit destructive uncertainty for:
+
+```text
+IRREVERSIBLE DURABLE DATA
+EXTERNAL LIVE CONSUMERS
 SECURITY/TRUST
 FINANCIAL STATE
 MIGRATION/CUTOVER
@@ -197,51 +241,51 @@ GENERATED LINEAGE
 LIVE RUNTIME
 ```
 
-## 7. Concurrency
+For these, preserve required truth first, prove migration/cutover, then delete the loser.
 
-Only one overlapping material mutation root may be active.
+## 10. Concurrency
 
-Read-only work may run in parallel across independent discovery axes.
+```text
+MAX_ACTIVE_OVERLAPPING_MATERIAL_MUTATION_UNITS=1
+```
 
-A large root may span multiple checkpoints/commits. Do not split it by file count, token count, model context, frontend/backend boundary or perceived size when one canonical cutover requires the whole cone.
+This is a collision rule, not a size limiter.
 
-Independent roots may be discovered while another is active but remain candidates until mutation authority is free.
+The unit may span many services/files if one causal cutover requires them. Wide parallel read-only census/analysis is encouraged.
 
-## 8. GitHub Actions authority
+Do not split a canonical cutover due to token count, session length, file count, frontend/backend boundary or perceived complexity.
 
-On `h`, workflow creation/modification/deletion is permitted when it materially supports diagnosis, migration, proof or durable admission.
+## 11. GitHub Actions authority
 
-No workflow requires PR semantics merely because historical workflows did.
+On `h`, GitHub Actions may be created, rewritten, dispatched or deleted as needed.
 
-Campaign-only workflow residue must be zero at fixed point.
+No workflow receives survival rights because it existed before `h`.
 
-## 9. Human intent and precedence
+Persistent workflows must own unique durable assurance. Campaign-only workflows must disappear when their evidence role ends. PR/default-branch assumptions inherited from old branches are not `h` authority.
 
-Current explicit human intent may broaden or narrow execution only within repository safety and data-integrity constraints.
-
-Precedence for this campaign:
+## 12. Precedence
 
 ```text
 CURRENT EXPLICIT HUMAN INTENT
 → THIS ORCHESTRATOR PACKAGE
 → LIVE h IMPLEMENTATION/DATA/RUNTIME EVIDENCE
-→ APPLICABLE DURABLE PRODUCT/SYSTEM TRUTH
+→ DURABLE REQUIRED PRODUCT/SYSTEM TRUTH
 → FORENSIC HISTORICAL SOURCES
 ```
 
-Historical plans/prompts/branches never override live proven truth or this package.
+Historical plans, prompts, docs, branches and CI conventions cannot override the canonical refoundation package.
 
-## 10. Assurance recursion outside the explicitly authorized h campaign
+## 13. Valid blockers
 
-The broad refoundation authority above exists because the human owner explicitly authorized this `h` campaign.
-
-Outside that explicit campaign, routine product work does not silently mutate the assurance control plane:
+Only material unknowns that can alter safe truth preservation or canonical design may halt mutation:
 
 ```text
-HUMAN_ONLY
-ASSURANCE_CONTROL_PLANE
-FROZEN_FOR_NORMAL_PRODUCT_WORK
-NO ASSURANCE RECURSION WITHOUT A UNIQUE MATERIAL CLAIM
+UNRESOLVED IRREVERSIBLE DATA RISK
+UNRESOLVED EXTERNAL CONSUMER CONTRACT
+UNKNOWN CURRENT h HEAD MOVEMENT
+MISSING REQUIRED HUMAN PRODUCT DECISION
+MISSING REQUIRED SECRET/CREDENTIAL/ENVIRONMENT
+BLOCKED_UNKNOWN THAT CHANGES CANONICAL TARGET
 ```
 
-These tokens are a boundary for unrelated normal work; they do not constrain the authorized `h` refoundation itself.
+Large deletion, many callers, unfamiliar structure or extensive migration are not blockers by themselves.
