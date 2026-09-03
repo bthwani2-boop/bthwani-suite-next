@@ -1,7 +1,8 @@
 # H Refoundation Scope, Authority and Continuous Campaign Rules
 
-Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: branch authority, all-tracked accounting, hostile survival law, structural-garbage survival prohibition, Git-history forensic authority, exact-head discipline, recovery, A0/A1/A2/B stage authority, continuous engagement, stop-state legality, deferral and preemption.
+OWNER_ROLE: BRANCH_SCOPE_EXACT_HEAD_RECOVERY_STOP_STATES
+AUTHORITY_ASSIGNED_BY: 00-ORCHESTRATOR.md
+SELF_CERTIFICATION: FORBIDDEN
 
 ## 1. Branch law
 

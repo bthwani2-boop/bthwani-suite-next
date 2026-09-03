@@ -1,6 +1,9 @@
 # Focus — Product, End-to-End Design and Governance Truth
 
-Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
+OWNER_ROLE: PRODUCT_JOURNEY_EXPERIENCE_GOVERNANCE
+AUTHORITY_ASSIGNED_BY: 00-ORCHESTRATOR.md
+SELF_CERTIFICATION: FORBIDDEN
+
 
 ## 1. Product/System truth is required value, not inherited implementation
 

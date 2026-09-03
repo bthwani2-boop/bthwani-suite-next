@@ -1,131 +1,103 @@
-# BThwani Governance Truth Index
+# BThwani Governance Index
 
-Status: DURABLE_TRUTH_INPUT
-Execution/closure authority on `h`: `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
-Semantic self-certification: FORBIDDEN
+ARTIFACT_CLASS: DURABLE_PROJECT_GOVERNANCE
+SEMANTIC_OWNER: governance/GOVERNANCE.md
+EXECUTION_AUTHORITY: NONE
+CLOSURE_AUTHORITY: NONE
+IMPLEMENTATION_STATE_AUTHORITY: NONE
 
 ## Purpose
 
-`governance/**` may preserve durable Product/System/Experience/Engineering/Security/Delivery meaning that is useful when reconstructing the canonical baseline. It is not a repository execution engine, execution-order authority, artifact-survival authority, migration/cutover controller, CI authority, approval authority or closure authority.
+`governance/**` is the durable semantic constitution of BThwani: Product/System meaning, bounded-context ownership, cross-surface experience, engineering policy, security/privacy, data, runtime/reliability and delivery expectations.
 
-For the `h` refoundation campaign, every governance artifact is inherited material and must re-earn its right to survive under the canonical orchestrator. A file, status label, schema, historical acceptance or statement that calls itself canonical does not make its semantics automatically true.
-
-```text
-GOVERNANCE != AUTOMATIC_TRUTH
-GOVERNANCE != EXECUTION_AUTHORITY
-GOVERNANCE != CLOSURE_AUTHORITY
-GOVERNANCE_STATUS_LABEL != SELF_CERTIFICATION
-```
-
-Required durable meaning is preserved. Stale, conflicting, duplicative, task-local, compensatory or misleading governance is corrected, absorbed or deleted at the highest safe canonical granularity.
-
-## How governance is used on `h`
-
-The session first loads and obeys the canonical orchestrator package. Governance is then read only when materially applicable as one input to the orchestrator's truth-reconciliation process.
+It is not an execution engine, branch controller, CI authority, runtime-state inventory, route/table/operation registry or release approval mechanism. During the current refoundation campaign, execution order, mutation, recovery and closure remain owned exclusively by `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`; branch-specific campaign details belong to that temporary execution authority, not durable Governance.
 
 ```text
-CURRENT HUMAN INTENT
-→ CANONICAL h ORCHESTRATOR
-→ REQUIRED PRODUCT/SYSTEM/DATA/SECURITY TRUTH RECONCILED FROM EVIDENCE
-→ LIVE h IMPLEMENTATION / CONTRACT / DATA / RUNTIME EVIDENCE
-→ AUTHORITATIVE EXTERNAL TECHNICAL EVIDENCE WHEN REQUIRED
-→ FORENSIC/HISTORICAL SUPPORT
+GOVERNANCE   = DURABLE MEANING / POLICY / OWNERSHIP
+DOCS         = HUMAN DEVELOPMENT / OPERATIONS GUIDANCE
+SOURCE       = CURRENT IMPLEMENTATION STATE
+ORCHESTRATOR = ACTIVE REFOUNDATION EXECUTION / CLOSURE
 ```
 
-Governance documents may provide strong evidence for durable Product/System intent, but they cannot by themselves override the orchestrator, current explicit human intent, proven durable data/security/financial truth, executable external contracts or current attributable runtime evidence.
+## Authority model
 
-Contradictions are findings. Resolve them at the semantic owner under the orchestrator; do not create a second authority-resolution framework here.
+Material claims are interpreted by class:
 
-## Durable truth locations
+1. current explicit human Product/System decisions;
+2. the applicable durable semantic owner in `governance/**`;
+3. executable contracts, schemas, code, configuration and runtime evidence for current implementation state;
+4. `docs/**` for non-authoritative development/operations guidance;
+5. historical/external material only as forensic/reference input.
 
-### Product and experience inputs
+A current implementation can reveal drift but does not silently redefine Product meaning. Governance cannot claim that a route, table, provider, test or deployment currently exists merely because a document says so.
 
-- `product/PRD.md` — platform-wide Product/System intent, actors, domains, surfaces and major ownership claims.
-- `product/PRODUCT-TRUTH-SPEC.md` — representation rules for capability/journey Product Truth.
-- `product/PRODUCT-TRUTH.schema.json` — structural schema only; it does not certify semantics.
-- `product/contracts/*.product-truth.json` — capability/journey-specific durable-truth candidates.
-- `product/EXPERIENCE-AND-DESIGN.md` — cross-surface experience, content, accessibility/localization and design intent.
-- `product/platform-model.yaml` — derived orientation only; it must contain no unique Product truth.
+## Canonical semantic owners
 
-### Engineering, security and delivery inputs
+### Product
 
-- `policies/engineering.md`
-- `policies/architecture-and-fullstack.md`
-- `policies/data-and-migrations.md`
-- `policies/frontend-and-client.md`
-- `policies/runtime-reliability.md`
-- `policies/standards-and-quality.md`
-- `policies/security.md`
-- `policies/delivery.md`
+- `product/PRD.md` — platform definition, actors, surfaces, bounded-context responsibilities, major Product requirements and non-goals.
+- `product/CAPABILITIES.md` — durable capability outcomes, actors, owner boundaries, invariants, failure classes and acceptance expectations.
+- `product/FINANCIAL-MODEL.md` — cross-capability WLT/financial model and money-movement invariants.
+- `product/EXPERIENCE-AND-DESIGN.md` — durable UX, information architecture, content, RTL/accessibility and visual/design-system meaning.
 
-These policy files survive only where their material rules are still required, nonduplicative and consistent with the canonical `h` baseline. They do not control refoundation order, deletion, branch mutation or completion merely because they exist.
+### Engineering policies
 
-## Evidence-class separation
-
-Keep materially different claims distinct:
-
-```text
-DURABLE_PRODUCT/SYSTEM_INTENT
-DURABLE_POLICY_INVARIANT
-EXECUTABLE_SOURCE
-GENERATED_DERIVED_OUTPUT
-CURRENT_DATA/RUNTIME_FACT
-EXTERNAL_REQUIREMENT
-TASK_LOCAL_FACT
-HISTORICAL_EVIDENCE
-DECISION_REQUIRED
-```
-
-A durable governance statement does not make an executable/runtime claim true. A current implementation does not automatically redefine Product meaning. Generated output and derived maps do not become mutable authorities.
+- `policies/engineering.md` — universal engineering constitution and owner routing.
+- `policies/architecture-and-fullstack.md` — bounded contexts, dependency direction, app/host vs service ownership, contracts and structural integrity.
+- `policies/data-and-migrations.md` — data authority, schemas, migrations, backfills, seeds and durable-data evolution.
+- `policies/frontend-and-client.md` — client responsibility, state/readback, accessibility and presentation boundaries.
+- `policies/runtime-reliability.md` — runtime/configuration, external systems, failure/recovery, observability and development-environment invariants.
+- `policies/security.md` — identity, authorization, credentials, privacy, financial security and untrusted boundaries.
+- `policies/standards-and-quality.md` — standards, testing, dependency/adoption, licensing and assurance adequacy.
+- `policies/delivery.md` — candidate identity, promotion, rollout, release, rollback and delivery evidence.
 
 ## One-source laws
 
-Where material, converge to:
-
 ```text
-ONE REQUIRED MEANING → ONE CANONICAL SEMANTIC OWNER
-ONE MATERIAL MUTABLE STATE → ONE CANONICAL WRITER/WRITE PATH
-ONE EXECUTABLE CONTRACT PROVENANCE PER BOUNDARY
-ONE CANONICAL DATA AUTHORITY PER MATERIAL FACT
-DERIVED REPRESENTATIONS → SUBORDINATE AND RECONSTRUCTABLE
-NO PERMANENT PARALLEL/SHADOW/FALLBACK BUSINESS TRUTH
+ONE_REQUIRED_MEANING → ONE_SEMANTIC_OWNER
+ONE_MATERIAL_MUTABLE_STATE → ONE_CANONICAL_WRITER
+ONE_CROSS_BOUNDARY_PROTOCOL → ONE_EXECUTABLE_CONTRACT_PROVENANCE
+DERIVED/CACHED/MATERIALIZED != AUTHORITATIVE
+DOCS != DURABLE_PRODUCT_GOVERNANCE
+TEST_GREEN != DURABLE_PRODUCT_GOVERNANCE
+CI_GREEN != CLOSURE
 ```
 
-Textual repetition is not automatically a defect. Competing authority, decision rules, writers, state machines, policies or durable meanings are.
+Text may summarize another owner for navigation, but it must identify that owner and may not introduce a competing rule.
 
-## Governance write and survival gate
+## What governance must not contain
 
-A governance artifact or rule survives only when materially applicable evidence supports all required conditions:
+Final Governance must not hand-maintain implementation inventories derivable from executable source: route lists, operation IDs, table/column inventories, generated-client inventories, screen/hook paths, CI results, current provider health, current environment values or campaign ledgers.
 
-```text
-REQUIRED DURABLE MEANING
-+ CORRECT SEMANTICS
-+ UNIQUE CANONICAL RESPONSIBILITY
-+ CORRECT OWNER/LOCATION
-+ NONDUPLICATIVE
-+ NONCONFLICTING
-+ NOT TASK/BRANCH/TOOL/AGENT/SESSION RESIDUE
-+ NO BETTER EXECUTABLE OR CANONICAL HOME FOR THE SAME MEANING
-```
+## Change and survival law
 
-`BLOCKED_UNKNOWN` blocks a survival or closure claim; it never means keep just in case.
-
-When required value exists in a losing governance container:
+A governance artifact survives only when it owns required durable meaning that is current, nonduplicative, correctly placed and not better represented by executable source.
 
 ```text
-SALVAGE REQUIRED MEANING
-→ PLACE IT UNDER THE CANONICAL OWNER
-→ UPDATE MATERIAL CONSUMERS/REFERENCES
-→ DELETE THE LOSING REPRESENTATION
-→ PROVE NEGATIVE SPACE
+REQUIRED_DURABLE_MEANING
++ UNIQUE_RESPONSIBILITY
++ CORRECT_SEMANTIC_OWNER
++ NO_PARALLEL_AUTHORITY
++ NO_TASK/BRANCH/SESSION_RESIDUE
+= ADMISSIBLE
 ```
 
-## Verification boundary
+`DEPRECATED` or `SUPERSEDED` does not grant survival rights. Required historical decision rationale may survive as an ADR when the rationale itself remains valuable; otherwise Git history is the archive.
 
-Governance semantics cannot self-certify. Schemas may prove shape only. Tests, workflows, scanners and agents may produce evidence only.
+## Developer reconstruction test
 
-For a material governance claim, verification must distinguish what is actually proven from what remains `NOT_COVERED`, `STALE`, `BLOCKED_UNKNOWN` or otherwise unresolved under `04-VERIFY-REDIAGNOSE-CLOSE.md`.
+Governance is sufficient only when a qualified developer can determine, without reverse-engineering accidental repository structure:
 
-## Fixed-point requirement
+- what BThwani is and is not;
+- deployable surfaces and primary actors;
+- the canonical bounded-context owner of every material fact;
+- required capabilities and cross-surface outcomes;
+- financial ownership and failure/reconciliation semantics;
+- authorization/trust boundaries;
+- app-host versus service-capability responsibilities;
+- contract/data/migration expectations;
+- provider/integration boundaries;
+- UX/RTL/accessibility requirements;
+- runtime/reliability/security/quality/delivery policies.
 
-At Level-4 closure, `governance/**` must contain only required, current, uniquely owned material truth or explanation that has survived the orchestrator's hostile survival challenge. There must be zero known governance/agent/tool authority conflicts, zero stale execution-routing authority, zero parallel closure semantics and zero governance residue retained only because it existed historically.
+Implementation commands and operating procedures remain in `docs/**`.

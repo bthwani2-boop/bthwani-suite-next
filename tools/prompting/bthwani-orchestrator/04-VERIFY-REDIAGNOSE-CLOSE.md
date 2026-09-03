@@ -1,7 +1,8 @@
 # H Verification, Compliance, Re-Diagnosis and Fixed-Point Closure
 
-Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: exact-h evidence, finding terminality, A0 admission, A1 unit closure, A2 adversarial structural qualification, continuous-execution compliance, checkpoint legality, Stage-B closure, negative-space/falsification and Level-4 fixed-point qualification.
+OWNER_ROLE: EVIDENCE_FALSIFICATION_CLOSURE_RECENSUS_FIXED_POINT
+AUTHORITY_ASSIGNED_BY: 00-ORCHESTRATOR.md
+SELF_CERTIFICATION: FORBIDDEN
 
 ## 1. Evidence proves claims, not activity
 

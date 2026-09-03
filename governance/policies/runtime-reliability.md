@@ -1,6 +1,10 @@
 # Runtime, Configuration, Reliability, Observability, and Recovery Policy
 
-Status: ACTIVE_CANONICAL
+ARTIFACT_CLASS: DURABLE_RUNTIME_RELIABILITY_POLICY
+SEMANTIC_OWNER: governance/policies/runtime-reliability.md
+EXECUTION_AUTHORITY: NONE
+CLOSURE_AUTHORITY: NONE
+IMPLEMENTATION_STATE_AUTHORITY: NONE
 
 ## Runtime truth
 
@@ -59,3 +63,19 @@ The system must be reproducible from canonical source plus declared toolchain/de
 ## Closure
 
 Runtime/reliability closure requires truthful startup/readiness, validated config ownership, bounded provider/failure semantics, required observability, recovered/reconcilable failure paths, no hidden fallback/shadow runtime authority and same-candidate evidence for the claims made.
+
+
+## Development-environment invariants
+
+Daily development may use a hybrid local/managed runtime when it preserves the same semantic contracts. Active code remains local when that gives the fastest feedback; managed stateful services are implementation choices, not domain authorities.
+
+```text
+DEV_DATABASE_ENGINE = POSTGRESQL/POSTGIS
+DEVELOPMENT_PROVIDER MAY DIFFER FROM PRODUCTION_PROVIDER
+MANAGED_DEV_SERVICE != DOMAIN_AUTHORITY
+SYNTHETIC/TEST_DATA_ONLY_IN_EXTERNAL_DEV_SERVICES
+DECLARED_LOCAL/FULL_RUNTIME MUST REMAIN A REPRODUCIBLE INTEGRATION PATH
+MOCK/SIMULATOR MUST NOT BYPASS REAL AUTHORIZATION/STATE/ACCOUNTING
+```
+
+Provider-specific domain models are forbidden when the stable semantic contract is provider-neutral. Heavy local infrastructure runs on demand unless a real task requires it. Production residency/provider selection is a separate approved policy decision; development convenience does not define it.

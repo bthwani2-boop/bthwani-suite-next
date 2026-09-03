@@ -1,6 +1,10 @@
 # Engineering Standards, Best-Practice Adequacy, and Quality Policy
 
-Status: ACTIVE_CANONICAL
+ARTIFACT_CLASS: DURABLE_QUALITY_POLICY
+SEMANTIC_OWNER: governance/policies/standards-and-quality.md
+EXECUTION_AUTHORITY: NONE
+CLOSURE_AUTHORITY: NONE
+IMPLEMENTATION_STATE_AUTHORITY: NONE
 
 ## Standards-grounded treatment gate
 
@@ -61,7 +65,7 @@ External standards do not invent BThwani Product semantics. Mutable version numb
 
 ## Quality and testability
 
-Design important behavior so its invariants and failure/recovery paths can be falsified. Tests are evidence, not Product Truth, and should target the authority/behavior they prove without hard-coding obsolete implementation structure as semantics.
+Design important behavior so its invariants and failure/recovery paths can be falsified. Tests are evidence, not Product/capability governance, and should target the authority/behavior they prove without hard-coding obsolete implementation structure as semantics.
 
 Do not weaken tests/scanners or create a fake-green compatibility path to accept a design that remains wrong. Conversely, do not introduce a large test/guard framework when focused existing evidence gives equivalent assurance more simply.
 
@@ -101,3 +105,18 @@ CAUSE_REMOVED
 ```
 
 A change that works functionally but leaves a known materially fragile design, violates an applicable standard, or replaces the defect with unjustified structural debt requires further correction.
+
+
+## External reference and dependency-adoption law
+
+External systems may be used as adversarial references for missing invariants, edge cases, state machines, failure modes, security rules, financial rules and test scenarios without granting them BThwani ownership.
+
+```text
+REFERENCE_SELECTION != DEPENDENCY_ADOPTION_SELECTION
+DONOR_VALUE != DONOR_AUTHORITY
+GOOD_REFERENCE != RIGHT_TO_COPY_TOPOLOGY
+```
+
+Before direct code reuse or dependency/runtime adoption, verify the exact current component/version, license, maintenance health, security/supply-chain posture, stack fit, operational cost, ownership fit, replacement/exit cost and whether the same requirement is already owned more simply. Unknown/no-license code is reference-only by default.
+
+Whole-platform replacement is forbidden by default unless the current BThwani owner/stack is independently proven to be the root defect and replacement passes the full adoption/migration gate. Research stops once the material question is sufficiently resolved and no high-risk unknown remains.

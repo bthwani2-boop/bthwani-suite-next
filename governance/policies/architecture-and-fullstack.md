@@ -1,6 +1,10 @@
 # Architecture, Layer Ownership, and Full-Stack Integrity Policy
 
-Status: ACTIVE_CANONICAL
+ARTIFACT_CLASS: DURABLE_ARCHITECTURE_POLICY
+SEMANTIC_OWNER: governance/policies/architecture-and-fullstack.md
+EXECUTION_AUTHORITY: NONE
+CLOSURE_AUTHORITY: NONE
+IMPLEMENTATION_STATE_AUTHORITY: NONE
 
 ## Architecture follows meaning
 
@@ -27,7 +31,7 @@ Current folders/files do not become architecture authority by existing. A move/r
 
 | Layer | Allowed durable responsibility | Must not become |
 |---|---|---|
-| Product Truth | outcome, actors, responsibility, journey, states/invariants, durable ownership | implementation inventory |
+| Product/capability governance | outcome, actors, responsibility, journey, states/invariants, durable ownership | implementation inventory |
 | Domain/backend | business decisions, legal transitions, invariants, authorization policy, idempotency/concurrency rules | transport/UI convenience layer |
 | Application/handler | trusted context, validation boundary, command/query orchestration | parallel domain owner |
 | Repository/data access | persistence translation and atomic data access | copied business policy |
@@ -38,7 +42,7 @@ Current folders/files do not become architecture authority by existing. A move/r
 | API/client adapter | protocol/transport mapping, error/shape adaptation | business truth owner |
 | Controller/hook/view-model | UI orchestration, request lifecycle, canonical readback, presentation derivation | backend/domain policy clone |
 | Screen/TSX | composition, rendering, ephemeral interaction state, formatting, navigation wiring, accessibility semantics | persisted business authority or raw data-access owner |
-| Shared UI kit | reusable presentation semantics/primitives | Product/domain owner |
+| Design system / shared presentation layer | reusable presentation semantics/primitives | Product/domain owner |
 
 For every materially affected symbol/file/module/package/directory, establish as applicable:
 
@@ -128,3 +132,17 @@ Compatibility windows require a proven need, owner, bounded scope, cutover condi
 ## Structural finishing
 
 Before a materially affected structural change is considered complete, inspect its negative space for ownerless artifacts, misplaced files, stale imports/exports, dead aliases, duplicate authorities, pass-through wrappers, obsolete dependencies, generated forks, legacy paths and unfinished moves/splits/merges. Known material residue tied to the change remains unresolved.
+
+
+## App-host and integration ownership
+
+Deployable apps own route hierarchy, navigation, tabs/shell, deep links, cross-capability composition, bootstrap/session binding, native/OS adapters, app assets and build/deployable configuration. Services/bounded contexts own business/system capability semantics, durable truth, canonical writers, service contracts and reusable capability presentation when justified.
+
+```text
+WHERE_IT_APPEARS != WHO_OWNS_IT
+APP_HOST != BUSINESS_CAPABILITY_OWNER
+services → apps = FORBIDDEN
+apps → service public capability entrypoints = ALLOWED
+```
+
+External integrations terminate at domain-specific semantic ports/adapters. A vendor name, provider mechanism or generic Providers container does not become a business owner. Platform Control may own governed cross-platform enablement/configuration only where explicitly assigned; secret values remain in approved runtime secret storage.

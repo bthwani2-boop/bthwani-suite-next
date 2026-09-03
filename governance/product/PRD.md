@@ -1,6 +1,10 @@
 # BThwani Product Requirements Document
 
-Status: ACTIVE_CANONICAL
+ARTIFACT_CLASS: DURABLE_PRODUCT_GOVERNANCE
+SEMANTIC_OWNER: governance/product/PRD.md
+EXECUTION_AUTHORITY: NONE
+CLOSURE_AUTHORITY: NONE
+IMPLEMENTATION_STATE_AUTHORITY: NONE
 
 ## 1. Product definition
 
@@ -8,7 +12,20 @@ BThwani is one BThwani-operated unified multi-surface B2B2C commerce, fulfillmen
 
 The platform supports multi-vertical commerce including restaurants, groceries, pharmacy, electronics, gifts/flowers, desserts/juices, fruits/vegetables, and other catalog-governed verticals added through the same contracts.
 
-Partner commercial relationships may use the governed models `COMMISSION`, `SUBSCRIPTION`, `HYBRID`, or `OPERATOR_MANAGED`. A subscription is a pricing/billing relationship; it does not create an independent platform instance, data-isolation authority or separate Product truth.
+Partner commercial relationships may use the governed models `COMMISSION`, `SUBSCRIPTION`, `HYBRID`, or `OPERATOR_MANAGED`. A subscription is a pricing/billing relationship; it does not create an independent platform instance, data-isolation authority or separate Product authority.
+
+## 1A. Product non-goals
+
+BThwani is not a separate platform instance per partner/store and is not a generic multi-tenant SaaS abstraction by default. Partner, Store, Actor, Role, Engagement, Organization, Authorization Scope, Operator Context and Tenant are distinct concepts.
+
+```text
+PARTNER != TENANT_BY_DEFAULT
+STORE != TENANT_BY_DEFAULT
+OPERATOR_CONTEXT != TENANT
+AUTHORIZATION_SCOPE != ORGANIZATION_ID
+```
+
+A tenancy boundary is admitted only when Product/System requirements prove independent isolation/lifecycle semantics. BThwani also does not adopt an external commerce, ERP, wallet or identity platform as its Product owner merely because that system is mature or available.
 
 ## 2. Required surfaces
 
@@ -19,10 +36,10 @@ The standard product surfaces are:
 - `app-captain`: assignment, delivery lifecycle, proof/exception handling, and authorized earnings readback.
 - `app-field`: assigned field onboarding, verification, readiness, and workforce-linked operational tasks.
 - `control-panel`: governed operator administration and operational control.
-- backend/domain services and their service-owned databases.
-- shared generated clients, controllers, adapters, UI primitives, events/jobs, and runtime infrastructure required by the above surfaces.
+- backend/domain services and their service-owned persistence.
+- generated clients, service-owned capability presentation, design-system primitives, events/jobs and runtime infrastructure required by the above surfaces.
 
-A capability may exclude a surface only when the applicable Product Truth makes the exclusion explicit when omission could otherwise be ambiguous.
+A capability may exclude a surface only when the applicable capability governance makes the exclusion explicit when omission could otherwise be ambiguous.
 
 ## 3. Actors and trust model
 
@@ -47,8 +64,8 @@ Every durable fact has exactly one authoritative owner.
 - DSH owns commerce, stores, catalog consumption, checkout/order operational truth, partner operational state, dispatch, delivery, serviceability, special requests, support/rescue, and application-facing bounded projections defined by current contracts.
 - WLT exclusively owns authoritative financial truth: wallet, ledger, payment, refund, settlement, payout, commission, reconciliation, and provider financial mutation.
 - Platform Control owns platform-wide governed configuration/rollout state assigned to it by current contracts.
-- Providers own provider registration/capabilities/connection policy while provider secrets remain in approved runtime secret storage.
-- Media owns governed binary/document media where a current contract assigns media ownership.
+- External technical integrations are owned by the consuming semantic capability through explicit ports/adapters. Platform Control may own governed cross-platform integration enablement/configuration where explicitly assigned; secret values remain in approved runtime secret storage. A generic provider service/name does not become a business domain.
+- Media/object-storage behavior belongs to the bounded context/capability that owns the business object; reusable storage primitives/adapters remain technical infrastructure rather than a second business owner.
 
 A consumer may keep a cache or projection only when the owner contract permits it. A projection is never a second truth owner.
 
@@ -56,7 +73,7 @@ A consumer may keep a cache or projection only when the owner contract permits i
 
 ### Central catalog
 
-Canonical category, product, taxonomy, visibility, and commercial catalog identity must come from the central catalog owner. No application may maintain a competing runtime catalog, hardcoded category list, demo product truth, or surface-local publication truth.
+Canonical category, product, taxonomy, visibility, and commercial catalog identity must come from the central catalog owner. No application may maintain a competing runtime catalog, hardcoded category list, demo product authority, or surface-local publication truth.
 
 ### Discovery and serviceability
 
@@ -98,7 +115,7 @@ Approved official electronic-wallet rails may move external money into BThwani f
 
 The current stakeholder Cash-Out model for partner, captain, and field is a governed manual external transfer from BThwani's official wallet accounts to a verified, versioned official-wallet destination. Funds move through hold, approval, immutable execution snapshot/batch, external execution evidence, independent verification as required, reconciliation, and only then completion. A spreadsheet/export is an execution artifact and never financial truth.
 
-One visible internal balance does not imply that every unit is withdrawable. Withdrawal eligibility is server-owned policy. General customer withdrawal and withdrawal of externally funded principal are not enabled by implication and require an explicit approved Product Truth/legal-financial policy before activation.
+One visible internal balance does not imply that every unit is withdrawable. Withdrawal eligibility is server-owned policy. General customer withdrawal and withdrawal of externally funded principal are not enabled by implication and require explicit approved Product/legal/financial governance before activation.
 
 Automated external payout is not implied by a generic provider adapter. It requires a separate approved capability with proven provider support, security, accounting, reconciliation, contractual and applicable regulatory evidence before it can replace the governed manual settlement path.
 
@@ -116,7 +133,7 @@ Analytics are read models, not truth owners. Every metric identifies its source 
 
 ## 6. Multi-surface capability contract
 
-Every material Product Truth capability defines, when applicable:
+Every material durable capability specification defines, when applicable:
 
 1. problem/outcome and affected actors;
 2. authoritative owner(s) and cross-domain boundaries;
@@ -129,7 +146,7 @@ Every material Product Truth capability defines, when applicable:
 9. loading, empty, offline, forbidden, conflict, partial, error and recovery semantics;
 10. acceptance criteria and negative invariants.
 
-Feature-specific durable rules belong in the applicable Product Truth rather than new competing top-level decision documents.
+Feature-specific durable rules belong in the applicable capability governance rather than new competing top-level decision documents.
 
 ## 7. Unified full-stack implementation rule
 
@@ -151,6 +168,6 @@ PII is minimized, scoped, redacted and retained according to current policy. Sec
 
 ## 10. Acceptance model
 
-A capability is accepted only against its current Product Truth and the exact implementation/runtime candidate being claimed. Static success proves only static claims. Runtime, visual, accessibility, security, finance, isolation, data-migration, CI, release and production claims require their own applicable evidence.
+A capability is accepted only against its current durable capability governance and the exact implementation/runtime candidate being claimed. Static success proves only static claims. Runtime, visual, accessibility, security, finance, isolation, data-migration, CI, release and production claims require their own applicable evidence.
 
 Product acceptance does not itself authorize merge, release or production; delivery authority remains separate.

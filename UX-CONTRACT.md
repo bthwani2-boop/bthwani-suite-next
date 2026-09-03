@@ -2,7 +2,7 @@
 
 Status: DERIVED_EXECUTION_MAP
 
-Primary durable UX/Product/Design truth inputs: `governance/product/EXPERIENCE-AND-DESIGN.md`, `governance/product/PRD.md`, and applicable `governance/product/contracts/*.product-truth.json`.
+Primary durable UX/Product/Design truth inputs: `governance/product/EXPERIENCE-AND-DESIGN.md`, `governance/product/PRD.md`, and applicable `governance/product/CAPABILITIES.md`.
 
 This file is a **tool-facing/current implementation map** retained because UI verification tooling uses its capability mapping. It is not a durable Product/System authority and does not certify the truth of the governance inputs it references. On branch `h`, material semantics are reconciled under the canonical orchestrator from current human intent, required Product/System truth, live data/contracts/runtime evidence and applicable durable governance inputs. Contradictions are findings; they are not resolved by a blanket "governance wins" rule.
 
@@ -15,10 +15,10 @@ Current durable evidence supports Arabic/RTL-first presentation with English/LTR
 | Scope | Durable truth input | Executable/current evidence |
 |---|---|---|
 | Platform/surfaces/actors | `governance/product/PRD.md` | live surface/runtime implementation |
-| Capability semantics | `governance/product/contracts/*.product-truth.json` | current service/API/data contracts and persisted behavior |
+| Capability semantics | `governance/product/CAPABILITIES.md` | current service/API/data contracts and persisted behavior |
 | Experience/design | `governance/product/EXPERIENCE-AND-DESIGN.md` | `shared/ui-kit/**` + rendered surfaces |
-| Identity/permissions | Product Truth + security inputs | current Identity/service contracts/runtime |
-| Finance | WLT Product Truth + PRD inputs | current WLT contracts/runtime/data |
+| Identity/permissions | Capability governance + security inputs | current Identity/service contracts/runtime |
+| Finance | `governance/product/FINANCIAL-MODEL.md` + PRD inputs | current WLT contracts/runtime/data |
 
 No row grants automatic authority to a document or current path. Material conflicts must be reconciled at the proven canonical owner.
 
@@ -35,10 +35,10 @@ These paths are current evidence, not preservation constraints; Stage A may reho
 
 | Capability | Current implementation owner | Semantic input | Allowed current variants | Evidence |
 |---|---|---|---|---|
-| Table Selection | `shared/ui-kit/src/components/DataTable` | capability Product Truth + experience input | page/all-results only when reconciled capability semantics permit | component + keyboard/browser/runtime as applicable |
-| Select/Listbox | native web `select` for accepted current fields | experience input + capability Product Truth | native until an authored shared owner is proven necessary | keyboard/browser selection evidence |
+| Table Selection | `shared/ui-kit/src/components/DataTable` | capability governance + experience input | page/all-results only when reconciled capability semantics permit | component + keyboard/browser/runtime as applicable |
+| Select/Listbox | native web `select` for accepted current fields | experience input + capability governance | native until an authored shared owner is proven necessary | keyboard/browser selection evidence |
 | Date | native web date/time input for accepted current fields | domain date contract + experience input | native until a typed authored owner is proven necessary | locale/keyboard/browser evidence |
-| Form | surface controller/schema + shared field primitives | reconciled Product Truth + service validation contract | create/edit according to capability | validation/submit/readback/recovery evidence |
+| Form | surface controller/schema + shared field primitives | reconciled capability governance + service validation contract | create/edit according to capability | validation/submit/readback/recovery evidence |
 | Scrollbar | shared web root baseline | experience/accessibility input | bounded local geometry exceptions | computed style + keyboard/scroll evidence |
 | Toast/feedback | mounted surface state/live-region owner | reconciled state semantics + experience input | success/warning/info/error when truthful | live-region + failure-path evidence |
 | CRUD | capability controller + canonical readback | reconciled write/readback semantics | return/stay per capability | full-flow runtime readback |

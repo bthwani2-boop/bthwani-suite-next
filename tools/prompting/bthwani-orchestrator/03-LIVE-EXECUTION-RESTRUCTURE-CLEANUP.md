@@ -1,7 +1,8 @@
 # H Continuous Demolition, Refoundation, Migration and Destructive Cleanup
 
-Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: A0 certain-dead immediate deletion, A1 destructive refoundation, Stage-B canonical implementation, patch-vs-demolish gate, ancestor escalation, demolition planning, eager loser deletion, continuous mutation, checkpoint-only commits, migration, cutover and recursive pruning.
+OWNER_ROLE: DEMOLITION_REFOUNDATION_MIGRATION_CUTOVER_DELETION
+AUTHORITY_ASSIGNED_BY: 00-ORCHESTRATOR.md
+SELF_CERTIFICATION: FORBIDDEN
 
 ## 1. Execution law
 

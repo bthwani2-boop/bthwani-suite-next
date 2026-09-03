@@ -1,30 +1,48 @@
 # BThwani Operational Runbooks
 
-Status: OPERATIONAL_GUIDANCE
-
-This directory contains operational and recovery procedures. Runbooks are not governance authority, Product Truth, API contracts, database truth, release approval, or evidence that a runtime action succeeded.
+DOCUMENT_CLASS: OPERATIONAL_RUNBOOK_INDEX
+PRODUCT_AUTHORITY: NONE
+CURRENT_IMPLEMENTATION_AUTHORITY: NONE
 
 ## Precedence
 
-Before acting on a runbook, resolve the current repository commit and verify the relevant canonical sources:
+Runbooks explain diagnosis, containment, recovery and operational verification. They do not redefine Product/domain ownership, legal state transitions, financial truth, authorization or runtime implementation.
 
-1. `governance/GOVERNANCE.md`;
-2. `AGENTS.md` and applicable canonical governance;
-3. current service contracts, migrations, source and runtime configuration;
-4. current registered guard/CI commands.
+Use this precedence:
 
-If a route, permission, workflow, migration name, environment variable, threshold or command in a runbook has drifted, the current canonical contract/implementation wins and the runbook must be corrected.
+```text
+governance durable semantic owner
+→ live executable contracts/code/config/data/runtime
+→ applicable runbook
+```
 
-## Rules
+If a runbook conflicts with a live executable path/command, correct the runbook. If implementation conflicts with durable governance, treat it as a product/architecture finding rather than silently changing the runbook to bless the drift.
 
-- Do not treat `Status: OPERATIONAL_RUNBOOK` as implementation or runtime evidence.
-- Never turn diagnostic SQL into an unauthorized mutation.
-- Never bypass authorization, isolation, migration, financial or release controls to accelerate recovery.
-- Prefer stable identifiers and redacted evidence; do not paste secrets or PII into incidents.
-- Verification remains read-only with respect to source.
-- A runbook cannot issue `CLOSED_WITH_EVIDENCE` or protected approval.
-- Branch names, workflow names and commit IDs are not durable unless the current repository still registers them.
+## Runbook map
 
-## Ownership
+- `identity.md` — Identity availability, sessions/activation and safe support diagnostics.
+- `client-addresses.md` — client addresses, serviceability, privacy lifecycle and conflicts.
+- `partner-onboarding.md` — onboarding/readiness/publication support.
+- `stores.md` — store discovery/publication/governance operations.
+- `orders.md` — canonical order operational truth and incident recovery.
+- `checkout-wlt.md` — checkout↔WLT handoff and unknown financial outcome handling.
+- `dispatch.md` — captain offer/assignment/timeout/reassignment operations.
+- `payments.md` — payment sessions/provider webhook/reconciliation safety.
+- `wallet-reconciliation.md` — WLT-backed projection/reconciliation incidents.
+- `rollout-recovery.md` — progressive rollout containment/rollback/recovery.
 
-Runbooks should name the service/domain that owns the operational fact being recovered. Cross-domain recovery must preserve the canonical owner; in particular, WLT remains the financial-truth owner for WLT-governed financial mutation.
+Mobile build activation and Sentry setup live under `../development/`, not operational runbooks.
+
+## Runbook law
+
+A runbook must:
+
+- identify its semantic owner(s);
+- use current public/operational interfaces rather than direct table edits as the normal recovery path;
+- distinguish unknown/pending from failure/success;
+- preserve idempotency/correlation and financial/security evidence;
+- avoid copying secrets or unnecessary PII into tickets/logs;
+- verify canonical readback after recovery;
+- use environment/configured thresholds rather than hardcoded historical numbers.
+
+A runbook may mention an implementation path only when operationally useful and must not become a hand-maintained route/table registry.

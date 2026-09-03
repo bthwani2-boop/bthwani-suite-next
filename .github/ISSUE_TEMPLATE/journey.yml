@@ -8,12 +8,12 @@ body:
     attributes:
       value: |
         Start from the product outcome, actors, authoritative owners, surfaces, states, and evidence—not
-        from a file list. This issue is planning/tracking support and does not create Product Truth or approval.
+        from a file list. This issue is planning/tracking support and does not create Capability governance or approval.
   - type: input
     id: capability-id
     attributes:
       label: Capability or journey ID
-      placeholder: Stable capability ID, existing Product Truth ID, or proposed identifier
+      placeholder: Stable capability ID, existing capability ID, or proposed identifier
     validations:
       required: true
   - type: textarea
@@ -56,11 +56,11 @@ body:
   - type: textarea
     id: product-truth
     attributes:
-      label: Product Truth
+      label: Capability governance
       description: >-
-        Reference the applicable existing Product Truth, or state that a new/changed Product Truth must be
+        Reference the applicable existing Capability governance, or state that a new/changed Capability governance must be
         created through current governance.
-      placeholder: governance/product/contracts/<capability>.product-truth.json or REQUIRED
+      placeholder: governance/product/CAPABILITIES.md or REQUIRED
     validations:
       required: true
   - type: textarea

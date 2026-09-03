@@ -1,6 +1,10 @@
 # Security and Privacy Policy
 
-Status: ACTIVE_CANONICAL
+ARTIFACT_CLASS: DURABLE_SECURITY_PRIVACY_POLICY
+SEMANTIC_OWNER: governance/policies/security.md
+EXECUTION_AUTHORITY: NONE
+CLOSURE_AUTHORITY: NONE
+IMPLEMENTATION_STATE_AUTHORITY: NONE
 
 ## Governing security model
 
@@ -101,3 +105,8 @@ Telemetry requires a real Product/Operations/Security decision purpose; do not c
 Use the smallest security evidence capable of falsifying the affected claim, then deepen by risk. Static analysis proves only its covered source patterns; runtime authorization/session/isolation/provider/file/network claims require targeted runtime/integration/adversarial evidence where material.
 
 Critical authentication/authorization bypass, secret exposure, cross-scope access, isolation failure, unsafe privileged input path or material financial-security failure blocks the affected outcome until root-correct treatment or an explicit legitimate unresolved stop state. Do not create security approval registries or governance gates as substitutes for actual security evidence.
+
+
+## Development/bootstrap credential boundary
+
+Development/bootstrap credentials or historical examples never define normal Identity credential policy. OTP/challenge lifecycle remains Identity-owned; SMS/email/push are delivery channels only. Development inspection mechanisms must be explicitly development-only and impossible to enable accidentally in production.

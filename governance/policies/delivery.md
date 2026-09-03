@@ -1,6 +1,10 @@
 # Software Delivery, Promotion, and Release Policy
 
-Status: ACTIVE_CANONICAL
+ARTIFACT_CLASS: DURABLE_DELIVERY_POLICY
+SEMANTIC_OWNER: governance/policies/delivery.md
+EXECUTION_AUTHORITY: NONE
+CLOSURE_AUTHORITY: NONE
+IMPLEMENTATION_STATE_AUTHORITY: NONE
 Owner: Delivery / Release Governance
 
 ## 1. Scope and boundary

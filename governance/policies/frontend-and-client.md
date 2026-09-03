@@ -1,6 +1,10 @@
 # Frontend, Mobile, and Client Engineering Policy
 
-Status: ACTIVE_CANONICAL
+ARTIFACT_CLASS: DURABLE_FRONTEND_POLICY
+SEMANTIC_OWNER: governance/policies/frontend-and-client.md
+EXECUTION_AUTHORITY: NONE
+CLOSURE_AUTHORITY: NONE
+IMPLEMENTATION_STATE_AUTHORITY: NONE
 
 ## Core rule
 
@@ -64,7 +68,7 @@ Required applicable states include truthful loading, empty/no-results, forbidden
 
 ## Design-system binding
 
-Durable Product/experience meaning comes from `../product/EXPERIENCE-AND-DESIGN.md` and capability Product Truth. Shared runtime design tokens/components implement those decisions. Surface-local reusable foundations are defects when they independently encode the same material cross-surface decision without a proven platform/task reason.
+Durable Product/experience meaning comes from `../product/EXPERIENCE-AND-DESIGN.md` and capability governance. Shared runtime design tokens/components implement those decisions. Surface-local reusable foundations are defects when they independently encode the same material cross-surface decision without a proven platform/task reason.
 
 ## Performance and perceived performance
 

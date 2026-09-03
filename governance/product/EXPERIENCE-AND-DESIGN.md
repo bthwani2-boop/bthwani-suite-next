@@ -1,10 +1,14 @@
 # BThwani Experience and Design Authority
 
-Status: ACTIVE_CANONICAL
+ARTIFACT_CLASS: DURABLE_EXPERIENCE_GOVERNANCE
+SEMANTIC_OWNER: governance/product/EXPERIENCE-AND-DESIGN.md
+EXECUTION_AUTHORITY: NONE
+CLOSURE_AUTHORITY: NONE
+IMPLEMENTATION_STATE_AUTHORITY: NONE
 
 ## Scope
 
-This file owns durable cross-surface UX, information architecture, content/terminology, accessibility/localization and brand/design-language decisions. Capability-specific business states/actions remain owned by `PRD.md` and applicable Product Truth; runtime token/component implementation remains owned by the executable shared UI/design-system code.
+This file owns durable cross-surface UX, information architecture, content/terminology, accessibility/localization and brand/design-language decisions. Capability-specific business states/actions remain owned by `PRD.md` and `CAPABILITIES.md`; runtime token/component implementation remains owned by the executable shared UI/design-system code.
 
 A design source, prototype, `DESIGN.md`, `UX-CONTRACT.md`, token source, component library and rendered screen must not survive as competing authorities. This file owns durable meaning; tool-facing maps and runtime tokens are derived implementations.
 

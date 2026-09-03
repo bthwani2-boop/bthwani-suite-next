@@ -1,6 +1,6 @@
 # BThwani Canonical Refoundation Target Package — Entrypoint
 
-PACKAGE_REVISION: 5
+PACKAGE_REVISION: 6
 PACKAGE_CLASS: TEMPORARY_CANONICAL_TARGET_SPECIALIZATION
 TARGET_REPOSITORY: bthwani2-boop/bthwani-suite-next
 TARGET_BRANCH: h
@@ -83,31 +83,24 @@ Required truth is preserved even when its inherited container is deleted.
 
 ## 2. Mandatory load order
 
-For execution of this refoundation:
+Load in this order:
 
-1. Load the latest live `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`.
-2. Load `01` through `05` and every materially applicable `focus/*` owner it requires.
-3. Re-pin exact live `h`; reconstruct recovery frontier before selecting new work.
-4. Load this file.
-5. Load `01-CANONICAL-REPOSITORY-TOPOLOGY.md`.
-6. Load `02-CROSS-BOUNDARY-DEPENDENCY-LAWS.md`.
-7. Load `03-REQUIRED-TRUTH-CENSUS-MATRICES.md`.
-8. Load every materially affected file under `targets/`.
-9. Load both files under `closure/` before mutation/closure decisions.
+1. `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` and every owner/focus module it requires.
+2. This `00-ENTRYPOINT.md`.
+3. `01-CANONICAL-REPOSITORY-TOPOLOGY.md`.
+4. Every materially applicable `targets/*.md`.
+5. `closure/TARGET-FIXED-POINT.md` when qualifying target completion.
 
-Do not select a new target from this package when the orchestrator recovery law proves an `ACTIVE_OPEN_UNIT` already exists.
+General diagnosis, migration/cutover/deletion and verification methodology is owned only by the durable orchestrator package and is intentionally not duplicated here.
 
 ## 3. Foundational modules
 
 ```text
 01-CANONICAL-REPOSITORY-TOPOLOGY.md
-  Canonical top-level taxonomy, losing roots, service/package/contracts/infra classification and topology exit rules.
+  BThwani-specific top-level taxonomy, losing roots, service/package/contracts/infra classification and topology exit rules.
 
-02-CROSS-BOUNDARY-DEPENDENCY-LAWS.md
-  Dependency direction, ownership chains, cross-service facts, contract/integration/secrets/reliability/naming admission.
-
-03-REQUIRED-TRUTH-CENSUS-MATRICES.md
-  Product truth before topology, required-truth preservation, canonical ownership matrix, no-forgotten-surface inventory, lineage proof and Stage-A treatment admission.
+GENERAL DIAGNOSIS / OWNERSHIP / MIGRATION / VERIFICATION LAWS
+  Owned only by the applicable durable bthwani-orchestrator semantic owner; not duplicated in this temporary package.
 ```
 
 ## 4. Target modules

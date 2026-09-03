@@ -1,7 +1,8 @@
 # H Forensic Diagnosis, Catastrophe Triage and Continuous Causal Synthesis
 
-Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: A0 hostile branch-wide census, required-truth extraction, inherited-shape-blind canonical skeleton, pre-root catastrophe universe, dominance ranking, structural yield, Source-of-Defect/Source-of-Fix proof, Stage-B root synthesis, and continuous causal-frontier derivation.
+OWNER_ROLE: FORENSIC_CENSUS_REQUIRED_TRUTH_ROOT_DIAGNOSIS
+AUTHORITY_ASSIGNED_BY: 00-ORCHESTRATOR.md
+SELF_CERTIFICATION: FORBIDDEN
 
 ## 1. Diagnosis starts branch-wide and hostile
 

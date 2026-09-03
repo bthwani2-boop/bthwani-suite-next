@@ -1,11 +1,11 @@
 # BThwani Relentless Canonical Baseline Refoundation Orchestrator
 
-PACKAGE_REVISION: 32
-REFOUNDATION_PROFILE_REVISION: 7
+PACKAGE_REVISION: 33
+REFOUNDATION_PROFILE_REVISION: 8
 PACKAGE_CLASS: RELENTLESS_CONTINUOUS_DEMOLITION_FIRST_CANONICAL_REFOUNDATION_ENGINE
 PROJECT: bthwani-suite-next
 TARGET_BRANCH: h
-SELF_CONTAINED: YES
+PACKAGE_SELF_CONTAINED: YES
 SEMANTIC_SELF_CERTIFICATION: FORBIDDEN
 
 ## 0. Mission
@@ -185,17 +185,16 @@ ASKING_FOR_CONTINUATION_WHEN_DERIVABLE
 
 ## 6. Canonical package ownership
 
-Exactly nine semantic owners exist:
+Exactly eight semantic owners exist:
 
 1. `00-ORCHESTRATOR.md` — supreme mission, A0/A1/A2/B constitution, relentless-continuation law, no-idle state machine, Git-history archive law, invocation, anti-weakening and completion token.
 2. `01-SCOPE-AUTHORITY-RULES.md` — branch authority, all-tracked accounting, hostile survival, known-garbage prohibition, exact-head, recovery, continuous engagement, legal stop states, deferral and preemption.
 3. `02-DIAGNOSE-ROOT-CAUSE.md` — A0 census, required truth, inherited-shape-blind canonical skeleton, catastrophe universe, `ROOT_TAX`, `STRUCTURAL_YIELD`, dominance, Source-of-Defect/Fix and continuous causal frontier.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — patch-vs-demolish, ancestor escalation, demolition plan, immediate/eager deletion, continuous mutation, checkpoint-only commits, migration/cutover/pruning.
 5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — evidence, finding terminality, A0/A1/A2 gates, continuous-execution compliance, checkpoint legality, Stage-B closure, fresh final recensus and completion.
-6. `05-OBJECTIVES-PLAYBOOK.md` — relentless traversal, recovery, automatic causal continuation, no-idle transitions, safe-checkpoint preemption and fixed-point execution.
-7. `focus/code-architecture-organization.md` — architecture/topology/semantic containers/naming/path/file/package/service ownership.
-8. `focus/governance-product-design.md` — product/system truth, actors, journeys, UX and end-to-end meaning.
-9. `focus/data-contracts-runtime-security-quality.md` — database/migrations/contracts/generated/runtime/config/security/finance/tests/CI/dependencies/assurance.
+6. `focus/code-architecture-organization.md` — architecture/topology/semantic containers/naming/path/file/package/service ownership.
+7. `focus/governance-product-design.md` — product/system truth, actors, journeys, UX and end-to-end meaning.
+8. `focus/data-contracts-runtime-security-quality.md` — database/migrations/contracts/generated/runtime/config/security/finance/tests/CI/dependencies/assurance.
 
 One material law has one owner. No helper, plan, agent adapter or governance file may create a weaker competing variant.
 
@@ -210,7 +209,7 @@ MODE: CANONICAL_BASELINE_REFOUNDATION
 COMPLETION_LEVEL: LEVEL_4
 ```
 
-Then load `00` through `05` and every materially applicable `focus/*` owner.
+Then load `00` through `04` and every materially applicable `focus/*` owner.
 
 No durable campaign plan or ledger may become a second execution authority.
 

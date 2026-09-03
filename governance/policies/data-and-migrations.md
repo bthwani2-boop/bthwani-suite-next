@@ -1,6 +1,10 @@
 # Data, Database, Migration, Backfill, and Seed Policy
 
-Status: ACTIVE_CANONICAL
+ARTIFACT_CLASS: DURABLE_DATA_POLICY
+SEMANTIC_OWNER: governance/policies/data-and-migrations.md
+EXECUTION_AUTHORITY: NONE
+CLOSURE_AUTHORITY: NONE
+IMPLEMENTATION_STATE_AUTHORITY: NONE
 
 ## Data authority
 
