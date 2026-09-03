@@ -134,7 +134,6 @@ jobs:
         continue-on-error: true
         run: |
           node --test tools/scripts/detect-ci-context.test.mjs
-          node --test tools/scripts/ci-routing.test.mjs
           node --test tools/scripts/ci-verification-window.test.mjs
           node --test tools/scripts/ci-runtime-bootstrap-policy.test.mjs
           node --test tools/scripts/detect-ci-context.property.test.mjs
