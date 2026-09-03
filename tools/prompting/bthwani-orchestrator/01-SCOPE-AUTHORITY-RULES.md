@@ -1,7 +1,7 @@
 # H Refoundation Scope and Authority Rules
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: branch authority, repository-wide mutation scope, truth reconciliation, forensic-source use, exact-head discipline, execution-recovery authority, execution-unit boundaries and artifact survival.
+Owner: branch authority, repository-wide mutation scope, truth reconciliation, forensic-source use, exact-head discipline, execution-recovery authority, stage/preemption authority, execution-unit boundaries and artifact survival.
 
 ## 1. Branch law
 
@@ -160,8 +160,19 @@ EXTENDS_ACTIVE_UNIT
 CONFLICTS_WITH_ACTIVE_UNIT
 INVALIDATES_ACTIVE_UNIT_ASSUMPTION
 INTRODUCES_HIGHER_CAUSAL_ROOT
+INTRODUCES_SYSTEMIC_CATASTROPHE
 INDEPENDENT_NONOVERLAPPING_CHANGE
 LOW_RISK_GARBAGE_ONLY
+```
+
+Recovery must also reconstruct the current campaign stage:
+
+```text
+ACTIVE_CAMPAIGN_STAGE = STAGE_A_SYSTEMIC_BASELINE_DECONTAMINATION | STAGE_B_NORMAL_ROOT_CLOSURE
+STAGE_A_EXIT_STATE
+ACTIVE_OPEN_UNIT
+ACTIVE_UNIT_STAGE
+RECOVERY_FRONTIER
 ```
 
 ```text
@@ -169,9 +180,40 @@ HEAD_MOVED != START_OVER
 HEAD_MOVED != IGNORE_DELTA
 ```
 
-If no prior SHA is available, inspect enough recent commit history and current reachability to establish the last proven closed unit, any active open unit, and its first unfinished material obligation before new-root selection.
+If no prior SHA is available, inspect enough recent commit history and current reachability to establish the campaign stage, the last proven closed unit, any active open unit, and its first unfinished material obligation before normal candidate selection.
 
 Git history answers `WHAT HAPPENED?`; it does not answer `WHAT IS CANONICAL?`. Current canonical status must still be proven under `00`/`02`/`03`/`04`.
+
+## 4.2 Systemic-catastrophe preemption authority
+
+An open unit normally retains priority until its migration/cutover/deletion obligations close. Do not use Stage A as permission for random context switching.
+
+A proven systemic catastrophe may preempt or supersede an open unit only when at least one is established:
+
+```text
+SYSTEMIC_CATASTROPHE_SUPERSEDES_ACTIVE_UNIT_CANONICAL_MODEL
+SYSTEMIC_CATASTROPHE_IS_REQUIRED_PREREQUISITE_OF_ACTIVE_UNIT
+SYSTEMIC_CATASTROPHE_IS_HIGHER_SHARED_CAUSE_OF_ACTIVE_UNIT_MATERIAL_FAILURES
+```
+
+Then:
+
+```text
+RECLASSIFY ACTIVE UNIT UNDER THE HIGHER SYSTEMIC UNIT
+→ PRESERVE ALREADY-CORRECT REQUIRED WORK
+→ INVALIDATE WRONG/STale ASSUMPTIONS
+→ EXECUTE THE HIGHER CANONICAL CUTOVER
+```
+
+Otherwise:
+
+```text
+OPEN_CRITICAL_PARTIAL_CUTOVER
+→ RESUME FROM RECOVERY_FRONTIER
+→ NO INDEPENDENT SYSTEMIC OR NORMAL ROOT SWITCH
+```
+
+This preemption law is causal, not convenience-based.
 
 ## 5. Absolute repository scope
 
@@ -236,6 +278,48 @@ BLOCKED_UNKNOWN
 
 `BLOCKED_UNKNOWN` blocks closure; it never means keep just in case.
 
+## 6.1 Mandatory branch-wide survival challenge before normal root closure
+
+Stage A applies the hostile-inheritance law across the branch before Stage B may start.
+
+The audit is not satisfied by sampling, by the current failure cone, or by reviewing only files touched by a candidate root. Material repository structure must be accounted for branch-wide so that later roots are not built on unexamined shared debt.
+
+At minimum challenge every material:
+
+```text
+TOP_LEVEL_SURFACE
+WORKSPACE
+PACKAGE
+SERVICE / DOMAIN BOUNDARY
+SHARED / CORE / COMMON-LIKE AUTHORITY
+DATABASE / MIGRATION AUTHORITY
+CONTRACT / GENERATED LINEAGE
+RUNTIME / CONFIG / INFRA AUTHORITY
+ASSURANCE / CI CONTROL PLANE
+TOOLS / DOCS / GOVERNANCE / AGENT AUTHORITY
+DEPENDENCY / LOCKFILE OWNERSHIP
+LARGE OR HIGH-FAN-IN SUBTREE
+```
+
+And account for lower artifacts sufficiently to derive all material container/authority verdicts and identify systemic debt.
+
+Required question is not `WHY DELETE THIS?`; it is:
+
+```text
+WHY DOES THIS MATERIAL STRUCTURE DESERVE TO SURVIVE THE CANONICAL BASELINE?
+```
+
+Every material artifact/container must be dispositioned or mapped to an explicit later Stage-B causal unit; unknown classification cannot be silently deferred.
+
+```text
+KEEP_PROVEN REQUIRES POSITIVE EVIDENCE
+CURRENT_USAGE DOES NOT SATISFY SURVIVAL
+CURRENT_BUILD_SUCCESS DOES NOT SATISFY SURVIVAL
+MANY_CALLERS DOES NOT SATISFY SURVIVAL
+```
+
+Stage A does not require prematurely implementing every local Stage-B root. It requires complete branch-wide accounting plus execution of every proven executable systemic catastrophe whose survival would tax, distort, block or contaminate multiple later roots.
+
 ## 7. Used does not mean canonical
 
 ```text
@@ -296,6 +380,8 @@ RECREATE MINIMAL CANONICAL SUBTREE
 ```
 
 There is no minimal-diff, minimal-file-count or existing-path preservation requirement.
+
+During Stage A, mutation selection is constrained further by `02`/`05`: systemic units outrank normal independent roots until the Stage-A exit gate owned by `04` passes.
 
 ## 9. Surface/subtree death test
 
