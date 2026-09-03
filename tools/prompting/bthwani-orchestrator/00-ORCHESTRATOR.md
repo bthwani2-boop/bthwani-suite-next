@@ -1,8 +1,8 @@
 # BThwani Canonical Baseline Refoundation Orchestrator
 
-PACKAGE_REVISION: 29
-REFOUNDATION_PROFILE_REVISION: 4
-PACKAGE_CLASS: TRUSTWORTHY_CANONICAL_BASELINE_REFOUNDATION_ENGINE
+PACKAGE_REVISION: 30
+REFOUNDATION_PROFILE_REVISION: 5
+PACKAGE_CLASS: HOSTILE_DEMOLITION_FIRST_CANONICAL_BASELINE_REFOUNDATION_ENGINE
 PROJECT: bthwani-suite-next
 TARGET_BRANCH: h
 SELF_CONTAINED: YES
@@ -14,95 +14,96 @@ NON_AUTHORITATIVE_BEHAVIORAL_EVALS: ALLOWED
 
 This package is the sole repository execution/closure constitution for the `h` canonical-baseline refoundation campaign.
 
-`h` is not a feature branch, integration branch, PR branch, or patch branch. It is the only mutable refoundation world.
+`h` is not a feature branch, integration branch, PR branch or patch branch. It is the only mutable refoundation world.
 
-The inherited repository is forensic input, not a trusted baseline.
+The inherited repository is forensic material, not a baseline entitled to repair.
 
-### Hostile-inheritance assumption
+The campaign does **not** exist to trim, polish, organize or cosmetically improve inherited structure. It exists to preserve only required truth, determine what canonical structure should exist, demolish proven losing structure at the highest safe granularity, rebuild the required canonical structure, migrate/cut over completely, and prove zero losing residue.
 
-For this campaign, inherited structure starts as suspect. Current existence creates no preservation right.
-
-```text
-ASSUME CURRENT STRUCTURE IS NONCANONICAL UNTIL PROVEN OTHERWISE.
-PRESERVE REQUIRED TRUTH, NOT HISTORICAL SHAPE.
-IF DELETE+REFOUND IS SAFER/CLEARER/FASTER THAN PATCHING, DELETE+REFOUND.
-IF A WHOLE SUBTREE IS A CONFUSING OR DUPLICATE AUTHORITY, REFOUND THE WHOLE SUBTREE.
-```
-
-This is not permission for blind data loss. Durable Product/Data/Security/Financial truth must be extracted and protected before destructive change.
-
-The campaign is explicitly two-stage:
+### 0.1 Hostile-inheritance assumption
 
 ```text
-STAGE_A = SYSTEMIC BASELINE DECONTAMINATION
-STAGE_B = NORMAL DYNAMIC ROOT CLOSURE
+ASSUME INHERITED STRUCTURE IS NONCANONICAL UNTIL PROVEN OTHERWISE.
+CURRENT_EXISTENCE CREATES NO PRESERVATION RIGHT.
+CURRENT_USAGE CREATES NO PRESERVATION RIGHT.
+HAS_CALLERS CREATES NO PRESERVATION RIGHT.
+BUILD_GREEN CREATES NO PRESERVATION RIGHT.
 ```
 
-Stage A is mandatory. It exists to make the entire branch a trustworthy enough canonical substrate that later roots are not repeatedly taxed by the same shared garbage, wrong topology, duplicate authority, bad migration/contract/runtime substrate, compensation architecture or verification/governance contamination.
+Required truth may be embedded in a losing container. That means salvage the truth, not preserve the container.
 
-```text
-UNTRUSTED INHERITED REPOSITORY
-→ SESSION RECOVERY / EXACT-h PIN
-→ COMPLETE BRANCH-WIDE FORENSIC ACCOUNTING
-→ REQUIRED TRUTH EXTRACTION
-→ HOSTILE BRANCH-WIDE SURVIVAL CHALLENGE
-→ BUILD CURRENT + CANONICAL FOUNDATION FROM FIRST PRINCIPLES
-→ SYNTHESIZE SYSTEMIC CATASTROPHE GRAPH
-→ CHOOSE HIGHEST CROSS-ROOT LEVERAGE SYSTEMIC UNIT
-→ SALVAGE REQUIRED VALUE
-→ REFOUND SHARED FOUNDATION AT HIGHEST CORRECT GRANULARITY
-→ MIGRATE COMPLETE AFFECTED CONE
-→ CUT OVER
-→ DELETE LOSING AUTHORITIES / CONTAINERS / SUBTREES / COMPENSATIONS
-→ RECURSIVELY PRUNE RESIDUE
-→ FIX ADMISSION / VERIFICATION HOLE
-→ VERIFY + SYSTEMIC NEGATIVE SPACE + FALSIFY
-→ RE-CENSUS / RE-SYNTHESIZE / REPEAT
-→ FRESH ADVERSARIAL STAGE-A BRANCH RECENSUS
-→ STAGE-A EXIT GATE PASS
-→ REBUILD CURRENT / CANONICAL / DELTA ON CLEANER BASELINE
-→ SYNTHESIZE NORMAL DYNAMIC ROOT GRAPH
-→ CLOSE REMAINING ROOTS WITH THE SAME REFOUND/MIGRATE/CUTOVER/DELETE DISCIPLINE
-→ FRESH FINAL FULL RE-CENSUS FROM ZERO
-→ TRUSTWORTHY LEVEL-4 CANONICAL BASELINE
-```
-
-Supreme law:
+### 0.2 Supreme structural law
 
 ```text
 PRESERVE REQUIRED TRUTH.
-BE CONSERVATIVE WITH IRREVERSIBLE DATA.
+BE CONSERVATIVE WITH IRREVERSIBLE DATA / SECURITY / FINANCIAL / EXTERNAL-CONSUMER RISK.
 DO NOT BE CONSERVATIVE WITH PROVEN STRUCTURAL DEBT.
-REFOUND REQUIRED STRUCTURE.
-DESTROY PROVEN LOSING STRUCTURE.
-DO NOT PRESERVE CONFUSION.
-DO NOT PRESERVE BUREAUCRACY.
-DO NOT PRESERVE A PATH, PACKAGE, TOOL, WORKFLOW, DOC OR GOVERNANCE LAYER WITHOUT UNIQUE CANONICAL VALUE.
-DO NOT BEGIN NORMAL ROOT CLOSURE ON TOP OF A BASELINE THAT STILL CONTAINS A KNOWN EXECUTABLE SYSTEMIC CATASTROPHE.
-FIRST MAKE THE BASELINE CANONICALLY WORTH BUILDING UPON; THEN CLOSE THE REMAINING ROOTS.
+
+KNOWN_GARBAGE_SURVIVAL = FORBIDDEN.
+KNOWN_LOSING_CONTAINER_SURVIVAL = FORBIDDEN EXCEPT ACTIVE PROVEN MIGRATION DEPENDENCY.
+MAPPED != TREATED.
+CLASSIFIED != TREATED.
+CLUSTERED != TREATED.
+ASSIGNED_TO_ROOT != TREATED.
+
+IF THE CONTAINER ITSELF IS STRUCTURALLY INVALID:
+  EDIT_IN_PLACE = FORBIDDEN BY DEFAULT.
+  SALVAGE REQUIRED TRUTH.
+  DEMOLISH THE LOSER.
+  REFOUND THE CANONICAL REPLACEMENT.
+
+DO NOT COLLECT GARBAGE.
+DO NOT BEAUTIFY GARBAGE.
+DO NOT REPACKAGE GARBAGE.
+DO NOT MOVE GARBAGE WITHOUT ELIMINATING ITS LOSING RESPONSIBILITY.
+DO NOT CREATE A NEW SHARED DUMP FROM MULTIPLE LOSERS.
+DO NOT ARCHIVE LOSERS JUST IN CASE.
+DO NOT CREATE CLEANUP-LATER DEBT.
 ```
 
-## 1. Canonical package ownership
+The survival of proven structural garbage after its last required migration dependency ends is itself a campaign failure.
 
-Exactly nine files are semantic owners in this package:
+## 1. Canonical campaign architecture
 
-1. `00-ORCHESTRATOR.md` — mission, package ownership, mandatory two-stage campaign law, operating loop, invocation, session-recovery entry gate, global non-negotiables and stop states.
-2. `01-SCOPE-AUTHORITY-RULES.md` — `h` branch authority, all-repository scope, hostile survival law, branch-wide survival challenge, mutation authority, old-branch forensic use, exact-head discipline, execution-recovery authority, systemic preemption authority, concurrency and artifact survival.
-3. `02-DIAGNOSE-ROOT-CAUSE.md` — full branch forensic census, truth extraction, hostile disposition, systemic-catastrophe synthesis/`ROOT_TAX`, semantic clustering, Source-of-Defect/Source-of-Fix and Stage-A/Stage-B causal diagnosis.
-4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — Stage-A systemic refoundation execution, Stage-B reconstruction, migration, cutover, highest-safe deletion, whole-subtree replacement, recursive pruning and structural finishing.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-`h` evidence, systemic-unit and normal-root closure gates, fail-closed Stage-A exit qualification, recovered-evidence freshness, finding accounting, falsification, fresh re-census and Level-4 fixed-point qualification.
-6. `05-OBJECTIVES-PLAYBOOK.md` — two-stage campaign traversal, dynamic systemic/root unit selection and interrupted-unit reconstruction; it does not own static catastrophe queues, session-sized objectives or AUTO/NEXT bug queues.
-7. `focus/code-architecture-organization.md` — architecture, semantic containers, topology, canonical naming/path ownership, file cohesion/size/complexity discipline, files/directories/packages/services, anti-fragmentation and structural UI ownership.
-8. `focus/governance-product-design.md` — Product/System truth, actors, journeys, screens, UX, accessibility/localization, end-to-end capability meaning and durable truth reconciliation.
+The campaign has four ordered stages:
+
+```text
+STAGE_A0 — HOSTILE BRANCH-WIDE CATASTROPHE TRIAGE
+STAGE_A1 — DOMINANT DESTRUCTIVE BASELINE REFOUNDATION
+STAGE_A2 — ADVERSARIAL STRUCTURAL QUALIFICATION
+STAGE_B  — NORMAL CAUSAL ROOT CLOSURE
+```
+
+```text
+A0: SEE THE WHOLE STRUCTURAL BATTLEFIELD BEFORE NORMAL MUTATION.
+A1: DEMOLISH / REFOUND THE DOMINANT PRE-ROOT BASELINE CATASTROPHES.
+A2: PROVE FROM ZERO THAT KNOWN STRUCTURAL GARBAGE AND UNTREATED STRUCTURAL FINDINGS ARE ZERO.
+B : CLOSE ONLY TRUE SEMANTIC / PRODUCT / SYSTEM ROOTS INSIDE PROVEN CANONICAL STRUCTURE.
+```
+
+Normal Stage-B root selection is forbidden until current exact `h` passes A2.
+
+## 2. Canonical package ownership
+
+Exactly nine files are semantic owners:
+
+1. `00-ORCHESTRATOR.md` — mission, A0/A1/A2/B campaign constitution, global anti-weakening invariants, session-entry law, execution forcing and final completion token.
+2. `01-SCOPE-AUTHORITY-RULES.md` — branch authority, all-tracked accounting burden, hostile survival law, known-garbage survival prohibition, Stage-B deferral isolation, exact-head discipline, blocker law, `OPEN_CRITICAL`/`OPEN_SAFE_CHECKPOINT` and preemption authority.
+3. `02-DIAGNOSE-ROOT-CAUSE.md` — A0 machine/semantic census, required-truth extraction, inherited-shape-blind canonical skeleton, catastrophe-universe synthesis, `ROOT_TAX`, `STRUCTURAL_YIELD`, dominance ranking, deferral falsification and Source-of-Defect/Source-of-Fix proof.
+4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — certain-dead immediate deletion, mandatory Patch-vs-Demolish Gate, ancestor exoneration, demolition plan, A1 destructive refoundation, eager loser deletion, migration/cutover and recursive pruning.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-`h` evidence, finding terminality, A0 admission, A1 execution/closure, A2 zero-garbage exit, Stage-B closure, negative-space/falsification and final Level-4 qualification.
+6. `05-OBJECTIVES-PLAYBOOK.md` — campaign traversal, dominance-based selection, first-candidate ban, safe-checkpoint preemption, no-endless-audit execution forcing and root traversal.
+7. `focus/code-architecture-organization.md` — architecture, topology, semantic containers, naming/path/file/package/service ownership, anti-fragmentation and structural UI ownership.
+8. `focus/governance-product-design.md` — Product/System truth, actors, journeys, screens, UX/accessibility/localization and end-to-end product meaning.
 9. `focus/data-contracts-runtime-security-quality.md` — database/migrations, contracts/generated bindings, runtime/config/infra, security/finance, operational truth, tests/CI/admission, dependencies and assurance.
 
-One material law has one owner. Other files reference it rather than create a competing variant.
+One material law has one owner. Other files may reference but must not create a weaker competing variant.
 
-`AGENTS.md`, `.agents/**`, historical plans, old prompts, old branches, CI outputs and tool results are adapters/evidence only. They may not redefine this package.
+`AGENTS.md`, `.agents/**`, historical plans/prompts, old branches, docs, CI outputs and tool results are adapters/evidence only unless a semantic owner explicitly assigns them canonical value.
 
-## 2. Invocation
+## 3. Invocation
 
-Normal human invocation is intentionally short:
+Normal invocation remains intentionally short:
 
 ```text
 REPOSITORY: bthwani2-boop/bthwani-suite-next
@@ -113,9 +114,9 @@ COMPLETION_LEVEL: LEVEL_4
 
 Then load `00` through `05` and every materially applicable `focus/*` owner.
 
-No separate durable campaign plan is required. Persisted plans must not become a second execution authority.
+No separate durable campaign plan or ledger may become a second execution authority.
 
-## 3. Governing doctrine
+## 4. Governing doctrine
 
 ```text
 CURRENT_EXISTENCE != RIGHT_TO_EXIST
@@ -124,328 +125,322 @@ HAS_CALLERS != DESERVES_TO_EXIST
 CURRENTLY_WORKING != CORRECT
 CI_GREEN != CLOSED
 HISTORICALLY_ACCEPTED != VALID
-OLD != WRONG
-NEW != CORRECT
 CURRENT_PATH != PRESERVATION_CONSTRAINT
 CURRENT_PACKAGE != PRESERVATION_CONSTRAINT
 CURRENT_API != PRESERVATION_CONSTRAINT
 CURRENT_WORKFLOW != PRESERVATION_CONSTRAINT
 CURRENT_GOVERNANCE != PRESERVATION_CONSTRAINT
-STAGE_A_ACTIVITY != STAGE_A_PASS
-SYSTEMIC_GRAPH_EMPTY_ONCE != STAGE_A_PASS
-NORMAL_ROOT_PROGRESS != PERMISSION_TO_IGNORE_SYSTEMIC_DEBT
+FOUND != TREATED
+MAPPED != TREATED
+MOVED != REFOUNDED
+RENAMED != REFOUNDED
+MERGED != CLEANED
+REORGANIZED != CANONICAL
 ```
 
-Every material responsibility must converge to:
+Every surviving responsibility converges to:
 
 ```text
 ONE CANONICAL OWNER
 ONE CANONICAL MUTABLE WRITER OR WRITE PATH
-ONE CANONICAL STORAGE/CONTRACT AUTHORITY WHERE APPLICABLE
-ONE JUSTIFIED CANONICAL CONTAINER SET
+ONE CANONICAL STORAGE / CONTRACT AUTHORITY WHERE APPLICABLE
+ONE JUSTIFIED MINIMUM NECESSARY CANONICAL CONTAINER SET
 DERIVED CONSUMERS ONLY
 ```
 
-Current containers begin with no presumption of survival. `KEEP_PROVEN` requires positive proof under `01`/`02`.
+Every tracked artifact is accounted by default. `NONMATERIAL` and `KEEP_PROVEN` both require positive proof under `01`/`02`.
 
-The pre-root burden of proof is branch-wide:
+## 5. No conservative bug-chasing or garbage accumulation
 
-```text
-WHY_DOES_THIS_MATERIAL_STRUCTURE_DESERVE_TO_SURVIVE?
-```
-
-not:
+Execution order is never defined by:
 
 ```text
-CAN_WE_FIND_A_REASON_TO_DELETE_IT?
+FIRST_ERROR
+FIRST_FAILED_CI_JOB
+FIRST_FILE_SEEN
+FIRST_CATASTROPHE_FOUND
+MOST_WARNINGS
+EASIEST_FIX
+SMALLEST_DIFF
+FEWEST_CALLERS
+SESSION_SIZE
+TOKEN_BUDGET
+HISTORICAL_TODO_ORDER
+STATIC_CATASTROPHE_LIST
 ```
-
-## 4. No conservative bug-chasing
-
-The campaign order is never defined by:
 
 ```text
-FIRST ERROR
-FIRST FAILED CI JOB
-FIRST FILE SEEN
-MOST WARNINGS
-EASIEST FIX
-SMALLEST DIFF
-SESSION SIZE
-TOKEN BUDGET
-HISTORICAL TODO ORDER
-STATIC CATASTROPHE LIST
+DO_NOT_FIX_A_LINE_WHEN_THE_FILE_IS_WRONG
+DO_NOT_FIX_A_FILE_WHEN_THE_DIRECTORY_OR_PACKAGE_IS_WRONG
+DO_NOT_FIX_A_PACKAGE_WHEN_THE_SERVICE_BOUNDARY_IS_WRONG
+DO_NOT_FIX_A_SERVICE_WHEN_THE_DOMAIN_OR_REPOSITORY_TOPOLOGY_IS_WRONG
+DO_NOT_PATCH_GENERATED_OUTPUT_WHEN_LINEAGE_IS_WRONG
+DO_NOT_PATCH_MIGRATIONS_WHEN_THE_EPOCH_IS_WRONG
+DO_NOT_PATCH_WORKFLOWS_WHEN_THE_ASSURANCE_CONTROL_PLANE_IS_WRONG
+DO_NOT_EDIT_INSIDE_A_CONTAINER_ALREADY_PROVEN_INVALID
 ```
 
-Errors and tool findings are evidence. During Stage A the campaign is driven by the Systemic Catastrophe Graph and cross-root leverage. During Stage B it is driven by the normal causal Root Graph.
+A large correct demolition/refoundation outranks a long sequence of descendant patches when safely executable.
 
-```text
-DO NOT FIX A LINE WHEN THE FILE IS WRONG.
-DO NOT FIX A FILE WHEN THE PACKAGE IS WRONG.
-DO NOT FIX A PACKAGE WHEN THE SERVICE BOUNDARY IS WRONG.
-DO NOT FIX A SERVICE WHEN THE DOMAIN TOPOLOGY IS WRONG.
-DO NOT FIX INDIVIDUAL ROOTS WHEN A SHARED SYSTEMIC SUBSTRATE IS WRONG.
-DO NOT FIX INDIVIDUAL WORKFLOWS WHEN THE ASSURANCE CONTROL PLANE IS WRONG.
-DO NOT FIX MIGRATIONS WHEN THE MIGRATION EPOCH IS WRONG.
-DO NOT FIX A TEST WHEN THE VERIFICATION AUTHORITY IS WRONG.
-DO NOT PATCH A CONFUSING SUBTREE WHEN WHOLE-SUBTREE REFOUNDATION IS CLEARER.
-DO NOT CHIP AWAY AT HIGH-LEVERAGE SHARED GARBAGE THROUGH A LOW-RISK CLEANUP LANE.
-```
+## 6. Mandatory session recovery entry gate
 
-A large correct refoundation is preferred over a long chain of small patches when the higher cause is proven.
-
-## 5. Mandatory two-stage campaign law
-
-### 5.1 Stage A — Systemic Baseline Decontamination
-
-Stage A is not optional and is not a best-effort cleanup pass.
-
-Its objective is:
-
-```text
-REMOVE EVERY PROVEN EXECUTABLE SYSTEMIC CONDITION
-WHOSE SURVIVAL WOULD MATERIALLY DISTORT, BLOCK, MULTIPLY OR REPEAT
-WORK ACROSS MULTIPLE LATER ROOTS,
-WHILE PRESERVING REQUIRED TRUTH AND SAFE CUTOVER.
-```
-
-Systemic candidates include only when proven by `02`, for example:
-
-```text
-REPOSITORY / WORKSPACE / PACKAGE TOPOLOGY CATASTROPHE
-CROSS-DOMAIN OR SHARED/CORE AUTHORITY CORRUPTION
-DATABASE OWNERSHIP OR MIGRATION-EPOCH CATASTROPHE
-CONTRACT / GENERATED-LINEAGE CATASTROPHE
-RUNTIME / CONFIG / INFRA AUTHORITY FRAGMENTATION
-ASSURANCE / CI CONTROL-PLANE CATASTROPHE
-GOVERNANCE / AGENT / TOOL AUTHORITY CONFLICT
-MULTI-SURFACE LEGACY / COMPATIBILITY / COMPENSATION ARCHITECTURE
-HIGH-LEVERAGE OBSOLETE SUBTREE
-```
-
-The names above are audit classes, not presumptions that a defect exists.
-
-```text
-NORMAL_ROOT_SELECTION = FORBIDDEN
-WHILE A PROVEN EXECUTABLE SYSTEMIC CATASTROPHE SURVIVES
-OR WHILE THE STAGE-A EXIT GATE IS NOT CURRENT PASS.
-```
-
-### 5.2 Stage B — Normal Dynamic Root Closure
-
-Stage B begins only after `04` proves Stage-A exit on the current exact `h`.
-
-Stage B rebuilds the normal causal Root Graph on the cleaner baseline and closes the remaining product/system/domain/journey/structural roots.
-
-Stage-A PASS is not repository completion. It is permission to begin normal root closure.
-
-If Stage-B discovery proves a new executable systemic catastrophe, Stage-A qualification becomes stale/invalidated and the campaign returns to Stage A under `01`/`05` preemption rules.
-
-## 6. Dynamic execution-unit selector
-
-The orchestrator is not required to operate root-by-root at one fixed granularity.
-
-The current campaign stage constrains candidate selection.
-
-Stage-A unit shapes may include:
-
-```text
-WHOLE REPOSITORY STRUCTURAL PASS
-REPOSITORY / WORKSPACE / PACKAGE TOPOLOGY
-TOP-LEVEL SURFACE
-CROSS-DOMAIN SHARED AUTHORITY
-DATABASE OWNERSHIP MODEL
-MIGRATION EPOCH
-CONTRACT/GENERATED LINEAGE
-RUNTIME/CONFIG/INFRA SURFACE
-ASSURANCE/CI CONTROL PLANE
-GOVERNANCE/TOOLS/DOCS/AGENT AUTHORITY SURFACE
-LARGE HIGH-FAN-IN OBSOLETE SUBTREE
-```
-
-Stage-B unit shapes may include:
-
-```text
-TOP-LEVEL SURFACE
-DOMAIN
-SERVICE
-CAPABILITY/JOURNEY
-PACKAGE FAMILY
-DIRECTORY SUBTREE
-FILE/SYMBOL CLUSTER
-DATABASE OWNERSHIP UNIT
-CONTRACT/GENERATED UNIT
-RUNTIME/CONFIG UNIT
-ASSURANCE UNIT
-SINGLE CAUSAL ROOT
-```
-
-Stage-A selection criterion:
-
-```text
-CHOOSE THE PROVEN UNIT THAT REMOVES THE MOST SHARED NONCANONICAL STRUCTURE
-AND THE MOST FUTURE ROOT_TAX
-WHILE PRESERVING REQUIRED TRUTH
-AND ALLOWING ONE COMPLETE MIGRATION/CUTOVER/DELETION PROOF.
-```
-
-Stage-B selection criterion:
-
-```text
-CHOOSE THE UNIT THAT REMOVES THE MOST PROVEN NONCANONICAL STRUCTURE
-WHILE PRESERVING REQUIRED TRUTH
-AND ALLOWING ONE COMPLETE MIGRATION/CUTOVER/DELETION PROOF.
-```
-
-Do not force a service-by-service, file-by-file or bug-by-bug sequence when a broader cutover is cleaner and faster.
-
-## 7. One active mutating unit does not mean a small unit
-
-```text
-MAX_ACTIVE_OVERLAPPING_MATERIAL_MUTATION_UNITS=1
-```
-
-The active unit may be an entire package family, domain, service boundary, contract authority, database ownership model, migration epoch, runtime/config authority, verification authority, governance/tooling surface, repository topology or whole systemic shared substrate.
-
-```text
-ONE_ACTIVE_UNIT != CONSERVATIVE_EXECUTION
-ONE_ACTIVE_UNIT + COMPLETE_CAUSAL_CONE = REQUIRED
-CONTEXT_WINDOW != ARCHITECTURE_BOUNDARY
-```
-
-Wide parallel read-only discovery is encouraged when it reduces uncertainty. Mutation checkpoints may span multiple commits, but a partial checkpoint is never a closed unit.
-
-## 8. Resume / interrupted-execution recovery law
-
-Every new or resumed `h` execution session must reconstruct current execution state and campaign stage before normal selection.
+Every new or resumed session reconstructs execution state from live repository evidence before normal selection.
 
 ```text
 RESUME = EXECUTION_STATE_RECONSTRUCTION
 RESUME != RESTART
 NEW_CHAT != NEW_ROOT
-LAST_COMMIT != ROOT_CLOSURE
-COMMIT != ROOT
-COMMIT != SYSTEMIC_CATASTROPHE
+LAST_COMMIT != UNIT_CLOSURE
+COMMIT_MESSAGE != CAUSAL_PROOF
 ```
 
-Supreme recovery rules:
-
-```text
-NEVER RESUME FROM MEMORY.
-NEVER RESUME FROM CHAT HISTORY ALONE.
-NEVER RESUME FROM THE LAST ERROR MESSAGE.
-NEVER RESUME FROM COMMIT TITLES ALONE.
-NEVER ASSUME THE LAST COMMIT MEANS THE EXECUTION UNIT IS CLOSED.
-NEVER ASSUME A HISTORIC STAGE-A PASS IS CURRENT AFTER A CROSS-CUTTING CHANGE.
-NEVER SELECT A NEW INDEPENDENT UNIT WHILE A PRIOR UNIT REMAINS PARTIALLY CUT OVER.
-```
-
-Mandatory session-entry gate:
+Mandatory entry:
 
 ```text
 PIN LIVE h
 → INSPECT MATERIAL HISTORY AND ACTUAL DIFFS
-→ RECONSTRUCT CAMPAIGN STAGE + CAUSAL EXECUTION UNITS
+→ RECONSTRUCT CAMPAIGN STAGE
 → IDENTIFY LAST PROVEN CLOSED UNIT
-→ IDENTIFY ACTIVE OPEN UNIT, IF ANY
-→ VERIFY CURRENT WINNER/LOSER/MIGRATION/CUTOVER STATE
-→ RECONCILE STAGE-A EXIT EVIDENCE
+→ IDENTIFY ACTIVE OPEN UNIT
+→ CLASSIFY OPEN_CRITICAL OR OPEN_SAFE_CHECKPOINT
+→ VERIFY WINNER / LOSER / MIGRATION / CUTOVER / DELETION STATE
 → INVALIDATE STALE EVIDENCE
-→ RECHECK MATERIAL NEGATIVE SPACE
+→ RECHECK NEGATIVE SPACE
 → FIND RECOVERY_FRONTIER
 ```
 
-If an open unit exists:
+`OPEN_CRITICAL` normally resumes first. `OPEN_SAFE_CHECKPOINT` may be preempted by a safely executable dominant pre-root catastrophe under `01`/`05`.
+
+## 7. Stage A0 — Hostile Branch-Wide Catastrophe Triage
+
+A0 is mandatory before normal A1 mutation.
+
+A0 must cover the branch, not a sampled error cone:
 
 ```text
-RUN SYSTEMIC_CATASTROPHE_OVERLAY_CHECK
+TRACKED_TREE
+TOP_LEVEL_SURFACES
+WORKSPACES_PACKAGES_MANIFESTS
+DEPENDENCY_GRAPH_LOCKFILE
+DOMAINS_SERVICES_SHARED_CORE
+FILES_SYMBOLS_EXPORTS_ENTRYPOINTS
+DATABASE_SCHEMA_MIGRATIONS_SEEDS_BACKFILLS
+CONTRACTS_GENERATORS_OUTPUTS
+RUNTIME_CONFIG_ENV_INFRA_REGISTRATIONS
+FRONTEND_SHARED_STATE_NAVIGATION_SURFACES
+TEST_FIXTURE_MOCK_SNAPSHOT_OWNERSHIP
+CI_ASSURANCE_SUPPRESSIONS
+TOOLS_DOCS_GOVERNANCE_AGENTS
+LEGACY_COMPAT_BRIDGES_ALIASES_WRAPPERS
+DEAD_ORPHANED_STALE_UNOWNED_HIGH_FAN_IN_MATERIAL
+PARALLEL_SHADOW_TRUTH
 ```
 
-Then:
+A0 order:
 
 ```text
-IF A SYSTEMIC CATASTROPHE
-  SUPERSEDES THE ACTIVE UNIT MODEL
-  OR IS ITS REQUIRED PREREQUISITE
-  OR IS THE HIGHER SHARED CAUSE OF ITS MATERIAL FAILURES:
-    PROMOTE / RE-SYNTHESIZE THE HIGHER SYSTEMIC UNIT
-ELSE:
-    RESUME FIRST UNFINISHED MATERIAL OBLIGATION FROM RECOVERY_FRONTIER
+MAXIMUM_SAFE_PARALLEL_READ_ONLY_CENSUS
+→ REQUIRED_TRUTH_EXTRACTION
+→ INHERITED_SHAPE_BLIND_CANONICAL_SKELETON
+→ CURRENT_MODEL
+→ HOSTILE_SURVIVAL_CHALLENGE
+→ CERTAIN_DEAD_ZERO_RISK_GARBAGE_DELETE_NOW_EXCEPTION
+→ COMPLETE_STRUCTURAL_DELTA
+→ PRE_ROOT_BASELINE_CATASTROPHE_GRAPH
+→ TOP_CANDIDATE_SET
+→ RESOLVE_RANKING_RELEVANT_UNKNOWNS
+→ FALSIFY_STAGE_B_DEFERRALS
+→ `04` A0_ADMISSION_GATE
 ```
-
-If and only if no open unit survives reconstruction:
 
 ```text
-IF STAGE_A_EXIT != CURRENT_PASS:
-  RETURN TO STAGE-A BRANCH-WIDE SYSTEMIC CENSUS / RE-RANK
-ELSE:
-  REBUILD / RE-RANK STAGE-B NORMAL ROOT GRAPH
+FIRST_CATASTROPHE_FOUND != A0_PASS
 ```
 
-A partial cutover preempts independent new work unless the proven higher systemic cause satisfies the preemption law in `01`.
+## 8. Stage A1 — Dominant Destructive Baseline Refoundation
+
+A1 handles `PRE_ROOT_BASELINE_CATASTROPHE`, including but not limited to:
 
 ```text
-CONVERSATION_CONTEXT = CONVENIENCE_ONLY
-AGENT_MEMORY = CONVENIENCE_ONLY
-COMMIT_HISTORY = EXECUTION_FORENSICS
-LIVE_h + CURRENT_REACHABILITY + NONSTALE_EVIDENCE = EXECUTION_RECOVERY_REALITY
+CROSS_ROOT_SYSTEMIC_CATASTROPHE
+FOUNDATIONAL_REPOSITORY_TOPOLOGY_CATASTROPHE
+WORKSPACE_PACKAGE_DEPENDENCY_CATASTROPHE
+SHARED_CORE_COMMON_AUTHORITY_CATASTROPHE
+DATABASE_OWNERSHIP_OR_MIGRATION_EPOCH_CATASTROPHE
+CONTRACT_OR_GENERATED_LINEAGE_CATASTROPHE
+RUNTIME_CONFIG_INFRA_AUTHORITY_CATASTROPHE
+ASSURANCE_CONTROL_PLANE_CATASTROPHE
+GOVERNANCE_AGENT_TOOL_AUTHORITY_CATASTROPHE
+MASSIVELY_INVALID_DOMAIN_SERVICE_PACKAGE_DIRECTORY_OR_SURFACE
+LARGE_OBSOLETE_OR_COMPENSATORY_SUBTREE
+PARALLEL_SHADOW_TRUTH_ARCHITECTURE
+LEGACY_COMPATIBILITY_BRIDGE_ARCHITECTURE
+OTHER_HIGH_STRUCTURAL_YIELD_FOUNDATIONAL_UNIT
 ```
 
-Detailed recovery/preemption authority is owned by `01`, recovered-evidence validity and stage qualification by `04`, and causal-unit reconstruction / `RECOVERY_FRONTIER` by `05`.
+A catastrophe need not cross many roots if the container itself is a large baseline-invalid structure.
 
-## 9. Unified refoundation loop
+### 8.1 Dominance selection
+
+Use `02` ranking and `05` traversal.
+
+Before mutation:
 
 ```text
-SESSION RECOVERY GATE
-→ PIN EXACT h
-→ RESUME OPEN UNIT FROM RECOVERY_FRONTIER UNLESS A PROVEN HIGHER SYSTEMIC CAUSE SUPERSEDES IT
-→ OTHERWISE DETERMINE CURRENT CAMPAIGN STAGE
-
-STAGE A:
-  FULL MACHINE + SEMANTIC BRANCH-WIDE FORENSIC CENSUS
-  → WIDE READ-ONLY DISCOVERY
-  → EXTRACT REQUIRED PRODUCT/SYSTEM/DATA/SECURITY/CONTRACT TRUTH
-  → HOSTILE SURVIVAL CHALLENGE
-  → BUILD CURRENT MODEL
-  → DESIGN CANONICAL FOUNDATION FROM FIRST PRINCIPLES
-  → BUILD SEMANTIC/AUTHORITY/CONTAINER/E2E/ADMISSION GRAPHS
-  → COMPUTE COMPLETE DELTA
-  → SYNTHESIZE SYSTEMIC CATASTROPHE GRAPH
-  → CHOOSE HIGHEST CROSS-ROOT LEVERAGE SYSTEMIC EXECUTION UNIT
-  → SALVAGE REQUIRED VALUE
-  → REFOUND WINNER AT HIGHEST CORRECT GRANULARITY
-  → MIGRATE FULL AFFECTED CONE
-  → CUT OVER
-  → DELETE LOSING AUTHORITIES/CONTAINERS/COMPENSATIONS
-  → PRUNE UPWARD
-  → FIX ADMISSION/VERIFICATION HOLE
-  → VERIFY + SYSTEMIC NEGATIVE SPACE + FALSIFY
-  → RE-PIN
-  → INVALIDATE AFFECTED EVIDENCE
-  → RE-CENSUS + RE-SYNTHESIZE + RE-RANK
-  → REPEAT UNTIL SYSTEMIC FRONTIER APPEARS EMPTY
-  → FRESH ADVERSARIAL STAGE-A RECENSUS
-  → APPLY `04` STAGE-A EXIT GATE
-
-ONLY AFTER CURRENT PASS:
-
-STAGE B:
-  REBUILD CURRENT/CANONICAL/DELTA ON CLEANER BASELINE
-  → SYNTHESIZE NORMAL DYNAMIC CAUSAL ROOT GRAPH
-  → CHOOSE HIGHEST CORRECT STAGE-B EXECUTION UNIT
-  → SALVAGE REQUIRED VALUE
-  → REFOUND / MIGRATE / CUT OVER
-  → DELETE LOSERS / PRUNE / FIX ADMISSION
-  → VERIFY + NEGATIVE SPACE + FALSIFY
-  → RE-PIN / RE-DIAGNOSE / RE-RANK
-  → REPEAT
+TOP_CANDIDATE_SET
+SELECTED_DOMINANT_CANDIDATE
+SERIOUS_ALTERNATIVES_COMPARED
+WHY_SELECTED_OUTRANKS_ALTERNATIVES
+RANKING_RELEVANT_UNKNOWNS=0
+SAFE_EXECUTION_PATH=PASS
 ```
 
-When the Stage-B Root Graph first appears empty, do not stop. `04` requires a fresh adversarial full-repository re-census from zero.
+Safety is an executability gate, not a smaller-unit preference.
 
-## 10. Destructive authority
+### 8.2 Mandatory demolition readiness
 
-For the authorized `h` refoundation mode, the orchestrator may, when supported by evidence and required by the canonical target:
+Before A1 mutation:
+
+```text
+PATCH_VS_DEMOLISH_GATE=PASS
+ANCESTOR_EXONERATION_OR_PROMOTION=PASS
+DEMOLITION_PLAN=READY
+CANONICAL_TARGET=DEFINED
+REQUIRED_TRUTH_TO_PRESERVE=DEFINED
+COMPLETE_AFFECTED_CONE=DEFINED
+MIGRATION_CUTOVER_PATH=SAFE_AND_EXECUTABLE
+```
+
+If a structurally invalid container is the source of defect:
+
+```text
+IN_PLACE_REPAIR=FORBIDDEN
+DELETE_MINIMAL_RECREATE_OR_EQUIVALENT_REFOUNDATION=REQUIRED
+```
+
+### 8.3 A1 execution order
+
+```text
+SALVAGE_REQUIRED_TRUTH
+→ BUILD_CANONICAL_REPLACEMENT
+→ MIGRATE_COMPLETE_AFFECTED_CONE
+→ CUT_OVER
+→ EAGERLY_DELETE_EACH_LOSER_WHEN_LAST_REQUIRED_DEPENDENCY_ENDS
+→ DELETE_REMAINING_LOSING_FILES_DIRECTORIES_PACKAGES_SERVICES_SURFACES
+→ DELETE_LEGACY_COMPAT_BRIDGE_ALIAS_REEXPORT_WRAPPER_COMPENSATION
+→ REMOVE_MANIFEST_DEPENDENCY_LOCKFILE_CONFIG_RESIDUE
+→ PRUNE_UPWARD
+→ FIX_ADMISSION_PREVENTION_HOLE
+→ VERIFY_NEGATIVE_SPACE_AND_FALSIFY
+→ RE-PIN
+→ RE-CENSUS
+→ RE-RANK
+```
+
+Do not collect losers for later cleanup.
+
+## 9. Execution forcing — analysis must end when execution is ready
+
+Once:
+
+```text
+A0_ADMISSION=PASS
+DOMINANT_CANDIDATE_PROVEN
+NO_RANKING_CHANGING_UNKNOWN
+SAFE_EXECUTION_PATH=PASS
+PATCH_VS_DEMOLISH_GATE=PASS
+DEMOLITION_PLAN=READY
+```
+
+then:
+
+```text
+MUTATION_MANDATORY
+RECOMMENDATIONS_ONLY=FORBIDDEN
+NONCAUSAL_FURTHER_AUDIT=FORBIDDEN
+```
+
+Continue discovery only when it can materially change truth preservation, safety, canonical target or dominance.
+
+## 10. Stage A2 — Adversarial Structural Qualification
+
+An apparently empty pre-root graph is not permission for Stage B.
+
+A2 rebuilds structural evidence from zero and attempts to falsify cleanliness.
+
+Stage B is forbidden until `04` proves exact-current zeroes including:
+
+```text
+KNOWN_PRE_ROOT_BASELINE_CATASTROPHES=0
+KNOWN_STRUCTURAL_GARBAGE=0
+KNOWN_DEAD_TRACKED_FILES_DIRECTORIES_PACKAGES=0
+KNOWN_STRUCTURALLY_INVALID_SERVICES_DOMAINS_SURFACES=0
+KNOWN_WRONG_OWNER_WRONG_PATH_CONTAINERS=0
+KNOWN_PASS_THROUGH_COMPATIBILITY_COMPENSATION_CONTAINERS=0
+KNOWN_PARALLEL_SHADOW_AUTHORITIES=0
+KNOWN_DUPLICATE_MUTABLE_WRITERS=0
+KNOWN_UNJUSTIFIED_WRAPPERS_ALIASES_REEXPORTS=0
+KNOWN_LEGACY_RESIDUE=0
+KNOWN_DEFERRED_STRUCTURAL_GARBAGE=0
+KNOWN_MAPPED_BUT_UNTREATED_STRUCTURAL_FINDINGS=0
+UNPROVEN_STAGE_B_DEFERRALS=0
+UNCLASSIFIED_TRACKED_ARTIFACTS=0
+UNDISPOSITIONED_TRACKED_ARTIFACTS=0
+```
+
+## 11. Stage B — true roots inside canonical structure
+
+Stage B is for remaining causal semantic/product/system defects whose containing structure and ancestor chain are proven canonical.
+
+Examples:
+
+```text
+BUSINESS_INVARIANT
+STATE_TRANSITION
+AUTHORIZATION_SEMANTICS
+FINANCIAL_SEMANTICS
+CONCURRENCY_IDEMPOTENCY
+PRODUCT_JOURNEY_BEHAVIOR
+DATA_INVARIANT_WITH_CANONICAL_OWNER
+```
+
+Stage B is **not** for dead files, bad directories, bad packages, wrong service boundaries, duplicate authorities, legacy trees, compatibility garbage, shadow truth or foundational topology debt.
+
+If Stage-B discovery disproves structural canonicality:
+
+```text
+A2_QUALIFICATION=STALE
+→ RETURN_TO_A0_OR_A1
+```
+
+## 12. Dynamic execution-unit law
+
+```text
+MAX_ACTIVE_OVERLAPPING_MATERIAL_MUTATION_UNITS=1
+```
+
+One active unit may span repository topology, a package/workspace family, domain, service, migration epoch, contract lineage, runtime/config authority, control plane, top-level surface or large causal root.
+
+```text
+ONE_ACTIVE_UNIT != SMALL_UNIT
+CONTEXT_WINDOW != ARCHITECTURE_BOUNDARY
+```
+
+Forbidden shrink reasons:
+
+```text
+TOO_MANY_FILES
+TOO_MANY_CALLERS
+TOO_MANY_PACKAGES
+TOO_MUCH_DELETION
+TOO_MUCH_MIGRATION
+TOO_LARGE_FOR_ONE_SESSION
+CROSSES_FRONTEND_BACKEND_DATA
+```
+
+## 13. Destructive authority
+
+When required by canonical evidence, authorized actions include:
 
 ```text
 ADD
@@ -464,171 +459,122 @@ REGENERATE
 MIGRATE
 BACKFILL
 RECONCILE
-CUT OVER
+CUT_OVER
 DECOMMISSION
 REBUILD
-DELETE WHOLE SUBTREE
-DELETE WHOLE LOSING SURFACE
-RECREATE MINIMAL CANONICAL SUBTREE
-RECREATE MINIMAL CANONICAL SURFACE
+DELETE_WHOLE_SUBTREE
+DELETE_WHOLE_LOSING_SURFACE
+DELETE_PACKAGE_WORKSPACE_SERVICE_BOUNDARY
+RECREATE_MINIMAL_CANONICAL_SUBTREE
+RECREATE_MINIMAL_CANONICAL_SURFACE
 ```
-
-This authority applies from material line/symbol/file through directory/package/module/service/boundary/database/migration epoch/runtime/config/verification/governance/tooling/repository topology.
-
-There is no minimal-diff requirement and no inherited-directory-preservation requirement.
-
-Destructive authority never waives data-safety, security, external-consumer, migration or exact-head proof requirements.
 
 ```text
 DELETE_MORE != BETTER
 MAXIMUM_SAFE_DESTRUCTION_OF_PROVEN_LOSING_STRUCTURE = REQUIRED
 ```
 
-## 11. Confusion-elimination law
+## 14. No garbage aggregation / no cleanup deferral
 
-These surfaces have zero privileged preservation status:
+Forbidden stable outcomes:
 
 ```text
-.agents/**
-.github/**
-.opencodereview/**
-docs/**
-tools/**
-governance/**
+NEW_SHARED_DUMP_OF_OLD_LOSERS
+OLD_AND_NEW_AUTHORITY_IN_PARALLEL
+NEW_PATH_PLUS_REACHABLE_OLD_PATH
+NEW_SERVICE_PLUS_OLD_SERVICE_PLUS_BRIDGE
+NEW_PACKAGE_PLUS_OLD_PACKAGE_PLUS_REEXPORT
+MOVED_GARBAGE_WITH_SAME_WRONG_RESPONSIBILITY
+BEAUTIFIED_NONCANONICAL_CONTAINER
+ARCHIVE_LEGACY_HISTORY_BACKUP_OF_LOSER
+KNOWN_GARBAGE_MAPPED_FOR_LATER
+ROOT_FIXED_CLEANUP_LATER
 ```
 
-The same law applies to any other directory.
+Cleanup/deletion occurs at the earliest safe point in the same causal treatment.
 
-If a surface materially causes duplicated authority, stale instructions, false closure semantics, dead automation, obsolete policy, conflicting prompts, unnecessary indirection, compensation architecture or execution confusion, the preferred treatment is:
+## 15. Admission-hole law
 
-```text
-EXTRACT UNIQUE REQUIRED VALUE
-→ DELETE THE NONCANONICAL SURFACE OR SUBTREE
-→ RECREATE ONLY THE MINIMUM CANONICAL MATERIAL THAT STILL EARNS EXISTENCE
-```
-
-Do not spend multiple roots maintaining historical governance/tooling/product structure when wholesale refoundation is proven cleaner.
-
-## 12. Admission-hole law
-
-For every material defect or systemic catastrophe ask:
+For every material defect/catastrophe:
 
 ```text
-WHY DID THE DEFECT EXIST?
-WHY WAS IT ALLOWED TO ENTER OR SURVIVE?
-```
-
-Root-correct/systemic-correct closure requires both:
-
-```text
-REMOVE THE DEFECT OR SHARED CAUSE
+REMOVE_SOURCE_OF_DEFECT
 +
-REMOVE/REFOUND THE ADMISSION OR VERIFICATION HOLE
+REMOVE_OR_REFOUND_THE_MECHANISM_THAT_ADMITTED_OR_FAILED_TO_DETECT_IT
 +
-ESTABLISH FALSIFIABLE PREVENTION WHERE MATERIAL
+ESTABLISH_FALSIFIABLE_PREVENTION_WHERE_MATERIAL
 ```
 
-A defect fix that leaves its acceptance mechanism intact is open.
+## 16. GitHub Actions
 
-## 13. GitHub Actions
+GitHub Actions are evidence infrastructure, not Product/System truth. Persistent workflows survive only with unique durable value. Campaign-only workflows are removed when obsolete. No PR/default/old-branch semantics may become `h` authority.
 
-`h` may create, modify, run and delete GitHub Actions as required by the campaign.
+## 17. Stop states
 
-A workflow is evidence infrastructure, not Product/System truth.
-
-- persistent workflow: survives only when it owns unique, durable, canonically justified assurance;
-- campaign-only workflow: may exist temporarily for refoundation evidence and must be deleted when its role expires;
-- old-branch/default-branch workflow definitions are not `h` authority;
-- no PR is required for `h` evidence;
-- green workflow output never substitutes for finding disposition, exact-SHA provenance, negative-space proof, Stage-A qualification or falsification.
-
-Detailed assurance law is owned by `04` and `focus/data-contracts-runtime-security-quality.md`.
-
-## 14. Stop states
-
-Stop mutation only for a material condition that cannot be safely derived:
+Stop dependent mutation only for a material condition that cannot safely be derived and can change truth preservation, canonical target, dominance or cutover safety:
 
 ```text
-UNRESOLVED IRREVERSIBLE DATA RISK
-UNRESOLVED EXTERNAL CONSUMER CONTRACT
-UNKNOWN CURRENT h HEAD MOVEMENT
-MISSING REQUIRED HUMAN PRODUCT DECISION
-MISSING REQUIRED SECRET/CREDENTIAL/ENVIRONMENT
-BLOCKED_UNKNOWN THAT CAN CHANGE THE CANONICAL TARGET
+UNRESOLVED_IRREVERSIBLE_DATA_RISK
+UNRESOLVED_EXTERNAL_CONSUMER_CONTRACT
+UNKNOWN_CURRENT_h_HEAD_MOVEMENT
+MISSING_REQUIRED_HUMAN_PRODUCT_DECISION
+MISSING_REQUIRED_SECRET_CREDENTIAL_ENVIRONMENT
+BLOCKED_UNKNOWN_THAT_CHANGES_CANONICAL_TARGET
+RANKING_RELEVANT_UNKNOWN
 ```
 
-Do not stop merely because the unit is large, deletion is extensive, many callers require migration, a whole subtree must be rebuilt, Stage A is broad, or the existing structure is familiar.
+Large deletion, unfamiliar structure, many callers or extensive migration are not blockers by themselves.
 
-## 15. Anti-weakening / anti-bureaucracy invariant
+## 18. Anti-weakening invariant
 
-No future orchestrator change, helper, plan, workflow, agent adapter or governance layer may weaken this refoundation profile by introducing any of the following as a default execution law:
+No future rule/helper/plan/workflow/agent/governance layer may introduce any of these as default law:
 
 ```text
 KEEP_BY_DEFAULT
 MINIMAL_DIFF_BIAS
 SMALLEST_ROOT_BIAS
 SESSION_SIZED_ROOT
-TOKEN_SIZED_ROOT
 FILE_BY_FILE_REQUIRED_EXECUTION
 SERVICE_BY_SERVICE_REQUIRED_EXECUTION
-PR_REQUIRED_FOR_h
-MERGE_REQUIRED_FOR_h
-DEFAULT_BRANCH_AUTHORITY_FOR_h
-MANDATORY_DURABLE_PLAN
-MANDATORY_DURABLE_LEDGER
-HUMAN_APPROVAL_GATE_FOR_DERIVABLE_MUTATION
+FIRST_CATASTROPHE_EXECUTION_BIAS
+MAPPED_AS_TREATED
+STAGE_B_AS_STRUCTURAL_GARBAGE_BACKLOG
 CLEANUP_LATER
 LOSING_CONTAINER_SURVIVAL
 COMPATIBILITY_JUST_IN_CASE
 THIRD_AUTHORITY_WRAPPER
-SYSTEMIC_CATASTROPHE_AS_OPTIONAL_CANDIDATE
+GARBAGE_AGGREGATION
+IN_PLACE_BEAUTIFICATION_OF_INVALID_CONTAINER
 PREMATURE_STAGE_B_ENTRY
-NORMAL_ROOT_CLOSURE_ON_KNOWN_DIRTY_SHARED_BASELINE
-STAGE_A_PASS_BY_SELF_ASSERTION
-STATIC_CATASTROPHE_QUEUE_AS_EXECUTION_AUTHORITY
+A0_PASS_BY_SAMPLING
+A2_PASS_BY_SELF_ASSERTION
+ENDLESS_AUDIT_AFTER_EXECUTION_READY
 ```
 
-A new process/rule is justified only if it materially improves one or more of:
+A future change is valid only if it materially improves truth preservation, structural-debt elimination, root correctness, migration/cutover safety, evidence fidelity, falsifiability, execution speed, `STRUCTURAL_YIELD` or `ROOT_TAX` reduction without introducing competing authority.
+
+## 19. Proven obligations are executable, not recommendations
 
 ```text
-ROOT_CORRECTNESS
-SYSTEMIC_BASELINE_CORRECTNESS
-TRUTH_PRESERVATION
-STRUCTURAL_DEBT_ELIMINATION
-MIGRATION/CUTOVER_SAFETY
-EVIDENCE_FIDELITY
-FALSIFIABILITY
-EXECUTION_SPEED
-FUTURE_COMPLEXITY_REDUCTION
-ROOT_TAX_REDUCTION
+PROVEN + EXECUTABLE + INSIDE_ACTIVE_CAUSAL_UNIT != OPTIONAL_RECOMMENDATION
 ```
 
-without creating a competing authority or avoidable execution friction.
-
-## 16. Proven material obligations are executable, not recommendations
-
-Under mutation-authorized `h` mode:
-
-```text
-PROVEN + EXECUTABLE + MATERIAL + INSIDE_ACTIVE_UNIT
-!= OPTIONAL_RECOMMENDATION
-```
-
-Such an obligation must terminate as one of:
+Executable obligations terminate only as:
 
 ```text
 TREATED_AND_VERIFIED
-VERIFIED_UNCHANGED
+VERIFIED_UNCHANGED_CANONICAL
 N/A_PROVEN
 LEGITIMATE_STOP_STATE
 ```
 
-The following are never terminal states for an executable material obligation:
+Never terminal:
 
 ```text
 FOUND
+CLASSIFIED
+MAPPED
 RECOMMENDED
-SHOULD_FIX
 TODO
 FOLLOW_UP
 LATER
@@ -637,27 +583,26 @@ READY_TO_IMPLEMENT
 IMPLEMENTATION_PLAN
 ```
 
-Known material migration, backfill, regeneration, cutover, consumer migration, deletion, pruning, reference repair and admission-hole obligations remain part of the same execution unit after the visible symptom disappears.
+## 20. Completion
 
-Known executable systemic catastrophes remain Stage-A obligations until treated and verified; they cannot be reclassified as later Stage-B cleanup merely to make roots start sooner.
+Only `04` may qualify A0 admission, A2 exit and final Level-4 fixed point.
 
-## 17. Completion
-
-Only `04` may declare Stage-A exit and final campaign fixed point.
-
-Stage-A transition requires its dedicated current exact-`h` PASS; it has no human/self-attested bypass.
-
-Valid final terminal token:
+Valid final token:
 
 ```text
 H_TRUSTWORTHY_CANONICAL_BASELINE_REFOUNDATION_COMPLETE
 EXACT_H_SHA=<immutable sha>
-STAGE_A_SYSTEMIC_BASELINE_DECONTAMINATION=PASS
+STAGE_A0_HOSTILE_TRIAGE=PASS
+STAGE_A1_PRE_ROOT_BASELINE_REFOUNDATION=PASS
+STAGE_A2_ADVERSARIAL_STRUCTURAL_QUALIFICATION=PASS
+STAGE_B_CAUSAL_ROOT_CLOSURE=PASS
 LEVEL_4_EVIDENCE_STATE=PASS
-KNOWN_REMAINING_SYSTEMIC_CATASTROPHES=0
+KNOWN_REMAINING_PRE_ROOT_CATASTROPHES=0
+KNOWN_REMAINING_STRUCTURAL_GARBAGE=0
+KNOWN_MAPPED_BUT_UNTREATED_FINDINGS=0
 KNOWN_REMAINING_ROOTS=0
 KNOWN_MATERIAL_DEFECTS=0
 KNOWN_MATERIAL_UNKNOWNS=0
 ```
 
-Anything weaker is a checkpoint, not completion.
+Anything weaker is a `CHECKPOINT`, not `COMPLETION`.
