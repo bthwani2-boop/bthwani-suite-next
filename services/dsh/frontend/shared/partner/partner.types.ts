@@ -567,9 +567,3 @@ export type PartnerQueueRecord = {
   readonly owner: 'partner' | 'catalog' | 'marketing' | 'system';
   readonly createdAt: string;
 };
-
-type UiAuditRow = {
-  id: string; who: string; why: string; when: string; permissionResult: string;
-  slaBreachReason: string; supportTicketLink: string; proofRequired: string;
-  evidenceState: string; resolutionPath: string; note: string; statusTone: string;
-};

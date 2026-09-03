@@ -1,4 +1,5 @@
 import React from 'react';
+import { AppState } from 'react-native';
 import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle.policy';
 import { getDshLocationAdapter } from '../mobile-capabilities';
 import {
@@ -134,7 +135,7 @@ export function useCaptainOrderRuntime() {
   const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
 
   const acceptTask = React.useCallback(
-    async (assignmentId: string, _captainId: string) => {
+    async (assignmentId: string) => {
       const currentActorId = actorId;
       if (!currentActorId) throw new Error('جلسة الكابتن غير جاهزة لتنفيذ العملية.');
       const intent = { actorId: currentActorId, assignmentId, decision: 'accept' as const };
@@ -153,7 +154,7 @@ export function useCaptainOrderRuntime() {
   );
 
   const declineTask = React.useCallback(
-    async (assignmentId: string, _captainId: string, reason: string) => {
+    async (assignmentId: string, reason: string) => {
       const currentActorId = actorId;
       if (!currentActorId) throw new Error('جلسة الكابتن غير جاهزة لتنفيذ العملية.');
       const normalizedReason = reason.trim();
@@ -181,7 +182,6 @@ export function useCaptainOrderRuntime() {
   const transitionDeliveryStatus = React.useCallback(
     async (
       assignmentId: string,
-      _captainId: string,
       expectedStatus: DshDeliveryStatus,
       nextStatus: DshDeliveryStatus,
       requiresArrivalLocation: boolean,
@@ -220,9 +220,8 @@ export function useCaptainOrderRuntime() {
   );
 
   const confirmStoreArrival = React.useCallback(
-    (assignmentId: string, captainId: string) => transitionDeliveryStatus(
+    (assignmentId: string) => transitionDeliveryStatus(
       assignmentId,
-      captainId,
       'driver_assigned',
       'driver_arrived_store',
       true,
@@ -231,9 +230,8 @@ export function useCaptainOrderRuntime() {
   );
 
   const confirmPickup = React.useCallback(
-    (assignmentId: string, captainId: string) => transitionDeliveryStatus(
+    (assignmentId: string) => transitionDeliveryStatus(
       assignmentId,
-      captainId,
       'driver_arrived_store',
       'picked_up',
       false,
@@ -242,9 +240,8 @@ export function useCaptainOrderRuntime() {
   );
 
   const confirmCustomerArrival = React.useCallback(
-    (assignmentId: string, captainId: string) => transitionDeliveryStatus(
+    (assignmentId: string) => transitionDeliveryStatus(
       assignmentId,
-      captainId,
       'picked_up',
       'arrived_customer',
       true,
@@ -266,7 +263,7 @@ export function useCaptainOrderRuntime() {
   );
 
   const failDelivery = React.useCallback(
-    async (assignmentId: string, _captainId: string, draft: CaptainDeliveryExceptionDraft): Promise<DshDeliveryException> => {
+    async (assignmentId: string, draft: CaptainDeliveryExceptionDraft): Promise<DshDeliveryException> => {
       const currentActorId = actorId;
       if (!currentActorId) throw new Error('جلسة الكابتن غير جاهزة لتنفيذ العملية.');
       let coordinates: DshCaptainCoordinates | undefined;
@@ -370,7 +367,6 @@ export function useCaptainActiveLocationPush({
       }
     };
 
-    const { AppState } = require('react-native') as typeof import('react-native');
     const subscription = AppState.addEventListener('change', (nextState: string) => {
       if (nextState === 'active') startInterval();
       else stopInterval();

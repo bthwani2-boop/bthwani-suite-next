@@ -4,10 +4,11 @@
 
 import React from 'react';
 import type { CaptainServiceType, CaptainAppMode } from './captain.contract';
+import type { CaptainInboxState } from './delivery.lifecycle';
 
 type ServiceModeDeps = {
   setActiveServiceType: React.Dispatch<React.SetStateAction<CaptainServiceType>>;
-  setInboxState: React.Dispatch<React.SetStateAction<any>>;
+  setInboxState: React.Dispatch<React.SetStateAction<CaptainInboxState>>;
   setCaptainAppMode: React.Dispatch<React.SetStateAction<CaptainAppMode>>;
 };
 

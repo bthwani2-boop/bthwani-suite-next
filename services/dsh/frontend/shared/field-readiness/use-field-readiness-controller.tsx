@@ -10,7 +10,6 @@ import {
   createReadinessEscalation,
   fetchOperatorEscalations,
   updateEscalation,
-  fetchPartnerOnboardingStatus,
   fetchFieldWorkQueue,
   classifyGovernedError,
   type FieldMutationContext,
@@ -24,7 +23,6 @@ import {
   checkActionIdleState, checkActionSubmittingState, checkActionSuccessState, checkActionQueuedState, checkActionErrorState,
   escalationIdleState, escalationLoadingState, escalationSuccessState, escalationEmptyState, escalationErrorState,
   escalationActionIdleState, escalationActionSubmittingState, escalationActionSuccessState, escalationActionQueuedState, escalationActionErrorState,
-  onboardingStatusIdleState, onboardingStatusLoadingState, onboardingStatusSuccessState, onboardingStatusErrorState,
   workQueueIdleState, workQueueLoadingState, workQueueSuccessState, workQueueErrorState,
 } from "./field-readiness.states";
 import type {
@@ -263,26 +261,6 @@ export function useFieldEscalationController(authKind = "unauthenticated") {
   const resetAction = useCallback(() => setActionState(escalationActionIdleState()), []);
 
   return { listState, actionState, loadOperatorEscalations, raiseEscalation, resolveEscalation, resetAction };
-}
-
-function usePartnerOnboardingStatusController(storeId: string, authKind = "unauthenticated") {
-  const [state, setState] = useState(onboardingStatusIdleState());
-
-  const load = useCallback(async () => {
-    setState(onboardingStatusLoadingState());
-    try {
-      const status = await fetchPartnerOnboardingStatus(storeId);
-      setState(onboardingStatusSuccessState(status));
-    } catch (error) {
-      setState(onboardingStatusErrorState(resolveProblem(error)));
-    }
-  }, [storeId]);
-
-  useEffect(() => {
-    if (isAuthenticated(authKind)) void load();
-  }, [authKind, load]);
-
-  return { state, reload: load };
 }
 
 export function useFieldWorkQueueController(authKind = "unauthenticated") {

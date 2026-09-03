@@ -1,7 +1,6 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolveWorkforceApiBaseUrl } from "../_kernel/workforce-api-base-url";
 import type {
-  OperationalCoreResponse,
   ProviderAvailabilityNotice,
   ProviderIncident,
 } from "./workforce.types";

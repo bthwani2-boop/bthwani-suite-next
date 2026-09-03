@@ -1,6 +1,7 @@
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 import {
   createDshFlexibleHttpClient,
+  DshRequestError,
   type DshMutationAuth,
 } from "../_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
@@ -47,7 +48,7 @@ export async function submitStoreRoleAction(
 ): Promise<StoreActionResponse> {
   const accessToken = isBffMode ? undefined : getIdentityAccessToken();
   if ((!isBffMode && accessToken === null) || httpClient === null) {
-    throw { kind: "http", status: 401 };
+    throw new DshRequestError("http", { status: 401 });
   }
   const governedAuth: DshMutationAuth = {
     ...(accessToken ? { accessToken } : {}),

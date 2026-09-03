@@ -11,7 +11,8 @@ export type DshClientContext = {
 };
 
 /** Home discovery is publicly accessible — no auth required for browsing. */
-export function canViewHomeDiscovery(_ctx: DshClientContext): boolean {
+export function canViewHomeDiscovery(ctx: DshClientContext): boolean {
+  void ctx;
   return true;
 }
 

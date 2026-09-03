@@ -44,7 +44,7 @@ export function PartnerDeliveryStatusCard({ task }: { readonly task: DshPartnerD
   const slaState = task.slaState?.state ?? 'not_started';
   return (
     <Box gap={2} padding={4} background="surfaceInset" radiusToken="md">
-      <Box layoutDirection="row" style={{ alignItems: 'center', gap: 8 } as never}>
+      <Box layoutDirection="row" style={{ alignItems: 'center', gap: 8 }}>
         <Text role="titleSm">توصيل المتجر</Text>
         <Badge
           label={STATUS_LABELS[task.status] ?? task.status}
@@ -63,4 +63,3 @@ export function PartnerDeliveryStatusCard({ task }: { readonly task: DshPartnerD
     </Box>
   );
 }
-

@@ -4,7 +4,6 @@ import type {
   CaptainSupportRoute,
 } from './captain.contract';
 import type {
-  DshCaptainLocationPush,
   useCaptainOrderRuntime,
 } from './use-captain-order-runtime';
 import type {

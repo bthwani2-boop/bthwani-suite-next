@@ -26,8 +26,8 @@ import type {
 const { request } = createDshHttpClient("/api/workforce", "workforce", 15000);
 
 export function workforceErrorCode(error: unknown): string | null {
-  return typeof error === "object" && error !== null && "code" in error && typeof (error as { code: unknown }).code === "string"
-    ? (error as { code: string }).code
+  return typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
+    ? error.code
     : null;
 }
 

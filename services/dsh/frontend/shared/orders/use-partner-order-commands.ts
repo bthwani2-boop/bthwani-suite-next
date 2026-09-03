@@ -16,7 +16,6 @@ import {
 } from './store-captain-handoff-confirmation-attempt';
 import {
   type PartnerOrderMutationCommand,
-  resolvePartnerOrderMutation,
 } from './partner-order-mutation.policy';
 
 export { resolvePartnerOrderMutation } from './partner-order-mutation.policy';

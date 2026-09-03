@@ -1,4 +1,4 @@
-import type { DshFieldVisit, DshReadinessCheck, DshOnboardingStatus, DshCheckType } from "./field-readiness.types";
+import type { DshFieldVisit, DshReadinessCheck, DshCheckType } from "./field-readiness.types";
 import { VISIT_STATUS_LABELS } from "./field-readiness.types";
 import { canCompleteVisit } from "./field-readiness.policy";
 
@@ -31,15 +31,6 @@ export type DshCheckItemViewModel = {
   readonly notes: string;
   readonly required: boolean;
   readonly critical: boolean;
-};
-
-export type DshOnboardingStatusViewModel = {
-  readonly storeId: string;
-  readonly statusLabel: string;
-  readonly isComplete: boolean;
-  readonly hasOpenEscalations: boolean;
-  readonly completedVisits: number;
-  readonly totalVisits: number;
 };
 
 export function buildVisitViewModel(visit: DshFieldVisit): DshFieldVisitViewModel {
@@ -82,25 +73,8 @@ export function buildChecklistViewModel(visit: DshFieldVisit, checks: readonly D
   };
 }
 
-function buildOnboardingStatusViewModel(status: DshOnboardingStatus): DshOnboardingStatusViewModel {
-  return {
-    storeId: status.storeId,
-    statusLabel: ONBOARDING_STATUS_LABELS[status.status] ?? status.status,
-    isComplete: status.onboardingComplete,
-    hasOpenEscalations: status.openEscalations > 0,
-    completedVisits: status.completedVisits,
-    totalVisits: status.totalVisits,
-  };
-}
-
 const VISIT_TYPE_LABELS: Record<string, string> = {
   onboarding: "تأهيل",
   periodic: "دورية",
   escalation_followup: "متابعة تصعيد",
-};
-
-const ONBOARDING_STATUS_LABELS: Record<string, string> = {
-  pending: "قيد الانتظار",
-  complete: "مكتمل",
-  escalation_required: "يتطلب حلاً للتصعيد",
 };

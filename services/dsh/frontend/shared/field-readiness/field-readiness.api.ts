@@ -9,7 +9,6 @@ import type {
   DshFieldVisit,
   DshReadinessCheck,
   DshReadinessEscalation,
-  DshOnboardingStatus,
   DshCreateVisitInput,
   DshCompleteVisitInput,
   DshUpsertCheckInput,
@@ -152,10 +151,6 @@ export async function updateEscalation(
     { method: "PATCH", body: input, ...mutationRequestContext(context) },
   );
   return data.escalation;
-}
-
-export async function fetchPartnerOnboardingStatus(storeId: string): Promise<DshOnboardingStatus> {
-  return request<DshOnboardingStatus>(`/dsh/partner/stores/${encodeURIComponent(storeId)}/onboarding-status`);
 }
 
 export async function fetchFieldWorkQueue(): Promise<DshFieldWorkQueue> {

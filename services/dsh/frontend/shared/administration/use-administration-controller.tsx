@@ -58,7 +58,7 @@ type AdministrationInvalidation = {
 
 const AdministrationInvalidationContext = createContext<AdministrationInvalidation>({
   subscribe: () => () => undefined,
-  invalidate: async () => undefined,
+  invalidate: () => Promise.resolve(),
 });
 
 export function AdministrationInvalidationProvider({ children }: PropsWithChildren) {

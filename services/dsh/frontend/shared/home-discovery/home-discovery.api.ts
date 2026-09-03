@@ -7,7 +7,6 @@ import {
   toHomeStoreCardViewModel,
 } from './home-discovery.view-model';
 import {
-  loadingState,
   successState,
   errorState,
   serviceUnavailableState,

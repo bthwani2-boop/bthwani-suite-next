@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchStorefront } from "./storefront.api";
+import { DshRequestError } from "../_kernel/dsh-request-error";
 import type { ClientStorefront } from "./storefront.api";
 
 export type StorefrontState =
@@ -21,9 +22,9 @@ export function useStorefrontController(storeId: string) {
         if (!active) return;
         setState({ kind: "success", payload });
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (!active) return;
-        if (error.response?.status === 404) {
+        if (error instanceof DshRequestError && error.status === 404) {
           setState({
             kind: "not_found",
             message: "المتجر أو الكتالوج غير متوفر حالياً.",
@@ -32,7 +33,9 @@ export function useStorefrontController(storeId: string) {
         }
         setState({
           kind: "error",
-          message: error.message || "حدث خطأ أثناء تحميل بيانات المتجر.",
+          message: error instanceof Error && error.message
+            ? error.message
+            : "حدث خطأ أثناء تحميل بيانات المتجر.",
         });
       });
 

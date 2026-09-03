@@ -34,7 +34,6 @@ export function useDshMobilePushRegistration(
     let active = true;
     let deviceId: string | undefined;
     let endpointRegistered = false;
-    let unregisterSessionEndHook: (() => void) | undefined;
     let tokenSubscription: { remove(): void } | undefined;
     let responseSubscription: { remove(): void } | undefined;
 
@@ -61,7 +60,7 @@ export function useDshMobilePushRegistration(
       await deactivateNotificationPushEndpoint(deviceId);
     };
 
-    unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(async () => {
+    const unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(async () => {
       active = false;
       await deactivateRegisteredEndpoint().catch(() => undefined);
     });

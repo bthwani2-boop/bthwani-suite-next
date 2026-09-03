@@ -2,13 +2,14 @@ import { getIdentityAccessToken } from "@bthwani/core-identity";
 
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { corrId } from "../_kernel/dsh-http-request";
+import { DshRequestError } from "../_kernel/dsh-request-error";
 import type { FieldMediaPickResult } from "../media/field-document-media";
 
 export async function uploadEmployeeMedia(actorId: string, file: FieldMediaPickResult): Promise<string> {
   const baseUrl = resolveDshApiBaseUrl();
   const cookieMode = baseUrl.startsWith("/");
   const token = cookieMode ? undefined : getIdentityAccessToken();
-  if (!cookieMode && !token) throw { kind: "http", status: 401 };
+  if (!cookieMode && !token) throw new DshRequestError("http", { status: 401 });
 
   const form = new FormData();
   form.append("file", {
@@ -28,7 +29,7 @@ export async function uploadEmployeeMedia(actorId: string, file: FieldMediaPickR
     body: form,
     ...(cookieMode ? { credentials: "include" as const } : {}),
   });
-  if (!response.ok) throw { kind: "http", status: response.status };
+  if (!response.ok) throw new DshRequestError("http", { status: response.status });
   const data = (await response.json()) as { mediaRef: string };
   return data.mediaRef;
 }

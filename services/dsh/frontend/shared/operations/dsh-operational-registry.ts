@@ -1,5 +1,3 @@
-import type { DshOnDemandPolicy } from './dsh-operational.contract';
-
 // ---------------------------------------------------------------------------
 // DSH Shared Flow Registry
 //

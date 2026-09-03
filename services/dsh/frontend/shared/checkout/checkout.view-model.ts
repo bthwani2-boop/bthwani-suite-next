@@ -1,8 +1,6 @@
 import type { DshCheckoutIntent } from "./checkout.types";
 import {
-  checkoutBlockedPaymentUnavailableState,
   checkoutConfirmingState,
-  checkoutReconciliationPendingState,
   checkoutSuccessState,
   checkoutTerminalState,
 } from "./checkout.states";

@@ -29,6 +29,6 @@ export function useStoreDetailController(storeId: string): StoreDetailController
 
   return {
     state,
-    retry: load,
+    retry: () => { void load(); },
   };
 }

@@ -74,7 +74,7 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     }
     try {
       setInboxState('offer-accepting');
-      await captainOrderRuntime.acceptTask(assignmentId, captainRuntimeId);
+      await captainOrderRuntime.acceptTask(assignmentId);
       resetOrderState();
       await Promise.resolve(refreshInbox());
       setInboxState('offer-accepted');
@@ -93,7 +93,7 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     }
     try {
       setDeclineSheetState('loading');
-      await captainOrderRuntime.declineTask(assignmentId, captainRuntimeId, reason.trim());
+      await captainOrderRuntime.declineTask(assignmentId, reason.trim());
       await Promise.resolve(refreshInbox());
       setDeclineSheetState('success');
       setIsDeclineSheetVisible(false);
@@ -113,7 +113,7 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
       return false;
     }
     return runDeliveryTransition(
-      () => captainOrderRuntime.confirmStoreArrival(activeAssignmentId, captainRuntimeId),
+      () => captainOrderRuntime.confirmStoreArrival(activeAssignmentId),
       'تم تثبيت الوصول للمتجر من DSH. راجع جاهزية العهدة قبل الاستلام.',
     );
   }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, runDeliveryTransition, setDeliveryActionMessage, setDeliveryActionState]);
@@ -125,7 +125,7 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
       return false;
     }
     const transitioned = await runDeliveryTransition(
-      () => captainOrderRuntime.confirmPickup(activeAssignmentId, captainRuntimeId),
+      () => captainOrderRuntime.confirmPickup(activeAssignmentId),
       'تم تثبيت الاستلام. المرحلة التالية هي الوصول إلى العميل.',
     );
     return transitioned;
@@ -138,7 +138,7 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
       return false;
     }
     return runDeliveryTransition(
-      () => captainOrderRuntime.confirmCustomerArrival(activeAssignmentId, captainRuntimeId),
+      () => captainOrderRuntime.confirmCustomerArrival(activeAssignmentId),
       'تم تثبيت الوصول للعميل من DSH. افتح إثبات التسليم لإكمال التسليم.',
     );
   }, [activeAssignmentId, captainOrderRuntime, captainRuntimeId, runDeliveryTransition, setDeliveryActionMessage, setDeliveryActionState]);
@@ -182,7 +182,7 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     }
     setCaptainPodState('loading');
     try {
-      const exception = await captainOrderRuntime.failDelivery(activeAssignmentId, captainRuntimeId, draft);
+      const exception = await captainOrderRuntime.failDelivery(activeAssignmentId, draft);
       setCaptainPodState('ready');
       return exception;
     } catch (err) {

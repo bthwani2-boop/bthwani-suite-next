@@ -12,7 +12,6 @@ export type { PartnerSupportControllerState, PartnerSupportDetailState } from ".
 export * from "./actor-support.api";
 export * from "./partner-support.api";
 export * from "./support.flows";
-export * from "./support.captain-escalation";
 export {
   SUPPORT_CLIENT_CATEGORIES,
   SUPPORT_MAIN_TABS,
@@ -26,7 +25,6 @@ export {
   filterTicketsBySearch,
 } from "./support-registry";
 export type {
-  OperationsSupportFlowSpec,
   SupportIncidentTone,
   SupportIncidentViewModel,
   SupportKpiMetrics,

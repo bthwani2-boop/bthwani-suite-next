@@ -3,7 +3,6 @@ import { createDshFlexibleHttpClient } from "../_kernel/dsh-http-request";
 import { toCardViewModel, toDetailViewModel } from "./store-discovery.view-model";
 import type { DshStoreDetailDto } from "./store-discovery.types";
 import {
-  loadingState,
   errorState,
   serviceUnavailableState,
   successState,

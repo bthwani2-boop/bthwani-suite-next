@@ -24,7 +24,6 @@ export {
   createReadinessEscalation,
   fetchOperatorEscalations,
   updateEscalation,
-  fetchPartnerOnboardingStatus,
   fetchFieldWorkQueue,
   reconcileFieldMutation,
   fetchChecklistPolicy,

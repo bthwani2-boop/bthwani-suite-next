@@ -4,7 +4,7 @@ import { fetchPartnerSelfOffers, submitPartnerSelfOffer } from "./marketing.api"
 import type { MarketingTickerWritePayload, PartnerOfferSubmitPayload } from "./marketing.api";
 import { fetchDeliveryAnalytics, fetchOrderAnalytics, fetchPlatformKpis, fetchStoreAnalytics, fetchSupportAnalytics } from "../analytics/analytics.api";
 import { buildDeliverySignalCards, buildMarketingKpiMetrics, type DeliverySignalCardViewModel, type MarketingKpiMetrics } from "./marketing-registry";
-import type { MarketingNewsTickerItem, MarketingNewsTickerAudience, MarketingTickerPlan, MarketingTickerPlanReason, MarketingTickerPlanEntry } from "./marketing.types";
+import type { MarketingNewsTickerItem, MarketingTickerPlan, MarketingTickerPlanReason, MarketingTickerPlanEntry } from "./marketing.types";
 import type { PartnerOfferRecord } from "../partner/dsh-partner-offer-types";
 
 function resolveMsg(err: unknown): string {
@@ -43,7 +43,6 @@ export function createMarketingTickerDraft(overrides: Partial<MarketingNewsTicke
 // --- News Ticker Evaluation Helpers ---
 
 export function buildMarketingTickerPlan(
-  audience: MarketingNewsTickerAudience = "all",
   items: ReadonlyArray<MarketingNewsTickerItem> = []
 ): MarketingTickerPlan {
   const planEntries: MarketingTickerPlanEntry[] = items.map(item => {
@@ -175,7 +174,7 @@ export function useTickersController(authKind: string) {
     }
   }, [items, load]);
 
-  const plan = useMemo(() => buildMarketingTickerPlan("all", items), [items]);
+  const plan = useMemo(() => buildMarketingTickerPlan(items), [items]);
 
   return {
     items, selected, draft, setDraft, select, save, remove, toggleStatus, togglePinned, plan,
@@ -350,4 +349,3 @@ export function useMarketingDeliverySignalsController() {
 
   return { items, reload: load, errorMessage };
 }
-

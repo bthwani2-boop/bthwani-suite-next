@@ -6,18 +6,3 @@ export type MapsUsageSurface =
   | "app-field"
   | "app-partner"
   | "control-panel";
-
-type GeoCoordinate = {
-  readonly latitude: number;
-  readonly longitude: number;
-};
-
-/**
- * Operational location checkpoint — server-controlled interval, system/operations only.
- * Never exposed to app-client.
- */
-type OperationalLocationCheckpoint = {
-  readonly captainId: string;
-  readonly recordedAt: string;
-  readonly zoneId?: string | null;
-};

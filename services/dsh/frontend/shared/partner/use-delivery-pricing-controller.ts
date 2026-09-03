@@ -7,7 +7,6 @@ import {
   updateOperatorDeliveryPricing,
   updatePartnerDeliveryPricing,
   type DeliveryPricingFulfillmentMode,
-  type DeliveryPricingMode,
   type DeliveryPricingMutation,
   type DeliveryPricingRecord,
 } from "./partner-delivery-pricing.api";
@@ -81,7 +80,7 @@ function useDeliveryPricingBase(
         if (!fulfillmentMode) {
           throw new Error("تعذر تحديد وضع التوصيل المطلوب.");
         }
-        await updateOperatorDeliveryPricing(storeId, fulfillmentMode as DeliveryPricingFulfillmentMode, {
+        await updateOperatorDeliveryPricing(storeId, fulfillmentMode, {
           ...input,
           expectedVersion: record?.version ?? 0,
         });

@@ -3,7 +3,6 @@ import {
   createZone,
   fetchStoreOnboardingFeePolicy,
   fetchStoreOnboardingFeeReference,
-  fetchZoneServiceability,
   fetchZones,
   updateZone,
   upsertStoreOnboardingFeePolicy,

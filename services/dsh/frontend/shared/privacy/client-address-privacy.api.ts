@@ -1,4 +1,5 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { DshRequestError } from "../_kernel/dsh-request-error";
 import type {
   DshClientAddressAnonymizationResult,
   DshClientAddressPrivacyAuditEvent,
@@ -25,10 +26,10 @@ function stablePrivacyKey(scope: string, payload: unknown): string {
 function normalizeRunId(runId: string): string {
   const normalized = runId.trim();
   if (normalized.length < 8 || normalized.length > 160) {
-    throw { kind: "invalid_request", message: "runId must contain 8 to 160 characters" };
+    throw new DshRequestError("invalid_request", { message: "runId must contain 8 to 160 characters" });
   }
   if (!/^[A-Za-z0-9._:-]+$/.test(normalized)) {
-    throw { kind: "invalid_request", message: "runId contains unsupported characters" };
+    throw new DshRequestError("invalid_request", { message: "runId contains unsupported characters" });
   }
   return normalized;
 }
@@ -51,7 +52,7 @@ export async function fetchClientAddressPrivacyEvents(
   limit = 50,
 ): Promise<readonly DshClientAddressPrivacyAuditEvent[]> {
   if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
-    throw { kind: "invalid_request", message: "privacy event limit must be between 1 and 200" };
+    throw new DshRequestError("invalid_request", { message: "privacy event limit must be between 1 and 200" });
   }
   const result = await request<{ events: DshClientAddressPrivacyAuditEvent[] }>(
     `/dsh/operator/privacy/client-addresses/events?limit=${limit}`,

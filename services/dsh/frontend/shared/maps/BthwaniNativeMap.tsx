@@ -10,11 +10,6 @@ export type BthwaniNativeMapProps = DshMapProps & {
   readonly accessibilityLabel?: string;
 };
 
-const DEFAULT_CENTER: BthwaniMapCoordinate = {
-  latitude: 15.3694,
-  longitude: 44.1910,
-};
-
 function isFiniteCoordinate(
   value: BthwaniMapCoordinate | null | undefined,
 ): value is BthwaniMapCoordinate {
@@ -41,11 +36,6 @@ export function BthwaniNativeMap({
   accessibilityLabel = "خريطة بثواني التفاعلية",
 }: BthwaniNativeMapProps): React.ReactElement {
   const MapRenderer = getDshMapRenderer();
-  const firstMarker = markers.find(isFiniteCoordinate);
-  const center = isFiniteCoordinate(selectedCoordinate)
-    ? selectedCoordinate
-    : firstMarker ?? DEFAULT_CENTER;
-
   const validMarkers = markers.filter(isFiniteCoordinate);
   const hasSelectedCoordinate = isFiniteCoordinate(selectedCoordinate);
 

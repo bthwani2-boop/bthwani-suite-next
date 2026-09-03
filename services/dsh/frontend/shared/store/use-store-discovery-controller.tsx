@@ -36,6 +36,6 @@ export function useStoreDiscoveryController(): StoreDiscoveryController {
     visibleState: withStoreDiscoveryFilter(eligibleState, activeFilter),
     activeFilter,
     setActiveFilter,
-    retry: load,
+    retry: () => { void load(); },
   };
 }

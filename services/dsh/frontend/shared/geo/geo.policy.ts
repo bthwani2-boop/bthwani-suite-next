@@ -6,5 +6,3 @@ export const DSH_GEO_POLICY = {
   wltDoesNotOwnGeoCordinates: true,
   mapsKeysOwnedByPlatformRegistry: true,
 } as const;
-
-type DshGeoPolicy = typeof DSH_GEO_POLICY;

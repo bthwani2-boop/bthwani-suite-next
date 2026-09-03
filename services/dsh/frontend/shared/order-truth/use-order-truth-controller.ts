@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { classifyOrderTruthFailure, createOrderTruth, fetchClientOrderTruth, fetchClientOrderTruthDetail, fetchOperatorOrderTruth, fetchPartnerOrderTruth } from "./order-truth.api";
 import { useIdentitySession } from "@bthwani/core-identity";
+import { DshRequestError } from "../_kernel/dsh-http-request";
 import { clearOrderTruthAttempt, getOrCreateOrderTruthAttempt } from "./order-truth-create-attempt";
 import type { CreateOrderTruthInput, OrderTruth, OrderTruthActor, OrderTruthCollectionState, OrderTruthCreateState } from "./order-truth.types";
 
@@ -29,7 +30,7 @@ export function useCreateOrderTruthController(token?: string) {
         readback.correlationId !== created.correlationId ||
         readback.version < 1
       ) {
-        throw { kind: "http", status: 409, code: "READBACK_MISMATCH" };
+        throw new DshRequestError("http", { status: 409, code: "READBACK_MISMATCH" });
       }
       await clearOrderTruthAttempt(actorId, attempt.fingerprint);
       setState({ kind: "success", order: readback });
@@ -79,4 +80,3 @@ export function useOrderTruthCollectionController(
   useEffect(() => { void load(); }, [load]);
   return { state, reload: load };
 }
-

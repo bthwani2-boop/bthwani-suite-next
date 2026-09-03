@@ -7,9 +7,3 @@ export type DshZoneHeatCell = {
   readonly densityLevel: "low" | "medium" | "high" | "saturated";
   readonly updatedAt: string;
 };
-
-type DshOperationalHeatmap = {
-  readonly cells: readonly DshZoneHeatCell[];
-  readonly generatedAt: string;
-  readonly aggregatedOnly: true;
-};

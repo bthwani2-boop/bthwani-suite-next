@@ -1,6 +1,6 @@
 import type { FieldOfflineOperationType } from "./field-offline-queue";
 import type { GovernedProblem } from "../_kernel/governed-problem";
-import type { DshFieldVisit, DshReadinessCheck, DshReadinessEscalation, DshOnboardingStatus, DshFieldWorkQueue } from "./field-readiness.types";
+import type { DshFieldVisit, DshReadinessCheck, DshReadinessEscalation, DshFieldWorkQueue } from "./field-readiness.types";
 
 export type DshFieldReadinessErrorState = {
   readonly kind: "error";
@@ -60,12 +60,6 @@ export type DshEscalationActionState =
   | DshQueuedActionState
   | DshFieldReadinessErrorState;
 
-export type DshOnboardingStatusState =
-  | { readonly kind: "idle" }
-  | { readonly kind: "loading" }
-  | { readonly kind: "success"; readonly status: DshOnboardingStatus }
-  | DshFieldReadinessErrorState;
-
 function normalizeProblem(problem: GovernedProblem | string): GovernedProblem {
   if (typeof problem !== "string") return problem;
   return {
@@ -116,11 +110,6 @@ export function escalationActionSubmittingState(): DshEscalationActionState { re
 export function escalationActionSuccessState(escalation: DshReadinessEscalation): DshEscalationActionState { return { kind: "success", escalation }; }
 export function escalationActionQueuedState(operationId: string, operationType: FieldOfflineOperationType, message: string): DshEscalationActionState { return { kind: "queued", operationId, operationType, message }; }
 export function escalationActionErrorState(problem: GovernedProblem | string): DshEscalationActionState { return errorState(problem); }
-
-export function onboardingStatusIdleState(): DshOnboardingStatusState { return { kind: "idle" }; }
-export function onboardingStatusLoadingState(): DshOnboardingStatusState { return { kind: "loading" }; }
-export function onboardingStatusSuccessState(status: DshOnboardingStatus): DshOnboardingStatusState { return { kind: "success", status }; }
-export function onboardingStatusErrorState(problem: GovernedProblem | string): DshOnboardingStatusState { return errorState(problem); }
 
 export type DshWorkQueueState =
   | { readonly kind: "idle" }

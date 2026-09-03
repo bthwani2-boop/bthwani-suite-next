@@ -80,11 +80,11 @@ export type CreateStoreAssortmentWithCommercialTruthInput = {
   readonly idempotencyKey?: string | undefined;
 };
 
-async function assertCommercialReadback(
+function assertCommercialReadback(
   assortment: StoreAssortment,
   readback: StoreAssortmentCommercialReadback,
   createdPriceId: string,
-): Promise<void> {
+): void {
   if (readback.inventory.storeAssortmentId !== assortment.id
     || !readback.prices.some((price) => price.id === createdPriceId)) {
     throw new Error("CATALOG_ASSORTMENT_COMMERCIAL_READBACK_MISMATCH");
@@ -119,7 +119,7 @@ export async function createOperatorStoreAssortmentWithCommercialTruth(
     input.idempotencyKey,
   );
   const readback = await catalogApi.fetchOperatorStoreAssortmentCommercial(storeId, masterProductId);
-  await assertCommercialReadback(assortment, readback, price.id);
+  assertCommercialReadback(assortment, readback, price.id);
   return { assortment, inventory, price, readback };
 }
 
@@ -159,7 +159,7 @@ export async function createPartnerStoreAssortmentWithCommercialTruth(
     input.idempotencyKey,
   );
   const readback = await catalogApi.fetchPartnerStoreAssortmentCommercial(storeId, masterProductId);
-  await assertCommercialReadback(assortment, readback, price.id);
+  assertCommercialReadback(assortment, readback, price.id);
   return { assortment, inventory, price, readback };
 }
 

@@ -6,7 +6,8 @@ export type CaptainInboxFulfillmentMode = 'bthwani_delivery';
  * a captain inbox item as partner delivery or client pickup.
  */
 export function resolveCaptainInboxFulfillmentMode(
-  _assignment: unknown,
+  assignment: unknown,
 ): CaptainInboxFulfillmentMode {
+  void assignment;
   return 'bthwani_delivery';
 }

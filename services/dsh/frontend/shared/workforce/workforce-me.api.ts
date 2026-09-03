@@ -27,7 +27,7 @@ function classifyError(error: unknown): WorkforceMeResult {
   if (code === "ENGAGEMENT_SUSPENDED") return { kind: "suspended" };
   const status =
     typeof error === "object" && error !== null && "status" in error
-      ? Number((error as { status: unknown }).status)
+      ? Number(error.status)
       : 0;
   if (status === 401) return { kind: "unauthenticated" };
   // The workforce message map stays authoritative for wording; the governed

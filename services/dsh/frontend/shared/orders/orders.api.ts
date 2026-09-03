@@ -6,7 +6,6 @@ import type {
   DshOrder,
   DshOrderPreparation,
   DshPartnerOrder,
-  DshRejectOrderInput,
   DshStoreCaptainHandoff,
   DshPreparationIssue,
   DshPreparationIssueList,

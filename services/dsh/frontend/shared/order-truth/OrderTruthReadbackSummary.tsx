@@ -60,7 +60,7 @@ export function OrderTruthReadbackSummary({
           tone="ghost"
           size="sm"
           fullWidth={false}
-          onPress={controller.reload}
+          onPress={() => { void controller.reload(); }}
         />
       </Box>
     );
@@ -79,7 +79,7 @@ export function OrderTruthReadbackSummary({
             tone="secondary"
             size="sm"
             fullWidth={false}
-            onPress={controller.reload}
+            onPress={() => { void controller.reload(); }}
           />
         ) : null}
       </Box>
@@ -104,7 +104,7 @@ export function OrderTruthReadbackSummary({
           tone="ghost"
           size="sm"
           fullWidth={false}
-          onPress={controller.reload}
+          onPress={() => { void controller.reload(); }}
         />
       </Box>
       {state.kind === "partial" ? <Text role="bodySm" tone="warning">{policy.description}</Text> : null}

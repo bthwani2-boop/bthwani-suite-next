@@ -38,7 +38,10 @@ function formatTimestamp(value: string | null | undefined): string | null {
 
 function EvidenceRow({ label, value }: { readonly label: string; readonly value: unknown }) {
   if (value === null || value === undefined || value === "") return null;
-  return <Text style={styles.secondaryText}>{label}: {String(value)}</Text>;
+  const displayValue = typeof value === "string" || typeof value === "number" || typeof value === "boolean" || typeof value === "bigint"
+    ? String(value)
+    : JSON.stringify(value) ?? "";
+  return <Text style={styles.secondaryText}>{label}: {displayValue}</Text>;
 }
 
 type RequestCardProps = {

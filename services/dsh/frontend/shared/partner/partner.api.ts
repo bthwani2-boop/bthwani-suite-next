@@ -1,8 +1,8 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { DshRequestError } from "../_kernel/dsh-request-error";
 import type {
   DshPartner,
-  DshPartnerSummary,
   DshPartnerDocument,
   DshPartnerFieldVisit,
   DshPartnerReadiness,
@@ -82,11 +82,10 @@ export function transitionPartner(
 ): Promise<{ partner: DshGovernedPartner; event: DshPartnerAuditEvent }> {
   const expectedVersion = version ?? 0;
   if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
-    return Promise.reject({
-      kind: "invalid_request",
+    return Promise.reject(new DshRequestError("invalid_request", {
       code: "EXPECTED_VERSION_REQUIRED",
       message: "partner transition requires a positive expected version",
-    });
+    }));
   }
   return request(`/dsh/operator/partners/${partnerId}/transition`, {
     method: "POST",

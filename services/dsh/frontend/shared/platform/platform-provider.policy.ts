@@ -3,9 +3,6 @@ import type { PlatformProviderKind } from "./platform-provider.types";
 export const ALLOWED_PROVIDER_CONSUMER_SURFACES = ["control-panel", "system"] as const;
 export const FORBIDDEN_PROVIDER_CONSUMER_SURFACES = ["app-client", "app-partner", "app-captain", "app-field"] as const;
 
-type AllowedProviderConsumerSurface = (typeof ALLOWED_PROVIDER_CONSUMER_SURFACES)[number];
-type ForbiddenProviderConsumerSurface = (typeof FORBIDDEN_PROVIDER_CONSUMER_SURFACES)[number];
-
 export const PROVIDER_AFFECTED_SURFACES: Record<PlatformProviderKind, readonly string[]> = {
   maps: ["app-client", "app-captain", "app-field", "app-partner", "control-panel"],
   payments: ["app-client", "app-partner", "control-panel"],

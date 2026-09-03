@@ -96,15 +96,6 @@ export type DshFieldWorkQueue = {
   readonly escalations: readonly DshReadinessEscalation[];
 };
 
-export type DshOnboardingStatus = {
-  readonly storeId: string;
-  readonly totalVisits: number;
-  readonly completedVisits: number;
-  readonly openEscalations: number;
-  readonly onboardingComplete: boolean;
-  readonly status: "pending" | "complete" | "escalation_required";
-};
-
 export type DshCreateVisitInput = {
   readonly visitType?: DshVisitType;
   /** Fresh device GPS evidence. Store coordinates are resolved by DSH only. */

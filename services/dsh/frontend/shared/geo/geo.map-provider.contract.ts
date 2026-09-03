@@ -57,8 +57,3 @@ export type MapProviderContract = {
   readonly mode: MapProviderMode;
   readonly surfacePolicy: Record<MapsUsageSurface, MapsUsageSurfacePermissions>;
 };
-
-const CURRENT_MAP_PROVIDER_CONTRACT: MapProviderContract = {
-  mode: "disabled",
-  surfacePolicy: MAPS_SURFACE_POLICY,
-};

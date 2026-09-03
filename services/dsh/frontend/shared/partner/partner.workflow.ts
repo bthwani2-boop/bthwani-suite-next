@@ -14,12 +14,7 @@ export type {
   PartnerQueueRecord,
 } from './partner.types';
 
-import type {
-  ApprovalStage,
-} from './partner.types';
-
-
-export function canRenderInClientSurface(stage: ApprovalStage | string): boolean {
+export function canRenderInClientSurface(stage: string): boolean {
   return stage === 'client-visible';
 }
 

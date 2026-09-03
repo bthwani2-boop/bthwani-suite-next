@@ -95,7 +95,7 @@ export function ActorNotificationsPanel({
   }
 
   if (state.kind === "error") {
-    return <StateView tone="danger" title="تعذر تحميل الإشعارات" description={state.message} actionLabel="إعادة المحاولة" onActionPress={reload} />;
+    return <StateView tone="danger" title="تعذر تحميل الإشعارات" description={state.message} actionLabel="إعادة المحاولة" onActionPress={() => { void reload(); }} />;
   }
 
   const notifications = maxItems ? state.notifications.slice(0, maxItems) : state.notifications;
@@ -124,7 +124,7 @@ export function ActorNotificationsPanel({
       ) : null}
 
       {notifications.length === 0 ? (
-        <StateView title={emptyTitle} description={emptyDescription} actionLabel="تحديث" onActionPress={reload} />
+        <StateView title={emptyTitle} description={emptyDescription} actionLabel="تحديث" onActionPress={() => { void reload(); }} />
       ) : (
         <Box gap={2}>
           {notifications.map((notification) => (
@@ -150,7 +150,7 @@ export function ActorNotificationsPanel({
           {preferenceState.kind === "idle" || preferenceState.kind === "loading" ? (
             <StateView loading title="جارٍ تحميل التفضيلات" />
           ) : preferenceState.kind === "error" ? (
-            <StateView tone="warning" title="تعذر تحميل التفضيلات" description={preferenceState.message} actionLabel="إعادة المحاولة" onActionPress={reload} />
+            <StateView tone="warning" title="تعذر تحميل التفضيلات" description={preferenceState.message} actionLabel="إعادة المحاولة" onActionPress={() => { void reload(); }} />
           ) : preferenceState.preferences.length === 0 ? (
             <StateView title="لا توجد تفضيلات مخصصة" description="تستخدم الإشعارات إعدادات المنصة الافتراضية لهذا الممثل." />
           ) : (

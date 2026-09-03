@@ -188,8 +188,8 @@ export function captainDeliveryStatusCommandIntentFromAttempt(
   const intent: CaptainDeliveryStatusCommandIntent = {
     actorId: attempt.scope.actorId,
     assignmentId: command.assignmentId,
-    expectedStatus: command.expectedStatus as DshDeliveryStatus,
-    nextStatus: command.nextStatus as DshDeliveryStatus,
+    expectedStatus: command.expectedStatus,
+    nextStatus: command.nextStatus,
     expectedVersion,
     ...(attempt.latitude !== undefined && attempt.longitude !== undefined
       ? { latitude: attempt.latitude, longitude: attempt.longitude }

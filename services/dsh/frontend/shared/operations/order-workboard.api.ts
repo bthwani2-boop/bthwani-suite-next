@@ -1,4 +1,4 @@
-import { createDshHttpClient } from '../_kernel/dsh-http-request';
+import { createDshHttpClient, DshRequestError } from '../_kernel/dsh-http-request';
 import { executeDurableOrderCancellation } from '../orders/order-cancellation-attempt';
 import type {
   CancelOrderResponse,
@@ -57,7 +57,7 @@ export async function cancelOperatorOrder(
   reasonNote = '',
   ticketReference = '',
 ): Promise<CancelOrderResponse> {
-  if (!orderId.trim()) throw { kind: 'invalid_request', message: 'orderId is required' };
+  if (!orderId.trim()) throw new DshRequestError('invalid_request', { message: 'orderId is required' });
   return executeDurableOrderCancellation({
     surface: 'operator',
     actorId,

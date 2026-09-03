@@ -1,5 +1,5 @@
 import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
-import type { Employee, FieldAgent, ProviderKind } from "./workforce.types";
+import type { FieldAgent, ProviderKind } from "./workforce.types";
 
 const { request } = createDshHttpClient("/api/workforce", "workforce", 15000);
 
@@ -19,8 +19,8 @@ export async function appendProviderDocument(
   actorId: string,
   expectedVersion: number,
   mediaRef: string,
-): Promise<FieldAgent | Employee> {
-  return request<FieldAgent | Employee>(
+): Promise<FieldAgent> {
+  return request<FieldAgent>(
     `/workforce/${providerCollection(kind)}/${encodeURIComponent(actorId)}/documents`,
     {
       method: "POST",

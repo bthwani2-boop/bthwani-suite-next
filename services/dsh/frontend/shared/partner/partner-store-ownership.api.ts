@@ -1,5 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { DshRequestError } from "../_kernel/dsh-request-error";
 import { secureCorrelationId } from "../_kernel/secure-random";
 import type { DshPartnerLinkedStore } from "./partner.types";
 import { fetchPartnerStores } from "./partner.api";
@@ -29,19 +30,17 @@ export function linkOrTransferPartnerStore(
 ): Promise<GovernedPartnerStoresResponse> {
   const storeId = input.storeId.trim();
   if (!storeId) {
-    return Promise.reject({
-      kind: "invalid_request",
+    return Promise.reject(new DshRequestError("invalid_request", {
       code: "STORE_ID_REQUIRED",
       message: "storeId is required",
-    });
+    }));
   }
   const expectedStoreVersion = input.expectedStoreVersion;
   if (expectedStoreVersion !== undefined && (!Number.isInteger(expectedStoreVersion) || expectedStoreVersion < 1)) {
-    return Promise.reject({
-      kind: "invalid_request",
+    return Promise.reject(new DshRequestError("invalid_request", {
       code: "INVALID_STORE_VERSION",
       message: "expectedStoreVersion must be a positive integer",
-    });
+    }));
   }
 
   const correlationId = secureCorrelationId("partner-store-ownership");

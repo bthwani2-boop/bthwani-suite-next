@@ -187,7 +187,7 @@ function IdentityAccessPanel({
               label={submitting ? "جاري تسجيل الجهاز" : "تسجيل هذا الجهاز والدخول"}
               tone="primary"
               disabled={submitting || !phone.trim() || !/^\d{6}$/.test(code.trim())}
-              onPress={submitPlatformAccessCode}
+              onPress={() => { void submitPlatformAccessCode(); }}
             />
           </View>
         ) : (
@@ -208,7 +208,7 @@ function IdentityAccessPanel({
               label={submitting ? "جاري الدخول" : "دخول"}
               tone="primary"
               disabled={submitting}
-              onPress={submitLogin}
+              onPress={() => { void submitLogin(); }}
             />
           </View>
         )}
@@ -222,7 +222,7 @@ function IdentityAccessPanel({
               label={submitting ? "جاري الدخول السريع" : quickLoginLabel}
               tone="secondary"
               disabled={submitting}
-              onPress={submitQuickDeveloperLogin}
+              onPress={() => { void submitQuickDeveloperLogin(); }}
             />
           </View>
         ) : null}

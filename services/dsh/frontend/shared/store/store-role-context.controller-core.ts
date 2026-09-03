@@ -19,7 +19,7 @@ export type StoreRoleContextState =
       readonly actorRole: "partner" | "field" | "captain" | "operator";
       readonly scope: "own" | "assigned" | "all";
       readonly store: DshStoreAdminDetail;
-      readonly latestAction: unknown | null;
+      readonly latestAction: unknown;
     };
 
 export type StoreRole = "partner" | "field" | "captain" | "operator";

@@ -28,13 +28,15 @@ export function WorkforceAccessGate({
   if (state.kind === "not_provisioned") {
     return (
       <GateFrame onLogout={onLogout}>
-        <StateView
-          tone="warning"
-          title="الملف التشغيلي غير منشأ"
-          description="الهوية مفعلة، لكن لا يوجد ملف Workforce مرتبط بها. لا يمكن فتح العمليات قبل إنشاء الملف من الجهة المخولة."
-          actionLabel="إعادة التحقق"
-          onActionPress={() => void workforce.reload()}
-        />
+        {incompleteContent ?? (
+          <StateView
+            tone="warning"
+            title="الملف التشغيلي غير منشأ"
+            description="الهوية مفعلة، لكن لا يوجد ملف Workforce مرتبط بها. لا يمكن فتح العمليات قبل إنشاء الملف من الجهة المخولة."
+            actionLabel="إعادة التحقق"
+            onActionPress={() => void workforce.reload()}
+          />
+        )}
       </GateFrame>
     );
   }

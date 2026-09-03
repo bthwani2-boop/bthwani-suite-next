@@ -1,6 +1,7 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import {
   createDshHttpClient,
+  DshRequestError,
   type DshRequestOptions,
 } from "../_kernel/dsh-http-request";
 import type {
@@ -61,7 +62,7 @@ export async function cancelOrder(
   const commandId = input.commandId.trim();
   const correlationId = input.correlationId.trim();
   if (!commandId || !correlationId) {
-    throw { kind: "invalid_request", message: "commandId and correlationId are required" };
+    throw new DshRequestError("invalid_request", { message: "commandId and correlationId are required" });
   }
   const body = {
     reasonCode: input.reasonCode,
