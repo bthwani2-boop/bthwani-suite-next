@@ -1,7 +1,7 @@
 # H Refoundation Scope and Authority Rules
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: branch authority, repository-wide mutation scope, forensic-source use, exact-head discipline, execution-unit boundaries and artifact survival.
+Owner: branch authority, repository-wide mutation scope, truth reconciliation, forensic-source use, exact-head discipline, execution-unit boundaries and artifact survival.
 
 ## 1. Branch law
 
@@ -50,7 +50,43 @@ OLD_BRANCH_TOPOLOGY == PRESERVATION_REQUIREMENT
 
 Recovered value must re-earn canonical status and be placed under the new canonical owner; do not revive historical containers just to recover behavior.
 
-## 3. Exact-head discipline
+## 3. Truth reconciliation law
+
+No inherited representation becomes automatic truth merely because it exists, compiles, executes, is documented or is tested.
+
+```text
+GOVERNANCE != AUTOMATIC_TRUTH
+CODE != AUTOMATIC_TRUTH
+RUNTIME != AUTOMATIC_TRUTH
+DATABASE_SHAPE != AUTOMATIC_PRODUCT_TRUTH
+TESTS != AUTOMATIC_TRUTH
+CI_GREEN != AUTOMATIC_TRUTH
+TOOL_FINDING != AUTOMATIC_ROOT_CAUSE
+OLD_BRANCH != AUTOMATIC_TRUTH
+CURRENT_SCREEN/API/PATH != AUTOMATIC_CANONICAL_TARGET
+```
+
+Keep evidence classes distinct when reconciling a material meaning:
+
+```text
+EXPLICIT_CURRENT_HUMAN_INTENT
+REQUIRED_PRODUCT/SEMANTIC_TRUTH
+CANONICAL_OWNERSHIP/WRITE_AUTHORITY
+DATA_TRUTH
+CONTRACT_TRUTH
+IMPLEMENTATION_TRUTH
+RUNTIME_TRUTH
+REPOSITORY_PLATFORM_TRUTH
+SECURITY/FINANCIAL_INVARIANTS
+EXTERNAL_TECHNICAL_EVIDENCE
+FORENSIC/HISTORICAL_SUPPORT
+```
+
+Canonical truth is reconstructed from the strongest consistent current evidence and first-principles ownership model. Contradictions trigger diagnosis; they are never resolved by blindly preferring the current file, current docs, current database shape or current test.
+
+This law exists to enable more aggressive refoundation safely, not to create a documentation gate.
+
+## 4. Exact-head discipline
 
 Before every coherent mutation batch:
 
@@ -78,7 +114,7 @@ STOP WRITE
 
 Never overwrite unseen work. Never force. After every push verify remote `h` and re-pin.
 
-## 4. Absolute repository scope
+## 5. Absolute repository scope
 
 Every material tracked artifact on `h` is in scope, including:
 
@@ -101,7 +137,7 @@ DEPENDENCIES / WORKSPACES / LOCKFILE / REPOSITORY TOPOLOGY
 
 No path, name or category has preservation immunity.
 
-## 5. Hostile-inheritance survival law
+## 6. Hostile-inheritance survival law
 
 Inherited structure starts with:
 
@@ -141,7 +177,7 @@ BLOCKED_UNKNOWN
 
 `BLOCKED_UNKNOWN` blocks closure; it never means keep just in case.
 
-## 6. Used does not mean canonical
+## 7. Used does not mean canonical
 
 ```text
 USED != CANONICAL
@@ -154,7 +190,7 @@ A heavily used wrong authority is migrated and deleted; caller count is not pres
 
 Semantic responsibility is derived from behavior, data, decisions, writers/readers, contract meaning, state transitions and consumer outcome—not filenames or current directories.
 
-## 7. Dynamic mutation authority
+## 8. Dynamic mutation authority
 
 The orchestrator may select the highest safely executable unit required to realize the canonical target:
 
@@ -202,7 +238,7 @@ RECREATE MINIMAL CANONICAL SUBTREE
 
 There is no minimal-diff, minimal-file-count or existing-path preservation requirement.
 
-## 8. Surface/subtree death test
+## 9. Surface/subtree death test
 
 For every materially suspect surface—including `.agents`, `.github`, `.opencodereview`, `docs`, `tools`, `governance`—ask:
 
@@ -227,7 +263,7 @@ EXTRACT UNIQUE REQUIRED VALUE
 
 Do not patch a structurally invalid surface merely because it contains many files.
 
-## 9. Safety boundaries
+## 10. Safety boundaries
 
 Aggressive structural authority does not permit destructive uncertainty for:
 
@@ -243,7 +279,9 @@ LIVE RUNTIME
 
 For these, preserve required truth first, prove migration/cutover, then delete the loser.
 
-## 10. Concurrency
+Ordinary repository deletion/rehome/rewrite on `h` is not a protected action once the canonical disposition and affected consumers are proven.
+
+## 11. Concurrency
 
 ```text
 MAX_ACTIVE_OVERLAPPING_MATERIAL_MUTATION_UNITS=1
@@ -255,7 +293,7 @@ The unit may span many services/files if one causal cutover requires them. Wide 
 
 Do not split a canonical cutover due to token count, session length, file count, frontend/backend boundary or perceived complexity.
 
-## 11. GitHub Actions authority
+## 12. GitHub Actions authority
 
 On `h`, GitHub Actions may be created, rewritten, dispatched or deleted as needed.
 
@@ -263,19 +301,20 @@ No workflow receives survival rights because it existed before `h`.
 
 Persistent workflows must own unique durable assurance. Campaign-only workflows must disappear when their evidence role ends. PR/default-branch assumptions inherited from old branches are not `h` authority.
 
-## 12. Precedence
+## 13. Precedence
 
 ```text
 CURRENT EXPLICIT HUMAN INTENT
 → THIS ORCHESTRATOR PACKAGE
-→ LIVE h IMPLEMENTATION/DATA/RUNTIME EVIDENCE
-→ DURABLE REQUIRED PRODUCT/SYSTEM TRUTH
+→ REQUIRED PRODUCT/SYSTEM/DATA/SECURITY TRUTH RECONCILED FROM LIVE EVIDENCE
+→ LIVE h IMPLEMENTATION/DATA/RUNTIME/REPOSITORY EVIDENCE
+→ AUTHORITATIVE EXTERNAL TECHNICAL EVIDENCE WHEN NEEDED
 → FORENSIC HISTORICAL SOURCES
 ```
 
 Historical plans, prompts, docs, branches and CI conventions cannot override the canonical refoundation package.
 
-## 13. Valid blockers
+## 14. Valid blockers
 
 Only material unknowns that can alter safe truth preservation or canonical design may halt mutation:
 
