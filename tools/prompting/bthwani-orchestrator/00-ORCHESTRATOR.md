@@ -1,6 +1,6 @@
 # BThwani Canonical Baseline Refoundation Orchestrator
 
-PACKAGE_REVISION: 26
+PACKAGE_REVISION: 27
 REFOUNDATION_PROFILE_REVISION: 3
 PACKAGE_CLASS: TRUSTWORTHY_CANONICAL_BASELINE_REFOUNDATION_ENGINE
 PROJECT: bthwani-suite-next
@@ -73,7 +73,7 @@ Exactly nine files are semantic owners in this package:
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — canonical model, Root Graph, refoundation, migration, cutover, highest-safe deletion, recursive pruning and structural finishing.
 5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-`h` evidence, finding accounting, failure classification, falsification, closure gates, fresh re-census and Level-4 fixed-point qualification.
 6. `05-OBJECTIVES-PLAYBOOK.md` — dynamic execution-unit selection and campaign traversal; it does not own session-sized objectives or AUTO/NEXT bug queues.
-7. `focus/code-architecture-organization.md` — architecture, semantic containers, topology, files/directories/packages/services, anti-fragmentation and structural UI ownership.
+7. `focus/code-architecture-organization.md` — architecture, semantic containers, topology, canonical naming/path ownership, file cohesion/size/complexity discipline, files/directories/packages/services, anti-fragmentation and structural UI ownership.
 8. `focus/governance-product-design.md` — Product/System truth, actors, journeys, screens, UX, accessibility/localization, end-to-end capability meaning and durable truth reconciliation.
 9. `focus/data-contracts-runtime-security-quality.md` — database/migrations, contracts/generated bindings, runtime/config/infra, security/finance, operational truth, tests/CI/admission, dependencies and assurance.
 
