@@ -3,7 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 
 const source = fs.readFileSync(
-  new URL("../frontend/shared/catalog/central-catalog.permissions.ts", import.meta.url),
+  new URL("../frontend/catalog/central-catalog.permissions.ts", import.meta.url),
   "utf8",
 );
 
