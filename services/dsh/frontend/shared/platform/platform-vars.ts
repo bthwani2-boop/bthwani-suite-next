@@ -1,4 +1,6 @@
-declare const process: any;
+declare const process:
+  | { readonly env?: Readonly<Record<string, string | undefined>> }
+  | undefined;
 
 export interface PlatformVarsConfig {
   dshApiBaseUrl: string | null;

@@ -2,31 +2,8 @@ import type { DshPartnerActivationStatus } from "./partner-activation.model";
 import type { DshPartner, DshPartnerReadiness } from "./partner.types";
 import { secureRandomId } from "../_kernel/secure-random.ts";
 
-export type DshPartnerAllowedAction =
-  | "read_owned_draft"
-  | "read_readiness"
-  | "update_owned_draft"
-  | "update_first_store"
-  | "upload_document"
-  | "capture_field_visit"
-  | "submit_for_review"
-  | "read_partner"
-  | "read_documents"
-  | "read_field_visits"
-  | "read_audit"
-  | "link_unowned_store"
-  | "review_documents"
-  | "approve_partner"
-  | "reject_partner"
-  | "activate_partner"
-  | "terminate_partner"
-  | "publish_store"
-  | "hide_store"
-  | "read_own_status"
-  | "read_own_readiness"
-  | "manage_authorized_store_team"
-  | "manage_store_settings"
-  | string;
+/** Server-owned action vocabulary; unknown future actions remain observable. */
+export type DshPartnerAllowedAction = string;
 
 export type DshGovernedPartner = DshPartner & {
   readonly allowedActions?: readonly DshPartnerAllowedAction[];
@@ -135,6 +112,19 @@ type HttpLikeError = {
   readonly message?: string;
 };
 
+export type PartnerReadbackIntegrityCode =
+  | "PARTNER_READBACK_MISMATCH"
+  | "PARTNER_READBACK_STALE";
+
+export class PartnerReadbackIntegrityError extends Error {
+  readonly kind = "integrity" as const;
+
+  constructor(readonly code: PartnerReadbackIntegrityCode, message: string) {
+    super(message);
+    this.name = "PartnerReadbackIntegrityError";
+  }
+}
+
 export function mapPartnerOnboardingFailure(error: unknown): PartnerOnboardingFailure {
   const value = (error && typeof error === "object" ? error : {}) as HttpLikeError;
   const status = value.status ?? 0;
@@ -201,10 +191,16 @@ export function assertPartnerReadback(
   partner: DshGovernedPartner,
 ): DshGovernedPartner {
   if (partner.id !== expectedPartnerId) {
-    throw { kind: "integrity", code: "PARTNER_READBACK_MISMATCH", message: "partner readback identity mismatch" };
+    throw new PartnerReadbackIntegrityError(
+      "PARTNER_READBACK_MISMATCH",
+      "partner readback identity mismatch",
+    );
   }
   if (!Number.isInteger(partner.version) || partner.version < expectedMinimumVersion) {
-    throw { kind: "integrity", code: "PARTNER_READBACK_STALE", message: "partner readback version is stale" };
+    throw new PartnerReadbackIntegrityError(
+      "PARTNER_READBACK_STALE",
+      "partner readback version is stale",
+    );
   }
   return partner;
 }
