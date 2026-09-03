@@ -9,9 +9,11 @@ core/identity  → services/identity
 core/workforce → services/workforce
 ```
 
-Both are real peer bounded contexts/services. Their former location under `core/` does not grant special architectural rank.
+Both are real peer bounded contexts/services when their current independent lifecycle/runtime/storage/contract responsibilities remain proven. Their former location under `core/` does not grant special architectural rank.
 
 Package/export names must lose `core-` after consumer cutover.
+
+A path move alone is not closure. Rebuild canonical internals, migrate data/contracts/clients/runtime consumers, then delete old roots and aliases.
 
 ## 2. Identity authority
 
@@ -29,7 +31,109 @@ device/session authorization semantics where applicable
 
 Apps bind platform storage/native callbacks; they do not reproduce session policy. DSH, WLT, Workforce, and Platform Control consume Identity rather than maintaining parallel auth truth.
 
-## 3. Workforce conceptual correction
+Identity does not become owner of Workforce engagement, DSH operational assignment, WLT financial state, or app navigation merely because those systems authorize actors through Identity.
+
+## 3. Identity topology refoundation
+
+Refound `core/identity` into a coherent service rather than copying inherited internal layout.
+
+Conceptual target when applicable:
+
+```text
+services/identity/
+├── backend/
+│   ├── cmd/
+│   └── internal/
+│       ├── runtime/
+│       ├── transport/http/
+│       ├── integrations/
+│       └── <cohesive-identity-capabilities>/
+├── contracts/
+├── clients/generated/
+├── frontend/          # only reusable host-neutral identity presentation/controllers
+├── database/
+└── tests/testing/
+```
+
+Possible semantic capabilities must be derived from live evidence rather than manufactured mechanically; examples may include actor, authentication, session, activation/access, authorization vocabulary, or device/session trust when those are truly separate cohesive responsibilities.
+
+Technical/lifecycle mechanisms such as HTTP, token parsing, cache, rate limiting, background cleanup, device adapters, OTP sender adapters, or audit plumbing are not top-level business domains.
+
+`cmd/*/main.go` remains thin startup. Large `internal/http` server/readiness/config files require cohesion review and rehome into runtime/transport/capability/integration owners rather than moving intact.
+
+## 4. Identity contracts/generated-client law
+
+Identity has one canonical service contract composition root when externally exposed, e.g.:
+
+```text
+services/identity/contracts/identity.openapi.yaml
+```
+
+Physical capability files may split for cohesion but remain one semantic authority.
+
+```text
+IDENTITY CANONICAL CONTRACT
+→ VALIDATE/COMPOSE
+→ DETERMINISTIC GENERATED CLIENT/BINDING
+→ DSH/WLT/WORKFORCE/APPS/PLATFORM CONSUMERS
+```
+
+Forbidden parallel authorities include hand-maintained duplicate auth DTOs, roles/permissions enumerations, session-state interpretations, action maps, or consumer-local copies that can drift from canonical Identity semantics.
+
+Authorization vocabulary and contract metadata do not replace server enforcement; consuming services remain responsible for enforcing permissions on their own protected operations using trusted Identity context/policy.
+
+## 5. Identity database/security law
+
+For each durable Identity/security fact prove:
+
+```text
+FACT
+CANONICAL TABLE/COLUMNS
+CANONICAL WRITER
+READBACK/REVOCATION PATH
+CONSTRAINTS/INDEXES
+RETENTION/LIFECYCLE
+PII/SECRET CLASSIFICATION
+AUDIT REQUIREMENTS
+LOSING STORAGE AUTHORITIES
+```
+
+Multiple mutable session/credential/actor authorities for the same meaning are forbidden.
+
+Each Identity deployment/storage boundary uses one globally ordered canonical migration lane unless a truly independent storage/deployment boundary proves otherwise.
+
+Heightened security closure must prove applicable:
+
+```text
+CREDENTIAL/VERIFICATION SECRET MATERIAL IS NOT EXPOSED TO CLIENTS/LOGS/AUDIT PAYLOADS
+SESSION/TOKEN CREATE-REFRESH-REVOKE SEMANTICS ARE SINGLE-AUTHORITY
+SERVER-SIDE AUTHORIZATION CONTEXT CANNOT BE FORGED BY CLIENT INPUT
+ACTOR/OPERATOR CONTEXT ISOLATION
+REPLAY/EXPIRY/REVOCATION BEHAVIOR
+BRUTE-FORCE/RATE-LIMIT OR EQUIVALENT ABUSE CONTROL WHERE REQUIRED
+DEVICE/SESSION TRUST SEMANTICS WHEN USED
+SECURITY-SENSITIVE CHANGES ARE AUDITABLE
+PII ACCESS/MASKING/MINIMIZATION WHERE REQUIRED
+RUNTIME SECRET REFERENCES ARE NOT RAW TRACKED VALUES
+```
+
+Do not weaken security constraints for local development convenience.
+
+## 6. Identity integrations and frontend boundary
+
+External messaging/verification/provider execution belongs under explicit Identity integrations only when Identity owns the semantic operation, for example:
+
+```text
+integrations/messaging/sms
+integrations/messaging/email
+integrations/verification-provider
+```
+
+Vendor details implement semantic ports and follow `providers-and-integrations.md`.
+
+Reusable Login/Profile/security presentation may live under Identity frontend when host-neutral and genuinely reused. App route/shell/deep-link/native SecureStore/keychain/browser bindings remain in app roots.
+
+## 7. Workforce conceptual correction
 
 Do not encode employment relationship and operational role as one mutually exclusive axis.
 
@@ -94,7 +198,7 @@ Role       = CAPTAIN
 
 without duplicating the person or forcing a false mutually exclusive profile type.
 
-## 4. Workforce ownership
+## 8. Workforce ownership
 
 Workforce may own, when proven:
 
@@ -113,7 +217,9 @@ role assignment metadata that belongs to workforce administration
 
 Do not make Workforce the owner of DSH operational task truth or WLT financial truth merely because workforce actors participate.
 
-## 5. Service boundary split
+Workforce-sensitive documents/PII require explicit access, retention, audit and masking/privacy treatment according to the actual data classification.
+
+## 9. Service boundary split
 
 ```text
 IDENTITY
@@ -131,7 +237,7 @@ WLT
 
 Operational role eligibility may require Workforce evidence, but DSH remains owner of DSH operational assignment/state. Financial consequences may reference Workforce/DSH evidence, but WLT remains financial authority.
 
-## 6. Workforce topology
+## 10. Workforce topology
 
 Do not mechanically create directories, but organize proven capabilities around real meanings such as:
 
@@ -159,7 +265,9 @@ integrations/wlt
 
 Large HTTP server/worker files and giant baseline SQL require cohesion review under orchestrator size rules; do not split merely by LOC, but do not preserve multi-responsibility files for convenience.
 
-## 7. Migration law for inherited profile exclusivity
+Workforce contracts/generated clients/database migrations follow the same sovereign-service lineage and one-canonical-migration-lane laws as other services.
+
+## 11. Migration law for inherited profile exclusivity
 
 Before changing current employee/captain/field profile constraints:
 
@@ -177,7 +285,7 @@ CENSUS_ALL_CURRENT_WORKFORCE_FACTS
 
 Do not simply relax constraints and keep ambiguous duplicate models.
 
-## 8. Independent service providers versus external technical providers
+## 12. Independent service providers versus external technical providers
 
 Do not overload the word `provider`.
 
@@ -187,7 +295,7 @@ A technical external provider (payment/maps/SMS/etc.) belongs to integration/pro
 
 Use explicit names such as `independent-contractor`, `captain`, `payment-rail`, `maps-adapter` rather than generic `provider` when ambiguity exists.
 
-## 9. Exit gate
+## 13. Exit gate
 
 At closure prove:
 
@@ -195,11 +303,17 @@ At closure prove:
 core/identity=ABSENT
 core/workforce=ABSENT
 core-* PACKAGE NAMES=0
-PARALLEL_AUTH/SESSION_AUTHORITIES=0
+IDENTITY_HTTP/RUNTIME_MEGA_CONTAINER_TOPOLOGY=0
+PARALLEL_AUTH/SESSION/CREDENTIAL/ACTOR_AUTHORITIES=0
+MANUAL_DUPLICATE_IDENTITY DTO/ROLE/PERMISSION/SESSION REGISTRIES=0
+IDENTITY_CONTRACT/GENERATED_CLIENT_DRIFT=0
+IDENTITY_SECURITY/PII/REVOCATION/AUDIT_GAPS=0
 WORKFORCE_RELATIONSHIP_AND_OPERATIONAL_ROLE_CONFLATION=0
 FALSE_EMPLOYEE_VS_CAPTAIN/FIELD_MUTUAL_EXCLUSIVITY=0
 DSH_OPERATIONAL_TRUTH_OWNED_BY_WORKFORCE=0
 WLT_FINANCIAL_TRUTH_OWNED_BY_WORKFORCE=0
 STALE_DSHCLIENT/HTTP_MEGA_PACKAGE_TOPOLOGY=0
 OLD_DB_CONSTRAINTS/PROJECTIONS_PRESERVING_LOSING_MODEL=0
+PARALLEL_IDENTITY/WORKFORCE_MIGRATION_AUTHORITIES=0
+OLD_CONTRACT/CLIENT/WORKSPACE/DOCKER PATHS=0
 ```

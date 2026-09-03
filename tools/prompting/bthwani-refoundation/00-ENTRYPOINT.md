@@ -1,6 +1,6 @@
 # BThwani Canonical Refoundation Target Package — Entrypoint
 
-PACKAGE_REVISION: 3
+PACKAGE_REVISION: 4
 PACKAGE_CLASS: TEMPORARY_CANONICAL_TARGET_SPECIALIZATION
 TARGET_REPOSITORY: bthwani2-boop/bthwani-suite-next
 TARGET_BRANCH: h
@@ -66,6 +66,7 @@ REMOVE apps/*/runtime WHEN IT IS ONLY A PASS-THROUGH PARENT
 DO NOT CREATE A GENERIC PROVIDERS GOD SERVICE
 REFOUND PLATFORM-CONTROL WITHOUT TURNING IT INTO A CONFIGURATION GOD SERVICE
 REFOUND UI-KIT AS A REAL DESIGN SYSTEM
+REFOUND IDENTITY AS A SOVEREIGN SECURITY-SENSITIVE SERVICE, NOT A MOVED core/ TREE
 REFOUND WORKFORCE AROUND PERSON + ENGAGEMENT + OPERATIONAL ROLE
 KEEP SERVICE CONTRACTS SOVEREIGN
 KEEP ROOT contracts/ NON-BUSINESS AND NON-RUNTIME-AUTHORITATIVE
@@ -114,7 +115,7 @@ targets/dsh-wlt.md
   DSH operational ownership, WLT financial independence, frontend/backend/contracts/database/capability topology, metadata-authority cleanup and financial contract convergence.
 
 targets/identity-workforce.md
-  Identity authority and Workforce refoundation around orthogonal engagement and operational-role axes.
+  Identity topology/contracts/generated/database/security authority plus Workforce refoundation around orthogonal person/engagement/operational-role axes.
 
 targets/platform-control.md
   Platform Control service admission, variables/flags/change/rollout/audit authority, provider-control-plane limits, and anti-god-service boundaries.
