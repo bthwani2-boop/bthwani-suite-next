@@ -497,7 +497,7 @@ test("checkout carries the confirmed cart version into the canonical DSH OCC con
   );
   assert.ok(conflictSchema.includes("DshCheckoutCartVersionConflict"));
   assertMarkers(
-    "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+    "services/dsh/frontend/commerce/checkout/use-checkout-to-order-flow.tsx",
     ["useCreateOrderTruthController", "submitOrder({ checkoutIntentId", "order_ready"],
   );
   assertMarkers(
@@ -512,7 +512,7 @@ test("checkout carries the confirmed cart version into the canonical DSH OCC con
 
 test("checkout keeps an unresolved payment intent visible and blocks duplicate submission", () => {
   const flow = assertMarkers(
-    "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+    "services/dsh/frontend/commerce/checkout/use-checkout-to-order-flow.tsx",
     ["operationLock", "checkout_action_error", "بقيت الجلسة محفوظة", "currentIntent.id !== intentId", "isOrderCreationEligible", "intent.state === \"confirmed\"", "reconciliation_pending", "checkoutInputRef", "clearCurrentCheckoutAttempt", "await cancelCheckoutIntent(intentId);"],
   );
   assert.doesNotMatch(flow, /catch \{\s*\/\/ Best effort cancel/);
