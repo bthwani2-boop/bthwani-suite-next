@@ -9,7 +9,7 @@
     {
       "ordinal": 1,
       "file": "dsh-001_canonical_baseline.sql",
-      "sha256": "4d8bd7b88f29100652d1e32707fdfa77f8730186a5a5ef9ba56499efe599f417",
+      "sha256": "68ee9f8da5874dc469b7689489dca738bb6968353ad04f4285a767847f6492e1",
       "historicalPrefix": "001",
       "state": "ACTIVE"
     }

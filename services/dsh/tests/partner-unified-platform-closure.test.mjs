@@ -15,7 +15,7 @@ describe("partner unified multi-surface platform closure", () => {
   });
 
   test("separates unrelated runtime stores into sovereign legal partners and scopes", () => {
-    const seed = read("services/dsh/database/seeds/local/dsh-958_partner_store_ownership.local.sql");
+    const seed = read("services/dsh/database/seeds/local/dsh-001_canonical_seed.local.sql");
     for (const id of [
       "prt_partner_local_001",
       "prt_partner_local_002",

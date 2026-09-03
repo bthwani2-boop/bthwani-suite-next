@@ -65,11 +65,7 @@ test("assortment contract is metadata-only and commercial fields are normalized"
 
 test("commercial catalog schema is normalized and legacy assortment columns are absent", () => {
   const migration = read("database/migrations/dsh-001_canonical_baseline.sql");
-  const seeds = [
-    read("database/seeds/local/dsh-032_central_catalog_seed.local.sql"),
-    read("database/seeds/local/dsh-960_client_storefront_catalog_completion.local.sql"),
-    read("database/seeds/local/dsh-981_assortment_runtime_truth.local.sql"),
-  ].join("\n");
+  const seeds = read("database/seeds/local/dsh-001_canonical_seed.local.sql");
 
   assert.match(migration, /CREATE TABLE public\.dsh_store_assortment_inventory/);
   assert.match(migration, /CREATE TABLE public\.dsh_store_assortment_prices/);
@@ -127,8 +123,8 @@ test("partner and field catalog writes cannot bypass central approval", () => {
 
 test("client home categories and fake products are central seed projections", () => {
   const repository = read("backend/internal/homediscovery/repository.go");
-  const seed = read("database/seeds/local/dsh-032_central_catalog_seed.local.sql");
-  const homeSeed = read("database/seeds/local/dsh-002_home_discovery.local.sql");
+  const seed = read("database/seeds/local/dsh-001_canonical_seed.local.sql");
+  const homeSeed = seed;
 
   assert.match(repository, /FROM dsh_catalog_domains/);
   assert.match(repository, /s\.catalog_domain_id/);

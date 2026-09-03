@@ -1,3 +1,187 @@
+-- Canonical WLT Local Seed Baseline (Epoch 2)
+-- Unified development fixtures for wallet policies, official providers, collateral, commission, and reference smoke.
+
+-- ===========================================================================
+-- Source fixture: wlt-905_dispatch_financial_eligibility_policy.local.sql
+-- ===========================================================================
+-- Local-only governed WLT dispatch policy for the canonical captain bootstrap.
+-- The local collateral top-up is the complete development balance, so no extra
+-- dispatch/COD balance is required; production thresholds remain WLT-owned policy.
+INSERT INTO wlt_dispatch_financial_eligibility_policies (
+    operator_context_id,
+    enabled,
+    require_active_wallet,
+    minimum_dispatch_balance_minor_units,
+    minimum_cod_balance_minor_units,
+    currency,
+    decision_ttl_seconds,
+    policy_version,
+    updated_by
+) VALUES (
+    'local-dsh',
+    TRUE,
+    TRUE,
+    0,
+    0,
+    'YER',
+    120,
+    'local-dispatch-financial-v1',
+    'seed:wlt-905-local-dispatch-financial-policy'
+)
+ON CONFLICT (operator_context_id) DO UPDATE
+SET enabled = EXCLUDED.enabled,
+    require_active_wallet = EXCLUDED.require_active_wallet,
+    minimum_dispatch_balance_minor_units = EXCLUDED.minimum_dispatch_balance_minor_units,
+    minimum_cod_balance_minor_units = EXCLUDED.minimum_cod_balance_minor_units,
+    currency = EXCLUDED.currency,
+    decision_ttl_seconds = EXCLUDED.decision_ttl_seconds,
+    policy_version = EXCLUDED.policy_version,
+    updated_by = EXCLUDED.updated_by,
+    updated_at = NOW()
+WHERE wlt_dispatch_financial_eligibility_policies.enabled IS DISTINCT FROM EXCLUDED.enabled
+   OR wlt_dispatch_financial_eligibility_policies.require_active_wallet IS DISTINCT FROM EXCLUDED.require_active_wallet
+   OR wlt_dispatch_financial_eligibility_policies.minimum_dispatch_balance_minor_units IS DISTINCT FROM EXCLUDED.minimum_dispatch_balance_minor_units
+   OR wlt_dispatch_financial_eligibility_policies.minimum_cod_balance_minor_units IS DISTINCT FROM EXCLUDED.minimum_cod_balance_minor_units
+   OR wlt_dispatch_financial_eligibility_policies.currency IS DISTINCT FROM EXCLUDED.currency
+   OR wlt_dispatch_financial_eligibility_policies.decision_ttl_seconds IS DISTINCT FROM EXCLUDED.decision_ttl_seconds
+   OR wlt_dispatch_financial_eligibility_policies.policy_version IS DISTINCT FROM EXCLUDED.policy_version
+   OR wlt_dispatch_financial_eligibility_policies.updated_by IS DISTINCT FROM EXCLUDED.updated_by;
+
+
+-- ===========================================================================
+-- Source fixture: wlt-914_official_wallet_provider.local.sql
+-- ===========================================================================
+-- Local-only governed provider registry for the canonical WLT payout-destination
+-- runtime smoke. Production provider onboarding remains a finance-control-plane
+-- operation; this fixture only declares the local provider identity required by
+-- that same boundary.
+INSERT INTO wlt_official_wallet_providers (
+    operator_context_id,
+    provider_key,
+    display_name,
+    active
+) VALUES (
+    'local-dsh',
+    'bthwani_local_wallet',
+    'BThwani Local Official Wallet',
+    TRUE
+)
+ON CONFLICT (operator_context_id, provider_key) DO UPDATE
+SET display_name = EXCLUDED.display_name,
+    active = EXCLUDED.active,
+    updated_at = NOW()
+WHERE wlt_official_wallet_providers.display_name IS DISTINCT FROM EXCLUDED.display_name
+   OR wlt_official_wallet_providers.active IS DISTINCT FROM EXCLUDED.active;
+
+
+-- ===========================================================================
+-- Source fixture: wlt-935_captain_collateral_policy.local.sql
+-- ===========================================================================
+-- Local-only governed WLT policy required before the local captain wallet is materialized.
+-- Production policy remains owned by the WLT policy API; this fixture only supplies
+-- deterministic development truth for the governed bootstrap flow.
+INSERT INTO wlt_captain_collateral_policies (
+    operator_context_id,
+    policy_id,
+    policy_version,
+    enabled,
+    minimum_collateral_minor_units,
+    currency,
+    change_reason,
+    updated_by_actor_id
+) VALUES (
+    'local-dsh',
+    'local-captain-collateral-v1',
+    1,
+    TRUE,
+    1000,
+    'YER',
+    'Governed local development captain collateral policy.',
+    'seed:wlt-935-local-captain-collateral'
+)
+ON CONFLICT (operator_context_id) DO UPDATE
+SET policy_id = EXCLUDED.policy_id,
+    enabled = EXCLUDED.enabled,
+    minimum_collateral_minor_units = EXCLUDED.minimum_collateral_minor_units,
+    currency = EXCLUDED.currency,
+    change_reason = EXCLUDED.change_reason,
+    updated_by_actor_id = EXCLUDED.updated_by_actor_id,
+    policy_version = wlt_captain_collateral_policies.policy_version + 1,
+    updated_at = NOW()
+WHERE wlt_captain_collateral_policies.policy_id IS DISTINCT FROM EXCLUDED.policy_id
+   OR wlt_captain_collateral_policies.enabled IS DISTINCT FROM EXCLUDED.enabled
+   OR wlt_captain_collateral_policies.minimum_collateral_minor_units IS DISTINCT FROM EXCLUDED.minimum_collateral_minor_units
+   OR wlt_captain_collateral_policies.currency IS DISTINCT FROM EXCLUDED.currency
+   OR wlt_captain_collateral_policies.change_reason IS DISTINCT FROM EXCLUDED.change_reason
+   OR wlt_captain_collateral_policies.updated_by_actor_id IS DISTINCT FROM EXCLUDED.updated_by_actor_id;
+
+
+-- ===========================================================================
+-- Source fixture: wlt-937_captain_delivery_commission_policy.local.sql
+-- ===========================================================================
+-- Local-only WLT policy for the end-to-end DSH delivery proof matrix.
+-- Production commission rates remain finance-owned and must be configured through
+-- the governed policy endpoint; this fixture makes the local integration contract
+-- executable without introducing a runtime fallback or caller-supplied amount.
+UPDATE wlt_commission_policy_versions
+SET status = 'inactive'
+WHERE operator_context_id = 'local-dsh'
+  AND commission_type = 'delivery_fee'
+  AND source_type = 'order'
+  AND beneficiary_actor_type = 'captain'
+  AND policy_id <> 'local-captain-delivery-fee';
+
+INSERT INTO wlt_commission_policy_versions (
+    operator_context_id,
+    policy_id,
+    version,
+    commission_type,
+    source_type,
+    beneficiary_actor_type,
+    calculation_type,
+    fixed_amount_minor_units,
+    basis_points,
+    minimum_amount_minor_units,
+    maximum_amount_minor_units,
+    currency,
+    status,
+    change_reason,
+    updated_by_actor_id
+) VALUES (
+    'local-dsh',
+    'local-captain-delivery-fee',
+    1,
+    'delivery_fee',
+    'order',
+    'captain',
+    'basis_points',
+    0,
+    10000,
+    0,
+    NULL,
+    'YER',
+    'active',
+    'local end-to-end delivery completion proof',
+    'seed:wlt-937-local-captain-delivery-policy'
+)
+ON CONFLICT (operator_context_id, policy_id, version) DO UPDATE
+SET commission_type = EXCLUDED.commission_type,
+    source_type = EXCLUDED.source_type,
+    beneficiary_actor_type = EXCLUDED.beneficiary_actor_type,
+    calculation_type = EXCLUDED.calculation_type,
+    fixed_amount_minor_units = EXCLUDED.fixed_amount_minor_units,
+    basis_points = EXCLUDED.basis_points,
+    minimum_amount_minor_units = EXCLUDED.minimum_amount_minor_units,
+    maximum_amount_minor_units = EXCLUDED.maximum_amount_minor_units,
+    currency = EXCLUDED.currency,
+    status = EXCLUDED.status,
+    change_reason = EXCLUDED.change_reason,
+    updated_by_actor_id = EXCLUDED.updated_by_actor_id;
+
+
+-- ===========================================================================
+-- Source fixture: wlt-936_authenticated_reference_smoke.local.sql
+-- ===========================================================================
 -- Local-only governed reference projections for the authenticated WLT runtime smoke.
 -- These rows model read-only projections produced by WLT internal processes; they
 -- are not production bootstrap data and are scoped to the local operator context.
@@ -259,3 +443,5 @@ SET status = EXCLUDED.status,
     updated_at = NOW()
 WHERE wlt_wallets.status IS DISTINCT FROM EXCLUDED.status
    OR wlt_wallets.currency IS DISTINCT FROM EXCLUDED.currency;
+
+

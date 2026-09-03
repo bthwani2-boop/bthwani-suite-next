@@ -17879,3 +17879,51 @@ ALTER TABLE ONLY public.dsh_coupon_redemptions
 -- PostgreSQL database dump complete
 --
 
+-- ---------------------------------------------------------------------------
+-- Canonical Platform Reference Data: Business Domains & Policies
+-- ---------------------------------------------------------------------------
+
+INSERT INTO public.dsh_catalog_domains (id, slug, name_ar, name_en, icon, sort_order, requires_product_catalog, is_manual_request) VALUES
+  ('domain-restaurants',    'restaurants',    'مطاعم',          'Restaurants',    '🍽️', 10, TRUE,  FALSE),
+  ('domain-groceries',      'groceries',      'مقاضي',          'Groceries',      '🛒', 20, TRUE,  FALSE),
+  ('domain-sweets-juices',  'sweets_juices',  'حلا وعصائر',      'Sweets & Juices','🍰', 30, TRUE,  FALSE),
+  ('domain-pharmacy',       'pharmacy',       'صيدلية',          'Pharmacy',       '💊', 35, TRUE,  FALSE),
+  ('domain-elegance',       'elegance',       'أناقتي',         'Elegance',       '✨', 40, TRUE,  FALSE),
+  ('domain-bthwani-store',  'bthwani_store',  'بثواني ستور',     'Bthwani Store',  '📦', 50, TRUE,  FALSE),
+  ('domain-home-projects',  'home_projects',  'مشاريع منزلية',   'Home Projects',  '🏠', 60, TRUE,  FALSE),
+  ('domain-spare-parts',    'spare_parts',    'قطع غيار',        'Spare Parts',    '🔧', 70, TRUE,  FALSE),
+  ('domain-honey-dates',    'honey_dates',    'عسل وتمور',       'Honey & Dates',  '🍯', 80, TRUE,  FALSE),
+  ('domain-electronics',    'electronics',    'إلكترونيات',      'Electronics',    '📱', 90, TRUE,  FALSE),
+  ('domain-cloud-kitchens', 'cloud_kitchens', 'مطابخ سحابية',    'Cloud Kitchens', '👩‍🍳', 100, TRUE, FALSE),
+  ('domain-manual-request', 'manual_request', 'طلب يدوي',        'Manual Request', '📝', 110, FALSE, TRUE)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.dsh_catalog_platform_policies (id, policy_scope, notes)
+VALUES ('default-policy', 'default', 'Platform-wide fallback catalog policy.')
+ON CONFLICT (id) DO NOTHING;
+
+WITH verticals(business_vertical_id) AS (
+  VALUES ('default'), ('domain-restaurants'), ('domain-groceries'), ('domain-pharmacy')
+), inserted AS (
+  INSERT INTO public.dsh_readiness_checklist_templates
+    (operator_context_id, business_vertical_id, updated_by)
+  SELECT 'system-default', business_vertical_id, 'baseline:canonical'
+  FROM verticals
+  ON CONFLICT (operator_context_id, business_vertical_id) DO NOTHING
+  RETURNING id
+)
+INSERT INTO public.dsh_readiness_checklist_template_items
+  (template_id, check_type, label_ar, required, critical, evidence_required, display_order)
+SELECT template.id, item.check_type, item.label_ar, TRUE, item.critical, TRUE, item.display_order
+FROM public.dsh_readiness_checklist_templates template
+CROSS JOIN (VALUES
+  ('location_verified',      'التحقق من الموقع',             TRUE,  10),
+  ('documents_uploaded',     'رفع المستندات المطلوبة',       TRUE,  20),
+  ('product_list_submitted', 'تقديم قائمة المنتجات',         FALSE, 30),
+  ('equipment_checked',      'فحص التجهيزات',                FALSE, 40),
+  ('safety_compliant',       'الالتزام بمتطلبات السلامة',    TRUE,  50),
+  ('hygiene_compliant',      'الالتزام بمتطلبات النظافة',    TRUE,  60)
+) AS item(check_type, label_ar, critical, display_order)
+WHERE template.operator_context_id = 'system-default'
+ON CONFLICT (template_id, check_type) DO NOTHING;
+
