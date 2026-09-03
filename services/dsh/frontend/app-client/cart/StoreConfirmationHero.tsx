@@ -9,7 +9,7 @@ import {
   radius,
   spacing,
 } from "@bthwani/ui-kit";
-import type { DshFulfillmentMode } from "../../shared/cart";
+import type { DshFulfillmentMode } from "../../commerce/cart";
 import type { DshStoreDetailViewModel } from "../../shared/store";
 import { getDshDeliveryModeDefinition } from "../../shared/delivery/delivery.contract";
 
