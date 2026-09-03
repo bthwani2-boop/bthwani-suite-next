@@ -1,14 +1,13 @@
 /**
  * DSH Captain App Public API.
  *
- * This is the only supported composition boundary for app-captain. Runtime
- * shells must import through @bthwani/dsh/app-captain instead of reaching into
- * services/dsh by relative filesystem path.
+ * The runtime composes the canonical DshCaptainApplication boundary and may
+ * consume route/platform contracts. Product surfaces, gates, readiness
+ * decisions and profile providers remain internal to DSH.
  */
 
 export { DshCaptainApplication } from "./DshCaptainApplication";
 export type { DshCaptainApplicationProps } from "./DshCaptainApplication";
-export { DshCaptainSurface } from "./DshCaptainSurface";
 
 export type {
   DshCaptainRoute,
@@ -36,23 +35,8 @@ export type {
   DshCaptainRouteId,
   DshCaptainRouteRecord,
 } from "./dsh-captain.routes";
-
 export type { DshCaptainScreenRegistryItem } from "./dsh-captain.screen-registry";
 
-export { IdentitySessionGate } from "../shared/session/IdentitySessionGate";
-export { useDshMobilePushRegistration } from "../shared/notifications/use-mobile-push-registration";
-export {
-  WorkforceAccessGate,
-  WorkforceProfileProvider,
-  useWorkforceProfile,
-} from "../shared/workforce";
-export {
-  fetchOwnCaptainReadiness as fetchCaptainOperationalReadiness,
-} from "../shared/dispatch";
 export {
   clearCaptainForegroundLocationOutbox,
 } from "../shared/dispatch/dispatch-location.api";
-export type {
-  DshCaptainReadiness,
-  DshCaptainReadiness as CaptainOperationalReadiness,
-} from "../shared/dispatch";

@@ -1,12 +1,6 @@
-// Canonical application boundary
 export { DshPartnerApplication } from './DshPartnerApplication';
 export type { DshPartnerApplicationProps } from './DshPartnerApplication';
 
-// UI surface
-export { DshPartnerSurface } from './DshPartnerSurface';
-export { PartnerFieldRatingGate } from './ratings/PartnerFieldRatingGate';
-export { IdentitySessionGate } from '../shared/session/IdentitySessionGate';
-export { useDshMobilePushRegistration } from '../shared/notifications/use-mobile-push-registration';
 export { configureCatalogMobileFilePicker } from '../shared/catalog';
 export type { CatalogMobileFileKind, UploadFileSource } from '../shared/catalog';
 
@@ -27,7 +21,6 @@ export type {
   DshPartnerSupportSearchParams,
 } from './partner-navigation';
 
-// UI-only types
 export type {
   DshPartnerHubSurfaceProps,
   DshPartnerRoute,
@@ -37,7 +30,6 @@ export type {
   PartnerHubSection,
 } from './dsh-partner.types';
 
-// Binding contracts
 export type {
   DshPartnerBindingContract,
   DshPartnerBindingContracts,

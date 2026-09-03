@@ -1,11 +1,6 @@
 export { DshClientApplication } from "./DshClientApplication";
 export type { DshClientApplicationProps } from "./DshClientApplication";
-export { DshClientSurface } from "./DshClientSurface";
-export type { DshClientSurfaceProps } from "./DshClientSurface";
-export {
-  DshClientPlatformProvider,
-  useDshClientPlatform,
-} from "./client-platform-context";
+
 export type {
   DshClientPlatform,
   DshClientRemoteImageProps,
@@ -20,6 +15,3 @@ export type {
   DshClientNavigationMode,
   DshClientRoute,
 } from "./client-navigation";
-export { ClientOrderRatingGate } from "./ratings/ClientOrderRatingGate";
-export { IdentitySessionGate } from "../shared/session/IdentitySessionGate";
-export { useDshMobilePushRegistration } from "../shared/notifications/use-mobile-push-registration";
