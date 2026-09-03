@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, StateView, Surface, Text, colorRoles, radius, spacing } from "@bthwani/ui-kit";
-import type { CheckoutToOrderFlowState } from "../../shared/checkout";
+import type { CheckoutToOrderFlowState } from "../../commerce/checkout";
 
 export function CheckoutProgress({
   state,
