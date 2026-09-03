@@ -1,39 +1,75 @@
-# H Forensic Diagnosis and Causal Refoundation Synthesis
+# H Forensic Diagnosis, Catastrophe Triage and Causal Refoundation Synthesis
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: full branch census, required-truth extraction, hostile survival challenge, semantic clustering, systemic-catastrophe synthesis, container/surface diagnosis, canonical target, structural delta, Source-of-Defect/Source-of-Fix proof and causal execution-unit synthesis.
+Owner: Stage-A0 hostile full-branch census, required-truth extraction, inherited-shape-blind canonical skeleton, hostile survival challenge, structural-garbage detection, pre-root baseline-catastrophe universe synthesis, dominance ranking, structural-yield analysis, deferral falsification, Source-of-Defect/Source-of-Fix proof and Stage-B causal-root synthesis.
 
-## 1. Diagnosis starts repository-wide
+## 1. Diagnosis starts branch-wide and hostile
 
-Do not begin from reported bugs, CI failures or named files.
+Do not begin from reported bugs, CI failures, named files, first failures or convenient surfaces.
 
-Begin from exact pinned `h` and reconstruct the whole material system:
+Begin from exact pinned `h` and reconstruct the whole tracked system:
 
 ```text
 TRACKED TREE
 TOP-LEVEL SURFACES
-WORKSPACES / PACKAGES
+WORKSPACES / PACKAGES / MANIFESTS
+DEPENDENCY GRAPH / LOCKFILE OWNERSHIP
 DOMAIN / SERVICE TOPOLOGY
-FILES / SYMBOLS / PUBLIC EXPORTS
-DATABASE / SCHEMA / MIGRATION OWNERSHIP
+FILES / SYMBOLS / PUBLIC EXPORTS / ENTRYPOINTS
+IMPORT / EXPORT / REEXPORT / ALIAS GRAPH
+DATABASE / SCHEMA / MIGRATION / SEED / BACKFILL OWNERSHIP
 API / CONTRACT / GENERATED LINEAGE
-RUNTIME / CONFIG / INFRA AUTHORITIES
-FRONTEND / SCREENS / JOURNEYS
-TEST / CI / ASSURANCE AUTHORITIES
+RUNTIME / CONFIG / ENV / INFRA / REGISTRATIONS
+FRONTEND / SCREENS / JOURNEYS / STORES / NAVIGATION
+TEST / FIXTURE / MOCK / SNAPSHOT OWNERSHIP
+CI / ASSURANCE / SUPPRESSION AUTHORITIES
 TOOLS / DOCS / GOVERNANCE / AGENT AUTHORITIES
-DEPENDENCIES / LOCKFILE OWNERSHIP
+LEGACY / COMPAT / FORWARDER / BRIDGE / WRAPPER LAYERS
+ORPHAN / DEAD / STALE / UNOWNED / HIGH-FAN-IN MATERIAL
 DUPLICATE / SHADOW / PARALLEL TRUTH
-LEGACY / COMPAT / FORWARDER / BRIDGE LAYERS
-ORPHAN / DEAD / STALE / UNOWNED MATERIAL
 ```
 
 Machine census must be followed by semantic census.
 
-Stage A requires this census to be branch-wide, not restricted to the currently failing cone. Sampling, first-error inspection or root-local discovery cannot satisfy the pre-root survival challenge.
+```text
+NO_SAMPLING_CLAIM_CAN_SATISFY_BRANCH_WIDE_COVERAGE
+FIRST_ERROR_DISCOVERY != CENSUS
+FIRST_CATASTROPHE_DISCOVERY != CANDIDATE_UNIVERSE_COMPLETE
+```
 
-## 2. Required-truth extraction
+Use maximum-safe parallel read-only discovery where independent scans can reduce latency without creating mutation authority.
 
-For every material capability/concern, identify only truth that must survive:
+## 2. Stage A0 — Hostile Branch-Wide Catastrophe Triage
+
+Stage A0 is read-only except for certain-dead garbage covered by `03` immediate-deletion law.
+
+No normal Stage-A1 refoundation mutation may begin until the initial candidate universe is sufficiently complete to compare the serious high-level alternatives.
+
+Mandatory Stage-A0 conceptual outputs:
+
+```text
+MACHINE_COVERAGE_VIEW
+TRACKED_ARTIFACT_ACCOUNTING_VIEW
+REQUIRED_TRUTH_VIEW
+INHERITED_SHAPE_BLIND_CANONICAL_SKELETON
+CURRENT_MODEL
+STRUCTURAL_DELTA_VIEW
+CONTAINER_SURVIVAL_VIEW
+PARALLEL_TRUTH_VIEW
+PRE_ROOT_BASELINE_CATASTROPHE_VIEW
+CATASTROPHE_DEPENDENCY_GRAPH
+TOP_CANDIDATE_SET
+RANKING_RELEVANT_UNKNOWNS
+STAGE_B_DEFERRAL_CANDIDATES
+```
+
+These are ephemeral evidence views, not durable campaign ledgers.
+
+Stage-A0 admission is not satisfied until `04` proves the dedicated gate.
+
+## 3. Required-truth extraction before structural loyalty
+
+For every capability/concern identify only truth that must survive:
 
 ```text
 PRODUCT INTENT
@@ -45,96 +81,75 @@ EXTERNAL CONTRACTS
 USER JOURNEYS
 REQUIRED INTEGRATIONS
 OBSERVABLE RUNTIME BEHAVIOR
-REQUIRED OPERATIONAL/ASSURANCE CLAIMS
+REQUIRED OPERATIONAL / ASSURANCE CLAIMS
 ```
 
-Do not preserve a container merely because required truth currently lives inside it.
-
-## 3. Semantic responsibility outranks names and paths
+Do not preserve a container because required truth currently lives inside it.
 
 ```text
-SEMANTIC_RESPONSIBILITY > FILE_NAME
-SEMANTIC_RESPONSIBILITY > CURRENT_PATH
-SEMANTIC_RESPONSIBILITY > CURRENT_PACKAGE
+SALVAGE_TRUTH != SALVAGE_CONTAINER
 ```
 
-Cluster by actual behavior:
+## 4. Inherited-shape-blind canonical skeleton
+
+Before allowing current repository topology to anchor the target, derive the high-level canonical skeleton from required truth without assuming inherited service/package/directory names deserve survival.
+
+Derive as applicable:
 
 ```text
-WHAT DECISION IS MADE?
-WHAT DATA IS READ/WRITTEN?
-WHAT STATE IS INTERPRETED OR TRANSITIONED?
-WHAT BUSINESS RULE/POLICY IS APPLIED?
-WHAT CONTRACT/ERROR SEMANTICS ARE OWNED?
-WHO CALLS IT?
-WHO CONSUMES THE RESULT?
-WHAT JOURNEY/SCREEN OUTCOME DEPENDS ON IT?
+REQUIRED DOMAINS
+REQUIRED SEMANTIC OWNERS
+REQUIRED MUTABLE WRITERS
+REQUIRED STORAGE AUTHORITIES
+REQUIRED CONTRACT SOURCES
+REQUIRED GENERATION LINEAGES
+REQUIRED RUNTIME AUTHORITIES
+REQUIRED PRODUCT SURFACES
+REQUIRED ASSURANCE ROLES
+REQUIRED MINIMUM CONTAINER BOUNDARIES
 ```
 
-Different names, paths, languages or surfaces do not prove different responsibilities.
+Then compare CURRENT against that skeleton.
 
-## 4. Build CURRENT without normalizing contradictions
+```text
+CURRENT_TOPOLOGY = EVIDENCE
+CURRENT_TOPOLOGY != TARGET_TEMPLATE
+```
 
-For every material semantic cluster record conceptually:
+## 5. Build CURRENT without normalizing contradictions
+
+For every semantic cluster derive:
 
 ```text
 SEMANTIC_ID
 CURRENT_OWNERS
 CURRENT_WRITERS
-CURRENT_READERS/CONSUMERS
+CURRENT_READERS / CONSUMERS
 CURRENT_STORAGE
 CURRENT_CONTRACTS
 CURRENT_GENERATED_LINEAGE
-CURRENT_RUNTIME/CONFIG_AUTHORITY
+CURRENT_RUNTIME / CONFIG AUTHORITY
 CURRENT_CONTAINERS
-CURRENT_SCREENS/JOURNEYS
-CURRENT_TEST/CI/TOOL/GOVERNANCE_AUTHORITIES
-CURRENT_COMPAT/BRIDGE/FORWARDER_LAYERS
-CURRENT_DEAD/SHADOW_PATHS
-HISTORICAL_DEFECT/ADMISSION_SIGNALS
+CURRENT_SCREENS / JOURNEYS
+CURRENT_TEST / CI / TOOL / GOVERNANCE AUTHORITIES
+CURRENT_COMPAT / BRIDGE / WRAPPER / FORWARDER LAYERS
+CURRENT_DEAD / SHADOW PATHS
+HISTORICAL_DEFECT / ADMISSION SIGNALS
 ```
 
 Contradictions are findings, not something to average away.
 
-## 5. Mandatory conceptual closure views
+## 6. Every tracked artifact is accounted
 
-The following views must be derivable from live evidence whenever material, but MUST NOT become mandatory durable repository ledgers or a second execution authority:
-
-```text
-ARTIFACT_DISPOSITION_VIEW
-FILE_VERDICT_VIEW
-CONTAINER_VERDICT_VIEW
-SEMANTIC_AUTHORITY_VIEW
-WINNER_LOSER_VIEW
-CANONICAL_CONTAINER_VIEW
-END_TO_END_CAPABILITY_VIEW
-STRUCTURAL_DELTA_VIEW
-BRANCH_SURVIVAL_VIEW
-SYSTEMIC_CATASTROPHE_VIEW
-CATASTROPHE_TO_DESCENDANT_ROOT_VIEW
-```
-
-They may exist in memory, generated output or temporary evidence. Their purpose is total accounting, not bureaucracy.
-
-Closure requires, evidence-bounded:
+Per `01`:
 
 ```text
-UNREVIEWED_TRACKED_ARTIFACTS=0
-UNDISPOSITIONED_MATERIAL_ARTIFACTS=0
-UNRESOLVED_FILE_VERDICTS=0
-UNRESOLVED_CONTAINER_VERDICTS=0
-UNRESOLVED_SEMANTIC_AUTHORITIES=0
-UNRESOLVED_WINNER_LOSER_GROUPS=0
-UNRESOLVED_CANONICAL_CONTAINER_ASSIGNMENTS=0
-UNMAPPED_MATERIAL_CAPABILITIES=0
-UNRESOLVED_STRUCTURAL_DELTA_ITEMS=0
+TRACKED_ARTIFACT_DEFAULT=ACCOUNT_REQUIRED
 ```
 
-Before Stage B specifically, every material artifact/container must either have a proven current disposition or be mapped to an explicit Stage-B causal obligation; silent unreviewed structure is forbidden.
+Every tracked artifact/container receives a verdict or a positively proven nonmaterial classification.
 
-## 6. Artifact/container/surface disposition
-
-Every material inherited artifact receives exactly one high-level disposition:
+High-level artifact dispositions:
 
 ```text
 KEEP_PROVEN
@@ -145,49 +160,90 @@ DELETE
 BLOCKED_UNKNOWN
 ```
 
-Every material container from file upward receives a structural verdict:
+Container verdicts:
 
 ```text
 CANONICAL_COHESIVE_CONTAINER
 MIXED_RESPONSIBILITY
 DUPLICATE_RESPONSIBILITY
 WRONG_OWNER
-WRONG_PATH/BOUNDARY
+WRONG_PATH_OR_BOUNDARY
 PASS_THROUGH_ONLY
 COMPATIBILITY_ONLY
 HISTORICAL_COMPENSATION
-DEAD/ORPHANED
-WHOLE_SUBTREE_REFOUND_CANDIDATE
+DEAD_OR_ORPHANED
+STRUCTURALLY_INVALID_REFOUND_REQUIRED
 UNCLASSIFIED
 ```
 
-`UNCLASSIFIED` and `BLOCKED_UNKNOWN` block closure; they do not create preservation rights.
+`UNCLASSIFIED` and `BLOCKED_UNKNOWN` are not preservation rights.
 
-The survival burden is hostile:
+## 7. Finding lifecycle: mapping is never treatment
 
-```text
-WHY_DOES_THIS_DESERVE_TO_SURVIVE?
-```
+Raw findings from code/runtime/tests/CI/scanners/reviews are evidence nodes.
 
-is mandatory for material inherited structure. Current use, successful build, caller count or historical acceptance is not positive survival proof.
-
-## 7. File and parent death test
-
-For every materially suspect file ask:
+Transitional states only:
 
 ```text
-DOES IT OWN A UNIQUE CANONICAL RESPONSIBILITY?
-IS IT A JUSTIFIED MEMBER OF THE MINIMUM NECESSARY CANONICAL FILE SET?
-CAN REQUIRED VALUE BE ABSORBED INTO A BETTER CANONICAL CONTAINER?
-IS IT REEXPORT/PASS-THROUGH/FORWARDER/SHIM/ALIAS ONLY?
-IS IT ONLY A HISTORICAL COMPENSATION?
+FOUND
+CLASSIFIED
+MAPPED_TO_PRE_ROOT_CATASTROPHE
+MAPPED_TO_STAGE_B_ROOT
+DUPLICATE_OF
+CLUSTERED
+ASSIGNED
 ```
 
-Then repeat upward for directory → package → service/boundary → surface.
+Terminal states only:
 
-A used loser is still a loser: migrate callers then delete it.
+```text
+TREATED_AND_VERIFIED
+FALSE_POSITIVE_PROVEN
+AUTHORIZED_INTENTIONAL_CONDITION
+TOOL_LIMITATION_PROVEN
+STALE_OR_SUPERSEDED_WITH_PROOF
+N/A_PROVEN
+LEGITIMATE_BLOCKER
+```
 
-## 8. Parallel/shadow truth census
+```text
+MAPPED != TREATED
+DISAPPEARED_FROM_LATER_RUN != TREATED
+GREEN_TOOL != FINDING_CLOSED
+```
+
+A structural finding mapped to Stage B still requires the isolation proof in §15; otherwise it remains a pre-root obligation.
+
+## 8. File and ancestor death analysis
+
+For every suspect artifact ask:
+
+```text
+DOES IT OWN UNIQUE REQUIRED CANONICAL RESPONSIBILITY?
+IS IT A REQUIRED MEMBER OF THE MINIMUM NECESSARY CANONICAL SET?
+CAN REQUIRED VALUE BE ABSORBED INTO A STRONGER OWNER?
+IS IT REEXPORT / PASS-THROUGH / FORWARDER / SHIM / ALIAS ONLY?
+IS IT HISTORICAL COMPENSATION?
+IS ITS PARENT CONTAINER ITSELF INVALID?
+```
+
+Then escalate upward:
+
+```text
+LINE
+→ SYMBOL
+→ FILE
+→ DIRECTORY
+→ PACKAGE / WORKSPACE
+→ SERVICE / BOUNDARY
+→ DOMAIN
+→ TOP-LEVEL SURFACE
+→ REPOSITORY TOPOLOGY
+```
+
+A child-level diagnosis is incomplete until materially plausible ancestors are either promoted or positively exonerated.
+
+## 9. Parallel/shadow truth census
 
 Search explicitly across:
 
@@ -207,133 +263,71 @@ CI / VERIFICATION
 DOCS / GOVERNANCE / AGENT INSTRUCTIONS THAT OPERATE AS AUTHORITY
 ```
 
-For every material competing group determine:
+For every competing group determine:
 
 ```text
 WINNING_CANONICAL_AUTHORITY
 LOSING_AUTHORITIES
 LOSING_CONTAINERS
 LOSING_WRITERS
-LOSING_READERS/CONSUMERS
+LOSING_READERS / CONSUMERS
 VALUE_TO_SALVAGE
-MIGRATION/CUTOVER
-DELETE_TARGETS
-OLD_PATH/ALIAS/ROUTE_CLEANUP
+MIGRATION / CUTOVER
+DEMOLITION_TARGETS
 NEGATIVE_SPACE_PROOF
 ```
 
-```text
-DISCOVERED_PARALLEL_TRUTH => MANDATORY_STRUCTURAL_DISPOSITION
-LOSING_AUTHORITY_OR_CONTAINER_SURVIVES_AFTER_CUTOVER => OPEN
-```
+Creating a third wrapper or consolidated garbage authority is forbidden.
 
-Creating a third wrapper is forbidden.
+## 10. End-to-end parity census
 
-## 9. End-to-end parity census
-
-For each required product capability trace as applicable:
+For every required product capability trace as applicable:
 
 ```text
 PRODUCT_MEANING
 → ACTOR / JOURNEY / STATE
-→ DATA/STORAGE_OWNER
-→ DOMAIN/BACKEND_OWNER
-→ API/EVENT
+→ DATA / STORAGE_OWNER
+→ DOMAIN / BACKEND_OWNER
+→ API / EVENT
 → CANONICAL_CONTRACT
 → GENERATED_BINDING
 → FRONTEND_DATA_CONSUMER
-→ COMPONENT/SCREEN
-→ USER_ACTION/MUTATION
+→ COMPONENT / SCREEN
+→ USER_ACTION / MUTATION
 → PERSISTED_READBACK
 → VISIBLE_FINAL_STATE
 ```
 
-Any unjustified break, local manual business mirror or orphan required layer is a structural delta item.
+Breaks are delta nodes. Do not create frontend/backend compensation for a higher structural cause.
 
-## 10. Top-level confusion surfaces
+## 11. Top-level and control-surface challenge
 
-Explicitly audit:
+Explicitly challenge `.agents/**`, `.github/**`, `.opencodereview/**`, `docs/**`, `tools/**`, `governance/**` and every other high-level surface under the same law.
+
+Ask:
 
 ```text
-.agents/**
-.github/**
-.opencodereview/**
-docs/**
-tools/**
-governance/**
+UNIQUE_REQUIRED_VALUE?
+CANONICAL_BOUNDARY?
+DUPLICATE_AUTHORITY?
+STALE_OR_CONFLICTING_INSTRUCTIONS?
+OBSOLETE_BRANCH / PR ASSUMPTIONS?
+HISTORICAL_COMPENSATION?
+DELETE_WHOLE_SURFACE_OR_SUBTREE_CANDIDATE?
 ```
 
-For each, determine whether the current subtree:
+## 12. Complete CURRENT → CANONICAL delta
+
+Compute across at least:
 
 ```text
-OWNS_UNIQUE_REQUIRED_VALUE
-DUPLICATES_ANOTHER_AUTHORITY
-CONTAINS_STALE/CONFLICTING_INSTRUCTIONS
-EMBEDS_OBSOLETE_CI/PR/BRANCH_ASSUMPTIONS
-EXISTS_TO_COMPENSATE_FOR_OLD_DEFECTS
-CAN_BE_SIMPLER_AS_EXTRACT→DELETE→MINIMAL_RECREATE
-```
-
-Do not repair dozens of historical files when one surface refoundation removes the causal confusion.
-
-## 11. Historical defects and raw findings are clustering evidence
-
-Failures, regressions, TODO/FIXME/HACK, brittle migrations, generated drift, repeated type/test failures, suppressions, scanner findings and old branch differences are evidence only.
-
-Every material raw finding from code/runtime/tests/CI/Sonar/CodeQL/Semgrep/OpenCodeReview/reviews/scanners receives one traceable disposition:
-
-```text
-MAPPED_TO_ROOT_OR_FINDING
-DUPLICATE_OF
-FALSE_POSITIVE_PROVEN
-AUTHORIZED_INTENTIONAL_CONDITION
-TOOL_LIMITATION_PROVEN
-STALE_OR_SUPERSEDED_WITH_PROOF
-N/A_PROVEN
-```
-
-```text
-UNMAPPED != RESOLVED
-DISAPPEARED_FROM_LATER_RUN != RESOLVED
-GREEN_TOOL != ALL_FINDINGS_DISPOSITIONED
-```
-
-Cluster by causal mechanism, never one objective per symptom.
-
-## 12. Design CANONICAL from first principles
-
-Canonical modeling must answer:
-
-```text
-WHAT_REQUIRED_TRUTH_SURVIVES?
-WHO_OWNS/WRITES_IT?
-WHERE_IS_IT_STORED?
-WHAT_IS_GENERATED_VS_HAND_WRITTEN?
-WHAT_DOMAIN/SERVICE/PACKAGE/DIRECTORY/FILE_SET_SHOULD_EXIST?
-WHAT_SCREENS/JOURNEYS_SHOULD_EXIST?
-WHAT_TOOLS/WORKFLOWS/GOVERNANCE_SHOULD_EXIST?
-WHAT_SHOULD_NOT_EXIST_AT_ALL?
-WHAT_MUST_BE_MIGRATED?
-WHAT_MUST_BE_DELETED?
-WHAT_MUST_PREVENT_REGRESSION?
-```
-
-Current topology is evidence, never a design constraint.
-
-During Stage A it is sufficient to design the canonical foundation and enough descendant shape to execute systemic cutovers safely; do not invent unnecessary local Stage-B implementation detail before shared foundations settle.
-
-## 13. Complete delta
-
-Compute CURRENT → CANONICAL across at least:
-
-```text
-PRODUCT/JOURNEY_PARITY
-OWNERSHIP / WRITER_AUTHORITY
-PERSISTENCE / MIGRATION_EPOCH
-CONTRACTS / GENERATED_LINEAGE
-DOMAIN / SERVICE_BOUNDARIES
-PACKAGE / DIRECTORY / FILE / SYMBOL_RESPONSIBILITY
-SCREENS / FRONTEND_BUSINESS_TRUTH
+PRODUCT / JOURNEY PARITY
+OWNERSHIP / WRITER AUTHORITY
+PERSISTENCE / MIGRATION EPOCH
+CONTRACTS / GENERATED LINEAGE
+DOMAIN / SERVICE BOUNDARIES
+PACKAGE / DIRECTORY / FILE / SYMBOL RESPONSIBILITY
+SCREENS / FRONTEND BUSINESS TRUTH
 RUNTIME / CONFIG / INFRA
 TOOLS / DOCS / GOVERNANCE / AGENTS
 TEST / CI / ASSURANCE
@@ -342,169 +336,188 @@ MIGRATION / CUTOVER
 ADMISSION / PREVENTION
 ```
 
-Delta items are causal evidence nodes, not a todo queue.
+Delta nodes are evidence, not a cleanup backlog.
 
-Every material delta node must be classified into one of:
+## 13. Pre-root baseline catastrophe definition
 
-```text
-PRE_ROOT_SYSTEMIC_CATASTROPHE
-STAGE_B_CAUSAL_ROOT_OR_DESCENDANT
-LOCAL_FINDING_MAPPED_TO_A_CAUSAL_UNIT
-BLOCKED_UNKNOWN
-```
-
-The classification is causal. Warning count or file count alone cannot promote a finding to systemic status.
-
-## 14. Mandatory systemic-catastrophe synthesis
-
-Before normal Root Graph selection, synthesize a separate pre-root graph for conditions that poison the shared baseline.
+Stage A is not limited to defects that cross many roots.
 
 ```text
-SYSTEMIC_CATASTROPHE =
-A PROVEN NONCANONICAL CONDITION THAT
-CROSSES OR CONTAMINATES MULTIPLE FUTURE ROOTS
-OR CORRUPTS A SHARED EXECUTION/OWNERSHIP/DATA/CONTRACT/RUNTIME/VERIFICATION SUBSTRATE,
-AND WHOSE EARLY REFOUNDATION MATERIALLY REDUCES
-THE COST, DISTORTION OR COMPLEXITY OF MULTIPLE LATER CLOSURES.
+PRE_ROOT_BASELINE_CATASTROPHE =
+A PROVEN STRUCTURAL CONDITION THAT MUST BE ELIMINATED BEFORE NORMAL ROOT CLOSURE BECAUSE IT IS ONE OR MORE OF:
+
+CROSS_ROOT_SYSTEMIC_CATASTROPHE
+FOUNDATIONAL_TOPOLOGY_CATASTROPHE
+SHARED_AUTHORITY_CATASTROPHE
+DATABASE_OWNERSHIP_OR_MIGRATION_EPOCH_CATASTROPHE
+CONTRACT_OR_GENERATED_LINEAGE_CATASTROPHE
+RUNTIME_CONFIG_INFRA_AUTHORITY_CATASTROPHE
+ASSURANCE_CONTROL_PLANE_CATASTROPHE
+GOVERNANCE_AGENT_TOOL_AUTHORITY_CATASTROPHE
+MASSIVELY_INVALID_DOMAIN_OR_SERVICE
+MASSIVELY_INVALID_PACKAGE_OR_WORKSPACE_FAMILY
+MASSIVELY_INVALID_DIRECTORY_OR_TOP_LEVEL_SURFACE
+LARGE_OBSOLETE_OR_COMPENSATORY_SUBTREE
+PARALLEL_OR_SHADOW_TRUTH_ARCHITECTURE
+LEGACY_COMPATIBILITY_BRIDGE_ARCHITECTURE
+OTHER_HIGH_STRUCTURAL_YIELD_REFOUNDATION
 ```
 
-Strong systemic signals include:
+A catastrophe need not span many domains. A single large invalid service/package/subtree can be pre-root when leaving it alive would make the baseline structurally unworthy.
+
+A local semantic/behavioral defect inside a proven canonical container is not automatically pre-root.
+
+## 14. ROOT_TAX and STRUCTURAL_YIELD
 
 ```text
-CROSS_ROOT_BLAST_RADIUS
-SHARED_AUTHORITY_CORRUPTION
-DUPLICATE_MUTABLE_AUTHORITY_ACROSS_SURFACES
-ROOT_CLOSURE_BLOCKING_POWER
-DIAGNOSIS_CONTAMINATION
-VERIFICATION_CONTAMINATION
-PARALLEL_TRUTH_MULTIPLIER
-COMPENSATION_LAYER_MULTIPLIER
-BAD_REPOSITORY/WORKSPACE/PACKAGE_TOPOLOGY
-BAD_DATABASE_OWNERSHIP_OR_MIGRATION_EPOCH
-DUPLICATE_CONTRACT_OR_GENERATED_LINEAGE
-REACHABLE_SUPERSEDED_RUNTIME/CONFIG
-CONFLICTING_GOVERNANCE/AGENT/TOOL_AUTHORITY
-HIGH_LEVERAGE_OBSOLETE_SUBTREE
-SHARED_CORE_COMMON_OWNERSHIP_REFUGE
+ROOT_TAX =
+EXTRA MIGRATION + COMPATIBILITY + DIAGNOSIS + VERIFICATION + PARALLEL_AUTHORITY + CLEANUP WORK
+FORCED INTO FUTURE ROOTS IF THE DEFECT SURVIVES.
 ```
-
-A local bug, duplicate helper or isolated warning is not systemic merely because it is ugly.
-
-For every systemic candidate derive conceptually:
 
 ```text
-CATASTROPHE_ID
-ACTUAL_SHARED_CAUSE
-AFFECTED_ROOT_FAMILIES / CAPABILITIES
-SHARED_SUBSTRATE
-WINNING_CANONICAL_FOUNDATION
-LOSING_AUTHORITIES/CONTAINERS
-REQUIRED_TRUTH_TO_SALVAGE
-COMPLETE_AFFECTED_CONE
-MIGRATION/CUTOVER
-DELETION/PRUNING
-ADMISSION/PREVENTION
-FALSIFICATION
-VALID_BLOCKERS
+STRUCTURAL_YIELD =
+HOW MUCH PROVEN WRONG REPOSITORY SHAPE DISAPPEARS WHEN THE UNIT CLOSES CORRECTLY.
 ```
 
-## 15. Systemic Catastrophe Graph, ROOT_TAX and ranking signals
+Structural-yield evidence includes as applicable:
+
+```text
+LOSING_AUTHORITIES_COLLAPSED
+LOSING_WRITERS_REMOVED
+FILES_DELETED_OR_ABSORBED
+DIRECTORIES_DELETED_OR_COLLAPSED
+PACKAGES_OR_WORKSPACES_DELETED
+SERVICES_OR_BOUNDARIES_REMOVED_OR_REFOUNDED
+WRAPPERS / ALIASES / REEXPORTS REMOVED
+COMPATIBILITY / LEGACY / COMPENSATION REMOVED
+DUPLICATE CONTRACT / GENERATED LINEAGE REMOVED
+SHADOW RUNTIME / CONFIG REMOVED
+FUTURE ROOTS COLLAPSED OR SIMPLIFIED
+```
+
+Raw deletion count is not the goal; elimination of wrong responsibility and wrong authority is.
+
+## 15. Stage-B deferral falsification
+
+Before classifying a known defect as Stage-B-only, actively try to prove that it is structural garbage or descendant of a pre-root catastrophe.
+
+Stage-B deferral is valid only when the full isolation law in `01` passes.
+
+Conceptually record:
+
+```text
+DEFERRAL_CANDIDATE
+CANONICAL_CONTAINER_PROOF
+ANCESTOR_EXONERATION
+NO_SHARED_AUTHORITY_PROOF
+NO_ROOT_TAX_PROOF
+NO_STRUCTURAL_DEMOLITION_TARGET_PROOF
+STAGE_B_ROOT_OWNER
+```
+
+```text
+FAILED_OR_UNKNOWN_ISOLATION_PROOF => PRE_ROOT_OBLIGATION
+```
+
+## 16. Candidate-universe completeness gate
+
+Before selecting the first normal Stage-A1 catastrophe, establish that all major high-level substrate families have been scanned and serious candidates compared.
+
+Required high-level families:
+
+```text
+REPOSITORY_TOPOLOGY
+WORKSPACES_PACKAGES_DEPENDENCIES
+DOMAINS_SERVICES_SHARED_CORE
+DATABASE_MIGRATIONS
+CONTRACTS_GENERATED
+RUNTIME_CONFIG_INFRA
+IDENTITY_AUTHORIZATION_WHEN_FOUNDATIONAL
+FRONTEND_SHARED_STATE_OR_CROSS_SURFACE_AUTHORITY
+CI_ASSURANCE
+TOOLS_GOVERNANCE_AGENTS_DOCS
+LEGACY_COMPATIBILITY_BRIDGES
+LARGE_HIGH_FAN_IN_OR_OBSOLETE_SUBTREES
+```
+
+```text
+FIRST_PROVEN_CATASTROPHE != FIRST_EXECUTED_CATASTROPHE
+```
+
+Exception: certain-dead garbage may be deleted immediately under `03` because it cannot affect ranking except by disappearing.
+
+## 17. Catastrophe dependency graph and dominance ranking
 
 Build:
 
 ```text
-SYSTEMIC_CATASTROPHE_GRAPH
+PRE_ROOT_BASELINE_CATASTROPHE_GRAPH
 ```
 
-before normal root traversal. Parent systemic causes must absorb descendant catastrophe symptoms where causally correct.
+Collapse symptom catastrophes into higher shared parents where causally supported.
 
-Use `ROOT_TAX` as a qualitative diagnosis concept:
-
-```text
-ROOT_TAX =
-THE EXTRA MIGRATION, COMPATIBILITY, DIAGNOSIS, VERIFICATION,
-PARALLEL-AUTHORITY AND CLEANUP WORK THAT A SURVIVING SHARED DEFECT
-WOULD FORCE INTO FUTURE ROOTS.
-```
-
-Rank systemic candidates by demonstrated leverage, not by ease or raw count:
+Rank serious executable candidates primarily by:
 
 ```text
-TRUTH / DATA / SECURITY RISK
+TRUTH / DATA / SECURITY / FINANCIAL RISK
+FOUNDATIONAL_BLOCKING_POWER
 CROSS_ROOT_BLOCKING_POWER
-SHARED_AUTHORITY_COLLAPSE
-NUMBER_AND_MATERIALITY_OF_ROOT_FAMILIES_AFFECTED
-DIAGNOSIS / VERIFICATION CONTAMINATION REMOVAL
-LOSING_STRUCTURE_DELETABLE
-COMPENSATION_LAYER_REMOVAL
+CANONICAL_OWNERSHIP_CORRECTION
+PARALLEL_TRUTH_COLLAPSE
+STRUCTURAL_YIELD
 ROOT_TAX_REMOVAL
+DIAGNOSIS / VERIFICATION CONTAMINATION REMOVAL
+COMPENSATION / COMPATIBILITY REMOVAL
 FUTURE_COMPLEXITY_REDUCTION
-SAFE_COMPLETE_CUTOVER_FEASIBILITY
 ```
 
-The governing question is:
+Safety is an executability gate, not a preference for smaller work.
+
+Before mutation derive an ephemeral dominance proof:
 
 ```text
-WHICH PROVEN REFOUNDATION, IF DONE NOW,
-MAKES THE LARGEST SET OF FUTURE ROOTS
-SMALLER, CLEANER, MORE INDEPENDENT AND EASIER TO CLOSE
-WITHOUT SACRIFICING REQUIRED TRUTH?
+TOP_CANDIDATE_SET
+SELECTED_DOMINANT_CANDIDATE
+SERIOUS_ALTERNATIVES
+WHY_SELECTED_OUTRANKS_EACH_SERIOUS_ALTERNATIVE
+RANKING_RELEVANT_UNKNOWNS=0
 ```
 
-`02` synthesizes and ranks evidence. Campaign traversal and stage admission are owned by `05` and `04` respectively.
+If another candidate clearly dominates and is safely executable, selecting the smaller/easier one is forbidden.
 
-## 16. Normal Dynamic Root Graph and execution units
+## 18. Source-of-Defect / Source-of-Fix / demolition execution gate
 
-The normal Root Graph is the Stage-B causal graph after Stage-A systemic decontamination has passed its exit gate.
-
-```text
-ROOT = HIGHEST_PROVEN_CAUSE_WHOSE_ELIMINATION_COLLAPSES_MATERIAL_DEFECT_CLUSTERS
-EXECUTION_UNIT = HIGHEST_CAUSALLY_COMPLETE_SAFE_CUTOVER_THAT_REMOVES_THE_MOST_PROVEN_NONCANONICAL_STRUCTURE
-```
-
-Candidate units may be a whole top-level surface, domain, service, package family, subtree, capability/journey, migration epoch, contract lineage, CI control plane or narrower root.
-
-Rank by structural leverage, canonical correctness, deletable losing structure and complete cutover—not ease.
-
-```text
-NORMAL_ROOT_SELECTION_BEFORE_STAGE_A_EXIT_PASS = FORBIDDEN
-```
-
-A Stage-B graph may be prepared conceptually during Stage A for dependency analysis, but it cannot control mutation order while an executable systemic catastrophe survives.
-
-## 17. Source-of-Defect / Source-of-Fix execution gate
-
-Before material mutation establish compactly:
+Before mutation establish compactly:
 
 ```text
 UNIT_ID
 UNIT_STAGE
-ROOT_CAUSE_ID_OR_CATASTROPHE_ID
+CATASTROPHE_ID_OR_ROOT_ID
 CAUSAL_PROOF
 ACTUAL_SOURCE_OF_DEFECT
 REQUIRED_SOURCE_OF_FIX
 CANONICAL_TARGET
-CANONICAL_OWNER/WRITER/BOUNDARY
+CANONICAL_OWNER / WRITER / BOUNDARY
 VALUE_TO_PRESERVE
-LOSING_AUTHORITIES/CONTAINERS
+LOSING_AUTHORITIES / CONTAINERS
 COMPLETE_AFFECTED_CONE
-WRITERS/READERS/CONSUMERS
-DATA/CONTRACT/RUNTIME_IMPACT
-MIGRATION/BACKFILL/RECONCILIATION
+WRITERS / READERS / CONSUMERS
+DATA / CONTRACT / RUNTIME IMPACT
+MIGRATION / BACKFILL / RECONCILIATION
 CUTOVER
-DELETION/PRUNING
-ADMISSION/PREVENTION
-VERIFICATION/FALSIFICATION
+EXPECTED_DEMOLITION_TARGETS
+EXPECTED_PARENT_PRUNING
+ADMISSION / PREVENTION
+VERIFICATION / FALSIFICATION
 VALID_BLOCKERS
 ```
 
-This is an internal correctness gate, not a human approval gate and not a reason to shrink the unit.
+For a structural catastrophe, `EXPECTED_DEMOLITION_TARGETS=NONE` is suspicious and requires explicit proof that no losing structure exists.
 
-If `ACTUAL_SOURCE_OF_DEFECT` is unknown, destructive mutation is not root-correct unless the mutation is a bounded diagnostic probe. If a higher Source-of-Fix is proven, fixing only a descendant representation is forbidden.
+Generated output is not the default Source-of-Fix: repair source/generator lineage, regenerate, migrate consumers and remove stale mirrors.
 
-Generated output is not the default Source-of-Fix: fix source/schema/template/generator, regenerate, migrate consumers, then delete stale output/mirrors.
-
-Forbidden shrinkage reasons:
+Forbidden shrink reasons:
 
 ```text
 TOO_MANY_FILES
@@ -515,99 +528,64 @@ WOULD_REQUIRE_MIGRATION
 TOO_LARGE_FOR_ONE_SESSION
 ```
 
-## 18. Patch-loop breaker and treatment adequacy
+## 19. Patch-loop and aggregation breaker
 
 If work degenerates into:
 
 ```text
-LOCAL_ERROR → LOCAL_FIX → RELATED_ERROR → FALLBACK/WRAPPER → ANOTHER_SYMPTOM
+LOCAL_ERROR → LOCAL_FIX → RELATED_ERROR → WRAPPER/FALLBACK → ANOTHER_SYMPTOM
 ```
 
-stop descendant patching, cluster symptoms and ask first whether the shared parent is a Stage-A systemic catastrophe. If yes, promote it into the Systemic Catastrophe Graph. Otherwise promote the correct Stage-B causal parent and re-rank.
-
-Before accepting a write, be able to answer:
+or:
 
 ```text
-WHAT_SYSTEMIC_CATASTROPHE_OR_ROOT_DOES_THIS_WRITE_REMOVE?
-WHAT_SOURCE_OF_DEFECT_DOES_IT_CHANGE?
-WHY_IS_THIS_THE_CANONICAL_SOURCE_OF_FIX?
-WHICH_DESCENDANT_FINDINGS_OR_ROOT_TAX_SHOULD_COLLAPSE?
-WHAT_OLD_STRUCTURE_BECOMES_DELETE_REQUIRED?
+MULTIPLE_BAD_FILES → NEW_SHARED_CONTAINER → OLD_BAD_RESPONSIBILITY_SURVIVES
 ```
 
-If the cause survives without the write, the write is not sufficient treatment except as a bounded migration/cutover step.
+stop immediately and re-evaluate the parent container/catastrophe graph.
 
-## 19. Independent challenger pass
-
-Before committing a high-impact canonical target or irreversible treatment, run a logically independent falsification pass. This is not an approval workflow and must not delay a proven executable unit unnecessarily.
-
-Challenge at least:
+Before accepting a proposed write ask:
 
 ```text
-IS_THE_FAVORED_CAUSE_ACTUALLY_A_SYMPTOM?
-WHAT_HIGHER_CAUSAL_PARENT_ALSO_FITS?
-IS_THIS_REALLY_SYSTEMIC_OR_MERELY_LOCAL?
-WHAT_SHARED_SUBSTRATE_OR_DESCENDANT_ROOT_FAMILY_IS_MISSING?
-WHAT_EVIDENCE_WOULD_DISPROVE_THE_TARGET?
-WHAT_WRITER/READER/CONSUMER/HANDOFF_MAY_BE_MISSING?
-WHAT_OLD_AUTHORITY_COULD_STILL_BE_REACHABLE?
-WHAT_DATA/RUNTIME_READBACK_WOULD_CONTRADICT_CUTOVER?
-WHAT_RACE/RETRY/RESTART/LOST_RESPONSE_CASE_BREAKS_THE_MODEL?
-WHAT_EXTERNAL_OR_SECURITY_TRUST_ASSUMPTION_IS_UNPROVEN?
+DOES_THIS_WRITE_REMOVE_THE_SOURCE_OF_DEFECT?
+DOES_IT_PRESERVE_A_CONTAINER_ALREADY_PROVEN_INVALID?
+DOES_IT_MOVE_GARBAGE_WITHOUT_ELIMINATING_RESPONSIBILITY?
+DOES_IT_CREATE_A_NEW_AGGREGATION_OF_LOSING_CODE?
+WHAT_LOSING_STRUCTURE_BECOMES_DELETE_REQUIRED?
+WHY_IS_A_HIGHER_DEMOLITION_NOT_CORRECT?
 ```
 
-A proven higher cause immediately reopens ranking. Challenger output is evidence, never a second authority.
+If the write mainly beautifies/repackages a losing container, it is forbidden.
 
-## 20. Stateful and trust-boundary modeling
+## 20. Independent challenger pass
 
-For materially stateful units model enough of:
+Before committing a high-impact target or irreversible treatment, independently challenge:
 
 ```text
-STATE
-EVENT/COMMAND
-ACTOR
-GUARD/PRECONDITION
-CANONICAL_DECISION_OWNER
-EXPECTED_NEXT_STATE
-FORBIDDEN_TRANSITIONS
-TERMINALITY
-RETRY/DUPLICATE/REPLAY
-CONCURRENCY/ORDERING
-FAILURE/RECOVERY
-IDEMPOTENCY
+IS_SELECTED_CATASTROPHE_A_SYMPTOM?
+IS_THERE_A_HIGHER_PARENT?
+IS_THE_SELECTED_UNIT_DOMINATED_BY_A_BROADER_SAFE_REFOUNDATION?
+WHAT_EVIDENCE_DISPROVES_THE_TARGET?
+WHAT_REQUIRED_TRUTH_COULD_BE_LOST?
+WHAT_OLD_WRITER/READER/REGISTRATION_COULD_SURVIVE?
+WHAT_RANKING_RELEVANT_UNKNOWN_REMAINS?
 ```
 
-For material security/privacy/financial/trust boundaries model enough of:
-
-```text
-ASSETS
-ACTORS/SERVICE_IDENTITIES
-ENTRY_POINTS
-TRUSTED_VS_UNTRUSTED_INPUTS
-PRIVILEGES/OBJECT_SCOPES
-DATA_FLOW
-ABUSE/MISUSE_CASES
-REPLAY/CONFUSED_DEPUTY/CROSS_SCOPE
-FAILURE_IMPACT
-CANONICAL_MITIGATION_OWNER
-REQUIRED_FALSIFICATION_EVIDENCE
-```
-
-These models exist only where material and are used to find higher causes faster; they are not mandatory documentation artifacts.
+Challenger output is evidence, not a second authority.
 
 ## 21. Diagnosis freshness
 
-After every material mutation unit:
+After every material refoundation unit:
 
 ```text
 RE-PIN h
-→ UPDATE CURRENT
-→ REFRESH CENSUS/DELTA
+→ REFRESH AFFECTED CURRENT / DELTA
 → INVALIDATE AFFECTED EVIDENCE
-→ REBUILD SYSTEMIC_CATASTROPHE_GRAPH
-→ RE-SYNTHESIZE SYSTEMIC UNITS
-→ IF STAGE_A_EXIT_NOT_PROVEN: RE-RANK SYSTEMIC UNITS
-→ IF STAGE_A_EXIT_PROVEN: REBUILD NORMAL ROOT GRAPH / RE-SYNTHESIZE STAGE-B UNITS / RE-RANK
+→ RE-RUN NEGATIVE SPACE
+→ RE-SYNTHESIZE PRE_ROOT_BASELINE_CATASTROPHE_GRAPH
+→ RE-RANK DOMINANT CANDIDATES
 ```
 
-For a cross-cutting Stage-A change, refresh branch-wide enough to catch collapsed, newly exposed or invalidated systemic candidates. Never execute a stale static queue after architecture changes.
+After cross-cutting structural changes, broaden to fresh branch-wide census rather than trusting selective refresh.
+
+Never execute a stale static queue after architecture changes.
