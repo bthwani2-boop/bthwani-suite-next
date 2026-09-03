@@ -25,7 +25,7 @@ import {
   getOrCreatePayoutAttempt,
   type PayoutAttemptIntent,
 } from "./payout-attempt";
-import { formatWltMoney, parseWltMajorInputToMinorUnits } from "../../shared/finance/wlt-money";
+import { formatWltMoney, parseWltMajorInputToMinorUnits } from "../presentation/wlt-money";
 
 export type PayoutDestinationPanelProps = {
   readonly actorType: PayoutActorType;
