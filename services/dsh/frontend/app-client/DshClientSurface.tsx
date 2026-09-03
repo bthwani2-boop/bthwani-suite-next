@@ -28,7 +28,7 @@ import { AwnakForm } from "../shared/awnak/AwnakForm";
 import { ClientSpecialRequestsScreen, useSpecialRequestsController } from "../shared/special-requests";
 import type { DshHomeSpecialRequestTarget } from "../shared/home-discovery";
 import { useOrderTruthCollectionController, toOrderTruthSummary, type OrderTruth } from "../shared/order-truth";
-import { fetchActiveCart } from "../shared/cart";
+import { fetchActiveCart } from "../commerce/cart";
 import { dshClientRouteFromActionUrl, type DshClientNavigation, type DshClientRoute } from "./client-navigation";
 
 type ClientTab = "home" | "stores" | "orders" | "special" | "wallet" | "profile" | "cart";
