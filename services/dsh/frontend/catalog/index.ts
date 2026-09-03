@@ -1,0 +1,77 @@
+import { deleteCatalogAsset } from "./central-catalog.api";
+import { reviewCatalogAssetOCC } from "./central-catalog-occ.api";
+
+export * from "./catalog.types";
+export * from "./client-catalog.types";
+export * from "./catalog.states";
+export * from "./catalog.view-model";
+export * from "./central-catalog.types";
+export * from "./central-catalog.api";
+export * from "./central-catalog-occ.api";
+export * from "./partner-product-media.client";
+export * from "./catalog-governance.types";
+export * from "./catalog-governance.api";
+export * from "./catalog-mobile-file-picker";
+export * from "./catalog-native-uri.adapter";
+export * from "./reels.types";
+export {
+  submitGovernedReel,
+  fetchPartnerReels,
+  fetchOperatorReels,
+  reviewGovernedReel,
+  fetchOperatorReelMediaBlob,
+} from "./reels.api";
+export {
+  ALLOWED_IMAGE_MIME_TYPES,
+  ALLOWED_VIDEO_MIME_TYPES,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_VIDEO_SIZE_BYTES,
+  toUploadFileSource,
+  isAllowedImageMime,
+  isAllowedVideoMime,
+  validateImageFile,
+  validateVideoFile,
+  uploadAndLinkImage,
+  uploadAndSubmitReel,
+} from "./catalog-media.controller-core";
+export type {
+  AssetUploadProgress,
+  AllowedImageMime,
+  AllowedVideoMime,
+  UploadFileSource,
+  UploadImageOptions,
+  UploadReelVideoOptions,
+} from "./catalog-media.controller-core";
+export {
+} from "./central-catalog-occ.api";
+
+/**
+ * Governed asset decision facade.
+ *
+ * The sovereign review contract accepts only approved/rejected. Archiving is a
+ * lifecycle delete operation and must use DELETE /catalog/assets/{assetId}; it
+ * must never be smuggled through the review endpoint as a third decision.
+ */
+export async function reviewCatalogAsset(
+  assetId: string,
+  input: {
+    readonly decision: "approved" | "rejected" | "archived";
+    readonly reviewNote?: string;
+  },
+) {
+  if (input.decision === "archived") {
+    await deleteCatalogAsset(assetId);
+    return;
+  }
+  return reviewCatalogAssetOCC(assetId, {
+    decision: input.decision,
+    reviewNote: input.reviewNote ?? "",
+  });
+}
+
+export * from "./use-central-catalog-controller";
+export * from "./central-catalog-product-pipeline";
+export * from "./central-catalog.permissions";
+export * from "./central-catalog.bulk";
+export * from "./product-proposal.adapter";
+export * from "./catalog-quality";
