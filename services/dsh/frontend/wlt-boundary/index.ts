@@ -27,6 +27,7 @@ export * from './presentation/WltDshCaptainBridge';
 export * from './presentation/WltDshPartnerBridge';
 export * from './presentation/captain-finance.copy';
 export * from './presentation/partner-finance.copy';
+export * from './presentation/wlt-money';
 
 export * from './commissions';
 export * from './payouts';
