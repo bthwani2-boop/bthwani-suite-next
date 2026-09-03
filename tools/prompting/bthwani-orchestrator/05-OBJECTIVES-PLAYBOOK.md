@@ -1,44 +1,40 @@
 # H Dynamic Refoundation Campaign Playbook
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: two-stage campaign traversal, interrupted-unit reconstruction and selection of the highest correct mutation unit. It does not create AUTO/NEXT queues, session-sized objectives, catastrophe checklists or bug-chasing order.
+Owner: A0/A1/A2/B campaign traversal, interrupted-unit reconstruction, dominance-based selection, safe-checkpoint preemption, anti-endless-audit execution forcing and highest-correct mutation-unit sequencing. It does not create AUTO/NEXT queues, session-sized objectives, static catastrophe checklists or bug-chasing order.
 
-## 1. Campaign architecture is explicitly two-stage
+## 1. Campaign architecture
 
-The campaign has two mutation stages after recovery:
+The campaign is:
 
 ```text
-STAGE_A — SYSTEMIC BASELINE DECONTAMINATION
-STAGE_B — NORMAL DYNAMIC ROOT CLOSURE
+STAGE_A0 — HOSTILE BRANCH-WIDE CATASTROPHE TRIAGE
+STAGE_A1 — DOMINANT DESTRUCTIVE BASELINE REFOUNDATION
+STAGE_A2 — ADVERSARIAL STRUCTURAL QUALIFICATION
+STAGE_B  — NORMAL CAUSAL ROOT CLOSURE
 ```
 
 Purpose:
 
 ```text
-STAGE_A:
-MAKE h CANONICALLY WORTH BUILDING NORMAL ROOT CLOSURE UPON.
-REMOVE PROVEN SHARED STRUCTURAL CATASTROPHES THAT WOULD TAX, DISTORT,
-BLOCK OR CONTAMINATE MULTIPLE LATER ROOTS.
-
-STAGE_B:
-CLOSE THE REMAINING CAUSAL PRODUCT/SYSTEM/DOMAIN/JOURNEY/STRUCTURAL ROOTS
-ON TOP OF THE CLEANER VERIFIED FOUNDATION.
+A0: SEE THE WHOLE STRUCTURAL BATTLEFIELD BEFORE NORMAL MUTATION.
+A1: DEMOLISH / REFOUND THE DOMINANT PRE-ROOT BASELINE CATASTROPHES.
+A2: PROVE FROM ZERO THAT KNOWN STRUCTURAL GARBAGE AND UNTREATED STRUCTURAL FINDINGS ARE ZERO.
+B : CLOSE ONLY TRUE SEMANTIC / PRODUCT / SYSTEM ROOTS INSIDE PROVEN CANONICAL STRUCTURE.
 ```
 
 ```text
-STAGE_A != FIX_EVERY_LOCAL_DEFECT
-STAGE_A != STATIC_CLEANUP_LIST
-STAGE_A != WARNING_PURGE
-STAGE_B != ALLOWED_WHILE_STAGE_A_GATE_IS_OPEN
+A0 != FIRST_ERROR_AUDIT
+A1 != CLEANUP_LIST
+A2 != SELF_CERTIFICATION
+B  != GARBAGE_BACKLOG
 ```
 
-The campaign is never forced to execute one file, one bug, one service or one root at a time.
+## 2. Recovery always precedes traversal
 
-## 2. Recovery always precedes stage traversal
+Every new/resumed session reconstructs from live repository evidence.
 
-Every new or resumed session runs the recovery gate in `00`/`01` before selecting new work.
-
-Reconstruct:
+Conceptually recover:
 
 ```text
 PINNED_H_SHA
@@ -46,6 +42,7 @@ ACTIVE_CAMPAIGN_STAGE
 LAST_PROVEN_CLOSED_UNIT
 ACTIVE_OPEN_UNIT
 ACTIVE_UNIT_STAGE
+EXECUTION_UNIT_STATE=OPEN_CRITICAL|OPEN_SAFE_CHECKPOINT
 ACTIVE_UNIT_COMMITS
 PROVEN_COMPLETED_OBLIGATIONS
 OPEN_OBLIGATIONS
@@ -57,64 +54,27 @@ LOSER_DELETION_STATE
 PRUNING_STATE
 ADMISSION_STATE
 NEGATIVE_SPACE_STATE
-STAGE_A_EXIT_STATE
+A0_ADMISSION_STATE
+A2_EXIT_STATE
 VALID_EVIDENCE
 STALE_EVIDENCE
 RECOVERY_FRONTIER
 ```
 
+Git history + live tree + reachability + current evidence reconstruct state. Commit messages do not.
+
+## 2.1 Recovery frontier
+
 ```text
-EPHEMERAL_RECOVERY_MODEL != DURABLE_CAMPAIGN_LEDGER
-EPHEMERAL_RECOVERY_MODEL MUST NOT BECOME A SECOND PERSISTED EXECUTION AUTHORITY
+RECOVERY_FRONTIER = FIRST MATERIAL OBLIGATION OF THE ACTIVE UNIT NOT PROVEN COMPLETE ON CURRENT h
 ```
 
-Git history + live canonical repository + current evidence remain the reconstructable source of execution state.
-
-## 2.1 Interrupted-session causal reconstruction
-
-For each material commit required to reconstruct the frontier, inspect as applicable:
+Examples:
 
 ```text
-PARENTS
-ACTUAL PATCH/DIFF
-CHANGED PATHS
-ADDITIONS/DELETIONS
-MOVES/RENAMES
-AUTHORITY/WRITER CHANGES
-READER/CONSUMER CHANGES
-SCHEMA/MIGRATION CHANGES
-CONTRACT/GENERATED-LINEAGE CHANGES
-RUNTIME/CONFIG/INFRA CHANGES
-ADMISSION/VERIFICATION CHANGES
-```
-
-Then attribute the material change to the causal execution unit and campaign stage it serves.
-
-```text
-COMMIT != ROOT
-COMMIT != CATASTROPHE
-COMMIT != EXECUTION_UNIT
-MULTIPLE_COMMITS_MAY_BELONG_TO_ONE_EXECUTION_UNIT
-ONE_COMMIT_MAY_IMPLEMENT_MULTIPLE_SUBSTEPS_OF_ONE_CAUSAL_UNIT
-COMMIT_MESSAGE_IS_NOT_CAUSAL_CLASSIFICATION
-```
-
-Do not turn commit history into a replacement bug queue. History reconstructs execution progress; the live causal model determines current canonical obligations.
-
-## 2.2 Recovery frontier
-
-```text
-RECOVERY_FRONTIER =
-THE FIRST MATERIAL OBLIGATION OF THE ACTIVE EXECUTION UNIT
-THAT IS NOT PROVEN COMPLETE ON CURRENT h
-```
-
-Examples include, as applicable:
-
-```text
-CANONICAL_OWNER_ESTABLISHED
 REQUIRED_VALUE_SALVAGED
-DATA/CONTRACT_MIGRATION_COMPLETE
+CANONICAL_OWNER_ESTABLISHED
+MIGRATION_COMPLETE
 CONSUMERS_MIGRATED
 CUTOVER_COMPLETE
 OLD_WRITES_ZERO
@@ -125,282 +85,296 @@ NEGATIVE_SPACE_PASS
 UNIT_VERIFICATION_PASS
 ```
 
-Do not repeat earlier subwork that is still proven complete. Do not skip the first unfinished obligation.
+## 2.2 Recovery/preemption decision
 
-## 2.3 Recovery decision and systemic overlay
-
-```text
-IF ACTIVE UNIT IS OPEN:
-  RUN SYSTEMIC_CATASTROPHE_OVERLAY_CHECK
-```
-
-A systemic unit may supersede/preempt the active unit only under the causal authority in `01`:
+If active unit is `OPEN_CRITICAL`:
 
 ```text
-SYSTEMIC_CAUSE_SUPERSEDES_ACTIVE_MODEL
-OR SYSTEMIC_CAUSE_IS_REQUIRED_PREREQUISITE
-OR SYSTEMIC_CAUSE_IS_HIGHER_SHARED_CAUSE_OF_ACTIVE_FAILURES
+RESUME_FROM_RECOVERY_FRONTIER
 ```
 
-If true:
+unless `01` proves a higher catastrophe supersedes/prerequisites/parents the active model.
+
+If active unit is `OPEN_SAFE_CHECKPOINT`:
 
 ```text
-PROMOTE / RE-SYNTHESIZE THE HIGHER SYSTEMIC UNIT
-→ PRESERVE CORRECT COMPLETED WORK
-→ INVALIDATE WRONG ASSUMPTIONS
-→ CONTINUE UNDER STAGE_A
+REFRESH_PRE_ROOT_DOMINANCE_OVERLAY
 ```
 
-Otherwise:
+If a safely executable pre-root catastrophe materially dominates the paused unit:
 
 ```text
-ACTIVE_OPEN_UNIT
-→ RESUME FROM RECOVERY_FRONTIER
+PREEMPT_SAFE_CHECKPOINT
+→ PRESERVE_CORRECT_COMPLETED_WORK
+→ ENTER_A1_DOMINANT_CATASTROPHE
 ```
 
-A partial cutover is not abandoned merely because unrelated inherited debt exists.
-
-If no open unit survives recovery:
+Otherwise resume the unit.
 
 ```text
-IF STAGE_A_EXIT_STATE != CURRENT_PASS:
-  ENTER / RESUME STAGE_A
-ELSE:
-  ENTER / RESUME STAGE_B
+STARTED_FIRST != MUST_FINISH_FIRST_WHEN_SAFE_TO_PAUSE
 ```
 
-## 3. Stage A — branch-wide systemic baseline decontamination
+## 3. Stage A0 — Hostile Branch-Wide Catastrophe Triage
 
-Stage A begins from the repository-wide census, hostile survival challenge and systemic synthesis owned by `01`/`02`.
+A0 begins only after recovery.
 
-Normal Stage-A cycle:
+Normal A0 sequence:
 
 ```text
 1. PIN EXACT h
-2. RUN / REFRESH BRANCH-WIDE MATERIAL CENSUS
-3. EXTRACT REQUIRED TRUTH
-4. CHALLENGE INHERITED MATERIAL STRUCTURE FOR SURVIVAL
-5. REFRESH CURRENT + CANONICAL FOUNDATION + DELTA
-6. BUILD / REFRESH SYSTEMIC_CATASTROPHE_GRAPH
-7. SYNTHESIZE CANDIDATE SYSTEMIC EXECUTION UNITS
-8. RANK BY CROSS-ROOT LEVERAGE / ROOT_TAX REMOVAL / SAFE COMPLETE CUTOVER
-9. SELECT HIGHEST CORRECT EXECUTABLE SYSTEMIC UNIT
-10. DECLARE COMPLETE SHARED CAUSAL CONE
-11. SALVAGE REQUIRED VALUE
-12. REFOUND / MIGRATE / CUT OVER
-13. DELETE LOSERS AT HIGHEST SAFE GRANULARITY
-14. PRUNE UPWARD AND REMOVE COMPENSATION/COMPATIBILITY RESIDUE
-15. REFOUND ADMISSION/PREVENTION
-16. VERIFY SYSTEMIC NEGATIVE SPACE + FALSIFY
-17. RE-PIN
-18. RE-CENSUS / RE-SYNTHESIZE / RE-RANK
-19. REPEAT UNTIL SYSTEMIC FRONTIER APPEARS EMPTY
-20. RUN FRESH ADVERSARIAL STAGE-A RECENSUS
-21. APPLY THE FAIL-CLOSED STAGE-A EXIT GATE IN `04`
+2. MAXIMUM-SAFE PARALLEL READ-ONLY MACHINE CENSUS
+3. FULL TRACKED-ARTIFACT ACCOUNTING
+4. EXTRACT REQUIRED TRUTH
+5. BUILD INHERITED-SHAPE-BLIND CANONICAL SKELETON
+6. BUILD CURRENT MODEL WITHOUT NORMALIZING CONTRADICTIONS
+7. RUN WHOLE-BRANCH HOSTILE SURVIVAL CHALLENGE
+8. DELETE ONLY CERTAIN-DEAD ZERO-RISK GARBAGE UNDER `03`
+9. BUILD COMPLETE STRUCTURAL DELTA
+10. BUILD PRE_ROOT_BASELINE_CATASTROPHE_GRAPH
+11. BUILD TOP_CANDIDATE_SET
+12. RESOLVE RANKING-RELEVANT UNKNOWNS
+13. FALSIFY STAGE-B DEFERRALS
+14. APPLY `04` A0 ADMISSION GATE
 ```
 
-No static catastrophe queue survives architecture change without revalidation.
+Normal A1 mutation before A0 admission PASS is forbidden.
 
-## 3.1 Stage-A candidate unit shapes
-
-A systemic unit may be very large:
+## 3.1 First-candidate ban
 
 ```text
-WHOLE REPOSITORY STRUCTURAL PASS
-REPOSITORY / WORKSPACE / PACKAGE TOPOLOGY
-TOP-LEVEL SURFACE
-CROSS-DOMAIN SHARED AUTHORITY
-DATABASE OWNERSHIP MODEL
-MIGRATION EPOCH
-CONTRACT / GENERATED LINEAGE
-RUNTIME / CONFIG / INFRA AUTHORITY SURFACE
-ASSURANCE / CI CONTROL PLANE
-GOVERNANCE / TOOLS / DOCS / AGENT AUTHORITY SURFACE
-LARGE HIGH-FAN-IN OBSOLETE SUBTREE
-MULTI-SURFACE LEGACY / COMPATIBILITY / COMPENSATION ARCHITECTURE
+FIRST_CATASTROPHE_FOUND != FIRST_CATASTROPHE_EXECUTED
+FIRST_SURFACE_INSPECTED != HIGHEST_PRIORITY_SURFACE
+FIRST_CI_FAILURE != EXECUTION_ORDER
+```
+
+Before the first A1 unit, compare serious candidates across every required high-level substrate family in `02`.
+
+Certain-dead immediate deletions are not candidate selection; they remove proven zero-value residue that cannot win ranking.
+
+## 4. Stage A1 — Dominant destructive baseline refoundation
+
+A1 attacks one highest correct overlapping mutation unit at a time, but that unit may be repository-wide in breadth.
+
+Candidate shapes include:
+
+```text
+REPOSITORY_TOPOLOGY
+WORKSPACE_PACKAGE_DEPENDENCY_FAMILY
+TOP_LEVEL_SURFACE
+DOMAIN_OR_SERVICE_BOUNDARY
+CROSS_DOMAIN_SHARED_AUTHORITY
+DATABASE_OWNERSHIP_MODEL
+MIGRATION_EPOCH
+CONTRACT_GENERATED_LINEAGE
+RUNTIME_CONFIG_INFRA_AUTHORITY
+ASSURANCE_CI_CONTROL_PLANE
+GOVERNANCE_TOOLS_DOCS_AGENT_AUTHORITY
+LARGE_HIGH_FAN_IN_OBSOLETE_SUBTREE
+MULTI_SURFACE_LEGACY_COMPATIBILITY_COMPENSATION_ARCHITECTURE
+OTHER_HIGH_STRUCTURAL_YIELD_FOUNDATIONAL_UNIT
+```
+
+## 4.1 Dominance selection law
+
+Select the serious executable candidate that dominates by the evidence model in `02`, not by convenience.
+
+Mandatory ephemeral selection proof:
+
+```text
+TOP_CANDIDATE_SET
+SELECTED_DOMINANT_CANDIDATE
+SERIOUS_ALTERNATIVES
+WHY_SELECTED_OUTRANKS_EACH_ALTERNATIVE
+ROOT_TAX
+STRUCTURAL_YIELD
+FOUNDATIONAL_BLOCKING_POWER
+RANKING_RELEVANT_UNKNOWNS=0
+SAFE_EXECUTION_PATH=PASS
 ```
 
 ```text
-SYSTEMIC_EXECUTION_UNIT != SESSION_SIZE
-SYSTEMIC_EXECUTION_UNIT != SMALLEST_DIFF
-SYSTEMIC_EXECUTION_UNIT != FIRST_ERROR
+EASIER != HIGHER_PRIORITY
+SMALLER_DIFF != HIGHER_PRIORITY
+FEWER_CALLERS != HIGHER_PRIORITY
 ```
 
-## 3.2 Stage-A selection criterion
+Safety is binary admission to execution, not a scoring bonus for small work.
 
-Prefer the proven candidate that maximizes:
+## 4.2 Execution forcing — no endless audit
+
+Once all are true:
 
 ```text
-TRUTH / DATA / SECURITY RISK REDUCTION
-CROSS_ROOT_BLOCKING_POWER REMOVAL
-CANONICAL_SHARED_OWNERSHIP_CORRECTION
-PARALLEL_TRUTH_COLLAPSE
-LOSING_CONTAINER_DELETION
-COMPENSATION_LAYER_REMOVAL
-DIAGNOSIS_CONTAMINATION_REMOVAL
-VERIFICATION_CONTAMINATION_REMOVAL
-ROOT_TAX_REMOVAL
-FUTURE_COMPLEXITY_REDUCTION
+A0_ADMISSION=PASS
+DOMINANT_CANDIDATE_PROVEN
+NO_RANKING_CHANGING_UNKNOWN
+SAFE_EXECUTION_PATH=PASS
+PATCH_VS_DEMOLISH_GATE=PASS
+DEMOLITION_PLAN=READY
 ```
 
-while retaining a safe, complete migration/cutover path.
-
-The governing question is:
+then:
 
 ```text
-WHICH PROVEN REFOUNDATION, IF DONE NOW,
-MAKES THE LARGEST SET OF FUTURE ROOTS
-SMALLER, CLEANER, MORE INDEPENDENT AND EASIER TO CLOSE?
+MUTATION_MANDATORY
+FURTHER_NONCAUSAL_AUDIT=FORBIDDEN
+RECOMMENDATIONS_ONLY=FORBIDDEN
 ```
 
-Do not choose a smaller candidate merely because it is easier to explain or faster to patch.
+Additional discovery is allowed only if it can materially change safety, canonical target or candidate dominance.
 
-## 3.3 Stage-A execution-ready declaration
+## 4.3 A1 execution-ready declaration
 
-Before systemic mutation state compactly:
+Before mutation state compactly:
 
 ```text
 UNIT_ID
-UNIT_STAGE=STAGE_A
+UNIT_STAGE=A1
 CATASTROPHE_ID
 CAUSAL_PROOF
-AFFECTED_ROOT_FAMILIES
-SHARED_SUBSTRATE
-ROOT_TAX
+DOMINANCE_PROOF
+ANCESTOR_EXONERATION_OR_PROMOTION
+PATCH_VS_DEMOLISH_RESULT
 CANONICAL_TARGET
 VALUE_TO_PRESERVE
-LOSING_AUTHORITIES/CONTAINERS
+LOSING_AUTHORITIES_CONTAINERS
 COMPLETE_AFFECTED_CONE
-WRITERS/READERS/CONSUMERS
-DATA/CONTRACT_MIGRATION
+WRITERS_READERS_CONSUMERS
+DATA_CONTRACT_MIGRATION
 CUTOVER
-DELETION/PRUNING
-ADMISSION/PREVENTION
-VERIFICATION/FALSIFICATION
+DEMOLITION_PLAN
+EXPECTED_STRUCTURAL_YIELD
+ADMISSION_PREVENTION
+VERIFICATION_FALSIFICATION
 VALID_BLOCKERS
 ```
 
-If this cannot be stated, discovery is not execution-ready.
-
-## 3.4 Stage-A exit is a gate, not a judgment call
-
-Stage A ends only when `04` proves the current exact `h` passes its dedicated exit gate.
+## 4.4 A1 treatment order
 
 ```text
-SYSTEMIC_GRAPH_APPEARS_EMPTY != STAGE_A_PASS
+SALVAGE_REQUIRED_TRUTH
+→ BUILD_CANONICAL_REPLACEMENT
+→ MIGRATE_COMPLETE_CONE
+→ CUT_OVER
+→ EAGERLY_DELETE_LOSERS_AS_LAST_DEPENDENCIES_END
+→ DELETE_REMAINING_LOSING_CONTAINERS
+→ DELETE_COMPAT_BRIDGE_ALIAS_REEXPORT_WRAPPER_LEGACY_RESIDUE
+→ REMOVE_MANIFEST_DEPENDENCY_CONFIG_RESIDUE
+→ PRUNE_UPWARD
+→ FIX_ADMISSION_HOLE
+→ VERIFY_NEGATIVE_SPACE
+→ RE-PIN
+→ RE-CENSUS / RE-RANK
 ```
 
-Required transition:
+Do not collect losers for later campaign cleanup.
+
+## 5. Re-ranking after every A1 unit
+
+After each closed catastrophe:
 
 ```text
-SYSTEMIC_FRONTIER_APPEARS_EMPTY
-→ FRESH ADVERSARIAL BRANCH-WIDE RECENSUS
-→ STAGE_A_EXIT_GATE
-→ PASS
-→ ONLY THEN STAGE_B
+RE-PIN
+→ INVALIDATE_AFFECTED_EVIDENCE
+→ REFRESH_CENSUS
+→ REFRESH_CATASTROPHE_GRAPH
+→ REFRESH_TOP_CANDIDATE_SET
+→ REFRESH_DOMINANCE
 ```
 
-If the recensus exposes another executable systemic catastrophe, return to Stage-A execution. Do not waive it because many systemic units were already closed.
+No static catastrophe ordering survives architectural change without revalidation.
 
-## 4. Stage B — normal dynamic root closure
+If new evidence promotes a higher parent, stop descendant patching and re-synthesize.
 
-Only after current Stage-A PASS, rebuild the normal causal Root Graph on the cleaner baseline.
+## 6. Stage A2 — adversarial structural qualification
 
-Normal Stage-B cycle:
+When A1 frontier appears empty:
 
 ```text
-1. PIN EXACT h
-2. REFRESH CURRENT/CANONICAL/DELTA
-3. REBUILD NORMAL CAUSAL ROOT GRAPH
-4. SYNTHESIZE CANDIDATE STAGE-B EXECUTION UNITS
-5. SELECT HIGHEST CORRECT SAFE UNIT
-6. DECLARE COMPLETE CAUSAL CONE
-7. SALVAGE REQUIRED VALUE
-8. REFOUND / MIGRATE / CUT OVER
-9. DELETE LOSERS AT HIGHEST SAFE GRANULARITY
-10. PRUNE UPWARD
-11. REFOUND ADMISSION/PREVENTION
-12. VERIFY + FALSIFY ON EXACT h
-13. RE-PIN
-14. RE-DIAGNOSE + RE-RANK
+DO_NOT_ENTER_B
 ```
 
-Allowed Stage-B unit shapes include:
+Run a fresh branch-wide census from zero and the `04` A2 gate.
+
+A2 exists to catch:
 
 ```text
-TOP-LEVEL SURFACE
-DOMAIN
-SERVICE
-CAPABILITY/JOURNEY
-PACKAGE FAMILY
-DIRECTORY SUBTREE
-FILE/SYMBOL CLUSTER
-DATABASE OWNERSHIP UNIT
-CONTRACT/GENERATED UNIT
-RUNTIME/CONFIG UNIT
-ASSURANCE UNIT
-SINGLE CAUSAL ROOT
+SURVIVING_GARBAGE
+BEAUTIFIED_LOSERS
+GARBAGE_AGGREGATION
+WRONG_OWNER_PATHS
+DEAD_FILES_DIRECTORIES_PACKAGES
+PARALLEL_AUTHORITIES
+LEGACY_COMPAT_RESIDUE
+MAPPED_BUT_UNTREATED_STRUCTURAL_FINDINGS
+UNPROVEN_STAGE_B_DEFERRALS
+MISSED_HIGHER_CATASTROPHES
 ```
 
-Do not force a service-by-service, file-by-file or bug-by-bug sequence when a broader causal cutover is cleaner and faster.
-
-## 4.1 Stage-B selection criterion
-
-Prefer the candidate that maximizes:
+If any appear:
 
 ```text
-STRUCTURAL_LEVERAGE
-CANONICAL_OWNERSHIP_CORRECTION
-PARALLEL_TRUTH_COLLAPSE
-LOSING_CONTAINER_DELETION
-COMPENSATION_LAYER_REMOVAL
-END_TO_END_PARITY_RESTORATION
-ADMISSION_HOLE_CLOSURE
-FUTURE_COMPLEXITY_REDUCTION
+A2=FAIL
+→ RETURN_TO_A0_OR_A1
 ```
 
-while retaining a safe complete migration/cutover path.
+Only exact-current A2 PASS permits Stage B.
 
-## 4.2 Stage-B systemic regression law
+## 7. Stage B — true causal roots only
 
-If Stage-B discovery proves a new executable systemic catastrophe:
+Stage B receives only roots whose containing structure and ancestor chain passed A2 canonical qualification.
+
+Allowed remaining root classes include genuinely semantic/product/system concerns such as:
 
 ```text
-STAGE_A_EXIT_STATE = INVALIDATED_OR_STALE
+BUSINESS_INVARIANT
+STATE_MACHINE_OR_TRANSITION
+AUTHORIZATION_SEMANTICS
+FINANCIAL_SEMANTICS
+CONCURRENCY_IDEMPOTENCY
+PRODUCT_JOURNEY_BEHAVIOR
+DATA_INVARIANT_WITH_CANONICAL_OWNER
+OTHER_CAUSAL_BEHAVIORAL_ROOT_INSIDE_PROVEN_CANONICAL_STRUCTURE
 ```
 
-If no unit is open, return immediately to Stage A.
-
-If a Stage-B unit is open, apply the systemic preemption law in `01`:
+Stage B is not for:
 
 ```text
-IF SYSTEMIC CAUSE SUPERSEDES / PREREQUISITES / PARENTS ACTIVE UNIT:
-  PROMOTE TO STAGE_A SYSTEMIC UNIT
-ELSE:
-  FINISH OPEN_CRITICAL CUTOVER FIRST
-  → THEN RETURN TO STAGE_A BEFORE SELECTING A NEW STAGE-B ROOT
+DEAD_FILES
+BAD_DIRECTORIES
+BAD_PACKAGES
+WRONG_SERVICE_BOUNDARIES
+DUPLICATE_AUTHORITIES
+LEGACY_TREES
+COMPATIBILITY_GARBAGE
+SHADOW_TRUTH
+BAD_FOUNDATIONAL_TOPOLOGY
 ```
 
-Normal independent Stage-B root selection is forbidden until Stage-A qualification is restored.
+If such evidence appears, A2 qualification becomes stale and campaign returns to A0/A1.
 
-## 5. Broad surface refoundation is first-class
+## 7.1 Stage-B execution
 
-If `.agents`, `.github`, `.opencodereview`, `docs`, `tools`, `governance` or another surface is proven broadly noncanonical, duplicated or confusing, it may become one systemic or normal execution unit depending on blast radius.
-
-Preferred treatment when justified:
+Normal cycle:
 
 ```text
-EXTRACT UNIQUE REQUIRED VALUE
-→ DESIGN MINIMAL CANONICAL SURFACE
-→ DELETE NONCANONICAL SUBTREE
-→ RECREATE ONLY REQUIRED MATERIAL
-→ UPDATE ALL REFERENCES/CONSUMERS
-→ FALSIFY OLD-SURFACE ABSENCE
+PIN EXACT h
+→ REFRESH CURRENT/CANONICAL/DELTA
+→ BUILD NORMAL CAUSAL ROOT GRAPH
+→ SELECT HIGHEST CAUSALLY COMPLETE ROOT
+→ APPLY PATCH_VS_DEMOLISH / ANCESTOR CHALLENGE AGAIN
+→ REFOUND / MIGRATE / CUT OVER AS REQUIRED
+→ DELETE ANY NEWLY PROVEN LOSERS IMMEDIATELY
+→ PRUNE
+→ FIX ADMISSION
+→ VERIFY / FALSIFY
+→ RE-PIN / RE-DIAGNOSE
 ```
 
-Do not create dozens of micro-roots to preserve a bad surface layout.
+Even in Stage B, discovering an invalid container forbids patching inside it.
 
-## 6. Large units are not shrunk for convenience
+## 8. Large units are not shrunk for convenience
 
 Forbidden shrink reasons:
 
@@ -414,94 +388,72 @@ FRONTEND_AND_BACKEND_BOTH_AFFECTED
 TOO_LARGE_FOR_ONE_SESSION
 ```
 
-Use coherent checkpoints while preserving one unit identity, stage and final canonical cutover.
+Use coherent checkpoints without changing unit identity.
 
-A checkpoint is never a closed unit while old authority/containers remain reachable.
-
-## 7. Partial-cutover preemption law
-
-A partially cut-over execution unit has priority over independent work except for the proven higher systemic supersession conditions owned by `01`.
+## 9. Open-critical vs open-safe checkpoint
 
 ```text
-IF WINNER_EXISTS AND LOSER_REMAINS_REACHABLE:
-  EXECUTION_UNIT_STATE=OPEN_CRITICAL
-
-IF SOME_REQUIRED_CONSUMERS_USE_WINNER AND OTHERS_USE_LOSER:
-  EXECUTION_UNIT_STATE=OPEN_CRITICAL
+WINNER_EXISTS + LOSER_REACHABLE => OPEN_CRITICAL
+MIXED_OLD_NEW_CONSUMERS => OPEN_CRITICAL
+PARTIAL_DATA_OR_RUNTIME_CUTOVER => OPEN_CRITICAL
 ```
 
-While `OPEN_CRITICAL`:
+While `OPEN_CRITICAL`, independent selection is forbidden except causal supersession rules in `01`.
+
+`OPEN_SAFE_CHECKPOINT` may be preempted by a dominant pre-root catastrophe.
+
+## 10. Immediate garbage deletion lane
+
+Certain-dead garbage does not wait for large-unit batching when it satisfies `03` strict zero-truth/zero-consumer/zero-migration-role proof.
 
 ```text
-NEW_INDEPENDENT_UNIT_SELECTION=FORBIDDEN
-```
-
-Resume through remaining migration, cutover, loser deletion, pruning and proof before moving to an independent unit.
-
-```text
-NEW_AUTHORITY + REACHABLE_OLD_AUTHORITY != PROGRESS_CLOSURE
-NEW_AUTHORITY + REACHABLE_OLD_AUTHORITY = PARALLEL_AUTHORITY_RISK
-```
-
-## 8. Independent inherited debt
-
-Wide discovery may expose unrelated Stage-A or Stage-B debt while another unit is mutating.
-
-Record it in the appropriate dynamic graph; do not opportunistically patch it if it overlaps or destabilizes the active cutover.
-
-This avoids random context switching without reverting to conservative micro-execution.
-
-## 9. Historical sources
-
-Old branches, plans, prompts and defect lists are forensic evidence only.
-
-They may reveal required value or defect clusters, but never dictate current topology, branch integration or execution order.
-
-## 10. Fast garbage lane
-
-Proven low-risk garbage need not wait for a large unit if deletion cannot alter canonical truth or a live contract and does not interrupt an `OPEN_CRITICAL` cutover.
-
-```text
-PROVE UNUSED/UNREQUIRED
-→ CHECK HIGHEST SAFE GRANULARITY
-→ DELETE
-→ PRUNE
+PROVE_CERTAIN_DEAD
+→ HIGHEST_SAFE_GRANULARITY
+→ DELETE_NOW
+→ PRUNE_NOW
 → VERIFY
 ```
 
-If the finding reveals a higher systemic structural cause, stop the local lane and promote the cause instead.
+If analysis reveals a higher invalid parent, promote to A1 rather than chipping descendants.
 
-Fast garbage deletion does not satisfy Stage-A systemic decontamination by itself.
+## 11. Historical sources
 
-## 11. Closure output
+Old branches/plans/prompts/defect lists are forensic only. They may reveal truth or defects but never dictate topology or order.
 
-For every closed unit record only compact evidence:
+## 12. Closure output
+
+For every closed unit retain only compact reconstructable evidence:
 
 ```text
 UNIT_STAGE
 UNIT_ID
-CATASTROPHE_ID_OR_ROOT_ID
-OLD_AUTHORITIES/CONTAINERS_REMOVED
-NEW_CANONICAL_AUTHORITY/CONTAINER_SET
-MIGRATION/CUTOVER_RESULT
-DELETED/PRUNED_STRUCTURE
+CATASTROPHE_OR_ROOT_ID
+OLD_AUTHORITIES_CONTAINERS_REMOVED
+NEW_CANONICAL_AUTHORITY_CONTAINER_SET
+MIGRATION_CUTOVER_RESULT
+DELETED_PRUNED_STRUCTURE
+STRUCTURAL_YIELD_RESULT
 ADMISSION_HOLE_RESULT
 EXACT_H_SHA
-VERIFICATION/FALSIFICATION_RESULT
-SYSTEMIC_GRAPH_OR_ROOT_GRAPH_STATE
+VERIFICATION_FALSIFICATION_RESULT
+CURRENT_CATASTROPHE_OR_ROOT_GRAPH_STATE
 ```
 
-Do not create another durable campaign plan mirroring this state. Git history + live canonical repository + evidence are preferred.
+Do not create a second durable campaign authority.
 
-## 12. Fixed point
-
-Stage A first reaches a candidate empty systemic frontier, then must pass the fresh Stage-A gate in `04` before Stage B can begin.
-
-When the Stage-B dynamic Root Graph first reaches zero, hand control to `04-VERIFY-REDIAGNOSE-CLOSE.md` for a fresh full-repository adversarial recensus from zero.
+## 13. Fixed point
 
 ```text
-FIRST_EMPTY_SYSTEMIC_GRAPH != STAGE_A_PASS
+A0_PASS
+→ A1_UNTIL_PRE_ROOT_FRONTIER_APPEARS_EMPTY
+→ A2_FRESH_ADVERSARIAL_PASS
+→ B_UNTIL_NORMAL_ROOT_GRAPH_APPEARS_EMPTY
+→ `04` FINAL_FULL_REPOSITORY_QUALIFICATION
+```
+
+```text
+FIRST_EMPTY_PRE_ROOT_GRAPH != A2_PASS
 FIRST_EMPTY_STAGE_B_ROOT_GRAPH != LEVEL_4_COMPLETE
 ```
 
-Only `04` qualifies either transition.
+Only `04` qualifies transitions and final completion.
