@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchOwnRepresentativeWallet, type RepresentativeWallet } from "../actor-wallet/actor-wallet.api";
-import { formatWltMoney } from "../../shared/finance/wlt-money";
+import { formatWltMoney } from "../presentation/wlt-money";
 
 type RuntimeGlobal = typeof globalThis & {
   readonly process?: {
