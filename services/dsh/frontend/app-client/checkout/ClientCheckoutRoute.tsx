@@ -11,8 +11,8 @@ import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
 import { useStoreDetailController } from "../../shared/store";
 import { useClientAddressController } from "../../shared/client-address";
 import { CartScreen } from "../cart";
-import { useCheckoutToOrderFlow } from "../../shared/checkout";
-import type { DshCreateIntentInput } from "../../shared/checkout";
+import { useCheckoutToOrderFlow } from "../../commerce/checkout";
+import type { DshCreateIntentInput } from "../../commerce/checkout";
 
 type Props = {
   readonly storeId: string;
