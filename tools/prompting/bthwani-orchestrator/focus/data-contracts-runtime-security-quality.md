@@ -16,51 +16,84 @@ LIFECYCLE/RETENTION WHEN MATERIAL
 SECURITY/FINANCIAL CLASSIFICATION WHEN MATERIAL
 ```
 
-Multiple mutable stores for one truth are forbidden unless one is explicitly derived and non-authoritative.
+Multiple mutable stores for one business truth are forbidden unless one is explicitly derived and non-authoritative.
+
+`ONE TRUTH` does not mean one table; correct normalization may use multiple tables. What is forbidden is multiple mutable authorities for the same meaning.
 
 ## 2. Schema and migration refoundation
 
-Treat migration history as executable architecture, not sacred chronology.
+Migration history is executable architecture, not sacred chronology.
 
 Audit:
 
 ```text
 SCHEMA OWNERSHIP
-MIGRATION ORDER/EPOCHS
-DUPLICATE TABLES/COLUMNS
+MIGRATION ORDER / EPOCHS
+DUPLICATE TABLE/COLUMN AUTHORITIES
 OBSOLETE COMPATIBILITY COLUMNS
 BACKFILLS
-SEEDS/BOOTSTRAP
-CONSTRAINTS/INDEXES
-POLICIES/TRIGGERS
+SEEDS / BOOTSTRAP
+CONSTRAINTS / INDEXES
+POLICIES / TRIGGERS
+MIGRATION MANIFESTS / ORDERING AUTHORITIES
 GENERATED DB CONTRACTS
+UPGRADE/RESET ASSUMPTIONS
 ```
 
-If the migration epoch is structurally wrong, refound the epoch/ownership model rather than repeatedly patching later migrations, subject to proven data-safety constraints.
+If the migration epoch itself is structurally corrupt, do not patch hundreds of migrations by default.
 
-No destructive data transformation without deterministic migration/reconciliation evidence.
+```text
+DETERMINE REQUIRED DURABLE TRUTH
+→ DETERMINE RESET VS CONTROLLED CUTOVER CONSTRAINTS
+→ DESIGN CANONICAL EPOCH/OWNERSHIP
+→ MIGRATE/BACKFILL/RECONCILE
+→ CUT OVER
+→ DELETE SHADOW/OBSOLETE MIGRATION AUTHORITIES
+→ PROVE REAL UPGRADE/READBACK WHERE REQUIRED
+```
+
+No destructive data transformation without deterministic evidence.
 
 ## 3. Contracts and generated lineage
 
-Canonical contract law:
-
 ```text
-ONE SOURCE CONTRACT
+ONE CANONICAL SOURCE CONTRACT
 ONE GENERATOR/TRANSFORM LINEAGE WHEN GENERATED
-ONE CANONICAL OUTPUT LOCATION PER CONSUMER SHAPE
+JUSTIFIED CANONICAL OUTPUT SET
 ZERO HAND-MAINTAINED MIRRORS
 ZERO STALE GENERATED OUTPUT
-ZERO DUPLICATE DTO/ENUM AUTHORITIES
+ZERO DUPLICATE DTO/ENUM/API-TYPE AUTHORITIES
 ```
 
-Contract consumers migrate as part of the same root. Old contracts are deleted after cutover unless an external live consumer proves bounded compatibility is required.
+Generated code may contain many files when they are derived from one source. Do not force one-file output; eliminate parallel hand-maintained truth.
 
-## 4. Runtime/config/infra
+Migrate all consumers and delete old contracts/mirrors after cutover unless a proven live external consumer requires bounded compatibility.
+
+## 4. Backend/frontend/data parity
+
+For every exposed material meaning prove the applicable lineage:
+
+```text
+PERSISTED TRUTH
+→ CANONICAL WRITER
+→ DOMAIN SEMANTICS
+→ API/EVENT CONTRACT
+→ GENERATED CLIENT/BINDING
+→ REQUIRED FRONTEND/OTHER CONSUMERS
+→ USER ACTION/MUTATION
+→ PERSISTED READBACK
+```
+
+Manual frontend business mappings, enums, DTOs, allowed-action logic or status interpretations that duplicate canonical semantics are shadow-truth candidates.
+
+A clean backend and clean frontend that disagree semantically are not closed.
+
+## 5. Runtime/config/infra
 
 Audit every material runtime authority:
 
 ```text
-ENVIRONMENT VARIABLES
+ENV VARIABLES
 CONFIG FILES
 FEATURE FLAGS
 PORTS/ENDPOINTS
@@ -68,20 +101,16 @@ CONTAINER/COMPOSE/DEPLOYMENT
 STARTUP/BOOTSTRAP
 HEALTH/READINESS
 QUEUES/JOBS
-SECRETS REFERENCES
+SECRET REFERENCES
 OBSERVABILITY
 ROUTING/PROXY
 ```
 
-One setting must not have competing authorities across env/config/scripts/workflows unless precedence is canonical, explicit and necessary.
+Eliminate competing authorities and stale runtime paths after cutover. Do not preserve scripts/config merely because historical tooling depends on them; migrate the consumer or refound the tooling.
 
-Delete stale runtime paths and configuration after cutover.
-
-## 5. Security and financial truth
+## 6. Security and financial truth
 
 Authentication, authorization, sessions, secrets, PII, provider credentials, isolation and financial mutation receive heightened proof.
-
-Required principles:
 
 ```text
 SERVER-SIDE AUTHORITY FOR SECURITY DECISIONS
@@ -94,13 +123,13 @@ NO FLOATING FINANCIAL SOURCE OF TRUTH
 AUDITABLE CANONICAL READBACK
 ```
 
-Do not delete or rewrite security/financial data structures until invariants and migration are proven.
+Aggressive structural deletion never waives truth-preservation/migration proof for security or money.
 
-## 6. Tests are consumers, not truth by themselves
+## 7. Tests are consumers, not truth by themselves
 
-Tests may reveal required behavior, but inherited tests can encode obsolete architecture.
+Inherited tests can encode obsolete architecture.
 
-Classify failing/stale tests by canonical claim:
+Classify each material test expectation:
 
 ```text
 VALID_CANONICAL_SPEC
@@ -111,66 +140,116 @@ MISSING_PREVENTION
 BROKEN_TEST_INFRA
 ```
 
-Update/delete tests with the root. Never weaken a valid assertion merely to obtain green output.
+Update/delete tests with the refoundation unit. Never weaken a valid assertion merely to obtain green output.
 
-## 7. CI and assurance authority
+Tests, fixtures, mocks, snapshots and helpers tied only to losing containers must migrate or be deleted in the same unit.
 
-CI exists to produce unique falsifiable evidence.
+## 8. CI/assurance control-plane refoundation
 
-Audit workflows/scripts/tools for:
+CI is not privileged structure. `.github/**`, assurance scripts, custom guards, scanner adapters and evidence collectors must re-earn existence.
+
+Audit for:
 
 ```text
 DUPLICATE VERIFICATION AUTHORITY
-PR-ONLY ASSUMPTIONS IN h CAMPAIGN
-STALE BRANCH AUTHORITY
+PR-ONLY ASSUMPTIONS IN h
+DEFAULT/OLD-BRANCH TRUST
+STALE g/master AUTHORITY
 UNCONSUMED SCANNER OUTPUT
-SUPPRESSION/ALLOW-FAIL MASKING
+SUPPRESSION / ALLOW-FAIL MASKING
 DUPLICATE CUSTOM GUARDS
+FAKE HUMAN/COMMENT ATTESTATION USED AS EXECUTION PROOF
 CAMPAIGN-ONLY RESIDUE
-EXCESSIVE COST WITHOUT UNIQUE CLAIM
+EXCESSIVE INDIRECTION/COST WITHOUT UNIQUE CLAIM
 ```
 
-Create/modify/delete workflows freely when needed by `h` refoundation. Prefer one durable authority per assurance claim.
+When the control plane is the root, refound it as one surface rather than patching workflows one-by-one.
 
-## 8. Evidence ingestion
+Preferred durable shape:
+
+```text
+ONE CANONICAL EXACT-h CONTROLLER PER DISTINCT ASSURANCE ROLE
+→ REUSABLE WORKERS WITH UNIQUE CLAIMS
+→ NO PR REQUIREMENT
+→ NO OLD-BRANCH AUTHORITY
+→ FAIL-CLOSED MATERIAL NOT_COVERED
+→ CAMPAIGN-ONLY WORKFLOWS DELETED AFTER USE
+```
+
+Do not preserve `repository-baseline`, PR dispatcher, PR comment evidence or other historical structures unless they independently prove unique required value for the final `h` baseline.
+
+## 9. Verifier/admission-hole law
+
+When a defect was accepted because verification was weak, closure requires fixing both product/structure and detector/admission authority.
+
+If the verifier itself is wrong:
+
+```text
+DEFINE CANONICAL CLAIM
+→ REBUILD VERIFIER
+→ PROVE GOOD CASE PASSES
+→ PROVE KNOWN BAD CASE FAILS
+→ THEN USE IT AS EVIDENCE
+```
+
+Never weaken a gate to obtain green.
+
+## 10. GitHub Actions on h
+
+`h` may create, rewrite, run and delete actions as needed.
+
+Persistent workflows survive only with unique durable baseline value. Diagnostic/campaign workflows are temporary by default.
+
+Every authoritative `h` workflow must prove exact candidate identity and must not depend on PR/default-branch semantics unless an actual external requirement makes that necessary.
+
+If real rendered/device/runtime evidence is required but unavailable:
+
+```text
+CLAIM=NOT_COVERED
+```
+
+Do not replace it with a PR comment or self-attestation.
+
+## 11. Evidence ingestion
 
 Every material tool result must be consumed:
 
 ```text
 FINDING
-SEVERITY/MATERIALITY
+MATERIALITY
 AFFECTED CLAIM
-ROOT MAPPING
+CAUSAL ROOT/UNIT MAPPING
 DISPOSITION
 REVERIFY REQUIREMENT
 LIMITATION
 ```
 
-Do not equate scanner execution with finding closure.
+Scanner execution is not finding closure.
 
-## 9. Dependencies and toolchain
+## 12. Dependencies and toolchain
 
-Every dependency/toolchain pin/workspace relation must re-earn existence.
+Every dependency, workspace edge, toolchain pin and custom script must re-earn existence.
 
-Delete unused dependencies after structural migration. Consolidate duplicate libraries when they encode the same responsibility. Keep separate dependencies only when capability/compatibility/risk proves separation is canonical.
+Delete unused dependencies after migration. Consolidate duplicated tooling/libraries when they encode the same responsibility. Remove custom automation when native compiler/test/build/runtime/security tooling gives the same or stronger unique claim more simply.
 
-Toolchain/generated workflows should be reproducible and pinned appropriately for the assurance claim.
+## 13. Runtime and experience proof
 
-## 10. Runtime and experience proof
+When behavior is runtime-material, static evidence is insufficient.
 
-When behavior is material at runtime, static evidence alone is insufficient.
+Prove startup/request/persistence/readback/experience at the highest material boundary affected by the refoundation unit.
 
-Prove actual startup/request/persistence/readback/experience as applicable. Mobile/web rendered flows, backend endpoints, migrations, and integration paths are checked at the highest material boundary affected by the root.
+For mobile/web, distinguish source/config correctness from actual rendered/device execution; do not claim one as the other.
 
-## 11. Final assurance cleanliness
+## 14. Final assurance cleanliness
 
 At fixed point:
 
 ```text
 NO DUPLICATE MATERIAL CI AUTHORITIES
-NO CAMPAIGN-ONLY WORKFLOW RESIDUE
-NO STALE BRANCH-BOUND TRUST ASSUMPTION FOR h
-NO UNCONSUMED MATERIAL SECURITY/STATIC FINDINGS
+NO PR/DEFAULT/OLD-BRANCH h TRUST ASSUMPTIONS
+NO CAMPAIGN-ONLY WORKFLOW/TOOL RESIDUE
+NO FAKE EXPERIENCE ATTESTATION
+NO UNCONSUMED MATERIAL STATIC/SECURITY FINDINGS
 NO UNUSED MATERIAL DEPENDENCIES
 NO DUPLICATE CONTRACT/MIGRATION/RUNTIME AUTHORITIES
 NO KNOWN UNVERIFIED MATERIAL DATA/SECURITY/FINANCIAL CLAIMS
