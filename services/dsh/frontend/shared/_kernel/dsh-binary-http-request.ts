@@ -1,3 +1,5 @@
+import { DshRequestError } from "./dsh-request-error.ts";
+
 export type DshBinaryRequestResult = {
   readonly ok: boolean;
   readonly status: number;
@@ -26,10 +28,9 @@ export function createDshBinaryHttpClient(timeoutMs = 30_000) {
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
-      throw {
-        kind: "network",
+      throw new DshRequestError("network", {
         message: error instanceof Error ? error.message : "network error",
-      };
+      });
     }
     return { ok: response.ok, status: response.status };
   }

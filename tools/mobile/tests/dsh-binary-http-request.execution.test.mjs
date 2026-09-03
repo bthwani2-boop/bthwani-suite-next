@@ -50,6 +50,6 @@ test("binary client normalizes transport failure as a network error", async () =
 
   await assert.rejects(
     () => client.put("https://storage.example.com/object?signed=1", new Blob(["x"]), "application/octet-stream"),
-    (error) => error?.kind === "network" && error?.message === "socket closed",
+    (error) => error instanceof Error && error.kind === "network" && error.message === "socket closed",
   );
 });
