@@ -1,7 +1,7 @@
 # H Verification, Re-Diagnosis and Fixed-Point Closure
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: exact-h evidence, recovered-evidence freshness, finding accounting, falsification, deletion proof, admission proof, fresh full recensus and Level-4 fixed-point qualification.
+Owner: exact-h evidence, recovered-evidence freshness, finding accounting, systemic-unit and normal-root closure proof, Stage-A exit qualification, falsification, deletion proof, admission proof, fresh full recensus and Level-4 fixed-point qualification.
 
 ## 1. Evidence proves claims, not architecture or activity
 
@@ -14,11 +14,12 @@ ZERO_EXIT != FINDINGS_DISPOSITIONED
 UPLOADED_ARTIFACT != EVIDENCE_CONSUMED
 STATIC_PASS != RUNTIME_PROOF
 SOURCE_CONFIG_CORRECT != RENDERED/DEVICE_CORRECT
+STAGE_A_ACTIVITY != STAGE_A_PASS
 ```
 
 Never turn a failed check directly into the next patch without causal classification.
 
-Use the cheapest proof that can actually falsify the claim, then escalate by material risk and root breadth. A whole-surface/root refoundation may require broad verification immediately; this rule is for speed without under-verification, not conservative execution.
+Use the cheapest proof that can actually falsify the claim, then escalate by material risk and causal breadth. A whole-surface/systemic/root refoundation may require broad verification immediately; this rule is for speed without under-verification, not conservative execution.
 
 ## 2. Exact-h evidence provenance
 
@@ -26,7 +27,8 @@ Every material closure claim remains reconstructable with:
 
 ```text
 EXACT_H_SHA
-CLAIM / ROOT / UNIT
+CAMPAIGN_STAGE
+CLAIM / CATASTROPHE / ROOT / UNIT
 EVIDENCE_SOURCE
 COMMAND / RUN / JOB / CHECK / ARTIFACT / SCENARIO
 BASE / INPUTS WHEN APPLICABLE
@@ -50,24 +52,26 @@ A prior execution claim is not automatically current merely because it appears i
 
 ```text
 HISTORIC_PASS != CURRENT_PASS
+HISTORIC_STAGE_A_PASS != CURRENT_STAGE_A_PASS
 HISTORIC_DELETION_CLAIM != CURRENT_ABSENCE_PROOF
 HISTORIC_CUTOVER_CLAIM != CURRENT_ZERO_OLD_REACHABILITY
 COMMIT_MESSAGE != VERIFICATION_EVIDENCE
 ```
 
-During session recovery, reconcile every material prior proof used to locate the active unit against:
+During session recovery, reconcile every material prior proof used to locate the active unit and campaign stage against:
 
 ```text
 CURRENT_EXACT_h_SHA
 CHANGED_CONE_SINCE_PROOF
 CURRENT_AUTHORITY/WRITER/CONSUMER_STATE
 CURRENT_SCHEMA/CONTRACT/GENERATOR/RUNTIME_STATE WHEN APPLICABLE
+CURRENT_SYSTEMIC_CATASTROPHE_STATE
 CURRENT_NEGATIVE_SPACE
 ```
 
-Use the existing fail-closed evidence dispositions from §3. Proof that was invalidated by intervening changes becomes `STALE`; newer adequate exact evidence may make it `SUPERSEDED`; an unexecuted material claim is `NOT_COVERED`. Do not manufacture a new recovery-only PASS state.
+Use the existing fail-closed evidence dispositions from §3. Proof that was invalidated by intervening changes becomes `STALE`; newer adequate exact evidence may make it `SUPERSEDED`; an unexecuted material claim is `NOT_COVERED`. Do not manufacture a recovery-only PASS state.
 
-Recovery should rerun only proof invalidated or newly required by the intervening change cone, except where the change is cross-cutting or final qualification requires broad fresh proof.
+Recovery should rerun only proof invalidated or newly required by the intervening change cone, except where the change is cross-cutting, Stage-A qualification is invalidated, or final qualification requires broad fresh proof.
 
 For any claimed deletion, migration or cutover, recovery must actively check materially applicable current absence/reachability surfaces, including:
 
@@ -91,6 +95,14 @@ If a losing authority/container remains materially reachable, the execution unit
 RECOVERED_NEGATIVE_SPACE_FAIL
 → UNIT_OPEN
 → RETURN TO THE FIRST UNFINISHED MATERIAL OBLIGATION
+```
+
+If a cross-cutting change invalidates a previously passed Stage-A gate:
+
+```text
+STAGE_A_EXIT_STATE = STALE
+→ RETURN TO SYSTEMIC RE-CENSUS
+→ STAGE_B_NEW_ROOT_SELECTION = FORBIDDEN UNTIL REQUALIFIED
 ```
 
 Textual zero-reference search alone remains insufficient where non-textual/runtime/generated/database/external reachability can survive.
@@ -130,7 +142,7 @@ Every material raw finding/warning from tests, CI, Sonar, CodeQL, Semgrep, OpenC
 Each finding receives one traceable disposition:
 
 ```text
-MAPPED_TO_ROOT_OR_FINDING
+MAPPED_TO_SYSTEMIC_CATASTROPHE_OR_ROOT_OR_FINDING
 DUPLICATE_OF
 FALSE_POSITIVE_PROVEN
 AUTHORIZED_INTENTIONAL_CONDITION
@@ -145,11 +157,11 @@ DISAPPEARED_FROM_LATER_RUN != RESOLVED
 GREEN_TOOL != ALL_FINDINGS_DISPOSITIONED
 ```
 
-Do not rerun every broad tool wave after every tiny commit. Re-run invalidated/newly required proof, and reserve fresh broad waves for broad structural roots and final fixed-point qualification.
+Do not rerun every broad tool wave after every tiny commit. Re-run invalidated/newly required proof, and reserve fresh broad waves for systemic refoundations, broad structural roots, Stage-A exit qualification and final fixed-point qualification.
 
 ## 5. Root/execution-unit closure gate
 
-As applicable, prove:
+For every material unit, as applicable, prove:
 
 ```text
 ACTUAL_SOURCE_OF_DEFECT_REMOVED
@@ -193,14 +205,92 @@ Negative-space proof is mandatory for deletion/cutover claims.
 
 Size thresholds and structural rules are owned by `focus/code-architecture-organization.md`; generated/declarative artifacts may use proven exceptions, but hand-maintained source may not bypass the gate merely because it builds or tests pass.
 
+## 5.1 Stage-A systemic-unit closure gate
+
+A systemic catastrophe is not closed merely because one descendant failure disappears or a replacement foundation exists.
+
+As applicable prove:
+
+```text
+SYSTEMIC_CATASTROPHE_REMOVED
+SHARED_SOURCE_OF_DEFECT_REMOVED
+WINNING_CANONICAL_FOUNDATION_EXISTS
+REQUIRED_SHARED_TRUTH_PRESERVED
+ALL_AFFECTED_ROOT_FAMILIES_MIGRATED_OR_PROVEN_UNAFFECTED
+OLD_SHARED_WRITERS=0
+OLD_SHARED_READERS/CONSUMERS=0
+OLD_SHARED_RUNTIME_REGISTRATIONS=0
+OLD_SHARED_CONFIG/ROUTES/ALIASES=0
+LOSING_SHARED_AUTHORITIES=0
+LOSING_SHARED_CONTAINERS/SUBTREES=0
+SHARED_COMPAT/BRIDGE/COMPENSATION_LAYER=0
+WORKSPACE/PACKAGE/DEPENDENCY_RESIDUE=0
+DIAGNOSIS_CONTAMINATION_REMOVED
+VERIFICATION_CONTAMINATION_REMOVED
+ROOT_TAX_MATERIALLY_REDUCED_OR_ELIMINATED
+SYSTEMIC_NEGATIVE_SPACE=PASS
+ADMISSION/PREVENTION_HOLE_CLOSED
+```
+
+If a new canonical foundation is layered over the old one, or later roots still require synchronized handling of both, the systemic unit is open.
+
+## 5.2 Mandatory Stage-A exit gate
+
+Stage B normal root mutation is forbidden until Stage A passes on a fresh exact `h` state.
+
+The exit gate must prove at minimum:
+
+```text
+FULL_BRANCH_MATERIAL_CENSUS=PASS
+BRANCH_WIDE_SURVIVAL_CHALLENGE=PASS
+
+UNREVIEWED_TRACKED_MATERIAL_ARTIFACTS=0
+UNDISPOSITIONED_TRACKED_MATERIAL_ARTIFACTS=0
+UNREVIEWED_TOP_LEVEL_SURFACES=0
+UNREVIEWED_WORKSPACES=0
+UNREVIEWED_PACKAGES=0
+UNREVIEWED_SERVICES_OR_DOMAIN_BOUNDARIES=0
+UNRESOLVED_HIGH_LEVEL_CONTAINER_VERDICTS=0
+
+KNOWN_EXECUTABLE_SYSTEMIC_CATASTROPHES=0
+KNOWN_CROSS_ROOT_PARALLEL_TRUTH=0
+KNOWN_DUPLICATE_SHARED_MUTABLE_AUTHORITIES=0
+KNOWN_SHARED_COMPENSATION_ARCHITECTURES=0
+KNOWN_REACHABLE_SUPERSEDED_SHARED_RUNTIME=0
+KNOWN_BAD_SHARED_MIGRATION_EPOCHS=0
+KNOWN_DUPLICATE_SHARED_CONTRACT_LINEAGES=0
+KNOWN_SHADOW_SHARED_GENERATED_AUTHORITIES=0
+KNOWN_ROOT_CLOSURE_STRUCTURAL_BLOCKERS=0
+KNOWN_HIGH_LEVERAGE_OBSOLETE_SUBTREES=0
+KNOWN_DEAD_OR_DUPLICATE_SHARED_PACKAGES_WORKSPACES=0
+KNOWN_UNJUSTIFIED_SHARED_COMPATIBILITY_LAYERS=0
+KNOWN_HIGH_LEVERAGE_GARBAGE=0
+KNOWN_DIAGNOSIS_CONTAMINATORS=0
+KNOWN_SHARED_VERIFICATION_CONTAMINATORS=0
+KNOWN_GOVERNANCE_AGENT_TOOL_AUTHORITY_CONFLICTS=0
+
+UNPROVEN_SURVIVING_MATERIAL_HIGH_LEVEL_CONTAINERS=0
+PRE_ROOT_SYSTEMIC_FRONTIER=EMPTY
+FRESH_ADVERSARIAL_STAGE_A_RECENSUS=PASS
+```
+
+A local Stage-B defect may remain known at Stage-A exit only if it is fully classified/mapped and is not itself an executable systemic catastrophe or a blocker of the shared baseline.
+
+```text
+STAGE_A_EXIT_PASS != REPOSITORY_COMPLETE
+STAGE_A_EXIT_PASS = BASELINE_IS_WORTHY_OF_NORMAL_ROOT_CLOSURE
+```
+
 ## 6. Failure classification before mutation
 
 Classify every material verification failure as:
 
 ```text
 ACTIVE_UNIT_SYMPTOM
+SYSTEMIC_CATASTROPHE_EVIDENCE
 NEW_HIGHER_ROOT_EVIDENCE
 INHERITED_INDEPENDENT_ROOT
+STAGE_A_EXIT_GATE_FAILURE
 VERIFIER_IMPLEMENTATION_FAILURE
 EVIDENCE_COLLECTOR_FAILURE
 ENV/INFRA_FAILURE
@@ -214,7 +304,7 @@ EXPECTED_TRANSITIONAL_FAILURE_INSIDE_OPEN_UNIT
 UNKNOWN
 ```
 
-If evidence reveals a higher causal root, stop local patching and re-rank. Flakiness is a defect until controlled/proven; cancelled/superseded/stale is neither PASS nor current product FAIL.
+If evidence reveals a higher systemic or causal parent, stop local patching and re-rank in the correct graph. Flakiness is a defect until controlled/proven; cancelled/superseded/stale is neither PASS nor current product FAIL.
 
 ## 7. Falsification is mandatory
 
@@ -224,13 +314,14 @@ Actively attempt to disprove closure:
 SEARCH_OLD_AUTHORITY_REFERENCES
 SEARCH_SECOND_WRITERS
 SEARCH_DUPLICATE_SEMANTICS_UNDER_DIFFERENT_NAMES/PATHS
+SEARCH_CROSS_ROOT_SHARED_POLICY_OR_STATE
 SEARCH_SHADOW_CONFIG/CONTRACT/DTO/ENUM/MAPPINGS
 SEARCH_MANUAL_GENERATED_MIRRORS
 SEARCH_COMPAT/FORWARDER/REEXPORT/ALIAS_PATHS
 SEARCH_EMPTY/MEANINGLESS_PARENT_CONTAINERS
 SEARCH_ORPHAN_SCREENS/APIs/BINDINGS/DATA
 SEARCH_TESTS/FIXTURES/MOCKS_FOR_RETIRED_TOPOLOGY
-SEARCH_CI/GOVERNANCE_SUPPRESSIONS_OR_PARALLEL_AUTHORITIES
+SEARCH_CI/GOVERNANCE/AGENT/TOOL_SUPPRESSIONS_OR_PARALLEL_AUTHORITIES
 SEARCH_CAMPAIGN_ONLY_TOOL/WORKFLOW_RESIDUE
 SEARCH_RUNTIME_REGISTRATION_OF_DELETED_PATHS
 SEARCH_STALE_CONFIG/ENV/FLAGS/SCRIPTS
@@ -240,6 +331,8 @@ SEARCH_MISLEADING_NAMES_AND_WRONG_OWNER_PATHS
 SEARCH_OVERSIZED_OR_MULTI_RESPONSIBILITY_FILES
 SEARCH_UNJUSTIFIED_GENERIC_UTILS_HELPERS_COMMON_MISC_SHARED_CORE_CONTAINERS
 SEARCH_CIRCULAR_AND_CROSS_DOMAIN_COUPLING
+SEARCH_HIGH_FAN_IN_OBSOLETE_OR_COMPENSATORY_SUBTREES
+SEARCH_SYSTEMIC_ROOT_TAX_SURVIVAL
 ```
 
 Textual zero-reference search alone is insufficient where runtime registration, generated wiring, database state, build manifests or external consumers can keep an old authority reachable.
@@ -308,7 +401,7 @@ If material rendered/device/runtime evidence cannot be produced, mark the claim 
 
 ## 11. Human-experience evidence
 
-For materially user-facing roots distinguish claims explicitly:
+For materially user-facing units distinguish claims explicitly:
 
 ```text
 SOURCE/TYPE_CORRECTNESS
@@ -332,17 +425,20 @@ RE-PIN h
 → INVALIDATE_AFFECTED_EVIDENCE
 → REFRESH_AFFECTED_SEMANTIC/AUTHORITY/CONTAINER/E2E/ADMISSION_GRAPHS
 → RE-RUN_NEGATIVE_SPACE
-→ RE-SYNTHESIZE_CAUSAL_ROOT_GRAPH
-→ RE-RANK
+→ RE-SYNTHESIZE_SYSTEMIC_CATASTROPHE_GRAPH
+→ IF STAGE_A_EXIT_NOT_PASS: RE-RANK_SYSTEMIC_UNITS
+→ IF STAGE_A_EXIT_PASS: RE-SYNTHESIZE_CAUSAL_ROOT_GRAPH / RE-RANK_STAGE_B
 ```
 
 The same invalidation law applies when an interrupted session reconstructs intervening commits: refresh the structural graphs invalidated by the actual changed cone before resuming mutation.
 
 For cross-cutting topology, ownership, database, migration-epoch, contract-authority, runtime/config, verification-authority or repository-control-plane changes, use a broad fresh re-census rather than selective refresh.
 
+Before first Stage-B mutation, run the dedicated fresh adversarial Stage-A recensus required by §5.2 even if the Systemic Catastrophe Graph appears empty.
+
 ## 13. Final adversarial recensus from zero
 
-When the dynamic Root Graph appears empty, do not declare completion.
+When the Stage-B dynamic Root Graph appears empty, do not declare completion.
 
 On final exact `h` SHA independently rebuild the evidence/model from zero and attempt to falsify the baseline.
 
@@ -358,13 +454,14 @@ FULL_CANONICAL_CONTAINER/ANTI_FRAGMENTATION_SWEEP
 FULL_FILENAME_DIRECTORY_PACKAGE_NAMING_AND_PATH_AUDIT
 FULL_FILE_SIZE_COHESION_COMPLEXITY_AND_COUPLING_AUDIT
 FULL_SERVICES/CORE/SHARED_TOPOLOGY_AUDIT
+FULL_SYSTEMIC_CATASTROPHE_AND_ROOT_TAX_RECURRENCE_SWEEP
 FULL_DATABASE/MIGRATION_AUTHORITY_AUDIT
 FULL_CONTRACT/GENERATED_SSOT_AUDIT
 FULL_END_TO_END_CAPABILITY_PARITY_SWEEP
 FULL_FRONTEND_BUSINESS_TRUTH_LEAKAGE_SWEEP
 FULL_RUNTIME/CONFIG/INFRA_AUTHORITY_SWEEP
 FULL_TEST/FIXTURE/MOCK_OWNERSHIP_SWEEP
-FULL_CI/TOOLS/GOVERNANCE/DOCS_AUTHORITY_SWEEP
+FULL_CI/TOOLS/GOVERNANCE/DOCS/AGENT_AUTHORITY_SWEEP
 FULL_SECURITY/FINANCIAL/INTEGRITY_QUALIFICATION
 FULL_OLD_PATH/ALIAS/SHIM/COMPATIBILITY_SWEEP
 FULL_NEGATIVE_SPACE
@@ -378,11 +475,13 @@ Final coverage must prove zero known material gaps/unknowns, not merely a green 
 Before Level-4 completion prove at minimum:
 
 ```text
+STAGE_A_SYSTEMIC_BASELINE_DECONTAMINATION=PASS
 UNREVIEWED_TRACKED_MATERIAL_ARTIFACTS=0
 UNDISPOSITIONED_TRACKED_MATERIAL_ARTIFACTS=0
 UNMAPPED_MATERIAL_RESPONSIBILITIES/OWNERS/WRITERS/CONSUMERS=0
 KNOWN_MATERIAL_DEFECTS=0
 KNOWN_MATERIAL_UNKNOWNS=0
+KNOWN_EXECUTABLE_SYSTEMIC_CATASTROPHES=0
 UNRESOLVED_STRUCTURAL_OR_SEMANTIC_ROOTS=0
 PARALLEL_TRUTHS/SHADOW_AUTHORITIES/DUPLICATE_MUTABLE_WRITERS=0
 LOSING_AUTHORITIES/CONTAINERS=0
