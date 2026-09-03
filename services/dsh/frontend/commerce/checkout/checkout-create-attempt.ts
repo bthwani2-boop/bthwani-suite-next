@@ -5,7 +5,7 @@ import {
   resolveMutationIdentityScope,
 } from "@bthwani/data-runtime/mutation-identity-scope";
 import type { DshCreateIntentInput } from "./checkout.types";
-import { secureRandomId } from "../_kernel/secure-random.ts";
+import { secureRandomId } from "../../shared/_kernel/secure-random.ts";
 
 const STORAGE_PREFIX = "@bthwani/checkout-create-attempt:v3/";
 
