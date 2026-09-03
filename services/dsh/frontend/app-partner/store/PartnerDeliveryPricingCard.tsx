@@ -5,7 +5,7 @@ import {
   formatWltMoney,
   minorUnitsToWltMajorInput,
   parseWltMajorInputToMinorUnits,
-} from "@bthwani/dsh/finance";
+} from "@bthwani/dsh/wlt-boundary";
 import {
   findDeliveryPricing,
   usePartnerDeliveryPricingController,
