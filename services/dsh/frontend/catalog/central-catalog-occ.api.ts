@@ -1,6 +1,6 @@
-import type { operations } from "../../../clients/generated/dsh-api";
-import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import type { operations } from "../../clients/generated/dsh-api";
+import { resolveDshApiBaseUrl } from "../shared/_kernel/dsh-api-base-url";
+import { createDshHttpClient } from "../shared/_kernel/dsh-http-request";
 import * as catalogApi from "./central-catalog.api";
 import type { CatalogAsset, CentralCatalogDomain, CentralCatalogNode, MasterProduct, ProductProposal, StoreAssortment, StoreAssortmentCreateInput, StoreAssortmentCommercialReadback, StoreAssortmentInventory, StoreAssortmentInventoryInput, StoreAssortmentPrice, StoreAssortmentPriceInput, StoreAssortmentMetadataInput, StoreAssortmentMetadataUpdateInput } from "./central-catalog.types";
 
