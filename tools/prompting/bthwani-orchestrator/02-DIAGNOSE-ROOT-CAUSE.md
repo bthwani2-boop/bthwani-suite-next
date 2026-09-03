@@ -1,51 +1,77 @@
-# H Forensic Diagnosis and Root-Cause Synthesis
+# H Forensic Diagnosis and Causal Refoundation Synthesis
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: census, truth extraction, semantic clustering, current/canonical delta evidence and causal Root Graph synthesis.
+Owner: full census, required-truth extraction, semantic clustering, container/surface diagnosis, canonical target, structural delta and causal execution-unit synthesis.
 
-## 1. Diagnosis is repository-wide before mutation ranking
+## 1. Diagnosis starts repository-wide
 
-Do not begin by fixing reported errors. Begin by reconstructing the repository truth model.
+Do not begin from reported bugs, CI failures or named files.
 
-Required first-pass census:
+Begin from exact pinned `h` and reconstruct the whole material system:
 
 ```text
 TRACKED TREE
-WORKSPACES/PACKAGES
-SERVICE/DOMAIN TOPOLOGY
-DATABASE/SCHEMA/MIGRATION OWNERSHIP
-API/CONTRACT/GENERATED LINEAGE
-RUNTIME/CONFIG/INFRA AUTHORITIES
-FRONTEND SURFACES/SHARED OWNERSHIP
-TEST/ASSURANCE/CI AUTHORITIES
-DEPENDENCY/LOCKFILE OWNERSHIP
-DUPLICATE/SHADOW/PARALLEL TRUTH
-LEGACY/COMPATIBILITY/BRIDGE LAYERS
-ORPHANED/DEAD/STALE/UNOWNED MATERIAL
+TOP-LEVEL SURFACES
+WORKSPACES / PACKAGES
+DOMAIN / SERVICE TOPOLOGY
+FILES / SYMBOLS / PUBLIC EXPORTS
+DATABASE / SCHEMA / MIGRATION OWNERSHIP
+API / CONTRACT / GENERATED LINEAGE
+RUNTIME / CONFIG / INFRA AUTHORITIES
+FRONTEND / SCREENS / JOURNEYS
+TEST / CI / ASSURANCE AUTHORITIES
+TOOLS / DOCS / GOVERNANCE / AGENT AUTHORITIES
+DEPENDENCIES / LOCKFILE OWNERSHIP
+DUPLICATE / SHADOW / PARALLEL TRUTH
+LEGACY / COMPAT / FORWARDER / BRIDGE LAYERS
+ORPHAN / DEAD / STALE / UNOWNED MATERIAL
 ```
 
-Machine census is followed by semantic census. File counts alone are not diagnosis.
+Machine census must be followed by semantic census.
 
-## 2. Required truth extraction
+## 2. Required-truth extraction
 
-For each material capability or concern, extract only truth that the canonical baseline must preserve:
+For every material capability/concern, identify only truth that must survive:
 
 ```text
 PRODUCT INTENT
-ACTORS AND AUTHORIZATION
+ACTORS / AUTHORIZATION
 DOMAIN SEMANTICS
 PERSISTED DATA MEANING
-FINANCIAL/SECURITY INVARIANTS
+SECURITY / FINANCIAL INVARIANTS
 EXTERNAL CONTRACTS
 USER JOURNEYS
 REQUIRED INTEGRATIONS
 OBSERVABLE RUNTIME BEHAVIOR
-COMPLIANCE/SAFETY CONSTRAINTS
+REQUIRED OPERATIONAL/ASSURANCE CLAIMS
 ```
 
-Do not preserve an implementation shape merely because it currently carries required truth.
+Do not preserve a container merely because required truth currently lives inside it.
 
-## 3. Build the CURRENT model
+## 3. Semantic responsibility outranks names and paths
+
+```text
+SEMANTIC_RESPONSIBILITY > FILE_NAME
+SEMANTIC_RESPONSIBILITY > CURRENT_PATH
+SEMANTIC_RESPONSIBILITY > CURRENT_PACKAGE
+```
+
+Cluster by actual behavior:
+
+```text
+WHAT DECISION IS MADE?
+WHAT DATA IS READ/WRITTEN?
+WHAT STATE IS INTERPRETED OR TRANSITIONED?
+WHAT BUSINESS RULE/POLICY IS APPLIED?
+WHAT CONTRACT/ERROR SEMANTICS ARE OWNED?
+WHO CALLS IT?
+WHO CONSUMES THE RESULT?
+WHAT JOURNEY/SCREEN OUTCOME DEPENDS ON IT?
+```
+
+Different names, paths, languages or surfaces do not prove different responsibilities.
+
+## 4. Build CURRENT without normalizing contradictions
 
 For every material semantic cluster record:
 
@@ -53,23 +79,24 @@ For every material semantic cluster record:
 SEMANTIC_ID
 CURRENT_OWNERS
 CURRENT_WRITERS
-CURRENT_READERS
+CURRENT_READERS/CONSUMERS
 CURRENT_STORAGE
 CURRENT_CONTRACTS
 CURRENT_GENERATED_LINEAGE
-CURRENT_RUNTIME_AUTHORITY
+CURRENT_RUNTIME/CONFIG AUTHORITY
 CURRENT_CONTAINERS
-CURRENT_TEST/CI COVERAGE
-CURRENT_COMPATIBILITY/BRIDGE LAYERS
-CURRENT_DEAD_OR_SHADOW_PATHS
-HISTORICAL_DEFECT_SIGNALS
+CURRENT_SCREENS/JOURNEYS
+CURRENT_TEST/CI/TOOL/GOVERNANCE AUTHORITIES
+CURRENT_COMPAT/BRIDGE/FORWARDER LAYERS
+CURRENT_DEAD/SHADOW PATHS
+HISTORICAL DEFECT/ADMISSION SIGNALS
 ```
 
-The CURRENT model must expose contradictions instead of normalizing them.
+Contradictions are findings, not something to average away.
 
-## 4. Artifact and container disposition
+## 5. Artifact/container/surface disposition
 
-Every material inherited container must receive one high-level disposition:
+Every material inherited artifact receives exactly one high-level disposition:
 
 ```text
 KEEP_PROVEN
@@ -80,70 +107,134 @@ DELETE
 BLOCKED_UNKNOWN
 ```
 
-For every directory/package/module/service boundary additionally classify:
+Every material container from file upward receives a structural verdict:
 
 ```text
-COHESIVE_CANONICAL_CONTAINER
+CANONICAL_COHESIVE_CONTAINER
 MIXED_RESPONSIBILITY
 DUPLICATE_RESPONSIBILITY
 WRONG_OWNER
+WRONG_PATH/BOUNDARY
 PASS_THROUGH_ONLY
 COMPATIBILITY_ONLY
+HISTORICAL_COMPENSATION
 DEAD/ORPHANED
+WHOLE_SUBTREE_REFOUND_CANDIDATE
 UNCLASSIFIED
 ```
 
-`UNCLASSIFIED` and `BLOCKED_UNKNOWN` are closure blockers.
+`UNCLASSIFIED` and `BLOCKED_UNKNOWN` block closure.
 
-## 5. Parallel/shadow truth census is mandatory
+## 6. File and parent death test
 
-Search explicitly for duplicated or competing authority across:
+For every materially suspect file ask:
+
+```text
+DOES IT OWN A UNIQUE CANONICAL RESPONSIBILITY?
+IS IT A JUSTIFIED MEMBER OF THE MINIMUM NECESSARY CANONICAL FILE SET?
+CAN REQUIRED VALUE BE ABSORBED INTO A BETTER CANONICAL CONTAINER?
+IS IT REEXPORT/PASS-THROUGH/FORWARDER/SHIM/ALIAS ONLY?
+IS IT ONLY A HISTORICAL COMPENSATION?
+```
+
+Then repeat upward for directory → package → service/boundary → surface.
+
+A used loser is still a loser: migrate callers then delete it.
+
+## 7. Parallel/shadow truth census
+
+Search explicitly across:
 
 ```text
 STATE
-BUSINESS RULES
-POLICY
-AUTHORIZATION
-MONEY/CALCULATION
-DTO/ENUM/CONTRACT
-SCHEMA/MIGRATION
+BUSINESS RULES / POLICY / AUTHORIZATION
+MONEY / CALCULATION
+DTO / ENUM / CONTRACT
+SCHEMA / MIGRATION
 CONFIGURATION
-ROUTES
-CLIENTS
-MAPPINGS
-CACHE/READ MODEL
+ROUTES / CLIENTS / MAPPINGS
+CACHE / READ MODEL
 VALIDATION
 NAVIGATION
 FEATURE FLAGS
-CI/VERIFICATION
-DOCS THAT OPERATE AS AUTHORITY
+CI / VERIFICATION
+DOCS / GOVERNANCE / AGENT INSTRUCTIONS THAT OPERATE AS AUTHORITY
 ```
 
-For every material parallel truth pair/group, determine:
+For every material competing group determine:
 
 ```text
 WINNING_CANONICAL_AUTHORITY
 LOSING_AUTHORITIES
-ALL LOSING WRITERS
-ALL LOSING READERS/CONSUMERS
-VALUE TO MIGRATE
-CUTOVER ORDER
+LOSING CONTAINERS
+LOSING WRITERS
+LOSING READERS/CONSUMERS
+VALUE TO SALVAGE
+MIGRATION/CUTOVER
 DELETE TARGETS
-NEGATIVE-SPACE PROOF REQUIRED
+OLD PATH/ALIAS/ROUTE CLEANUP
+NEGATIVE-SPACE PROOF
 ```
 
 ```text
-DISCOVERED_PARALLEL_MATERIAL_TRUTH => MANDATORY_STRUCTURAL_DISPOSITION
-LOSING_AUTHORITY_SURVIVES_AFTER_CUTOVER => ROOT_OPEN
+DISCOVERED_PARALLEL_TRUTH => MANDATORY_STRUCTURAL_DISPOSITION
+LOSING_AUTHORITY_OR_CONTAINER_SURVIVES_AFTER_CUTOVER => OPEN
 ```
 
-Creating a third wrapper around two authorities is forbidden.
+Creating a third wrapper is forbidden.
 
-## 6. Historical defects are clustering evidence
+## 8. End-to-end parity census
 
-Use failures, TODO/FIXME/HACK, regressions, repeated incidents, brittle migrations, repeated contract drift, CI suppressions, generated drift, recurring type/test failures and old branch differences as evidence.
+For each required product capability trace as applicable:
 
-Cluster them by causal mechanism:
+```text
+PRODUCT MEANING
+→ ACTOR / JOURNEY / STATE
+→ DATA/STORAGE OWNER
+→ DOMAIN/BACKEND OWNER
+→ API/EVENT
+→ CANONICAL CONTRACT
+→ GENERATED BINDING
+→ FRONTEND DATA CONSUMER
+→ COMPONENT/SCREEN
+→ USER ACTION/MUTATION
+→ PERSISTED READBACK
+→ VISIBLE FINAL STATE
+```
+
+Any unjustified break, local manual business mirror or orphan required layer is a structural delta item.
+
+## 9. Top-level confusion surfaces
+
+Explicitly audit:
+
+```text
+.agents/**
+.github/**
+.opencodereview/**
+docs/**
+tools/**
+governance/**
+```
+
+For each, determine whether the current subtree:
+
+```text
+OWNS UNIQUE REQUIRED VALUE
+DUPLICATES ANOTHER AUTHORITY
+CONTAINS STALE/CONFLICTING INSTRUCTIONS
+EMBEDS OBSOLETE CI/PR/BRANCH ASSUMPTIONS
+EXISTS TO COMPENSATE FOR OLD DEFECTS
+CAN BE SIMPLER AS EXTRACT→DELETE→MINIMAL-RECREATE
+```
+
+Do not repair dozens of historical files when one surface refoundation removes the causal confusion.
+
+## 10. Historical defects are clustering evidence
+
+Failures, regressions, TODO/FIXME/HACK, brittle migrations, generated drift, repeated type/test failures, suppressions and old branch differences are evidence only.
+
+Cluster by causal mechanism:
 
 ```text
 SAME WRONG OWNER
@@ -151,125 +242,112 @@ SAME DUPLICATE SOURCE OF TRUTH
 SAME FRAGMENTED BOUNDARY
 SAME MIGRATION EPOCH
 SAME CONTRACT LINEAGE FAILURE
-SAME RUNTIME/CONFIG AUTHORITY SPLIT
+SAME RUNTIME/CONFIG SPLIT
 SAME ADMISSION/VERIFICATION HOLE
-SAME COMPENSATING LAYER
+SAME COMPENSATION STRUCTURE
+SAME CONFUSING CONTROL/GOVERNANCE SURFACE
 ```
 
-Do not convert each symptom into its own objective.
+Never produce one objective per symptom.
 
-## 7. Build the canonical target before selecting the root
+## 11. Design CANONICAL from first principles
 
 Canonical modeling must answer:
 
 ```text
 WHAT REQUIRED TRUTH SURVIVES?
-WHO OWNS IT?
-WHO MAY WRITE IT?
+WHO OWNS/WRITES IT?
 WHERE IS IT STORED?
 WHAT IS GENERATED VS HAND-WRITTEN?
-WHAT CONTAINERS SHOULD EXIST?
-WHAT BOUNDARIES SHOULD EXIST?
+WHAT DOMAIN/SERVICE/PACKAGE/DIRECTORY/FILE SET SHOULD EXIST?
+WHAT SCREENS/JOURNEYS SHOULD EXIST?
+WHAT TOOLS/WORKFLOWS/GOVERNANCE SHOULD EXIST?
 WHAT SHOULD NOT EXIST AT ALL?
 WHAT MUST BE MIGRATED?
 WHAT MUST BE DELETED?
 WHAT MUST PREVENT REGRESSION?
 ```
 
-If the answer is constrained only by current folders/packages, diagnosis is invalid.
+Current topology is evidence, never a design constraint.
 
-## 8. Complete structural delta
+## 12. Complete delta
 
-Compute CURRENT → CANONICAL at least across:
+Compute CURRENT → CANONICAL across at least:
 
 ```text
-OWNERSHIP
-WRITER AUTHORITY
-PERSISTENCE
-CONTRACTS
-GENERATED LINEAGE
-SERVICE/DOMAIN BOUNDARIES
-PACKAGE/DIRECTORY TOPOLOGY
-FILE/SYMBOL RESPONSIBILITY
-RUNTIME/CONFIG/INFRA
-TEST/CI/ASSURANCE
-DEPENDENCIES
-MIGRATION/CUTOVER
-ADMISSION/PREVENTION
+PRODUCT/JOURNEY PARITY
+OWNERSHIP / WRITER AUTHORITY
+PERSISTENCE / MIGRATION EPOCH
+CONTRACTS / GENERATED LINEAGE
+DOMAIN / SERVICE BOUNDARIES
+PACKAGE / DIRECTORY / FILE / SYMBOL RESPONSIBILITY
+SCREENS / FRONTEND BUSINESS TRUTH
+RUNTIME / CONFIG / INFRA
+TOOLS / DOCS / GOVERNANCE / AGENTS
+TEST / CI / ASSURANCE
+DEPENDENCIES / WORKSPACES
+MIGRATION / CUTOVER
+ADMISSION / PREVENTION
 ```
 
-Delta items are evidence nodes, not an ordered todo list.
+Delta items are causal evidence nodes, not a todo queue.
 
-## 9. Root Graph
+## 13. Dynamic Root Graph and execution units
 
-Build a dynamic causal graph where:
+Build the causal graph, then synthesize candidate execution units at the highest useful granularity.
 
 ```text
-ROOT = HIGHEST PROVEN CAUSE WHOSE ELIMINATION COLLAPSES THE LARGEST MATERIAL DEFECT CLUSTER
+ROOT = HIGHEST PROVEN CAUSE WHOSE ELIMINATION COLLAPSES MATERIAL DEFECT CLUSTERS
+EXECUTION_UNIT = HIGHEST CAUSALLY COMPLETE SAFE CUTOVER THAT REMOVES THE MOST PROVEN NONCANONICAL STRUCTURE
 ```
 
-A root must identify:
+Candidate units may be a whole top-level surface, domain, service, package family, subtree, migration epoch, contract lineage, CI control plane or narrower root.
+
+Rank by structural leverage, canonical correctness, deletable losing structure and complete cutover—not ease.
+
+## 14. Root/unit declaration
+
+Before mutation establish:
 
 ```text
-ROOT_ID
-CAUSAL_CLAIM
-PROOF
+UNIT_ID
+CAUSAL_PROOF
 CANONICAL_TARGET
-AFFECTED_CONE
 VALUE_TO_PRESERVE
-LOSING_STRUCTURE
-MIGRATION/CUTOVER REQUIREMENTS
-DELETION REQUIREMENTS
-ADMISSION_HOLE
-VERIFICATION/FALSIFICATION CLAIMS
-BLOCKERS
+LOSING_AUTHORITIES/CONTAINERS
+COMPLETE AFFECTED CONE
+WRITERS/READERS/CONSUMERS
+DATA/CONTRACT MIGRATION
+CUTOVER
+DELETION/PRUNING
+ADMISSION/PREVENTION
+VERIFICATION/FALSIFICATION
+VALID BLOCKERS
 ```
 
-Rank by structural leverage and correctness, not convenience.
-
-Priority favors roots that eliminate:
+Forbidden shrinkage reasons:
 
 ```text
-PARALLEL/SHADOW TRUTH
-MULTIPLE MUTABLE WRITERS
-WRONG OWNERSHIP
-DUPLICATE RESPONSIBILITY TREES
-BAD SERVICE/DOMAIN BOUNDARIES
-BAD MIGRATION EPOCHS
-BAD CONTRACT/GENERATED AUTHORITY
-BAD RUNTIME/CONFIG AUTHORITY
-PATCH/COMPATIBILITY LAYERS
-SYSTEMIC ADMISSION HOLES
+TOO MANY FILES
+TOO MANY CALLERS
+TOO MANY PACKAGES
+TOO MUCH DELETION
+WOULD REQUIRE MIGRATION
+TOO LARGE FOR ONE SESSION
 ```
 
-## 10. Root selection gate
+## 15. Diagnosis freshness
 
-Select the highest root that is both proven and executable safely.
-
-Forbidden root shrinkage:
+After every material mutation unit:
 
 ```text
-FILE_TOO_BIG
-DIFF_TOO_BIG
-TOO_MANY_CALLERS
-TOO_MANY_PACKAGES
-WOULD_REQUIRE_DELETION
-WOULD_REQUIRE_MIGRATION
-TOO_MUCH_FOR_ONE_SESSION
+RE-PIN h
+→ UPDATE CURRENT
+→ REFRESH CENSUS/DELTA
+→ INVALIDATE AFFECTED EVIDENCE
+→ REBUILD ROOT GRAPH
+→ RE-SYNTHESIZE EXECUTION UNITS
+→ RE-RANK
 ```
 
-Valid blockers are limited to unresolved material facts described in `00`/`01`.
-
-## 11. Diagnosis freshness
-
-After every material root mutation:
-
-```text
-UPDATE CURRENT MODEL
-UPDATE DELTA
-INVALIDATE AFFECTED EVIDENCE
-REBUILD/REFRESH ROOT GRAPH
-RE-RANK
-```
-
-Do not continue executing a stale precomputed queue after architecture has changed.
+Never execute a stale static queue after architecture changes.
