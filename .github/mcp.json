@@ -2,6 +2,21 @@
   "mcpServers": {
     "lean-ctx": {
       "command": "lean-ctx"
+    },
+    "agent-device": {
+      "command": "agent-device",
+      "args": [
+        "mcp"
+      ]
+    },
+    "sonarqube": {
+      "type": "http",
+      "url": "https://api.sonarcloud.io/mcp",
+      "headers": {
+        "Authorization": "Bearer ${SONARQUBE_TOKEN}",
+        "SONARQUBE_ORG": "bthwani2-boop",
+        "SONARQUBE_READ_ONLY": "true"
+      }
     }
   }
 }

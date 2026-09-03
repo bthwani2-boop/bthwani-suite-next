@@ -71,6 +71,7 @@ services/dsh/database/seeds/local/media/
 .aider*
 !.aiderignore
 .mimosa/
+.local/
 
 # Diagnostics are transient evidence. Canonical policy, contracts, and source
 # live outside this directory; generated inventories and command output must
