@@ -13,24 +13,22 @@ import {
   Header,
   formatDateTime,
 } from "@bthwani/ui-kit";
-import { formatWltMoney } from '@bthwani/dsh/finance';
-import { useFieldFinanceController } from '@bthwani/dsh/wlt-boundary';
-import { classifyGovernedError } from '../../shared/_kernel/governed-problem';
-import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 import {
+  formatWltMoney,
+  useFieldFinanceController,
   PayoutDestinationPanel,
   commissionStatusLabel,
   commissionStatusTone,
   commissionTypeLabel,
-  walletStatusLabel
+  walletStatusLabel,
 } from '@bthwani/dsh/wlt-boundary';
+import { classifyGovernedError } from '../../shared/_kernel/governed-problem';
+import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 import { DshFieldReferenceTag } from "../../../../dsh/frontend/app-field/components/DshFieldReferenceTag";
 
 type WltFieldFinanceScreenProps = {
   readonly onBack: () => void;
 };
-
-
 
 export function WltFieldFinanceScreen({ onBack }: WltFieldFinanceScreenProps) {
   const controller = useFieldFinanceController();
