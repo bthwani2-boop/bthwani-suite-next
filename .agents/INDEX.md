@@ -1,46 +1,20 @@
 # BThwani Agent Routing Index
 
-Status: DERIVED_SUPPORT
+Status: DERIVED_ROUTING_ONLY
 
-Use this index only when routing is not already obvious. Normal focused work should not preload every skill or tool.
+This file owns no repository, Product, architecture, execution, deletion, migration, CI or closure semantics.
 
-## Skills
+Canonical authority for branch `h`:
 
-Load only when the trigger matches:
+`tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
 
-- `bthwani-orchestrator` — canonical thin agent entrypoint; loads the repository Root-Cause Orchestrator. All other skills remain subordinate.
+Rules:
 
-- `bthwani-current-workspace-authority` — emit repository, branch, commit, and ref-provenance evidence; canonical authority remains the orchestrator.
-- `bthwani-api-runtime-binding` — API contract, generated client, route, or consumer binding changes.
-- `bthwani-ci-workflow-guardian` — executable GitHub Actions or CI code changes.
-- `bthwani-cost-aware-subagent-orchestrator` — independent bounded work units materially benefit from delegation.
-- `bthwani-docker-journey-runtime` — Docker, persistence, startup, or live runtime proof.
-- `bthwani-dsh-wlt-finance-boundary` — payment, wallet, ledger, settlement, payout, refund, commission, or reconciliation.
-- `bthwani-independent-implementation-reviewer` — emit bounded implementation-review evidence when materially required; it cannot decide G4 or closure.
-- `bthwani-platform-runtime-config` — environment, provider, URL, port, CORS, or sensitive runtime configuration.
-- `bthwani-product-truth-governor` — user-visible, role-sensitive, commercial, cross-surface, or workflow behavior.
-- `bthwani-screen-flow-binding` — route, screen, state, action, or controller binding.
-- `bthwani-security-secrets-privacy` — auth, authorization, sessions, secrets, PII, privacy, or isolation.
-- `bthwani-service-fullstack-journey` — capability crossing contract, backend, data, shared state, and surfaces.
-- `ponytail` — enforces minimal code, YAGNI, reuse, and anti-overengineering (Decision Ladder).
-- `ponytail-review` — review diffs exclusively for unnecessary complexity and bloat.
+1. Load the canonical orchestrator first for any material repository work on `h`.
+2. Load `.agents/skills/**` or `.agents/tools/**` only as bounded capability helpers requested by, or materially useful under, the orchestrator.
+3. A skill/tool may gather evidence, inspect, test, render, review or perform explicitly delegated edits; it may not redefine Root Graph ranking, canonical ownership, artifact survival, execution-unit size, destructive authority, migration/cutover, compatibility, CI authority or closure.
+4. No skill/tool may impose minimal-diff, session-sized, file-by-file, PR, merge, approval, durable-plan or keep-by-default constraints on the `h` refoundation campaign.
+5. If a helper conflicts with the orchestrator, the orchestrator wins and the conflicting helper becomes a refoundation/deletion candidate.
+6. This index itself must be deleted or reduced further if it ceases to provide unique routing value.
 
-## Optional tools
-
-Policies live directly under `.agents/tools/`:
-
-- `antigravity-implementer`
-- `graphify`
-- `leanctx`
-- `open-code-review`
-
-## Constraints
-
-- Use the smallest materially sufficient skill/tool set.
-- Do not introduce a registry, validation layer, or routing metadata layer just to describe these files again.
-- Prefer compiler, typecheck, lint, tests, builds, database/runtime checks, contract tooling, and security tools directly.
-- Keep custom guards or workflows only when they add unique executable assurance that cannot be obtained more simply.
-- Parallel read-only investigation is allowed when useful.
-- At most one writer may modify an overlapping work unit at a time.
-- When delegation is used, use one integration/push owner for the combined result.
-- Implementers own only their bounded edits; tools and adapters own no Product Truth or approval.
+Do not duplicate the orchestrator's laws here.
