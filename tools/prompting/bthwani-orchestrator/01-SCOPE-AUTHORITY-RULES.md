@@ -281,15 +281,26 @@ For these, preserve required truth first, prove migration/cutover, then delete t
 
 Ordinary repository deletion/rehome/rewrite on `h` is not a protected action once the canonical disposition and affected consumers are proven.
 
-## 11. Concurrency
+## 11. Single execution-session law
 
 ```text
+ACTIVE_EXECUTION_SESSIONS=1
+PARALLEL_MUTATING_SESSIONS=FORBIDDEN
+PARALLEL_EXECUTION_AGENTS=FORBIDDEN
 MAX_ACTIVE_OVERLAPPING_MATERIAL_MUTATION_UNITS=1
 ```
 
-This is a collision rule, not a size limiter.
+All repository mutation, root selection, migration, cutover, deletion, refoundation and closure decisions for `h` execute through one continuous authority/session.
 
-The unit may span many services/files if one causal cutover requires them. Wide parallel read-only census/analysis is encouraged.
+This is a coordination law, not a size limiter. The single session may execute a very large Root/Surface/Service/Domain/Control-Plane refoundation when that is the highest correct unit.
+
+Within the same execution session, independent read-only evidence collection may run concurrently only when it cannot mutate repository truth or create competing execution authority. GitHub Actions may also fan out independent verification jobs; that is evidence parallelism, not parallel execution authority.
+
+```text
+SINGLE_SESSION != SMALL_CHANGE
+SINGLE_SESSION != SERIAL_BUG_CHASING
+SINGLE_SESSION = ONE_DECISION_AND_MUTATION_AUTHORITY
+```
 
 Do not split a canonical cutover due to token count, session length, file count, frontend/backend boundary or perceived complexity.
 
