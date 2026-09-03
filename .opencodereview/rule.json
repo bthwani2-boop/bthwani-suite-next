@@ -1,163 +1,103 @@
 {
   "exclude": [
     "**/node_modules/**",
-    "**/.pnpm-store/**",
-    "**/.next/**",
-    "**/.expo/**",
+    "**/vendor/**",
     "**/dist/**",
     "**/build/**",
+    "**/.next/**",
+    "**/.expo/**",
     "**/coverage/**",
-    "**/graphify-out/**",
-    "**/.yagni-out/**",
-    "**/.nx/**",
-    "**/.cache/**",
-    "**/.turbo/**",
-    "**/.artifacts/**",
-    "**/.diagnostics/**",
     "**/clients/generated/**",
     "**/generated/**",
     "**/*.generated.*",
     "**/*.min.js",
     "**/*.map",
+    "pnpm-lock.yaml",
+    "**/graphify-out/**",
+    "**/.diagnostics/**",
+    "**/.nx/**",
+    "**/.pnpm-store/**",
+    "**/.cache/**",
+    "**/.turbo/**",
+    "**/.yagni-out/**",
+    "**/.artifacts/**",
     "**/*.log",
     "**/*.bak",
     "**/*.zip",
     "**/*.7z",
     "**/*.rar",
-    "pnpm-lock.yaml",
-    "**/vendor/**",
     "**/*.graphify-bak"
   ],
   "rules": [
     {
-      "path": ".github/workflows/**/*.{yml,yaml}",
+      "path": ".github/**/*",
       "merge_system_rule": true,
-      "rule": "Review GitHub workflows as security-sensitive execution authority. Prove least privilege, immutable action pins, safe event semantics, trusted/untrusted input separation, secret isolation, exact-SHA behavior, branch-agnostic routing where intended, push-vs-PR deduplication, concurrency correctness, fail-closed behavior, and that CI never commits, pushes, merges, rewrites source, or creates parallel analysis authority. Search for missing negative paths and workflow trust-boundary gaps."
+      "rule": "Review GitHub Actions and reusable actions as executable evidence infrastructure, not repository execution or completion authority. Check exact-h candidate identity, least privilege, immutable pins, untrusted-input separation, secret isolation, concurrency, fail-closed behavior, artifact provenance, and absence of PR/default/old-branch assumptions that are invalid for h. Flag duplicate or campaign-only verification paths with no unique claim."
     },
     {
-      "path": ".github/actions/**/*",
+      "path": "tools/prompting/bthwani-orchestrator/**/*",
       "merge_system_rule": true,
-      "rule": "Review reusable GitHub Actions for shell/input injection, untrusted-context interpolation, secret leakage, mutable dependencies, unsafe artifact handling, missing error propagation, platform drift, excessive-permission assumptions, and callers that can violate the action trust model."
+      "rule": "Review the h orchestrator package for internally conflicting semantic ownership, broken Recovery Law, Stage-A/Stage-B leakage, unsafe mutation gates, parallel closure semantics, incomplete migration/cutover/deletion law, stale evidence rules, and missing negative-space or fixed-point requirements. Do not invent a second execution constitution in review output."
     },
     {
-      "path": "governance/**/*",
+      "path": "{governance,docs,.agents}/**/*",
       "merge_system_rule": true,
-      "rule": "Review governance only as canonical authority. Detect conflicting, stale, duplicate, incomplete, or self-approving truth; registry/catalog inconsistency; ambiguous precedence; parallel lifecycle or ownership; missing consumer migration; and documentation that substitutes for an executable fix."
+      "rule": "Review governance, documentation and agent adapters as inherited truth/evidence/routing material. Detect semantic self-certification, stale or conflicting execution/closure authority, duplicated durable meaning, obsolete branch/PR assumptions, task-local residue, misleading precedence, and material truth that should instead live under a stronger canonical executable or semantic owner. The h orchestrator controls execution and closure."
     },
     {
-      "path": "tools/prompting/**/*",
+      "path": "{contracts,services/**/contracts}/**/*",
       "merge_system_rule": true,
-      "rule": "Review orchestration/prompting for contradictory authority, unsafe write gates, unbounded scope, missing decision barriers, parallel truth, ambiguous lifecycle transitions, failure to verify negative space, and instructions that patch symptoms instead of closing the highest proven root cause."
-    },
-    {
-      "path": "contracts/**/*",
-      "merge_system_rule": true,
-      "rule": "Treat contracts as canonical transport/API authority. Check schema/enum compatibility, required/optional semantics, operation IDs, auth scopes, error/status vocabulary, generated-client provenance, runtime route binding, versioning/cutover, all writers/readers/consumers, and removal of handwritten duplicate transport truth."
-    },
-    {
-      "path": "services/**/contracts/**/*",
-      "merge_system_rule": true,
-      "rule": "Treat service contracts as canonical API authority. Check modular source-to-bundle consistency, schema compatibility, operation IDs, scopes, generated bindings, runtime handlers, consumer migration, backward compatibility, and absence of parallel handwritten DTO/status/error truth."
-    },
-    {
-      "path": "services/wlt/**/database/migrations/**/*.sql",
-      "merge_system_rule": true,
-      "rule": "Treat WLT migrations as financial-data authority changes. Check forward-only ordering, deployment idempotency assumptions, locks/downtime, constraints/indexes, data preservation, deterministic backfill, money precision, ledger/audit invariants, reconciliation impact, compatibility with old/new writers/readers, and proof no DSH/client path gains parallel financial truth."
+      "rule": "Review contract sources and their lineage. Prove rather than assume canonical ownership. Check schema/enum compatibility, operation IDs, auth scopes, required/optional semantics, error/status vocabulary, generator provenance, runtime binding, consumer migration, duplicate handwritten mirrors, stale generated lineage, and bounded compatibility when a live external consumer requires it."
     },
     {
       "path": "**/database/migrations/**/*.sql",
       "merge_system_rule": true,
-      "rule": "Review migrations for forward-only ordering, unique registration, transaction/locking safety, deterministic defaults/backfills, data preservation, constraints/indexes, compatibility windows, writer/reader cutover, remediation strategy, and missing runtime/contract/test changes required by the schema transition."
-    },
-    {
-      "path": "services/wlt/**/*_test.go",
-      "merge_system_rule": true,
-      "rule": "Review WLT tests as executable evidence for financial invariants. Require meaningful assertions for ledger integrity, idempotency, authorization, concurrency, reconciliation, failure atomicity, immutable receipts, duplicate delivery/retry behavior, and negative paths. Flag tests that mirror implementation or hide missing production behavior."
-    },
-    {
-      "path": "services/wlt/**/*.{test,spec}.{js,jsx,ts,tsx}",
-      "merge_system_rule": true,
-      "rule": "Review WLT tests as executable evidence for financial invariants. Require meaningful assertions for ledger integrity, idempotency, authorization, concurrency, reconciliation, failure atomicity, immutable receipts, duplicate delivery/retry behavior, and negative paths. Flag semantic mocks that redefine financial truth."
-    },
-    {
-      "path": "services/dsh/**/*_test.go",
-      "merge_system_rule": true,
-      "rule": "Review DSH tests as executable evidence for lifecycle invariants, authorization, idempotency, concurrency, handoff/outbox reliability, retry/recovery, DSH-to-WLT boundaries, and negative transitions. Detect missing journey coverage and tests that permit parallel operational/financial truth."
-    },
-    {
-      "path": "services/dsh/**/*.{test,spec}.{js,jsx,ts,tsx}",
-      "merge_system_rule": true,
-      "rule": "Review DSH tests as executable evidence for lifecycle invariants, authorization, idempotency, concurrency, handoff/outbox reliability, retry/recovery, DSH-to-WLT boundaries, and negative transitions. Detect missing journey coverage and semantic mocks."
+      "rule": "Review migrations as executable data architecture. Check ownership and epoch coherence, ordering, transaction/locking safety, deterministic transformation/backfill, data preservation, constraints/indexes, money/security invariants where material, old/new writer-reader cutover, rollback or roll-forward assumptions, and shadow/obsolete schema authority."
     },
     {
       "path": "**/*_test.go",
       "merge_system_rule": true,
-      "rule": "Review Go tests as executable evidence: observable behavior, boundary/error/permission paths, concurrency/idempotency where applicable, realistic fixtures, deterministic isolation, regression strength, and whether deleted/weakened tests conceal missing production behavior."
+      "rule": "Review Go tests as evidence consumers, not truth by existence. Require meaningful observable assertions, negative paths, authorization, concurrency/idempotency/retry behavior where material, representative fixtures and deterministic isolation. Flag tests that preserve retired topology, mirror implementation, weaken valid assertions or conceal missing production behavior."
     },
     {
-      "path": "**/*.{test,spec}.{js,jsx,ts,tsx}",
+      "path": "**/*.{test,spec}.{js,jsx,ts,tsx,mjs,mts}",
       "merge_system_rule": true,
-      "rule": "Review tests as executable evidence: assertions must prove observable behavior and negative paths; async failures must be awaited; mocks must preserve real contract semantics; fixtures must remain representative; snapshots must not replace behavioral proof. Identify important changed behavior with no focused test."
+      "rule": "Review tests as evidence consumers, not automatic specification. Check observable assertions, awaited async failures, realistic contract semantics, negative paths, regression strength, stale topology, duplicate coverage and whether mocks/fixtures/snapshots create parallel business truth or hide a missing runtime path."
     },
     {
       "path": "services/wlt/**/*",
       "merge_system_rule": true,
-      "rule": "Treat WLT as exclusive owner of financial truth. Aggressively search for ledger imbalance, double-spend/double-apply, non-idempotent commands/events, race conditions, authorization gaps, precision/rounding defects, incomplete transaction boundaries, reconciliation gaps, mutable receipts/audit data, unsafe retries, missing compensations, stale consumers, and payment/refund/settlement/payout/commission/wallet truth escaping into DSH or clients."
-    },
-    {
-      "path": "services/dsh/**/*",
-      "merge_system_rule": true,
-      "rule": "Treat DSH as operational commerce/fulfillment truth, never financial truth. Review lifecycle/state-machine invariants, auth/authz, ownership/scopes, idempotency, concurrency, order/assignment/preparation/handoff/outbox reliability, retries/recovery, WLT integration boundaries, runtime route binding, cross-surface consumers, missing migrations/backfills, and obsolete parallel paths after cutover."
+      "rule": "Apply heightened financial scrutiny. Verify the current canonical ownership model from orchestrator-reconciled evidence rather than assuming it from path. Search for parallel ledger/balance writers, double-apply, non-idempotent mutation, race conditions, precision/rounding defects, incomplete transaction boundaries, reconciliation gaps, mutable receipts/audit data, unsafe retry and financial semantics leaking into non-owning layers."
     },
     {
       "path": "core/identity/**/*",
       "merge_system_rule": true,
-      "rule": "Treat Identity as authentication/session/role/permission authority. Search for authentication bypass, role/scope confusion, insecure activation/recovery/session handling, authorization drift, identifier ambiguity, token leakage/replay, insufficient revocation, missing auditability, duplicated actor truth, and privilege escalation across surfaces."
+      "rule": "Apply heightened identity/security scrutiny. Verify current canonical ownership and search for authentication bypass, role/scope confusion, insecure activation/recovery/session handling, authorization drift, identifier ambiguity, token leakage/replay, insufficient revocation, privilege escalation, duplicated actor truth and client-side-only security decisions."
     },
     {
-      "path": "core/workforce/**/*",
+      "path": "{apps,services/**/frontend}/**/*.{ts,tsx,js,jsx}",
       "merge_system_rule": true,
-      "rule": "Treat Workforce as employee/profile/employment-state authority. Check actor linkage, lifecycle/status gates, provisioning/suspension semantics, supervisor/scope ownership, authorization, privacy, incomplete onboarding/offboarding propagation, and duplicated profile truth in applications or DSH."
-    },
-    {
-      "path": "core/platform-control/**/*",
-      "merge_system_rule": true,
-      "rule": "Treat Platform Control as administrative platform-governance authority. Review privileged command authorization, operator context, change-set lifecycle, auditability, idempotency, cross-service propagation, generated contract/client provenance, failure recovery, stale administrative state, and any path that bypasses the canonical control-plane writer or creates parallel operational truth."
-    },
-    {
-      "path": "core/providers/**/*",
-      "merge_system_rule": true,
-      "rule": "Treat Providers as external-provider integration authority. Review credential and secret boundaries, provider identity/config ownership, request signing and authentication, idempotency/retry/replay behavior, timeout/circuit/failure semantics, webhook validation, mapping of external to canonical internal states, observability, safe degradation, and prevention of provider-specific state becoming a competing project truth."
-    },
-    {
-      "path": "apps/**/*.{ts,tsx,js,jsx}",
-      "merge_system_rule": true,
-      "rule": "Review application surfaces end-to-end: routing, state transitions, loading/empty/error/degraded/offline/retry states, auth/session/authz gates, generated-client use, accessibility, stale-cache behavior, user-visible consistency, irreversible-action confirmation, and whether local UI/domain state duplicates canonical DSH/WLT/Identity/Workforce truth. Search for omitted affected surfaces, not just defects in edited files."
-    },
-    {
-      "path": "services/**/frontend/**/*.{ts,tsx,js,jsx}",
-      "merge_system_rule": true,
-      "rule": "Review shared/surface frontend for owner boundaries, generated API usage, deterministic state transitions, permission gates, error/retry/offline behavior, accessibility, performance, cache invalidation, complete cross-surface migration, and presentation models that accidentally redefine transport, operational, identity, or financial truth."
+      "rule": "Review frontend/runtime surfaces end-to-end: explicit journey ownership, canonical data/contract consumption, routing, deterministic state transitions, loading/empty/error/offline/retry states, auth/session gates, accessibility/localization where material, cache invalidation, cross-surface migration and absence of local business/financial/security truth that duplicates a backend/domain authority."
     },
     {
       "path": "infra/**/*",
       "merge_system_rule": true,
-      "rule": "Review infrastructure for secret exposure, unsafe network/service exposure, insecure defaults, privilege escalation, mutable/unpinned dependencies, destructive deployment behavior, missing health/readiness/rollback signals, persistence/backup risk, environment drift, and mismatch between CI/runtime contracts and deployed topology."
+      "rule": "Review infrastructure for secret exposure, unsafe service/network exposure, insecure defaults, privilege escalation, mutable dependencies, destructive operations, persistence/backup risk, missing health/readiness/recovery signals, environment drift and competing runtime/config authorities."
     },
     {
       "path": "tools/scripts/**/*",
       "merge_system_rule": true,
-      "rule": "Review operational scripts for destructive behavior, wrong-target risk, non-idempotent mutation, unsafe shell interpolation, secret leakage, path/platform assumptions, partial-failure behavior, missing preconditions/postconditions, stale authority, and scripts that bypass canonical application or CI controls."
+      "rule": "Review operational and assurance scripts for wrong-target risk, destructive behavior, unsafe interpolation, secret leakage, stale branch/default/PR authority, non-idempotent mutation, partial-failure masking, missing preconditions/postconditions, duplicate control planes, references to deleted workflows/files, and scripts that recreate a repository execution or closure authority outside the orchestrator."
     },
     {
       "path": "**/{package.json,go.mod,go.sum}",
       "merge_system_rule": true,
-      "rule": "Review dependency manifest changes for necessity, canonical package ownership, duplicate/overlapping libraries, runtime compatibility, supply-chain exposure, version skew, platform constraints, transitive behavioral risk, and missing migration/removal of superseded dependencies. Do not duplicate dedicated vulnerability-scanner output; focus on semantic dependency risk."
+      "rule": "Review dependency/workspace manifests for necessity, coherent ownership, dead scripts, references to missing files, duplicate libraries/tooling, runtime compatibility, version skew, supply-chain exposure and residue from deleted packages, workflows or migration paths."
     },
     {
-      "path": "**/*.{go,ts,tsx,js,jsx,json,yaml,yml,sql,md}",
+      "path": "**/*.{go,ts,tsx,js,jsx,mjs,mts,json,yaml,yml,sql,md}",
       "merge_system_rule": true,
-      "rule": "Review changed behavior and necessary context for correctness, security, privacy, authentication/authorization, data integrity, concurrency, idempotency, error handling, retries, failure atomicity, performance, observability, compatibility, maintainability, dead/duplicate code, parallel truth, missing consumer migration, missing negative tests, and missing changes outside the edited file. Prioritize grounded Critical/High/Medium findings that can affect correctness, security, data, money, permissions, availability, UX, compatibility, or maintainability. Avoid style-only noise."
+      "rule": "Review changed behavior and necessary context for correctness, security, privacy, authorization, data integrity, concurrency, idempotency, error/retry semantics, failure atomicity, performance, observability, compatibility, maintainability, dead/duplicate structure, parallel truth, wrong ownership, missing consumer migration and missing negative tests. Prefer causal structural findings over style noise or symptom-by-symptom patch suggestions."
     }
   ]
 }
