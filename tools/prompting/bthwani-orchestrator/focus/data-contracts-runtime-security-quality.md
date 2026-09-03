@@ -108,7 +108,24 @@ ROUTING/PROXY
 
 Eliminate competing authorities and stale runtime paths after cutover. Do not preserve scripts/config merely because historical tooling depends on them; migrate the consumer or refound the tooling.
 
-## 6. Security and financial truth
+## 6. Operational truth where material
+
+Do not stop at compile/runtime startup when the affected root includes operational behavior. Audit only where material, but cover the real concern completely:
+
+```text
+OBSERVABILITY / ALERTING SIGNAL OWNERSHIP
+FAILURE / RECOVERY / RETRY / RESTART
+BACKUP / RESTORE / DATA RECOVERY
+PRIVACY / RETENTION / DELETION LIFECYCLE
+PERFORMANCE / CAPACITY / RESILIENCE
+SUPPLY-CHAIN / DEPENDENCY / ARTIFACT PROVENANCE
+EXTERNAL PROVIDER FAILURE / UNKNOWN RESULT
+JOB/QUEUE REPLAY / IDEMPOTENCY
+```
+
+Do not invent arbitrary SLO/RPO/RTO numbers without a real requirement. But known material operational gaps block a trustworthy baseline.
+
+## 7. Security and financial truth
 
 Authentication, authorization, sessions, secrets, PII, provider credentials, isolation and financial mutation receive heightened proof.
 
@@ -125,7 +142,7 @@ AUDITABLE CANONICAL READBACK
 
 Aggressive structural deletion never waives truth-preservation/migration proof for security or money.
 
-## 7. Tests are consumers, not truth by themselves
+## 8. Tests are consumers, not truth by themselves
 
 Inherited tests can encode obsolete architecture.
 
@@ -144,7 +161,23 @@ Update/delete tests with the refoundation unit. Never weaken a valid assertion m
 
 Tests, fixtures, mocks, snapshots and helpers tied only to losing containers must migrate or be deleted in the same unit.
 
-## 8. CI/assurance control-plane refoundation
+## 9. Tool execution condition classification
+
+A tool can fail independently of Product code. Classify material tool/execution conditions as:
+
+```text
+DIAGNOSIS_BLOCKER
+EXECUTION_FINDING
+DEGRADED_EVIDENCE
+NOT_APPLICABLE
+EVIDENCE_AVAILABLE
+```
+
+Only a proven `DIAGNOSIS_BLOCKER` can stop a dependent treatment solely because evidence is missing. `EXECUTION_FINDING` and `DEGRADED_EVIDENCE` do not force the whole campaign to stop when another root is already sufficiently proven.
+
+This preserves speed while keeping missing closure proof visible.
+
+## 10. CI/assurance control-plane refoundation
 
 CI is not privileged structure. `.github/**`, assurance scripts, custom guards, scanner adapters and evidence collectors must re-earn existence.
 
@@ -176,9 +209,9 @@ ONE CANONICAL EXACT-h CONTROLLER PER DISTINCT ASSURANCE ROLE
 → CAMPAIGN-ONLY WORKFLOWS DELETED AFTER USE
 ```
 
-Do not preserve `repository-baseline`, PR dispatcher, PR comment evidence or other historical structures unless they independently prove unique required value for the final `h` baseline.
+Do not preserve repository-baseline, PR dispatcher, PR comment evidence or other historical structures unless they independently prove unique required value for the final `h` baseline.
 
-## 9. Verifier/admission-hole law
+## 11. Verifier/admission-hole law
 
 When a defect was accepted because verification was weak, closure requires fixing both product/structure and detector/admission authority.
 
@@ -194,7 +227,7 @@ DEFINE CANONICAL CLAIM
 
 Never weaken a gate to obtain green.
 
-## 10. GitHub Actions on h
+## 12. GitHub Actions on h
 
 `h` may create, rewrite, run and delete actions as needed.
 
@@ -210,29 +243,29 @@ CLAIM=NOT_COVERED
 
 Do not replace it with a PR comment or self-attestation.
 
-## 11. Evidence ingestion
+## 13. Evidence ingestion
 
 Every material tool result must be consumed:
 
 ```text
 FINDING
 MATERIALITY
-AFFECTED CLAIM
-CAUSAL ROOT/UNIT MAPPING
+AFFECTED_CLAIM
+CAUSAL_ROOT/UNIT_MAPPING
 DISPOSITION
-REVERIFY REQUIREMENT
+REVERIFY_REQUIREMENT
 LIMITATION
 ```
 
 Scanner execution is not finding closure.
 
-## 12. Dependencies and toolchain
+## 14. Dependencies and toolchain
 
 Every dependency, workspace edge, toolchain pin and custom script must re-earn existence.
 
 Delete unused dependencies after migration. Consolidate duplicated tooling/libraries when they encode the same responsibility. Remove custom automation when native compiler/test/build/runtime/security tooling gives the same or stronger unique claim more simply.
 
-## 13. Runtime and experience proof
+## 15. Runtime and experience proof
 
 When behavior is runtime-material, static evidence is insufficient.
 
@@ -240,17 +273,17 @@ Prove startup/request/persistence/readback/experience at the highest material bo
 
 For mobile/web, distinguish source/config correctness from actual rendered/device execution; do not claim one as the other.
 
-## 14. Final assurance cleanliness
+## 16. Final assurance cleanliness
 
 At fixed point:
 
 ```text
-NO DUPLICATE MATERIAL CI AUTHORITIES
-NO PR/DEFAULT/OLD-BRANCH h TRUST ASSUMPTIONS
-NO CAMPAIGN-ONLY WORKFLOW/TOOL RESIDUE
-NO FAKE EXPERIENCE ATTESTATION
-NO UNCONSUMED MATERIAL STATIC/SECURITY FINDINGS
-NO UNUSED MATERIAL DEPENDENCIES
-NO DUPLICATE CONTRACT/MIGRATION/RUNTIME AUTHORITIES
-NO KNOWN UNVERIFIED MATERIAL DATA/SECURITY/FINANCIAL CLAIMS
+NO_DUPLICATE_MATERIAL_CI_AUTHORITIES
+NO_PR/DEFAULT/OLD_BRANCH_h_TRUST_ASSUMPTIONS
+NO_CAMPAIGN_ONLY_WORKFLOW/TOOL_RESIDUE
+NO_FAKE_EXPERIENCE_ATTESTATION
+NO_UNCONSUMED_MATERIAL_STATIC/SECURITY_FINDINGS
+NO_UNUSED_MATERIAL_DEPENDENCIES
+NO_DUPLICATE_CONTRACT/MIGRATION/RUNTIME_AUTHORITIES
+NO_KNOWN_UNVERIFIED_MATERIAL_DATA/SECURITY/FINANCIAL/OPERATIONAL_CLAIMS
 ```
