@@ -1,6 +1,6 @@
-import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
-import type { operations } from "../../../clients/generated/dsh-api";
+import { resolveDshApiBaseUrl } from "../shared/_kernel/dsh-api-base-url";
+import { corrId, createDshHttpClient } from "../shared/_kernel/dsh-http-request";
+import type { operations } from "../../clients/generated/dsh-api";
 import type { CentralCatalogDomain, CentralCatalogNode, MasterProduct, ProductProposal, StoreAssortment, CatalogAsset, CatalogAssetLink, AssetUploadIntent, AssetUploadIntentInput, SeedStatus, StoreAssortmentMetadataInput, StoreAssortmentInventory, StoreAssortmentPrice, StoreAssortmentCommercialReadback } from "./central-catalog.types";
 
 type JsonResponse<Operation extends keyof operations, Status extends keyof operations[Operation]["responses"]> =
