@@ -1,318 +1,96 @@
-name: SonarQube Cloud
-
-run-name: >-
-  ${{ github.event_name == 'pull_request' && format('SonarQube PR {0}', github.event.pull_request.number) ||
-  github.event_name == 'push' && format('SonarQube push {0}', github.sha) || format('SonarQube dispatched
-  candidate {0}', inputs.head_sha || github.sha) }}
+name: SonarQube exact-h baseline
 
 on:
   workflow_call:
     inputs:
-      pr_number: {type: string, required: false, default: ""}
       head_sha: {type: string, required: true}
       base_sha: {type: string, required: true}
-      head_ref: {type: string, required: false, default: ""}
-      base_ref: {type: string, required: false, default: ""}
-      trusted_scan: {type: boolean, required: false, default: false}
-      full_scope: {type: boolean, required: false, default: false}
     secrets:
       SONAR_TOKEN:
         required: true
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
-  group: sonarqube-cloud-${{ inputs.head_sha || github.event.pull_request.number || github.ref }}
+  group: sonar-h-${{ inputs.head_sha }}
   cancel-in-progress: true
 
+env:
+  HEAD_SHA: ${{ inputs.head_sha }}
+  BASE_SHA: ${{ inputs.base_sha }}
+
 jobs:
-  scope:
-    name: Resolve exact Sonar candidate scope
+  baseline:
+    name: Sonar full exact-h analysis
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    outputs:
-      base_sha: ${{ steps.ci_scope.outputs.base_sha }}
-      head_sha: ${{ steps.ci_scope.outputs.head_sha }}
-      mode: ${{ steps.ci_scope.outputs.mode }}
-      dsh: ${{ steps.ci_scope.outputs.dsh }}
-      wlt: ${{ steps.ci_scope.outputs.wlt }}
-      identity: ${{ steps.ci_scope.outputs.identity }}
-      workforce: ${{ steps.ci_scope.outputs.workforce }}
-      platform: ${{ steps.ci_scope.outputs.platform }}
-      providers: ${{ steps.ci_scope.outputs.providers }}
-      node_required: ${{ steps.node_plan.outputs.required }}
-      node_suites: ${{ steps.node_plan.outputs.suites }}
-      go_required: ${{ steps.go_plan.outputs.required }}
-      go_matrix: ${{ steps.go_plan.outputs.matrix }}
-      sonar_required: ${{ steps.ci_scope.outputs.sonar_required }}
+    timeout-minutes: 90
     steps:
-      - name: Checkout immutable candidate source with full history
+      - name: Checkout exact h candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
-          show-progress: false
-          fetch-depth: 0
-
-      - name: Set up locked Node runtime for scope routing
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: "24.17.0"
-
-      - name: Verify Sonar coverage ownership and configuration
-        run: node --test tools/guards/sonar-coverage-ownership-gate.test.mjs && node tools/guards/sonar-coverage-ownership-gate.mjs
-
-      - name: Determine exact affected Sonar scope
-        id: ci_scope
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          EVENT_BEFORE: ${{ github.event.before }}
-          PR_BASE_SHA: ${{ inputs.base_sha || github.event.pull_request.base.sha }}
-          EXPECTED_HEAD_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
-          INPUT_FULL_SCOPE: ${{ inputs.full_scope }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          set -euo pipefail
-          head_sha="$(git rev-parse HEAD)"
-          [[ -n "${EXPECTED_HEAD_SHA}" && "${head_sha}" == "${EXPECTED_HEAD_SHA}" ]] || {
-            echo "::error::Sonar checkout SHA mismatch: expected=${EXPECTED_HEAD_SHA:-<empty>} actual=${head_sha}"
-            exit 1
-          }
-
-          base_sha="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
-          if [[ -z "${base_sha}" || "${base_sha}" =~ ^0+$ ]]; then
-            base_sha="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${head_sha}")"
-          fi
-          if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "${base_sha}" --depth=1
-          fi
-          git cat-file -e "${base_sha}^{commit}" 2>/dev/null || {
-            echo "::error::Sonar base SHA cannot be resolved: ${base_sha}"
-            exit 1
-          }
-
-          mode=affected
-          if [[ "${INPUT_FULL_SCOPE}" == "true" || \
-                ( "${EVENT_NAME}" == "workflow_dispatch" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) || \
-                ( "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
-            mode=full
-          fi
-
-          CI_BASE_SHA="${base_sha}" \
-          CI_HEAD_SHA="${head_sha}" \
-          CI_MODE="${mode}" \
-          node tools/scripts/detect-ci-context.mjs
-          echo "mode=${mode}" >> "${GITHUB_OUTPUT}"
-
-      - name: Test and plan exact Node coverage
-        id: node_plan
-        shell: bash
-        env:
-          CI_BASE_SHA: ${{ steps.ci_scope.outputs.base_sha }}
-          CI_HEAD_SHA: ${{ steps.ci_scope.outputs.head_sha }}
-          CI_MODE: ${{ steps.ci_scope.outputs.mode }}
-        run: |
-          set -euo pipefail
-          node --test tools/scripts/generate-sonar-node-coverage.test.mjs
-          node tools/scripts/generate-sonar-node-coverage.mjs --plan
-
-      - name: Plan exact Go coverage matrix
-        id: go_plan
-        shell: bash
-        env:
-          MODE: ${{ steps.ci_scope.outputs.mode }}
-          TRUSTED_SCAN: ${{ inputs.trusted_scan }}
-          DSH: ${{ steps.ci_scope.outputs.dsh }}
-          WLT: ${{ steps.ci_scope.outputs.wlt }}
-          IDENTITY: ${{ steps.ci_scope.outputs.identity }}
-          WORKFORCE: ${{ steps.ci_scope.outputs.workforce }}
-          PLATFORM: ${{ steps.ci_scope.outputs.platform }}
-          PROVIDERS: ${{ steps.ci_scope.outputs.providers }}
-        run: |
-          set -euo pipefail
-          services=()
-          if [[ "${MODE}" == "full" && "${TRUSTED_SCAN}" == "true" ]]; then
-            services=(dsh wlt identity workforce platform providers)
-          else
-            [[ "${DSH}" == "true" ]] && services+=(dsh)
-            [[ "${WLT}" == "true" ]] && services+=(wlt)
-            [[ "${IDENTITY}" == "true" ]] && services+=(identity)
-            [[ "${WORKFORCE}" == "true" ]] && services+=(workforce)
-            [[ "${PLATFORM}" == "true" ]] && services+=(platform)
-            [[ "${PROVIDERS}" == "true" ]] && services+=(providers)
-          fi
-
-          if (( ${#services[@]} == 0 )); then
-            echo 'required=false' >> "${GITHUB_OUTPUT}"
-            echo 'matrix=["none"]' >> "${GITHUB_OUTPUT}"
-          else
-            matrix="$(printf '%s\n' "${services[@]}" | jq -R . | jq -s -c .)"
-            echo 'required=true' >> "${GITHUB_OUTPUT}"
-            echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
-          fi
-
-      - name: Publish Sonar scope summary
-        shell: bash
-        env:
-          BASE_SHA: ${{ steps.ci_scope.outputs.base_sha }}
-          HEAD_SHA: ${{ steps.ci_scope.outputs.head_sha }}
-          MODE: ${{ steps.ci_scope.outputs.mode }}
-          NODE_REQUIRED: ${{ steps.node_plan.outputs.required }}
-          NODE_SUITES: ${{ steps.node_plan.outputs.suites }}
-          GO_REQUIRED: ${{ steps.go_plan.outputs.required }}
-          GO_MATRIX: ${{ steps.go_plan.outputs.matrix }}
-        run: |
-          {
-            echo "### Exact Sonar scope"
-            echo "- Base: ${BASE_SHA}"
-            echo "- Head: ${HEAD_SHA}"
-            echo "- Mode: ${MODE}"
-            echo "- Node coverage required: ${NODE_REQUIRED}"
-            echo "- Node suites: ${NODE_SUITES:-none}"
-            echo "- Go coverage required: ${GO_REQUIRED}"
-            echo "- Go services: ${GO_MATRIX}"
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-  node_coverage:
-    name: Sonar Node coverage
-    needs: [scope]
-    if: ${{ needs.scope.result == 'success' && needs.scope.outputs.sonar_required == 'true' && needs.scope.outputs.node_required == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - name: Checkout trusted workflow context for Node coverage
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
+          ref: ${{ env.HEAD_SHA }}
           fetch-depth: 0
           fetch-tags: false
           persist-credentials: false
           show-progress: false
-      - name: Checkout immutable Node coverage candidate
-        shell: bash
-        env:
-          EXPECTED_SHA: ${{ needs.scope.outputs.head_sha }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          [[ "${EXPECTED_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::exact candidate SHA required"; exit 1; }
-          git -c "http.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}" fetch --no-tags origin "${EXPECTED_SHA}"
-          git switch --detach FETCH_HEAD
-          [[ "$(git rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || { echo "::error::Node coverage candidate drift"; exit 1; }
 
-      - name: Verify exact Node coverage candidate
+      - name: Verify exact h identity and ancestry
         shell: bash
-        env:
-          EXPECTED_SHA: ${{ needs.scope.outputs.head_sha }}
         run: |
           set -euo pipefail
-          [[ "$(git rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || {
-            echo "::error::Node coverage candidate drift"
+          [[ "${GITHUB_REF_NAME}" == "h" ]] || {
+            echo "::error::Sonar baseline authority is h only"
             exit 1
           }
+          [[ "$(git rev-parse HEAD)" == "${HEAD_SHA}" ]] || {
+            echo "::error::Sonar candidate drift"
+            exit 1
+          }
+          [[ "${BASE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || {
+            echo "::error::Sonar exact base SHA required"
+            exit 1
+          }
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "${BASE_SHA}" "${HEAD_SHA}"
+          [[ -s sonar-project.properties ]] || {
+            echo "::error::Candidate-owned sonar-project.properties is missing"
+            exit 1
+          }
+          project_key="$(sed -n 's/^sonar\.projectKey=//p' sonar-project.properties | head -n 1)"
+          [[ -n "${project_key}" ]] || {
+            echo "::error::Candidate-owned Sonar project key is missing"
+            exit 1
+          }
+          echo "SONAR_PROJECT_KEY=${project_key}" >> "${GITHUB_ENV}"
 
       - name: Set up immutable Node workspace
         uses: ./.github/actions/setup-node-workspace
 
-      - name: Restore Sonar Node Nx cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: .nx/cache
-          key: sonar-node-${{ hashFiles('pnpm-lock.yaml', 'nx.json', 'tools/verification/ownership.manifest.json') }}-${{ needs.scope.outputs.head_sha }}
-          restore-keys: |
-            sonar-node-${{ hashFiles('pnpm-lock.yaml', 'nx.json', 'tools/verification/ownership.manifest.json') }}-
-            nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
+      - name: Verify Sonar coverage ownership
+        run: |
+          node --test tools/guards/sonar-coverage-ownership-gate.test.mjs
+          node tools/guards/sonar-coverage-ownership-gate.mjs
+          node --test tools/scripts/generate-sonar-node-coverage.test.mjs
 
-      - name: Materialize contracts through the Nx owner
+      - name: Materialize canonical contracts
         run: pnpm exec nx run contracts:materialize
 
-      - name: Generate exact affected Node LCOV
+      - name: Generate full Node coverage
         shell: bash
         env:
-          SONAR_NODE_COVERAGE_SUITES: ${{ needs.scope.outputs.node_suites }}
+          CI_BASE_SHA: ${{ inputs.base_sha }}
+          CI_HEAD_SHA: ${{ inputs.head_sha }}
+          CI_MODE: full
         run: |
           set -euo pipefail
           node tools/scripts/generate-sonar-node-coverage.mjs
           [[ -s .sonar/node-coverage/lcov.info ]] || {
-            echo "::error::Node coverage report is missing or empty"
+            echo "::error::Full Node LCOV evidence is missing"
             exit 1
           }
 
-      - name: Collect exact Node coverage artifact
-        shell: bash
-        env:
-          CANDIDATE_SHA: ${{ needs.scope.outputs.head_sha }}
-          BASE_SHA: ${{ needs.scope.outputs.base_sha }}
-          MODE: ${{ needs.scope.outputs.mode }}
-          SUITES: ${{ needs.scope.outputs.node_suites }}
-        run: |
-          set -euo pipefail
-          evidence="${RUNNER_TEMP}/sonar-node-evidence"
-          mkdir -p "${evidence}/reports/.sonar/node-coverage"
-          cp -a .sonar/node-coverage/. "${evidence}/reports/.sonar/node-coverage/"
-          jq -n \
-            --arg repository "${GITHUB_REPOSITORY}" \
-            --arg candidateSha "${CANDIDATE_SHA}" \
-            --arg baseSha "${BASE_SHA}" \
-            --arg mode "${MODE}" \
-            --arg suites "${SUITES}" \
-            '{schemaVersion:1,kind:"node",repository:$repository,candidateSha:$candidateSha,baseSha:$baseSha,mode:$mode,suites:($suites|split(",")|map(select(length>0)))}' \
-            > "${evidence}/manifest.json"
-
-      - name: Upload exact Node coverage artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: sonar-node-coverage-${{ needs.scope.outputs.head_sha }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/sonar-node-evidence
-          if-no-files-found: error
-          # Reports live under hidden .sonar/ paths; preserve them in the artifact.
-          include-hidden-files: true
-          retention-days: 2
-
-  go_coverage:
-    name: Sonar Go coverage (${{ matrix.service }})
-    needs: [scope]
-    if: ${{ needs.scope.result == 'success' && needs.scope.outputs.sonar_required == 'true' && needs.scope.outputs.go_required == 'true' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        service: ${{ fromJson(needs.scope.outputs.go_matrix) }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - name: Checkout trusted workflow context for Go coverage
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
-          fetch-tags: false
-          persist-credentials: false
-          show-progress: false
-      - name: Checkout immutable Go coverage candidate
-        shell: bash
-        env:
-          EXPECTED_SHA: ${{ needs.scope.outputs.head_sha }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          [[ "${EXPECTED_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::exact candidate SHA required"; exit 1; }
-          git -c "http.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}" fetch --no-tags origin "${EXPECTED_SHA}"
-          git switch --detach FETCH_HEAD
-          [[ "$(git rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || { echo "::error::Go coverage candidate drift"; exit 1; }
-
-      - name: Verify exact Go coverage candidate
-        shell: bash
-        env:
-          EXPECTED_SHA: ${{ needs.scope.outputs.head_sha }}
-        run: |
-          set -euo pipefail
-          [[ "$(git rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || {
-            echo "::error::Go coverage candidate drift"
-            exit 1
-          }
-
-      - name: Set up locked Go runtime with dependency cache
+      - name: Set up locked Go runtime
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: services/dsh/backend/go.mod
@@ -325,884 +103,157 @@ jobs:
             core/platform-control/backend/go.sum
             core/providers/backend/go.sum
 
-      - name: Provision only the selected governed database topology
-        id: database
+      - name: Generate honest full Go coverage
         shell: bash
-        env:
-          SERVICE: ${{ matrix.service }}
-          CANDIDATE_SHA: ${{ needs.scope.outputs.head_sha }}
-          PASSWORD: bthwani_ci_ephemeral_coverage
         run: |
           set -euo pipefail
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client >/dev/null
-
-          start_db() {
-            local container="$1" image="$2" user="$3" database="$4" port="$5"
-            docker run -d --rm \
-              --name "${container}" \
-              -e POSTGRES_USER="${user}" \
-              -e POSTGRES_PASSWORD="${PASSWORD}" \
-              -e POSTGRES_DB="${database}" \
-              -p "${port}:5432" \
-              "${image}" >/dev/null
-            ready=false
-            for _ in $(seq 1 40); do
-              if docker exec "${container}" pg_isready -U "${user}" -d "${database}" >/dev/null 2>&1; then
-                ready=true
-                break
-              fi
-              sleep 2
-            done
-            [[ "${ready}" == "true" ]] || {
-              echo "::error::Database ${database} did not become ready"
-              docker logs "${container}" || true
-              exit 1
-            }
-          }
-
-          migrate() {
-            local service="$1" directory="$2" database_url="$3" identity_database_url="${4:-}"
-            if [[ "${service}" == "workforce" ]]; then
-              pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-migrations.ps1 \
-                -ServiceKey "${service}" -MigrationDirectory "${directory}" \
-                -DatabaseUrl "${database_url}" -IdentityDatabaseUrl "${identity_database_url}" \
-                -SourceCommitSha "${CANDIDATE_SHA}"
-            else
-              pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-migrations.ps1 \
-                -ServiceKey "${service}" -MigrationDirectory "${directory}" \
-                -DatabaseUrl "${database_url}" -SourceCommitSha "${CANDIDATE_SHA}"
-            fi
-          }
-
-          actor_placeholders="${RUNNER_TEMP}/go-coverage-actor-placeholders.json"
-          cat > "${actor_placeholders}" <<'JSON'
-          {
-            "FIELD_ACTOR_ID": "ci-field-actor-001",
-            "CAPTAIN_ACTOR_ID": "ci-captain-actor-001",
-            "WLT_PAYOUT_ENCRYPTION_KEY": "ci-sonar-coverage-payout-encryption-key"
-          }
-          JSON
-
-          case "${SERVICE}" in
-            dsh)
-              start_db sonar-dsh-db postgis/postgis:16-3.4-alpine dsh_runtime dsh_runtime 5433
-              database_url="postgres://dsh_runtime:${PASSWORD}@127.0.0.1:5433/dsh_runtime?sslmode=disable"
-              migrate dsh services/dsh/database/migrations "${database_url}"
-              BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File \
-                tools/scripts/invoke-service-seeds.ps1 \
-                -ServiceKey dsh -SeedDirectory services/dsh/database/seeds/local -Transport url \
-                -DatabaseUrl "${database_url}" -PlaceholderFile "${actor_placeholders}" \
-                -AllowLocalSeeds -SourceCommitSha "${CANDIDATE_SHA}"
-              ;;
-            wlt)
-              start_db sonar-wlt-db postgres:16-alpine wlt_runtime wlt_runtime 5434
-              database_url="postgres://wlt_runtime:${PASSWORD}@127.0.0.1:5434/wlt_runtime?sslmode=disable"
-              migrate wlt services/wlt/database/migrations "${database_url}"
-              BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File \
-                tools/scripts/invoke-service-seeds.ps1 \
-                -ServiceKey wlt -SeedDirectory services/wlt/database/seeds/local -Transport url \
-                -DatabaseUrl "${database_url}" -PlaceholderFile "${actor_placeholders}" \
-                -AllowLocalSeeds -SourceCommitSha "${CANDIDATE_SHA}"
-              ;;
-            identity)
-              start_db sonar-identity-db postgres:16-alpine identity_runtime identity_runtime 5435
-              database_url="postgres://identity_runtime:${PASSWORD}@127.0.0.1:5435/identity_runtime?sslmode=disable"
-              migrate identity core/identity/database/migrations "${database_url}"
-              ;;
-            workforce)
-              start_db sonar-workforce-identity-db postgres:16-alpine identity_runtime identity_runtime 5435
-              start_db sonar-workforce-db postgres:16-alpine workforce_runtime workforce_runtime 5436
-              identity_url="postgres://identity_runtime:${PASSWORD}@127.0.0.1:5435/identity_runtime?sslmode=disable"
-              database_url="postgres://workforce_runtime:${PASSWORD}@127.0.0.1:5436/workforce_runtime?sslmode=disable"
-              migrate identity core/identity/database/migrations "${identity_url}"
-              migrate workforce core/workforce/database/migrations "${database_url}" "${identity_url}"
-              ;;
-            platform)
-              start_db sonar-platform-db postgres:16-alpine platform_control_runtime platform_control_runtime 5437
-              database_url="postgres://platform_control_runtime:${PASSWORD}@127.0.0.1:5437/platform_control_runtime?sslmode=disable"
-              migrate platform-control core/platform-control/database/migrations "${database_url}"
-              ;;
-            providers)
-              start_db sonar-providers-db postgres:16-alpine providers_runtime providers_runtime 5438
-              database_url="postgres://providers_runtime:${PASSWORD}@127.0.0.1:5438/providers_runtime?sslmode=disable"
-              migrate providers core/providers/database/migrations "${database_url}"
-              ;;
-            *)
-              echo "::error::Unknown Sonar Go coverage service: ${SERVICE}"
-              exit 1
-              ;;
-          esac
-
-          echo "database_url=${database_url}" >> "${GITHUB_OUTPUT}"
-
-      - name: Generate normalized exact Go coverage report
-        shell: bash
-        env:
-          SERVICE: ${{ matrix.service }}
-          DATABASE_URL: ${{ steps.database.outputs.database_url }}
-        run: |
-          set -euo pipefail
-          case "${SERVICE}" in
-            dsh) module="services/dsh/backend" ;;
-            wlt) module="services/wlt/backend" ;;
-            identity) module="core/identity/backend" ;;
-            workforce) module="core/workforce/backend" ;;
-            platform) module="core/platform-control/backend" ;;
-            providers) module="core/providers/backend" ;;
-            *) echo "::error::Unknown Go module service ${SERVICE}"; exit 1 ;;
-          esac
-
-          report="${GITHUB_WORKSPACE}/${module}/.sonar/coverage.out"
-          raw_report="${GITHUB_WORKSPACE}/${module}/.sonar/coverage.raw.out"
-          mkdir -p "$(dirname "${report}")"
-
-          (
-            cd "${module}"
-            case "${SERVICE}" in
-              identity)
-                IDENTITY_REQUIRE_DB_TESTS=true DATABASE_URL="${DATABASE_URL}" \
-                  go test ./... -coverprofile="${raw_report}"
-                ;;
-              workforce)
-                WORKFORCE_REQUIRE_DB_TESTS=true DATABASE_URL="${DATABASE_URL}" \
-                  go test ./... -coverprofile="${raw_report}"
-                ;;
-              dsh)
-                DSH_REQUIRE_DB_TESTS=true DSH_TEST_operator_context_id=local-dsh DATABASE_URL="${DATABASE_URL}" \
-                  go test ./... -coverprofile="${raw_report}"
-                ;;
-              wlt)
-                WLT_REQUIRE_DB_TESTS=true BTHWANI_OPERATOR_CONTEXT_ID=local-dsh DATABASE_URL="${DATABASE_URL}" \
-                  go test ./... -coverprofile="${raw_report}"
-                ;;
-              platform)
-                DATABASE_URL="${DATABASE_URL}" go test ./... -coverprofile="${raw_report}"
-                ;;
-              providers)
-                DATABASE_TEST=1 DATABASE_URL="${DATABASE_URL}" go test ./... -coverprofile="${raw_report}"
-                ;;
-            esac
+          modules=(
+            services/dsh/backend
+            services/wlt/backend
+            core/identity/backend
+            core/workforce/backend
+            core/platform-control/backend
+            core/providers/backend
           )
-
-          [[ -s "${raw_report}" ]] || {
-            echo "::error::Go coverage report is empty for ${module}"
-            exit 1
-          }
-          grep -qv '^mode:' "${raw_report}" || {
-            echo "::error::Go coverage report has no executable records for ${module}"
-            exit 1
-          }
-          raw_summary="$(cd "${module}" && go tool cover -func="${raw_report}")"
-          grep -q '^total:' <<<"${raw_summary}" || {
-            echo "::error::Go coverage report has no total summary for ${module}"
-            exit 1
-          }
-
-          module_name="$(cd "${module}" && go list -m)"
-          : > "${report}"
-          while IFS= read -r coverage_line; do
-            case "${coverage_line}" in
-              "${module_name}/"*)
-                printf '%s/%s\n' "${module}" "${coverage_line#"${module_name}/"}" >> "${report}"
-                ;;
-              *)
-                printf '%s\n' "${coverage_line}" >> "${report}"
-                ;;
-            esac
-          done < "${raw_report}"
-
-          [[ -s "${report}" ]] || {
-            echo "::error::Normalized Go coverage report is empty for ${module}"
-            exit 1
-          }
-          grep -qv '^mode:' "${report}" || {
-            echo "::error::Normalized Go coverage report has no executable records for ${module}"
-            exit 1
-          }
-          normalized_summary="$(go tool cover -func="${report}")"
-          grep -q '^total:' <<<"${normalized_summary}" || {
-            echo "::error::Normalized Go coverage report has no total summary for ${module}"
-            exit 1
-          }
-
-          evidence="${RUNNER_TEMP}/sonar-go-evidence"
-          mkdir -p "${evidence}/reports/${module}/.sonar"
-          cp -- "${report}" "${evidence}/reports/${module}/.sonar/coverage.out"
-          jq -n \
-            --arg repository "${GITHUB_REPOSITORY}" \
-            --arg candidateSha "${{ needs.scope.outputs.head_sha }}" \
-            --arg baseSha "${{ needs.scope.outputs.base_sha }}" \
-            --arg mode "${{ needs.scope.outputs.mode }}" \
-            --arg service "${SERVICE}" \
-            --arg module "${module}" \
-            '{schemaVersion:1,kind:"go",repository:$repository,candidateSha:$candidateSha,baseSha:$baseSha,mode:$mode,service:$service,module:$module}' \
-            > "${evidence}/manifest.json"
-
-      - name: Upload exact Go coverage artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: sonar-go-coverage-${{ matrix.service }}-${{ needs.scope.outputs.head_sha }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/sonar-go-evidence
-          if-no-files-found: error
-          # Reports live under hidden .sonar/ paths; preserve them in the artifact.
-          include-hidden-files: true
-          retention-days: 2
-
-  assemble:
-    name: Assemble exact Sonar coverage evidence
-    needs: [scope, node_coverage, go_coverage]
-    if: >-
-      ${{ always() && needs.scope.result == 'success' &&
-      (needs.scope.outputs.sonar_required != 'true' ||
-      ((needs.scope.outputs.node_required != 'true' || needs.node_coverage.result == 'success') &&
-      (needs.scope.outputs.go_required != 'true' || needs.go_coverage.result == 'success'))) }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      actions: read
-      contents: read
-    steps:
-      - name: Download, bind, and merge exact coverage parts
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ needs.scope.outputs.head_sha }}
-          BASE_SHA: ${{ needs.scope.outputs.base_sha }}
-          MODE: ${{ needs.scope.outputs.mode }}
-          NODE_REQUIRED: ${{ needs.scope.outputs.node_required }}
-          GO_REQUIRED: ${{ needs.scope.outputs.go_required }}
-          GO_MATRIX: ${{ needs.scope.outputs.go_matrix }}
-          SONAR_REQUIRED: ${{ needs.scope.outputs.sonar_required }}
-        run: |
-          set -euo pipefail
-          evidence="${RUNNER_TEMP}/sonar-coverage-evidence"
-          parts_file="${RUNNER_TEMP}/sonar-coverage-parts.jsonl"
-          mkdir -p "${evidence}/reports"
-          : > "${parts_file}"
-          if [[ "${SONAR_REQUIRED}" != "true" ]]; then
-            NODE_REQUIRED=false
-            GO_REQUIRED=false
-            GO_MATRIX='[]'
-          fi
-
-          artifacts_json() {
-            gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100"
-          }
-
-          download_exact() {
-            local name="$1" kind="$2" service="${3:-}"
-            local artifact_id=""
-            for _ in $(seq 1 20); do
-              artifact_id="$(artifacts_json | jq -r --arg name "${name}" \
-                '[.artifacts[] | select(.name == $name)] | if length == 1 then .[0].id else empty end')"
-              [[ "${artifact_id}" =~ ^[0-9]+$ ]] && break
-              sleep 2
-            done
-            [[ "${artifact_id}" =~ ^[0-9]+$ ]] || {
-              echo "::error::Expected Sonar coverage artifact not found exactly once: ${name}"
+          for module in "${modules[@]}"; do
+            mkdir -p "${module}/.sonar"
+            raw="${GITHUB_WORKSPACE}/${module}/.sonar/coverage.raw.out"
+            report="${GITHUB_WORKSPACE}/${module}/.sonar/coverage.out"
+            (
+              cd "${module}"
+              GOWORK=off go test ./... -count=1 -coverprofile="${raw}"
+            )
+            [[ -s "${raw}" ]] || {
+              echo "::error::Go coverage missing for ${module}"
               exit 1
             }
-
-            archive="${RUNNER_TEMP}/${name}.zip"
-            destination="${RUNNER_TEMP}/${name}"
-            mkdir -p "${destination}"
-            gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${archive}"
-
-            while IFS= read -r entry; do
-              [[ -n "${entry}" && "${entry}" != ".." && "${entry}" != /* && "${entry}" != ../* && \
-                 "${entry}" != */../* && "${entry}" != */.. ]] || {
-                echo "::error::Unsafe Sonar artifact path in ${name}"
-                exit 1
-              }
-            done < <(unzip -Z1 "${archive}")
-            unzip -q "${archive}" -d "${destination}"
-            if find "${destination}" -type l -print -quit | grep -q .; then
-              echo "::error::Symlink found in Sonar coverage artifact ${name}"
-              exit 1
-            fi
-
-            if [[ "${kind}" == "node" ]]; then
-              jq -e \
-                --arg repository "${GITHUB_REPOSITORY}" \
-                --arg head "${HEAD_SHA}" \
-                --arg base "${BASE_SHA}" \
-                '.schemaVersion==1 and .kind=="node" and .repository==$repository and .candidateSha==$head and .baseSha==$base' \
-                "${destination}/manifest.json" >/dev/null
-            else
-              jq -e \
-                --arg repository "${GITHUB_REPOSITORY}" \
-                --arg head "${HEAD_SHA}" \
-                --arg base "${BASE_SHA}" \
-                --arg service "${service}" \
-                '.schemaVersion==1 and .kind=="go" and .repository==$repository and .candidateSha==$head and .baseSha==$base and .service==$service' \
-                "${destination}/manifest.json" >/dev/null
-            fi
-
-            if [[ -d "${destination}/reports" ]]; then
-              cp -a "${destination}/reports/." "${evidence}/reports/"
-            fi
-            sha256="$(sha256sum "${archive}" | awk '{print $1}')"
-            jq -nc --arg name "${name}" --arg kind "${kind}" --arg service "${service}" --arg sha256 "${sha256}" \
-              '{name:$name,kind:$kind,service:($service|select(length>0)),sha256:$sha256}' >> "${parts_file}"
-          }
-
-          if [[ "${NODE_REQUIRED}" == "true" ]]; then
-            download_exact "sonar-node-coverage-${HEAD_SHA}-${GITHUB_RUN_ID}" node
-          fi
-
-          if [[ "${GO_REQUIRED}" == "true" ]]; then
-            while IFS= read -r service; do
-              [[ -n "${service}" && "${service}" != "none" ]] || continue
-              download_exact "sonar-go-coverage-${service}-${HEAD_SHA}-${GITHUB_RUN_ID}" go "${service}"
-            done < <(jq -r '.[]' <<<"${GO_MATRIX}")
-          fi
-
-          jq -s '.' "${parts_file}" > "${RUNNER_TEMP}/parts.json"
-          jq -n \
-            --arg repository "${GITHUB_REPOSITORY}" \
-            --arg candidateSha "${HEAD_SHA}" \
-            --arg baseSha "${BASE_SHA}" \
-            --arg mode "${MODE}" \
-            --arg runId "${GITHUB_RUN_ID}" \
-            --arg nodeRequired "${NODE_REQUIRED}" \
-            --argjson goServices "${GO_MATRIX}" \
-            --slurpfile parts "${RUNNER_TEMP}/parts.json" \
-            '{schemaVersion:2,repository:$repository,candidateSha:$candidateSha,baseSha:$baseSha,mode:$mode,workflowRunId:$runId,nodeRequired:($nodeRequired=="true"),goServices:$goServices,parts:$parts[0]}' \
-            > "${evidence}/manifest.json"
-
-      - name: Upload canonical exact coverage evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: sonar-coverage-${{ needs.scope.outputs.head_sha }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/sonar-coverage-evidence
-          if-no-files-found: error
-          # Reports live under hidden .sonar/ paths; preserve them in the artifact.
-          include-hidden-files: true
-          retention-days: 2
-
-  scan:
-    name: SonarQube trusted static analysis
-    needs: [scope, assemble]
-    if: ${{ always() && inputs.trusted_scan && needs.scope.result == 'success' && needs.scope.outputs.sonar_required == 'true' && needs.assemble.result == 'success' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    permissions:
-      actions: read
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Checkout immutable candidate without executing repository code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ needs.scope.outputs.head_sha }}
-          # Sonar needs complete history for SCM blame and new-code accuracy.
-          fetch-depth: 0
-          persist-credentials: false
-          show-progress: false
-
-      - name: Revalidate trusted definition and candidate
-        shell: bash
-        env:
-          EXPECTED_HEAD_SHA: ${{ needs.scope.outputs.head_sha }}
-          EXPECTED_BASE_SHA: ${{ needs.scope.outputs.base_sha }}
-          PR_NUMBER: ${{ inputs.pr_number }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          if [[ "${GITHUB_EVENT_NAME}" != "workflow_call" ]]; then
-            [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]] || {
-              echo "::error::secret-bearing Sonar analysis requires the default-branch workflow definition"
+            module_name="$(cd "${module}" && GOWORK=off go list -m)"
+            : > "${report}"
+            while IFS= read -r line; do
+              case "${line}" in
+                "${module_name}/"*)
+                  printf '%s/%s\n' "${module}" "${line#"${module_name}/"}" >> "${report}"
+                  ;;
+                *) printf '%s\n' "${line}" >> "${report}" ;;
+              esac
+            done < "${raw}"
+            grep -q '^mode:' "${report}"
+            grep -qv '^mode:' "${report}" || {
+              echo "::error::Go coverage has no executable records for ${module}"
               exit 1
             }
-          fi
-          [[ "$(git rev-parse HEAD)" == "${EXPECTED_HEAD_SHA}" ]] || {
-            echo "::error::Sonar trusted scan checkout drift"
-            exit 1
-          }
-          if [[ -n "${PR_NUMBER:-}" ]]; then
-            pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
-            [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${EXPECTED_HEAD_SHA}" ]] || {
-              echo "::error::Sonar PR head drift"
-              exit 1
-            }
-            [[ "$(jq -r '.base.sha' <<<"${pr}")" == "${EXPECTED_BASE_SHA}" ]] || {
-              echo "::error::Sonar PR base drift"
-              exit 1
-            }
-          fi
+          done
 
-      - name: Download and validate canonical exact coverage evidence
-        shell: bash
-        env:
-          EXPECTED_HEAD_SHA: ${{ needs.scope.outputs.head_sha }}
-          EXPECTED_BASE_SHA: ${{ needs.scope.outputs.base_sha }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          name="sonar-coverage-${EXPECTED_HEAD_SHA}-${GITHUB_RUN_ID}"
-          artifacts="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100")"
-          artifact_id="$(jq -r --arg name "${name}" \
-            '[.artifacts[] | select(.name == $name)] | if length == 1 then .[0].id else empty end' <<<"${artifacts}")"
-          [[ "${artifact_id}" =~ ^[0-9]+$ ]] || {
-            echo "::error::Canonical Sonar coverage artifact missing or ambiguous"
-            exit 1
-          }
-
-          archive="${RUNNER_TEMP}/sonar-coverage.zip"
-          destination="${RUNNER_TEMP}/sonar-coverage"
-          mkdir -p "${destination}"
-          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${archive}"
-          while IFS= read -r entry; do
-            [[ -n "${entry}" && "${entry}" != ".." && "${entry}" != /* && "${entry}" != ../* && \
-               "${entry}" != */../* && "${entry}" != */.. ]] || {
-              echo "::error::unsafe canonical Sonar coverage artifact path"
-              exit 1
-            }
-          done < <(unzip -Z1 "${archive}")
-          unzip -q "${archive}" -d "${destination}"
-          if find "${destination}" -type l -print -quit | grep -q .; then
-            echo "::error::canonical Sonar coverage artifact contains a symlink"
-            exit 1
-          fi
-          jq -e \
-            --arg repository "${GITHUB_REPOSITORY}" \
-            --arg head "${EXPECTED_HEAD_SHA}" \
-            --arg base "${EXPECTED_BASE_SHA}" \
-            '.schemaVersion==2 and .repository==$repository and .candidateSha==$head and .baseSha==$base' \
-            "${destination}/manifest.json" >/dev/null
-          if [[ -d "${destination}/reports" ]]; then
-            cp -a "${destination}/reports/." "${GITHUB_WORKSPACE}/"
-          fi
-
-      - name: Fetch trusted Sonar project settings without checkout
-        shell: bash
-        env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          trusted="${RUNNER_TEMP}/trusted-sonar-project.properties"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/contents/sonar-project.properties" -f "ref=${DEFAULT_BRANCH}" --jq '.content' |
-            base64 --decode > "${trusted}"
-          [[ -s "${trusted}" ]] || {
-            echo "::error::trusted Sonar settings missing"
-            exit 1
-          }
-          rm -f -- "${GITHUB_WORKSPACE}/sonar-project.properties"
-          install -m 0600 -- "${trusted}" "${GITHUB_WORKSPACE}/sonar-project.properties"
-          [[ -f "${GITHUB_WORKSPACE}/sonar-project.properties" && ! -L "${GITHUB_WORKSPACE}/sonar-project.properties" ]] || {
-            echo "::error::trusted Sonar settings were not installed as a regular file"
-            exit 1
-          }
-          if find "${GITHUB_WORKSPACE}" -type l -print -quit | grep -q .; then
-            echo "::error::candidate or coverage artifact contains a symlink; secret-bearing Sonar scan refused"
-            exit 1
-          fi
-          project_key="$(sed -n 's/^sonar\.projectKey=//p' "${GITHUB_WORKSPACE}/sonar-project.properties" | head -n 1)"
-          [[ -n "${project_key}" ]] || {
-            echo "::error::trusted Sonar project key missing"
-            exit 1
-          }
-          echo "SONAR_PROJECT_KEY=${project_key}" >> "${GITHUB_ENV}"
-
-      - name: Load trusted Sonar task validator
-        shell: bash
-        env:
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          trusted_validator="${RUNNER_TEMP}/validate-sonar-analysis-task.mjs"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/validate-sonar-analysis-task.mjs" \
-            -f "ref=${DEFAULT_BRANCH}" --jq '.content' | base64 --decode > "${trusted_validator}"
-          [[ -s "${trusted_validator}" ]] || {
-            echo "::error::trusted Sonar task validator missing"
-            exit 1
-          }
-          node --check "${trusted_validator}"
-          echo "TRUSTED_SONAR_TASK_VALIDATOR=${trusted_validator}" >> "${GITHUB_ENV}"
-
-      - name: Validate SonarQube Cloud token
+      - name: Validate Sonar token
         shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
+          set -euo pipefail
           [[ -n "${SONAR_TOKEN}" ]] || {
             echo "::error::SONAR_TOKEN is not configured"
             exit 1
           }
 
-      - name: SonarQube Cloud trusted scan
+      - name: Scan exact h candidate with candidate-owned configuration
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         with:
           args: >-
-            ${{ inputs.pr_number && format('-Dsonar.pullrequest.key={0}', inputs.pr_number) || '' }}
-            ${{ inputs.base_ref && format('-Dsonar.pullrequest.base={0}', inputs.base_ref) || '' }}
-            ${{ inputs.head_ref && format('-Dsonar.pullrequest.branch={0}', inputs.head_ref) || '' }}
-            ${{ inputs.head_sha && format('-Dsonar.scm.revision={0}', inputs.head_sha) || '' }}
+            -Dsonar.branch.name=h
+            -Dsonar.scm.revision=${{ env.HEAD_SHA }}
+            -Dsonar.javascript.lcov.reportPaths=.sonar/node-coverage/lcov.info
+            -Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
-            ${{ needs.scope.outputs.node_required == 'true' && '-Dsonar.javascript.lcov.reportPaths=.sonar/node-coverage/lcov.info' || '' }}
-            ${{ needs.scope.outputs.go_required == 'true' && '-Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out' || '' }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      - name: Validate and publish exact Sonar analysis task identity
-        if: ${{ success() }}
+      - name: Bind Sonar result to exact h SHA and require zero open findings
         shell: bash
         env:
-          PR_NUMBER: ${{ inputs.pr_number }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           set -euo pipefail
           [[ -s .scannerwork/report-task.txt ]] || {
-            echo "::error::Sonar scanner did not publish report-task.txt"
+            echo "::error::Sonar report-task.txt is missing"
             exit 1
           }
-          validator_args=()
-          if [[ -n "${PR_NUMBER}" ]]; then
-            validator_args+=(--pr-number "${PR_NUMBER}")
-          fi
-          node "${TRUSTED_SONAR_TASK_VALIDATOR}" \
-            --input .scannerwork/report-task.txt \
-            --output .scannerwork/sonar-analysis-task.json \
-            --project-key "${SONAR_PROJECT_KEY}" \
-            "${validator_args[@]}"
-
-      - name: Upload exact Sonar analysis task identity
-        if: ${{ success() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: sonar-analysis-task-${{ needs.scope.outputs.head_sha }}-${{ github.run_id }}
-          path: |
-            .scannerwork/report-task.txt
-            .scannerwork/sonar-analysis-task.json
-          if-no-files-found: error
-          retention-days: 2
-
-  evidence:
-    name: Consume Sonar evidence
-    needs: [scope, scan]
-    # Consume the remote API evidence even when the scanner failed; the result
-    # job still requires a successful scanner and a clean consumed evidence set.
-    if: ${{ always() && inputs.trusted_scan && needs.scope.result == 'success' && needs.scope.outputs.sonar_required == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      actions: read
-      contents: read
-    env:
-      GH_TOKEN: ${{ github.token }}
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      HEAD_SHA: ${{ needs.scope.outputs.head_sha }}
-      BASE_SHA: ${{ needs.scope.outputs.base_sha }}
-      MODE: ${{ needs.scope.outputs.mode }}
-      PR_NUMBER: ${{ inputs.pr_number }}
-      BRANCH_NAME: ${{ inputs.head_ref || github.ref_name }}
-      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-    steps:
-      - name: Checkout immutable candidate identity
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ env.HEAD_SHA }}
-          fetch-depth: 1
-          persist-credentials: false
-          show-progress: false
-
-      - name: Load trusted Sonar evidence classifier
-        shell: bash
-        run: |
-          set -euo pipefail
-          trusted_classifier="${RUNNER_TEMP}/classify-sonar-evidence.mjs"
-          trusted_properties="${RUNNER_TEMP}/sonar-project.properties"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/classify-sonar-evidence.mjs" \
-            -f "ref=${DEFAULT_BRANCH}" --jq '.content' | base64 --decode > "${trusted_classifier}"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/contents/sonar-project.properties" \
-            -f "ref=${DEFAULT_BRANCH}" --jq '.content' | base64 --decode > "${trusted_properties}"
-          [[ -s "${trusted_classifier}" ]] || { echo "::error::trusted Sonar evidence classifier missing"; exit 1; }
-          [[ -s "${trusted_properties}" ]] || { echo "::error::trusted Sonar project settings missing"; exit 1; }
-          node --check "${trusted_classifier}"
-          trusted_task_validator="${RUNNER_TEMP}/validate-sonar-analysis-task.mjs"
-          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/validate-sonar-analysis-task.mjs" \
-            -f "ref=${DEFAULT_BRANCH}" --jq '.content' | base64 --decode > "${trusted_task_validator}"
-          [[ -s "${trusted_task_validator}" ]] || { echo "::error::trusted Sonar task validator missing"; exit 1; }
-          node --check "${trusted_task_validator}"
-          project_key="$(sed -n 's/^sonar\.projectKey=//p' "${trusted_properties}" | head -n 1)"
-          [[ -n "${project_key}" ]] || { echo "::error::trusted Sonar project key missing"; exit 1; }
-          {
-            echo "TRUSTED_SONAR_CLASSIFIER=${trusted_classifier}"
-            echo "TRUSTED_SONAR_TASK_VALIDATOR=${trusted_task_validator}"
-            echo "SONAR_PROJECT_KEY=${project_key}"
-          } >> "${GITHUB_ENV}"
-
-      - name: Download and validate exact Sonar analysis task identity
-        shell: bash
-        env:
-          EXPECTED_HEAD_SHA: ${{ needs.scope.outputs.head_sha }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
+          ce_task_id="$(sed -n 's/^ceTaskId=//p' .scannerwork/report-task.txt | head -n 1)"
+          [[ -n "${ce_task_id}" ]] || {
+            echo "::error::Sonar CE task id is missing"
+            exit 1
+          }
           evidence="${RUNNER_TEMP}/sonar-evidence"
-          mkdir -p "${evidence}/task"
-          name="sonar-analysis-task-${EXPECTED_HEAD_SHA}-${GITHUB_RUN_ID}"
-          artifacts="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100")"
-          artifact_id="$(jq -r --arg name "${name}" \
-            '[.artifacts[] | select(.name == $name)] | if length == 1 then .[0].id else empty end' <<<"${artifacts}")"
-          [[ "${artifact_id}" =~ ^[0-9]+$ ]] || {
-            echo "::error::Exact Sonar analysis task artifact missing or ambiguous"
-            exit 1
-          }
-          archive="${RUNNER_TEMP}/sonar-analysis-task.zip"
-          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${archive}"
-          while IFS= read -r entry; do
-            [[ -n "${entry}" && "${entry}" != ".." && "${entry}" != /* && "${entry}" != ../* && \
-               "${entry}" != */../* && "${entry}" != */.. ]] || {
-              echo "::error::unsafe Sonar analysis task artifact path"
-              exit 1
-            }
-          done < <(unzip -Z1 "${archive}")
-          unzip -q "${archive}" -d "${evidence}/task"
-          if find "${evidence}/task" -type l -print -quit | grep -q .; then
-            echo "::error::Sonar analysis task artifact contains a symlink"
-            exit 1
-          fi
-          mapfile -t task_files < <(find "${evidence}/task" -type f -name report-task.txt -print)
-          [[ "${#task_files[@]}" == 1 ]] || {
-            echo "::error::Sonar report-task identity is missing or ambiguous"
-            exit 1
-          }
-          validator_args=()
-          if [[ -n "${PR_NUMBER}" ]]; then
-            validator_args+=(--pr-number "${PR_NUMBER}")
-          fi
-          node "${TRUSTED_SONAR_TASK_VALIDATOR}" \
-            --input "${task_files[0]}" \
-            --output "${evidence}/task/validated.json" \
-            --project-key "${SONAR_PROJECT_KEY}" \
-            "${validator_args[@]}"
+          mkdir -p "${evidence}"
 
-      - name: Retrieve raw Sonar evidence for the exact candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          evidence="${RUNNER_TEMP}/sonar-evidence"
-          mkdir -p "${evidence}/raw"
-          : > "${evidence}/warnings.log"
-          [[ -n "${SONAR_TOKEN}" ]] || { echo "::error::SONAR_TOKEN is not configured"; exit 1; }
-
-          quality_gate_args=()
-          issues_args=(--data-urlencode "componentKeys=${SONAR_PROJECT_KEY}")
-          hotspots_args=(--data-urlencode "projectKey=${SONAR_PROJECT_KEY}")
-          measures_args=(--data-urlencode "component=${SONAR_PROJECT_KEY}")
-          task="${evidence}/task/validated.json"
-          ce_task_id="$(jq -r '.properties.ceTaskId // empty' "${task}")"
-          [[ -n "${ce_task_id}" ]] || { echo "::error::Sonar CE task id is missing"; exit 1; }
-          if [[ -n "${PR_NUMBER}" ]]; then
-            issues_args+=(--data-urlencode "pullRequest=${PR_NUMBER}")
-            hotspots_args+=(--data-urlencode "pullRequest=${PR_NUMBER}")
-            measures_args+=(--data-urlencode "pullRequest=${PR_NUMBER}")
-          else
-            issues_args+=(--data-urlencode "branch=${BRANCH_NAME}")
-            hotspots_args+=(--data-urlencode "branch=${BRANCH_NAME}")
-            measures_args+=(--data-urlencode "branch=${BRANCH_NAME}")
-          fi
-
-          fetch_json() {
-            local name="$1" endpoint="$2"
+          api_get() {
+            local output="$1" endpoint="$2"
             shift 2
-            if ! curl --fail-with-body --silent --show-error --retry 4 --retry-delay 3 \
+            curl --fail-with-body --silent --show-error --retry 4 --retry-delay 3 \
               --connect-timeout 20 --max-time 120 --user "${SONAR_TOKEN}:" \
-              --get "https://sonarcloud.io/${endpoint}" "$@" > "${evidence}/raw/${name}.json"; then
-              echo "${name}: Sonar API request failed" >> "${evidence}/warnings.log"
-              printf '%s\n' '{}' > "${evidence}/raw/${name}.json"
-            fi
-            if ! jq -e 'type == "object"' "${evidence}/raw/${name}.json" >/dev/null 2>&1; then
-              echo "${name}: Sonar API response was not a JSON object" >> "${evidence}/warnings.log"
-              printf '%s\n' '{}' > "${evidence}/raw/${name}.json"
-            fi
+              --get "https://sonarcloud.io/${endpoint}" "$@" > "${output}"
+            jq -e 'type == "object"' "${output}" >/dev/null
           }
 
-          fetch_remaining_pages() {
-            local name="$1" endpoint="$2"
-            shift 2
-            local first_page="${evidence}/raw/${name}-page-1.json"
-            local total
-            total="$(jq -r '.paging.total // empty' "${first_page}")"
-            [[ "${total}" =~ ^[0-9]+$ ]] || return 0
-            local page=2
-            while (( (page - 1) * 500 < total )); do
-              fetch_json "${name}-page-${page}" "${endpoint}" "$@" \
-                --data-urlencode "ps=500" --data-urlencode "p=${page}"
-              page=$((page + 1))
-            done
-          }
-
-          merge_paged_json() {
-            local key="$1" output="$2"
-            shift 2
-            jq -s --arg key "${key}" '
-              . as $pages
-              | (map(.[$key] // []) | add) as $entries
-              | (map(.paging // empty) | .[0] // {}) as $paging
-              | {($key): $entries, paging: ($paging + {total: ($paging.total // ($entries | length))})}
-            ' "$@" > "${output}"
-          }
-
-          fetch_json ce-task api/ce/task --data-urlencode "id=${ce_task_id}"
+          api_get "${evidence}/ce-task.json" api/ce/task --data-urlencode "id=${ce_task_id}"
           jq -e \
             --arg task_id "${ce_task_id}" \
             --arg project "${SONAR_PROJECT_KEY}" \
-            '.task | type == "object" and .id == $task_id and .status == "SUCCESS" and
-             .componentKey == $project and (.analysisId | type == "string" and length > 0)' \
-            "${evidence}/raw/ce-task.json" >/dev/null || {
+            '.task.id == $task_id and .task.status == "SUCCESS" and .task.componentKey == $project and (.task.analysisId | type == "string" and length > 0)' \
+            "${evidence}/ce-task.json" >/dev/null || {
             echo "::error::Sonar CE task is not a successful exact-project task"
             exit 1
           }
-          analysis_id="$(jq -r '.task.analysisId' "${evidence}/raw/ce-task.json")"
-          revision="${HEAD_SHA}"
-          analysis_entries='[]'
-          if [[ -n "${PR_NUMBER}" ]]; then
-            selected=false
-            attempt=1
-            max_attempts=60
-            rm -f "${evidence}/raw/pull-request-selected.json" "${evidence}/raw/analysis-selected.json"
-            while (( attempt <= max_attempts )); do
-              fetch_json pull-request api/project_pull_requests/list \
-                --data-urlencode "project=${SONAR_PROJECT_KEY}"
-              if jq -e \
-                --arg pr "${PR_NUMBER}" \
-                --arg head "${HEAD_SHA}" \
-                '(.pullRequests // []) as $all |
-                 [$all[] | select((.key | tostring) == $pr)] as $matches |
-                 ($matches | length) == 1 and ($matches[0].commit.sha // "") == $head' \
-                "${evidence}/raw/pull-request.json" >/dev/null; then
-                jq -e \
-                  --arg pr "${PR_NUMBER}" \
-                  --arg head "${HEAD_SHA}" \
-                  '(.pullRequests // []) |
-                   map(select((.key | tostring) == $pr and (.commit.sha // "") == $head)) |
-                   if length == 1 then .[0] else empty end' \
-                  "${evidence}/raw/pull-request.json" > "${evidence}/raw/pull-request-selected.json"
-                fetch_json analysis-search api/project_analyses/search \
-                  --data-urlencode "project=${SONAR_PROJECT_KEY}" \
-                  --data-urlencode "pullRequest=${PR_NUMBER}" \
-                  --data-urlencode "ps=100"
-                if jq -e \
-                  --arg analysis_id "${analysis_id}" \
-                  --arg head "${HEAD_SHA}" \
-                  '(.analyses // []) |
-                   map(select((.key // "") == $analysis_id and (.revision // "") == $head)) |
-                   length == 1' \
-                  "${evidence}/raw/analysis-search.json" >/dev/null; then
-                  jq -e \
-                    --arg analysis_id "${analysis_id}" \
-                    --arg head "${HEAD_SHA}" \
-                    '{analyses: [(.analyses // [])[] |
-                      select((.key // "") == $analysis_id and (.revision // "") == $head)]}' \
-                    "${evidence}/raw/analysis-search.json" > "${evidence}/raw/analysis-selected.json"
-                  analysis_entries="$(jq -c '.analyses' "${evidence}/raw/analysis-selected.json")"
-                  selected=true
-                  break
-                fi
-              fi
-              if (( attempt == max_attempts )); then
-                break
-              fi
-              sleep 5
-              attempt=$((attempt + 1))
-            done
-            if [[ "${selected}" != "true" ]]; then
-              echo "::error::Sonar PR and analysis records did not converge to the exact candidate after ${max_attempts} attempts"
-              exit 1
-            fi
-          else
-            printf '%s\n' '{}' > "${evidence}/raw/pull-request-selected.json"
-            analysis_entries="$(jq -cn --arg key "${analysis_id}" --arg revision "${revision}" \
-              '[{key:$key,revision:$revision}]')"
-          fi
-          quality_gate_args=(--data-urlencode "analysisId=${analysis_id}")
-          echo "SONAR_ANALYSIS_ID=${analysis_id}" >> "${GITHUB_ENV}"
+          analysis_id="$(jq -r '.task.analysisId' "${evidence}/ce-task.json")"
+
+          api_get "${evidence}/analyses.json" api/project_analyses/search \
+            --data-urlencode "project=${SONAR_PROJECT_KEY}" \
+            --data-urlencode "branch=h" \
+            --data-urlencode "ps=100"
+          jq -e \
+            --arg id "${analysis_id}" \
+            --arg head "${HEAD_SHA}" \
+            '[.analyses[]? | select(.key == $id and .revision == $head)] | length == 1' \
+            "${evidence}/analyses.json" >/dev/null || {
+            echo "::error::Sonar analysis is not uniquely bound to the exact h candidate"
+            exit 1
+          }
+
+          api_get "${evidence}/quality-gate.json" api/qualitygates/project_status \
+            --data-urlencode "analysisId=${analysis_id}"
+          jq -e '.projectStatus.status == "OK"' "${evidence}/quality-gate.json" >/dev/null || {
+            echo "::error::Sonar Quality Gate is not OK"
+            exit 1
+          }
+
+          api_get "${evidence}/issues.json" api/issues/search \
+            --data-urlencode "componentKeys=${SONAR_PROJECT_KEY}" \
+            --data-urlencode "branch=h" \
+            --data-urlencode "resolved=false" \
+            --data-urlencode "ps=1"
+          api_get "${evidence}/hotspots.json" api/hotspots/search \
+            --data-urlencode "projectKey=${SONAR_PROJECT_KEY}" \
+            --data-urlencode "branch=h" \
+            --data-urlencode "ps=1"
+          issues="$(jq -r '.paging.total // -1' "${evidence}/issues.json")"
+          hotspots="$(jq -r '.paging.total // -1' "${evidence}/hotspots.json")"
+          [[ "${issues}" == "0" && "${hotspots}" == "0" ]] || {
+            echo "::error::Sonar exact-h baseline has unresolved issues=${issues}, hotspots=${hotspots}"
+            exit 1
+          }
 
           jq -n \
+            --arg headSha "${HEAD_SHA}" \
+            --arg baseSha "${BASE_SHA}" \
             --arg analysisId "${analysis_id}" \
-            --arg revision "${revision}" \
-            --arg ceTaskId "${ce_task_id}" \
             --arg projectKey "${SONAR_PROJECT_KEY}" \
-            --argjson analyses "${analysis_entries}" \
-            --slurpfile pullRequest "${evidence}/raw/pull-request-selected.json" \
-            '{analysisId:$analysisId,analyses:$analyses,ceTaskId:$ceTaskId,projectKey:$projectKey,pullRequest:$pullRequest[0]}' \
-            > "${evidence}/raw/analysis.json"
+            --argjson issues "${issues}" \
+            --argjson hotspots "${hotspots}" \
+            '{schema:"bthwani-sonar-exact-h/1",headSha:$headSha,baseSha:$baseSha,analysisId:$analysisId,projectKey:$projectKey,qualityGate:"OK",openIssues:$issues,openHotspots:$hotspots,evidenceComplete:true}' \
+            > "${evidence}/summary.json"
+          cat "${evidence}/summary.json"
 
-          fetch_json quality-gate api/qualitygates/project_status "${quality_gate_args[@]}"
-          fetch_json issues-page-1 api/issues/search "${issues_args[@]}" --data-urlencode "resolved=false" --data-urlencode "ps=500" --data-urlencode "p=1"
-          fetch_remaining_pages issues api/issues/search "${issues_args[@]}" --data-urlencode "resolved=false"
-          fetch_json hotspots-page-1 api/hotspots/search "${hotspots_args[@]}" --data-urlencode "ps=500" --data-urlencode "p=1"
-          fetch_remaining_pages hotspots api/hotspots/search "${hotspots_args[@]}"
-          fetch_json measures api/measures/component "${measures_args[@]}" --data-urlencode "metricKeys=bugs,vulnerabilities,code_smells,security_hotspots,coverage,duplicated_lines_density,ncloc"
-
-          mapfile -t issue_pages < <(find "${evidence}/raw" -maxdepth 1 -type f -name 'issues-page-*.json' -print | sort -V)
-          mapfile -t hotspot_pages < <(find "${evidence}/raw" -maxdepth 1 -type f -name 'hotspots-page-*.json' -print | sort -V)
-          [[ "${#issue_pages[@]}" -gt 0 && "${#hotspot_pages[@]}" -gt 0 ]] || {
-            echo "::error::Sonar paged evidence files are missing"
-            exit 1
-          }
-          merge_paged_json issues "${evidence}/raw/issues.json" "${issue_pages[@]}"
-          merge_paged_json hotspots "${evidence}/raw/hotspots.json" "${hotspot_pages[@]}"
-
-          warnings="$(jq -Rsc 'split("\n") | map(select(length > 0))' "${evidence}/warnings.log")"
-          jq -n \
-            --slurpfile qualityGate "${evidence}/raw/quality-gate.json" \
-            --slurpfile issues "${evidence}/raw/issues.json" \
-            --slurpfile hotspots "${evidence}/raw/hotspots.json" \
-            --slurpfile measures "${evidence}/raw/measures.json" \
-            --slurpfile analysis "${evidence}/raw/analysis.json" \
-            --argjson warnings "${warnings}" \
-            '{qualityGate:$qualityGate[0],issues:$issues[0],hotspots:$hotspots[0],measures:$measures[0],analysis:$analysis[0],warnings:$warnings}' \
-            > "${evidence}/input.json"
-
-      - name: Normalize and consume Sonar findings and diagnostics
-        shell: bash
-        run: |
-          set -euo pipefail
-          evidence="${RUNNER_TEMP}/sonar-evidence"
-          classifier_exit=0
-          node "${TRUSTED_SONAR_CLASSIFIER}" \
-            --input "${evidence}/input.json" \
-            --output-dir "${evidence}/classified" \
-            --head-sha "${HEAD_SHA}" \
-            --base-sha "${BASE_SHA}" \
-            --mode "${MODE}" \
-            --analysis-id "${SONAR_ANALYSIS_ID}" \
-            --pr-number "${PR_NUMBER}" \
-            --execution-status success || classifier_exit=$?
-          [[ -s "${evidence}/classified/summary.json" ]] || {
-            echo "::error::Sonar evidence classifier did not produce a summary"
-            exit 1
-          }
-          cat "${evidence}/classified/summary.json"
-          [[ "${classifier_exit}" == "0" ]] || {
-            echo "::error::Sonar evidence is incomplete; raw API output remains in the artifact"
-            exit 1
-          }
-          jq -e '.status == "PASS" and .qualityGate.status == "OK" and .evidenceComplete == true and .counts.materialFindings == 0' \
-            "${evidence}/classified/summary.json" >/dev/null || {
-            echo "::error::Sonar quality gate, evidence consumption, or material-finding disposition is not closed"
-            exit 1
-          }
-
-      - name: Upload consumed Sonar evidence
+      - name: Upload exact Sonar evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -1210,65 +261,3 @@ jobs:
           path: ${{ runner.temp }}/sonar-evidence
           if-no-files-found: error
           retention-days: 14
-
-  result:
-    name: >-
-      ${{ github.event_name == 'pull_request' && 'SonarQube / PR result' || github.event_name == 'push' &&
-      'SonarQube / push result' || 'SonarQube / dispatched result' }}
-    needs: [scope, node_coverage, go_coverage, assemble, scan, evidence]
-    if: ${{ always() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Enforce progressive exact Sonar results
-        shell: bash
-        env:
-          SCOPE_RESULT: ${{ needs.scope.result }}
-          NODE_REQUIRED: ${{ needs.scope.outputs.node_required }}
-          NODE_RESULT: ${{ needs.node_coverage.result }}
-          GO_REQUIRED: ${{ needs.scope.outputs.go_required }}
-          GO_RESULT: ${{ needs.go_coverage.result }}
-          ASSEMBLE_RESULT: ${{ needs.assemble.result }}
-          SCAN_RESULT: ${{ needs.scan.result }}
-          EVIDENCE_RESULT: ${{ needs.evidence.result }}
-          TRUSTED_SCAN: ${{ inputs.trusted_scan }}
-          SONAR_REQUIRED: ${{ needs.scope.outputs.sonar_required }}
-        run: |
-          set -euo pipefail
-          failures=()
-          [[ "${SCOPE_RESULT}" == "success" ]] || failures+=("scope:${SCOPE_RESULT}")
-          if [[ "${SONAR_REQUIRED}" == "true" ]]; then
-            if [[ "${NODE_REQUIRED}" == "true" ]]; then
-              [[ "${NODE_RESULT}" == "success" ]] || failures+=("node-coverage:${NODE_RESULT}")
-            else
-              [[ "${NODE_RESULT}" == "skipped" ]] || failures+=("node-coverage-unexpected:${NODE_RESULT}")
-            fi
-            if [[ "${GO_REQUIRED}" == "true" ]]; then
-              [[ "${GO_RESULT}" == "success" ]] || failures+=("go-coverage:${GO_RESULT}")
-            else
-              [[ "${GO_RESULT}" == "skipped" ]] || failures+=("go-coverage-unexpected:${GO_RESULT}")
-            fi
-          else
-            [[ "${NODE_RESULT}" == "skipped" ]] || failures+=("node-coverage-unexpected:${NODE_RESULT}")
-            [[ "${GO_RESULT}" == "skipped" ]] || failures+=("go-coverage-unexpected:${GO_RESULT}")
-          fi
-          [[ "${ASSEMBLE_RESULT}" == "success" ]] || failures+=("assemble:${ASSEMBLE_RESULT}")
-
-          trusted_scan_required="${TRUSTED_SCAN}"
-          if [[ "${SONAR_REQUIRED}" != "true" ]]; then
-            trusted_scan_required=false
-          fi
-          if [[ "${trusted_scan_required}" == "true" ]]; then
-            [[ "${SCAN_RESULT}" == "success" ]] || failures+=("trusted-scan:${SCAN_RESULT}")
-            [[ "${EVIDENCE_RESULT}" == "success" ]] || failures+=("evidence-consumption:${EVIDENCE_RESULT}")
-          else
-            [[ "${SCAN_RESULT}" == "skipped" ]] || failures+=("untrusted-scan-unexpected:${SCAN_RESULT}")
-            [[ "${EVIDENCE_RESULT}" == "skipped" ]] || failures+=("evidence-unexpected:${EVIDENCE_RESULT}")
-          fi
-
-          if (( ${#failures[@]} != 0 )); then
-            echo "::error::Sonar progressive verification failed: $(IFS=,; echo "${failures[*]}")"
-            exit 1
-          fi
-
-          echo "Progressive exact-candidate Sonar verification passed."

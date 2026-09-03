@@ -1,75 +1,58 @@
-name: Dependency Review
-
-run-name: >-
-  ${{ github.event_name == 'pull_request' && format('Dependency Review PR {0}',
-  github.event.pull_request.number) || format('Dependency Review dispatched candidate {0}', inputs.head_sha ||
-  inputs.expected_sha) }}
+name: Dependency Review exact-h
 
 on:
   workflow_call:
     inputs:
-      pr_number: {type: string, required: false, default: ""}
       head_sha: {type: string, required: true}
       base_sha: {type: string, required: true}
-      base_ref: {type: string, required: true}
-      head_ref: {type: string, required: true}
-      expected_sha: {type: string, required: true}
 
 permissions:
   contents: read
 
 concurrency:
-  group: dependency-review-${{ github.event.pull_request.number || github.ref }}
+  group: dependency-review-h-${{ inputs.head_sha }}
   cancel-in-progress: true
 
 jobs:
-  dependency-review:
-    name: Dependency review
+  review:
+    name: Dependency delta ${{ inputs.base_sha }}..${{ inputs.head_sha }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      contents: read
+    timeout-minutes: 20
     steps:
-      - name: Verify immutable manual candidate
-        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' }}
+      - name: Checkout exact h candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ inputs.head_sha }}
+          fetch-depth: 0
+          fetch-tags: false
+          persist-credentials: false
+
+      - name: Verify exact h candidate and base
         shell: bash
         env:
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
-          HEAD_REF: ${{ inputs.head_ref }}
-          BASE_REF: ${{ inputs.base_ref }}
-          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          BASE_SHA: ${{ inputs.base_sha }}
         run: |
           set -euo pipefail
-          [[ "${EXPECTED_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || {
-            echo "::error::expected_sha must be a full 40-character SHA"
+          [[ "${GITHUB_REF_NAME}" == "h" ]] || {
+            echo "::error::Dependency Review authority is h only"
             exit 1
           }
-          resolved_head="$(gh api --method GET \
-            -H "X-GitHub-Api-Version: 2026-03-10" \
-            "/repos/${GITHUB_REPOSITORY}/commits/${HEAD_REF}" \
-            --jq '.sha')"
-          [[ "${resolved_head}" == "${EXPECTED_SHA}" ]] || {
-            echo "::error::Dependency Review head_ref mismatch: expected=${EXPECTED_SHA} resolved=${resolved_head}"
+          [[ "$(git rev-parse HEAD)" == "${HEAD_SHA}" ]] || {
+            echo "::error::Dependency Review candidate drift"
             exit 1
           }
-          {
-            echo "### Dependency Review manual scope"
-            echo "- Base: ${BASE_REF}"
-            echo "- Head: ${resolved_head}"
-          } >> "${GITHUB_STEP_SUMMARY}"
+          [[ "${BASE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || {
+            echo "::error::Dependency Review exact base SHA required"
+            exit 1
+          }
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "${BASE_SHA}" "${HEAD_SHA}"
 
-      - name: Reject newly introduced vulnerable dependencies on pull requests
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_call' }}
+      - name: Reject introduced vulnerable dependencies
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
-          fail-on-severity: low
-          show-patched-versions: true
-
-      - name: Reject newly introduced vulnerable dependencies on remote dispatch
-        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' }}
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
-        with:
-          base-ref: ${{ inputs.base_ref }}
-          head-ref: ${{ inputs.head_ref }}
+          base-ref: ${{ inputs.base_sha }}
+          head-ref: ${{ inputs.head_sha }}
           fail-on-severity: low
           show-patched-versions: true

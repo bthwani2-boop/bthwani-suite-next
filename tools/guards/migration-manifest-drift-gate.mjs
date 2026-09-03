@@ -81,6 +81,80 @@ function loadManifest(service, directory, failures) {
   return { ...manifest, migrations: [...(manifest.migrations ?? []), ...extension.migrations] };
 }
 
+function git(gitArgs) {
+  return execFileSync("git", gitArgs, { cwd: repositoryRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+}
+
+function resolveBaseline() {
+  const baselineIndex = args.indexOf("--immutable-baseline");
+  const requested = baselineIndex >= 0 ? args[baselineIndex + 1] : null;
+  const explicit = requested || process.env.CI_BASE_SHA || null;
+
+  if (!explicit) {
+    if (process.env.GITHUB_ACTIONS === "true") {
+      throw new Error("CI migration verification requires --immutable-baseline or CI_BASE_SHA; implicit branch fallback is forbidden");
+    }
+    try {
+      return git(["rev-parse", "HEAD^"]).trim();
+    } catch {
+      return null;
+    }
+  }
+
+  if (!/^[0-9a-fA-F]{40}$/.test(explicit)) {
+    throw new Error(`immutable migration baseline must be an exact 40-character SHA: ${explicit}`);
+  }
+
+  let baseline;
+  try {
+    baseline = git(["rev-parse", `${explicit}^{commit}`]).trim();
+  } catch (error) {
+    throw new Error(`immutable migration baseline is unavailable: ${explicit}: ${String(error?.stderr ?? error?.message ?? error)}`);
+  }
+  if (baseline !== explicit) {
+    throw new Error(`immutable migration baseline did not resolve exactly: expected=${explicit} actual=${baseline}`);
+  }
+  try {
+    git(["merge-base", "--is-ancestor", baseline, "HEAD"]);
+  } catch {
+    throw new Error(`immutable migration baseline is not an ancestor of HEAD: ${baseline}`);
+  }
+  return baseline;
+}
+
+function checkImmutableDigestHistory(service, relativeDirectory, manifest) {
+  const baseline = resolveBaseline();
+  if (!baseline) return [];
+  const manifestRelative = `${relativeDirectory}/manifest.json`;
+  let baselineManifest;
+  try {
+    baselineManifest = JSON.parse(git(["show", `${baseline}:${manifestRelative}`]));
+  } catch (error) {
+    const detail = String(error?.stderr ?? error?.message ?? error);
+    if (/does not exist in/u.test(detail)) return [];
+    throw new Error(`unable to read baseline manifest for ${service} at ${baseline}: ${detail}`);
+  }
+
+  const published = new Map((baselineManifest.migrations ?? []).filter((entry) => entry?.file && entry.sha256).map((entry) => [entry.file, entry.sha256]));
+  const failures = [];
+  const currentFiles = new Set((manifest.migrations ?? []).map((entry) => entry.file));
+  for (const [file, baselineDigest] of published) {
+    if (!currentFiles.has(file)) {
+      failures.push(`published migration removed from manifest: ${file} baseline=${baselineDigest}`);
+    }
+  }
+  for (const entry of manifest.migrations ?? []) {
+    const baselineDigest = published.get(entry.file);
+    if (!baselineDigest || baselineDigest === entry.sha256) continue;
+    const amendment = amendments.get(`${service}:${entry.file}`);
+    const accepted = new Set(amendment?.acceptedHistoricalSha256 ?? []);
+    if (!accepted.has(baselineDigest)) {
+      failures.push(`published migration digest changed without governed amendment disposition: ${entry.file} state=${entry.state} baseline=${baselineDigest} current=${entry.sha256} amendment=${amendment?.replacementSha256 ?? "<none>"}`);
+    }
+  }
+  return failures;
+}
+
 function checkService(service) {
   const failures = [];
   const relativeDirectory = servicePaths[service];
@@ -138,67 +212,6 @@ function checkService(service) {
   return failures;
 }
 
-function git(args) {
-  return execFileSync("git", args, { cwd: repositoryRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-}
-
-function resolveBaseline() {
-  const baselineIndex = args.indexOf("--immutable-baseline");
-  const requested = baselineIndex >= 0 ? args[baselineIndex + 1] : null;
-  let remoteDefault = null;
-  try {
-    remoteDefault = git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"]).trim();
-  } catch {}
-  const candidates = requested
-    ? [requested]
-    : [
-        process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : null,
-        process.env.DEFAULT_BRANCH ? `origin/${process.env.DEFAULT_BRANCH}` : null,
-        remoteDefault,
-        "HEAD^",
-      ].filter(Boolean);
-  for (const candidate of candidates) {
-    try {
-      const mergeBase = git(["merge-base", "HEAD", candidate]).trim();
-      if (mergeBase) return mergeBase;
-    } catch {}
-  }
-  return null;
-}
-
-function checkImmutableDigestHistory(service, relativeDirectory, manifest) {
-  const baseline = resolveBaseline();
-  if (!baseline) return [];
-  const manifestRelative = `${relativeDirectory}/manifest.json`;
-  let baselineManifest;
-  try {
-    baselineManifest = JSON.parse(git(["show", `${baseline}:${manifestRelative}`]));
-  } catch (error) {
-    const detail = String(error?.stderr ?? error?.message ?? error);
-    if (/does not exist in/u.test(detail)) return [];
-    throw new Error(`unable to read baseline manifest for ${service} at ${baseline}: ${detail}`);
-  }
-
-  const published = new Map((baselineManifest.migrations ?? []).filter((entry) => entry?.file && entry.sha256).map((entry) => [entry.file, entry.sha256]));
-  const failures = [];
-  const currentFiles = new Set((manifest.migrations ?? []).map((entry) => entry.file));
-  for (const [file, baselineDigest] of published) {
-    if (!currentFiles.has(file)) {
-      failures.push(`published migration removed from manifest: ${file} baseline=${baselineDigest}`);
-    }
-  }
-  for (const entry of manifest.migrations ?? []) {
-    const baselineDigest = published.get(entry.file);
-    if (!baselineDigest || baselineDigest === entry.sha256) continue;
-    const amendment = amendments.get(`${service}:${entry.file}`);
-    const accepted = new Set(amendment?.acceptedHistoricalSha256 ?? []);
-    if (!accepted.has(baselineDigest)) {
-      failures.push(`published migration digest changed without governed amendment disposition: ${entry.file} state=${entry.state} baseline=${baselineDigest} current=${entry.sha256} amendment=${amendment?.replacementSha256 ?? "<none>"}`);
-    }
-  }
-  return failures;
-}
-
 let failed = false;
 for (const service of requestedServices ?? Object.keys(servicePaths)) {
   if (!servicePaths[service]) {
@@ -206,13 +219,19 @@ for (const service of requestedServices ?? Object.keys(servicePaths)) {
     failed = true;
     continue;
   }
-  const failures = checkService(service);
-  if (failures.length) {
+  try {
+    const failures = checkService(service);
+    if (failures.length) {
+      failed = true;
+      console.error(`migration-manifest-drift-gate: FAIL ${service}`);
+      for (const failure of failures) console.error(`  - ${failure}`);
+    } else {
+      console.log(`migration-manifest-drift-gate: PASS ${service}`);
+    }
+  } catch (error) {
     failed = true;
     console.error(`migration-manifest-drift-gate: FAIL ${service}`);
-    for (const failure of failures) console.error(`  - ${failure}`);
-  } else {
-    console.log(`migration-manifest-drift-gate: PASS ${service}`);
+    console.error(`  - ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
