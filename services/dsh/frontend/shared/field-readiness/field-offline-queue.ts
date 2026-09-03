@@ -324,7 +324,7 @@ async function migrateV3Artifacts(scope: FieldOfflineQueueScope): Promise<void> 
         });
         continue;
       }
-      const operation = entry as FieldOfflineOperationV3;
+      const operation = entry;
       try {
         const intentFingerprint = buildFieldIntentFingerprint(operation.operationType, operation.payload);
         if (current.some((candidate) => candidate.operationType === operation.operationType
@@ -352,7 +352,7 @@ async function migrateV3Artifacts(scope: FieldOfflineQueueScope): Promise<void> 
     if (migrated.length > 0 || !currentRaw) await writeQueueForScope(scope, [...current, ...migrated]);
     if (quarantined.length > 0) {
       const recoveryRaw = await storageAdapter.getItem(recoveryQuarantineStorageKey(scope));
-      const recovery = recoveryRaw ? JSON.parse(recoveryRaw) : [];
+      const recovery: unknown = recoveryRaw ? JSON.parse(recoveryRaw) : [];
       if (!Array.isArray(recovery) || !recovery.every(isQuarantineRecord)) {
         throw new Error("stored field offline recovery quarantine does not match its schema");
       }
