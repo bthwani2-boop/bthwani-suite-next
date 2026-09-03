@@ -1,6 +1,6 @@
 import { resolveMutationIdentityScope } from "@bthwani/data-runtime/mutation-identity-scope";
 import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
-import { secureRandomId } from "../_kernel/secure-random.ts";
+import { secureRandomId } from "../../shared/_kernel/secure-random.ts";
 import type { DshFulfillmentMode } from "./cart.types";
 
 export type CartMutationContext = {
