@@ -34,6 +34,34 @@ export type DshSessionRequestResult<T> = {
   readonly message?: string;
 };
 
+export type DshRequestErrorKind = "http" | "network" | "invalid_request";
+
+type DshRequestErrorDetails = {
+  readonly status?: number | undefined;
+  readonly body?: string | undefined;
+  readonly code?: string | undefined;
+  readonly correlationId?: string | undefined;
+  readonly message?: string | undefined;
+};
+
+export class DshRequestError extends Error {
+  readonly kind: DshRequestErrorKind;
+  readonly status?: number;
+  readonly body?: string;
+  readonly code?: string;
+  readonly correlationId?: string;
+
+  constructor(kind: DshRequestErrorKind, details: DshRequestErrorDetails = {}) {
+    super(details.message ?? kind);
+    this.name = "DshRequestError";
+    this.kind = kind;
+    if (details.status !== undefined) this.status = details.status;
+    if (details.body !== undefined) this.body = details.body;
+    if (details.code !== undefined) this.code = details.code;
+    if (details.correlationId !== undefined) this.correlationId = details.correlationId;
+  }
+}
+
 export function corrId(prefix: string): string {
   return secureCorrelationId(prefix);
 }
@@ -44,7 +72,7 @@ async function fetchWithControlPanelSessionRetry(
 ): Promise<Response> {
   if (cookieMode) return executeWithControlPanelCookieSession(execute, true);
 
-  let response = await execute();
+  const response = await execute();
   if (response.status !== 401) return response;
 
   const refreshed = await refreshIdentitySession();
@@ -64,15 +92,24 @@ async function parseResponse<T>(
     let code: string | undefined;
     let message: string | undefined;
     try {
-      const parsed = JSON.parse(body);
-      if (parsed && typeof parsed.code === "string") code = parsed.code;
-      if (parsed && typeof parsed.message === "string") message = parsed.message;
+      const parsed: unknown = JSON.parse(body);
+      if (typeof parsed === "object" && parsed !== null) {
+        const details = parsed as Readonly<Record<string, unknown>>;
+        if (typeof details.code === "string") code = details.code;
+        if (typeof details.message === "string") message = details.message;
+      }
     } catch {
       // Non-JSON errors preserve the raw body only.
     }
     // The correlation id travels with the failure so every surface can show a
     // support reference instead of a generic "something went wrong".
-    throw { kind: "http", status: response.status, body, code, message, correlationId };
+    throw new DshRequestError("http", {
+      status: response.status,
+      body,
+      code,
+      message,
+      correlationId,
+    });
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
@@ -121,10 +158,9 @@ function validateRequestOptions(options: DshRequestOptions): void {
     options.expectedVersion !== undefined &&
     (!Number.isInteger(options.expectedVersion) || options.expectedVersion < 1)
   ) {
-    throw {
-      kind: "invalid_request",
+    throw new DshRequestError("invalid_request", {
       message: "expectedVersion must be a positive integer",
-    };
+    });
   }
 }
 
@@ -213,19 +249,11 @@ function createDshJsonClient(
         ? await fetchWithControlPanelSessionRetry(execute, cookieMode)
         : await execute();
     } catch (error) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "kind" in error &&
-        (error as { kind?: unknown }).kind === "invalid_request"
-      ) {
-        throw error;
-      }
-      throw {
-        kind: "network",
+      if (error instanceof DshRequestError) throw error;
+      throw new DshRequestError("network", {
         message: error instanceof Error ? error.message : "network error",
         correlationId,
-      };
+      });
     }
     return parseResponse<T>(response, correlationId);
   }
@@ -269,8 +297,8 @@ export function createDshSessionHttpClient(
         },
         signal: init.signal ?? AbortSignal.timeout(timeoutMs),
       });
-      const body = await response.json().catch(() => null);
-      return { ok: response.ok, status: response.status, body };
+      const body: unknown = await response.json().catch(() => null);
+      return { ok: response.ok, status: response.status, body: body as T | null };
     } catch (error) {
       return {
         ok: false,

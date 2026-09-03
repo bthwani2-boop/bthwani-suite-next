@@ -140,7 +140,10 @@ describe("field problem support reference", () => {
     // Without this the employee and support have no shared reference for the
     // failed request.
     assert.match(transportSource, /parseResponse<T>\(response, correlationId\)/);
-    assert.match(transportSource, /kind: "http", status: response\.status, body, code, message, correlationId/);
+    assert.match(transportSource, /new DshRequestError\("http", \{/);
+    assert.match(transportSource, /status: response\.status,/);
+    assert.match(transportSource, /correlationId,/);
+    assert.doesNotMatch(transportSource, /throw \{ kind: "http"/);
   });
 
   test("classifier preserves the correlation id alongside the reason code", () => {
