@@ -79,3 +79,19 @@ MOCK/SIMULATOR MUST NOT BYPASS REAL AUTHORIZATION/STATE/ACCOUNTING
 ```
 
 Provider-specific domain models are forbidden when the stable semantic contract is provider-neutral. Heavy local infrastructure runs on demand unless a real task requires it. Production residency/provider selection is a separate approved policy decision; development convenience does not define it.
+
+
+## Cache, coordination and external-provider operating law
+
+Redis/Valkey or equivalent coordination infrastructure is disabled by default unless a real requirement is proven, such as distributed rate limiting, measured hot-cache need, distributed locking or ephemeral coordination.
+
+```text
+CACHE != BUSINESS_SOURCE_OF_TRUTH
+COORDINATION_STORE != DOMAIN_AUTHORITY
+```
+
+Development may use managed stateful services while active code remains local when that produces the fastest loop, provided the same semantic contracts and reproducible integration path remain valid.
+
+Mocks/simulators may emulate external success, pending, rejection, timeout, delayed result, duplicate callback/reference, invalid signature, provider unavailable, unknown result and reconciliation mismatch. They must never bypass BThwani authorization, accounting, state machines, challenge lifecycle or idempotency.
+
+Unknown external mutations remain unknown/reconcilable until authoritative evidence resolves them. Blind fallback/retry across providers is forbidden when duplicate effect is possible.

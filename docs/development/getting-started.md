@@ -3,6 +3,17 @@
 DOCUMENT_CLASS: HUMAN_DEVELOPMENT_GUIDE
 CURRENT_COMMAND_AUTHORITY: package.json / pnpm-workspace.yaml / repository scripts
 
+## Developer reading path
+
+Before making a material change:
+
+1. read `governance/project/PLATFORM.md`;
+2. read `governance/product/PRD.md`;
+3. locate the capability in `governance/product/CAPABILITIES.md`;
+4. locate the journey in `governance/product/JOURNEYS.md`;
+5. confirm ownership in `governance/architecture/OWNERSHIP-AND-SOURCE-OF-TRUTH.md`;
+6. read `repository-map.md` and the applicable development guide.
+
 ## Prerequisites
 
 Current root toolchain constraints are:

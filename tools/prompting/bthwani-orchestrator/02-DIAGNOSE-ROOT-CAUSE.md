@@ -1,14 +1,14 @@
-# H Forensic Diagnosis, Catastrophe Triage and Continuous Causal Synthesis
+# Diagnosis, Required-Truth Reconstruction and Causal Root Selection
 
 OWNER_ROLE: FORENSIC_CENSUS_REQUIRED_TRUTH_ROOT_DIAGNOSIS
 AUTHORITY_ASSIGNED_BY: 00-ORCHESTRATOR.md
 SELF_CERTIFICATION: FORBIDDEN
 
-## 1. Diagnosis starts branch-wide and hostile
+## 1. Diagnosis starts repository-wide and evidence-first
 
 Do not begin from the first bug, first failed check, first file or easiest surface.
 
-Begin from exact pinned `h` and enumerate the tracked system:
+Begin from the exact pinned current head and enumerate the material tracked system:
 
 ```text
 TRACKED_TREE
@@ -33,7 +33,7 @@ LARGE_HIGH_FAN_IN_SUBTREES
 
 Sampling cannot satisfy A0.
 
-## 2. Required truth before inherited shape
+## 2. Required truth before current shape
 
 Extract only what must survive:
 
@@ -50,7 +50,7 @@ OBSERVABLE_RUNTIME_BEHAVIOR
 REQUIRED_OPERATIONAL_ASSURANCE_CLAIMS
 ```
 
-Then build an inherited-shape-blind canonical skeleton before accepting current containers as candidates for survival:
+Then build a current-shape-independent canonical model before accepting current containers as canonical solely because they exist:
 
 ```text
 REQUIRED_TRUTH

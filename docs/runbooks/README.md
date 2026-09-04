@@ -29,6 +29,11 @@ If a runbook conflicts with a live executable path/command, correct the runbook.
 - `dispatch.md` — captain offer/assignment/timeout/reassignment operations.
 - `payments.md` — payment sessions/provider webhook/reconciliation safety.
 - `wallet-reconciliation.md` — WLT-backed projection/reconciliation incidents.
+- `settlements-and-payouts.md` — WLT settlement/payout/reconciliation incidents.
+- `workforce.md` — workforce profile/engagement/eligibility incidents.
+- `platform-control.md` — governed variables/change-set/rollout incidents.
+- `provider-unknown-outcomes.md` — ambiguous external mutation/provider outcomes.
+- `special-requests-and-support.md` — special-request and support/rescue incidents.
 - `rollout-recovery.md` — progressive rollout containment/rollback/recovery.
 
 Mobile build activation and Sentry setup live under `../development/`, not operational runbooks.

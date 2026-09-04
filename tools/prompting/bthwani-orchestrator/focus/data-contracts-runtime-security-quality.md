@@ -259,6 +259,21 @@ TRACE != AUTHORIZATION
 OBSERVABILITY MUST NOT BECOME A SECOND STATE AUTHORITY
 ```
 
+## 6.4 Semantic external-capability boundaries
+
+External integrations are modeled by stable semantic responsibility, not vendor/general-provider shape.
+
+Examples:
+
+```text
+AUTH_CHALLENGE_ENGINE != DELIVERY_CHANNEL
+FINANCIAL_RAIL != BILLER_FULFILLMENT
+CACHE/COORDINATION != BUSINESS_TRUTH
+VENDOR_ADAPTER != DOMAIN_OWNER
+```
+
+A timeout/unknown external mutation preserves operation identity and reconciliation semantics. Blind cross-provider fallback is forbidden when duplicate effect is possible.
+
 ## 7. Security and financial truth
 
 Authentication, authorization, sessions, secrets, PII, provider credentials, isolation and financial mutation receive heightened proof.
@@ -337,7 +352,7 @@ When the control plane is the root, refound it as one surface rather than patchi
 Preferred durable shape:
 
 ```text
-ONE CANONICAL EXACT-h CONTROLLER PER DISTINCT ASSURANCE ROLE
+ONE CANONICAL EXACT-CANDIDATE CONTROLLER PER DISTINCT ASSURANCE ROLE
 → REUSABLE WORKERS WITH UNIQUE CLAIMS
 → NO PR REQUIREMENT
 → NO OLD-BRANCH AUTHORITY
@@ -345,7 +360,7 @@ ONE CANONICAL EXACT-h CONTROLLER PER DISTINCT ASSURANCE ROLE
 → CAMPAIGN-ONLY WORKFLOWS DELETED AFTER USE
 ```
 
-Do not preserve repository-baseline, PR dispatcher, PR comment evidence or other historical structures unless they independently prove unique required value for the final `h` baseline.
+Do not preserve repository-baseline, PR dispatcher, PR comment evidence or other historical structures unless they independently prove unique required value for the intended canonical repository baseline.
 
 ## 11. Verifier/admission-hole law
 
@@ -363,13 +378,13 @@ DEFINE CANONICAL CLAIM
 
 Never weaken a gate to obtain green.
 
-## 12. GitHub Actions on h
+## 12. GitHub Actions on the invocation branch
 
-`h` may create, rewrite, run and delete actions as needed.
+The invocation branch may create, rewrite, run and delete actions as needed within current authority.
 
 Persistent workflows survive only with unique durable baseline value. Diagnostic/campaign workflows are temporary by default.
 
-Every authoritative `h` workflow must prove exact candidate identity and must not depend on PR/default-branch semantics unless an actual external requirement makes that necessary.
+Every authoritative workflow must prove exact candidate identity and must not depend on PR/default-branch semantics unless an actual external requirement makes that necessary.
 
 If real rendered/device/runtime evidence is required but unavailable:
 

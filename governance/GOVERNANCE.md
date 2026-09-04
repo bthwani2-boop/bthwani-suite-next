@@ -33,12 +33,30 @@ A current implementation can reveal drift but does not silently redefine Product
 
 ## Canonical semantic owners
 
+### Project orientation
+
+- `project/PLATFORM.md` — platform classification, surfaces, actors, fulfillment/commercial modes and bounded contexts.
+- `project/GLOSSARY.md` — ubiquitous language.
+- `project/ACTORS-TRUST-AND-SCOPE.md` — actor/role/engagement/organization/scope/context trust model.
+
 ### Product
 
-- `product/PRD.md` — platform definition, actors, surfaces, bounded-context responsibilities, major Product requirements and non-goals.
-- `product/CAPABILITIES.md` — durable capability outcomes, actors, owner boundaries, invariants, failure classes and acceptance expectations.
-- `product/FINANCIAL-MODEL.md` — cross-capability WLT/financial model and money-movement invariants.
-- `product/EXPERIENCE-AND-DESIGN.md` — durable UX, information architecture, content, RTL/accessibility and visual/design-system meaning.
+- `product/PRD.md` — platform requirements and non-goals.
+- `product/CAPABILITIES.md` — durable capability semantic envelope, outcomes, actors, owner boundaries, state/acceptance/failure semantics and success measures.
+- `product/JOURNEYS.md` — cross-capability actor/system journeys.
+- `product/FINANCIAL-MODEL.md` — cross-capability WLT/financial model.
+- `product/COMMERCIAL-AND-PARTNER-MODEL.md` — partner/store/commercial relationship model.
+- `product/WORKFORCE-MODEL.md` — person/engagement/eligibility/operational-role model.
+- `product/EXPERIENCE-AND-DESIGN.md` — durable UX, RTL/accessibility and design-system meaning.
+
+### Architecture
+
+- `architecture/SYSTEM-CONTEXT.md` — bounded contexts and dependency direction.
+- `architecture/OWNERSHIP-AND-SOURCE-OF-TRUTH.md` — semantic owner/writer/readback map.
+- `architecture/APP-SERVICE-COMPOSITION.md` — deployable-host versus service-capability responsibility.
+- `architecture/DATA-CONTRACTS-AND-INTEGRATIONS.md` — data/contract/version/integration boundaries.
+- `architecture/RUNTIME-AND-CONFIGURATION.md` — runtime/configuration classes and technical operating boundaries.
+- `decisions/README.md` — ADR admission and rationale policy.
 
 ### Engineering policies
 

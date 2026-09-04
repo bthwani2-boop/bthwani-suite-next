@@ -3,96 +3,87 @@
 TEMPORARY_TARGET_SPECIALIZATION: YES
 GENERAL_EXECUTION_AUTHORITY: NONE
 
-## 1. Mission
+## Mission
 
-Refound `governance/**` into the minimum sufficient durable semantic constitution of BThwani. Governance must let a qualified developer understand the platform without preserving accidental implementation topology or becoming a second execution engine.
+Governance must be sufficient for a qualified developer to reconstruct BThwani's intended Product/System/ownership model without reverse-engineering accidental implementation structure.
 
-## 2. Target information architecture
-
-The current target is intentionally compact:
+## Target knowledge architecture
 
 ```text
 governance/
 ├── GOVERNANCE.md
+├── project/
+│   ├── PLATFORM.md
+│   ├── GLOSSARY.md
+│   └── ACTORS-TRUST-AND-SCOPE.md
 ├── product/
 │   ├── PRD.md
 │   ├── CAPABILITIES.md
+│   ├── JOURNEYS.md
 │   ├── FINANCIAL-MODEL.md
+│   ├── COMMERCIAL-AND-PARTNER-MODEL.md
+│   ├── WORKFORCE-MODEL.md
 │   └── EXPERIENCE-AND-DESIGN.md
-└── policies/
-    ├── engineering.md
-    ├── architecture-and-fullstack.md
-    ├── data-and-migrations.md
-    ├── frontend-and-client.md
-    ├── runtime-reliability.md
-    ├── security.md
-    ├── standards-and-quality.md
-    └── delivery.md
+├── architecture/
+│   ├── SYSTEM-CONTEXT.md
+│   ├── OWNERSHIP-AND-SOURCE-OF-TRUTH.md
+│   ├── APP-SERVICE-COMPOSITION.md
+│   ├── DATA-CONTRACTS-AND-INTEGRATIONS.md
+│   └── RUNTIME-AND-CONFIGURATION.md
+├── policies/
+│   └── durable specialized policies
+└── decisions/
+    └── README.md + only admitted durable ADRs
 ```
 
-This tree is target-specific and remains subject to the orchestrator's artifact-admission law; do not create empty categories merely to make the tree larger.
+This is a minimum-sufficient semantic target, not permission to create empty bureaucracy.
 
-## 3. Authority boundary
+## Required Product semantic envelope
+
+Every material capability accounts for applicable problem, frequency/severity when governed, outcome, target state, success measure/guardrails, actors, responsibilities, permitted/forbidden actions, required/excluded surfaces, preconditions, trusted scope, durable states, legal/forbidden transitions, invariants, failure/recovery, acceptance and cross-owner relationships.
+
+Representation cleanup must preserve every still-valid semantic statement.
+
+## Capability versus journey
 
 ```text
-GOVERNANCE = DURABLE PRODUCT/SYSTEM/POLICY MEANING
-DOCS = HUMAN GUIDANCE
-EXECUTABLE SOURCE = CURRENT IMPLEMENTATION STATE
-ORCHESTRATOR = REFOUNDATION EXECUTION/CLOSURE
+CAPABILITY = STABLE RESPONSIBILITY
+JOURNEY = ACTOR/SYSTEM OUTCOME CROSSING CAPABILITIES
+SURFACE = INTERACTION HOST
+ROUTE/SCREEN = IMPLEMENTATION COMPOSITION
 ```
 
-Governance files must not self-certify through labels such as `ACTIVE_CANONICAL`. Authority comes from the Governance index/semantic ownership model plus current human intent and reconciliation under the orchestrator.
+Do not collapse these categories.
 
-## 4. Product/capability model
+## Source-of-truth model
 
-Durable capability governance owns stable outcomes, actors, owner boundaries, business/negative invariants and acceptance expectations.
+Governance must provide one semantic map from meaning to owner/writer/contract/derived consumers/readback without copying current table/route/file inventories.
 
-It must not hand-maintain:
+## Authority boundary
 
-```text
-ROUTE NAMES
-OPERATION IDs
-DATABASE TABLE INVENTORIES
-SCREEN/HOOK FILE PATHS
-GENERATED CLIENT INVENTORIES
-CI RESULTS
-CURRENT RUNTIME HEALTH
-```
+Governance is durable Product/System/architecture/policy knowledge. It is not execution state, current runtime inventory, CI result registry, route/table/operation mirror or campaign ledger.
 
-The inherited `product/contracts/*.product-truth.json`, schema and derived platform-model forms are losing representations when their durable value has been extracted into the semantic owners above.
-
-## 5. Product/domain ownership
-
-At minimum Governance must make unambiguous:
-
-- Identity owns actor/authentication/session/activation truth.
-- Workforce owns workforce profile/engagement/eligibility truth.
-- DSH owns commerce/partner/store/order/dispatch/delivery/serviceability/support and other operational truth assigned by Product.
-- WLT owns wallet/ledger/payment/refund/commission/payout/settlement/reconciliation truth.
-- Platform Control owns only explicitly assigned cross-platform governed configuration/control-plane truth.
-- External providers are adapters/integrations at semantic owners; a generic provider container does not become a business domain.
-- Apps are deployable hosts/composition surfaces, not business truth owners.
-
-## 6. Required durable models
-
-Governance must preserve current required:
-
-- product definition/non-goals;
-- actors/surfaces/trust concepts;
-- capability catalog and ownership;
-- WLT/financial invariants;
-- experience/RTL/accessibility/design-system meaning;
-- architecture/data/contracts/client/runtime/security/quality/delivery policies.
-
-## 7. Closure gate
+## Closure gate
 
 ```text
 GOVERNANCE_ENTRYPOINT=PASS
-DEVELOPER_RECONSTRUCTION_TEST=PASS
-SELF_CERTIFYING_STATUS_LABELS=0
+PLATFORM_ORIENTATION=PASS
+UBIQUITOUS_GLOSSARY=PASS
+ACTOR/TRUST/SCOPE_MODEL=PASS
+CAPABILITY_MODEL=PASS
+JOURNEY_MODEL=PASS
+SOURCE_OF_TRUTH_MAP=PASS
+SYSTEM_CONTEXT=PASS
+APP_SERVICE_COMPOSITION=PASS
+DATA_CONTRACT_INTEGRATION_MODEL=PASS
+RUNTIME_CONFIGURATION_MODEL=PASS
+FINANCIAL_MODEL=PASS
+COMMERCIAL_PARTNER_MODEL=PASS
+WORKFORCE_MODEL=PASS
+EXPERIENCE_MODEL=PASS
+ADR_ADMISSION_MODEL=PASS
+SELF_CERTIFICATION_CONFLICTS=0
 MANUAL_IMPLEMENTATION_INVENTORY_AUTHORITY=0
-DUPLICATE_PRODUCT/CAPABILITY_AUTHORITIES=0
-STALE core/shared/providers OWNER MODEL=0
-REQUIRED_FINANCIAL/SECURITY/WORKFORCE/EXPERIENCE_MEANING_LOST=0
-DOCS/GOVERNANCE_AUTHORITY_BOUNDARY=PASS
+DUPLICATE_DURABLE_MEANING_AUTHORITIES=0
+REQUIRED_SEMANTIC_VALUE_LOST=0
 ```

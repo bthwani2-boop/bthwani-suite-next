@@ -9,14 +9,18 @@ CURRENT_COMMAND_AUTHORITY: LIVE_REPOSITORY_SCRIPTS_AND_CONFIG
 
 A developer new to BThwani should read in this order:
 
-1. `governance/GOVERNANCE.md` — how durable truth is organized.
-2. `governance/product/PRD.md` — what BThwani is, actors, surfaces and bounded-context ownership.
-3. `governance/product/CAPABILITIES.md` — required capabilities, invariants and acceptance expectations.
-4. `governance/product/FINANCIAL-MODEL.md` when money, wallets, COD, payouts, settlement or reconciliation is affected.
-5. `governance/product/EXPERIENCE-AND-DESIGN.md` — cross-surface UX/RTL/accessibility/design rules.
-6. The applicable file under `governance/policies/`.
-7. `development/getting-started.md` — current workstation/bootstrap path.
-8. The applicable development guide or operational runbook.
+1. `governance/GOVERNANCE.md`
+2. `governance/project/PLATFORM.md`
+3. `governance/project/GLOSSARY.md`
+4. `governance/project/ACTORS-TRUST-AND-SCOPE.md`
+5. `governance/product/PRD.md`
+6. `governance/product/CAPABILITIES.md`
+7. `governance/product/JOURNEYS.md`
+8. `governance/architecture/OWNERSHIP-AND-SOURCE-OF-TRUTH.md`
+9. `governance/product/FINANCIAL-MODEL.md` when money is affected
+10. `governance/product/EXPERIENCE-AND-DESIGN.md` when a user/operator surface is affected
+11. the applicable engineering policy
+12. `development/getting-started.md`
 
 ## What Docs owns
 
@@ -32,24 +36,42 @@ When a command, path, port or environment value conflicts with live scripts/conf
 
 ## Documentation map
 
-### Development
+### Development handbook
 
-- `development/getting-started.md` — prerequisites, install, primary commands, verification.
-- `development/runtime.md` — daily/focused/full runtime modes and current local service endpoints.
-- `development/mobile.md` — Expo/Metro, devices, ADB, application commands.
-- `development/providers-and-sandboxes.md` — development provider choices, simulators and safety boundaries.
-- `development/eas.md` — mobile EAS initialization/preflight/build operations.
-- `development/sentry.md` — mobile Sentry activation/verification.
-- `development/github-evidence.md` — GitHub evidence model for the active campaign.
-- `development/leanctx.md` — LeanCTX usage.
+Read in this order for normal onboarding:
+
+1. `development/getting-started.md`
+2. `development/repository-map.md`
+3. `development/first-change.md`
+
+Then use the focused guide:
+
+- `development/apps-and-routing.md`
+- `development/frontend-development.md`
+- `development/services-development.md`
+- `development/database-and-migrations.md`
+- `development/contracts-and-generation.md`
+- `development/testing-and-verification.md`
+- `development/configuration-and-secrets.md`
+- `development/runtime.md`
+- `development/providers-and-sandboxes.md`
+- `development/mobile.md`
+- `development/control-panel.md`
+- `development/design-system.md`
+- `development/observability-and-debugging.md`
+- `development/ci-and-quality.md`
+- `development/eas.md`
+- `development/sentry.md`
+- `development/repository-evidence.md`
+- `development/leanctx.md`
 
 ### Runbooks
 
-`runbooks/README.md` routes operational incidents to the smallest applicable runbook. Runbooks describe diagnosis/recovery only; they never override domain owners or invent direct database/business mutations.
+`runbooks/README.md` routes operational incidents to focused runbooks. Runbooks describe diagnosis/recovery only; they do not override domain owners or invent direct business/database mutations.
 
 ### Reference
 
-`reference/external-systems/` contains non-authoritative external research. Reference selection is not dependency adoption and external systems never define BThwani ownership.
+`reference/external-systems/` contains non-authoritative external research. Reference selection is not dependency adoption.
 
 ## Staleness rule
 

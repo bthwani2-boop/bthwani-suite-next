@@ -38,7 +38,7 @@ The app runtime wrappers support governed cache clearing. Prefer the repository 
 
 Mobile runtime configuration must remain public-client safe. Server credentials, provider secrets and privileged service tokens never enter `EXPO_PUBLIC_*` or the mobile bundle.
 
-The current local Identity host profile uses port `18082`; other API endpoints must come from the active runtime configuration rather than hardcoded screen logic.
+All API endpoints must come from active runtime configuration rather than hardcoded screen logic. Exact host ports are executable configuration, not portable documentation authority.
 
 ## Native/build identity
 

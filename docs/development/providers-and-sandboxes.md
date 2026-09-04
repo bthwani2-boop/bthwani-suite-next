@@ -2,55 +2,46 @@
 
 DOCUMENT_CLASS: HUMAN_DEVELOPMENT_GUIDE
 PRODUCT_AUTHORITY: NONE
-CURRENT_PROVIDER_CONFIG_AUTHORITY: live runtime/environment configuration
+CURRENT_PROVIDER_CONFIG_AUTHORITY: live repository configuration
 
-## Core rule
+## Core law
 
 Development providers are replaceable implementations behind BThwani semantic boundaries.
 
-```text
-MANAGED_DEV_SERVICE != DOMAIN_AUTHORITY
-DEVELOPMENT_PROVIDER != REQUIRED_PRODUCTION_PROVIDER
-PROVIDER_NAME != BUSINESS_DOMAIN
-```
+- MANAGED_DEV_SERVICE != DOMAIN_AUTHORITY
+- DEVELOPMENT_PROVIDER != REQUIRED_PRODUCTION_PROVIDER
+- PROVIDER_NAME != BUSINESS_DOMAIN
 
-## Current practical development defaults
+## Identity and messaging
 
-Use these only when useful and currently configured:
+Identity owns OTP/challenge lifecycle. SMS/email/push are delivery channels.
 
-- PostgreSQL/PostGIS: managed PostgreSQL such as Neon for daily state, Docker PostgreSQL as reproducible fallback/integration.
-- Object storage: Cloudflare R2 for managed test media; MinIO for local S3-compatible conformance/offline work.
-- Maps: Google Maps behind the owning DSH maps/geocoding/routing integration port.
-- Push: Expo Push as a delivery channel; notification business truth remains BThwani-owned.
-- Email: Resend for real development delivery; Mailpit for local inspection/failure testing.
-- OTP: Identity owns the challenge lifecycle; `DevOtpSink` is the normal development delivery path.
-- Real SMS: Twilio/Infobip or another selected adapter only for occasional real-delivery E2E tests.
-- Financial/biller integrations: WireMock/on-demand deterministic simulators for success, pending, timeout, duplicate, delayed, invalid, unknown and reconciliation cases.
-- Observability: local logs by default; tracing infrastructure on demand.
-- Cache/coordination: Redis/Valkey only when a proven owned requirement exists.
+Daily development should prefer a development OTP delivery sink. Real SMS delivery is used only when the test specifically requires channel E2E behavior.
 
-Current external accounts/free tiers are operational conveniences, not durable Product decisions.
+Fixed universal OTPs are not a normal Identity mechanism. Raw OTP production logging is forbidden.
 
-## Financial sandboxes
+Messaging channel usage should prefer the cheapest/least intrusive channel that satisfies the Product requirement; do not use paid SMS for every development interaction.
 
-WireMock is the deterministic default for BThwani failure/state-machine testing. A real Stripe/PayPal or other sandbox may be used only when the specific adapter/conformance question justifies it.
+## Privileged authentication
 
-```text
-REAL_SANDBOX_ALLOWED_WHEN_USEFUL
-!=
-BUILD_DOMAIN_AROUND_PROVIDER
-```
+Control Panel/operator authentication should remain capable of stronger factors such as TOTP and Passkeys/WebAuthn when implemented.
 
-No external sandbox is assumed to represent BThwani's required production financial rail.
+## Financial rail simulator
 
-## OTP and messaging
+Use deterministic simulator behavior for success, pending, rejection, timeout, unavailable, delayed result, duplicate callback/reference, invalid signature, unknown outcome and reconciliation mismatch.
 
-OTP is an Identity capability; SMS/email are channels. Development inspection must not rely on uncontrolled raw OTP logs and must be impossible to enable accidentally in production.
+WLT remains internal financial authority.
+
+## Biller simulator
+
+FinancialRail and BillerGateway are distinct. Biller simulation covers inquiry, subscriber/bill errors, recharge/bill fulfillment, duplicate request, provider float/balance errors, timeout/unknown/delayed result, quote change, reversal and reconciliation mismatch where supported.
+
+Do not blind-retry an ambiguous fulfillment through another provider.
+
+## Storage/maps/email/push
+
+Use whichever configured development adapter is currently selected; it does not define the domain model.
 
 ## Sensitive data
 
-External development services receive synthetic/test data. Sensitive documents, financial evidence, credentials and production PII require their approved classification/storage policy and must not be copied into general development accounts.
-
-## Unknown external outcomes
-
-For mutations, timeout or missing confirmation is not proof of failure. Preserve the operation identity and reconcile against the owning system/provider before trying another route that could duplicate the effect.
+General external development services receive synthetic/test data. Production PII/financial/identity data requires its approved environment/classification policy.

@@ -110,3 +110,59 @@ Critical authentication/authorization bypass, secret exposure, cross-scope acces
 ## Development/bootstrap credential boundary
 
 Development/bootstrap credentials or historical examples never define normal Identity credential policy. OTP/challenge lifecycle remains Identity-owned; SMS/email/push are delivery channels only. Development inspection mechanisms must be explicitly development-only and impossible to enable accidentally in production.
+
+
+## OTP, challenge and privileged-authentication law
+
+OTP/challenge lifecycle is an Identity capability. SMS, email or any other channel is delivery only.
+
+```text
+OTP_ENGINE != SMS_PROVIDER
+OTP_CHALLENGE_STATE → IDENTITY
+OTP_DELIVERY → CHANNEL_ADAPTER
+```
+
+Development/bootstrap credentials or historical examples never define normal credential policy. Fixed universal development OTP values are forbidden as a normal Identity mechanism.
+
+Material OTP abuse controls must support bounded server-side policy across the applicable dimensions, including:
+
+- per-phone challenge/request rate;
+- per-IP rate;
+- per-device/session/client risk dimension where available and justified;
+- resend/cooldown/expiry/attempt limits;
+- provider/channel spend or abuse limits where external delivery cost can be exploited;
+- replay/single-use enforcement;
+- audit/correlation without logging raw OTP values.
+
+Exact thresholds are configuration/policy values and must not be invented in governance.
+
+Raw OTPs must not enter production logs, traces, analytics or general audit records.
+
+For privileged Control Panel/operator authentication, architecture must remain capable of stronger factors such as TOTP and Passkeys/WebAuthn. These are authentication methods, not SMS delivery channels.
+
+
+## Threat boundaries and data classification
+
+Treat these as explicit trust boundaries:
+
+- untrusted public/mobile/web clients;
+- trusted-but-scoped operators;
+- service-to-service callers;
+- external provider callbacks/webhooks;
+- uploaded documents/media;
+- financial mutations/reconciliation;
+- development/test environments.
+
+At each boundary validate identity, authorization/scope, input/schema, replay/idempotency, provenance and sensitive-data handling as applicable.
+
+Data handling distinguishes at minimum:
+
+- public/non-sensitive content;
+- internal operational data;
+- personal/location/workforce data;
+- authentication/credential/secret material;
+- financial/payment/payout/reconciliation evidence.
+
+The owning policy/configuration defines retention/residency/erasure requirements. Do not invent fixed retention, RPO or RTO values without approved evidence.
+
+Sensitive classes are minimized, encrypted/protected according to risk, redacted in observability/audit, and exposed only to the minimum authorized consumer.

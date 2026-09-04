@@ -3,84 +3,95 @@
 TEMPORARY_TARGET_SPECIALIZATION: YES
 GENERAL_EXECUTION_AUTHORITY: NONE
 
-## 1. Mission
+## Mission
 
-Refound `docs/**` into a human developer/operations knowledge system that is navigable from one entrypoint and cannot become parallel Product, contract, database or runtime authority.
+Docs form a portable human Developer Handbook and operational runbook system. They explain how to work with the platform without becoming Product, contract, data or current-runtime authority.
 
-## 2. Target information architecture
+## Developer handbook target
 
 ```text
 docs/
 ├── README.md
 ├── development/
 │   ├── getting-started.md
+│   ├── repository-map.md
+│   ├── apps-and-routing.md
+│   ├── frontend-development.md
+│   ├── services-development.md
+│   ├── database-and-migrations.md
+│   ├── contracts-and-generation.md
+│   ├── testing-and-verification.md
+│   ├── configuration-and-secrets.md
 │   ├── runtime.md
-│   ├── mobile.md
 │   ├── providers-and-sandboxes.md
+│   ├── mobile.md
+│   ├── control-panel.md
+│   ├── design-system.md
+│   ├── observability-and-debugging.md
+│   ├── ci-and-quality.md
+│   ├── first-change.md
+│   ├── repository-evidence.md
 │   ├── eas.md
 │   ├── sentry.md
-│   ├── github-evidence.md
 │   └── leanctx.md
 ├── runbooks/
-│   ├── README.md
-│   └── <focused operational runbooks>
+│   └── focused operational runbooks
 └── reference/
     └── external-systems/
-        ├── README.md
-        └── <topic reference files>
 ```
 
-## 3. Developer bootstrap acceptance
+## Portability law
 
-A new developer must be able to identify from `docs/README.md`:
+Durable docs must not contain campaign/branch-specific instructions or obsolete repository-history narrative.
 
-- which Governance files define platform meaning;
-- exact current toolchain constraints;
-- install command;
-- primary app/control commands;
-- affected/full verification entrypoints;
-- runtime modes and current declared local endpoints;
-- mobile/device workflow;
-- where provider/sandbox guidance lives;
-- where operational runbooks live;
-- how to use external references without treating them as authority.
+Exact ports/container names/environment values/routes/tables remain executable-source truth unless they are deliberately governed stable conventions.
 
-## 4. Runtime/command law
+## Developer reconstruction acceptance
 
-Docs may summarize current commands/ports only after verifying them against live executable source. They must identify scripts/configuration as current command/runtime authority.
+A new developer can:
 
-```text
-STALE_COMMAND != COMPATIBILITY_GUIDANCE
-STALE_PATH != HISTORICAL_VALUE
-```
+- understand repository classification/placement;
+- identify Product capability/journey/owner;
+- work on apps/routing/frontend/services;
+- evolve database/migrations;
+- change contracts/generated clients;
+- configure secrets/runtime safely;
+- use provider simulators correctly;
+- verify/test at the right evidence level;
+- debug through observability without treating logs as truth;
+- understand CI/quality;
+- make a representative first change;
+- locate operational runbooks and external references.
 
-Delete or correct stale instructions rather than retaining them "just in case."
+## Runbooks
 
-## 5. Runbook law
+Runbooks own diagnosis/containment/recovery guidance only. They never bypass owner state transitions, fabricate unknown outcomes or redefine Product/financial/security truth.
 
-Runbooks own diagnosis/containment/recovery guidance only. They must not bypass domain transitions with direct state edits, fabricate unknown financial/provider outcomes, copy secrets/PII into evidence or redefine Product truth.
-
-## 6. External reference law
-
-External reference material belongs under `docs/reference/**`, is non-authoritative and is loaded only when a material question benefits from it.
-
-```text
-REFERENCE_SELECTION != ADOPTION_SELECTION
-DONOR_VALUE != DONOR_AUTHORITY
-```
-
-Named AI/model routing and transient campaign research mechanics do not belong in durable docs.
-
-## 7. Closure gate
+## Closure gate
 
 ```text
 DOCS_ENTRYPOINT=PASS
 NEW_DEVELOPER_BOOTSTRAP=PASS
-DEVELOPMENT_GUIDANCE=PASS
+REPOSITORY_MAP=PASS
+APPS_ROUTING=PASS
+FRONTEND=PASS
+SERVICES=PASS
+DATABASE_MIGRATIONS=PASS
+CONTRACTS_GENERATION=PASS
+TESTING_VERIFICATION=PASS
+CONFIG_SECRETS=PASS
+RUNTIME=PASS
+PROVIDERS_SANDBOXES=PASS
+MOBILE=PASS
+CONTROL_PANEL=PASS
+DESIGN_SYSTEM=PASS
+OBSERVABILITY_DEBUGGING=PASS
+CI_QUALITY=PASS
+FIRST_CHANGE=PASS
+REPOSITORY_EVIDENCE=PASS
 RUNBOOK_ROUTING=PASS
 EXTERNAL_REFERENCE_BOUNDARY=PASS
+CAMPAIGN_BRANCH_SPECIFIC_RESIDUE=0
+STALE_COMMAND/PATH_GUIDANCE=0
 DOCS_PARALLEL_PRODUCT/CONTRACT/DATA_AUTHORITY=0
-STALE_PRODUCT_TRUTH_JSON_REFERENCES=0
-STALE_COMMAND/PATH/BRANCH_GUIDANCE=0
-LOOSE_PROMPTING_DEVELOPMENT/REFERENCE_DOCS=0
 ```

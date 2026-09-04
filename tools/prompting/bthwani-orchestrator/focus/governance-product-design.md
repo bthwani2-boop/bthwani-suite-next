@@ -312,6 +312,24 @@ CENSUS_REQUIRED_BEHAVIOR
 → ONLY_THEN_DELETE_LOSER
 ```
 
+## 10A. Representation-preservation law
+
+A format/file/schema/topology refactor that claims Product-semantic equivalence must preserve every still-valid semantic statement.
+
+```text
+REPRESENTATION_CHANGE
+→ CENSUS_EXISTING_DURABLE_SEMANTICS
+→ MAP_EACH_TO_NEW_OWNER/REPRESENTATION
+→ EXPLICITLY_JUSTIFY_ANY_INTENTIONAL_SEMANTIC_REMOVAL
+→ VERIFY_NO_REQUIRED_MEANING_LOST
+```
+
+```text
+FORMATTING_CLEANUP != PERMISSION_TO_DROP_PRODUCT_MEANING
+MERGE_DOCUMENTS != SEMANTIC_DELETION
+SCHEMA_REMOVAL != REQUIREMENT_REMOVAL
+```
+
 ## 11. Governance is not privileged
 
 `governance/**` and governance-like docs are not automatically canonical because they describe process or Product intent.

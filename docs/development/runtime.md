@@ -1,73 +1,40 @@
 # Development Runtime
 
 DOCUMENT_CLASS: HUMAN_DEVELOPMENT_GUIDE
-CURRENT_RUNTIME_AUTHORITY: live scripts, package.json, infra/docker and environment configuration
+CURRENT_RUNTIME_AUTHORITY: live repository scripts/configuration
+PRODUCT_AUTHORITY: NONE
 
 ## Runtime modes
 
 ### Daily development
-
-Run the surface/service actively being changed locally. Keep heavy infrastructure off unless required. Managed development services may be used for stateful dependencies when they preserve the same semantic contracts.
+Run only the actively changed app/service and the smallest needed dependencies. Heavy infrastructure remains off unless required.
 
 ### Focused integration
-
-Run only the infrastructure required by the current capability, such as WLT plus its financial simulator, or a service plus an object-storage/email test adapter.
+Run the exact service dependencies/simulators required by the current capability.
 
 ### Full integration
+Use repository-owned orchestration for migrations, readiness, smoke, integration and journey verification.
 
-Use repository runtime orchestration for migrations, smoke/integration/journey checks, provider-adapter conformance and reproducibility.
+Useful root entrypoints include `pnpm runtime:full:up`, `pnpm runtime:full:smoke`, `pnpm runtime:full:down` and the current scripts exposed by `package.json`.
 
-```powershell
-pnpm runtime:full:up
-pnpm runtime:full:smoke
-pnpm runtime:full:down
-```
+## Ports/endpoints
 
-`FULL_INTEGRATION != DAILY_DEV`.
-
-## Current declared local endpoints
-
-The current checked runtime profile declares:
-
-| Surface/service | Local port |
-|---|---:|
-| Control Panel | 13000 |
-| Local dev session broker | 18100 |
-| app-client Metro | 18101 |
-| app-partner Metro | 18102 |
-| app-captain Metro | 18103 |
-| app-field Metro | 18104 |
-| DSH API | 18080 |
-| Identity API | 18082 |
-| WLT API | 18083 |
-| Workforce API | 18086 |
-| Providers API profile — inherited current implementation, not canonical target | 18087 |
-| Platform Control API | 18088 |
-
-A current runtime profile may still contain inherited/temporary services while refoundation is active. A port/profile existing in executable source proves current runtime state only; it does not grant canonical domain ownership.
+Exact ports, container names and environment values are executable configuration. Do not copy them into durable docs as an independent authority. Inspect current runtime config/scripts.
 
 ## Database
 
-The durable development engine is PostgreSQL/PostGIS. Managed PostgreSQL may be used for daily development; Docker PostgreSQL remains a reproducible local/integration path.
+Development engine is PostgreSQL/PostGIS. Managed PostgreSQL may be used for fast daily state while local/container PostgreSQL remains a reproducible integration path.
 
-External development databases use synthetic/test data only. Never copy production customer/financial/identity data into a general development service.
+External development services receive synthetic/test data only.
 
 ## Docker
 
-Docker is reproducible infrastructure, not Product authority and not a mandatory all-day development runtime. Start only the profiles needed by the current task.
+Docker is reproducible development/integration infrastructure, not mandatory daily runtime and not Product authority.
 
-Useful root commands include:
+## Cache
 
-```powershell
-pnpm runtime:up
-pnpm runtime:status
-pnpm runtime:smoke
-pnpm runtime:migrate
-pnpm runtime:down
-```
+Redis/Valkey is off by default unless a proven requirement exists. Cache/coordination state must not become business truth.
 
-Exact profile composition remains owned by repository scripts/configuration.
+## External failure
 
-## Failure semantics
-
-A mock/simulator may emulate an external dependency but must still exercise BThwani authorization, state machines, idempotency, accounting and readback. Fake success paths that bypass the real domain are invalid evidence.
+Mocks/simulators must exercise real BThwani authorization/state/accounting/idempotency. Timeout or missing confirmation is not proof of failure/success; unknown outcomes remain reconcilable.

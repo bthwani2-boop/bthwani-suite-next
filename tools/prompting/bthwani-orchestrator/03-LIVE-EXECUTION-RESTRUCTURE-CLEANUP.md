@@ -1,4 +1,4 @@
-# H Continuous Demolition, Refoundation, Migration and Destructive Cleanup
+# Continuous Build, Refoundation, Cutover and Cleanup
 
 OWNER_ROLE: DEMOLITION_REFOUNDATION_MIGRATION_CUTOVER_DELETION
 AUTHORITY_ASSIGNED_BY: 00-ORCHESTRATOR.md
@@ -229,7 +229,7 @@ A commit exists to preserve a coherent recoverable state, not to divide the camp
 After every commit:
 
 ```text
-VERIFY_REMOTE_h
+VERIFY_REMOTE_CURRENT_BRANCH
 → RE_PIN
 → RECONCILE_ANY_HEAD_MOVEMENT
 → RESUME_SAME_UNIT_FROM_NEXT_REQUIRED_ACTION

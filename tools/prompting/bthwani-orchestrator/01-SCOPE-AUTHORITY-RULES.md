@@ -1,34 +1,23 @@
-# H Refoundation Scope, Authority and Continuous Campaign Rules
+# Scope, Authority, Exact-Head and Recovery Rules
 
 OWNER_ROLE: BRANCH_SCOPE_EXACT_HEAD_RECOVERY_STOP_STATES
 AUTHORITY_ASSIGNED_BY: 00-ORCHESTRATOR.md
 SELF_CERTIFICATION: FORBIDDEN
 
-## 1. Branch law
+## 1. Invocation branch law
 
 ```text
-MUTABLE_REFOUNDATION_AUTHORITY=h
+MUTABLE_AUTHORITY = INVOCATION_BRANCH
 ```
 
-`h` is the only mutable refoundation world.
+Only the repository/branch supplied by the current invocation is mutable unless explicit human authorization expands scope.
 
-```text
-PR_FROM_h=FORBIDDEN
-PR_TO_h=FORBIDDEN
-MERGE_INTO_h=FORBIDDEN
-MERGE_FROM_h=FORBIDDEN
-REBASE_h_ON_OTHER_BRANCH=FORBIDDEN
-AUTO_SYNC_h=FORBIDDEN
-FORCE_PUSH_h=FORBIDDEN
-BLIND_CHERRY_PICK_OF_OLD_STRUCTURE=FORBIDDEN
-```
-
-Normal fast-forward commits directly to `h` are authorized.
+Cross-branch merge, rebase, autosync, blind cherry-pick of historical structure and force-push are forbidden by default. A normal fast-forward update of the invocation branch is allowed when the expected head is still current.
 
 ## 2. Live tree vs forensic history
 
 ```text
-LIVE_h = CANONICAL_PRESENT
+CURRENT_HEAD = CANONICAL_PRESENT
 GIT_HISTORY = FORENSIC_PAST
 ```
 
@@ -44,7 +33,7 @@ If previously committed material is needed later, recover it through commit hist
 
 ```text
 GIT_HISTORY_IS_THE_ARCHIVE
-LIVE_h_IS_NOT_AN_ARCHIVE
+CURRENT_HEAD_IS_NOT_AN_ARCHIVE
 ```
 
 Historical branches and old commits are forensic only. They may recover required truth or explain past behavior; they never impose topology or preservation rights.
@@ -54,15 +43,15 @@ Historical branches and old commits are forensic only. They may recover required
 Before every coherent mutation batch:
 
 ```text
-RESOLVE_REMOTE_h
-→ RECORD_EXPECTED_REMOTE_H_SHA
+RESOLVE_REMOTE_CURRENT_BRANCH
+→ RECORD_EXPECTED_CURRENT_BRANCH_SHA
 → DIAGNOSE_AGAINST_THAT_SHA
 ```
 
 Immediately before write:
 
 ```text
-RESOLVE_ACTUAL_REMOTE_H_SHA
+RESOLVE_ACTUAL_CURRENT_BRANCH_SHA
 ```
 
 If the head moved unexpectedly:
@@ -225,7 +214,7 @@ ASKING_FOR_NEXT_INSTRUCTION_WHEN_DERIVABLE
 During execution, maintain an ephemeral control state sufficient to force the next action:
 
 ```text
-EXACT_H_SHA
+EXACT_HEAD_SHA
 CAMPAIGN_ENGAGED
 CURRENT_STAGE
 CURRENT_UNIT
@@ -245,7 +234,7 @@ If `CURRENT_BLOCKER_OR_NONE=NONE`, `NEXT_REQUIRED_ACTION` must be executed rathe
 Recovery reconstructs from:
 
 ```text
-LIVE_REMOTE_h
+LIVE_REMOTE_CURRENT_BRANCH
 + COMMIT_GRAPH
 + MATERIAL_DIFFS
 + CURRENT_REACHABILITY
@@ -270,7 +259,7 @@ A checkpoint exists only so execution can recover if forcibly interrupted.
 When a unit closes:
 
 ```text
-RE_PIN_h
+RE_PIN_CURRENT_BRANCH
 → RE_CENSUS_INVALIDATED_CONE
 → RE_DIAGNOSE
 → RE_RANK
@@ -289,7 +278,7 @@ Only these may stop mutation:
 ```text
 UNRESOLVED_IRREVERSIBLE_DATA_RISK
 UNRESOLVED_EXTERNAL_LIVE_CONSUMER_CONTRACT
-UNKNOWN_CURRENT_h_HEAD_MOVEMENT_NOT_YET_RECONCILED
+UNKNOWN_CURRENT_CURRENT_BRANCH_HEAD_MOVEMENT_NOT_YET_RECONCILED
 MISSING_REQUIRED_HUMAN_PRODUCT_DECISION
 MISSING_REQUIRED_SECRET_CREDENTIAL_ENVIRONMENT
 BLOCKED_UNKNOWN_THAT_CAN_CHANGE_CANONICAL_TARGET_OR_SAFE_CUTOVER

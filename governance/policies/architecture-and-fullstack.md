@@ -146,3 +146,30 @@ apps → service public capability entrypoints = ALLOWED
 ```
 
 External integrations terminate at domain-specific semantic ports/adapters. A vendor name, provider mechanism or generic Providers container does not become a business owner. Platform Control may own governed cross-platform enablement/configuration only where explicitly assigned; secret values remain in approved runtime secret storage.
+
+
+## Financial rail versus biller fulfillment
+
+External money movement and external bill/recharge fulfillment are distinct semantic responsibilities:
+
+```text
+FinancialRail
+→ moves or authorizes external money
+
+BillerGateway
+→ fulfills telecom / electricity / water / internet / recharge / other biller service
+```
+
+Do not hide bill/recharge fulfillment inside a generic payment/provider abstraction merely because both depend on an external vendor.
+
+The operation-owning domain defines the semantic port. External vendor adapters implement that port. A vendor or generic Providers container never becomes the domain owner.
+
+For ambiguous external fulfillment or financial mutation:
+
+```text
+TIMEOUT != FAILURE
+MISSING_CONFIRMATION != SUCCESS
+UNKNOWN MUST REMAIN UNKNOWN UNTIL RECONCILED
+```
+
+Do not blindly retry through an alternate provider until duplicate external effect is proven impossible.

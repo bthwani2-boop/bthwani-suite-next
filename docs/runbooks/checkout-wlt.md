@@ -32,15 +32,7 @@ Operate and recover the checkout-to-WLT payment-session handoff without creating
 - On definitive failure, release only DSH-owned operational reservations allowed by the current state machine.
 - On confirmed WLT read/create success, bind the existing WLT reference and verify persisted readback.
 
-Example read-only diagnostic, after confirming current schema names:
-
-```sql
-SELECT id, operator_context_id, client_id, state, wlt_payment_session_id,
-       reconciliation_attempt_count, updated_at
-FROM dsh_checkout_intents
-WHERE state = 'wlt_outcome_unknown'
-ORDER BY updated_at ASC;
-```
+Use current owner/service diagnostics to list unresolved checkout intents by canonical state, age and correlation identity. Do not encode table/column names in the runbook; inspect the current executable schema or repository-owned diagnostic command.
 
 ## WLT event receipt incidents
 

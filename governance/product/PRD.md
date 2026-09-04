@@ -131,22 +131,28 @@ Cross-surface platform variables have a canonical server-side owner, type/schema
 
 Analytics are read models, not truth owners. Every metric identifies its source owner, aggregation/window, time basis, unit/currency, freshness behavior and allowed dimensions. Missing/stale/partial data is explicit and is not silently rendered as zero. Financial analytics derive from WLT-owned facts or governed WLT-backed projections.
 
-## 6. Multi-surface capability contract
+## 6. Multi-surface capability semantic envelope
 
-Every material durable capability specification defines, when applicable:
+Every material durable capability defines, when applicable:
 
-1. problem/outcome and affected actors;
-2. authoritative owner(s) and cross-domain boundaries;
-3. required and explicitly excluded surfaces;
-4. states, legal transitions and forbidden transitions;
-5. canonical mutation authority and committed readback semantics;
-6. authorization/object-scope requirements;
-7. idempotency/concurrency/retry/reconciliation behavior;
-8. database/event/job/integration effects;
-9. loading, empty, offline, forbidden, conflict, partial, error and recovery semantics;
-10. acceptance criteria and negative invariants.
+1. problem statement, affected actors, frequency/severity when governed;
+2. required outcome, target state, primary success measure and guardrails when governed;
+3. actor responsibilities plus permitted/forbidden actions;
+4. canonical owner(s), writer(s) and cross-domain boundaries;
+5. required surfaces/consumers and explicit exclusions with reasons;
+6. preconditions, trusted context and object-scope requirements;
+7. durable states, legal transitions and forbidden transitions;
+8. canonical mutation authority and committed readback semantics;
+9. cross-surface/service handoffs and durable event/contract meaning;
+10. canonical data ownership and material persistence/migration implications;
+11. idempotency/concurrency/retry/replay semantics;
+12. external-provider unknown-result/reconciliation/recovery semantics;
+13. security/privacy/financial restrictions;
+14. loading/empty/offline/forbidden/conflict/partial/error/recovery semantics;
+15. acceptance criteria, failure states and negative invariants;
+16. bounded unresolved durable decisions that genuinely require authorization.
 
-Feature-specific durable rules belong in the applicable capability governance rather than new competing top-level decision documents.
+Representation-only cleanup must preserve every still-valid semantic statement. Formatting/structure change is not permission to drop Product meaning.
 
 ## 7. Unified full-stack implementation rule
 

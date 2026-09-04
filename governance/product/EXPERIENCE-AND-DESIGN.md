@@ -120,3 +120,10 @@ Experiments/feature flags are bounded transition/evidence mechanisms, not perman
 Rendered correctness requires the evidence class capable of proving the claim: visual/interaction/accessibility/browser/device/runtime/usability evidence as applicable. An attractive screenshot, design file or token audit alone is not proof of a correct journey.
 
 Real-user comprehension/discoverability/task-completion claims require appropriate research/usability evidence when code/runtime/design evidence cannot establish them.
+
+
+## Journey and capability linkage
+
+Experience acceptance follows `CAPABILITIES.md` and `JOURNEYS.md`. A polished screen is incomplete when the cross-capability journey, failure/recovery path or canonical readback is incomplete.
+
+Refoundation preserves required approved experience value but does not automatically preserve losing component/container topology.

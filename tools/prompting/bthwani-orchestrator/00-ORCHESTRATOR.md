@@ -1,38 +1,46 @@
-# BThwani Relentless Canonical Baseline Refoundation Orchestrator
+# BThwani Canonical Platform Build and Refoundation Orchestrator
 
-PACKAGE_REVISION: 33
-REFOUNDATION_PROFILE_REVISION: 8
-PACKAGE_CLASS: RELENTLESS_CONTINUOUS_DEMOLITION_FIRST_CANONICAL_REFOUNDATION_ENGINE
-PROJECT: bthwani-suite-next
-TARGET_BRANCH: h
+PACKAGE_REVISION: 34
+REFOUNDATION_PROFILE_REVISION: 9
+PACKAGE_CLASS: PORTABLE_CONTINUOUS_CANONICAL_BUILD_REFOUNDATION_ENGINE
+PROJECT: BTHWANI
+TARGET_BRANCH: INVOCATION_SUPPLIED
 PACKAGE_SELF_CONTAINED: YES
 SEMANTIC_SELF_CERTIFICATION: FORBIDDEN
 
 ## 0. Mission
 
-This package is the sole execution and closure constitution for the `h` canonical-baseline refoundation campaign.
+This package is the execution and closure constitution for canonical BThwani platform construction and refoundation inside the repository and branch supplied at invocation time.
 
-The inherited repository is forensic material, not a baseline entitled to repair, preservation or cosmetic cleanup.
-
-The campaign exists to:
+It does not own or describe how a repository was prepared, copied, created or transferred. It starts from the current pinned repository state and builds/refounds the platform from there.
 
 ```text
-PRESERVE_REQUIRED_TRUTH
-→ IDENTIFY_THE_CANONICAL_TARGET
-→ DEMOLISH_PROVEN_LOSING_STRUCTURE_AT_THE_HIGHEST_SAFE_GRANULARITY
-→ REFOUND_THE_MINIMUM_NECESSARY_CANONICAL_STRUCTURE
-→ MIGRATE_AND_CUT_OVER_COMPLETELY
-→ DELETE_EVERY_LOSER_AND_RESIDUE
+QUALIFY_EXISTING_FOUNDATION
+→ PRESERVE_PROVEN_CANONICAL_STRUCTURE
+→ CHALLENGE_UNPROVEN_OR_IMPORTED_STRUCTURE
+→ IDENTIFY_HIGHEST_MATERIAL_ROOT
+→ RECONSTRUCT_REQUIRED_TRUTH
+→ DEFINE_CANONICAL_OWNER_AND_TARGET
+→ BUILD_OR_REFOUND
+→ CONNECT_COMPLETE_AFFECTED_CONE
+→ CUT_OVER_WHEN_REPLACING_EXISTING_AUTHORITY
+→ DELETE_LOSERS_AND_RESIDUE
+→ VERIFY
 → RE_DIAGNOSE
-→ CONTINUE_UNTIL_A_PROVEN_LEVEL_4_FIXED_POINT
+→ CONTINUE_UNTIL_LEVEL_4_FIXED_POINT
 ```
 
-It is not a sequence of independent tasks. It is one continuous causal campaign.
+The engine does not assume that a prepared foundation is bad. It also never treats existence, usage or a green build as proof of canonicality.
 
-## 1. Supreme hostile-inheritance law
+## 1. Foundation qualification and survival law
 
 ```text
-ASSUME_INHERITED_STRUCTURE_NONCANONICAL_UNTIL_PROVEN_OTHERWISE
+PROVEN_CANONICAL_FOUNDATION → PRESERVE
+UNPROVEN_STRUCTURE → CHALLENGE
+INVALID_STRUCTURE → REFOUND
+REQUIRED_MISSING_STRUCTURE → BUILD
+PARALLEL_SHADOW_OR_LOSING_STRUCTURE → MIGRATE/CUT_OVER/DELETE
+
 CURRENT_EXISTENCE != RIGHT_TO_EXIST
 CURRENT_USAGE != CANONICAL
 HAS_CALLERS != DESERVES_TO_EXIST
@@ -40,7 +48,7 @@ BUILD_GREEN != CANONICAL
 CI_GREEN != CLOSED
 ```
 
-Required truth embedded in a losing container means salvage the truth, not preserve the container.
+Required truth embedded in a losing container means salvage the truth, not preserve the container. Proven canonical prepared structure is preserved unless current evidence disproves it.
 
 ```text
 KNOWN_GARBAGE_SURVIVAL=FORBIDDEN
@@ -67,51 +75,33 @@ SALVAGE_REQUIRED_TRUTH
 ## 2. Git-history archive law
 
 ```text
-LIVE_h = CANONICAL_PRESENT
+CURRENT_HEAD = PRESENT_REPOSITORY_STATE
 GIT_HISTORY = FORENSIC_PAST
 ```
 
-Do not retain obsolete or losing material in live `h` because it may be useful for future reference.
+Do not retain obsolete or losing material in the current tree merely for future reference. Git history is the archive.
 
-```text
-GIT_HISTORY_IS_THE_ARCHIVE
-LIVE_h_IS_NOT_AN_ARCHIVE
-```
+Forbidden when used only to preserve proven losing shape: `archive/`, `legacy/`, `history/`, `backup/`, `_unused/`, reachable deprecated implementations, commented-out old implementations and keep-just-in-case copies.
 
-Forbidden:
-
-```text
-archive/
-legacy/
-history/
-backup/
-_unused/
-DEPRECATED_BUT_REACHABLE
-COMMENTED_OUT_OLD_IMPLEMENTATION
-KEEP_JUST_IN_CASE
-```
-
-when their purpose is to preserve proven losing historical shape.
-
-Previously committed historical material may be recovered later through commit history, parent blobs and diffs.
+Historical material may be recovered through commit history, parent blobs and diffs.
 
 ## 3. Canonical campaign architecture
 
 ```text
-STAGE_A0 — HOSTILE BRANCH-WIDE CATASTROPHE TRIAGE
-STAGE_A1 — DOMINANT DESTRUCTIVE BASELINE REFOUNDATION
+STAGE_A0 — FOUNDATION QUALIFICATION AND SYSTEMIC ROOT TRIAGE
+STAGE_A1 — DOMINANT SYSTEMIC REFOUNDATION WHEN REQUIRED
 STAGE_A2 — ADVERSARIAL STRUCTURAL QUALIFICATION
-STAGE_B  — NORMAL CAUSAL ROOT CLOSURE
+STAGE_B  — VERTICAL CAPABILITY BUILD/REFOUNDATION CLOSURE
 ```
 
 ```text
-A0: SEE_THE_WHOLE_STRUCTURAL_BATTLEFIELD
-A1: DEMOLISH_AND_REFOUND_THE_DOMINANT_BASELINE_CATASTROPHES
-A2: PROVE_ZERO_KNOWN_STRUCTURAL_GARBAGE_AND_UNTREATED_STRUCTURAL_FINDINGS
-B : CLOSE_ONLY_TRUE_SEMANTIC_PRODUCT_SYSTEM_ROOTS_INSIDE_PROVEN_CANONICAL_STRUCTURE
+A0: PROVE_THE_FOUNDATION_AND_FIND_ANY_SYSTEMIC_ENABLING_ROOT
+A1: REFOUND_ONLY_PROVEN_DOMINANT_SYSTEMIC_ROOTS
+A2: PROVE_STRUCTURAL_QUALIFICATION_WITH_ZERO_KNOWN_UNTREATED_STRUCTURAL_FINDINGS
+B : BUILD_OR_REFOUND_TRUE_PRODUCT/SYSTEM CAPABILITIES VERTICALLY INSIDE QUALIFIED STRUCTURE
 ```
 
-Stage B is forbidden until current exact `h` passes A2.
+Stage B begins only after the current exact repository state passes the applicable structural qualification gate.
 
 ## 4. Relentless continuous fixed-point law
 
@@ -185,16 +175,17 @@ ASKING_FOR_CONTINUATION_WHEN_DERIVABLE
 
 ## 6. Canonical package ownership
 
-Exactly eight semantic owners exist:
+Exactly nine semantic owners exist:
 
 1. `00-ORCHESTRATOR.md` — supreme mission, A0/A1/A2/B constitution, relentless-continuation law, no-idle state machine, Git-history archive law, invocation, anti-weakening and completion token.
-2. `01-SCOPE-AUTHORITY-RULES.md` — branch authority, all-tracked accounting, hostile survival, known-garbage prohibition, exact-head, recovery, continuous engagement, legal stop states, deferral and preemption.
+2. `01-SCOPE-AUTHORITY-RULES.md` — branch authority, all-tracked accounting, foundation survival qualification, known-garbage prohibition, exact-head, recovery, continuous engagement, legal stop states, deferral and preemption.
 3. `02-DIAGNOSE-ROOT-CAUSE.md` — A0 census, required truth, inherited-shape-blind canonical skeleton, catastrophe universe, `ROOT_TAX`, `STRUCTURAL_YIELD`, dominance, Source-of-Defect/Fix and continuous causal frontier.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — patch-vs-demolish, ancestor escalation, demolition plan, immediate/eager deletion, continuous mutation, checkpoint-only commits, migration/cutover/pruning.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — evidence, finding terminality, A0/A1/A2 gates, continuous-execution compliance, checkpoint legality, Stage-B closure, fresh final recensus and completion.
-6. `focus/code-architecture-organization.md` — architecture/topology/semantic containers/naming/path/file/package/service ownership.
-7. `focus/governance-product-design.md` — product/system truth, actors, journeys, UX and end-to-end meaning.
-8. `focus/data-contracts-runtime-security-quality.md` — database/migrations/contracts/generated/runtime/config/security/finance/tests/CI/dependencies/assurance.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — evidence, finding terminality, qualification gates, continuous-execution compliance, checkpoint legality, capability closure, fresh final recensus and completion.
+6. `05-EXECUTION-PLAYBOOK.md` — procedural execution state machine: session entry, recovery, stage traversal, automatic continuation, checkpoint transition, preemption and fixed-point traversal.
+7. `focus/code-architecture-organization.md` — architecture/topology/semantic containers/naming/path/file/package/service ownership.
+8. `focus/governance-product-design.md` — product/system truth, actors, journeys, UX and end-to-end meaning.
+9. `focus/data-contracts-runtime-security-quality.md` — database/migrations/contracts/generated/runtime/config/security/finance/tests/CI/dependencies/assurance.
 
 One material law has one owner. No helper, plan, agent adapter or governance file may create a weaker competing variant.
 
@@ -203,13 +194,13 @@ One material law has one owner. No helper, plan, agent adapter or governance fil
 Normal invocation remains intentionally short:
 
 ```text
-REPOSITORY: bthwani2-boop/bthwani-suite-next
-BRANCH: h
-MODE: CANONICAL_BASELINE_REFOUNDATION
+REPOSITORY: <current repository>
+BRANCH: <current working branch>
+MODE: CANONICAL_PLATFORM_BUILD
 COMPLETION_LEVEL: LEVEL_4
 ```
 
-Then load `00` through `04` and every materially applicable `focus/*` owner.
+Then load `00` through `05` and every materially applicable `focus/*` owner.
 
 No durable campaign plan or ledger may become a second execution authority.
 
@@ -218,7 +209,7 @@ No durable campaign plan or ledger may become a second execution authority.
 Every new or resumed session begins with:
 
 ```text
-PIN_LIVE_h
+PIN_CURRENT_HEAD
 → INSPECT_MATERIAL_HISTORY_AND_ACTUAL_DIFFS
 → RECONSTRUCT_CURRENT_STAGE
 → IDENTIFY_LAST_PROVEN_CLOSED_UNIT
@@ -239,9 +230,9 @@ LAST_COMMIT != UNIT_CLOSURE
 
 If no legitimate blocker exists, execute `NEXT_REQUIRED_ACTION`.
 
-## 9. A0 — hostile battlefield census
+## 9. A0 — foundation qualification and systemic-root census
 
-A0 must cover the entire tracked structural battlefield, including:
+A0 must cover the complete material foundation and all structural surfaces that could change ownership, safety or later capability closure, including:
 
 ```text
 TRACKED_TREE
@@ -268,14 +259,14 @@ A0 order:
 ```text
 MAXIMUM_SAFE_PARALLEL_READ_ONLY_CENSUS
 → REQUIRED_TRUTH_EXTRACTION
-→ INHERITED_SHAPE_BLIND_CANONICAL_SKELETON
-→ HOSTILE_SURVIVAL_CHALLENGE
+→ CURRENT_SHAPE_INDEPENDENT_CANONICAL_MODEL
+→ SURVIVAL_AND_OWNERSHIP_CHALLENGE
 → DELETE_CERTAIN_DEAD_GARBAGE_IMMEDIATELY
 → COMPLETE_STRUCTURAL_DELTA
-→ PRE_ROOT_BASELINE_CATASTROPHE_UNIVERSE
+→ SYSTEMIC_ROOT_CANDIDATE_UNIVERSE
 → TOP_CANDIDATE_SET
 → RESOLVE_RANKING_RELEVANT_UNKNOWNS
-→ FALSIFY_STAGE_B_DEFERRALS
+→ FALSIFY_CAPABILITY_STAGE_DEFERRALS
 → A0_ADMISSION_GATE
 ```
 
@@ -283,7 +274,7 @@ MAXIMUM_SAFE_PARALLEL_READ_ONLY_CENSUS
 FIRST_CATASTROPHE_FOUND != FIRST_EXECUTED_CATASTROPHE
 ```
 
-## 10. A1 — dominant destructive refoundation
+## 10. A1 — dominant systemic refoundation when required
 
 Before mutation:
 
@@ -349,7 +340,7 @@ CHECKPOINT = RECOVERY_MECHANISM_ONLY
 After a commit:
 
 ```text
-VERIFY_REMOTE_h
+VERIFY_CURRENT_BRANCH
 → RE_PIN
 → CONTINUE_SAME_UNIT_OR_NEXT_REQUIRED_FRONTIER
 ```
@@ -399,12 +390,12 @@ NONCAUSAL_FURTHER_AUDIT=FORBIDDEN
 
 An apparently empty catastrophe graph is not enough.
 
-Run a fresh branch-wide census from zero.
+Run a fresh repository-wide structural census from zero.
 
 Stage B requires exact-current zeroes including:
 
 ```text
-KNOWN_PRE_ROOT_BASELINE_CATASTROPHES=0
+KNOWN_SYSTEMIC_ENABLING_ROOTS_REQUIRING_TREATMENT=0
 KNOWN_STRUCTURAL_GARBAGE=0
 KNOWN_DEAD_TRACKED_ARTIFACTS=0
 KNOWN_STRUCTURALLY_INVALID_CONTAINERS=0
@@ -424,9 +415,9 @@ If A2 fails, immediately return to the correct earlier stage and execute the exp
 
 If A2 passes and roots remain, enter Stage B immediately.
 
-## 15. Stage B — true causal roots only
+## 15. Stage B — vertical capability build/refoundation
 
-Stage B handles semantic/product/system roots only inside structurally canonical containers.
+Stage B builds or refounds semantic Product/System capabilities inside structurally qualified containers.
 
 ```text
 STAGE_B_CLOSURE_UNIT = HIGHEST_CAUSALLY_CORRECT_SEMANTIC_PRODUCT/SYSTEM_ROOT
@@ -588,7 +579,7 @@ Valid terminal token:
 
 ```text
 H_TRUSTWORTHY_CANONICAL_BASELINE_REFOUNDATION_COMPLETE
-EXACT_H_SHA=<immutable sha>
+EXACT_HEAD_SHA=<immutable sha>
 CONTINUOUS_CAMPAIGN_EXECUTION=PASS
 A0_HOSTILE_TRIAGE=PASS
 A1_DESTRUCTIVE_REFOUNDATION_FRONTIER=EMPTY

@@ -1,4 +1,4 @@
-# H Verification, Compliance, Re-Diagnosis and Fixed-Point Closure
+# Verification, Re-Diagnosis and Fixed-Point Closure
 
 OWNER_ROLE: EVIDENCE_FALSIFICATION_CLOSURE_RECENSUS_FIXED_POINT
 AUTHORITY_ASSIGNED_BY: 00-ORCHESTRATOR.md
@@ -18,12 +18,12 @@ UNIT_CLOSED != CAMPAIGN_COMPLETE
 STAGE_PASS != CAMPAIGN_COMPLETE
 ```
 
-## 2. Exact-h evidence provenance
+## 2. Exact-head evidence provenance
 
 Every closure claim must be reconstructable with:
 
 ```text
-EXACT_H_SHA
+EXACT_HEAD_SHA
 CAMPAIGN_STAGE
 UNIT_OR_CATASTROPHE_OR_ROOT
 CLAIM
@@ -66,6 +66,22 @@ LEGITIMATE_BLOCKER
 KNOWN_MAPPED_BUT_UNTREATED_FINDING > 0
 => RELEVANT_STAGE_GATE_FAILS
 ```
+
+## 3A. Assurance asset classification
+
+Every materially affected test, fixture, mock, snapshot, simulator mapping, helper and custom guard must be classified before closure:
+
+```text
+VALID_CANONICAL_SPEC → preserve/refound
+OBSOLETE_BEHAVIOR → delete
+DUPLICATE_COVERAGE → merge/delete
+WRONG_LAYER_SPEC → rewrite/rehome
+LOSING_TOPOLOGY_TEST → delete with loser
+MISSING_PREVENTION → add smallest durable prevention proof
+BROKEN_TEST_INFRA → repair/refound or prove/remove obsolete harness
+```
+
+A green obsolete test is not closure evidence.
 
 ## 4. Continuous-execution compliance gate
 
@@ -234,6 +250,21 @@ REQUIRED_ACTION_WITHOUT_ERROR/RECOVERY_SEMANTICS=0
 
 Decorative/non-actionable UI is not counted as an action merely because it renders.
 
+## 7A. No-forgotten-surface gate
+
+Before a material capability/system unit closes:
+
+```text
+UNACCOUNTED_REQUIRED_ACTOR_OR_JOURNEY=0
+UNACCOUNTED_REQUIRED_APP_OR_SURFACE_CONSUMER=0
+UNACCOUNTED_REQUIRED_MATERIAL_ACTION=0
+REQUIRED_VALUE_STRANDED_IN_LOSER=0
+UNACCOUNTED_OPERATOR_CORRELATION_WHEN_REQUIRED=0
+UNACCOUNTED_FAILURE_UNKNOWN_RECOVERY_SEMANTICS=0
+```
+
+Only fresh evidence may set these to zero.
+
 ## 8. Unit closure is a transition, not a stop
 
 When a unit closes, verification must emit the next required control transition:
@@ -398,7 +429,7 @@ Valid completion token:
 
 ```text
 H_TRUSTWORTHY_CANONICAL_BASELINE_REFOUNDATION_COMPLETE
-EXACT_H_SHA=<immutable sha>
+EXACT_HEAD_SHA=<immutable sha>
 CONTINUOUS_CAMPAIGN_EXECUTION=PASS
 A0_HOSTILE_TRIAGE=PASS
 A1_DESTRUCTIVE_REFOUNDATION_FRONTIER=EMPTY
